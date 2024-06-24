@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>可愛風格的點擊效果</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .box {
+            width: 120px;
+            height: 120px;
+            border-radius: 60px;
+            margin: 10px;
+            display: inline-block;
+            line-height: 120px;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+        .blue {
+            background-color: #3498db;
+        }
+        .pink {
+            background-color: #ff69b4;
+        }
+        .box:active {
+            transform: scale(1.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            display: none;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        .pop-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.5s;
+            color: black;
+        }
+        .bubble {
+            position: fixed;
+            top: -50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: fall 3s linear forwards;
+        }
+        @keyframes fall {
+            to {
+                top: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="blueBox" class="box blue" onclick="handleClick(this, '藍色')">藍色</div>
+        <div id="pinkBox" class="box pink" onclick="handleClick(this, '粉色')">粉色</div>
+    </div>
+    <button onclick="toggleResults()">顯示結果</button>
+    <div id="result"></div>
+
+    <script>
+        let blueCount = 0;
+        let pinkCount = 0;
+        let isResultShown = false;
+
+        function handleClick(element, text) {
+            if (text === '藍色') {
+                blueCount++;
+            } else {
+                pinkCount++;
+            }
+
+            // 顯示彈出文字效果
+            const popText = document.createElement('div');
+            popText.classList.add('pop-text');
+            popText.textContent = text + '!';
+            element.appendChild(popText);
+            setTimeout(() => {
+                popText.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 10);
+            setTimeout(() => {
+                element.removeChild(popText);
+            }, 3000);
+
+            // 暫時保持背景顏色為紅色
+            element.style.backgroundColor = 'red';
+            setTimeout(() => {
+                element.style.backgroundColor = element.classList.contains('blue') ? '#3498db' : '#ff69b4';
+            }, 300);
+
+            // 添加漂落的泡泡效果
+            createBubble(element, text);
+        }
+
+        function createBubble(element, text) {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            bubble.style.backgroundColor = text === '藍色' ? '#3498db' : '#ff69b4';
+            bubble.style.left = Math.random() * window.innerWidth + 'px';
+            document.body.appendChild(bubble);
+            setTimeout(() => {
+                document.body.removeChild(bubble);
+            }, 3000);
+        }
+
+        function toggleResults() {
+            const resultDiv = document.getElementById('result');
+            if (isResultShown) {
+                resultDiv.style.display = 'none';
+            } else {
+                const total = blueCount + pinkCount;
+                resultDiv.textContent = `藍色: ${blueCount}, 粉色: ${pinkCount}, 總數: ${total}`;
+                resultDiv.style.display = 'block';
+            }
+            isResultShown = !isResultShown;
+        }
+    </script>
+</body>
+</html>
