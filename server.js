@@ -59,6 +59,30 @@ app.get('/api/db-time', async (req, res) => {
 });
 // --- API 路由設定結束 ---
 
+// API 路由：獲取所有商品列表
+app.get('/api/products', async (req, res) => {
+  console.log("收到獲取所有商品的請求"); // 在後端日誌中加個標記，方便追蹤
+  try {
+    // 從連接池獲取連接，執行查詢，然後釋放連接
+    const client = await pool.connect();
+    // 執行 SQL 查詢，選取 products 表格中的所有欄位 (*)
+    const result = await client.query('SELECT * FROM products ORDER BY created_at DESC'); // 按建立時間降冪排序，新的在前
+    client.release(); // 確保釋放連接
+
+    // 將查詢結果 (result.rows 是一個包含所有商品物件的陣列) 以 JSON 格式回傳
+    res.json(result.rows);
+    console.log("成功獲取並回傳商品列表，數量:", result.rows.length);
+
+  } catch (err) {
+    // 如果查詢過程中發生錯誤
+    console.error("查詢商品列表時發生錯誤:", err);
+    // 回傳 500 伺服器內部錯誤狀態碼，並附帶錯誤訊息
+    res.status(500).json({ error: '無法從資料庫獲取商品列表' });
+  }
+});
+
+// --- API 路由設定結束 ---
+
 
 // --- 伺服器啟動 ---
 app.listen(port, () => {
