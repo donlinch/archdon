@@ -1,27 +1,69 @@
+require('dotenv').config(); // 讀取 .env 檔案中的環境變數 (僅限本地)
+const { Pool } = require('pg'); // 引入 pg 的 Pool
 const express = require('express');
 const path = require('path'); // Node.js 內建模組，用來處理檔案路徑
 
 const app = express();
 const port = process.env.PORT || 3000; // Render 會設定 PORT 環境變數，本地測試用 3000
 
+// --- 資料庫連接設定 ---
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // 如果在 Render 上部署，建議加上 SSL 連接設定
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// 異步函數：測試資料庫連接
+async function testDbConnection() {
+  try {
+    const client = await pool.connect(); // 嘗試從連接池獲取一個連接
+    console.log("成功連接到 PostgreSQL 資料庫！");
+    const timeResult = await client.query('SELECT NOW()'); // 執行一個簡單的 SQL 查詢
+    console.log("資料庫目前時間:", timeResult.rows[0].now);
+    client.release(); // 將連接釋放回連接池
+  } catch (err) {
+    console.error("!!! 連接資料庫時發生錯誤:", err.message); // 顯示更簡潔的錯誤訊息
+    // 可以在這裡加上更詳細的錯誤處理，例如檢查是否 DATABASE_URL 未設定
+    if (!process.env.DATABASE_URL) {
+        console.error("錯誤原因：DATABASE_URL 環境變數未設定。請檢查 .env 檔案或 Render 環境變數。");
+    }
+  }
+}
+// --- 資料庫連接設定結束 ---
+
+// --- 中介軟體設定 ---
 // 設定靜態檔案目錄 (重要！)
 // 告訴 Express 去哪裡找 HTML, CSS, JS 檔案
 app.use(express.static(path.join(__dirname, 'public')));
+// --- 中介軟體設定結束 ---
 
-// 基本的首頁路由 (非必要，因為 express.static 會自動找 index.html)
-// 如果 public 資料夾裡有 index.html，訪問 '/' 會自動顯示它
-// app.get('/', (req, res) => {
-//   // 你也可以在這裡明確指定發送哪個檔案
-//   // res.sendFile(path.join(__dirname, 'public', 'index.html'));
-//   res.send('Hello from Express!'); // 或者只發送簡單文字
-// });
 
-// 加入一個簡單的 API 路由，測試後端是否運作
+// --- API 路由設定 ---
+// API 路由：測試基本回應
 app.get('/api/hello', (req, res) => {
   res.json({ message: '來自後端的 SunnyYummy API 回應！' });
 });
 
+// API 路由：測試從資料庫讀取時間
+app.get('/api/db-time', async (req, res) => {
+  try {
+    // 從連接池獲取連接，執行查詢，然後釋放連接
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release(); // 確保釋放連接
+    res.json({ dbTime: result.rows[0].now });
+  } catch (err) {
+    console.error("查詢資料庫時間失敗:", err);
+    res.status(500).json({ error: '無法查詢資料庫' });
+  }
+});
+// --- API 路由設定結束 ---
 
+
+// --- 伺服器啟動 ---
 app.listen(port, () => {
   console.log(`伺服器正在監聽 port ${port}`);
+  // 在伺服器啟動後測試資料庫連接
+  testDbConnection();
 });
+// --- 伺服器啟動結束 ---
