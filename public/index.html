@@ -1,111 +1,108 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>SunnyYummy 網頁 (Node.js)</title>
-        <link rel="stylesheet" href="style.css"> 
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 網頁 (Node.js)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
-    <h1>SunnyYummy</h1>
-    <p>這是由 Node.js Express 伺服器提供的網頁！</p>
-    <p><a href="/api/hello">測試後端 API</a> | <a href="/api/db-time">測試資料庫時間</a> | <a href="/api/products">查看商品 API</a></p>
 
-    <hr> <!-- 加個分隔線 -->
+    <header>
+        <h1>SunnyYummy</h1>
+        <!-- 未來可以在這裡放導覽列 -->
+    </header>
 
-    <h2>商品列表</h2>
-    <div id="product-list">
-        <!-- 商品資料將會被 JavaScript 動態加在這裡 -->
-        <p>正在載入商品...</p>
-    </div>
+    <main class="container">
+        <p class="api-links"> <!-- 給 API 連結加上 class -->
+            <a href="/api/hello">測試後端 API</a> |
+            <a href="/api/db-time">測試資料庫時間</a> |
+            <a href="/api/products">查看商品 API</a>
+        </p>
 
-    <hr> <!-- 加個分隔線 -->
+        <hr>
+
+        <h2>商品列表</h2>
+        <div id="product-list">
+            <p>正在載入商品...</p>
+        </div>
+
+        <hr>
+
+    </main> <!-- 主要內容結束 -->
+
+    <footer>
+        <div class="container">
+            <p>© 2025 SunnyYummy. All Rights Reserved.</p>
+            <!-- 可以放社群連結等 -->
+        </div>
+    </footer>
 
     <!-- JavaScript 程式碼放在 body 結束前 -->
     <script>
-       
-           // 等待整個 HTML 文件載入完成後再執行
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("頁面載入完成，準備獲取商品..."); // 在瀏覽器控制台打印訊息
-
-        // 找到要放置商品列表的 div 元素
+        console.log("頁面載入完成，準備獲取商品...");
         const productListDiv = document.getElementById('product-list');
 
-        // 使用 fetch API 向後端請求商品資料
-        fetch('/api/products') // 向我們的後端 API 發出 GET 請求
+        fetch('/api/products')
             .then(response => {
-                // 檢查伺服器回應是否成功 (狀態碼 200-299)
                 if (!response.ok) {
                     throw new Error('無法獲取商品資料，狀態碼：' + response.status);
                 }
-                // 解析回應的 JSON 資料
                 return response.json();
             })
             .then(products => {
-                // 成功獲取到商品資料 (products 是一個陣列)
-                console.log("成功獲取商品資料:", products); // 在瀏覽器控制台打印資料
-
-                // 清空原本的 "正在載入商品..." 文字
+                console.log("成功獲取商品資料:", products);
                 productListDiv.innerHTML = '';
 
-                // 檢查是否有商品資料
                 if (products.length === 0) {
                     productListDiv.innerHTML = '<p>目前沒有商品。</p>';
-                    return; // 如果沒有商品，就顯示訊息並結束
+                    return;
                 }
 
-                // 遍歷商品陣列，為每個商品創建 HTML 元素
                 products.forEach(product => {
-                    // 創建一個 div 作為商品卡片
                     const card = document.createElement('div');
-                    card.className = 'product-card'; // 套用我們在 CSS 裡定義的樣式
+                    card.className = 'product-card';
 
-                    // 創建圖片元素
                     const img = document.createElement('img');
-                    img.src = product.image_url; // 設定圖片來源
-                    img.alt = product.name; // 設定圖片替代文字
+                    img.src = product.image_url;
+                    img.alt = product.name;
 
-                    // 創建商品名稱標題 (例如用 h3)
                     const nameHeading = document.createElement('h3');
                     nameHeading.textContent = product.name;
 
-                    // 創建商品描述段落
                     const descriptionP = document.createElement('p');
                     descriptionP.textContent = product.description;
 
-                    // 創建價格段落
+                    // --- 修改這裡：給價格加上 class="price" ---
                     const priceP = document.createElement('p');
-                    // 格式化價格，加上貨幣符號 (可以根據需要調整)
+                    priceP.className = 'price'; // <--- 加上這行
                     priceP.textContent = `價格: $${product.price}`;
+                    // --- 修改結束 ---
 
-                    // 創建賣貨便連結
+                    // --- 修改這裡：給連結加上 class="button" ---
                     const link = document.createElement('a');
+                    link.className = 'button'; // <--- 加上這行
                     link.href = product.seven_eleven_url;
                     link.textContent = '前往 7-11 賣貨便預購';
-                    link.target = '_blank'; // 在新分頁開啟連結
-                    link.rel = 'noopener noreferrer'; // 安全性考量
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    // --- 修改結束 ---
 
-                    // 將所有創建的元素加入到商品卡片 div 中
                     card.appendChild(img);
                     card.appendChild(nameHeading);
                     card.appendChild(descriptionP);
                     card.appendChild(priceP);
                     card.appendChild(link);
 
-                    // 將完成的商品卡片 div 加入到頁面的 product-list div 中
                     productListDiv.appendChild(card);
                 });
-
             })
             .catch(error => {
-                // 如果請求過程中發生任何錯誤 (網路問題、解析 JSON 失敗等)
-                console.error("獲取商品時發生錯誤:", error); // 在瀏覽器控制台打印錯誤
-                // 在頁面上顯示錯誤訊息
+                console.error("獲取商品時發生錯誤:", error);
                 productListDiv.innerHTML = `<p>載入商品失敗：${error.message}</p>`;
             });
     });
-
-
     </script>
 
 </body>
