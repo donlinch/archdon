@@ -1,0 +1,109 @@
+/* style.css */
+
+
+
+
+body {
+    font-family: sans-serif; /* 使用更常見的無襯線字體 */
+    line-height: 1.6;
+    margin: 20px; /* 給頁面一點邊距 */
+    background-color: #f4f4f4; /* 淺灰色背景 */
+}
+
+h1, h2 {
+    color: #333;
+    text-align: center; /* 標題置中 */
+}
+
+/* --- 商品列表容器 --- */
+#product-list {
+    display: flex; /* 使用 Flexbox 佈局 */
+    flex-wrap: wrap; /* 允許換行 */
+    gap: 20px; /* 卡片之間的間距 */
+    justify-content: center; /* 卡片水平置中 (如果只有一行或不足一行) */
+    padding: 20px 0; /* 上下留白 */
+}
+
+/* --- 商品卡片 --- */
+.product-card {
+    background-color: #fff; /* 白色背景 */
+    border: 1px solid #ddd;
+    border-radius: 8px; /* 圓角 */
+    padding: 20px;
+    margin-bottom: 20px; /* 保留底部間距 (雖然 gap 處理了水平間距) */
+    width: calc(33.333% - 40px); /* 嘗試讓一行顯示三個，減去 gap 的影響，需要微調 */
+    min-width: 280px; /* 最小寬度 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 加點陰影 */
+    display: flex; /* 讓卡片內部也用 flex */
+    flex-direction: column; /* 內部元素垂直排列 */
+    align-items: center; /* 內部元素水平置中 */
+    text-align: center; /* 文字置中 */
+}
+
+/* 卡片內的圖片 */
+.product-card img {
+    max-width: 100%;
+    height: auto;
+    max-height: 200px; /* 限制圖片最大高度 */
+    object-fit: cover; /* 保持圖片比例並填滿空間 */
+    margin-bottom: 15px;
+    border-radius: 4px; /* 圖片也加點圓角 */
+}
+
+/* 卡片內的標題 */
+.product-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+/* 卡片內的描述 */
+.product-card p {
+    color: #666;
+    flex-grow: 1; /* 讓描述盡量填滿空間 (如果需要對齊按鈕) */
+    margin-bottom: 15px;
+}
+
+/* 卡片內的價格 */
+.product-card p:last-of-type { /* 選中價格那個 p (假設它是描述後的最後一個p) */
+     font-weight: bold;
+     color: #333;
+     margin-bottom: 20px;
+}
+
+
+/* 卡片內的連結 (做得像按鈕) */
+.product-card a {
+    display: inline-block;
+    background-color: #ffcc00; /* SunnyYummy 黃色? */
+    color: #333;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease; /* 滑鼠移過時有過渡效果 */
+}
+
+.product-card a:hover {
+    background-color: #e6b800; /* 滑鼠移過時變深一點 */
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background-color: #ddd;
+    margin: 30px 0;
+}
+
+/* --- 響應式調整 (簡易版) --- */
+@media (max-width: 900px) {
+    .product-card {
+        width: calc(50% - 30px); /* 中等螢幕一行顯示兩個 */
+    }
+}
+
+@media (max-width: 600px) {
+    .product-card {
+        width: 90%; /* 小螢幕一行顯示一個 */
+        max-width: 350px; /* 限制最大寬度 */
+    }
+}
