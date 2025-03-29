@@ -52,24 +52,7 @@ app.use(session({
 }));
 // --- End Middleware ---
 
-// --- 新增：記錄頁面瀏覽的中介軟體 ---
-async function logPageView(req, res, next) {
-  // 我們只想記錄對根路徑 ('/') 的 GET 請求 (即訪問首頁)
-  // 避免記錄 API 呼叫、靜態檔案請求、或後台頁面請求
-  if (req.method === 'GET' && req.path === '/') {
-    console.log('[logPageView] 記錄首頁瀏覽');
-    try {
-      // 異步執行插入，不需要等待它完成，以免拖慢頁面回應
-      pool.query('INSERT INTO page_views DEFAULT VALUES')
-          .catch(err => console.error("記錄頁面瀏覽時出錯:", err)); // 只記錄錯誤，不阻斷請求
-    } catch (err) {
-      // 這個 catch 幾乎不會觸發，因為 query 是異步的
-      console.error("嘗試記錄頁面瀏覽時捕捉到同步錯誤:", err);
-    }
-  }
-  // 無論是否記錄，都繼續處理請求
-  next();
-}
+
 // 將中介軟體應用到所有請求路徑 (它會在內部判斷是否為首頁)
 // 放在靜態檔案之後，但在路由處理之前
 app.use(logPageView);
@@ -582,39 +565,7 @@ app.delete('/api/music/:id', requireAdmin, async (req, res) => { // <--- 確認�
 });
 // --- End Music Admin Routes --- // (或者放在 Protected Admin Routes 區塊裡)
 
-// 新增：API 路由：獲取後台統計數據 (受保護)
-app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-  console.log("收到獲取統計數據的請求");
-  try {
-    const client = await pool.connect();
 
-    // 查詢總瀏覽量
-    const totalViewsResult = await client.query('SELECT COUNT(*) AS total_views FROM page_views');
-    const totalViews = totalViewsResult.rows[0].total_views || 0;
-
-    // 查詢今日瀏覽量 (假設資料庫時區正確)
-    // current_date 是 PostgreSQL 的語法，獲取目前日期
-    const todayViewsResult = await client.query('SELECT COUNT(*) AS today_views FROM page_views WHERE viewed_at >= current_date');
-    const todayViews = todayViewsResult.rows[0].today_views || 0;
-
-    // 查詢本月瀏覽量 (可選)
-    const monthViewsResult = await client.query("SELECT COUNT(*) AS month_views FROM page_views WHERE date_trunc('month', viewed_at) = date_trunc('month', current_date)");
-    const monthViews = monthViewsResult.rows[0].month_views || 0;
-
-    client.release();
-
-    console.log(`成功獲取統計數據: Total=${totalViews}, Today=${todayViews}, Month=${monthViews}`);
-    res.json({
-      totalViews: parseInt(totalViews), // 轉換成數字
-      todayViews: parseInt(todayViews),
-      monthViews: parseInt(monthViews)
-    });
-
-  } catch (err) {
-    console.error("查詢統計數據時發生錯誤:", err);
-    res.status(500).json({ error: '無法獲取統計數據' });
-  }
-});
 
 // --- Server Start ---
 app.listen(port, () => {
