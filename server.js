@@ -45,8 +45,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // 保持為 false 以便測試
-        maxAge: 1000 * 60 * 60 * 24 * 7
+      secure: process.env.NODE_ENV === 'production', // 生產環境要求 HTTPS
+      maxAge: 1000 * 60 * 60 * 24 * 7
         // httpOnly: true
     }
 }));
