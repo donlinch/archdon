@@ -3,199 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 網頁 (Node.js)</title>
-    <link rel="stylesheet" href="style.css">
+    <title>SunnyYummy</title>
+    <!-- 引入你的 CSS 檔案 -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- (可選) 可以在這裡加入 Favicon 等 -->
 </head>
 <body>
-
+    <!-- 固定的頁首 (如果所有頁面都有) -->
     <header>
-        <h1> ～SunnyYummy～ </h1>
-        <!-- 未來可以在這裡放導覽列 -->
+        <h1><a href="#/" style="text-decoration: none; color: inherit;">～SunnyYummy～</a></h1>
+        <nav id="main-nav">
+            <!-- 導覽連結會由 JS 動態生成或放在這裡 -->
+            <a href="#/products">商品</a>
+            <a href="#/music">音樂</a>
+            <a href="#/admin">後台管理</a>
+        </nav>
     </header>
 
-    <main class="container">
-        <p class="api-links"> <!-- 給 API 連結加上 class -->
-            <a href="/api/hello">測試後端 API</a> |
-            <a href="/api/db-time">測試資料庫時間</a> |
-            <a href="/api/products">查看商品 API</a>
-        </p>
+    <!-- 主要內容區域，將由 JavaScript 動態填充 -->
+    <main id="app" class="container">
+        <!-- 初始載入時可以顯示 Loading... -->
+        <p>正在載入頁面...</p>
+    </main>
 
-        <hr>
-
-        <h2>商品列表</h2>
-        <div id="product-list">
-            <p>正在載入商品...</p>
-        </div>
-
-  
-      
-   
-        <hr>
-
-    </main> <!-- 主要內容結束 -->
-
+    <!-- 固定的頁尾 (如果所有頁面都有) -->
     <footer>
         <div class="container">
             <p>© 2025 SunnyYummy. All Rights Reserved.</p>
-            <!-- 可以放社群連結等 -->
         </div>
     </footer>
 
-    <!-- JavaScript 程式碼放在 body 結束前 -->
-    <script>
-
-
-
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("頁面載入完成，準備獲取商品...");
-        const productListDiv = document.getElementById('product-list');
-
-        fetch('/api/products')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('無法獲取商品資料，狀態碼：' + response.status);
-                }
-                return response.json();
-            })
-            .then(products => {
-                console.log("成功獲取商品資料:", products);
-                productListDiv.innerHTML = '';
-
-                if (products.length === 0) {
-                    productListDiv.innerHTML = '<p>目前沒有商品。</p>';
-                    return;
-                }
-
-                products.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'product-card';
-
-                    const img = document.createElement('img');
-                    img.src = product.image_url;
-                    img.alt = product.name;
-
-                    const nameHeading = document.createElement('h3');
-                    nameHeading.textContent = product.name;
-
-                    const descriptionP = document.createElement('p');
-                    descriptionP.textContent = product.description;
-
-                    // --- 修改這裡：給價格加上 class="price" ---
-                    const priceP = document.createElement('p');
-                    priceP.className = 'price'; // <--- 加上這行
-                    priceP.textContent = `價格: $${product.price}`;
-                    // --- 修改結束 ---
-
-                    // --- 修改這裡：給連結加上 class="button" ---
-                    const link = document.createElement('a');
-                    link.className = 'button'; // <--- 加上這行
-                    link.href = product.seven_eleven_url;
-                    link.textContent = '前往 7-11 賣貨便預購';
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                    // --- 修改結束 ---
-
-                    card.appendChild(img);
-                    card.appendChild(nameHeading);
-                    card.appendChild(descriptionP);
-                    card.appendChild(priceP);
-                    card.appendChild(link);
-
-                    productListDiv.appendChild(card);
-                });
-            })
-            .catch(error => {
-                console.error("獲取商品時發生錯誤:", error);
-                productListDiv.innerHTML = `<p>載入商品失敗：${error.message}</p>`;
-            });
-
-// --- 新增：獲取並顯示音樂列表 ---
-console.log("準備獲取音樂作品...");
-    const musicListDiv = document.getElementById('music-list');
-
-    fetch('/api/music') // 向新的音樂 API 發出請求
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('無法獲取音樂資料，狀態碼：' + response.status);
-            }
-            return response.json();
-        })
-        .then(musicTracks => { // 將變數命名為 musicTracks 以區分
-            console.log("成功獲取音樂資料:", musicTracks);
-            musicListDiv.innerHTML = ''; // 清空載入訊息
-
-            if (musicTracks.length === 0) {
-                musicListDiv.innerHTML = '<p>目前沒有音樂作品。</p>';
-                return;
-            }
-
-            // 遍歷音樂陣列，創建卡片
-            musicTracks.forEach(track => {
-                const card = document.createElement('div');
-                // 可以共用 product-card 樣式，或為音樂建立新樣式
-                card.className = 'product-card music-card'; // 加個 music-card 方便未來單獨設定樣式
-
-                // 封面圖片
-                const img = document.createElement('img');
-                img.src = track.cover_art_url;
-                img.alt = track.title;
-
-                // 歌曲標題
-                const titleHeading = document.createElement('h3');
-                titleHeading.textContent = track.title;
-
-                // 演出者
-                const artistP = document.createElement('p');
-                artistP.textContent = `演出者: ${track.artist}`;
-
-                // (可選) 發行日期
-                const releaseDateP = document.createElement('p');
-                if (track.release_date) {
-                   // 簡單格式化日期
-                   releaseDateP.textContent = `發行日期: ${new Date(track.release_date).toLocaleDateString()}`;
-                } else {
-                   releaseDateP.textContent = '發行日期: 未知';
-                }
-
-                // (可選) 簡介
-                const descriptionP = document.createElement('p');
-                descriptionP.textContent = track.description || ''; // 如果沒有描述就顯示空字串
-
-                // 平台連結
-                const link = document.createElement('a');
-                link.className = 'button'; // 共用按鈕樣式
-                link.href = track.platform_url;
-                link.textContent = '前往收聽';
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-
-                // 加入卡片
-                card.appendChild(img);
-                card.appendChild(titleHeading);
-                card.appendChild(artistP);
-                card.appendChild(releaseDateP); // 加入日期
-                card.appendChild(descriptionP); // 加入描述
-                card.appendChild(link);
-
-                // 加入頁面
-                musicListDiv.appendChild(card);
-            });
-
-        })
-        .catch(error => {
-            console.error("獲取音樂時發生錯誤:", error);
-            musicListDiv.innerHTML = `<p>載入音樂失敗：${error.message}</p>`;
-        });
-    // --- 新增音樂列表程式碼結束 ---
-
-
-
-
-
-    });
-    </script>
-
+    <!-- 引入主要的 JavaScript 檔案 -->
+    <!-- *** 非常重要：確保檔名是 app.js 或你選擇的其他名稱 *** -->
+    <script src="/app.js"></script>
 </body>
 </html>
