@@ -193,6 +193,58 @@ app.get('/admin/products', requireAdmin, (req, res) => {
 });
 // --- End Protected Admin Routes ---
 
+// 新增：顯示「新增商品」的表單頁面
+app.get('/admin/products/new', requireAdmin, (req, res) => {
+  console.log("正在提供受保護的 /admin/products/new 頁面");
+  res.sendFile(path.join(__dirname, 'views', 'admin-product-new.html')); // 發送新建立的 HTML
+});
+
+
+// 新增：處理「新增商品」表單的提交 (POST)
+app.post('/admin/products', requireAdmin, async (req, res) => {
+  console.log("收到新增商品請求，資料:", req.body);
+  // 從表單提交的 req.body 中獲取資料
+  const { name, description, price, image_url, seven_eleven_url } = req.body;
+
+  // 基本的後端驗證 (例如檢查名稱是否為空)
+  if (!name) {
+    console.error("新增商品失敗：缺少商品名稱");
+    // TODO: 可以導回新增頁面並顯示錯誤訊息
+    return res.status(400).send("錯誤：必須提供商品名稱。 <a href='/admin/products/new'>返回</a>");
+  }
+
+  try {
+    const client = await pool.connect();
+    // 準備 SQL INSERT 語句
+    // 使用 $1, $2... 作為參數佔位符，防止 SQL 注入攻擊
+    const sql = `
+      INSERT INTO products (name, description, price, image_url, seven_eleven_url)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *; -- (可選) 返回剛剛插入的資料
+    `;
+    const values = [
+      name,
+      description || null, // 如果沒填描述，傳入 null
+      price || null,       // 如果沒填價格，傳入 null (資料庫欄位允許 NULL)
+      image_url || null,
+      seven_eleven_url || null
+    ];
+
+    const result = await client.query(sql, values);
+    client.release();
+
+    console.log("成功新增商品:", result.rows[0]); // 顯示插入的資料
+
+    // 新增成功後，重新導向回商品列表頁面
+    res.redirect('/admin/products');
+
+  } catch (err) {
+    console.error("新增商品到資料庫時發生錯誤:", err);
+    // TODO: 更友善的錯誤處理頁面
+    res.status(500).send("伺服器錯誤，無法新增商品。 <a href='/admin/products'>返回列表</a>");
+  }
+});
+
 
 // --- Server Start ---
 app.listen(port, () => {
