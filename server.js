@@ -87,7 +87,7 @@ app.get('/api/products', async (req, res) => {
   } catch (err) {
     console.error("查詢商品列表時發生錯誤:", err);
     res.status(500).json({ error: '無法從資料庫獲取商品列表' });
-  }
+  } 
 });
 
 // API 路由：獲取所有音樂作品列表
@@ -104,6 +104,45 @@ app.get('/api/music', async (req, res) => {
     res.status(500).json({ error: '無法從資料庫獲取音樂列表' });
   }
 });
+
+// 路由：顯示登入頁面
+app.get('/login', (req, res) => {
+  // 直接發送 public/login.html 檔案
+  // 我們可以假設如果使用者已經登入，訪問 /login 就直接跳轉到後台 (之後再加)
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// 路由：處理登入表單提交 (POST 請求)
+app.post('/login', (req, res) => {
+  const enteredPassword = req.body.password; // 獲取表單提交的密碼
+  const adminPassword = process.env.ADMIN_PASSWORD; // 從環境變數獲取正確的密碼
+
+  console.log("收到登入嘗試"); // 日誌記錄
+
+  // 檢查密碼是否正確
+  if (enteredPassword && enteredPassword === adminPassword) {
+      // 密碼正確！在 Session 中設定登入標記
+      req.session.isAdmin = true;
+      console.log("管理員登入成功，Session 已設定");
+
+      // 登入成功後，重新導向到一個後台頁面 (例如 /admin)
+      // 我們還沒建立 /admin 頁面，先導向回首頁示意
+      res.redirect('/'); // TODO: 之後改成導向到後台管理頁面
+  } else {
+      // 密碼錯誤
+      console.log("管理員登入失敗：密碼錯誤");
+      // 重新導向回登入頁面，並帶上錯誤提示 (用查詢參數 query parameter)
+      // TODO: 更好的方式是用 flash messages 或樣板引擎傳遞錯誤
+       res.redirect('/login?error=InvalidPassword'); // 簡單用查詢參數示意
+      // 或者直接發送錯誤訊息 (較不推薦)
+      // res.status(401).send('密碼錯誤！<a href="/login">返回登入</a>');
+  }
+});
+
+
+
+  
+
 // --- API 路由設定結束 ---
 
 
