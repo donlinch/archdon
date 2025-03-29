@@ -557,17 +557,29 @@ app.post('/admin/music/edit/:id', requireAdmin, async (req, res) => {
 
 // ... (保留處理商品刪除的 DELETE 路由) ...
 
-// 新增：處理「刪除音樂」的請求 (DELETE)
-app.get('/api/music/delete/:id', requireAdmin, async (req, res) => {
-  
+// *** 處理刪除音樂的路由 ***
+app.delete('/api/music/:id', requireAdmin, async (req, res) => { // <--- 確認是 DELETE 和 /api/music/:id
   console.log(`--- 執行 DELETE /api/music/${req.params.id} 路由 ---`);
-
   const musicId = req.params.id;
   console.log(`收到刪除音樂 (ID: ${musicId}) 的請求`);
-
-  res.json({ success: true, message: `收到刪除 ID ${musicId} 的 GET 請求 (僅測試)` });
+  try {
+    const client = await pool.connect();
+    const sql = `DELETE FROM music WHERE id = $1 RETURNING *;`; // <--- 實際刪除 SQL
+    const values = [musicId];
+    const result = await client.query(sql, values);
+    client.release();
+    if (result.rowCount === 0) {
+       console.log(`刪除音樂失敗：找不到音樂 (ID: ${musicId})`);
+       return res.status(404).json({ success: false, message: '找不到該音樂作品' });
+    }
+    console.log("成功刪除音樂:", result.rows[0]);
+    res.json({ success: true, message: '音樂已成功刪除' }); // <--- 返回成功 JSON
+  } catch (err) {
+    console.error(`刪除音樂 (ID: ${musicId}) 時發生錯誤:`, err);
+    res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除音樂' }); // <--- 返回失敗 JSON
+  }
 });
-
+// --- End Music Admin Routes --- // (或者放在 Protected Admin Routes 區塊裡)
 
 // 新增：API 路由：獲取後台統計數據 (受保護)
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
