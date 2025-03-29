@@ -172,11 +172,22 @@ app.post('/login', (req, res) => {
 
 
 // --- 受保護的後台路由 ---
-// 顯示後台管理頁面 - 在這個路由前加上 requireAdmin 中介軟體
+
+// 顯示後台管理主頁
 app.get('/admin', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin 頁面");
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
+
+// 新增：顯示後台商品管理列表頁面
+app.get('/admin/products', requireAdmin, (req, res) => {
+  console.log("正在提供受保護的 /admin/products 頁面");
+  res.sendFile(path.join(__dirname, 'public', 'admin-products.html'));
+});
+
+
+
+
 // --- 受保護的後台路由結束 ---
 
 
