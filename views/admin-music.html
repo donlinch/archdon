@@ -67,7 +67,7 @@
                         if (confirm(`確定要刪除音樂 "${trackTitle}" (ID: ${trackId}) 嗎？這個操作無法復原！`)) {
                             console.log(`準備刪除音樂 ID: ${trackId}`);
                             try {
-                                const response = await fetch(`/admin/music/${trackId}`, {
+                                const response = await fetch(`/api/music/${trackId}`, {
                                     method: 'DELETE'
                                 });
                                 const result = await response.json();
