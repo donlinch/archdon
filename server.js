@@ -45,10 +45,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // 生產環境要求 HTTPS
+      secure: false, // <-- 改成 false
       maxAge: 1000 * 60 * 60 * 24 * 7
-        // httpOnly: true
-    }
+      // httpOnly: true
+  }
 }));
 // --- End Middleware ---
 
