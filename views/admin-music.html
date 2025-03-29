@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理音樂 - SunnyYummy 後台</title> <!-- Changed -->
+    <link rel="stylesheet" href="/style.css">
+    <style> /* 沿用之前的表格樣式 */
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .admin-table th, .admin-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .admin-table th { background-color: #f2f2f2; }
+        .admin-table img { max-width: 50px; height: auto; vertical-align: middle;}
+        .admin-table .actions a { margin-right: 5px; }
+        .add-button { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+        .add-button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>管理後台 - 音樂管理</h1> <!-- Changed -->
+    </header>
+    <main class="container">
+        <p><a href="/admin">返回後台主頁</a> | <a href="/logout">登出</a></p>
+        <hr>
+
+        <a href="/admin/music/new" class="add-button">新增音樂</a> <!-- Changed -->
+
+        <h2>現有音樂列表</h2> <!-- Changed -->
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>封面</th> <!-- Changed -->
+                    <th>標題</th> <!-- Changed -->
+                    <th>演出者</th> <!-- Changed -->
+                    <th>發行日期</th> <!-- Changed -->
+                    <th>平台連結</th> <!-- Changed -->
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-music-list-body"> <!-- Changed ID -->
+                <!-- 音樂資料會由 JS 加在這裡 -->
+                <tr><td colspan="7">正在載入音樂...</td></tr> <!-- Changed colspan -->
+            </tbody>
+        </table>
+
+    </main>
+    <footer>
+        <div class="container">
+             <p>© 2025 SunnyYummy. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const musicListBody = document.getElementById('admin-music-list-body'); // Changed
+
+        async function fetchAndRenderMusic() { // Changed function name
+            try {
+                const response = await fetch('/api/music'); // Changed API endpoint
+                if (!response.ok) {
+                     throw new Error('無法獲取音樂列表'); // Changed message
+                }
+                const musicTracks = await response.json(); // Changed variable name
+
+                musicListBody.innerHTML = '';
+
+                if (musicTracks.length === 0) {
+                    musicListBody.innerHTML = '<tr><td colspan="7">目前沒有音樂作品。</td></tr>'; // Changed message
+                    return;
+                }
+
+                musicTracks.forEach(track => { // Changed variable name
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-id', track.id);
+                    // --- 修改顯示的欄位 ---
+                    row.innerHTML = `
+                        <td>${track.id}</td>
+                        <td><img src="${track.cover_art_url || '/images/placeholder.png'}" alt="${track.title}" style="max-width: 50px; height: auto;"></td>
+                        <td>${track.title}</td>
+                        <td>${track.artist}</td>
+                        <td>${track.release_date ? new Date(track.release_date).toLocaleDateString() : ''}</td>
+                        <td><a href="${track.platform_url || '#'}" target="_blank">${track.platform_url ? '連結' : ''}</a></td>
+                        <td class="actions">
+                            <a href="/admin/music/edit/${track.id}">編輯</a> <!-- Changed base path -->
+                            <a href="#" class="delete-link" data-id="${track.id}">刪除</a> <!-- data-id is correct -->
+                        </td>
+                    `;
+                    // --- 修改結束 ---
+                    musicListBody.appendChild(row);
+                });
+
+                // 為所有刪除連結加上事件監聽器 (之後實現刪除功能時再加)
+                // attachDeleteListeners(); // Temporarily commented out
+
+            } catch (error) {
+                console.error("獲取音樂列表失敗:", error); // Changed message
+                musicListBody.innerHTML = '<tr><td colspan="7">無法載入音樂資料。</td></tr>'; // Changed message
+            }
+        }
+
+        // *** 刪除功能的 JS (暫時註解掉，因為還沒建後端 DELETE /admin/music/:id) ***
+        /*
+        function attachDeleteListeners() {
+            const deleteLinks = document.querySelectorAll('.delete-link');
+            deleteLinks.forEach(link => {
+                link.addEventListener('click', async function(event) {
+                    event.preventDefault();
+                    const trackId = this.getAttribute('data-id');
+                    const trackTitle = this.closest('tr').querySelector('td:nth-child(3)').textContent;
+
+                    if (confirm(`確定要刪除音樂 "${trackTitle}" (ID: ${trackId}) 嗎？`)) {
+                        console.log(`準備刪除音樂 ID: ${trackId}`);
+                        try {
+                            const response = await fetch(`/admin/music/${trackId}`, { // Changed endpoint
+                                method: 'DELETE'
+                            });
+                            const result = await response.json();
+                            if (response.ok && result.success) {
+                                alert('音樂刪除成功！');
+                                fetchAndRenderMusic(); // Refresh list
+                            } else {
+                                alert(`刪除失敗：${result.message || '未知錯誤'}`);
+                            }
+                        } catch (error) {
+                            console.error("刪除請求失敗:", error);
+                            alert('刪除過程中發生網路或程式錯誤。');
+                        }
+                    } else {
+                        console.log('取消刪除');
+                    }
+                });
+            });
+        }
+        */
+
+        // 頁面載入時，執行第一次獲取和渲染
+        fetchAndRenderMusic();
+
+    });
+    </script>
+
+</body>
+</html>

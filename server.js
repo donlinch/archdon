@@ -368,6 +368,13 @@ app.delete('/admin/products/:id', requireAdmin, async (req, res) => {
 });
 
 
+// 新增：顯示後台音樂管理列表頁面
+app.get('/admin/music', requireAdmin, (req, res) => {
+  console.log("正在提供受保護的 /admin/music 頁面");
+  res.sendFile(path.join(__dirname, 'views', 'admin-music.html'));
+});
+
+
 // --- Server Start ---
 app.listen(port, () => {
   console.log(`伺服器正在監聽 port ${port}`);
