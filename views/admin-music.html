@@ -68,14 +68,14 @@
                             console.log(`準備刪除音樂 ID: ${trackId}`);
                             try {
                                 const response = await fetch(`/api/music/${trackId}`, {
-                                    method: 'DELETE'
+                                    method: 'GET'
                                 });
                                 const result = await response.json();
                                 if (response.ok && result.success) {
                                     alert('音樂刪除成功！');
                                     fetchAndRenderMusic(); // 重新載入列表
                                 } else {
-                                    alert(`刪除失敗：${result.message || '未知錯誤'}`);
+                                    alert(`測試回應: ${result.message}'}`);
                                 }
                             } catch (error) {
                                 console.error("刪除請求失敗:", error);
