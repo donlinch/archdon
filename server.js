@@ -112,6 +112,33 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// 新增：API 路由：獲取單一商品資料
+app.get('/api/products/:id', async (req, res) => {
+  const productId = req.params.id; // 從 URL 路徑中獲取 :id 參數
+  console.log(`收到獲取商品 (ID: ${productId}) 的請求`);
+  try {
+    const client = await pool.connect();
+    // 使用參數化查詢，只選取特定 ID 的商品
+    const result = await client.query('SELECT * FROM products WHERE id = $1', [productId]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      // 如果找不到該 ID 的商品
+      console.log(`找不到商品 (ID: ${productId})`);
+      return res.status(404).json({ error: '找不到該商品' });
+    }
+
+    // 回傳找到的第一個 (也是唯一一個) 商品物件
+    res.json(result.rows[0]);
+    console.log(`成功獲取並回傳商品 (ID: ${productId})`);
+
+  } catch (err) {
+    console.error(`查詢商品 (ID: ${productId}) 時發生錯誤:`, err);
+    res.status(500).json({ error: '無法從資料庫獲取商品資料' });
+  }
+});
+
+
 app.get('/api/music', async (req, res) => {
   console.log("收到獲取所有音樂作品的請求");
   try {
@@ -197,6 +224,13 @@ app.get('/admin/products', requireAdmin, (req, res) => {
 app.get('/admin/products/new', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin/products/new 頁面");
   res.sendFile(path.join(__dirname, 'views', 'admin-product-new.html')); // 發送新建立的 HTML
+});
+
+// 新增：顯示「編輯商品」的表單頁面
+app.get('/admin/products/edit/:id', requireAdmin, (req, res) => {
+  // :id 參數在這裡只是用來構成 URL，實際的資料獲取由前端 JS 完成
+  console.log(`正在提供受保護的 /admin/products/edit/${req.params.id} 頁面`);
+  res.sendFile(path.join(__dirname, 'views', 'admin-product-edit.html'));
 });
 
 

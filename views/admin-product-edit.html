@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編輯商品 - SunnyYummy 後台</title> <!-- Changed -->
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        /* (可以沿用 admin-product-new.html 的樣式) */
+        .form-container { max-width: 600px; margin: 30px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .form-container h2 { margin-bottom: 25px; text-align: center; border-bottom: none;}
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea { width: calc(100% - 22px); padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .form-group textarea { min-height: 100px; }
+        .form-buttons { text-align: right; }
+        .form-buttons button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .form-buttons button[type="submit"] { background-color: #007bff; color: white; } /* 改成藍色 */
+        .form-buttons button[type="submit"]:hover { background-color: #0056b3; }
+        .form-buttons button[type="button"] { background-color: #6c757d; color: white; }
+        .form-buttons button[type="button"]:hover { background-color: #5a6268; }
+        #loading-message { text-align: center; padding: 20px; } /* 新增載入訊息樣式 */
+    </style>
+</head>
+<body>
+    <header>
+        <h1>管理後台 - 編輯商品</h1> <!-- Changed -->
+    </header>
+    <main class="container">
+         <p><a href="/admin/products">返回商品列表</a> | <a href="/admin">返回後台主頁</a> | <a href="/logout">登出</a></p>
+         <hr>
+
+        <div class="form-container">
+            <h2>編輯商品資訊</h2>
+            <div id="loading-message"><p>正在載入商品資料...</p></div>
+            <!-- 表單 action 會由 JS 設定，或者我們可以用 POST /admin/products/edit/:id 這種路由 -->
+            <form id="edit-product-form" method="POST" style="display: none;"> <!-- 初始隱藏表單 -->
+                <!-- 新增隱藏欄位來儲存 ID -->
+                <input type="hidden" id="productId" name="productId">
+
+                <div class="form-group">
+                    <label for="name">商品名稱:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">商品描述:</label>
+                    <textarea id="description" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="price">價格:</label>
+                    <input type="number" id="price" name="price" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="image_url">圖片網址:</label>
+                    <input type="text" id="image_url" name="image_url" placeholder="/images/your_image.jpg 或 https://...">
+                </div>
+                <div class="form-group">
+                    <label for="seven_eleven_url">7-11 賣貨便連結:</label>
+                    <input type="text" id="seven_eleven_url" name="seven_eleven_url">
+                </div>
+                <div class="form-buttons">
+                    <button type="button" onclick="window.location.href='/admin/products'">取消</button>
+                    <button type="submit">更新商品</button> <!-- Changed -->
+                </div>
+            </form>
+        </div>
+    </main>
+     <footer>
+        <div class="container">
+             <p>© 2025 SunnyYummy. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const loadingMessage = document.getElementById('loading-message');
+        const form = document.getElementById('edit-product-form');
+        const productIdInput = document.getElementById('productId');
+        const nameInput = document.getElementById('name');
+        const descriptionInput = document.getElementById('description');
+        const priceInput = document.getElementById('price');
+        const imageUrlInput = document.getElementById('image_url');
+        const sevenElevenUrlInput = document.getElementById('seven_eleven_url');
+
+        // 1. 從 URL 獲取商品 ID
+        //    例如 URL 是 /admin/products/edit/5，我們要取出 5
+        const pathSegments = window.location.pathname.split('/');
+        const productId = pathSegments[pathSegments.length - 1];
+
+        if (!productId || isNaN(parseInt(productId))) {
+            loadingMessage.innerHTML = '<p>錯誤：無效的商品 ID。</p>';
+            return;
+        }
+
+        // 設定隱藏欄位的值
+        productIdInput.value = productId;
+        // 設定表單的 action URL
+        form.action = `/admin/products/edit/${productId}`; // 表單提交到這個 URL
+
+        try {
+            // 2. Fetch 這個商品的資料 (我們需要新建一個 API 來獲取單一商品)
+            //    先假設 API 是 /api/products/:id
+            const response = await fetch(`/api/products/${productId}`); // 注意 URL 變化
+
+            if (!response.ok) {
+                 throw new Error(`無法獲取商品資料 (ID: ${productId})，狀態碼：${response.status}`);
+            }
+            const product = await response.json();
+
+             // 3. 將獲取的資料填入表單欄位
+            nameInput.value = product.name || '';
+            descriptionInput.value = product.description || '';
+            priceInput.value = product.price || '';
+            imageUrlInput.value = product.image_url || '';
+            sevenElevenUrlInput.value = product.seven_eleven_url || '';
+
+            // 4. 顯示表單，隱藏載入訊息
+            loadingMessage.style.display = 'none';
+            form.style.display = 'block';
+
+        } catch (error) {
+            console.error("載入商品資料失敗:", error);
+            loadingMessage.innerHTML = `<p>載入商品資料失敗：${error.message}</p>`;
+        }
+    });
+    </script>
+
+</body>
+</html>
