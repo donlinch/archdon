@@ -1,459 +1,178 @@
-/* style.css - v2 */
-
-/* --- 基本重設與全域樣式 --- */
-body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* 換個更現代的字體 */
-    line-height: 1.6;
-    margin: 0; /* 移除預設 body 邊距 */
-    padding: 0;
-    background-color: #f8f9fa; /* 稍稍不同的背景色 */
-    color: #343a40; /* 深灰色文字 */
-    display: flex; /* 讓頁尾能置底 */
-    flex-direction: column;
-    min-height: 100vh; /* 確保 body 至少和視窗一樣高 */
-}
-
-.container {
-    max-width: 1140px; /* 設定內容最大寬度 */
-    margin: 0 auto; /* 水平置中 */
-    padding: 0 15px; /* 左右留白 */
-    flex-grow: 1; /* 讓主要內容區塊填滿剩餘空間 */
-}
-
-h1, h2, h3 {
-    color: #212529; /* 標題用更深的顏色 */
-}
-
-h1 {
-    text-align: center;
-    margin-top: 40px;
-    margin-bottom: 10px;
-    /* 可以考慮放 Logo 圖片代替文字 */
-}
-
-h2 {
-    text-align: center;
-    margin-top: 40px;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #ffcc00; /* 加個黃色底線 */
-    padding-bottom: 10px;
-    display: inline-block; /* 讓底線只跟文字一樣寬 */
-}
-
-p {
-    margin-bottom: 15px;
-}
-
-a {
-    color: #007bff; /* 預設連結顏色 */
-    text-decoration: none; /* 移除底線 */
-}
-a:hover {
-    color: #0056b3;
-    text-decoration: underline; /* 滑鼠移過加底線 */
-}
-
-hr {
-    border: 0;
-    height: 1px;
-    background-color: #e9ecef; /* 分隔線顏色淡一點 */
-    margin: 40px 0;
-}
-
-/* --- 頁首 Header (示意) --- */
-header {
-    background-color: #ffffff; /* 白色背景 */
-    padding: 15px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    text-align: center; /* 暫時置中 */
-    margin-bottom: 30px;
-}
-/* (未來可以在 header 裡放導覽列 Nav) */
-
- /* --- API 連結區塊 --- */
-.api-links {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #6c757d;
-}
-.api-links a {
-    margin: 0 5px;
-}
-
-
-/* --- 商品列表容器 --- */
-#product-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 30px; /* 加大間距 */
-    justify-content: center; /* 水平置中 */
-    padding: 0; /* 移除內邊距，讓 container 控制 */
-}
-
-/* --- 商品卡片 --- */
-.product-card {
-    background-color: #fff;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 25px; /* 加大內邊距 */
-    width: calc(33.333% - 20px - 2*25px); /* 減去 gap 和 padding 的影響，計算更精確 */
-    min-width: 280px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* 陰影調整 */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    transition: transform 0.2s ease-in-out; /* 加入滑鼠移過效果 */
-}
-
-.product-card:hover {
-    transform: translateY(-5px); /* 滑鼠移過時稍微上移 */
-    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-}
-
-.product-card img {
-    max-width: 100%;
-    height: 200px; /* 固定圖片高度 */
-    object-fit: cover;
-    margin-bottom: 20px; /* 加大圖片下方間距 */
-    border-radius: 4px;
-}
-
-.product-card h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 1.25em; /* 加大標題字 */
-    color: #343a40;
-}
-
-.product-card p {
-    color: #6c757d; /* 描述文字顏色淡一點 */
-    flex-grow: 1;
-    margin-bottom: 15px;
-    font-size: 0.95em;
-}
-
- /* 價格段落 */
-.product-card .price { /* 給價格加個 class 會更好選 */
-     font-weight: bold;
-     font-size: 1.1em;
-     color: #e67e22; /* 橘色價格 */
-     margin-bottom: 20px;
-}
-
-.product-card a.button { /* 給按鈕連結加個 class */
-    display: inline-block;
-    background-color: #ffcc00;
-    color: #333;
-    padding: 12px 20px; /* 按鈕加大 */
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.product-card a.button:hover {
-    background-color: #e6b800;
-    text-decoration: none;
-    transform: scale(1.05); /* 滑鼠移過時稍微放大 */
-}
-
-/* --- 頁尾 Footer (示意) --- */
-footer {
-    background-color: #343a40; /* 深色背景 */
-    color: #f8f9fa; /* 淺色文字 */
-    text-align: center;
-    padding: 20px 0;
-    margin-top: 40px; /* 與上方內容的間距 */
-}
-footer p {
+/* Basic Reset & Body Style */
+* {
     margin: 0;
-    font-size: 0.9em;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-
-/* --- 響應式調整 --- */
-@media (max-width: 992px) { /* 調整斷點 */
-    .product-card {
-        width: calc(50% - 15px - 2*25px); /* 中等螢幕一行顯示兩個 */
-    }
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+    padding-bottom: 80px;
 }
 
-@media (max-width: 768px) { /* 調整斷點 */
-    .product-card {
-        width: calc(100% - 2*25px); /* 小螢幕一行顯示一個 */
-        max-width: 400px;
-    }
-    h1 { font-size: 1.8em; }
-    h2 { font-size: 1.5em; }
-}
-
-/* ========================== */
-/* ===== Admin Styles ===== */
-/* ========================== */
-
-/* ---- Admin Layout & General ---- */
-body.admin-page { /* 給 admin.html 的 body 加個 class 可能更好，但先這樣 */
-    background-color: #f8f9fa; /* 淡灰色背景 */
-}
-
-#admin-header {
-    background-color: #343a40; /* 深灰背景 */
-    color: white;
-    padding: 1rem 1.5rem; /* 使用 rem 單位 */
-    margin-bottom: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* Header Styles */
+header {
+    background-color: #FFC107;
+    color: #333;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    margin-bottom: 2.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#admin-header h1 {
+header h1 {
     margin: 0;
-    font-size: 1.6rem; /* 調整字體大小 */
+    font-weight: 700;
 }
 
-#admin-nav a {
-    color: #dee2e6; /* 淺灰色連結 */
-    text-decoration: none;
-    margin-left: 1rem;
-    transition: color 0.2s ease;
+/* Main Content Area */
+main {
+    max-width: 1200px; /* Constrain width */
+    margin: 0 auto;
+    padding: 0 1.5rem;
 }
 
-#admin-nav a:hover {
-    color: white;
-}
-
-#admin-content {
-    padding: 0 1.5rem 1.5rem; /* 調整內邊距 */
-}
-
-.admin-section {
-    background-color: white;
-    padding: 1.5rem;
-    border-radius: 8px; /* 圓角 */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* 柔和陰影 */
-    margin-bottom: 1.5rem;
-}
-
-.admin-section h2 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e9ecef; /* 分隔線 */
-    font-size: 1.4rem;
-    color: #495057; /* 深灰色標題 */
-    display: flex; /* 讓返回按鈕可以放右邊 */
-    justify-content: space-between;
-    align-items: center;
-}
-
-.admin-section h2 .back-button { /* 給返回按鈕加 class */
-    font-size: 0.85em;
-    font-weight: normal;
-    padding: 0.3rem 0.8rem;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none; /* 如果是 a 連結 */
-}
-.admin-section h2 .back-button:hover {
-    background-color: #5a6268;
-}
-
-
-/* ---- Admin Buttons ---- */
-.admin-button, /* 通用按鈕 class */
-.add-button,
-.edit-btn, /* 編輯按鈕 class */
-.delete-btn,
-.form-buttons button {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 500;
+/* Style for "我們的商品" heading */
+main h2 {
     text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: 0.25rem;
-    transition: all 0.2s ease-in-out;
-    text-decoration: none; /* For <a> tags styled as buttons */
-    margin: 0.2rem; /* 給按鈕一些間距 */
+    margin-bottom: 2rem;
+    color: #E67E22;
+    font-size: 1.8rem;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+    position: relative;
+    display: inline-block;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
-.admin-button:hover,
-.add-button:hover,
-.edit-btn:hover,
-.delete-btn:hover,
-.form-buttons button:hover {
-    filter: brightness(90%); /* 懸停時稍微變暗 */
-}
-
-.add-button {
-    background-color: #28a745; /* 綠色 */
-    color: white;
-    border-color: #28a745;
-}
-
-.edit-btn { /* 編輯按鈕樣式 */
-    background-color: #ffc107; /* 黃色 */
-    color: #212529;
-    border-color: #ffc107;
-}
-
-.delete-btn { /* 刪除按鈕樣式 */
-    background-color: #dc3545; /* 紅色 */
-    color: white;
-    border-color: #dc3545;
-}
-
-/* 表單內的提交按鈕 */
-.form-buttons button[type="submit"] {
-    background-color: #007bff; /* 藍色 */
-    color: white;
-    border-color: #007bff;
-}
-
-/* 表單內的取消按鈕 */
-.form-buttons button[type="button"] {
-    background-color: #6c757d; /* 灰色 */
-    color: white;
-    border-color: #6c757d;
+main h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60%;
+    height: 3px;
+    background-color: #FFC107;
+    margin-left: 20%;
 }
 
 
-/* ---- Admin Table ---- */
-.admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-    background-color: white;
-    font-size: 0.9rem;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+/* Product Grid Layout */
+.product-grid {
+    display: grid;
+    gap: 1.5rem; /* Slightly reduce gap for potentially more columns */
+    /* Default: 1 column mobile */
+    grid-template-columns: 1fr;
 }
 
-.admin-table th,
-.admin-table td {
-    border: 1px solid #dee2e6; /* 更淺的邊框 */
-    padding: 0.75rem; /* 增加內邊距 */
-    text-align: left;
-    vertical-align: middle; /* 垂直居中 */
+/* Responsive Grid: 2 columns tablet */
+@media (min-width: 600px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.8rem;
+    }
 }
 
-.admin-table thead th {
-    background-color: #e9ecef; /* 表頭背景色 */
-    font-weight: 600; /* 表頭字重 */
-    color: #495057;
+/* Responsive Grid: 3 columns small desktop */
+@media (min-width: 900px) { /* Adjusted breakpoint */
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
 }
 
-.admin-table tbody tr:nth-of-type(odd) {
-    /* background-color: #f8f9fa; */ /* 可選：斑馬條紋 */
-}
-
-.admin-table tbody tr:hover {
-    background-color: #f1f3f5; /* 行懸停效果 */
-}
-
-.admin-table img {
-    max-width: 50px; /* 限制圖片寬度 */
-    max-height: 50px; /* 限制圖片高度 */
-    height: auto;
-    vertical-align: middle;
-    border-radius: 4px; /* 圖片圓角 */
-    margin-right: 0.5rem;
-}
-
-.admin-table .actions {
-    white-space: nowrap; /* 防止操作按鈕換行 */
-    text-align: center; /* 操作按鈕居中 */
-}
-.admin-table .actions button,
-.admin-table .actions a { /* 讓按鈕和連結樣式更一致 */
-     font-size: 0.85em;
-     padding: 0.3rem 0.6rem;
+/* Responsive Grid: 4 columns large desktop (like example image) */
+@media (min-width: 1200px) {
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem; /* Reduce gap slightly for 4 columns */
+    }
 }
 
 
-/* ---- Admin Form ---- */
-.form-container { /* 已存在，可微調 */
-    max-width: 700px; /* 可以稍微加寬 */
-    margin: 1rem auto; /* 自動居中 */
-    /* padding: 1.5rem; */ /* 已在 .admin-section 中設定 */
-}
-
-.form-group { /* 已存在，可微調 */
-    margin-bottom: 1rem;
-}
-
-.form-group label { /* 已存在，可微調 */
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500; /* 稍微加粗 */
-    color: #495057;
-}
-
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group input[type="password"], /* 登入頁密碼 */
-.form-group input[type="date"],
-.form-group textarea {
-    display: block; /* 確保佔滿整行 */
-    width: 100%; /* 佔滿容器寬度 */
-    padding: 0.5rem 0.75rem;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: #495057;
+/* Individual Product Card Styles */
+.product-card {
     background-color: #fff;
-    background-clip: padding-box;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    box-sizing: border-box; /* 關鍵：確保 padding 不會撐大寬度 */
+    border: 1px solid #e9ecef;
+    border-radius: 8px; /* Slightly less rounded */
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Change text alignment for the whole card */
+    text-align: center;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
-    border-color: #80bdff;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+/* HOVER EFFECT */
+.product-card:hover {
+    transform: scale(1.03); /* Slightly smaller scale factor */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    position: relative;
 }
 
-.form-group textarea { /* 已存在 */
-    min-height: 100px;
-    resize: vertical; /* 允許垂直調整大小 */
+/* Style for the image container */
+.product-card .image-container {
+    width: 100%;
+    height: 200px; /* Adjusted height */
+    overflow: hidden;
+    margin-bottom: 0.5rem; /* Space below image */
+    padding: 0.5rem 0.5rem 0 0.5rem; /* Padding around image */
 }
 
-.form-buttons { /* 已存在 */
-    text-align: right; /* 按鈕靠右 */
-    margin-top: 1.5rem;
+.product-card img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Use contain to show whole image, adjust padding if needed */
+    /* object-fit: cover; */ /* Alternative: fills container, might crop */
+    margin: 0 auto; /* Center image if container is wider */
 }
 
-#form-error, #login-error { /* 錯誤訊息樣式 */
-    color: #dc3545;
-    margin-top: 0.75rem;
-    font-size: 0.9em;
+/* Container for text content */
+.product-card .card-content {
+    padding: 0 1rem 1rem 1rem; /* Adjust padding */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center content vertically */
 }
 
-/* ---- Dashboard Specific ---- */
-.dashboard-links ul {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0 0;
-    display: flex; /* 讓按鈕橫向排列 */
-    gap: 1rem; /* 按鈕間距 */
-    flex-wrap: wrap;
-}
-.dashboard-links li {
-    margin: 0; /* 移除 li 的預設 margin */
+.product-card h3 { /* Product Name */
+    font-size: 1.05rem; /* Slightly smaller font */
+    margin-bottom: 0.4rem;
+    color: #343a40;
+    font-weight: 700;
 }
 
-.dashboard-links button { /* 儀表板導航按鈕 */
-     font-size: 1rem;
-     padding: 0.6rem 1.2rem;
-     background-color: #007bff;
-     color: white;
+.product-card p { /* Product Description */
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.4;
+    margin-bottom: 0.8rem;
+    /* Removed flex-grow here, centering handles spacing */
+}
+
+.product-card .price { /* Product Price */
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #E67E22;
+    margin-top: auto; /* Pushes price towards bottom in flex column */
+    padding-top: 0.5rem; /* Add some space above price */
+    /* Text align center is inherited from .product-card now */
+}
+
+/* Footer Styles */
+footer {
+    background-color: #343a40;
+    color: #f8f9fa;
+    text-align: center;
+    padding: 1.5rem 0;
+    margin-top: 3rem;
 }
