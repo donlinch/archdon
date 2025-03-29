@@ -1,20 +1,19 @@
-require('dotenv').config(); // 讀取 .env 檔案中的環境變數 (僅限本地)
-const { Pool } = require('pg'); // 引入 pg 的 Pool
+require('dotenv').config();
+const { Pool } = require('pg');
 const express = require('express');
-const path = require('path'); // Node.js 內建模組，用來處理檔案路徑
-const session = require('express-session'); // 引入 express-session
+const path = require('path');
+const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 
 const app = express();
-const port = process.env.PORT || 3000; // Render 會設定 PORT 環境變數，本地測試用 3000
+const port = process.env.PORT || 3000;
 
-// --- 資料庫連接設定 ---
+// --- Database Connection ---
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// 異步函數：測試資料庫連接
 async function testDbConnection() {
   try {
     const client = await pool.connect();
@@ -25,67 +24,68 @@ async function testDbConnection() {
   } catch (err) {
     console.error("!!! 連接資料庫時發生錯誤:", err.message);
     if (!process.env.DATABASE_URL) {
-        console.error("錯誤原因：DATABASE_URL 環境變數未設定。請檢查 .env 檔案或 Render 環境變數。");
+        console.error("錯誤原因：DATABASE_URL 環境變數未設定。");
     }
   }
 }
-// --- 資料庫連接設定結束 ---
+// --- End Database Connection ---
 
-// --- 中介軟體設定 ---
-// **重要：中介軟體需要在路由定義之前設定**
-
-// 設定靜態檔案目錄
+// --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// 解析 POST 請求的 body (用於登入表單)
-app.use(express.json()); // 解析 application/json
-app.use(express.urlencoded({ extended: true })); // 解析 application/x-www-form-urlencoded
-
-// 設定 Session 中介軟體
 app.use(session({
-  store: new pgSession({
-      pool: pool,                // 使用我們現有的資料庫連接池
-      tableName: 'user_sessions', // 指定儲存 Session 的表格名稱 (它會自動建立)
-      createTableIfMissing: true // 如果表格不存在，自動建立它
-  }),
-  secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-      secure: false,
-      maxAge: 1000 * 60 * 60 * 24 * 7 // 延長 Session 到 7 天 (可選)
-      // httpOnly: true
-  }
+    store: new pgSession({
+        pool: pool,
+        tableName: 'user_sessions',
+        createTableIfMissing: true
+    }),
+    secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // 保持為 false 以便測試
+        maxAge: 1000 * 60 * 60 * 24 * 7
+        // httpOnly: true
+    }
 }));
-// --- 中介軟體設定結束 ---
+// --- End Middleware ---
 
-
-
-// --- 驗證中介軟體 ---
-// 這個函數會檢查使用者是否已登入 (Session 中是否有 isAdmin 標記)
+// --- Authentication Middleware ---
 function requireAdmin(req, res, next) {
-  if (req.session && req.session.isAdmin) {
-    // 如果已登入 (isAdmin 為 true)，則允許繼續處理請求
-    console.log("管理員已驗證，Session ID:", req.sessionID); // 可以在日誌中看到 Session ID
+  console.log(`[requireAdmin] 檢查路徑: ${req.originalUrl}`);
+  console.log(`[requireAdmin] Session 存在嗎?: ${!!req.session}`);
+  if (req.session) {
+      console.log(`[requireAdmin] Session ID: ${req.sessionID}`);
+      console.log(`[requireAdmin] Session.isAdmin 值: ${req.session.isAdmin}`);
+  }
+
+  if (req.session && req.session.isAdmin === true) { // 使用嚴格比較
+    console.log("[requireAdmin] 驗證通過，呼叫 next()");
     next();
   } else {
-    // 如果未登入，重新導向到登入頁面
-    console.log("未授權的訪問，重新導向到登入頁");
-    res.redirect('/login');
+    console.log("[requireAdmin] 驗證失敗，重新導向到 /login");
+    if (req.session) {
+        req.session.destroy(err => { // 嘗試銷毀無效 session
+            if(err) console.error("[requireAdmin] 銷毀無效 session 時出錯:", err);
+            res.clearCookie('connect.sid'); // 再次嘗試清除 cookie
+            res.redirect('/login');
+        });
+    } else {
+        res.clearCookie('connect.sid'); // 再次嘗試清除 cookie
+        res.redirect('/login');
+    }
   }
 }
-// --- 驗證中介軟體結束 ---
+// --- End Authentication Middleware ---
 
 
-// --- API 路由設定 ---
-// API 路由：測試基本回應
+// --- API Routes ---
 app.get('/api/hello', (req, res) => {
-  // 檢查 session 是否存在 (測試用)
-  // console.log('Session in /api/hello:', req.session);
   res.json({ message: '來自後端的 SunnyYummy API 回應！' });
 });
 
-// API 路由：測試從資料庫讀取時間
 app.get('/api/db-time', async (req, res) => {
   try {
     const client = await pool.connect();
@@ -98,7 +98,6 @@ app.get('/api/db-time', async (req, res) => {
   }
 });
 
-// API 路由：獲取所有商品列表
 app.get('/api/products', async (req, res) => {
   console.log("收到獲取所有商品的請求");
   try {
@@ -110,115 +109,94 @@ app.get('/api/products', async (req, res) => {
   } catch (err) {
     console.error("查詢商品列表時發生錯誤:", err);
     res.status(500).json({ error: '無法從資料庫獲取商品列表' });
-  } 
+  }
 });
 
-// API 路由：獲取所有音樂作品列表
 app.get('/api/music', async (req, res) => {
   console.log("收到獲取所有音樂作品的請求");
   try {
     const client = await pool.connect();
     const result = await client.query('SELECT * FROM music ORDER BY release_date DESC, created_at DESC');
     client.release();
-    res.json(result.rows); // 回傳音樂資料陣列
+    res.json(result.rows);
     console.log("成功獲取並回傳音樂列表，數量:", result.rows.length);
   } catch (err) {
     console.error("查詢音樂列表時發生錯誤:", err);
     res.status(500).json({ error: '無法從資料庫獲取音樂列表' });
   }
 });
+// --- End API Routes ---
 
-// 路由：顯示登入頁面
+// --- Page & Auth Routes ---
+// 顯示登入頁面
 app.get('/login', (req, res) => {
-  // 直接發送 public/login.html 檔案
-  // 我們可以假設如果使用者已經登入，訪問 /login 就直接跳轉到後台 (之後再加)
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// 路由：處理登入表單提交 (POST 請求)
+// 處理登入表單提交
 app.post('/login', (req, res) => {
-  const enteredPassword = req.body.password; // 獲取表單提交的密碼
-  const adminPassword = process.env.ADMIN_PASSWORD; // 從環境變數獲取正確的密碼
+  const enteredPassword = req.body.password;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  console.log("收到登入嘗試");
 
-  console.log("收到登入嘗試"); // 日誌記錄
-
-  // 檢查密碼是否正確
   if (enteredPassword && enteredPassword === adminPassword) {
-    // 密碼正確！在 Session 中設定登入標記
-    req.session.isAdmin = true;
-    console.log("管理員登入成功，Session 即將儲存");
+      req.session.isAdmin = true;
+      console.log("管理員登入成功，Session 即將儲存");
+      req.session.save(err => {
+          if (err) {
+              console.error("Session 儲存錯誤:", err);
+              return res.redirect('/login?error=SessionSaveError');
+          }
+          console.log("Session 儲存成功，重新導向到 /admin");
+          res.redirect('/admin'); // 導向後台主頁
+      });
+  } else {
+      console.log("管理員登入失敗：密碼錯誤");
+       res.redirect('/login?error=InvalidPassword');
+  }
+});
 
-    // --- 修改這裡：確保 Session 儲存後再重新導向 ---
-    req.session.save(err => {
-        if (err) {
-            // 如果儲存 Session 出錯
-            console.error("Session 儲存錯誤:", err);
-            // 可以導向到錯誤頁面或登入頁
-            return res.redirect('/login?error=SessionSaveError');
-        }
-        // Session 儲存成功，現在可以安全地重新導向
-        console.log("Session 儲存成功，重新導向到 /admin");
-        res.redirect('/admin');
-    });
-    // --- 修改結束 ---
-
-} else {
-    // 密碼錯誤
-    // ... (保持不變) ...
-    res.redirect('/login?error=InvalidPassword');
-}
-
-// 路由：處理登出
+// 處理登出 <-- ***移到這裡***
 app.get('/logout', (req, res) => {
-  const sessionID = req.sessionID; // 先記住 session ID (用於日誌)
-  req.session.destroy(err => {
-    // 無論是否出錯，都嘗試清除 cookie 並重新導向
-    res.clearCookie('connect.sid'); // 清除 cookie
-    if (err) {
-      console.error(`登出時 Session (ID: ${sessionID}) 銷毀錯誤:`, err);
-    } else {
-      console.log(`管理員已登出，Session (ID: ${sessionID}) 已銷毀`);
-    }
-    // 重新導向到登入頁面
-    res.redirect('/login');
-  });
+  const sessionID = req.sessionID;
+  if (req.session) {
+      req.session.destroy(err => {
+        res.clearCookie('connect.sid');
+        if (err) {
+          console.error(`登出時 Session (ID: ${sessionID}) 銷毀錯誤:`, err);
+        } else {
+          console.log(`管理員已登出，Session (ID: ${sessionID}) 已銷毀`);
+        }
+        res.redirect('/login');
+      });
+  } else {
+      res.clearCookie('connect.sid');
+      console.log("登出請求，但沒有找到 Session");
+      res.redirect('/login');
+  }
 });
 
-});
+// --- End Page & Auth Routes ---
 
 
-
-  
-
-// --- API 路由設定結束 ---
-
-
-
-// --- 受保護的後台路由 ---
-
+// --- Protected Admin Routes ---
 // 顯示後台管理主頁
 app.get('/admin', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin 頁面");
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// 新增：顯示後台商品管理列表頁面
+// 顯示後台商品管理列表頁面
 app.get('/admin/products', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin/products 頁面");
   res.sendFile(path.join(__dirname, 'public', 'admin-products.html'));
 });
+// --- End Protected Admin Routes ---
 
 
-
-
-// --- 受保護的後台路由結束 ---
-
-
-
-// --- 伺服器啟動 ---
+// --- Server Start ---
 app.listen(port, () => {
   console.log(`伺服器正在監聽 port ${port}`);
-  // 在伺服器啟動後測試資料庫連接
   testDbConnection();
 });
-// --- 伺服器啟動結束 ---
+// --- End Server Start ---
