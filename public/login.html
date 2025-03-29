@@ -65,12 +65,25 @@
         </form>
         <!-- 用來顯示錯誤訊息的地方 (可選) -->
         <div id="error-message" class="error-message">
-            <% if (typeof error !== 'undefined' && error) { %>
-                <p><%= error %></p>
-            <% } %>
+           
+              
+
         </div>
     </div>
      <!-- 簡單連結回首頁 -->
      <p style="text-align: center; margin-top: 20px;"><a href="/">返回首頁</a></p>
+
+
+     <script>
+        // 檢查 URL 是否有 error=InvalidPassword 參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const loginError = urlParams.get('error');
+    
+        if (loginError === 'InvalidPassword') {
+            const errorMessageDiv = document.getElementById('error-message');
+            errorMessageDiv.innerHTML = '<p>密碼錯誤，請再試一次。</p>';
+        }
+    </script>
+
 </body>
 </html>
