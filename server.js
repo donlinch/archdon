@@ -3,6 +3,7 @@ const { Pool } = require('pg'); // 引入 pg 的 Pool
 const express = require('express');
 const path = require('path'); // Node.js 內建模組，用來處理檔案路徑
 const session = require('express-session'); // 引入 express-session
+const pgSession = require('connect-pg-simple')(session);
 
 const app = express();
 const port = process.env.PORT || 3000; // Render 會設定 PORT 環境變數，本地測試用 3000
@@ -42,14 +43,19 @@ app.use(express.urlencoded({ extended: true })); // 解析 application/x-www-for
 
 // 設定 Session 中介軟體
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev', // 用環境變數或預設值
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // 生產環境要求 HTTPS
-        maxAge: 1000 * 60 * 60 * 24 // 24 小時
-        // httpOnly: true // 建議開啟以增加安全性
-    }
+  store: new pgSession({
+      pool: pool,                // 使用我們現有的資料庫連接池
+      tableName: 'user_sessions', // 指定儲存 Session 的表格名稱 (它會自動建立)
+      createTableIfMissing: true // 如果表格不存在，自動建立它
+  }),
+  secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 24 * 7 // 延長 Session 到 7 天 (可選)
+      // httpOnly: true
+  }
 }));
 // --- 中介軟體設定結束 ---
 
