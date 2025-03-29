@@ -522,6 +522,9 @@ app.post('/admin/music/edit/:id', requireAdmin, async (req, res) => {
 
 // 新增：處理「刪除音樂」的請求 (DELETE)
 app.delete('/admin/music/:id', requireAdmin, async (req, res) => {
+  
+  console.log(`--- 執行 DELETE /api/music/${req.params.id} 路由 ---`);
+
   const musicId = req.params.id;
   console.log(`收到刪除音樂 (ID: ${musicId}) 的請求`);
 
