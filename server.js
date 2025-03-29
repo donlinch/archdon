@@ -138,22 +138,29 @@ app.post('/login', (req, res) => {
 
   // 檢查密碼是否正確
   if (enteredPassword && enteredPassword === adminPassword) {
-      // 密碼正確！在 Session 中設定登入標記
-      req.session.isAdmin = true;
-      console.log("管理員登入成功，Session 已設定");
+    // 密碼正確！在 Session 中設定登入標記
+    req.session.isAdmin = true;
+    console.log("管理員登入成功，Session 即將儲存");
 
-      // 登入成功後，重新導向到一個後台頁面 (例如 /admin)
-      // 我們還沒建立 /admin 頁面，先導向回首頁示意
-      res.redirect('/admin'); // TODO: 之後改成導向到後台管理頁面
-  } else {
-      // 密碼錯誤
-      console.log("管理員登入失敗：密碼錯誤");
-      // 重新導向回登入頁面，並帶上錯誤提示 (用查詢參數 query parameter)
-      // TODO: 更好的方式是用 flash messages 或樣板引擎傳遞錯誤
-       res.redirect('/login?error=InvalidPassword'); // 簡單用查詢參數示意
-      // 或者直接發送錯誤訊息 (較不推薦)
-      // res.status(401).send('密碼錯誤！<a href="/login">返回登入</a>');
-  }
+    // --- 修改這裡：確保 Session 儲存後再重新導向 ---
+    req.session.save(err => {
+        if (err) {
+            // 如果儲存 Session 出錯
+            console.error("Session 儲存錯誤:", err);
+            // 可以導向到錯誤頁面或登入頁
+            return res.redirect('/login?error=SessionSaveError');
+        }
+        // Session 儲存成功，現在可以安全地重新導向
+        console.log("Session 儲存成功，重新導向到 /admin");
+        res.redirect('/admin');
+    });
+    // --- 修改結束 ---
+
+} else {
+    // 密碼錯誤
+    // ... (保持不變) ...
+    res.redirect('/login?error=InvalidPassword');
+}
 });
 
 
