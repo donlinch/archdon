@@ -199,6 +199,7 @@ app.get('/login', (req, res) => {
 
 // 處理登入表單提交
 app.post('/login', (req, res) => {
+  console.log("--- POST /login 路由被執行 ---");
   const enteredPassword = req.body.password;
   const adminPassword = process.env.ADMIN_PASSWORD;
   console.log("收到登入嘗試");
