@@ -183,13 +183,13 @@ app.get('/logout', (req, res) => {
 // 顯示後台管理主頁
 app.get('/admin', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin 頁面");
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.sendFile(path.join(__dirname, 'views', 'admin.html')); // <--- 改成 'views'
 });
 
 // 顯示後台商品管理列表頁面
 app.get('/admin/products', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin/products 頁面");
-  res.sendFile(path.join(__dirname, 'public', 'admin-products.html'));
+  res.sendFile(path.join(__dirname, 'views', 'admin-products.html')); // <--- 改成 'views'
 });
 // --- End Protected Admin Routes ---
 
