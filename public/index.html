@@ -1,73 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW"> <!-- You can change zh-TW to 'en' or your preferred language -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy (SPA)</title>
-    {/* 引入樣式表 */}
-    <link rel="stylesheet" href="/style.css">
+    <title>Hello World</title>
 </head>
 <body>
-    <header>
-        <h1><a href="#/" style="text-decoration: none; color: inherit;">～SunnyYummy～</a></h1>
-        <nav id="main-nav">
-            <a href="#/">首頁</a>
-            <a href="#/products">商品</a>
-            <a href="#/music">音樂</a>
-            <a href="#/admin">後台管理</a> {/* 前端路由目標 */}
-        </nav>
-    </header>
-
-    {/* 主要內容區域，由 app.js 填充 */}
-    <main id="app" class="container">
-        <p>Loading SPA...</p> {/* 初始載入提示 */}
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>© 2025 SunnyYummy. All Rights Reserved.</p>
-        </div>
-    </footer>
-
-   <!-- Edit Product Modal (Initially Hidden) -->
-<div id="edit-product-modal" class="modal" style="display: none;">
-    <div class="modal-overlay" onclick="closeEditModal()"></div>
-    <div class="modal-content form-container">
-        <span class="close-modal-btn" onclick="closeEditModal()">×</span>
-        <h2>編輯商品</h2>
-        <form id="edit-product-form">
-            <input type="hidden" id="edit-product-id" name="productId">
-            <div class="form-group">
-                <label for="edit-product-name">商品名稱:</label>
-                <input type="text" id="edit-product-name" name="name" required>
-            </div>
-            {/* ... 其他表單欄位 ... */}
-             <div class="form-group">
-                <label for="edit-product-description">商品描述:</label>
-                <textarea id="edit-product-description" name="description"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="edit-product-price">價格:</label>
-                <input type="number" id="edit-product-price" name="price" step="0.01" min="0">
-            </div>
-            <div class="form-group">
-                <label for="edit-product-image_url">圖片網址:</label>
-                <input type="text" id="edit-product-image_url" name="image_url" placeholder="/images/your_image.jpg 或 https://...">
-            </div>
-            <div class="form-group">
-                <label for="edit-product-seven_eleven_url">7-11 賣貨便連結:</label>
-                <input type="text" id="edit-product-seven_eleven_url" name="seven_eleven_url">
-            </div>
-            <div class="form-buttons">
-                <button type="button" class="cancel-btn admin-button" onclick="closeEditModal()">取消</button>
-                <button type="submit" class="admin-button">儲存變更</button>
-            </div>
-             <p id="edit-form-error" style="color: red; margin-top: 10px;"></p>
-        </form>
-    </div>
-</div>
-
-    {/* 引入主要的 JavaScript 檔案 */}
-    <script src="/app.js"></script>
+    <h1>Hello World</h1>
 </body>
 </html>
