@@ -3,38 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy</title>
-    <!-- 引入你的 CSS 檔案 -->
+    <title>SunnyYummy (SPA)</title>
     <link rel="stylesheet" href="/style.css">
-    <!-- (可選) 可以在這裡加入 Favicon 等 -->
 </head>
 <body>
-    <!-- 固定的頁首 (如果所有頁面都有) -->
     <header>
         <h1><a href="#/" style="text-decoration: none; color: inherit;">～SunnyYummy～</a></h1>
         <nav id="main-nav">
-            <!-- 導覽連結會由 JS 動態生成或放在這裡 -->
+            <a href="#/">首頁</a>
             <a href="#/products">商品</a>
             <a href="#/music">音樂</a>
-            <a href="#/admin">後台管理</a>
+            <a href="#/admin">後台管理</a> {/* 連結目標是前端路由 */}
         </nav>
     </header>
 
-    <!-- 主要內容區域，將由 JavaScript 動態填充 -->
+    {/* 主要內容區域，將由 app.js 填充 */}
     <main id="app" class="container">
-        <!-- 初始載入時可以顯示 Loading... -->
-        <p>正在載入頁面...</p>
+        <p>Loading SPA...</p>
     </main>
 
-    <!-- 固定的頁尾 (如果所有頁面都有) -->
     <footer>
         <div class="container">
             <p>© 2025 SunnyYummy. All Rights Reserved.</p>
         </div>
     </footer>
 
-    <!-- 引入主要的 JavaScript 檔案 -->
-    <!-- *** 非常重要：確保檔名是 app.js 或你選擇的其他名稱 *** -->
+    {/* 引入主要的 JavaScript 檔案 (將是空的) */}
     <script src="/app.js"></script>
 </body>
 </html>
