@@ -144,7 +144,7 @@ app.post('/login', (req, res) => {
 
       // 登入成功後，重新導向到一個後台頁面 (例如 /admin)
       // 我們還沒建立 /admin 頁面，先導向回首頁示意
-      res.redirect('/'); // TODO: 之後改成導向到後台管理頁面
+      res.redirect('/admin'); // TODO: 之後改成導向到後台管理頁面
   } else {
       // 密碼錯誤
       console.log("管理員登入失敗：密碼錯誤");
