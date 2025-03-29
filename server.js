@@ -333,6 +333,41 @@ app.post('/admin/products/edit/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// 新增：處理「刪除商品」的請求 (DELETE)
+app.delete('/admin/products/:id', requireAdmin, async (req, res) => {
+  const productId = req.params.id; // 從 URL 獲取要刪除的商品 ID
+  console.log(`收到刪除商品 (ID: ${productId}) 的請求`);
+
+  try {
+    const client = await pool.connect();
+    // 準備 SQL DELETE 語句
+    const sql = `DELETE FROM products WHERE id = $1 RETURNING *;`; // 返回被刪除的資料 (可選)
+    const values = [productId];
+
+    const result = await client.query(sql, values);
+    client.release();
+
+    if (result.rowCount === 0) {
+       // 如果沒有任何行被刪除 (可能該 ID 不存在)
+       console.log(`刪除商品失敗：找不到商品 (ID: ${productId})`);
+       // 可以回傳 404 錯誤
+       return res.status(404).json({ success: false, message: '找不到該商品' });
+    }
+
+    console.log("成功刪除商品:", result.rows[0]);
+
+    // 刪除成功後，回傳成功的 JSON 訊息
+    // 前端 JS 收到成功訊息後，會負責重新整理頁面或移除表格行
+    res.json({ success: true, message: '商品已成功刪除' });
+
+  } catch (err) {
+    console.error(`刪除商品 (ID: ${productId}) 時發生錯誤:`, err);
+    // 回傳 500 錯誤
+    res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除商品' });
+  }
+});
+
+
 // --- Server Start ---
 app.listen(port, () => {
   console.log(`伺服器正在監聽 port ${port}`);

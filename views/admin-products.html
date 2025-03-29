@@ -61,42 +61,105 @@
     </footer>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const productListBody = document.getElementById('admin-product-list-body');
-
-        fetch('/api/products') // 呼叫我們之前建立的 API
-            .then(response => response.ok ? response.json() : Promise.reject('Failed to load'))
-            .then(products => {
-                productListBody.innerHTML = ''; // 清空載入訊息
-                if (products.length === 0) {
-                    productListBody.innerHTML = '<tr><td colspan="7">目前沒有商品。</td></tr>';
-                    return;
+        document.addEventListener('DOMContentLoaded', function() {
+            const productListBody = document.getElementById('admin-product-list-body');
+    
+            // 將獲取並渲染表格的邏輯封裝成函數，方便重複呼叫
+            async function fetchAndRenderProducts() {
+                try {
+                    const response = await fetch('/api/products');
+                    if (!response.ok) {
+                         throw new Error('無法獲取商品列表');
+                    }
+                    const products = await response.json();
+    
+                    productListBody.innerHTML = ''; // 清空
+    
+                    if (products.length === 0) {
+                        productListBody.innerHTML = '<tr><td colspan="7">目前沒有商品。</td></tr>';
+                        return;
+                    }
+    
+                    products.forEach(product => {
+                        const row = document.createElement('tr');
+                        // 為每一行加上一個 data-id 屬性，方便選取
+                        row.setAttribute('data-id', product.id);
+                        row.innerHTML = `
+                            <td>${product.id}</td>
+                            <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name}" style="max-width: 50px; height: auto;"></td>
+                            <td>${product.name}</td>
+                            <td>${product.price !== null ? product.price : ''}</td>
+                            <td>${product.description || ''}</td>
+                            <td><a href="${product.seven_eleven_url || '#'}" target="_blank">${product.seven_eleven_url ? '連結' : ''}</a></td>
+                            <td class="actions">
+                                <a href="/admin/products/edit/${product.id}">編輯</a>
+                                <!-- 修改刪除連結：移除 href，加上 class 和 data-id -->
+                                <a href="#" class="delete-link" data-id="${product.id}">刪除</a>
+                            </td>
+                        `;
+                        productListBody.appendChild(row);
+                    });
+    
+                    // *** 新增：為所有刪除連結加上事件監聽器 ***
+                    attachDeleteListeners();
+    
+                } catch (error) {
+                    console.error("獲取商品列表失敗:", error);
+                    productListBody.innerHTML = '<tr><td colspan="7">無法載入商品資料。</td></tr>';
                 }
-
-                products.forEach(product => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${product.id}</td>
-                        <td><img src="${product.image_url}" alt="${product.name}"></td>
-                        <td>${product.name}</td>
-                        <td>${product.price}</td>
-                        <td>${product.description || ''}</td>
-                        <td><a href="${product.seven_eleven_url}" target="_blank">連結</a></td>
-                        <td class="actions">
-                            <a href="/admin/products/edit/${product.id}">編輯</a>
-                            <a href="/admin/products/delete/${product.id}">刪除</a>
-                            <!-- 刪除功能通常需要用 POST 或 DELETE 方法配合表單/JS -->
-                        </td>
-                    `;
-                    productListBody.appendChild(row);
+            }
+    
+            // *** 新增：附加刪除事件監聽器的函數 ***
+            function attachDeleteListeners() {
+                const deleteLinks = document.querySelectorAll('.delete-link');
+                deleteLinks.forEach(link => {
+                    link.addEventListener('click', async function(event) {
+                        event.preventDefault(); // 防止連結預設跳轉行為
+                        const productId = this.getAttribute('data-id');
+                        const productName = this.closest('tr').querySelector('td:nth-child(3)').textContent; // 獲取商品名稱
+    
+                        // 彈出確認對話框
+                        if (confirm(`確定要刪除商品 "${productName}" (ID: ${productId}) 嗎？這個操作無法復原！`)) {
+                            console.log(`準備刪除商品 ID: ${productId}`);
+                            try {
+                                const response = await fetch(`/admin/products/${productId}`, {
+                                    method: 'DELETE', // 指定 HTTP 方法為 DELETE
+                                    headers: {
+                                        'Content-Type': 'application/json' // 雖然沒 body，但有些後端需要
+                                    }
+                                });
+    
+                                const result = await response.json(); // 解析後端的回應
+    
+                                if (response.ok && result.success) {
+                                    alert('商品刪除成功！');
+                                    // 方法一：簡單地重新載入整個列表
+                                    fetchAndRenderProducts();
+                                    // 方法二：直接從畫面上移除該行 (更流暢，但稍微複雜)
+                                    // const rowToRemove = document.querySelector(`tr[data-id="${productId}"]`);
+                                    // if (rowToRemove) {
+                                    //     rowToRemove.remove();
+                                    // }
+                                } else {
+                                    // 如果後端回傳錯誤 (例如 404 或 500)
+                                    alert(`刪除失敗：${result.message || '未知錯誤'}`);
+                                }
+                            } catch (error) {
+                                console.error("刪除請求失敗:", error);
+                                alert('刪除過程中發生網路或程式錯誤。');
+                            }
+                        } else {
+                            console.log('取消刪除');
+                        }
+                    });
                 });
-            })
-            .catch(error => {
-                console.error("獲取商品列表失敗:", error);
-                productListBody.innerHTML = '<tr><td colspan="7">無法載入商品資料。</td></tr>';
-            });
-    });
-    </script>
+            }
+    
+            // 頁面載入時，執行第一次獲取和渲染
+            fetchAndRenderProducts();
+    
+        });
+        </script>
 
 </body>
 </html>
