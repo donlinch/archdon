@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員登入 - SunnyYummy</title>
+    <link rel="stylesheet" href="style.css"> <!-- 可以共用一些基本樣式 -->
+    <style>
+        /* 針對登入頁面的簡單樣式 */
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .login-container h2 {
+            margin-bottom: 25px;
+            border-bottom: none; /* 移除 h2 預設底線 */
+        }
+        .login-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            text-align: left;
+        }
+        .login-container input[type="password"] {
+            width: calc(100% - 22px); /* 減去 padding 和 border */
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .login-container button {
+            background-color: #ffcc00;
+            color: #333;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .login-container button:hover {
+            background-color: #e6b800;
+        }
+        .error-message {
+            color: red;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>管理員登入</h2>
+        <!-- 登入表單，提交到 /login 這個路徑，使用 POST 方法 -->
+        <form action="/login" method="POST">
+            <div>
+                <label for="password">密碼:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">登入</button>
+        </form>
+        <!-- 用來顯示錯誤訊息的地方 (可選) -->
+        <div id="error-message" class="error-message">
+            <% if (typeof error !== 'undefined' && error) { %>
+                <p><%= error %></p>
+            <% } %>
+        </div>
+    </div>
+     <!-- 簡單連結回首頁 -->
+     <p style="text-align: center; margin-top: 20px;"><a href="/">返回首頁</a></p>
+</body>
+</html>
