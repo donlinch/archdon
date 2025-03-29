@@ -50,12 +50,11 @@
              <p>© 2025 SunnyYummy. All Rights Reserved.</p>
         </div>
     </footer>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const musicListBody = document.getElementById('admin-music-list-body');
         
-            // *** 附加刪除事件監聽器的函數 (保持不變) ***
+            // *** 附加刪除事件監聽器的函數 (修正 fetch URL 和 method) ***
             function attachDeleteListeners() {
                 const deleteLinks = document.querySelectorAll('.delete-link');
                 deleteLinks.forEach(link => {
@@ -67,19 +66,31 @@
                         if (confirm(`確定要刪除音樂 "${trackTitle}" (ID: ${trackId}) 嗎？這個操作無法復原！`)) {
                             console.log(`準備刪除音樂 ID: ${trackId}`);
                             try {
-                                const response = await fetch(`/api/music/${trackId}`, {
-                                    method: 'GET'
+                                // *** 修正這裡：使用正確的 API 端點和 DELETE 方法 ***
+                                const response = await fetch(`/api/music/${trackId}`, { // <--- 改回 /api/music/
+                                    method: 'DELETE' // <--- 改回 DELETE
                                 });
+                                // *** 修正結束 ***
+        
+                                // 嘗試解析 JSON，如果伺服器返回錯誤 (非 JSON)，會進入 catch
                                 const result = await response.json();
+        
                                 if (response.ok && result.success) {
                                     alert('音樂刪除成功！');
                                     fetchAndRenderMusic(); // 重新載入列表
                                 } else {
-                                    alert(`測試回應: ${result.message}'}`);
+                                    // 處理後端返回的錯誤訊息
+                                    alert(`刪除失敗：${result.message || '伺服器返回錯誤狀態'}`);
                                 }
                             } catch (error) {
+                                // 處理網路錯誤或 JSON 解析錯誤
                                 console.error("刪除請求失敗:", error);
-                                alert('刪除過程中發生網路或程式錯誤。');
+                                // 檢查是否是 JSON 解析錯誤
+                                if (error instanceof SyntaxError) {
+                                    alert('刪除失敗：伺服器回應格式錯誤。');
+                                } else {
+                                    alert('刪除過程中發生網路或程式錯誤。');
+                                }
                             }
                         } else {
                             console.log('取消刪除');
@@ -88,7 +99,7 @@
                 });
             }
         
-            // *** 獲取並渲染音樂列表的函數 (只保留一個) ***
+            // *** 獲取並渲染音樂列表的函數 (保持不變) ***
             async function fetchAndRenderMusic() {
                 try {
                     const response = await fetch('/api/music');
@@ -122,7 +133,7 @@
                         musicListBody.appendChild(row);
                     });
         
-                    // *** 在渲染完表格後呼叫 attachDeleteListeners ***
+                    // 在渲染完表格後呼叫 attachDeleteListeners
                     attachDeleteListeners();
         
                 } catch (error) {
@@ -131,7 +142,7 @@
                 }
             }
         
-            // *** 頁面載入時，只執行一次獲取和渲染 ***
+            // 頁面載入時，執行一次獲取和渲染
             fetchAndRenderMusic();
         
         });
