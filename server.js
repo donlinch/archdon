@@ -54,6 +54,23 @@ app.use(session({
 // --- 中介軟體設定結束 ---
 
 
+
+// --- 驗證中介軟體 ---
+// 這個函數會檢查使用者是否已登入 (Session 中是否有 isAdmin 標記)
+function requireAdmin(req, res, next) {
+  if (req.session && req.session.isAdmin) {
+    // 如果已登入 (isAdmin 為 true)，則允許繼續處理請求
+    console.log("管理員已驗證，Session ID:", req.sessionID); // 可以在日誌中看到 Session ID
+    next();
+  } else {
+    // 如果未登入，重新導向到登入頁面
+    console.log("未授權的訪問，重新導向到登入頁");
+    res.redirect('/login');
+  }
+}
+// --- 驗證中介軟體結束 ---
+
+
 // --- API 路由設定 ---
 // API 路由：測試基本回應
 app.get('/api/hello', (req, res) => {
@@ -144,6 +161,17 @@ app.post('/login', (req, res) => {
   
 
 // --- API 路由設定結束 ---
+
+
+
+// --- 受保護的後台路由 ---
+// 顯示後台管理頁面 - 在這個路由前加上 requireAdmin 中介軟體
+app.get('/admin', requireAdmin, (req, res) => {
+  console.log("正在提供受保護的 /admin 頁面");
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+// --- 受保護的後台路由結束 ---
+
 
 
 // --- 伺服器啟動 ---
