@@ -6,6 +6,8 @@ const apiBaseUrl = ''; // Assume API is on the same origin
 
 // --- Helper Functions ---
 async function fetchData(url, options = {}) {
+   
+    console.log("DEBUG: fetchData in admin.js is executing with credentials: 'include'. URL:", url);
     try {
         // *** CRITICAL: Include credentials to send session cookie ***
         const fetchOptions = {
