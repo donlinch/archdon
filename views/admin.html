@@ -19,6 +19,15 @@
     <main class="container admin-container">
         <h2>歡迎來到管理後台！</h2>
         <p>您已成功登入。</p>
+   <!-- 新增統計區塊 -->
+   <div class="stats-container" style="margin-top: 30px; padding: 20px; background-color: #e9ecef; border-radius: 5px;">
+    <h3>網站瀏覽統計 (首頁)</h3>
+    <p>總瀏覽量: <strong id="total-views">載入中...</strong></p>
+    <p>今日瀏覽量: <strong id="today-views">載入中...</strong></p>
+    <p>本月瀏覽量: <strong id="month-views">載入中...</strong></p>
+</div>
+<!-- 統計區塊結束 -->
+
         <ul>
             <li><a href="/">返回前台首頁</a></li>
             <li><a href="/admin/products">管理商品</a></li> <!-- 修改這裡 -->
@@ -33,5 +42,37 @@
              <p>© 2025 SunnyYummy. All Rights Reserved.</p>
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("後台頁面載入，準備獲取統計...");
+            const totalViewsEl = document.getElementById('total-views');
+            const todayViewsEl = document.getElementById('today-views');
+            const monthViewsEl = document.getElementById('month-views');
+        
+            try {
+                const response = await fetch('/api/admin/stats'); // 呼叫統計 API
+                if (!response.ok) {
+                     // 如果 API 返回錯誤 (例如未登入 403，或伺服器 500)
+                     // requireAdmin 中介軟體應該會處理未登入跳轉，這裡主要處理 500
+                     throw new Error(`無法獲取統計數據: ${response.status}`);
+                }
+                const stats = await response.json();
+        
+                // 更新頁面上的數字
+                totalViewsEl.textContent = stats.totalViews;
+                todayViewsEl.textContent = stats.todayViews;
+                monthViewsEl.textContent = stats.monthViews;
+                console.log("成功獲取並顯示統計數據:", stats);
+        
+            } catch (error) {
+                console.error("獲取統計數據失敗:", error);
+                // 在統計區塊顯示錯誤
+                totalViewsEl.textContent = '錯誤';
+                todayViewsEl.textContent = '錯誤';
+                monthViewsEl.textContent = '錯誤';
+            }
+        });
+        </script>
 </body>
 </html>
