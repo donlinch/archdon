@@ -1,4 +1,4 @@
-// public/admin.js (完整版)
+// public/admin.js (處理 admin.html 頁面邏輯)
 
 const adminContent = document.getElementById('admin-content');
 const logoutLink = document.getElementById('logout-link');
@@ -7,71 +7,70 @@ const apiBaseUrl = ''; // Assume API is on the same origin
 // --- Helper Functions ---
 async function fetchData(url, options = {}) {
     try {
-        const response = await fetch(apiBaseUrl + url, options);
+        // *** CRITICAL: Include credentials to send session cookie ***
+        const fetchOptions = {
+            ...options,
+            credentials: 'include'
+        };
+        const response = await fetch(apiBaseUrl + url, fetchOptions);
         if (!response.ok) {
             let errorData;
-            try {
-                errorData = await response.json();
-            } catch (parseError) {
-                // If response is not JSON or parsing failed
-                console.error("Failed to parse error response:", parseError, "URL:", url);
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            // If error JSON was parsed successfully
+            try { errorData = await response.json(); } catch (parseError) { throw new Error(`HTTP error! status: ${response.status}`); }
             const message = errorData.message || `HTTP error! status: ${response.status}`;
-            console.error('API Error:', message, 'URL:', url, 'Options:', options);
-            throw new Error(message); // Throw the message from the backend
+            console.error('API Error:', message, 'URL:', url, 'Options:', fetchOptions);
+            throw new Error(message);
         }
-        // Check if response is JSON (logout API might return 200 with no content)
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return await response.json();
-        }
-        // If not JSON (e.g., successful logout), return a success object
+        if (contentType && contentType.includes('application/json')) { return await response.json(); }
         return { success: true, status: response.status };
     } catch (error) {
         console.error('Fetch Error:', error, 'URL:', url, 'Options:', options);
-        // Re-throw the error for the caller to handle
         throw error;
     }
 }
 
 function renderLoading() {
-    adminContent.innerHTML = '<div class="admin-section"><p>正在載入...</p></div>';
+    if(adminContent) adminContent.innerHTML = '<div class="admin-section"><p>正在載入...</p></div>';
 }
 
 function renderError(message, context = "") {
     console.error(`Error ${context}: ${message}`);
-    // Display error within the admin content area
-    adminContent.innerHTML = `
-        <div class="admin-section">
-            <h2 style="color:red;">操作失敗</h2>
-            <p>${message}</p>
-            <button class="admin-button" onclick="renderDashboard()">返回儀表板</button>
-        </div>`;
+    if(adminContent) {
+        adminContent.innerHTML = `
+            <div class="admin-section">
+                <h2 style="color:red;">操作失敗</h2>
+                <p>${message}</p>
+                <button class="admin-button" onclick="renderDashboard()">返回儀表板</button>
+            </div>`;
+    } else {
+        alert(`錯誤: ${message}`); // Fallback if container is missing
+    }
 }
 
 // --- Admin State ---
-let currentView = 'loading'; // Tracks the current view being displayed
+let currentView = 'loading'; // Tracks the current view
 
 // --- Core Rendering Logic ---
 
 async function initializeAdmin() {
+    if (!adminContent) {
+        console.error("Admin content container '#admin-content' not found!");
+        return;
+    }
     renderLoading();
     try {
         const status = await fetchData('/api/auth/status');
         if (status.isAdmin) {
             if (logoutLink) logoutLink.style.display = 'inline';
-            renderDashboard(); // Show dashboard if logged in
+            renderDashboard();
         } else {
             if (logoutLink) logoutLink.style.display = 'none';
-            renderLogin(); // Show login form if not logged in
+            renderLogin();
         }
     } catch (error) {
         renderError(`無法驗證登入狀態: ${error.message}`, "initializing admin");
-        // Fallback to login screen even if status check fails
         if (logoutLink) logoutLink.style.display = 'none';
-        renderLogin();
+        renderLogin(); // Fallback to login
     }
 }
 
@@ -79,6 +78,7 @@ async function initializeAdmin() {
 
 function renderLogin() {
     currentView = 'login';
+    if (!adminContent) return;
     adminContent.innerHTML = `
         <div class="admin-section">
             <h2>管理後台登入</h2>
@@ -99,11 +99,14 @@ function renderLogin() {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', handleLoginSubmit);
+    } else {
+         console.error("Login form not found after renderLogin!");
     }
 }
 
 function renderDashboard() {
     currentView = 'dashboard';
+     if (!adminContent) return;
     adminContent.innerHTML = `
         <div class="admin-section">
             <h2>儀表板</h2>
@@ -114,15 +117,15 @@ function renderDashboard() {
                     <li><button class="admin-button" onclick="renderMusicList()">管理音樂</button></li>
                 </ul>
             </div>
-            {/* Placeholder for future stats */}
-            {/* <div class="stats-container admin-section" style="margin-top: 1.5rem;">...</div> */}
         </div>
     `;
+    // Note: Logout link listener is attached once on DOMContentLoaded
 }
 
 // --- Product CRUD Views ---
 async function renderProductList() {
     currentView = 'products';
+    if (!adminContent) return;
     renderLoading();
     try {
         const products = await fetchData('/api/products');
@@ -151,7 +154,7 @@ async function renderProductList() {
                     <tbody id="admin-list-body">${tableRows}</tbody>
                 </table>
             </div>`;
-        attachDeleteListeners();
+        attachDeleteListeners(); // Attach listeners after rendering the table
     } catch (error) {
         renderError(`無法載入商品列表: ${error.message}`, "rendering product list");
     }
@@ -159,6 +162,7 @@ async function renderProductList() {
 
 async function renderProductForm(productId = null) {
     currentView = 'productForm';
+     if (!adminContent) return;
     renderLoading();
     let product = { id: null, name: '', description: '', price: '', image_url: '', seven_eleven_url: '' };
     const isEditMode = productId !== null;
@@ -192,12 +196,15 @@ async function renderProductForm(productId = null) {
     const productForm = document.getElementById('product-form');
     if(productForm) {
         productForm.addEventListener('submit', handleProductFormSubmit);
+    } else {
+         console.error("Product form not found after renderProductForm!");
     }
 }
 
 // --- Music CRUD Views ---
 async function renderMusicList() {
     currentView = 'music';
+     if (!adminContent) return;
     renderLoading();
      try {
         const musicTracks = await fetchData('/api/music');
@@ -241,6 +248,7 @@ async function renderMusicList() {
 
 async function renderMusicForm(musicId = null) {
     currentView = 'musicForm';
+     if (!adminContent) return;
     renderLoading();
      let track = { id: null, title: '', artist: '', description: '', release_date: '', cover_art_url: '', platform_url: '' };
      const isEditMode = musicId !== null;
@@ -253,12 +261,7 @@ async function renderMusicForm(musicId = null) {
          }
      }
      let releaseDateValue = '';
-     // Format date for input type=date (YYYY-MM-DD)
-     if (track.release_date) {
-         try {
-             releaseDateValue = new Date(track.release_date).toISOString().split('T')[0];
-         } catch(e){ console.error("Error parsing music release date", track.release_date); }
-     }
+     if (track.release_date) { try { releaseDateValue = new Date(track.release_date).toISOString().split('T')[0]; } catch(e){ console.error("Error parsing music release date", track.release_date)} }
 
     adminContent.innerHTML = `
          <div class="admin-section">
@@ -283,6 +286,8 @@ async function renderMusicForm(musicId = null) {
     const musicForm = document.getElementById('music-form');
     if (musicForm) {
          musicForm.addEventListener('submit', handleMusicFormSubmit);
+    } else {
+        console.error("Music form not found after renderMusicForm!");
     }
 }
 
@@ -292,7 +297,7 @@ async function handleLoginSubmit(event) {
     event.preventDefault();
     const passwordInput = document.getElementById('password');
     const errorP = document.getElementById('login-error');
-    if (!passwordInput || !errorP) return; // Defensive check
+    if (!passwordInput || !errorP) { console.error("Login form elements missing!"); return; }
     errorP.textContent = '';
     const password = passwordInput.value;
     try {
@@ -314,14 +319,14 @@ async function handleLoginSubmit(event) {
 
 async function handleLogoutClick(event) {
      event.preventDefault();
+     if (!logoutLink) return; // Should exist if user is logged in
      try {
          await fetchData('/api/logout', { method: 'POST' });
-         if (logoutLink) logoutLink.style.display = 'none';
+         logoutLink.style.display = 'none';
          renderLogin();
      } catch (error) {
-         // Display error, but still attempt to render login as user is likely logged out
          renderError(`登出失敗: ${error.message}`, "logging out");
-         renderLogin(); // Fallback to login screen
+         renderLogin(); // Still render login on error
      }
 }
 
@@ -329,21 +334,19 @@ async function handleProductFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const errorP = form.querySelector('#form-error');
-    if (!errorP) return;
+    if (!errorP) { console.error("Form error element missing!"); return; }
     errorP.textContent = '';
     const formData = new FormData(form);
     const productData = Object.fromEntries(formData.entries());
     const productId = productData.productId || null;
     const isEditMode = productId !== null;
 
-    // Handle empty price and convert to number
     productData.price = productData.price ? parseFloat(productData.price) : null;
      if (productData.price !== null && isNaN(productData.price)) {
         errorP.textContent = '價格必須是有效的數字。';
         return;
      }
-
-    delete productData.productId; // Remove id from submitted data
+    delete productData.productId;
 
     const url = isEditMode ? `/api/products/${productId}` : '/api/products';
     const method = isEditMode ? 'PUT' : 'POST';
@@ -356,7 +359,7 @@ async function handleProductFormSubmit(event) {
         });
         if (result.success) {
             alert(`商品已成功${isEditMode ? '更新' : '新增'}！`);
-            renderProductList(); // Go back to list on success
+            renderProductList();
         } else {
             errorP.textContent = result.message || `無法${isEditMode ? '更新' : '新增'}商品`;
         }
@@ -369,16 +372,15 @@ async function handleMusicFormSubmit(event) {
      event.preventDefault();
      const form = event.target;
      const errorP = form.querySelector('#form-error');
-     if (!errorP) return;
+      if (!errorP) { console.error("Form error element missing!"); return; }
      errorP.textContent = '';
      const formData = new FormData(form);
      const musicData = Object.fromEntries(formData.entries());
      const musicId = musicData.musicId || null;
      const isEditMode = musicId !== null;
 
-     // Handle empty date
      musicData.release_date = musicData.release_date || null;
-     delete musicData.musicId; // Remove id from submitted data
+     delete musicData.musicId;
 
      const url = isEditMode ? `/api/music/${musicId}` : '/api/music';
      const method = isEditMode ? 'PUT' : 'POST';
@@ -391,7 +393,7 @@ async function handleMusicFormSubmit(event) {
          });
          if (result.success) {
              alert(`音樂已成功${isEditMode ? '更新' : '新增'}！`);
-             renderMusicList(); // Go back to list on success
+             renderMusicList();
          } else {
              errorP.textContent = result.message || `無法${isEditMode ? '更新' : '新增'}音樂`;
          }
@@ -402,41 +404,40 @@ async function handleMusicFormSubmit(event) {
 
 // Unified delete event listener using event delegation
 function attachDeleteListeners() {
-    // Remove previous listener to prevent duplicates if called multiple times
+    if (!adminContent) return;
+    // Remove previous listener to prevent duplicates
     adminContent.removeEventListener('click', handleDeleteClick);
     // Add the listener
     adminContent.addEventListener('click', handleDeleteClick);
 }
 
-// Separate handler function for delete clicks
+// Separate handler function for delete clicks (to be attached/detached)
 async function handleDeleteClick(event) {
     if (event.target.classList.contains('delete-btn')) {
         event.preventDefault();
         const btn = event.target;
-        const type = btn.getAttribute('data-type'); // 'product' or 'music'
+        const type = btn.getAttribute('data-type');
         const id = btn.getAttribute('data-id');
         const row = btn.closest('tr');
-        if (!type || !id || !row) return; // Exit if essential data is missing
+        if (!type || !id || !row) return;
 
-        const nameElement = row.querySelector('td:nth-child(3)'); // 3rd td is usually name/title
+        const nameElement = row.querySelector('td:nth-child(3)');
         const name = nameElement ? nameElement.textContent : `ID ${id}`;
 
         if (confirm(`確定要刪除 ${type === 'product' ? '商品' : '音樂'} "${name}" (ID: ${id}) 嗎？這個操作無法復原！`)) {
             console.log(`Attempting to delete ${type} ID: ${id}`);
-            const url = `/api/${type}s/${id}`; // Build API URL
+            const url = `/api/${type}s/${id}`;
             try {
                 const result = await fetchData(url, { method: 'DELETE' });
                 if (result.success) {
                     alert(`${type === 'product' ? '商品' : '音樂'}刪除成功！`);
-                    row.remove(); // Remove row from the table
-                    // Optional: check if table body is empty and display a message
+                    row.remove();
                     const listBody = document.getElementById('admin-list-body');
                     if (listBody && listBody.children.length === 0) {
-                       const colspan = type === 'product' ? 7 : 7; // Adjust colspan based on type
+                       const colspan = type === 'product' ? 7 : 7;
                        listBody.innerHTML = `<tr><td colspan="${colspan}">列表已空。</td></tr>`;
                     }
                 } else {
-                    // Display error, but don't stop the admin interface
                     alert(`刪除失敗：${result.message || '未知錯誤'}`);
                 }
             } catch (error) {
@@ -452,15 +453,16 @@ async function handleDeleteClick(event) {
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize the admin interface
-    initializeAdmin();
-
-    // Attach logout listener only once
-    if(logoutLink) {
-      logoutLink.addEventListener('click', handleLogoutClick);
-    } else {
-      // This might happen if the script runs before the logout link exists (e.g., on login screen)
-      // It will be displayed and listener added after successful login.
-      console.log("Logout link not found on initial load, will be handled after login.");
+    if (!adminContent) {
+        console.error("Fatal Error: Admin content container '#admin-content' not found on DOMContentLoaded!");
+        document.body.innerHTML = "<p style='color:red; text-align: center; margin-top: 50px;'>頁面結構錯誤，無法初始化管理後台。</p>";
+        return;
     }
+    if (logoutLink) {
+        logoutLink.addEventListener('click', handleLogoutClick);
+    } else {
+        console.warn("Logout link '#logout-link' not found on initial load. It should be shown after login.");
+    }
+    // Start the admin interface initialization
+    initializeAdmin();
 });
