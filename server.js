@@ -167,6 +167,24 @@ app.post('/login', (req, res) => {
     // ... (保持不變) ...
     res.redirect('/login?error=InvalidPassword');
 }
+
+// 路由：處理登出
+app.get('/logout', (req, res) => {
+  // 使用 express-session 提供的 req.session.destroy() 方法
+  req.session.destroy(err => {
+    if (err) {
+      console.error("登出時 Session 銷毀錯誤:", err);
+      // 即使銷毀失敗，還是嘗試讓使用者跳轉
+      return res.redirect('/'); // 或者導向錯誤頁面
+    }
+    // Session 成功銷毀後，清除瀏覽器的 session cookie
+    res.clearCookie('connect.sid'); // 預設 cookie 名稱是 connect.sid
+    console.log("管理員已登出，Session 已銷毀");
+    // 重新導向到登入頁面
+    res.redirect('/login');
+  });
+});
+
 });
 
 
