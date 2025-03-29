@@ -17,42 +17,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         productList.forEach(product => {
-            const card = document.createElement('div');
-            card.className = 'product-card'; // Apply CSS class
+            const cardLink = document.createElement('a');
+            cardLink.className = 'product-card'; // Apply CSS class to the link
 
-            // Image - Use image_url from the database
+            // *** 設定連結屬性 ***
+            // Use seven_eleven_url if available, otherwise link nowhere safely
+            cardLink.href = product.seven_eleven_url || '#'; // Link to '#' if URL is missing
+            if (product.seven_eleven_url) {
+               cardLink.target = '_blank'; // Open in new tab if URL exists
+               cardLink.rel = 'noopener noreferrer'; // Security measure for target="_blank"
+            }
+
+
+            // --- Create internal elements (Image Container, Image, Content Div, etc.) ---
+            // Image container (optional but good for consistent image sizing)
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'image-container';
+
             const img = document.createElement('img');
-            // Assuming image_url stores paths like '/images/myimage.jpg'
-            // express.static will serve them correctly from the public folder
             img.src = product.image_url;
-            img.alt = product.name; // Alt text is important
+            img.alt = product.name;
+            imageContainer.appendChild(img); // Add image to its container
 
-            // Name
+            // Content container
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'card-content';
+
             const name = document.createElement('h3');
             name.textContent = product.name;
 
-            // Description
             const description = document.createElement('p');
-            // Handle potentially missing description
-            description.textContent = product.description || '暫無描述';
+            description.textContent = product.description || ' '; // Use space if no description
 
-            // Price
             const price = document.createElement('p');
             price.className = 'price';
-             // Handle potentially missing price
-            price.textContent = product.price !== null ? `NT$ ${product.price}` : '價格未定';
+            price.textContent = product.price !== null ? `NT$ ${product.price.toLocaleString()}` : '價格洽詢'; // Format price
 
-            // Append elements to the card
-            card.appendChild(img);
-            card.appendChild(name);
-            card.appendChild(description);
-            card.appendChild(price);
+            // Append content elements to the content div
+            contentDiv.appendChild(name);
+            contentDiv.appendChild(description);
+            contentDiv.appendChild(price);
 
-            // Append the card to the grid
-            grid.appendChild(card);
+            // *** 將內部元素附加到 <a> 連結卡片 ***
+            cardLink.appendChild(imageContainer); // Add image container first
+            cardLink.appendChild(contentDiv);     // Add content div after
+
+            // *** 將連結卡片附加到 Grid ***
+            grid.appendChild(cardLink);
         });
     }
-
     // --- Function to Fetch Products from API ---
     async function fetchProducts() {
         const grid = document.getElementById('product-grid');
