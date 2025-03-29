@@ -279,6 +279,59 @@ app.post('/admin/products', requireAdmin, async (req, res) => {
   }
 });
 
+// 新增：處理「編輯商品」表單的提交 (POST)
+app.post('/admin/products/edit/:id', requireAdmin, async (req, res) => {
+  const productId = req.params.id; // 從 URL 獲取要編輯的商品 ID
+  // 從表單提交的 req.body 中獲取更新後的資料
+  const { name, description, price, image_url, seven_eleven_url } = req.body;
+
+  console.log(`收到更新商品 (ID: ${productId}) 請求，資料:`, req.body);
+
+  // 基本的後端驗證
+  if (!name) {
+    console.error("更新商品失敗：缺少商品名稱");
+    // TODO: 可以導回編輯頁面並顯示錯誤訊息
+    return res.status(400).send(`錯誤：必須提供商品名稱。 <a href='/admin/products/edit/${productId}'>返回編輯</a>`);
+  }
+
+  try {
+    const client = await pool.connect();
+    // 準備 SQL UPDATE 語句
+    // 使用 $1, $2... 佔位符，並用 WHERE id = $N 來指定更新哪一筆
+    const sql = `
+      UPDATE products
+      SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW()
+      WHERE id = $6
+      RETURNING *; -- (可選) 返回更新後的資料
+    `;
+    const values = [
+      name,
+      description || null,
+      price || null,
+      image_url || null,
+      seven_eleven_url || null,
+      productId // 將 productId 作為 WHERE 條件的值
+    ];
+
+    const result = await client.query(sql, values);
+    client.release();
+
+    if (result.rowCount === 0) {
+       // 如果沒有任何行被更新 (可能該 ID 不存在)
+       console.log(`更新商品失敗：找不到商品 (ID: ${productId})`);
+       return res.status(404).send(`錯誤：找不到要更新的商品 (ID: ${productId})。 <a href='/admin/products'>返回列表</a>`);
+    }
+
+    console.log("成功更新商品:", result.rows[0]);
+
+    // 更新成功後，重新導向回商品列表頁面
+    res.redirect('/admin/products');
+
+  } catch (err) {
+    console.error(`更新商品 (ID: ${productId}) 到資料庫時發生錯誤:`, err);
+    res.status(500).send(`伺服器錯誤，無法更新商品。 <a href='/admin/products/edit/${productId}'>返回編輯</a>`);
+  }
+});
 
 // --- Server Start ---
 app.listen(port, () => {
