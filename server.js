@@ -220,6 +220,31 @@ app.get('/admin/products', requireAdmin, (req, res) => {
 });
 // --- End Protected Admin Routes ---
 
+
+// 顯示後台音樂管理列表頁面
+app.get('/admin/music', requireAdmin, (req, res) => {
+  console.log("正在提供受保護的 /admin/music 頁面");
+  res.sendFile(path.join(__dirname, 'views', 'admin-music.html'));
+});
+
+    // 新增：顯示「新增音樂」的表單頁面
+    app.get('/admin/music/new', requireAdmin, (req, res) => {
+      console.log("正在提供受保護的 /admin/music/new 頁面");
+      const filePath = path.join(__dirname, 'views', 'admin-music-new.html');
+      console.log("嘗試發送檔案路徑:", filePath); // 打印出完整路徑看看對不對
+
+      res.sendFile(filePath, (err) => { // 加入一個回調函數來檢查錯誤
+          if (err) {
+              console.error("發送 admin-music-new.html 時出錯:", err);
+              // 可以發送一個更友善的錯誤訊息給使用者
+              res.status(err.status || 500).send("無法載入頁面，請稍後再試。");
+          } else {
+              console.log("成功發送 admin-music-new.html");
+          }
+      });
+    });
+
+
 // 新增：顯示「新增商品」的表單頁面
 app.get('/admin/products/new', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin/products/new 頁面");
@@ -373,6 +398,49 @@ app.get('/admin/music', requireAdmin, (req, res) => {
   console.log("正在提供受保護的 /admin/music 頁面");
   res.sendFile(path.join(__dirname, 'views', 'admin-music.html'));
 });
+
+// 新增：處理「新增音樂」表單的提交 (POST)
+app.post('/admin/music', requireAdmin, async (req, res) => {
+  console.log("收到新增音樂請求，資料:", req.body);
+  // 從表單提交的 req.body 中獲取資料
+  const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
+
+  // 基本驗證 (至少需要標題和演出者)
+  if (!title || !artist) {
+    console.error("新增音樂失敗：缺少標題或演出者");
+    return res.status(400).send("錯誤：必須提供標題和演出者。 <a href='/admin/music/new'>返回</a>");
+  }
+
+  try {
+    const client = await pool.connect();
+    const sql = `
+      INSERT INTO music (title, artist, description, release_date, cover_art_url, platform_url)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [
+      title,
+      artist,
+      description || null,
+      release_date || null, // 如果沒填日期，傳入 null
+      cover_art_url || null,
+      platform_url || null
+    ];
+
+    const result = await client.query(sql, values);
+    client.release();
+
+    console.log("成功新增音樂:", result.rows[0]);
+
+    // 新增成功後，重新導向回音樂列表頁面
+    res.redirect('/admin/music');
+
+  } catch (err) {
+    console.error("新增音樂到資料庫時發生錯誤:", err);
+    res.status(500).send("伺服器錯誤，無法新增音樂。 <a href='/admin/music'>返回列表</a>");
+  }
+});
+
 
 
 // --- Server Start ---
