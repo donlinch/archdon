@@ -1,3 +1,5 @@
+// server.js (完整版 - 支援前台 SPA 和獨立 admin.html)
+
 require('dotenv').config();
 const { Pool } = require('pg');
 const express = require('express');
@@ -31,545 +33,323 @@ async function testDbConnection() {
 // --- End Database Connection ---
 
 // --- Middleware ---
+// 提供 public 資料夾中的靜態檔案 (index.html, admin.html, app.js, admin.js, style.css, images 等)
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // 解析 JSON body
+app.use(express.urlencoded({ extended: true })); // 解析 URL-encoded body
 
+// Session Middleware
 app.use(session({
     store: new pgSession({
         pool: pool,
-        tableName: 'user_sessions',
+        tableName: 'user_sessions', // 確保此表格存在
         createTableIfMissing: true
     }),
-    secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev',
+    secret: process.env.SESSION_SECRET || 'a_very_secret_key_for_dev_12345', // 建議使用更強的密鑰
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // <-- 改成 false
-      maxAge: 1000 * 60 * 60 * 24 * 7
-      // httpOnly: true
-  }
+      secure: process.env.NODE_ENV === 'production', // 正式環境應為 true (需要 HTTPS)
+      httpOnly: true, // 增加安全性
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax' // 建議添加 SameSite 屬性
+    }
 }));
 // --- End Middleware ---
 
-
-// 將中介軟體應用到所有請求路徑 (它會在內部判斷是否為首頁)
-// 放在靜態檔案之後，但在路由處理之前
-
-// --- 記錄頁面瀏覽結束 ---
-
-
 // --- Authentication Middleware ---
 function requireAdmin(req, res, next) {
-  console.log(`[requireAdmin] 檢查路徑: ${req.originalUrl}`);
-  console.log(`[requireAdmin] Session 存在嗎?: ${!!req.session}`);
-  if (req.session) {
-      console.log(`[requireAdmin] Session ID: ${req.sessionID}`);
-      console.log(`[requireAdmin] Session.isAdmin 值: ${req.session.isAdmin}`);
-  }
-
-  if (req.session && req.session.isAdmin === true) { // 使用嚴格比較
-    console.log("[requireAdmin] 驗證通過，呼叫 next()");
+  // 保護 API 路由
+  if (req.session && req.session.isAdmin === true) {
     next();
   } else {
-    console.log("[requireAdmin] 驗證失敗，重新導向到 /login");
-    if (req.session) {
-        req.session.destroy(err => { // 嘗試銷毀無效 session
-            if(err) console.error("[requireAdmin] 銷毀無效 session 時出錯:", err);
-            res.clearCookie('connect.sid'); // 再次嘗試清除 cookie
-            res.redirect('/login');
-        });
-    } else {
-        res.clearCookie('connect.sid'); // 再次嘗試清除 cookie
-        res.redirect('/login');
-    }
+    console.log("[requireAdmin] API 驗證失敗 for:", req.originalUrl);
+    res.status(401).json({ success: false, message: '未授權或 Session 過期，請重新登入' });
   }
 }
 // --- End Authentication Middleware ---
 
-// --- Authentication Middleware ---
-function requireAdmin(req, res, next) { /* ... */ }
-// --- End Authentication Middleware ---
-
-// *** 把測試路由放到所有其他路由之前！ ***
-app.get('/test-delete/:id', requireAdmin, async (req, res) => {
-  console.log(`--- 執行 GET /test-delete/${req.params.id} 路由 ---`);
-  const musicId = req.params.id;
-  console.log(`收到刪除音樂 (ID: ${musicId}) 的請求 (透過 GET 測試)`);
-  res.json({ success: true, message: `收到刪除 ID ${musicId} 的 GET 請求 (僅測試)` });
-});
-// *** 測試路由結束 ***
-
-
 // --- API Routes ---
-app.get('/api/hello', (req, res) => {
-  res.json({ message: '來自後端的 SunnyYummy API 回應！' });
-});
 
-app.get('/api/db-time', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT NOW()');
-    client.release();
-    res.json({ dbTime: result.rows[0].now });
-  } catch (err) {
-    console.error("查詢資料庫時間失敗:", err);
-    res.status(500).json({ error: '無法查詢資料庫' });
-  }
-});
+// === Auth APIs ===
+app.post('/api/login', (req, res) => {
+    console.log('Received request for /api/login'); // 添加日誌方便除錯
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
-app.get('/api/products', async (req, res) => {
-  console.log("收到獲取所有商品的請求");
-  try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT * FROM products ORDER BY created_at DESC');
-    client.release();
-    res.json(result.rows);
-    console.log("成功獲取並回傳商品列表，數量:", result.rows.length);
-  } catch (err) {
-    console.error("查詢商品列表時發生錯誤:", err);
-    res.status(500).json({ error: '無法從資料庫獲取商品列表' });
-  }
-});
-
-// 新增：API 路由：獲取單一商品資料
-app.get('/api/products/:id', async (req, res) => {
-  const productId = req.params.id; // 從 URL 路徑中獲取 :id 參數
-  console.log(`收到獲取商品 (ID: ${productId}) 的請求`);
-  try {
-    const client = await pool.connect();
-    // 使用參數化查詢，只選取特定 ID 的商品
-    const result = await client.query('SELECT * FROM products WHERE id = $1', [productId]);
-    client.release();
-
-    if (result.rows.length === 0) {
-      // 如果找不到該 ID 的商品
-      console.log(`找不到商品 (ID: ${productId})`);
-      return res.status(404).json({ error: '找不到該商品' });
+    if (!adminPassword) {
+         console.error("錯誤：ADMIN_PASSWORD 環境變數未設定！");
+         return res.status(500).json({ success: false, message: '伺服器設定錯誤' });
     }
 
-    // 回傳找到的第一個 (也是唯一一個) 商品物件
-    res.json(result.rows[0]);
-    console.log(`成功獲取並回傳商品 (ID: ${productId})`);
+    if (password && password === adminPassword) {
+        req.session.isAdmin = true;
+        console.log("管理員登入成功 via API, Session ID:", req.sessionID);
+        res.json({ success: true, message: '登入成功' });
+    } else {
+        console.log("管理員登入失敗 via API：密碼錯誤或未提供");
+        res.status(401).json({ success: false, message: '密碼錯誤' });
+    }
+});
 
-  } catch (err) {
-    console.error(`查詢商品 (ID: ${productId}) 時發生錯誤:`, err);
-    res.status(500).json({ error: '無法從資料庫獲取商品資料' });
-  }
+app.post('/api/logout', (req, res) => {
+    const sessionID = req.sessionID;
+    if (req.session) {
+        req.session.destroy(err => {
+            res.clearCookie('connect.sid'); // 清除 cookie
+            if (err) {
+                console.error(`登出時 Session (ID: ${sessionID}) 銷毀錯誤:`, err);
+                res.status(500).json({ success: false, message: '登出時發生錯誤' });
+            } else {
+                console.log(`管理員已登出 via API，Session (ID: ${sessionID}) 已銷毀`);
+                res.json({ success: true, message: '登出成功' });
+            }
+        });
+    } else {
+        console.log("登出請求 via API，但沒有找到 Session");
+        res.json({ success: true, message: '已登出或 Session 不存在' });
+    }
+});
+
+app.get('/api/auth/status', (req, res) => {
+    if (req.session && req.session.isAdmin === true) {
+        res.json({ success: true, isAdmin: true });
+    } else {
+        res.json({ success: true, isAdmin: false });
+    }
 });
 
 
+// === Product APIs ===
+app.get('/api/products', async (req, res) => {
+    console.log("收到獲取所有商品的請求 (API)");
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT * FROM products ORDER BY created_at DESC');
+      client.release();
+      res.json(result.rows);
+    } catch (err) {
+      console.error("查詢商品列表時發生錯誤:", err);
+      res.status(500).json({ error: '無法從資料庫獲取商品列表' });
+    }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+    const productId = req.params.id;
+    console.log(`收到獲取商品 (ID: ${productId}) 的請求 (API)`);
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT * FROM products WHERE id = $1', [productId]);
+      client.release();
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '找不到該商品' });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(`查詢商品 (ID: ${productId}) 時發生錯誤:`, err);
+      res.status(500).json({ error: '無法從資料庫獲取商品資料' });
+    }
+});
+
+app.post('/api/products', requireAdmin, async (req, res) => {
+    console.log("收到 API 新增商品請求，資料:", req.body);
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    if (!name) {
+        return res.status(400).json({ success: false, message: '必須提供商品名稱' });
+    }
+    try {
+        const client = await pool.connect();
+        const sql = `INSERT INTO products (name, description, price, image_url, seven_eleven_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;`;
+        const values = [name, description || null, price || null, image_url || null, seven_eleven_url || null];
+        const result = await client.query(sql, values);
+        client.release();
+        console.log("API 成功新增商品:", result.rows[0]);
+        res.status(201).json({ success: true, message: '商品新增成功', product: result.rows[0] });
+    } catch (err) {
+        console.error("API 新增商品到資料庫時發生錯誤:", err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法新增商品' });
+    }
+});
+
+app.put('/api/products/:id', requireAdmin, async (req, res) => {
+    const productId = req.params.id;
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    console.log(`收到 API 更新商品 (ID: ${productId}) 請求，資料:`, req.body);
+    if (!name) {
+        return res.status(400).json({ success: false, message: '必須提供商品名稱' });
+    }
+    try {
+        const client = await pool.connect();
+        const sql = `UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *;`;
+        const values = [name, description || null, price || null, image_url || null, seven_eleven_url || null, productId];
+        const result = await client.query(sql, values);
+        client.release();
+        if (result.rowCount === 0) {
+           return res.status(404).json({ success: false, message: `找不到要更新的商品 (ID: ${productId})` });
+        }
+        console.log("API 成功更新商品:", result.rows[0]);
+        res.json({ success: true, message: '商品更新成功', product: result.rows[0] });
+    } catch (err) {
+        console.error(`API 更新商品 (ID: ${productId}) 到資料庫時發生錯誤:`, err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法更新商品' });
+    }
+});
+
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
+    const productId = req.params.id;
+    console.log(`收到 API 刪除商品 (ID: ${productId}) 的請求`);
+    try {
+        const client = await pool.connect();
+        const sql = `DELETE FROM products WHERE id = $1 RETURNING *;`;
+        const result = await client.query(sql, [productId]);
+        client.release();
+        if (result.rowCount === 0) {
+           return res.status(404).json({ success: false, message: '找不到該商品' });
+        }
+        console.log("API 成功刪除商品:", result.rows[0]);
+        res.json({ success: true, message: '商品已成功刪除' });
+    } catch (err) {
+        console.error(`API 刪除商品 (ID: ${productId}) 時發生錯誤:`, err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除商品' });
+    }
+});
+
+
+// === Music APIs ===
 app.get('/api/music', async (req, res) => {
-  console.log("收到獲取所有音樂作品的請求");
-  try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT * FROM music ORDER BY release_date DESC, created_at DESC');
-    client.release();
-    res.json(result.rows);
-    console.log("成功獲取並回傳音樂列表，數量:", result.rows.length);
-  } catch (err) {
-    console.error("查詢音樂列表時發生錯誤:", err);
-    res.status(500).json({ error: '無法從資料庫獲取音樂列表' });
-  }
+    console.log("收到獲取所有音樂作品的請求 (API)");
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT * FROM music ORDER BY release_date DESC, created_at DESC');
+      client.release();
+      res.json(result.rows);
+    } catch (err) {
+      console.error("查詢音樂列表時發生錯誤:", err);
+      res.status(500).json({ error: '無法從資料庫獲取音樂列表' });
+    }
+});
+
+app.get('/api/music/:id', async (req, res) => {
+    const musicId = req.params.id;
+    console.log(`收到獲取音樂 (ID: ${musicId}) 的請求 (API)`);
+    try {
+      const client = await pool.connect();
+      const result = await client.query('SELECT * FROM music WHERE id = $1', [musicId]);
+      client.release();
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '找不到該音樂作品' });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(`查詢音樂 (ID: ${musicId}) 時發生錯誤:`, err);
+      res.status(500).json({ error: '無法從資料庫獲取音樂資料' });
+    }
+});
+
+app.post('/api/music', requireAdmin, async (req, res) => {
+    console.log("收到 API 新增音樂請求，資料:", req.body);
+    const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
+    if (!title || !artist) {
+        return res.status(400).json({ success: false, message: '必須提供標題和演出者' });
+    }
+    try {
+        const client = await pool.connect();
+        const sql = `INSERT INTO music (title, artist, description, release_date, cover_art_url, platform_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;`;
+        const values = [title, artist, description || null, release_date || null, cover_art_url || null, platform_url || null];
+        const result = await client.query(sql, values);
+        client.release();
+        console.log("API 成功新增音樂:", result.rows[0]);
+        res.status(201).json({ success: true, message: '音樂新增成功', music: result.rows[0] });
+    } catch (err) {
+        console.error("API 新增音樂到資料庫時發生錯誤:", err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法新增音樂' });
+    }
+});
+
+app.put('/api/music/:id', requireAdmin, async (req, res) => {
+    const musicId = req.params.id;
+    const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
+    console.log(`收到 API 更新音樂 (ID: ${musicId}) 請求，資料:`, req.body);
+     if (!title || !artist) {
+        return res.status(400).json({ success: false, message: '必須提供標題和演出者' });
+    }
+    try {
+        const client = await pool.connect();
+        const sql = `UPDATE music SET title = $1, artist = $2, description = $3, release_date = $4, cover_art_url = $5, platform_url = $6, updated_at = NOW() WHERE id = $7 RETURNING *;`;
+        const values = [title, artist, description || null, release_date || null, cover_art_url || null, platform_url || null, musicId];
+        const result = await client.query(sql, values);
+        client.release();
+        if (result.rowCount === 0) {
+           return res.status(404).json({ success: false, message: `找不到要更新的音樂 (ID: ${musicId})` });
+        }
+        console.log("API 成功更新音樂:", result.rows[0]);
+        res.json({ success: true, message: '音樂更新成功', music: result.rows[0] });
+    } catch (err) {
+        console.error(`API 更新音樂 (ID: ${musicId}) 到資料庫時發生錯誤:`, err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法更新音樂' });
+    }
+});
+
+app.delete('/api/music/:id', requireAdmin, async (req, res) => {
+    const musicId = req.params.id;
+    console.log(`收到 API 刪除音樂 (ID: ${musicId}) 的請求`);
+    try {
+        const client = await pool.connect();
+        const sql = `DELETE FROM music WHERE id = $1 RETURNING *;`;
+        const result = await client.query(sql, [musicId]);
+        client.release();
+        if (result.rowCount === 0) {
+           return res.status(404).json({ success: false, message: '找不到該音樂作品' });
+        }
+        console.log("API 成功刪除音樂:", result.rows[0]);
+        res.json({ success: true, message: '音樂已成功刪除' });
+    } catch (err) {
+        console.error(`API 刪除音樂 (ID: ${musicId}) 時發生錯誤:`, err);
+        res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除音樂' });
+    }
 });
 // --- End API Routes ---
 
-// --- Page & Auth Routes ---
-// 顯示登入頁面
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+
+// --- Page Serving Routes ---
+
+// **新增**: 提供獨立的 admin.html
+app.get('/admin', (req, res) => {
+    console.log("Serving /admin request with admin.html");
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// 處理登入表單提交
-app.post('/login', (req, res) => {
-  console.log("--- POST /login 路由被執行 ---");
-  const enteredPassword = req.body.password;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  console.log("收到登入嘗試");
-
-  if (enteredPassword && enteredPassword === adminPassword) {
-      req.session.isAdmin = true;
-      console.log("管理員登入成功，Session 即將儲存");
-      req.session.save(err => {
-          if (err) {
-              console.error("Session 儲存錯誤:", err);
-              return res.redirect('/login?error=SessionSaveError');
-          }
-          console.log("Session 儲存成功，重新導向到 /admin");
-          res.redirect('/admin'); // 導向後台主頁
-      });
-  } else {
-      console.log("管理員登入失敗：密碼錯誤");
-       res.redirect('/login?error=InvalidPassword');
-  }
-});
-
-// 處理登出 <-- ***移到這裡***
-app.get('/logout', (req, res) => {
-  const sessionID = req.sessionID;
-  if (req.session) {
-      req.session.destroy(err => {
-        res.clearCookie('connect.sid');
-        if (err) {
-          console.error(`登出時 Session (ID: ${sessionID}) 銷毀錯誤:`, err);
-        } else {
-          console.log(`管理員已登出，Session (ID: ${sessionID}) 已銷毀`);
-        }
-        res.redirect('/login');
-      });
-  } else {
-      res.clearCookie('connect.sid');
-      console.log("登出請求，但沒有找到 Session");
-      res.redirect('/login');
-  }
-});
-
-// --- End Page & Auth Routes ---
-
-
-// --- Protected Admin Routes ---
-// 顯示後台管理主頁
-app.get('/admin', requireAdmin, (req, res) => {
-  console.log("正在提供受保護的 /admin 頁面");
-  res.sendFile(path.join(__dirname, 'views', 'admin.html')); // <--- 改成 'views'
-});
-
-// 顯示後台商品管理列表頁面
-app.get('/admin/products', requireAdmin, (req, res) => {
-  console.log("正在提供受保護的 /admin/products 頁面");
-  res.sendFile(path.join(__dirname, 'views', 'admin-products.html')); // <--- 改成 'views'
-});
-// --- End Protected Admin Routes ---
-
-
-// 顯示後台音樂管理列表頁面
-app.get('/admin/music', requireAdmin, (req, res) => {
-  console.log("正在提供受保護的 /admin/music 頁面");
-  res.sendFile(path.join(__dirname, 'views', 'admin-music.html'));
-});
-
-    // 新增：顯示「新增音樂」的表單頁面
-    app.get('/admin/music/new', requireAdmin, (req, res) => {
-      console.log("正在提供受保護的 /admin/music/new 頁面");
-      const filePath = path.join(__dirname, 'views', 'admin-music-new.html');
-      console.log("嘗試發送檔案路徑:", filePath); // 打印出完整路徑看看對不對
-
-      res.sendFile(filePath, (err) => { // 加入一個回調函數來檢查錯誤
-          if (err) {
-              console.error("發送 admin-music-new.html 時出錯:", err);
-              // 可以發送一個更友善的錯誤訊息給使用者
-              res.status(err.status || 500).send("無法載入頁面，請稍後再試。");
-          } else {
-              console.log("成功發送 admin-music-new.html");
-          }
-      });
-    });
-
-
-// 新增：顯示「新增商品」的表單頁面
-app.get('/admin/products/new', requireAdmin, (req, res) => {
-  console.log("正在提供受保護的 /admin/products/new 頁面");
-  res.sendFile(path.join(__dirname, 'views', 'admin-product-new.html')); // 發送新建立的 HTML
-});
-
-// 新增：顯示「編輯商品」的表單頁面
-app.get('/admin/products/edit/:id', requireAdmin, (req, res) => {
-  // :id 參數在這裡只是用來構成 URL，實際的資料獲取由前端 JS 完成
-  console.log(`正在提供受保護的 /admin/products/edit/${req.params.id} 頁面`);
-  res.sendFile(path.join(__dirname, 'views', 'admin-product-edit.html'));
-});
-
-// 新增：顯示「編輯音樂」的表單頁面
-app.get('/admin/music/edit/:id', requireAdmin, (req, res) => {
-  console.log(`正在提供受保護的 /admin/music/edit/${req.params.id} 頁面`);
-  res.sendFile(path.join(__dirname, 'views', 'admin-music-edit.html'));
-});
-
-
-
-// 新增：處理「新增商品」表單的提交 (POST)
-app.post('/admin/products', requireAdmin, async (req, res) => {
-  console.log("收到新增商品請求，資料:", req.body);
-  // 從表單提交的 req.body 中獲取資料
-  const { name, description, price, image_url, seven_eleven_url } = req.body;
-
-  // 基本的後端驗證 (例如檢查名稱是否為空)
-  if (!name) {
-    console.error("新增商品失敗：缺少商品名稱");
-    // TODO: 可以導回新增頁面並顯示錯誤訊息
-    return res.status(400).send("錯誤：必須提供商品名稱。 <a href='/admin/products/new'>返回</a>");
+// **修改**: SPA 回退路由，處理所有其他非 API、非 /admin 的 GET 請求
+app.get('*', (req, res, next) => { // 添加 next
+  // 只處理 GET 請求
+  if (req.method !== 'GET') {
+    return next(); // 交給下一個處理器或 Express 預設處理
   }
 
-  try {
-    const client = await pool.connect();
-    // 準備 SQL INSERT 語句
-    // 使用 $1, $2... 作為參數佔位符，防止 SQL 注入攻擊
-    const sql = `
-      INSERT INTO products (name, description, price, image_url, seven_eleven_url)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *; -- (可選) 返回剛剛插入的資料
-    `;
-    const values = [
-      name,
-      description || null, // 如果沒填描述，傳入 null
-      price || null,       // 如果沒填價格，傳入 null (資料庫欄位允許 NULL)
-      image_url || null,
-      seven_eleven_url || null
-    ];
-
-    const result = await client.query(sql, values);
-    client.release();
-
-    console.log("成功新增商品:", result.rows[0]); // 顯示插入的資料
-
-    // 新增成功後，重新導向回商品列表頁面
-    res.redirect('/admin/products');
-
-  } catch (err) {
-    console.error("新增商品到資料庫時發生錯誤:", err);
-    // TODO: 更友善的錯誤處理頁面
-    res.status(500).send("伺服器錯誤，無法新增商品。 <a href='/admin/products'>返回列表</a>");
+  // 排除 API 和 /admin 路徑
+  if (req.originalUrl.startsWith('/api') || req.originalUrl === '/admin') {
+    return next(); // 不是我們要處理的 SPA 頁面請求，交給下一個
   }
+
+  // 檢查是否請求靜態檔案 (雖然 express.static 應該先處理，但以防萬一)
+  // 簡單檢查常見副檔名
+  if (req.originalUrl.includes('.')) {
+      // 假設是請求靜態檔案，讓 express.static 處理或最終 404
+      return next();
+  }
+
+
+  // 如果是其他 GET 請求，則發送前台 SPA 的 index.html
+  console.log(`Serving SPA fallback for: ${req.originalUrl}`);
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 新增：處理「編輯商品」表單的提交 (POST)
-app.post('/admin/products/edit/:id', requireAdmin, async (req, res) => {
-  const productId = req.params.id; // 從 URL 獲取要編輯的商品 ID
-  // 從表單提交的 req.body 中獲取更新後的資料
-  const { name, description, price, image_url, seven_eleven_url } = req.body;
-
-  console.log(`收到更新商品 (ID: ${productId}) 請求，資料:`, req.body);
-
-  // 基本的後端驗證
-  if (!name) {
-    console.error("更新商品失敗：缺少商品名稱");
-    // TODO: 可以導回編輯頁面並顯示錯誤訊息
-    return res.status(400).send(`錯誤：必須提供商品名稱。 <a href='/admin/products/edit/${productId}'>返回編輯</a>`);
-  }
-
-  try {
-    const client = await pool.connect();
-    // 準備 SQL UPDATE 語句
-    // 使用 $1, $2... 佔位符，並用 WHERE id = $N 來指定更新哪一筆
-    const sql = `
-      UPDATE products
-      SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW()
-      WHERE id = $6
-      RETURNING *; -- (可選) 返回更新後的資料
-    `;
-    const values = [
-      name,
-      description || null,
-      price || null,
-      image_url || null,
-      seven_eleven_url || null,
-      productId // 將 productId 作為 WHERE 條件的值
-    ];
-
-    const result = await client.query(sql, values);
-    client.release();
-
-    if (result.rowCount === 0) {
-       // 如果沒有任何行被更新 (可能該 ID 不存在)
-       console.log(`更新商品失敗：找不到商品 (ID: ${productId})`);
-       return res.status(404).send(`錯誤：找不到要更新的商品 (ID: ${productId})。 <a href='/admin/products'>返回列表</a>`);
-    }
-
-    console.log("成功更新商品:", result.rows[0]);
-
-    // 更新成功後，重新導向回商品列表頁面
-    res.redirect('/admin/products');
-
-  } catch (err) {
-    console.error(`更新商品 (ID: ${productId}) 到資料庫時發生錯誤:`, err);
-    res.status(500).send(`伺服器錯誤，無法更新商品。 <a href='/admin/products/edit/${productId}'>返回編輯</a>`);
-  }
-});
-
-// 新增：處理「刪除商品」的請求 (DELETE)
-app.delete('/admin/products/:id', requireAdmin, async (req, res) => {
-  const productId = req.params.id; // 從 URL 獲取要刪除的商品 ID
-  console.log(`收到刪除商品 (ID: ${productId}) 的請求`);
-
-  try {
-    const client = await pool.connect();
-    // 準備 SQL DELETE 語句
-    const sql = `DELETE FROM products WHERE id = $1 RETURNING *;`; // 返回被刪除的資料 (可選)
-    const values = [productId];
-
-    const result = await client.query(sql, values);
-    client.release();
-
-    if (result.rowCount === 0) {
-       // 如果沒有任何行被刪除 (可能該 ID 不存在)
-       console.log(`刪除商品失敗：找不到商品 (ID: ${productId})`);
-       // 可以回傳 404 錯誤
-       return res.status(404).json({ success: false, message: '找不到該商品' });
-    }
-
-    console.log("成功刪除商品:", result.rows[0]);
-
-    // 刪除成功後，回傳成功的 JSON 訊息
-    // 前端 JS 收到成功訊息後，會負責重新整理頁面或移除表格行
-    res.json({ success: true, message: '商品已成功刪除' });
-
-  } catch (err) {
-    console.error(`刪除商品 (ID: ${productId}) 時發生錯誤:`, err);
-    // 回傳 500 錯誤
-    res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除商品' });
-  }
-});
-
-
-// 新增：顯示後台音樂管理列表頁面
-app.get('/admin/music', requireAdmin, (req, res) => {
-  console.log("正在提供受保護的 /admin/music 頁面");
-  res.sendFile(path.join(__dirname, 'views', 'admin-music.html'));
-});
-
-// 新增：處理「新增音樂」表單的提交 (POST)
-app.post('/admin/music', requireAdmin, async (req, res) => {
-  console.log("收到新增音樂請求，資料:", req.body);
-  // 從表單提交的 req.body 中獲取資料
-  const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
-
-  // 基本驗證 (至少需要標題和演出者)
-  if (!title || !artist) {
-    console.error("新增音樂失敗：缺少標題或演出者");
-    return res.status(400).send("錯誤：必須提供標題和演出者。 <a href='/admin/music/new'>返回</a>");
-  }
-
-  try {
-    const client = await pool.connect();
-    const sql = `
-      INSERT INTO music (title, artist, description, release_date, cover_art_url, platform_url)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *;
-    `;
-    const values = [
-      title,
-      artist,
-      description || null,
-      release_date || null, // 如果沒填日期，傳入 null
-      cover_art_url || null,
-      platform_url || null
-    ];
-
-    const result = await client.query(sql, values);
-    client.release();
-
-    console.log("成功新增音樂:", result.rows[0]);
-
-    // 新增成功後，重新導向回音樂列表頁面
-    res.redirect('/admin/music');
-
-  } catch (err) {
-    console.error("新增音樂到資料庫時發生錯誤:", err);
-    res.status(500).send("伺服器錯誤，無法新增音樂。 <a href='/admin/music'>返回列表</a>");
-  }
-});
-
-// 新增：API 路由：獲取單一音樂資料
-app.get('/api/music/:id', async (req, res) => {
-  const musicId = req.params.id; // 從 URL 路徑中獲取 :id 參數
-  console.log(`收到獲取音樂 (ID: ${musicId}) 的請求`);
-  try {
-    const client = await pool.connect();
-    // 使用參數化查詢，只選取特定 ID 的音樂
-    const result = await client.query('SELECT * FROM music WHERE id = $1', [musicId]);
-    client.release();
-
-    if (result.rows.length === 0) {
-      console.log(`找不到音樂 (ID: ${musicId})`);
-      return res.status(404).json({ error: '找不到該音樂作品' });
-    }
-    res.json(result.rows[0]); // 回傳找到的音樂物件
-    console.log(`成功獲取並回傳音樂 (ID: ${musicId})`);
-  } catch (err) {
-    console.error(`查詢音樂 (ID: ${musicId}) 時發生錯誤:`, err);
-    res.status(500).json({ error: '無法從資料庫獲取音樂資料' });
-  }
-});
-
-
-// 新增：處理「編輯音樂」表單的提交 (POST)
-app.post('/admin/music/edit/:id', requireAdmin, async (req, res) => {
-  const musicId = req.params.id;
-  const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
-
-  console.log(`收到更新音樂 (ID: ${musicId}) 請求，資料:`, req.body);
-
-  if (!title || !artist) {
-    console.error("更新音樂失敗：缺少標題或演出者");
-    return res.status(400).send(`錯誤：必須提供標題和演出者。 <a href='/admin/music/edit/${musicId}'>返回編輯</a>`);
-  }
-
-  try {
-    const client = await pool.connect();
-    const sql = `
-      UPDATE music
-      SET title = $1, artist = $2, description = $3, release_date = $4, cover_art_url = $5, platform_url = $6, updated_at = NOW()
-      WHERE id = $7
-      RETURNING *;
-    `;
-    const values = [
-      title,
-      artist,
-      description || null,
-      release_date || null,
-      cover_art_url || null,
-      platform_url || null,
-      musicId
-    ];
-
-    const result = await client.query(sql, values);
-    client.release();
-
-    if (result.rowCount === 0) {
-       console.log(`更新音樂失敗：找不到音樂 (ID: ${musicId})`);
-       return res.status(404).send(`錯誤：找不到要更新的音樂 (ID: ${musicId})。 <a href='/admin/music'>返回列表</a>`);
-    }
-
-    console.log("成功更新音樂:", result.rows[0]);
-    res.redirect('/admin/music'); // 導回音樂列表
-
-  } catch (err) {
-    console.error(`更新音樂 (ID: ${musicId}) 到資料庫時發生錯誤:`, err);
-    res.status(500).send(`伺服器錯誤，無法更新音樂。 <a href='/admin/music/edit/${musicId}'>返回編輯</a>`);
-  }
-});
-
-// ... (保留處理商品刪除的 DELETE 路由) ...
-
-// *** 處理刪除音樂的路由 ***
-app.delete('/api/music/:id', requireAdmin, async (req, res) => { // <--- 確認是 DELETE 和 /api/music/:id
-  console.log(`--- 執行 DELETE /api/music/${req.params.id} 路由 ---`);
-  const musicId = req.params.id;
-  console.log(`收到刪除音樂 (ID: ${musicId}) 的請求`);
-  try {
-    const client = await pool.connect();
-    const sql = `DELETE FROM music WHERE id = $1 RETURNING *;`; // <--- 實際刪除 SQL
-    const values = [musicId];
-    const result = await client.query(sql, values);
-    client.release();
-    if (result.rowCount === 0) {
-       console.log(`刪除音樂失敗：找不到音樂 (ID: ${musicId})`);
-       return res.status(404).json({ success: false, message: '找不到該音樂作品' });
-    }
-    console.log("成功刪除音樂:", result.rows[0]);
-    res.json({ success: true, message: '音樂已成功刪除' }); // <--- 返回成功 JSON
-  } catch (err) {
-    console.error(`刪除音樂 (ID: ${musicId}) 時發生錯誤:`, err);
-    res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除音樂' }); // <--- 返回失敗 JSON
-  }
-});
-// --- End Music Admin Routes --- // (或者放在 Protected Admin Routes 區塊裡)
-
+// --- End Page Serving Routes ---
 
 
 // --- Server Start ---
 app.listen(port, () => {
   console.log(`伺服器正在監聽 port ${port}`);
-  testDbConnection();
+  testDbConnection(); // 測試資料庫連接
 });
 // --- End Server Start ---
