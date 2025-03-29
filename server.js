@@ -258,6 +258,13 @@ app.get('/admin/products/edit/:id', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'admin-product-edit.html'));
 });
 
+// 新增：顯示「編輯音樂」的表單頁面
+app.get('/admin/music/edit/:id', requireAdmin, (req, res) => {
+  console.log(`正在提供受保護的 /admin/music/edit/${req.params.id} 頁面`);
+  res.sendFile(path.join(__dirname, 'views', 'admin-music-edit.html'));
+});
+
+
 
 // 新增：處理「新增商品」表單的提交 (POST)
 app.post('/admin/products', requireAdmin, async (req, res) => {
@@ -441,6 +448,77 @@ app.post('/admin/music', requireAdmin, async (req, res) => {
   }
 });
 
+// 新增：API 路由：獲取單一音樂資料
+app.get('/api/music/:id', async (req, res) => {
+  const musicId = req.params.id; // 從 URL 路徑中獲取 :id 參數
+  console.log(`收到獲取音樂 (ID: ${musicId}) 的請求`);
+  try {
+    const client = await pool.connect();
+    // 使用參數化查詢，只選取特定 ID 的音樂
+    const result = await client.query('SELECT * FROM music WHERE id = $1', [musicId]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      console.log(`找不到音樂 (ID: ${musicId})`);
+      return res.status(404).json({ error: '找不到該音樂作品' });
+    }
+    res.json(result.rows[0]); // 回傳找到的音樂物件
+    console.log(`成功獲取並回傳音樂 (ID: ${musicId})`);
+  } catch (err) {
+    console.error(`查詢音樂 (ID: ${musicId}) 時發生錯誤:`, err);
+    res.status(500).json({ error: '無法從資料庫獲取音樂資料' });
+  }
+});
+
+
+// 新增：處理「編輯音樂」表單的提交 (POST)
+app.post('/admin/music/edit/:id', requireAdmin, async (req, res) => {
+  const musicId = req.params.id;
+  const { title, artist, description, release_date, cover_art_url, platform_url } = req.body;
+
+  console.log(`收到更新音樂 (ID: ${musicId}) 請求，資料:`, req.body);
+
+  if (!title || !artist) {
+    console.error("更新音樂失敗：缺少標題或演出者");
+    return res.status(400).send(`錯誤：必須提供標題和演出者。 <a href='/admin/music/edit/${musicId}'>返回編輯</a>`);
+  }
+
+  try {
+    const client = await pool.connect();
+    const sql = `
+      UPDATE music
+      SET title = $1, artist = $2, description = $3, release_date = $4, cover_art_url = $5, platform_url = $6, updated_at = NOW()
+      WHERE id = $7
+      RETURNING *;
+    `;
+    const values = [
+      title,
+      artist,
+      description || null,
+      release_date || null,
+      cover_art_url || null,
+      platform_url || null,
+      musicId
+    ];
+
+    const result = await client.query(sql, values);
+    client.release();
+
+    if (result.rowCount === 0) {
+       console.log(`更新音樂失敗：找不到音樂 (ID: ${musicId})`);
+       return res.status(404).send(`錯誤：找不到要更新的音樂 (ID: ${musicId})。 <a href='/admin/music'>返回列表</a>`);
+    }
+
+    console.log("成功更新音樂:", result.rows[0]);
+    res.redirect('/admin/music'); // 導回音樂列表
+
+  } catch (err) {
+    console.error(`更新音樂 (ID: ${musicId}) 到資料庫時發生錯誤:`, err);
+    res.status(500).send(`伺服器錯誤，無法更新音樂。 <a href='/admin/music/edit/${musicId}'>返回編輯</a>`);
+  }
+});
+
+// ... (保留處理商品刪除的 DELETE 路由) ...
 
 
 // --- Server Start ---

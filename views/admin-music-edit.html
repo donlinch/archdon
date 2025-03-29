@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編輯音樂 - SunnyYummy 後台</title> <!-- Changed -->
+    <link rel="stylesheet" href="/style.css">
+    <style> /* (沿用之前的表單樣式) */
+        /* ... (保留 form-container, form-group 等樣式) ... */
+    </style>
+</head>
+<body>
+    <header>
+        <h1>管理後台 - 編輯音樂</h1> <!-- Changed -->
+    </header>
+    <main class="container">
+         <p><a href="/admin/music">返回音樂列表</a> | <a href="/admin">返回後台主頁</a> | <a href="/logout">登出</a></p> <!-- Changed -->
+         <hr>
+
+        <div class="form-container">
+            <h2>編輯音樂資訊</h2> <!-- Changed -->
+            <div id="loading-message"><p>正在載入音樂資料...</p></div> <!-- Changed -->
+            <form id="edit-music-form" method="POST" style="display: none;"> <!-- Changed ID -->
+                <input type="hidden" id="musicId" name="musicId"> <!-- Changed ID/Name -->
+
+                <div class="form-group">
+                    <label for="title">標題:</label> <!-- Changed -->
+                    <input type="text" id="title" name="title" required> <!-- Changed -->
+                </div>
+                 <div class="form-group">
+                    <label for="artist">演出者:</label> <!-- Changed -->
+                    <input type="text" id="artist" name="artist" required> <!-- Changed -->
+                </div>
+                 <div class="form-group">
+                    <label for="description">簡介:</label> <!-- Changed -->
+                    <textarea id="description" name="description"></textarea> <!-- Changed -->
+                </div>
+                 <div class="form-group">
+                    <label for="release_date">發行日期:</label> <!-- Changed -->
+                    <input type="date" id="release_date" name="release_date"> <!-- Changed -->
+                </div>
+                <div class="form-group">
+                    <label for="cover_art_url">封面圖片網址:</label> <!-- Changed -->
+                    <input type="text" id="cover_art_url" name="cover_art_url" placeholder="/images/cover.jpg 或 https://..."> <!-- Changed -->
+                </div>
+                <div class="form-group">
+                    <label for="platform_url">音樂平台連結:</label> <!-- Changed -->
+                    <input type="text" id="platform_url" name="platform_url" placeholder="https://..."> <!-- Changed -->
+                </div>
+                <div class="form-buttons">
+                    <button type="button" onclick="window.location.href='/admin/music'">取消</button> <!-- Changed -->
+                    <button type="submit">更新音樂</button> <!-- Changed -->
+                </div>
+            </form>
+        </div>
+    </main>
+     <footer>
+        <div class="container">
+             <p>© 2025 SunnyYummy. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const loadingMessage = document.getElementById('loading-message');
+        const form = document.getElementById('edit-music-form'); // Changed
+        const musicIdInput = document.getElementById('musicId'); // Changed
+        const titleInput = document.getElementById('title'); // Changed
+        const artistInput = document.getElementById('artist'); // Changed
+        const descriptionInput = document.getElementById('description'); // Changed
+        const releaseDateInput = document.getElementById('release_date'); // Changed
+        const coverArtUrlInput = document.getElementById('cover_art_url'); // Changed
+        const platformUrlInput = document.getElementById('platform_url'); // Changed
+
+        const pathSegments = window.location.pathname.split('/');
+        const musicId = pathSegments[pathSegments.length - 1]; // Changed variable name
+
+        if (!musicId || isNaN(parseInt(musicId))) {
+            loadingMessage.innerHTML = '<p>錯誤：無效的音樂 ID。</p>'; // Changed
+            return;
+        }
+
+        musicIdInput.value = musicId; // Changed
+        form.action = `/admin/music/edit/${musicId}`; // Changed action URL
+
+        try {
+            const response = await fetch(`/api/music/${musicId}`); // Changed API endpoint
+
+            if (!response.ok) {
+                 throw new Error(`無法獲取音樂資料 (ID: ${musicId})，狀態碼：${response.status}`); // Changed
+            }
+            const music = await response.json(); // Changed variable name
+
+            // 填充表單
+            titleInput.value = music.title || ''; // Changed
+            artistInput.value = music.artist || ''; // Changed
+            descriptionInput.value = music.description || ''; // Changed
+            // 處理日期格式 (YYYY-MM-DD)
+            if (music.release_date) {
+                releaseDateInput.value = new Date(music.release_date).toISOString().split('T')[0];
+            } else {
+                releaseDateInput.value = '';
+            }
+            coverArtUrlInput.value = music.cover_art_url || ''; // Changed
+            platformUrlInput.value = music.platform_url || ''; // Changed
+
+            loadingMessage.style.display = 'none';
+            form.style.display = 'block';
+
+        } catch (error) {
+            console.error("載入音樂資料失敗:", error); // Changed
+            loadingMessage.innerHTML = `<p>載入音樂資料失敗：${error.message}</p>`; // Changed
+        }
+    });
+    </script>
+
+</body>
+</html>
