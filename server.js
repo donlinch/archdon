@@ -23,7 +23,6 @@ async function testDbConnection() {
     client.release(); // 將連接釋放回連接池
   } catch (err) {
     console.error("!!! 連接資料庫時發生錯誤:", err.message); // 顯示更簡潔的錯誤訊息
-    // 可以在這裡加上更詳細的錯誤處理，例如檢查是否 DATABASE_URL 未設定
     if (!process.env.DATABASE_URL) {
         console.error("錯誤原因：DATABASE_URL 環境變數未設定。請檢查 .env 檔案或 Render 環境變數。");
     }
@@ -32,8 +31,6 @@ async function testDbConnection() {
 // --- 資料庫連接設定結束 ---
 
 // --- 中介軟體設定 ---
-// 設定靜態檔案目錄 (重要！)
-// 告訴 Express 去哪裡找 HTML, CSS, JS 檔案
 app.use(express.static(path.join(__dirname, 'public')));
 // --- 中介軟體設定結束 ---
 
@@ -47,37 +44,46 @@ app.get('/api/hello', (req, res) => {
 // API 路由：測試從資料庫讀取時間
 app.get('/api/db-time', async (req, res) => {
   try {
-    // 從連接池獲取連接，執行查詢，然後釋放連接
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
-    client.release(); // 確保釋放連接
+    client.release();
     res.json({ dbTime: result.rows[0].now });
   } catch (err) {
     console.error("查詢資料庫時間失敗:", err);
     res.status(500).json({ error: '無法查詢資料庫' });
   }
 });
-// --- API 路由設定結束 ---
 
 // API 路由：獲取所有商品列表
 app.get('/api/products', async (req, res) => {
-  console.log("收到獲取所有商品的請求"); // 在後端日誌中加個標記，方便追蹤
+  console.log("收到獲取所有商品的請求");
   try {
-    // 從連接池獲取連接，執行查詢，然後釋放連接
     const client = await pool.connect();
-    // 執行 SQL 查詢，選取 products 表格中的所有欄位 (*)
-    const result = await client.query('SELECT * FROM products ORDER BY created_at DESC'); // 按建立時間降冪排序，新的在前
-    client.release(); // 確保釋放連接
-
-    // 將查詢結果 (result.rows 是一個包含所有商品物件的陣列) 以 JSON 格式回傳
+    const result = await client.query('SELECT * FROM products ORDER BY created_at DESC');
+    client.release();
     res.json(result.rows);
     console.log("成功獲取並回傳商品列表，數量:", result.rows.length);
+  } catch (err) {
+    console.error("查詢商品列表時發生錯誤:", err);
+    res.status(500).json({ error: '無法從資料庫獲取商品列表' });
+  }
+});
+
+// API 路由：獲取所有音樂作品列表
+app.get('/api/music', async (req, res) => {
+  console.log("收到獲取所有音樂作品的請求");
+  try {
+    const client = await pool.connect();
+    // 查詢 music 表格，按發行日期降冪排序 (如果 release_date 是 NULL 會排在後面)
+    const result = await client.query('SELECT * FROM music ORDER BY release_date DESC, created_at DESC');
+    client.release();
+
+    res.json(result.rows); // 回傳音樂資料陣列
+    console.log("成功獲取並回傳音樂列表，數量:", result.rows.length);
 
   } catch (err) {
-    // 如果查詢過程中發生錯誤
-    console.error("查詢商品列表時發生錯誤:", err);
-    // 回傳 500 伺服器內部錯誤狀態碼，並附帶錯誤訊息
-    res.status(500).json({ error: '無法從資料庫獲取商品列表' });
+    console.error("查詢音樂列表時發生錯誤:", err);
+    res.status(500).json({ error: '無法從資料庫獲取音樂列表' });
   }
 });
 
