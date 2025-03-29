@@ -170,16 +170,15 @@ app.post('/login', (req, res) => {
 
 // 路由：處理登出
 app.get('/logout', (req, res) => {
-  // 使用 express-session 提供的 req.session.destroy() 方法
+  const sessionID = req.sessionID; // 先記住 session ID (用於日誌)
   req.session.destroy(err => {
+    // 無論是否出錯，都嘗試清除 cookie 並重新導向
+    res.clearCookie('connect.sid'); // 清除 cookie
     if (err) {
-      console.error("登出時 Session 銷毀錯誤:", err);
-      // 即使銷毀失敗，還是嘗試讓使用者跳轉
-      return res.redirect('/'); // 或者導向錯誤頁面
+      console.error(`登出時 Session (ID: ${sessionID}) 銷毀錯誤:`, err);
+    } else {
+      console.log(`管理員已登出，Session (ID: ${sessionID}) 已銷毀`);
     }
-    // Session 成功銷毀後，清除瀏覽器的 session cookie
-    res.clearCookie('connect.sid'); // 預設 cookie 名稱是 connect.sid
-    console.log("管理員已登出，Session 已銷毀");
     // 重新導向到登入頁面
     res.redirect('/login');
   });
