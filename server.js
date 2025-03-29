@@ -520,6 +520,30 @@ app.post('/admin/music/edit/:id', requireAdmin, async (req, res) => {
 
 // ... (保留處理商品刪除的 DELETE 路由) ...
 
+// 新增：處理「刪除音樂」的請求 (DELETE)
+app.delete('/admin/music/:id', requireAdmin, async (req, res) => {
+  const musicId = req.params.id;
+  console.log(`收到刪除音樂 (ID: ${musicId}) 的請求`);
+
+  try {
+    const client = await pool.connect();
+    const sql = `DELETE FROM music WHERE id = $1 RETURNING *;`;
+    const values = [musicId];
+    const result = await client.query(sql, values);
+    client.release();
+
+    if (result.rowCount === 0) {
+       console.log(`刪除音樂失敗：找不到音樂 (ID: ${musicId})`);
+       return res.status(404).json({ success: false, message: '找不到該音樂作品' });
+    }
+    console.log("成功刪除音樂:", result.rows[0]);
+    res.json({ success: true, message: '音樂已成功刪除' });
+  } catch (err) {
+    console.error(`刪除音樂 (ID: ${musicId}) 時發生錯誤:`, err);
+    res.status(500).json({ success: false, message: '伺服器錯誤，無法刪除音樂' });
+  }
+});
+
 
 // --- Server Start ---
 app.listen(port, () => {
