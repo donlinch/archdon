@@ -556,7 +556,7 @@ main h2::after {
 
 #header-logo {
     
-    height: 1024px; /* *** 調整這個高度值來控制 Logo 大小 *** */
+    height: 600px; /* *** 調整這個高度值來控制 Logo 大小 *** */
     width: auto; /* 寬度自動調整以保持比例 */
     vertical-align: middle; /* 嘗試垂直居中對齊 Logo (在行內元素或表格單元格中有效) */
     /* display: block; margin: 0 auto; */ /* 另一種可能的對齊方式，如果上面效果不好 */
@@ -565,7 +565,7 @@ main h2::after {
 /* Optional: 根據 Logo 高度微調 Header 的 padding */
 #header-logo {
     /* 預設 (手機優先) 的高度 */
-    height: 600px; /* *** 為手機設定一個較小的高度 *** */
+    height: 300px; /* *** 為手機設定一個較小的高度 *** */
     width: auto;  /* 寬度自動縮放以保持比例 */
     vertical-align: middle; /* 嘗試垂直居中 */
     display: inline-block; /* 確保 vertical-align 生效 */
