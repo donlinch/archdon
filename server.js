@@ -17,6 +17,59 @@ app.use(express.json());
 
 // --- API Routes ---
 
+
+// --- 新增: 讀取消息列表 API (帶分頁和總數) ---
+app.get('/api/news', async (req, res) => {
+  // 1. 獲取分頁參數 (來自 URL 查詢字串, e.g., /api/news?page=2&limit=5)
+  const page = parseInt(req.query.page) || 1; // 獲取頁碼，若無則預設為 1
+  const limit = parseInt(req.query.limit) || 10; // 獲取每頁數量，若無則預設為 10
+
+  // 2. 基本驗證，確保 page 和 limit 是正整數
+  if (page <= 0 || limit <= 0) {
+      return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' });
+  }
+
+  // 3. 計算 OFFSET
+  const offset = (page - 1) * limit;
+
+  try {
+      // 4. 執行兩個查詢：一個獲取總數，一個獲取當前頁數據
+      //    使用 Promise.all 並行執行以提高效率
+
+      // 查詢 1: 獲取消息總數
+      const countResult = await pool.query('SELECT COUNT(*) FROM news');
+      const totalItems = parseInt(countResult.rows[0].count); // 轉換為數字
+
+      // 查詢 2: 獲取當前頁的消息數據
+      const newsResult = await pool.query(
+          `SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at
+           FROM news
+           ORDER BY updated_at DESC
+           LIMIT $1 OFFSET $2`,
+          [limit, offset] // 將 limit 和 offset 作為參數傳遞
+      );
+
+      // 5. 計算總頁數
+      const totalPages = Math.ceil(totalItems / limit);
+
+      // 6. 組合回傳結果
+      const responseData = {
+          totalItems: totalItems,
+          totalPages: totalPages,
+          currentPage: page,
+          limit: limit,
+          news: newsResult.rows // 當前頁的消息陣列
+      };
+
+      res.status(200).json(responseData); // 回傳組合後的數據
+
+  } catch (err) {
+      console.error('獲取最新消息列表時出錯:', err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+
 // GET all products (已修改以支持排序)
 app.get('/api/products', async (req, res) => {
     // 從查詢參數獲取排序方式，預設為 'latest' (最新)
