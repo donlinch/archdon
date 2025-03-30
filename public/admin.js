@@ -144,38 +144,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Add Event Listener for Edit Form Submission ---
-    if (editForm) {
-        editForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Prevent default page reload
-            // Placeholder for now, will implement actual save logic next
-            alert('儲存功能尚未實作！');
-            const productId = editProductId.value;
-            console.log("Save button clicked for product ID:", productId);
+     // --- Add Event Listener for Edit Form Submission ---
+ if (editForm) {
+    editForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent default page reload
+        editFormError.textContent = ''; // Clear previous errors
 
-            // --- Next steps (to be implemented): ---
-            // 1. Get updated data from form fields:
-            //    const updatedData = {
-            //        name: editProductName.value,
-            //        description: editProductDescription.value,
-            //        price: parseFloat(editProductPrice.value), // Convert price to number
-            //        image_url: editProductImageUrl.value,
-            //        seven_eleven_url: editProductSevenElevenUrl.value
-            //    };
-            // 2. Basic Validation (e.g., ensure price is a valid number)
-            // 3. Send PUT request to backend:
-            //    await fetch(`/api/products/${productId}`, {
-            //        method: 'PUT',
-            //        headers: { 'Content-Type': 'application/json' },
-            //        body: JSON.stringify(updatedData)
-            //    });
-            // 4. Handle response (success/error)
-            // 5. If success: closeModal() and maybe fetchAndDisplayProducts() to refresh list
-            // 6. If error: display error message in editFormError paragraph
-        });
-    } else {
-        console.error("Edit form element not found. Submission listener not added.");
-    }
+        const productId = editProductId.value;
+        if (!productId) {
+            editFormError.textContent = '錯誤：找不到商品 ID。';
+            return;
+        }
+
+        // --- 1. Get updated data from form fields ---
+        let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
+        const updatedData = {
+            name: editProductName.value.trim(),
+            description: editProductDescription.value.trim(),
+            price: priceValue, // Send parsed number or null
+            image_url: editProductImageUrl.value.trim() || null, // Send null if empty
+            seven_eleven_url: editProductSevenElevenUrl.value.trim() || null // Send null if empty
+        };
+
+        // --- 2. Basic Frontend Validation (Optional, mirror backend) ---
+        if (!updatedData.name) {
+            editFormError.textContent = '商品名稱不能為空。';
+            return;
+        }
+         if (updatedData.price !== null && isNaN(updatedData.price)) {
+            editFormError.textContent = '價格必須是有效的數字。';
+            return;
+        }
+        if (updatedData.price !== null && updatedData.price < 0) {
+             editFormError.textContent = '價格不能是負數。';
+            return;
+        }
+        // Simple URL validation (very basic) - can be improved
+        const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+        // if (!isBasicUrlValid(updatedData.image_url)) {
+        //     editFormError.textContent = '圖片路徑格式不正確 (應為相對路徑或 http/https 開頭)。';
+        //     return;
+        // }
+        if (!isBasicUrlValid(updatedData.seven_eleven_url)) {
+            editFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。';
+            return;
+        }
+
+        // --- 3. Send PUT request to backend ---
+        try {
+            const response = await fetch(`/api/products/${productId}`, {
+                method: 'PUT', // Use PUT for replacing the entire resource (or PATCH for partial updates)
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedData) // Convert JS object to JSON string
+            });
+
+            // --- 4. Handle response ---
+            if (!response.ok) {
+                // Try to parse error message from backend
+                let errorMsg = `儲存失敗 (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg; // Use backend error if available
+                } catch (e) { /* Ignore parsing error */ }
+                throw new Error(errorMsg);
+            }
+
+            // --- 5. If success ---
+            console.log('Product updated successfully!');
+            closeModal(); // Close the modal
+            // Refresh the entire list to show changes
+            // This is simpler than updating just one row, suitable for now
+            await fetchAndDisplayProducts();
+
+        } catch (error) {
+            // --- 6. If error ---
+            console.error('Error updating product:', error);
+            editFormError.textContent = `儲存錯誤：${error.message}`; // Display error message
+        }
+    });
+} else {
+    console.error("Edit form element not found. Submission listener not added.");
+}
+
+// ... (rest of the code: initial load etc.) ...
 
     // --- Initial Load ---
     fetchAndDisplayProducts(); // Load the product list when the page is ready

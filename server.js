@@ -64,7 +64,83 @@ app.get('/api/products/:id', async (req, res) => {
 });
 
 //-- Catch-all for SPA (Single Page Application) - Optional for now ---
-// If you have client-side routing later, uncomment this:
+// If// API endpoint to UPDATE a product by ID
+ app.put('/api/products/:id', async (req, res) => {
+  const { id } = req.params;
+  // Get updated data from the request body
+  const { name, description, price, image_url, seven_eleven_url } = req.body;
+
+  // --- Basic Input Validation ---
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'Invalid product ID format.' });
+  }
+  if (typeof name !== 'string' || name.trim() === '') {
+       return res.status(400).json({ error: 'Product name cannot be empty.' });
+  }
+  // Price validation: check if it's a number or null/empty string (allow clearing price)
+  let priceValue = null; // Default to null if not provided or invalid
+  if (price !== undefined && price !== null && price !== '') {
+      priceValue = parseFloat(price);
+      if (isNaN(priceValue)) {
+          return res.status(400).json({ error: 'Invalid price format. Must be a number.' });
+      }
+      if (priceValue < 0) {
+          return res.status(400).json({ error: 'Price cannot be negative.'})
+      }
+  }
+
+  // Validate URLs (optional but good practice)
+  const isValidUrl = (urlString) => {
+     if (!urlString) return true; // Allow empty URLs
+     try { new URL(urlString); return true; } catch (_) { return false; }
+  };
+ //  if (!isValidUrl(image_url)) { // Assuming image_url is relative, skip this check? Or adjust.
+ //      // If image_url MUST be absolute:
+ //      // return res.status(400).json({ error: 'Invalid image URL format.' });
+ //  }
+  if (!isValidUrl(seven_eleven_url)) {
+      return res.status(400).json({ error: 'Invalid 7-11 link URL format.' });
+  }
+  // --- End Validation ---
+
+
+  try {
+      // Construct the UPDATE query
+      const result = await pool.query(
+          `UPDATE products
+           SET name = $1,
+               description = $2,
+               price = $3,
+               image_url = $4,
+               seven_eleven_url = $5,
+               updated_at = NOW()
+           WHERE id = $6
+           RETURNING *`, // Return the updated row
+          [
+              name,
+              description || null, // Use null if description is empty/undefined
+              priceValue,          // Use the validated/parsed price
+              image_url || null,   // Use null if image_url is empty
+              seven_eleven_url || null, // Use null if 7-11 url is empty
+              id
+          ]
+      );
+
+      if (result.rowCount === 0) {
+          // If rowCount is 0, it means no row with that ID was found to update
+          return res.status(404).json({ error: 'Product not found, cannot update.' });
+      }
+
+      // Send back the updated product data
+      res.status(200).json(result.rows[0]);
+
+  } catch (err) {
+      console.error(`Error updating product with ID ${id}:`, err);
+      res.status(500).json({ error: 'Internal Server Error during update.' });
+  }
+});
+
+// ... (existing code like app.listen) ... you have client-side routing later, uncomment this:
 /*
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
