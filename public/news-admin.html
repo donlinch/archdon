@@ -45,11 +45,20 @@
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <h1>消息管理</h1> <!-- 修改標題 -->
-        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button class="add-news-btn" onclick="showAddNewsForm()">新增消息</button> <!-- 修改按鈕 -->
+    <!-- *** 新增: 管理分頁導覽 *** -->
+    <nav class="admin-nav">
+        <a href="/admin.html">商品管理</a>
+        <a href="/music-admin.html">音樂管理</a>
+        <a href="/news-admin.html" class="active">消息管理</a> <!-- 當前頁面設為 active -->
+    </nav>
 
+    <div class="admin-container">
+        <h1>消息管理</h1>
+        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+        <button class="add-news-btn" onclick="showAddNewsForm()">新增消息</button>
+        <!-- ... rest of the content ... -->
+    </div>
+    
         <h2>現有消息列表</h2> <!-- 修改標題 -->
         <div id="news-list-container"> <!-- 修改 ID -->
             <p>正在加載消息...</p> <!-- 修改文字 -->

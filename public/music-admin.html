@@ -47,12 +47,18 @@
       </style>
   </head>
   <body>
-      <div class="admin-container">
-          <!-- *** 修改標題和按鈕文字/Class/onclick *** -->
-          <h1>音樂管理</h1>
-          <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-          <button class="add-music-btn" onclick="showAddMusicForm()">新增音樂</button> <!-- *** 修改 *** -->
+      <!-- *** 新增: 管理分頁導覽 *** -->
+      <nav class="admin-nav">
+        <a href="/admin.html">商品管理</a>
+        <a href="/music-admin.html" class="active">音樂管理</a> <!-- 當前頁面設為 active -->
+        <a href="/news-admin.html">消息管理</a>
+    </nav>
 
+    <div class="admin-container">
+        <h1>音樂管理</h1>
+        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+        <button class="add-music-btn" onclick="showAddMusicForm()">新增音樂</button>
+        
           <!-- *** 修改列表容器 ID 和表格 ID *** -->
           <h2>現有音樂列表</h2>
           <div id="album-list-container">

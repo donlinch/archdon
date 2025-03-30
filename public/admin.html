@@ -45,11 +45,18 @@
      </style>
  </head>
  <body>
-     <div class="admin-container">
-         <h1>商品管理</h1>
-         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
+    <nav class="admin-nav">
+        <a href="/admin.html" class="active">商品管理</a> <!-- 當前頁面設為 active -->
+        <a href="/music-admin.html">音樂管理</a>
+        <a href="/news-admin.html">消息管理</a>
+    </nav>
 
+    <div class="admin-container">
+        <h1>商品管理</h1>
+        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+        <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
+        <!-- ... rest of the content ... -->
+    </div>
          <h2>現有商品列表</h2>
          <div id="product-list-container">
              <p>正在加載商品...</p>
