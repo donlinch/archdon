@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+ <html lang="zh-TW">
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>商品管理 - SunnyYummy</title>
+     <!-- 你可以選擇性地連結 style.css 或建立一個 admin.css -->
+     <link rel="stylesheet" href="style.css">
+     <style>
+         /* 簡單的 Admin 頁面特定樣式 */
+         body { background-color: #fff; color: #333; }
+         .admin-container { max-width: 960px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+         #product-list-table th { background-color: #e9ecef; }
+         .action-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; }
+         .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
+         .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
+         .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
+     </style>
+ </head>
+ <body>
+     <div class="admin-container">
+         <h1>商品管理</h1>
+         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+
+         <!-- 之後可以放新增商品的按鈕或表單 -->
+          <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
+
+         <h2>現有商品列表</h2>
+         <div id="product-list-container">
+             <p>正在加載商品...</p>
+             <table id="product-list-table" style="display: none;">
+                 <thead>
+                     <tr>
+                         <th>ID</th>
+                         <th>名稱</th>
+                         <th>價格</th>
+                         <th>圖片預覽</th>
+                         <th>操作</th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                     <!-- 商品列將由 JavaScript 動態填入 -->
+                 </tbody>
+             </table>
+         </div>
+
+         <!-- 編輯商品的 Modal 或表單可以放在這裡 (預設隱藏) -->
+         <!-- 新增商品的 Modal 或表單也可以放在這裡 (預設隱藏) -->
+
+     </div>
+
+     <!-- 連結 Admin 頁面專用的 JavaScript -->
+     <script src="admin.js"></script>
+ </body>
+ </html>
