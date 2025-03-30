@@ -571,14 +571,14 @@ main h2::after {
 }
 
 /* 當螢幕寬度變大時 (例如平板或更大) */
-@media (min-width: 768px) { /* 你可以調整這個斷點 */
+@media (min-width: 300px) { /* 你可以調整這個斷點 */
     #header-logo {
         height: 80px; /* *** 在較大螢幕上稍微增加高度 *** */
     }
 }
 
 /* 對於更大的桌面螢幕 (可選) */
-@media (min-width: 992px) {
+@media (min-width: 100px) {
     #header-logo {
         height: 150px; /* *** 再次增加高度 *** */
     }
