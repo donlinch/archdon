@@ -70,6 +70,39 @@ main h2::after {
     margin-left: 20%;
 }
 
+ /* --- Category Navigation Styles --- */
+ .category-nav {
+    display: flex;           /* Arrange links in a row */
+    justify-content: center; /* Center the links horizontally */
+    flex-wrap: wrap;         /* Allow wrapping on small screens */
+    gap: 1rem 1.5rem;      /* Spacing between links */
+    margin-bottom: 2.5rem;   /* Space below the navigation */
+    padding-bottom: 1rem;    /* Optional: padding below links */
+    border-bottom: 2px solid #ECEFF1; /* Subtle separator line */
+}
+
+.category-nav a {
+    color: #757575;        /* Medium text color */
+    text-decoration: none;
+    font-size: 1.1rem;       /* Slightly larger font */
+    font-weight: 500;       /* Medium weight */
+    padding: 0.5rem 0;     /* Padding top/bottom */
+    border-bottom: 3px solid transparent; /* Prepare space for active underline */
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Style for the currently active category */
+.category-nav a.active {
+    color: #E57373;        /* Use Coral Red for active link */
+    font-weight: 700;       /* Bolder */
+    border-bottom-color: #FFB74D; /* Use Warm Orange for underline */
+}
+
+/* Hover effect for non-active links */
+.category-nav a:not(.active):hover {
+    color: #424242;        /* Darker text on hover */
+    border-bottom-color: #B0BEC5; /* Blue Grey underline on hover */
+}
 
 /* Product Grid Layout */
 .product-grid {
