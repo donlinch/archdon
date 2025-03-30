@@ -38,7 +38,7 @@ header {
 /* Header Logo Style - Responsive */
 #header-logo {
     /* 預設 (手機優先) 的高度 */
-    height: 120px; /* *** 手機上的 Logo 高度 (可調整) *** */
+    height: 240px; /* *** 手機上的 Logo 高度 (可調整) *** */
     width: auto;  /* 寬度自動 */
     vertical-align: middle;
     display: inline-block;
