@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const price = document.createElement('p');
             price.className = 'price';
-            price.textContent = product.price !== null ? `NT$ ${product.price.toLocaleString()}` : '價格洽詢'; // Format price
+            price.textContent = product.price !== null ? `NT$ ${Math.floor(product.price)}` : '價格洽詢'; // Format price
 
             // Append content elements to the content div
             contentDiv.appendChild(name);
@@ -61,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // *** 將內部元素附加到 <a> 連結卡片 ***
             cardLink.appendChild(imageContainer); // Add image container first
             cardLink.appendChild(contentDiv);     // Add content div after
-
+            const cartIcon = document.createElement('span'); // Use span or i tag
+            cartIcon.className = 'cart-icon';
+            cartIcon.innerHTML = '🛒'; 
             // *** 將連結卡片附加到 Grid ***
             grid.appendChild(cardLink);
         });

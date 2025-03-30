@@ -115,6 +115,7 @@ main h2::after {
     text-align: center;
     text-decoration: none;
     color: inherit;
+    position: relative; 
 }
 
 /* HOVER EFFECT */
@@ -329,3 +330,31 @@ main h2::after {
 #edit-image-preview[src] { /* Show only if src is set */
      display: block;
 }
+
+/* --- Shopping Cart Icon Styles --- */
+.cart-icon {
+    position: absolute; /* Position relative to the card */
+    bottom: 1rem;      /* Distance from bottom */
+    right: 1rem;       /* Distance from right */
+    font-size: 1.3rem; /* Icon size */
+    color: #B0BEC5;    /* Use the Blue Grey color, or another subtle color */
+    cursor: pointer;    /* Indicate it's clickable (even if not functional yet) */
+    transition: color 0.2s ease, transform 0.2s ease;
+    padding: 5px; /* Make the clickable area slightly larger */
+    z-index: 5; /* Ensure it's above other card content if needed */
+}
+
+.cart-icon:hover {
+    color: #E57373; /* Use Coral Red on hover */
+    transform: scale(1.1); /* Slightly enlarge on hover */
+}
+
+/* Optional: Adjust card content padding if icon overlaps */
+.product-card .card-content {
+    /* Add padding-bottom if needed to prevent text overlap */
+     padding: 0 1rem 1.5rem 1rem; /* Slightly increase bottom padding */
+}
+/* Make sure price doesn't overlap */
+ .product-card .price {
+     padding-right: 0.5rem; /* Add a little space just in case */
+ }
