@@ -337,8 +337,8 @@ main h2::after {
     bottom: 1rem;
     right: 1rem;
     /* Remove font-size and color, use width/height */
-    width: 24px;  /* Adjust size as needed */
-    height: 24px; /* Adjust size as needed */
+    width: 15px;  /* Adjust size as needed */
+    height: 15px; /* Adjust size as needed */
     /* color: #B0BEC5; --- Remove this */
     cursor: pointer;
     transition: transform 0.2s ease; /* Keep transform transition */
