@@ -523,3 +523,52 @@ main h2::after {
     .music-list-item .play-link::before { font-size: 0.7rem; }
     .music-list-item .release-date { font-size: 0.75rem; min-width: 60px; }
 }
+
+ /* --- Admin Navigation Styles --- */
+ .admin-nav {
+    background-color: #f8f9fa; /* 與 admin-container 背景色匹配或稍深 */
+    padding: 1rem 0;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6; /* 分隔線 */
+    margin-bottom: 1rem; /* 與下方內容的間距 */
+}
+
+.admin-nav a {
+    color: #495057; /* 深灰色文字 */
+    text-decoration: none;
+    padding: 0.6rem 1.2rem; /* 內邊距 */
+    margin: 0 0.5rem; /* 連結間距 */
+    border-radius: 5px; /* 圓角 */
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.admin-nav a:hover {
+    background-color: #e9ecef; /* 淺灰色背景 hover */
+    color: #212529;
+}
+
+.admin-nav a.active {
+    background-color: #007bff; /* 主題藍色 (或其他醒目顏色) */
+    color: white;
+    font-weight: bold;
+}
+
+#header-logo {
+    height: 50px; /* *** 調整這個高度值來控制 Logo 大小 *** */
+    width: auto; /* 寬度自動調整以保持比例 */
+    vertical-align: middle; /* 嘗試垂直居中對齊 Logo (在行內元素或表格單元格中有效) */
+    /* display: block; margin: 0 auto; */ /* 另一種可能的對齊方式，如果上面效果不好 */
+}
+
+/* Optional: 根據 Logo 高度微調 Header 的 padding */
+header {
+    /* padding: 1rem 1rem; */ /* 你可能需要稍微調整上下 padding */
+    /* 確保 header 內有足夠空間容納 logo */
+    line-height: 1; /* 避免 h1 的行高影響垂直對齊 */
+}
+
+header h1 {
+    margin: 0; /* 移除 h1 的默認 margin */
+    line-height: inherit; /* 繼承 header 的 line-height */
+}
