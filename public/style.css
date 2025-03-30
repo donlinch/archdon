@@ -28,9 +28,10 @@ header {
     background-color: #FFB74D; /* Warm Orange */
     color: #424242;
     /* *** 減小上下 Padding *** */
-    padding: 0.1rem 0.2rem; /* 上下 0.5rem，左右 1rem (可微調) */
+    padding: 0.5rem 1rem; /* 上下 0.5rem，左右 1rem (可微調) */
     text-align: center;
-    margin-bottom: 2rem; /* Header 和下方內容的間距 */
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem; /* Header 和下方內容的間距 */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     line-height: 1;
 }
