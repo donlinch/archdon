@@ -556,7 +556,7 @@ main h2::after {
 
 #header-logo {
     
-    height: 1rem; /* *** 調整這個高度值來控制 Logo 大小 *** */
+    height: 2rem; /* *** 調整這個高度值來控制 Logo 大小 *** */
     width: 1rem; /* 寬度自動調整以保持比例 */
     vertical-align: middle; /* 嘗試垂直居中對齊 Logo (在行內元素或表格單元格中有效) */
     /* display: block; margin: 0 auto; */ /* 另一種可能的對齊方式，如果上面效果不好 */
