@@ -215,6 +215,89 @@ app.get('/api/news/:id', async (req, res) => {
   }
 });
 
+// --- 新增: 消息管理 API Routes ---
+
+// POST /api/news - 新增消息
+app.post('/api/news', async (req, res) => {
+  const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+
+  // --- 驗證 ---
+  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); }
+  let formattedEventDate = null;
+  if (event_date) {
+      try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; }
+      catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); }
+  }
+  const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
+  if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); }
+  if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
+  // --- 結束驗證 ---
+
+  try {
+      const result = await pool.query(
+          `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+           RETURNING *`,
+          [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null ]
+      );
+      res.status(201).json(result.rows[0]);
+  } catch (err) {
+      console.error('新增消息時出錯:', err);
+      res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
+  }
+});
+
+// PUT /api/news/:id - 更新消息
+app.put('/api/news/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+
+  // --- 驗證 ---
+  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); }
+  let formattedEventDate = null;
+  if (event_date) {
+      try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; }
+      catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); }
+  }
+  const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
+  if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); }
+  if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
+  // --- 結束驗證 ---
+
+  try {
+      const result = await pool.query(
+          `UPDATE news
+           SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW()
+           WHERE id = $7
+           RETURNING *`,
+          [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null, id ]
+      );
+      if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法更新。' }); }
+      res.status(200).json(result.rows[0]);
+  } catch (err) {
+      console.error(`更新消息 ID ${id} 時出錯:`, err);
+      res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
+  }
+});
+
+// DELETE /api/news/:id - 刪除消息
+app.delete('/api/news/:id', async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+
+  try {
+      const result = await pool.query('DELETE FROM news WHERE id = $1', [id]);
+      if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法刪除。' }); }
+      res.status(204).send();
+  } catch (err) {
+      console.error(`刪除消息 ID ${id} 時出錯:`, err);
+      res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+  }
+});
+
+
+
 // --- 新增: 按讚 API ---
 app.post('/api/news/:id/like', async (req, res) => {
   const { id } = req.params;
