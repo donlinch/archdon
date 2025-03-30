@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
          const cartIcon = document.createElement('img'); 
          cartIcon.src = '/images/shop.png'; 
          cartIcon.alt = '購物車';
+
          cardLink.appendChild(cartIcon);  // <<< --- THIS LINE WAS MISSING! Add it here.
 
          // *** 將連結卡片附加到 Grid ***
