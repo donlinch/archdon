@@ -4,67 +4,51 @@
      <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <title>商品管理 - SunnyYummy</title>
-     <!-- 你可以選擇性地連結 style.css 或建立一個 admin.css -->
      <link rel="stylesheet" href="style.css">
      <style>
          /* 簡單的 Admin 頁面特定樣式 */
          body { background-color: #fff; color: #333; }
-         .admin-container { max-width: 960px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); } /* 稍微加寬 */
+         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; /* 幫助列寬分配 */ }
+         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; /* 防止內容換行 */ }
          #product-list-table th { background-color: #e9ecef; }
-         .action-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; }
+         /* 為特定列設定大致寬度 */
+         #product-list-table th:nth-child(1), #product-list-table td:nth-child(1) { width: 8%; }  /* ID */
+         #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 30%; } /* 名稱 */
+         #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 12%; } /* 價格 */
+         #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 15%; text-align: center;} /* 點擊數 - 新增 */
+         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; text-align: center;} /* 圖片 */
+         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
+
+         .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;} /* 調整按鈕 padding */
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
          .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
          .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
-         .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.modal-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 500px;
-    width: 90%;
-}
-.close-btn {
-    float: right;
-    cursor: pointer;
-    font-size: 24px;
-}
-.form-group {
-    margin-bottom: 1rem;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-}
-.form-group input,
-.form-group textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-   
-   
-   </style>
+
+         /* --- Modal 相關樣式 (保持不變) --- */
+         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; /* JS 控制 */ justify-content: center; align-items: center; padding-top: 50px; }
+         .modal[style*="display: flex"] { display: flex !important; }
+         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+         .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+         .close-btn:hover { color: #333; }
+         .form-group { margin-bottom: 1rem; }
+         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+         .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+         .form-group textarea { resize: vertical; min-height: 80px; }
+         .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+         .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
+         .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+         .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
+         #edit-image-preview[src], #add-image-preview[src] { display: block; }
+         #edit-form-error, #add-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
+     </style>
  </head>
  <body>
      <div class="admin-container">
          <h1>商品管理</h1>
          <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-
-         <!-- 之後可以放新增商品的按鈕或表單 -->
-          <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
+         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
 
          <h2>現有商品列表</h2>
          <div id="product-list-container">
@@ -75,6 +59,7 @@
                          <th>ID</th>
                          <th>名稱</th>
                          <th>價格</th>
+                         <th>點擊數</th> <!-- *** 新增標題 *** -->
                          <th>圖片預覽</th>
                          <th>操作</th>
                      </tr>
@@ -84,136 +69,44 @@
                  </tbody>
              </table>
          </div>
+     </div> <!-- End of admin-container -->
 
-         <!-- 編輯商品的 Modal 或表單可以放在這裡 (預設隱藏) -->
-         <!-- 新增商品的 Modal 或表單也可以放在這裡 (預設隱藏) -->
+     <!-- Add Product Modal (保持不變) -->
+     <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAddModal()">×</span>
+            <h2>新增商品</h2>
+            <form id="add-product-form">
+                <div class="form-group"> <label for="add-product-name">商品名稱:</label> <input type="text" id="add-product-name" name="name" required> </div>
+                <div class="form-group"> <label for="add-product-description">商品描述:</label> <textarea id="add-product-description" name="description" rows="3"></textarea> </div>
+                <div class="form-group"> <label for="add-product-price">價格:</label> <input type="number" id="add-product-price" name="price" step="0.01" placeholder="例如: 490" required> </div>
+                <div class="form-group"> <label for="add-product-image-url">圖片路徑:</label> <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg"> <img id="add-image-preview" src="" alt="圖片預覽"> </div>
+                <div class="form-group"> <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label> <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://..."> </div>
+                <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button> </div>
+                <p id="add-form-error"></p>
+            </form>
+        </div>
+    </div>
 
+     <!-- Edit Product Modal (保持不變, 內部已有 click count span) -->
+     <div id="edit-modal" class="modal">
+         <div class="modal-content">
+             <span class="close-btn" onclick="closeModal()">×</span>
+             <h2>編輯商品</h2>
+             <form id="edit-product-form">
+                 <input type="hidden" id="edit-product-id">
+                 <div class="form-group"> <label for="edit-product-name">商品名稱:</label> <input type="text" id="edit-product-name" name="name" required> </div>
+                 <div class="form-group"> <label for="edit-product-description">商品描述:</label> <textarea id="edit-product-description" name="description" rows="3"></textarea> </div>
+                 <div class="form-group"> <label for="edit-product-price">價格:</label> <input type="number" id="edit-product-price" name="price" step="0.01" required> </div>
+                 <div class="form-group"> <label for="edit-product-image-url">圖片路徑:</label> <input type="text" id="edit-product-image-url" name="image_url"> <img id="edit-image-preview" src="" alt="圖片預覽"> </div>
+                 <div class="form-group"> <label for="edit-product-seven-eleven-url">7-11 連結:</label> <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url"> </div>
+                 <div class="form-group"> <label>點擊次數:</label> <span id="edit-product-click-count" style="font-weight: bold; padding: 8px 0; display: inline-block;">-</span> </div>
+                 <div class="form-actions"> <button type="submit" class="action-btn save-btn">儲存變更</button> <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button> </div>
+                 <p id="edit-form-error"></p>
+             </form>
+         </div>
      </div>
 
-     <!-- Add Product Modal -->
-<div id="add-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeAddModal()">×</span>
-        <h2>新增商品</h2>
-        <form id="add-product-form">
-            <div class="form-group">
-                <label for="add-product-name">商品名稱:</label>
-                <input type="text" id="add-product-name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="add-product-description">商品描述:</label>
-                <textarea id="add-product-description" name="description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="add-product-price">價格 (NT$):</label>
-                <input type="number" id="add-product-price" name="price" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="add-product-image-url">圖片路徑:</label>
-                <input type="text" id="add-product-image-url" name="image_url">
-                <img id="add-image-preview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: block; margin-top: 5px;">
-            </div>
-            <div class="form-group">
-                <label for="add-product-seven-eleven-url">7-11 連結:</label>
-                <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url">
-            </div>
-        
-            <!-- *** 新增: 顯示點擊次數 (唯讀) *** -->
-             <div class="form-group">
-                <label>點擊次數:</label>
-                <span id="edit-product-click-count" style="font-weight: bold; padding: 8px; display: inline-block;">-</span>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="action-btn save-btn">新增商品</button>
-                <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
-            </div>
-            <p id="add-form-error" style="color: red; margin-top: 10px;"></p>
-        </form>
-    </div>
-</div>
-
-<!-- Edit Product Modal -->
-<div id="edit-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">×</span>
-        <h2>編輯商品</h2>
-        <form id="edit-product-form">
-            <!-- Hidden input to store product ID -->
-            <input type="hidden" id="edit-product-id">
-
-            <div class="form-group">
-                <label for="edit-product-name">商品名稱:</label>
-                <input type="text" id="edit-product-name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-product-description">商品描述:</label>
-                <textarea id="edit-product-description" name="description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="edit-product-price">價格 (NT$):</label>
-                <input type="number" id="edit-product-price" name="price" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-product-image-url">圖片路徑:</label>
-                <input type="text" id="edit-product-image-url" name="image_url">
-                <img id="edit-image-preview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: block; margin-top: 5px;">
-            </div>
-             <div class="form-group">
-                <label for="edit-product-seven-eleven-url">7-11 連結:</label>
-                <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url">
-            </div>
-            <div class="form-group">
-                <label>點擊次數:</label>
-                <span id="edit-product-click-count" style="font-weight: bold; padding: 8px 0; display: inline-block;">-</span>
-             </div>
-
-            <div class="form-actions">
-                <button type="submit" class="action-btn save-btn">儲存變更</button>
-                <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button>
-            </div>
-             <p id="edit-form-error" style="color: red; margin-top: 10px;"></p>
-        </form>
-    </div>
-</div>
- <!-- Add Product Modal -->
- <div id="add-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeAddModal()">×</span>
-        <h2>新增商品</h2>
-        <form id="add-product-form">
-            <!-- No hidden ID needed for adding -->
-            <div class="form-group">
-                <label for="add-product-name">商品名稱:</label>
-                <input type="text" id="add-product-name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="add-product-description">商品描述:</label>
-                <textarea id="add-product-description" name="description" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="add-product-price">價格 (NT$):</label>
-                <input type="number" id="add-product-price" name="price" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="add-product-image-url">圖片路徑:</label>
-                <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg">
-            </div>
-             <div class="form-group">
-                <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label>
-                <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://...">
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="action-btn save-btn">確認新增</button>
-                <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
-            </div>
-            <p id="add-form-error" style="color: red; margin-top: 10px;"></p>
-        </form>
-    </div>
-</div>
-
-     <!-- 連結 Admin 頁面專用的 JavaScript -->
      <script src="admin.js"></script>
  </body>
  </html>
