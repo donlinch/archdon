@@ -1,89 +1,64 @@
 // server.js
-require('dotenv').config();
+require('dotenv').config(); // 從 .env 載入環境變數
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg');
+const { Pool } = require('pg'); // PostgreSQL 客戶端
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
 
+// --- 資料庫連接池設定 ---
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+// --- 中間件 (Middleware) ---
+app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 目錄下的靜態檔案
+app.use(express.json()); // 解析請求主體中的 JSON 資料
 
-// --- API Routes ---
+// --- 基本認證中間件函數 ---
+const basicAuthMiddleware = (req, res, next) => {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin'; // 從 .env 讀取帳號
+    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // 從 .env 讀取密碼 (務必修改!)
 
+    const authHeader = req.headers.authorization; // 獲取 Authorization 標頭
 
-// --- 新增: 讀取消息列表 API (帶分頁和總數) ---
-app.get('/api/news', async (req, res) => {
-  // 1. 獲取分頁參數 (來自 URL 查詢字串, e.g., /api/news?page=2&limit=5)
-  const page = parseInt(req.query.page) || 1; // 獲取頁碼，若無則預設為 1
-  const limit = parseInt(req.query.limit) || 10; // 獲取每頁數量，若無則預設為 10
-
-  // 2. 基本驗證，確保 page 和 limit 是正整數
-  if (page <= 0 || limit <= 0) {
-      return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' });
-  }
-
-  // 3. 計算 OFFSET
-  const offset = (page - 1) * limit;
-
-  try {
-      // 4. 執行兩個查詢：一個獲取總數，一個獲取當前頁數據
-      //    使用 Promise.all 並行執行以提高效率
-
-      // 查詢 1: 獲取消息總數
-      const countResult = await pool.query('SELECT COUNT(*) FROM news');
-      const totalItems = parseInt(countResult.rows[0].count); // 轉換為數字
-
-      // 查詢 2: 獲取當前頁的消息數據
-      const newsResult = await pool.query(
-          `SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at
-           FROM news
-           ORDER BY updated_at DESC
-           LIMIT $1 OFFSET $2`,
-          [limit, offset] // 將 limit 和 offset 作為參數傳遞
-      );
-
-      // 5. 計算總頁數
-      const totalPages = Math.ceil(totalItems / limit);
-
-      // 6. 組合回傳結果
-      const responseData = {
-          totalItems: totalItems,
-          totalPages: totalPages,
-          currentPage: page,
-          limit: limit,
-          news: newsResult.rows // 當前頁的消息陣列
-      };
-
-      res.status(200).json(responseData); // 回傳組合後的數據
-
-  } catch (err) {
-      console.error('獲取最新消息列表時出錯:', err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-
-// GET all products (已修改以支持排序)
-app.get('/api/products', async (req, res) => {
-    // 從查詢參數獲取排序方式，預設為 'latest' (最新)
-    const sortBy = req.query.sort || 'latest';
-
-    let orderByClause = 'ORDER BY created_at DESC'; // 預設按最新排序
-
-    if (sortBy === 'popular') {
-        orderByClause = 'ORDER BY click_count DESC, created_at DESC'; // 按點擊數降冪，點擊數相同則按最新
+    if (!authHeader) { // 如果沒有標頭，要求認證
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('需要認證才能訪問管理區域。');
     }
-    // 如果將來有手動排序: else if (sortBy === 'manual') { orderByClause = 'ORDER BY sort_order ASC, created_at DESC'; }
 
+    try { // 使用 try-catch 處理可能的解析錯誤
+        // 解析 'Basic base64string'
+        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+        const user = auth[0];
+        const pass = auth[1];
+
+        if (user === adminUser && pass === adminPass) { // 檢查憑證
+            next(); // 憑證正確，繼續處理請求
+        } else {
+            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+            return res.status(401).send('認證失敗。'); // 憑證錯誤
+        }
+    } catch (error) { // 處理 Base64 解析錯誤等
+        console.error("認證標頭解析錯誤:", error);
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('認證失敗 (格式錯誤)。');
+    }
+};
+
+
+// --- 公開 API Routes (不需要認證) ---
+
+// GET all products (支持排序: latest, popular)
+app.get('/api/products', async (req, res) => {
+    const sortBy = req.query.sort || 'latest';
+    let orderByClause = 'ORDER BY created_at DESC';
+    if (sortBy === 'popular') {
+        orderByClause = 'ORDER BY click_count DESC, created_at DESC';
+    }
     try {
-        // 在 SQL 查詢中動態插入排序子句，並選取 click_count
         const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products ${orderByClause}`;
         const result = await pool.query(queryText);
         res.json(result.rows);
@@ -93,21 +68,13 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// GET a single product by ID (已修改以包含 click_count)
+// GET a single product by ID (包含點擊數)
 app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    if (isNaN(parseInt(id))) {
-        return res.status(400).json({ error: '無效的商品 ID 格式。' });
-    }
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
     try {
-        // 確保查詢包含 click_count
-        const result = await pool.query(
-            'SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1',
-            [id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到商品。' });
-        }
+        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
         res.json(result.rows[0]);
     } catch (err) {
         console.error(`獲取商品 ID ${id} 時出錯:`, err);
@@ -115,480 +82,234 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-
-// --- 新增: 音樂相關 API Routes ---
-
-// GET 所有歌手列表 (用於篩選)
-app.get('/api/artists', async (req, res) => {
-  try {
-      // 從 music 表中選取不重複的 artist，並按字母排序
-      const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL ORDER BY artist ASC');
-      // 將結果轉換成簡單的字串陣列
-      const artists = result.rows.map(row => row.artist);
-      res.json(artists);
-  } catch (err) {
-      console.error('獲取歌手列表時出錯:', err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-// GET 音樂列表 (支持按歌手篩選，預設按發行日期最新排序)
-app.get('/api/music', async (req, res) => {
-  // 從查詢參數獲取歌手名稱
-  const artistFilter = req.query.artist || null; // 例如 /api/music?artist=林莉C亞米
-
-  let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
-  const queryParams = [];
-
-  // 如果有提供歌手篩選條件
-  if (artistFilter) {
-      queryText += ' WHERE artist = $1'; // 添加 WHERE 子句
-      queryParams.push(artistFilter); // 將歌手名稱加入參數陣列
-  }
-
-  queryText += ' ORDER BY release_date DESC'; // 按發行日期降冪排序 (最新在前)
-
-  try {
-      const result = await pool.query(queryText, queryParams); // 執行查詢
-      res.json(result.rows);
-  } catch (err) {
-      console.error('獲取音樂列表時出錯:', err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-// GET 單一音樂項目 (給編輯頁面用)
-app.get('/api/music/:id', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(parseInt(id))) {
-      return res.status(400).json({ error: '無效的音樂 ID 格式。' });
-  }
-  try {
-      // 查詢特定 ID 的音樂資料
-      const result = await pool.query(
-          'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music WHERE id = $1',
-          [id]
-      );
-      if (result.rows.length === 0) {
-          return res.status(404).json({ error: '找不到該音樂項目。' });
-      }
-      res.json(result.rows[0]);
-  } catch (err) {
-      console.error(`獲取音樂 ID ${id} 時出錯:`, err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-// --- 音樂管理的 CRUD API (之後再添加) ---
-// POST /api/music   (新增)
-// PUT /api/music/:id (更新)
-// DELETE /api/music/:id (刪除)
-
-
-
-
-// --- 新增: GET 單一消息詳情 API ---
-app.get('/api/news/:id', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(parseInt(id))) {
-      return res.status(400).json({ error: '無效的消息 ID 格式。' });
-  }
-
-  try {
-      // 查詢特定 ID 的消息，包含完整內容和大圖 URL
-      const result = await pool.query(
-          `SELECT id, title, event_date, content, image_url, like_count, updated_at
-           FROM news
-           WHERE id = $1`,
-          [id]
-      );
-
-      if (result.rows.length === 0) {
-          return res.status(404).json({ error: '找不到該消息。' });
-      }
-      // 回傳找到的消息資料
-      res.status(200).json(result.rows[0]);
-
-  } catch (err) {
-      console.error(`獲取消息 ID ${id} 時出錯:`, err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-// --- 新增: 消息管理 API Routes ---
-
-// POST /api/news - 新增消息
-app.post('/api/news', async (req, res) => {
-  const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-
-  // --- 驗證 ---
-  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); }
-  let formattedEventDate = null;
-  if (event_date) {
-      try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; }
-      catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); }
-  }
-  const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
-  if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); }
-  if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
-  // --- 結束驗證 ---
-
-  try {
-      const result = await pool.query(
-          `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-           RETURNING *`,
-          [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null ]
-      );
-      res.status(201).json(result.rows[0]);
-  } catch (err) {
-      console.error('新增消息時出錯:', err);
-      res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
-  }
-});
-
-// PUT /api/news/:id - 更新消息
-app.put('/api/news/:id', async (req, res) => {
-  const { id } = req.params;
-  const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-
-  // --- 驗證 ---
-  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
-  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); }
-  let formattedEventDate = null;
-  if (event_date) {
-      try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; }
-      catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); }
-  }
-  const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
-  if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); }
-  if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
-  // --- 結束驗證 ---
-
-  try {
-      const result = await pool.query(
-          `UPDATE news
-           SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW()
-           WHERE id = $7
-           RETURNING *`,
-          [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null, id ]
-      );
-      if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法更新。' }); }
-      res.status(200).json(result.rows[0]);
-  } catch (err) {
-      console.error(`更新消息 ID ${id} 時出錯:`, err);
-      res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
-  }
-});
-
-// DELETE /api/news/:id - 刪除消息
-app.delete('/api/news/:id', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
-
-  try {
-      const result = await pool.query('DELETE FROM news WHERE id = $1', [id]);
-      if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法刪除。' }); }
-      res.status(204).send();
-  } catch (err) {
-      console.error(`刪除消息 ID ${id} 時出錯:`, err);
-      res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-  }
-});
-
-
-
-// --- 新增: 按讚 API ---
-app.post('/api/news/:id/like', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(parseInt(id))) {
-      // 對於無效 ID，可以選擇靜默處理或返回錯誤
-      console.warn(`收到無效 ID (${id}) 的按讚請求`);
-      // 返回 400 Bad Request 可能更合適，讓前端知道請求有問題
-      return res.status(400).json({ error: '無效的消息 ID 格式。' });
-      // 或者靜默處理: return res.status(204).send();
-  }
-
-  try {
-      // 更新 like_count 並返回更新後的數字
-      const result = await pool.query(
-          `UPDATE news
-           SET like_count = like_count + 1
-           WHERE id = $1
-           RETURNING like_count`, // 返回更新後的 like_count
-          [id]
-      );
-
-      if (result.rowCount === 0) {
-          // 如果找不到對應 ID 的新聞 (可能已被刪除)
-          return res.status(404).json({ error: '找不到要按讚的消息。' });
-      }
-
-      // 成功更新，回傳新的 like_count
-      res.status(200).json({ like_count: result.rows[0].like_count });
-
-  } catch (err) {
-      console.error(`處理消息 ID ${id} 按讚時出錯:`, err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
-  }
-});
-
-
-// --- 新增/修改/刪除消息的 API (之後添加) ---
-// POST /api/news
-// PUT /api/news/:id
-// DELETE /api/news/:id
-
-
-
-// UPDATE a product by ID
-app.put('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-
-    // --- Validation for PUT (與之前相同) ---
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
-    if (typeof name !== 'string' || name.trim() === '') { return res.status(400).json({ error: '商品名稱不能為空。' }); }
-    let priceValue = null;
-    if (price !== undefined && price !== null && price !== '') {
-        priceValue = parseFloat(price);
-        if (isNaN(priceValue)) { return res.status(400).json({ error: '無效的價格格式。必須是數字。' }); }
-        if (priceValue < 0) { return res.status(400).json({ error: '價格不能為負數。' }); }
-    }
-    const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
-    if (seven_eleven_url && !isValidUrl(seven_eleven_url)) { return res.status(400).json({ error: '無效的 7-11 連結格式。' }); }
-    // --- End Validation for PUT ---
-
-    try {
-        const result = await pool.query(
-            `UPDATE products
-             SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW()
-             WHERE id = $6
-             RETURNING *`, // RETURNING * 會包含所有欄位，包括 click_count
-            [ name, description || null, priceValue, image_url || null, seven_eleven_url || null, id ]
-        );
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到商品，無法更新。' });
-        }
-        res.status(200).json(result.rows[0]); // 回傳更新後的商品資料
-    } catch (err) {
-        console.error(`更新商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// CREATE a new product
-app.post('/api/products', async (req, res) => {
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-
-    // --- Validation for POST (與之前相同) ---
-    if (typeof name !== 'string' || name.trim() === '') { return res.status(400).json({ error: '商品名稱不能為空。' }); }
-    let priceValue = null;
-    if (price !== undefined && price !== null && price !== '') {
-        priceValue = parseFloat(price);
-        if (isNaN(priceValue)) { return res.status(400).json({ error: '無效的價格格式。必須是數字。' }); }
-        if (priceValue < 0) { return res.status(400).json({ error: '價格不能為負數。' }); }
-    }
-    const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
-    if (seven_eleven_url && !isValidUrl(seven_eleven_url)) { return res.status(400).json({ error: '無效的 7-11 連結格式。' }); }
-    // --- End Validation for POST ---
-
-    try {
-        // click_count 會使用資料庫預設值 0
-        const result = await pool.query(
-            `INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-             RETURNING *`, // RETURNING * 會包含新生成的 ID 和預設的 click_count
-            [ name, description || null, priceValue, image_url || null, seven_eleven_url || null ]
-        );
-        res.status(201).json(result.rows[0]); // 回傳新建立的商品資料
-    } catch (err) {
-        console.error('新增商品時出錯:', err);
-        res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// DELETE a product by ID
-app.delete('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) {
-        return res.status(400).json({ error: '無效的商品 ID 格式。' });
-    }
-    try {
-        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到商品，無法刪除。' });
-        }
-        res.status(204).send(); // 成功刪除，無內容返回
-    } catch (err) {
-        console.error(`刪除商品 ID ${id} 時出錯:`, err);
-        if (err.code === '23503') {
-             return res.status(409).json({ error: '無法刪除商品，因為它被其他資料引用。' });
-        }
-        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// --- 新增: API 端點來記錄商品點擊 ---
+// POST record product click
 app.post('/api/products/:id/click', async (req, res) => {
     const { id } = req.params;
-    if (isNaN(parseInt(id))) {
-        // 即使 ID 無效，我們也靜默處理，不影響前端跳轉
-        console.warn(`收到無效 ID (${id}) 的點擊記錄請求`);
-        return res.status(204).send(); // 返回成功，但不做任何事
-    }
+    if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
     try {
-        // 更新點擊次數，不關心結果是否找到 (找不到也沒關係)
         await pool.query('UPDATE products SET click_count = click_count + 1 WHERE id = $1', [id]);
-        res.status(204).send(); // 成功記錄，無內容返回
+        res.status(204).send();
     } catch (err) {
         console.error(`記錄商品 ID ${id} 點擊時出錯:`, err);
-        // 出錯也返回成功，避免影響前端用戶體驗
-        res.status(204).send(); // 或者可以返回 500，但前端可能需要處理
+        res.status(204).send(); // 出錯也靜默處理
+    }
+});
+
+// GET all artists
+app.get('/api/artists', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL ORDER BY artist ASC');
+        const artists = result.rows.map(row => row.artist);
+        res.json(artists);
+    } catch (err) {
+        console.error('獲取歌手列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET music list (支持按歌手篩選)
+app.get('/api/music', async (req, res) => {
+    const artistFilter = req.query.artist || null;
+    let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
+    const queryParams = [];
+    if (artistFilter) { queryText += ' WHERE artist = $1'; queryParams.push(artistFilter); }
+    queryText += ' ORDER BY release_date DESC';
+    try {
+        const result = await pool.query(queryText, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取音樂列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET a single music item by ID
+app.get('/api/music/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的音樂 ID 格式。' }); }
+    try {
+        const result = await pool.query('SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music WHERE id = $1', [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該音樂項目。' }); }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取音樂 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET news list (支持分頁)
+app.get('/api/news', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    if (page <= 0 || limit <= 0) { return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); }
+    const offset = (page - 1) * limit;
+    try {
+        const countResult = await pool.query('SELECT COUNT(*) FROM news');
+        const totalItems = parseInt(countResult.rows[0].count);
+        const newsResult = await pool.query(`SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at FROM news ORDER BY updated_at DESC LIMIT $1 OFFSET $2`, [limit, offset]);
+        const totalPages = Math.ceil(totalItems / limit);
+        res.status(200).json({ totalItems, totalPages, currentPage: page, limit, news: newsResult.rows });
+    } catch (err) {
+        console.error('獲取最新消息列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET a single news item by ID
+app.get('/api/news/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    try {
+        const result = await pool.query('SELECT id, title, event_date, content, image_url, like_count, updated_at FROM news WHERE id = $1', [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該消息。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取消息 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST like a news item
+app.post('/api/news/:id/like', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    try {
+        const result = await pool.query('UPDATE news SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要按讚的消息。' }); }
+        res.status(200).json({ like_count: result.rows[0].like_count });
+    } catch (err) {
+        console.error(`處理消息 ID ${id} 按讚時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
 
 
+// --- 受保護的管理頁面和 API Routes ---
 
-// --- 新增: 音樂管理 API Routes ---
+// 保護管理 HTML 頁面的訪問
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html'], basicAuthMiddleware);
 
-// POST /api/music - 新增音樂項目
-app.post('/api/music', async (req, res) => {
-  // 從請求主體獲取資料
-  const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
-
-  // --- 基本輸入驗證 ---
-  if (typeof title !== 'string' || title.trim() === '') {
-      return res.status(400).json({ error: '音樂標題不能為空。' });
-  }
-  if (typeof artist !== 'string' || artist.trim() === '') {
-      return res.status(400).json({ error: '歌手名稱不能為空。' });
-  }
-  // 驗證 release_date 是否是有效的日期格式 (YYYY-MM-DD) 或可被 JS Date 解析
-  let formattedReleaseDate = null;
-  if (release_date) {
-      try {
-          // 嘗試轉換為 Date 物件再轉回 ISO 字串 (YYYY-MM-DD) 來標準化/驗證
-          formattedReleaseDate = new Date(release_date).toISOString().split('T')[0];
-      } catch (e) {
-          return res.status(400).json({ error: '無效的發行日期格式。請使用 YYYY-MM-DD。' });
-      }
-  } else {
-      // 如果沒提供發行日期，是否允許？或是設為必填？這裡先設為 null
-      // return res.status(400).json({ error: '發行日期不能為空。' });
-  }
-
-  const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
-  if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面圖片路徑格式。' }); }
-  if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
-  // --- 結束驗證 ---
-
-  try {
-      // 執行 INSERT 語句
-      const result = await pool.query(
-          `INSERT INTO music (title, artist, cover_art_url, platform_url, release_date, description, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-           RETURNING *`, // 返回新插入的行
-          [
-              title,
-              artist,
-              cover_art_url || null,
-              platform_url || null,
-              formattedReleaseDate, // 使用格式化/驗證過的日期
-              description || null
-          ]
-      );
-      // 以 201 Created 狀態回傳新建立的音樂資料
-      res.status(201).json(result.rows[0]);
-  } catch (err) {
-      console.error('新增音樂時出錯:', err);
-      res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
-  }
+// --- 商品管理 API (受保護) ---
+// CREATE a new product
+app.post('/api/products', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    // ... (驗證邏輯) ...
+    if (typeof name !== 'string' || name.trim() === '') { return res.status(400).json({ error: '商品名稱不能為空。' }); }
+    let priceValue = null; if (price !== undefined && price !== null && price !== '') { priceValue = parseFloat(price); if (isNaN(priceValue)) { return res.status(400).json({ error: '無效的價格格式。' }); } if (priceValue < 0) { return res.status(400).json({ error: '價格不能為負數。' }); } }
+    const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
+    if (seven_eleven_url && !isValidUrl(seven_eleven_url)) { return res.status(400).json({ error: '無效的 7-11 連結格式。' }); }
+    try {
+        const result = await pool.query(`INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [ name, description || null, priceValue, image_url || null, seven_eleven_url || null ]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('新增商品時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
+});
+// UPDATE a product by ID
+app.put('/api/products/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    // ... (驗證邏輯) ...
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); } if (typeof name !== 'string' || name.trim() === '') { return res.status(400).json({ error: '商品名稱不能為空。' }); } let priceValue = null; if (price !== undefined && price !== null && price !== '') { priceValue = parseFloat(price); if (isNaN(priceValue)) { return res.status(400).json({ error: '無效的價格格式。' }); } if (priceValue < 0) { return res.status(400).json({ error: '價格不能為負數。' }); } } const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'); if (seven_eleven_url && !isValidUrl(seven_eleven_url)) { return res.status(400).json({ error: '無效的 7-11 連結格式。' }); }
+    try {
+        const result = await pool.query(`UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [ name, description || null, priceValue, image_url || null, seven_eleven_url || null, id ]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`更新商品 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+// DELETE a product by ID
+app.delete('/api/products/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除商品 ID ${id} 時出錯:`, err); if (err.code === '23503') { return res.status(409).json({ error: '無法刪除商品，因為它被其他資料引用。' }); } res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
 });
 
-// PUT /api/music/:id - 更新音樂項目
-app.put('/api/music/:id', async (req, res) => {
-  const { id } = req.params;
-  // 從請求主體獲取要更新的資料
-  const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
 
-  // --- 輸入驗證 ---
-  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的音樂 ID 格式。' }); }
-  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '音樂標題不能為空。' }); }
-  if (typeof artist !== 'string' || artist.trim() === '') { return res.status(400).json({ error: '歌手名稱不能為空。' }); }
-
-  let formattedReleaseDate = null;
-  if (release_date) {
-      try { formattedReleaseDate = new Date(release_date).toISOString().split('T')[0]; }
-      catch (e) { return res.status(400).json({ error: '無效的發行日期格式。請使用 YYYY-MM-DD。' }); }
-  }
-  // else { return res.status(400).json({ error: '發行日期不能為空。' }); } // 如果要求必填
-
-  const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
-  if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面圖片路徑格式。' }); }
-  if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
-  // --- 結束驗證 ---
-
-  try {
-      // 執行 UPDATE 語句
-      const result = await pool.query(
-          `UPDATE music
-           SET title = $1, artist = $2, cover_art_url = $3, platform_url = $4, release_date = $5, description = $6, updated_at = NOW()
-           WHERE id = $7
-           RETURNING *`, // 返回更新後的行
-          [
-              title,
-              artist,
-              cover_art_url || null,
-              platform_url || null,
-              formattedReleaseDate,
-              description || null,
-              id // WHERE 條件的 ID
-          ]
-      );
-
-      if (result.rowCount === 0) {
-          // 如果沒有找到對應 ID 的記錄
-          return res.status(404).json({ error: '找不到音樂項目，無法更新。' });
-      }
-      // 以 200 OK 狀態回傳更新後的音樂資料
-      res.status(200).json(result.rows[0]);
-  } catch (err) {
-      console.error(`更新音樂 ID ${id} 時出錯:`, err);
-      res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
-  }
+// --- 音樂管理 API (受保護) ---
+// CREATE a new music item
+app.post('/api/music', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
+    // ... (驗證邏輯) ...
+    if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '音樂標題不能為空。' }); } if (typeof artist !== 'string' || artist.trim() === '') { return res.status(400).json({ error: '歌手名稱不能為空。' }); } let formattedReleaseDate = null; if (release_date) { try { formattedReleaseDate = new Date(release_date).toISOString().split('T')[0]; } catch (e) { return res.status(400).json({ error: '無效的發行日期格式。' }); } } const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'); if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面路徑格式。' }); } if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
+    try {
+        const result = await pool.query(`INSERT INTO music (title, artist, cover_art_url, platform_url, release_date, description, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`, [ title, artist, cover_art_url || null, platform_url || null, formattedReleaseDate, description || null ]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('新增音樂時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
+});
+// UPDATE a music item by ID
+app.put('/api/music/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
+    // ... (驗證邏輯) ...
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的音樂 ID 格式。' }); } if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '音樂標題不能為空。' }); } if (typeof artist !== 'string' || artist.trim() === '') { return res.status(400).json({ error: '歌手名稱不能為空。' }); } let formattedReleaseDate = null; if (release_date) { try { formattedReleaseDate = new Date(release_date).toISOString().split('T')[0]; } catch (e) { return res.status(400).json({ error: '無效的發行日期格式。' }); } } const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'); if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面路徑格式。' }); } if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
+    try {
+        const result = await pool.query(`UPDATE music SET title = $1, artist = $2, cover_art_url = $3, platform_url = $4, release_date = $5, description = $6, updated_at = NOW() WHERE id = $7 RETURNING *`, [ title, artist, cover_art_url || null, platform_url || null, formattedReleaseDate, description || null, id ]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`更新音樂 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+// DELETE a music item by ID
+app.delete('/api/music/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的音樂 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM music WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除音樂 ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
 });
 
-// DELETE /api/music/:id - 刪除音樂項目
-app.delete('/api/music/:id', async (req, res) => {
-  const { id } = req.params;
 
-  // --- 驗證 ---
-  if (isNaN(parseInt(id))) {
-      return res.status(400).json({ error: '無效的音樂 ID 格式。' });
-  }
-  // --- 結束驗證 ---
-
-  try {
-      // 執行 DELETE 語句
-      const result = await pool.query('DELETE FROM music WHERE id = $1', [id]);
-
-      if (result.rowCount === 0) {
-          // 如果沒有找到對應 ID 的記錄
-          return res.status(404).json({ error: '找不到音樂項目，無法刪除。' });
-      }
-      // 成功刪除，返回 204 No Content
-      res.status(204).send();
-  } catch (err) {
-      console.error(`刪除音樂 ID ${id} 時出錯:`, err);
-      // 如果 music 表有被其他表引用，這裡可以添加外鍵錯誤檢查 (err.code === '23503')
-      res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-  }
+// --- 消息管理 API (受保護) ---
+// CREATE a new news item
+app.post('/api/news', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // ... (驗證邏輯) ...
+    if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); } let formattedEventDate = null; if (event_date) { try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; } catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); } } const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'); if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); } if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
+    try {
+        const result = await pool.query(`INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`, [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null ]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('新增消息時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
 });
-// --- 可選的 SPA Catch-all 路由 (目前註解掉) ---
+// UPDATE a news item by ID
+app.put('/api/news/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // ... (驗證邏輯) ...
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); } if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '消息標題不能為空。' }); } let formattedEventDate = null; if (event_date) { try { formattedEventDate = new Date(event_date).toISOString().split('T')[0]; } catch (e) { return res.status(400).json({ error: '無效的活動日期格式。' }); } } const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://'); if (thumbnail_url && !isValidUrl(thumbnail_url)) { return res.status(400).json({ error: '無效的縮圖路徑格式。' }); } if (image_url && !isValidUrl(image_url)) { return res.status(400).json({ error: '無效的大圖路徑格式。' }); }
+    try {
+        const result = await pool.query(`UPDATE news SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW() WHERE id = $7 RETURNING *`, [ title, formattedEventDate, summary || null, content || null, thumbnail_url || null, image_url || null, id ]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`更新消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+// DELETE a news item by ID
+app.delete('/api/news/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM news WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+});
+
+
+// --- 可選的 SPA Catch-all 路由 ---
+// 如果你的前端用了路由庫(如 React Router, Vue Router)並且設置了 history 模式，
+// 你可能需要取消這個註解，讓所有未匹配 API 的 GET 請求都返回 index.html
 /*
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // 確保請求不是指向 API 或現有靜態文件
+  if (!req.path.startsWith('/api/') && req.path.indexOf('.') === -1) {
+     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+     // 如果是 API 或靜態文件請求但未匹配，讓 Express 處理 (通常是 404)
+     // 或者你可以在這裡明確返回 404
+     res.status(404).send('資源未找到');
+  }
 });
 */
 
