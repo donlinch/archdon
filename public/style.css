@@ -1,5 +1,5 @@
 /*
-    New Color Palette Proposal:
+    Color Palette:
     Warm Orange (Header): #FFB74D
     Coral Red   (Accent 1): #E57373
     Blue Grey   (Accent 2): #B0BEC5
@@ -23,21 +23,47 @@ body {
     padding-bottom: 80px;
 }
 
-/* Header Styles */
+/* Header Styles - *** 調整 Padding *** */
 header {
     background-color: #FFB74D; /* Warm Orange */
-    color: #424242; /* Dark Text (better contrast on orange) */
-    padding: 0.5rem 1rem;
+    color: #424242;
+    /* *** 減小上下 Padding *** */
+    padding: 0.5rem 1rem; /* 上下 0.5rem，左右 1rem (可微調) */
     text-align: center;
-    margin-bottom: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Softer shadow */
+    margin-bottom: 2rem; /* Header 和下方內容的間距 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    line-height: 1;
+}
+
+/* Header Logo Style - Responsive */
+#header-logo {
+    /* 預設 (手機優先) 的高度 */
+    height: 35px; /* *** 手機上的 Logo 高度 (可調整) *** */
+    width: auto;  /* 寬度自動 */
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* 較大螢幕的 Logo 高度 */
+@media (min-width: 768px) {
+    #header-logo {
+        height: 40px; /* *** 平板上的 Logo 高度 (可調整) *** */
+    }
+}
+
+/* 更大桌面螢幕的 Logo 高度 */
+@media (min-width: 992px) {
+    #header-logo {
+        height: 45px; /* *** 桌面上的 Logo 高度 (可調整) *** */
+    }
 }
 
 header h1 {
     margin: 0;
-    color: #ffffff;
-    font-weight: 700;
+    line-height: inherit;
+    color: #424242; /* 深色文字對比度更好 */
 }
+
 
 /* Main Content Area */
 main {
@@ -46,532 +72,116 @@ main {
     padding: 0 1rem;
 }
 
-/* Style for "我們的商品" heading */
-main h2 {
-    text-align: center;
+/* Category Navigation Styles */
+.category-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.2rem;
     margin-bottom: 2rem;
-    color: #E57373; /* Coral Red */
-    font-size: 1.8rem;
-    font-weight: 700;
-    padding-bottom: 0.5rem;
-    position: relative;
-    display: inline-block;
-    left: 50%;
-    transform: translateX(-50%);
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid #ECEFF1;
 }
-
-main h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 60%;
-    height: 3px;
-    background-color: #FFB74D; /* Warm Orange underline */
-    margin-left: 20%;
-}
-
- /* --- Category Navigation Styles --- */
- .category-nav {
-    display: flex;           /* Arrange links in a row */
-    justify-content: center; /* Center the links horizontally */
-    flex-wrap: wrap;         /* Allow wrapping on small screens */
-    gap: 0.8rem 1.2rem;      /* Spacing between links */
-    margin-bottom: 2rem;   /* Space below the navigation */
-    padding-bottom: 0.8rem;    /* Optional: padding below links */
-    border-bottom: 2px solid #ECEFF1; /* Subtle separator line */
-}
-
 .category-nav a {
-    color: #757575;        /* Medium text color */
+    color: #757575;
     text-decoration: none;
-    font-size: 1rem;       /* Slightly larger font */
-    font-weight: 500;       /* Medium weight */
-    padding: 0.4rem 0;     /* Padding top/bottom */
-    border-bottom: 3px solid transparent; /* Prepare space for active underline */
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.4rem 0;
+    border-bottom: 3px solid transparent;
     transition: color 0.2s ease, border-color 0.2s ease;
 }
-
-/* Style for the currently active category */
 .category-nav a.active {
-    color: #E57373;        /* Use Coral Red for active link */
-    font-weight: 700;       /* Bolder */
-    border-bottom-color: #FFB74D; /* Use Warm Orange for underline */
+    color: #E57373;
+    font-weight: 700;
+    border-bottom-color: #FFB74D;
 }
-
-/* Hover effect for non-active links */
 .category-nav a:not(.active):hover {
-    color: #424242;        /* Darker text on hover */
-    border-bottom-color: #B0BEC5; /* Blue Grey underline on hover */
+    color: #424242;
+    border-bottom-color: #B0BEC5;
 }
 
-/* Product Grid Layout */
+/* Product Grid Layout - 更緊湊 */
 .product-grid {
     display: grid;
-    gap: 1.5rem;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* 手機 2 欄 */
+    gap: 0.8rem;
 }
+@media (min-width: 600px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
+@media (min-width: 900px) { .product-grid { grid-template-columns: repeat(4, 1fr); gap: 1.2rem; } }
+@media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; } }
 
-/* Responsive Grid */
-@media (min-width: 600px) {
-    .product-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.88rem;
-    }
+/* Individual Product Card Styles - 更緊湊 */
+.product-card, .product-card:link, .product-card:visited {
+    background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 100%; text-align: center; text-decoration: none; color: inherit; position: relative;
 }
-@media (min-width: 900px) {
-    .product-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2rem;
-    }
-}
-@media (min-width: 1200px) {
-    .product-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 1rem;
-    }
-}
+.product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
+.product-card .image-container { width: 100%; height: 160px; overflow: hidden; margin-bottom: 0.4rem; padding: 0.4rem 0.4rem 0 0.4rem; }
+.product-card img { display: block; width: 100%; height: 100%; object-fit: contain; margin: 0 auto; }
+.product-card .card-content { padding: 0 0.8rem 0.8rem 0.8rem; flex-grow: 1; display: flex; flex-direction: column; }
+.product-card h3 { font-size: 0.9rem; margin-bottom: 0.2rem; color: #424242; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
+.product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
 
 
-/* Individual Product Card Styles (<a> tag) */
-.product-card,
-.product-card:link,
-.product-card:visited {
-    background-color: #fff;
-    border: 1px solid #ECEFF1;
-    border-radius: 6px; /* 稍小的圓角 */
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* 更細微的陰影 */
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    text-align: center;
-    text-decoration: none;
-    color: inherit;
-    position: relative;
-}
-
-/* HOVER EFFECT */
-.product-card:hover {
-    transform:  translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-    z-index: 10;
-    position: relative;
-    border-color: #B0BEC5; /* Blue Grey border on hover */
-}
-
-/* Style for the image container */
-.product-card .image-container {
-    width: 100%;
-    height: 160px;
-    overflow: hidden;
-    margin-bottom: 0.4rem;
-    padding: 0.4rem 0.4rem 0 0.4rem;
-}
-
-.product-card img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    margin: 0 auto;
-}
-
-/* Container for text content */
-.product-card .card-content {
-    padding: 0 0.8rem 0.8rem 0.8rem;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-   
-}
-
-.product-card h3 { /* Product Name */
-    font-size: 0.9rem; /* *** 縮小字體 *** */
-    margin-bottom: 0.2rem; /* *** 縮小間距 *** */
-    color: #424242;
-    font-weight: 700;
-    /* 限制名稱最多顯示一行 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.product-card p { /* Product Description */
-    font-size: 0.75rem; /* *** 縮小字體 *** */
-    color: #757575;
-    line-height: 1.4;
-    margin-bottom: 0.5rem; /* *** 縮小間距 *** */
-    flex-grow: 1; /* *** 允許描述推開價格 *** */
- /* --- 可選：限制描述最多顯示 2 行 --- */
- display: -webkit-box;
- -webkit-line-clamp: 2; /* 顯示的最大行數 */
- -webkit-box-orient: vertical;
- overflow: hidden;
- text-overflow: ellipsis;
- min-height: calc(0.75rem * 1.4 * 2); /* 為 2 行文字保留空間 */
- /* --- 結束可選部分 --- */
-}
-
-
-.product-card .price { /* Product Price */
-    font-weight: bold;
-    font-size: 1rem;
-    color: #E57373; /* Coral Red Price */
-    margin-top: auto;
-    padding-top: 0.4rem;
-}
-
- /* --- Footer Styles --- */
- footer {
-    background-color: #424242; /* Use the existing dark footer color */
-    color: #FAFAFA; /* Light text */
-    padding: 2.5rem 1rem 1.5rem 1rem; /* More padding top/bottom */
-    margin-top: 4rem; /* More space above footer */
+/* --- Footer Styles --- */
+footer {
+    background-color: #424242;
+    color: #FAFAFA;
+    padding: 2.5rem 1rem 1.5rem 1rem;
+    margin-top: 4rem;
     text-align: center;
 }
-
-.footer-container {
-    max-width: 1100px; /* Limit footer content width */
-    margin: 0 auto; /* Center container */
-}
-
-.footer-nav {
-    display: flex; /* Arrange links in a row */
-    justify-content: center; /* Center the links horizontally */
-    flex-wrap: wrap; /* Allow links to wrap on smaller screens */
-    gap: 1rem 2rem; /* Row gap and column gap */
-    margin-bottom: 1.5rem; /* Space below nav links */
-    padding-bottom: 1.5rem; /* Space below nav links */
-    border-bottom: 1px solid #616161; /* Subtle separator line */
-}
-
-.footer-nav a {
-    color: #eeeeee; /* Slightly off-white for links */
-    text-decoration: none;
-    font-size: 0.95rem;
-    transition: color 0.2s ease;
-}
-
-.footer-nav a:hover,
-.footer-nav a.admin-link:hover { /* Hover effect */
-    color: #FFB74D; /* Use header color for hover */
-}
-
-/* Optional: Slightly different style for admin link if needed */
-/*
-.footer-nav a.admin-link {
-    color: #B0BEC5; // Example: Blue Grey
-}
-*/
-
-.footer-social {
-    margin-bottom: 1.5rem; /* Space below social icons (if any) */
-    /* Add styles for social icons here if you add them */
-}
-
-.footer-copyright p {
-    font-size: 0.85rem;
-    color: #bdbdbd; /* Lighter grey for copyright */
-    line-height: 1.5;
-}
+.footer-container { max-width: 1100px; margin: 0 auto; }
+.footer-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #616161; }
+.footer-nav a { color: #eeeeee; text-decoration: none; font-size: 0.95rem; transition: color 0.2s ease; }
+.footer-nav a:hover, .footer-nav a.admin-link:hover { color: #FFB74D; }
+.footer-social { margin-bottom: 1.5rem; }
+.footer-copyright p { font-size: 0.85rem; color: #bdbdbd; line-height: 1.5; }
 
 /* --- Modal Styles --- */
-.modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
-    padding-top: 50px; /* Location of the box */
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 5% auto; /* 5% from the top and centered */
-    padding: 25px;
-    border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
-    max-width: 600px; /* Maximum width */
-    border-radius: 8px;
-    position: relative;
-}
-
-.close-btn {
-    color: #aaa;
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.modal h2 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: #333;
-}
-
-/* Form Styles within Modal */
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-    color: #555;
-}
-
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group input[type="url"],
-.form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box; /* Include padding and border in element's total width and height */
-}
-
- .form-group textarea {
-    resize: vertical; /* Allow vertical resizing */
-}
-
-.form-actions {
-    margin-top: 1.5rem;
-    text-align: right;
-}
-
-.form-actions .action-btn { /* Reuse some styles */
-    padding: 10px 15px;
-}
-
-.form-actions .save-btn {
-    background-color: #28a745; /* Green */
-    border-color: #28a745;
-    color: white;
-    margin-left: 10px;
-}
- .form-actions .cancel-btn {
-    background-color: #6c757d; /* Grey */
-    border-color: #6c757d;
-    color: white;
-}
-#edit-image-preview {
-    display: none; /* Hide preview initially */
-}
-
-#edit-image-preview[src] { /* Show only if src is set */
-     display: block;
-}
-
-/* --- Shopping Cart Icon Styles --- */
-.cart-icon {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    /* Remove font-size and color, use width/height */
-    width: 10%;  /* Adjust size as needed */
-    height: 10%; /* Adjust size as needed */
-    /* color: #B0BEC5; --- Remove this */
-    cursor: pointer;
-    transition: transform 0.2s ease; /* Keep transform transition */
-    /* padding: 5px; --- Remove or adjust padding if using */
-    z-index: 5;
-}
-
-.cart-icon:hover {
-    /* Remove color change, keep transform */
-    /* color: #E57373; --- Remove this */
-    transform: scale(1.5); /* Slightly increase scale effect? */
-}
-/* Optional: Adjust card content padding if icon overlaps */
-.product-card .card-content {
-    /* Add padding-bottom if needed to prevent text overlap */
-     padding: 0 1rem 1.5rem 1rem; /* Slightly increase bottom padding */
-}
-/* Make sure price doesn't overlap */
- .product-card .price {
-     padding-right: 0.5rem; /* Add a little space just in case */
- }
-
- /* --- Music List Styles --- */
- .music-list {
-    /* 可以移除 grid 相關樣式 */
-    /* display: grid; ... */
-    width: 100%; /* 列表佔滿寬度 */
-    margin-top: 1.5rem; /* 與篩選按鈕的間距 */
-}
-
-.music-list-item {
-    display: flex; /* *** 使用 Flexbox 實現橫向排列 *** */
-    align-items: center; /* 垂直居中對齊 */
-    padding: 0.8rem 0.5rem; /* 上下 padding，左右稍微小一點 */
-    border-bottom: 1px solid #eee; /* 項目之間的分隔線 */
-    gap: 1rem; /* 各個元素之間的間距 */
-    transition: background-color 0.2s ease;
-}
-
-.music-list-item:hover {
-    background-color: #f9f9f9; /* 鼠標懸停時的背景色 */
-}
-
-/* 封面圖片 */
-.music-list-item .cover {
-    flex-shrink: 0; /* 防止圖片被壓縮 */
-    width: 50px;    /* 固定封面寬度 */
-    height: 50px;   /* 固定封面高度 */
-    border-radius: 4px; /* 可選：小圓角 */
-    overflow: hidden;
-}
-.music-list-item .cover img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* 歌曲資訊 (包含標題和歌手) */
-.music-list-item .info {
-    flex-grow: 1; /* 佔據大部分剩餘空間 */
-    /* 防止文字過長溢出 */
-    overflow: hidden;
-    /* 內部也可以用 flex 垂直排列 */
-    /* display: flex; */
-    /* flex-direction: column; */
-}
-.music-list-item .info .title {
-    display: block; /* 佔滿一行 */
-    font-size: 0.95rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 0.1rem; /* 與歌手的間距 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.music-list-item .info .artist {
-    display: block; /* 佔滿一行 */
-    font-size: 0.8rem;
-    color: #666;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* 播放按鈕 (連結) */
-.music-list-item .play-link {
-    flex-shrink: 0; /* 不壓縮 */
-    display: inline-flex; /* 使用 inline-flex 讓內部圖標居中 */
-    align-items: center;
-    justify-content: center;
-    width: 36px; /* 按鈕大小 */
-    height: 36px;
-    border: 1px solid #ddd;
-    border-radius: 50%; /* 圓形按鈕 */
-    color: #555;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-.music-list-item .play-link:hover {
-    background-color: #eee;
-    color: #333;
-    border-color: #ccc;
-}
- /* 播放圖標 (可以使用 SVG, Font Awesome 或簡單字符) */
-.music-list-item .play-link::before { /* 用偽元素顯示播放圖標 */
-    content: '▶'; /* 簡單的播放符號 */
-    font-size: 0.8rem;
-}
-
-/* 發行日期 */
-.music-list-item .release-date {
-    flex-shrink: 0; /* 不壓縮 */
-    font-size: 0.8rem;
-    color: #888;
-    min-width: 70px; /* 給日期一個最小寬度，避免換行 */
-    text-align: right; /* 日期靠右對齊 */
-}
-
-/* --- 手機版響應式調整 (可選) --- */
-@media (max-width: 600px) {
-    .music-list-item {
-        gap: 0.6rem; /* 縮小手機上的間距 */
-        padding: 0.6rem 0.3rem;
-    }
-    .music-list-item .cover {
-        width: 40px;
-        height: 40px;
-    }
-    .music-list-item .info .title { font-size: 0.9rem; }
-    .music-list-item .info .artist { font-size: 0.75rem; }
-    .music-list-item .play-link { width: 32px; height: 32px; }
-    .music-list-item .play-link::before { font-size: 0.7rem; }
-    .music-list-item .release-date { font-size: 0.75rem; min-width: 60px; }
-}
-
- /* --- Admin Navigation Styles --- */
- .admin-nav {
-    background-color: #f8f9fa; /* 與 admin-container 背景色匹配或稍深 */
-    padding: 1rem 0;
-    text-align: center;
-    border-bottom: 1px solid #dee2e6; /* 分隔線 */
-    margin-bottom: 1rem; /* 與下方內容的間距 */
-}
-
-.admin-nav a {
-    color: #495057; /* 深灰色文字 */
-    text-decoration: none;
-    padding: 0.6rem 1.2rem; /* 內邊距 */
-    margin: 0 0.5rem; /* 連結間距 */
-    border-radius: 5px; /* 圓角 */
-    font-weight: 500;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.admin-nav a:hover {
-    background-color: #e9ecef; /* 淺灰色背景 hover */
-    color: #212529;
-}
-
-.admin-nav a.active {
-    background-color: #007bff; /* 主題藍色 (或其他醒目顏色) */
-    color: white;
-    font-weight: bold;
-}
-
-#header-logo {
-    
-    height: 600px; /* *** 調整這個高度值來控制 Logo 大小 *** */
-    width: auto; /* 寬度自動調整以保持比例 */
-    vertical-align: middle; /* 嘗試垂直居中對齊 Logo (在行內元素或表格單元格中有效) */
-    /* display: block; margin: 0 auto; */ /* 另一種可能的對齊方式，如果上面效果不好 */
-}
-
-/* Optional: 根據 Logo 高度微調 Header 的 padding */
-#header-logo {
-    /* 預設 (手機優先) 的高度 */
-    height: 300px; /* *** 為手機設定一個較小的高度 *** */
-    width: auto;  /* 寬度自動縮放以保持比例 */
-    vertical-align: middle; /* 嘗試垂直居中 */
-    display: inline-block; /* 確保 vertical-align 生效 */
-}
+/* (假設這些樣式主要用於 admin 頁面, 保持原樣) */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding-top: 50px; }
+.modal[style*="display: flex"] { display: flex !important; }
+.modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+.close-btn:hover { color: #333; }
+/* ... (其他 Modal 內部樣式) ... */
+.modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+.form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+.form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
+.form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+.form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+#edit-image-preview, #add-image-preview, #edit-cover-preview, #add-cover-preview, #edit-news-thumbnail-preview, #add-news-thumbnail-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
+#edit-image-preview[src], #add-image-preview[src], #edit-cover-preview[src], #add-cover-preview[src], #edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src] { display: block; }
+#edit-form-error, #add-form-error, #edit-music-form-error, #add-music-form-error, #edit-news-form-error, #add-news-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
 
 
+/* --- Music List Styles --- */
+.music-list { width: 100%; margin-top: 1.5rem; }
+.music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; }
+.music-list-item:hover { background-color: #f9f9f9; }
+.music-list-item .cover { flex-shrink: 0; width: 50px; height: 50px; border-radius: 4px; overflow: hidden; }
+.music-list-item .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.music-list-item .info { flex-grow: 1; overflow: hidden; }
+.music-list-item .info .title { display: block; font-size: 0.95rem; font-weight: bold; color: #333; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-list-item .info .artist { display: block; font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-list-item .play-link { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #ddd; border-radius: 50%; color: #555; text-decoration: none; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.music-list-item .play-link:hover { background-color: #eee; color: #333; border-color: #ccc; }
+.music-list-item .play-link::before { content: '▶'; font-size: 0.8rem; }
+.music-list-item .release-date { flex-shrink: 0; font-size: 0.8rem; color: #888; min-width: 70px; text-align: right; }
+@media (max-width: 600px) { .music-list-item { gap: 0.6rem; padding: 0.6rem 0.3rem; } .music-list-item .cover { width: 40px; height: 40px; } .music-list-item .info .title { font-size: 0.9rem; } .music-list-item .info .artist { font-size: 0.75rem; } .music-list-item .play-link { width: 32px; height: 32px; } .music-list-item .play-link::before { font-size: 0.7rem; } .music-list-item .release-date { font-size: 0.75rem; min-width: 60px; } }
 
+/* --- Admin Navigation Styles --- */
+.admin-nav { background-color: #f8f9fa; padding: 1rem 0; text-align: center; border-bottom: 1px solid #dee2e6; margin-bottom: 1rem; }
+.admin-nav a { color: #495057; text-decoration: none; padding: 0.6rem 1.2rem; margin: 0 0.5rem; border-radius: 5px; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease; }
+.admin-nav a:hover { background-color: #e9ecef; color: #212529; }
+.admin-nav a.active { background-color: #007bff; color: white; font-weight: bold; }
 
-
+/* --- 移除購物車圖示樣式 --- */
+/* .cart-icon { ... } */
+/* .cart-icon:hover { ... } */
