@@ -62,6 +62,77 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
+
+// --- 新增: 音樂相關 API Routes ---
+
+// GET 所有歌手列表 (用於篩選)
+app.get('/api/artists', async (req, res) => {
+  try {
+      // 從 music 表中選取不重複的 artist，並按字母排序
+      const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL ORDER BY artist ASC');
+      // 將結果轉換成簡單的字串陣列
+      const artists = result.rows.map(row => row.artist);
+      res.json(artists);
+  } catch (err) {
+      console.error('獲取歌手列表時出錯:', err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+// GET 音樂列表 (支持按歌手篩選，預設按發行日期最新排序)
+app.get('/api/music', async (req, res) => {
+  // 從查詢參數獲取歌手名稱
+  const artistFilter = req.query.artist || null; // 例如 /api/music?artist=林莉C亞米
+
+  let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
+  const queryParams = [];
+
+  // 如果有提供歌手篩選條件
+  if (artistFilter) {
+      queryText += ' WHERE artist = $1'; // 添加 WHERE 子句
+      queryParams.push(artistFilter); // 將歌手名稱加入參數陣列
+  }
+
+  queryText += ' ORDER BY release_date DESC'; // 按發行日期降冪排序 (最新在前)
+
+  try {
+      const result = await pool.query(queryText, queryParams); // 執行查詢
+      res.json(result.rows);
+  } catch (err) {
+      console.error('獲取音樂列表時出錯:', err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+// GET 單一音樂項目 (給編輯頁面用)
+app.get('/api/music/:id', async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: '無效的音樂 ID 格式。' });
+  }
+  try {
+      // 查詢特定 ID 的音樂資料
+      const result = await pool.query(
+          'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music WHERE id = $1',
+          [id]
+      );
+      if (result.rows.length === 0) {
+          return res.status(404).json({ error: '找不到該音樂項目。' });
+      }
+      res.json(result.rows[0]);
+  } catch (err) {
+      console.error(`獲取音樂 ID ${id} 時出錯:`, err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+// --- 音樂管理的 CRUD API (之後再添加) ---
+// POST /api/music   (新增)
+// PUT /api/music/:id (更新)
+// DELETE /api/music/:id (刪除)
+
+
+
 // UPDATE a product by ID
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
