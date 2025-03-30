@@ -337,8 +337,8 @@ main h2::after {
     bottom: 1rem;
     right: 1rem;
     /* Remove font-size and color, use width/height */
-    width: 15px;  /* Adjust size as needed */
-    height: 15px; /* Adjust size as needed */
+    width: 10%;  /* Adjust size as needed */
+    height: 10%; /* Adjust size as needed */
     /* color: #B0BEC5; --- Remove this */
     cursor: pointer;
     transition: transform 0.2s ease; /* Keep transform transition */
@@ -349,7 +349,7 @@ main h2::after {
 .cart-icon:hover {
     /* Remove color change, keep transform */
     /* color: #E57373; --- Remove this */
-    transform: scale(0.3); /* Slightly increase scale effect? */
+    transform: scale(1.5); /* Slightly increase scale effect? */
 }
 /* Optional: Adjust card content padding if icon overlaps */
 .product-card .card-content {
