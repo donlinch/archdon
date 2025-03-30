@@ -17,7 +17,46 @@
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
          .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
          .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
-     </style>
+         .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+}
+.close-btn {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+   
+   
+   </style>
  </head>
  <body>
      <div class="admin-container">
@@ -50,6 +89,42 @@
          <!-- 新增商品的 Modal 或表單也可以放在這裡 (預設隱藏) -->
 
      </div>
+
+     <!-- Add Product Modal -->
+<div id="add-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAddModal()">×</span>
+        <h2>新增商品</h2>
+        <form id="add-product-form">
+            <div class="form-group">
+                <label for="add-product-name">商品名稱:</label>
+                <input type="text" id="add-product-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="add-product-description">商品描述:</label>
+                <textarea id="add-product-description" name="description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="add-product-price">價格 (NT$):</label>
+                <input type="number" id="add-product-price" name="price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="add-product-image-url">圖片路徑:</label>
+                <input type="text" id="add-product-image-url" name="image_url">
+                <img id="add-image-preview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: block; margin-top: 5px;">
+            </div>
+            <div class="form-group">
+                <label for="add-product-seven-eleven-url">7-11 連結:</label>
+                <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="action-btn save-btn">新增商品</button>
+                <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
+            </div>
+            <p id="add-form-error" style="color: red; margin-top: 10px;"></p>
+        </form>
+    </div>
+</div>
 
 <!-- Edit Product Modal -->
 <div id="edit-modal" class="modal" style="display: none;">
@@ -90,7 +165,42 @@
         </form>
     </div>
 </div>
+ <!-- Add Product Modal -->
+ <div id="add-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAddModal()">×</span>
+        <h2>新增商品</h2>
+        <form id="add-product-form">
+            <!-- No hidden ID needed for adding -->
+            <div class="form-group">
+                <label for="add-product-name">商品名稱:</label>
+                <input type="text" id="add-product-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="add-product-description">商品描述:</label>
+                <textarea id="add-product-description" name="description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="add-product-price">價格 (NT$):</label>
+                <input type="number" id="add-product-price" name="price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="add-product-image-url">圖片路徑:</label>
+                <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg">
+            </div>
+             <div class="form-group">
+                <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label>
+                <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://...">
+            </div>
 
+            <div class="form-actions">
+                <button type="submit" class="action-btn save-btn">確認新增</button>
+                <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
+            </div>
+            <p id="add-form-error" style="color: red; margin-top: 10px;"></p>
+        </form>
+    </div>
+</div>
 
      <!-- 連結 Admin 頁面專用的 JavaScript -->
      <script src="admin.js"></script>
