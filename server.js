@@ -186,6 +186,78 @@ app.get('/api/music/:id', async (req, res) => {
 
 
 
+
+// --- 新增: GET 單一消息詳情 API ---
+app.get('/api/news/:id', async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: '無效的消息 ID 格式。' });
+  }
+
+  try {
+      // 查詢特定 ID 的消息，包含完整內容和大圖 URL
+      const result = await pool.query(
+          `SELECT id, title, event_date, content, image_url, like_count, updated_at
+           FROM news
+           WHERE id = $1`,
+          [id]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ error: '找不到該消息。' });
+      }
+      // 回傳找到的消息資料
+      res.status(200).json(result.rows[0]);
+
+  } catch (err) {
+      console.error(`獲取消息 ID ${id} 時出錯:`, err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+// --- 新增: 按讚 API ---
+app.post('/api/news/:id/like', async (req, res) => {
+  const { id } = req.params;
+  if (isNaN(parseInt(id))) {
+      // 對於無效 ID，可以選擇靜默處理或返回錯誤
+      console.warn(`收到無效 ID (${id}) 的按讚請求`);
+      // 返回 400 Bad Request 可能更合適，讓前端知道請求有問題
+      return res.status(400).json({ error: '無效的消息 ID 格式。' });
+      // 或者靜默處理: return res.status(204).send();
+  }
+
+  try {
+      // 更新 like_count 並返回更新後的數字
+      const result = await pool.query(
+          `UPDATE news
+           SET like_count = like_count + 1
+           WHERE id = $1
+           RETURNING like_count`, // 返回更新後的 like_count
+          [id]
+      );
+
+      if (result.rowCount === 0) {
+          // 如果找不到對應 ID 的新聞 (可能已被刪除)
+          return res.status(404).json({ error: '找不到要按讚的消息。' });
+      }
+
+      // 成功更新，回傳新的 like_count
+      res.status(200).json({ like_count: result.rows[0].like_count });
+
+  } catch (err) {
+      console.error(`處理消息 ID ${id} 按讚時出錯:`, err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
+
+
+// --- 新增/修改/刪除消息的 API (之後添加) ---
+// POST /api/news
+// PUT /api/news/:id
+// DELETE /api/news/:id
+
+
+
 // UPDATE a product by ID
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
