@@ -46,7 +46,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 
 /* --- News List Styles --- */
 .news-list { margin-top: 1.5rem; }
-.news-card { display: flex; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; transition: box-shadow 0.2s ease; /* position: relative; <-- 移除 */ }
+
+.news-card { display: flex; align-items: stretch; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; transition: box-shadow 0.2s ease; /* position: relative; <-- 移除 */ }
  .news-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
 /* 日期標籤 */
 .news-card .date-tag { flex-shrink: 0; background-color: #E57373; color: white; padding: 1.5rem 1rem; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 70px; }
@@ -63,16 +64,17 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .news-card .news-summary { font-size: 0.85rem; color: #666; line-height: 1.5; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.85rem * 1.5 * 2); }
 /* 底部互動區 (按讚) - *** 修改為 Flex 欄 *** */
 .news-card .actions {
-    /* position: absolute; <-- 移除 */
-    flex-shrink: 0; /* 不壓縮 */
-    width: 55px;   /* 設定固定寬度 */
-    padding: 0.5rem 0; /* 上下 padding */
-    display: flex;
-    flex-direction: column; /* 垂直排列 */
-    align-items: center;    /* 水平居中 */
-    justify-content: center;/* 垂直居中 */
-    gap: 0.1rem;          /* 垂直間距 */
-    border-left: 1px solid #eee; /* 可選分隔線 */
+       /* position: absolute; <-- 移除 */
+       flex-shrink: 0; /* 不壓縮 */
+       width: 60px;    /* *** 設定固定寬度 (可調整) *** */
+       padding: 0.5rem 0;
+       display: flex;
+       flex-direction: column; /* 垂直堆疊 */
+       align-items: center;    /* 水平居中 */
+       justify-content: center;/* 垂直居中 */
+       gap: 0.1rem;
+       border-left: 1px solid #eee; /* 可選分隔線 */
+       /* background-color: #f8f8f8; */ /* 可選背景色 */
 }
 .news-card .like-button { background: none; border: none; cursor: pointer; padding: 2px 5px; display: inline-flex; align-items: center; color: #aaa; font-size: 0.9rem; line-height: 1; margin: 0; }
 .news-card .like-button.liked { color: #E57373; font-weight: bold; }

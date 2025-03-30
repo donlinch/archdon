@@ -1,6 +1,7 @@
 // public/news.js
 document.addEventListener('DOMContentLoaded', () => {
-    const newsListContainer = document.getElementById('news-list');
+    const artistFilterNav = document.getElementById('artist-filter'); // news 頁面實際沒有用到，但保留以防複製錯誤
+    const newsListContainer = document.getElementById('news-list');   // 獲取正確的列表容器 ID
     const paginationControls = document.getElementById('pagination-controls');
     const detailModal = document.getElementById('news-detail-modal');
     const detailImage = document.getElementById('detail-image');
@@ -20,21 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("頁面缺少列表或分頁容器元素。");
             return;
         }
-        currentPage = page; // 更新當前頁碼
-        newsListContainer.innerHTML = '<p>正在加載最新消息...</p>'; // 顯示加載訊息
-        paginationControls.innerHTML = ''; // 清空分頁
+        currentPage = page;
+        newsListContainer.innerHTML = '<p>正在加載最新消息...</p>';
+        paginationControls.innerHTML = '';
 
         try {
             const response = await fetch(`/api/news?page=${page}&limit=${itemsPerPage}`);
             if (!response.ok) throw new Error(`獲取消息失敗 (HTTP ${response.status})`);
-            const data = await response.json(); // { totalItems, totalPages, currentPage, news: [...] }
+            const data = await response.json();
 
-            displayNews(data.news); // 顯示消息列表
-            renderPagination(data.totalPages, data.currentPage); // 渲染分頁控制
+            displayNews(data.news);
+            renderPagination(data.totalPages, data.currentPage);
 
         } catch (error) {
             console.error("獲取或顯示消息時出錯:", error);
-            newsListContainer.innerHTML = '<p>無法加載消息。</p>';
+            if (newsListContainer) newsListContainer.innerHTML = '<p>無法加載消息。</p>';
         }
     }
 
@@ -43,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Array} newsList - 消息物件陣列
      */
     function displayNews(newsList) {
-        newsListContainer.innerHTML = ''; // 清空容器
+        if (!newsListContainer) return;
+        newsListContainer.innerHTML = '';
 
         if (newsList.length === 0) {
             newsListContainer.innerHTML = '<p>目前沒有最新消息。</p>';
@@ -51,10 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         newsList.forEach(newsItem => {
+            // 卡片是 div
             const card = document.createElement('div');
             card.className = 'news-card';
-            // *** 讓整個卡片可點擊打開 Modal ***
-            card.onclick = () => openNewsDetailModal(newsItem.id);
 
             // 1. 日期標籤
             const dateTag = document.createElement('div');
@@ -69,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="weekday">${dayNames[eventDate.getDay()]}</span>
                 `;
             } else {
-                // 如果沒有活動日期，可以顯示發布日期或其他
                 const updatedDate = new Date(newsItem.updated_at);
                  dateTag.innerHTML = `
                     <span class="month">${updatedDate.getMonth() + 1}月</span>
@@ -85,204 +85,165 @@ document.addEventListener('DOMContentLoaded', () => {
             thumbnailImg.alt = newsItem.title || '縮圖';
             thumbnailDiv.appendChild(thumbnailImg);
 
-            // 3. 內容區
+            // 3. 主要內容區
             const contentWrapper = document.createElement('div');
             contentWrapper.className = 'content-wrapper';
+            // *** 將打開 Modal 的點擊事件綁定到這裡 ***
+            contentWrapper.onclick = () => openNewsDetailModal(newsItem.id);
+            contentWrapper.style.cursor = 'pointer'; // 添加手型指標
 
             const titleH3 = document.createElement('h3');
             titleH3.className = 'news-title';
             titleH3.textContent = newsItem.title || '無標題';
-
             const summaryP = document.createElement('p');
             summaryP.className = 'news-summary';
             summaryP.textContent = newsItem.summary || '';
+            contentWrapper.appendChild(titleH3);
+            contentWrapper.appendChild(summaryP);
 
-            // 4. 互動區 (愛心按鈕)
+
+            // 4. 互動區 (按讚)
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'actions';
             const likeButton = document.createElement('button');
             likeButton.className = 'like-button';
-            likeButton.innerHTML = '<span class="heart-icon">♡</span>'; // 初始是空心
+            likeButton.innerHTML = '<span class="heart-icon">♡</span>'; // 初始空心
             const likeCountSpan = document.createElement('span');
             likeCountSpan.className = 'like-count';
             likeCountSpan.textContent = newsItem.like_count || 0;
 
-            // --- 按讚按鈕的點擊事件 ---
+            // 按讚按鈕事件 - 阻止冒泡很重要
             likeButton.onclick = async (event) => {
-                 event.stopPropagation(); // *** 阻止事件冒泡到卡片點擊 ***
-                 likeNews(newsItem.id, likeButton, likeCountSpan);
+                 event.stopPropagation(); // 阻止事件冒泡到 contentWrapper 的 onclick
+                 await likeNews(newsItem.id, likeButton, likeCountSpan);
             };
 
             actionsDiv.appendChild(likeButton);
             actionsDiv.appendChild(likeCountSpan);
 
-            contentWrapper.appendChild(titleH3);
-            contentWrapper.appendChild(summaryP);
-            contentWrapper.appendChild(actionsDiv);
-
-            // 組合卡片
+            // *** 按正確順序添加到 card ***
             card.appendChild(dateTag);
             card.appendChild(thumbnailDiv);
-            card.appendChild(contentWrapper);
+            card.appendChild(contentWrapper); // 主要內容在中間
+            card.appendChild(actionsDiv);     // 按讚區塊在最右邊
 
             newsListContainer.appendChild(card);
         });
     }
 
-   /**
-    * 渲染分頁控制按鈕
-    * @param {number} totalPages - 總頁數
-    * @param {number} currentPage - 當前頁碼
-    */
-   function renderPagination(totalPages, currentPage) {
-       paginationControls.innerHTML = ''; // 清空舊按鈕
-       if (totalPages <= 1) return; // 只有一頁或沒有內容，則不顯示分頁
+    /**
+     * 渲染分頁控制按鈕
+     * @param {number} totalPages - 總頁數
+     * @param {number} currentPage - 當前頁碼
+     */
+    function renderPagination(totalPages, currentPage) {
+        if (!paginationControls) return;
+        paginationControls.innerHTML = '';
+        if (totalPages <= 1) return;
 
-       const createPageButton = (pageNumber, text = pageNumber, isActive = false, isDisabled = false) => {
-           const button = document.createElement('button');
-           button.textContent = text;
-           button.disabled = isDisabled;
-           if (isActive) {
-               button.classList.add('active');
-           } else {
-               button.onclick = () => fetchNews(pageNumber);
-           }
-           return button;
-       };
+        const createPageButton = (pageNumber, text = pageNumber, isActive = false, isDisabled = false) => {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.disabled = isDisabled;
+            if (isActive) { button.classList.add('active'); }
+            else { button.onclick = () => fetchNews(pageNumber); }
+            return button;
+        };
 
-       // 上一頁按鈕
-       paginationControls.appendChild(createPageButton(currentPage - 1, '上一頁', false, currentPage === 1));
+        paginationControls.appendChild(createPageButton(currentPage - 1, '上一頁', false, currentPage === 1));
+        // 簡單分頁邏輯：顯示所有頁碼 (如果頁數多需要改進)
+        for (let i = 1; i <= totalPages; i++) {
+            paginationControls.appendChild(createPageButton(i, i, i === currentPage));
+        }
+        paginationControls.appendChild(createPageButton(currentPage + 1, '下一頁', false, currentPage === totalPages));
+    }
 
-       // 頁碼按鈕 (可以添加省略邏輯，但我們先做簡單的)
-       for (let i = 1; i <= totalPages; i++) {
-           // 簡單顯示所有頁碼，如果頁數過多可以加入省略邏輯
-           // 例如: 只顯示當前頁前後幾頁，以及第一頁和最後一頁
-           paginationControls.appendChild(createPageButton(i, i, i === currentPage));
-       }
 
-       // 下一頁按鈕
-       paginationControls.appendChild(createPageButton(currentPage + 1, '下一頁', false, currentPage === totalPages));
-   }
+     /**
+      * 打開並填充消息詳情 Modal
+      * @param {number} newsId - 要顯示的消息 ID
+      */
+     async function openNewsDetailModal(newsId) {
+         if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) { console.error("缺少詳情 Modal 的必要元素。"); return; }
+         detailImage.src = ''; detailTitle.textContent = '加載中...'; detailMeta.textContent = ''; detailBody.textContent = ''; // 用 textContent 清空
+         detailModal.style.display = 'flex';
+
+         try {
+             const response = await fetch(`/api/news/${newsId}`);
+             if (!response.ok) throw new Error(`無法獲取消息詳情 (HTTP ${response.status})`);
+             const newsItem = await response.json();
+
+             detailImage.src = newsItem.image_url || '/images/placeholder.png';
+             detailImage.alt = newsItem.title || '消息圖片';
+             detailTitle.textContent = newsItem.title || '無標題';
+             let metaText = '';
+             if(newsItem.event_date) metaText += `活動日期: ${new Date(newsItem.event_date).toLocaleDateString()} | `;
+             metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString()}`;
+             detailMeta.textContent = metaText;
+             // 使用 textContent 設置內容以避免潛在的 XSS 風險，除非你確定 content 是安全的 HTML
+             detailBody.textContent = newsItem.content || '沒有詳細內容。';
+             // 如果 content 確定是安全的 HTML: detailBody.innerHTML = newsItem.content || '沒有詳細內容。';
+
+         } catch (error) {
+             console.error("加載消息詳情失敗:", error);
+             detailTitle.textContent = '加載失敗';
+             detailBody.textContent = error.message;
+         }
+     }
+
+     /**
+      * 關閉消息詳情 Modal
+      */
+     window.closeNewsDetailModal = function() { if (detailModal) { detailModal.style.display = 'none'; } }
 
 
     /**
-     * 打開並填充消息詳情 Modal
-     * @param {number} newsId - 要顯示的消息 ID
+     * 處理按讚請求
+     * @param {number} newsId - 被按讚的消息 ID
+     * @param {HTMLElement} likeButtonElement - 被點擊的按鈕元素
+     * @param {HTMLElement} countElement - 顯示數量的元素
      */
-    async function openNewsDetailModal(newsId) {
-        if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) {
-            console.error("缺少詳情 Modal 的必要元素。");
-            return;
+    async function likeNews(newsId, likeButtonElement, countElement) {
+        const isLiked = likeButtonElement.classList.contains('liked');
+        const currentCount = parseInt(countElement.textContent) || 0;
+
+        if (isLiked) { console.log("已經按過讚了"); return; } // 暫不處理取消讚
+        else { // 前端樂觀更新 (Optimistic Update)
+             likeButtonElement.classList.add('liked');
+             likeButtonElement.querySelector('.heart-icon').textContent = '♥';
+             countElement.textContent = currentCount + 1;
+             likeButtonElement.disabled = true; // 暫時禁用
         }
-        // 清空舊內容
-        detailImage.src = '';
-        detailTitle.textContent = '加載中...';
-        detailMeta.textContent = '';
-        detailBody.innerHTML = '';
-        detailModal.style.display = 'flex'; // 顯示 Modal
 
         try {
-            const response = await fetch(`/api/news/${newsId}`);
-            if (!response.ok) throw new Error(`無法獲取消息詳情 (HTTP ${response.status})`);
-            const newsItem = await response.json();
-
-            detailImage.src = newsItem.image_url || '/images/placeholder.png'; // 使用大圖 URL
-            detailImage.alt = newsItem.title || '消息圖片';
-            detailTitle.textContent = newsItem.title || '無標題';
-            // 組合 Meta 信息
-            let metaText = '';
-            if(newsItem.event_date) metaText += `活動日期: ${new Date(newsItem.event_date).toLocaleDateString()} | `;
-            metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString()}`;
-            detailMeta.textContent = metaText;
-            detailBody.textContent = newsItem.content || '沒有詳細內容。'; // 使用 textContent 避免 XSS
-
-        } catch (error) {
-            console.error("加載消息詳情失敗:", error);
-            detailTitle.textContent = '加載失敗';
-            detailBody.textContent = error.message;
-        }
-    }
-
-    /**
-     * 關閉消息詳情 Modal
-     */
-    window.closeNewsDetailModal = function() { // 綁定到 window 讓 HTML onclick 可以調用
-        if (detailModal) {
-            detailModal.style.display = 'none';
-        }
-    }
-
-
-   /**
-    * 處理按讚請求
-    * @param {number} newsId - 被按讚的消息 ID
-    * @param {HTMLElement} likeButtonElement - 被點擊的按鈕元素
-    * @param {HTMLElement} countElement - 顯示數量的元素
-    */
-   async function likeNews(newsId, likeButtonElement, countElement) {
-       // (可選) 前端立即反饋：改變圖標和數量
-       const isLiked = likeButtonElement.classList.contains('liked');
-       const currentCount = parseInt(countElement.textContent) || 0;
-
-       if (isLiked) {
-            // 如果已經是 liked 狀態，這裡可以選擇不做任何事，或者實現取消讚
-            console.log("已經按過讚了 (或取消讚功能未實現)");
-            return; // 暫時不做取消讚
-       } else {
-            likeButtonElement.classList.add('liked'); // 添加 liked class
-            likeButtonElement.querySelector('.heart-icon').textContent = '♥'; // 變實心
-            countElement.textContent = currentCount + 1; // 數量 +1
-            likeButtonElement.disabled = true; // 暫時禁用按鈕防止重複點擊
-       }
-
-
-       try {
-           const response = await fetch(`/api/news/${newsId}/like`, { method: 'POST' });
-
-           if (!response.ok) {
-               // 如果 API 失敗，嘗試恢復前端狀態
-                if (!isLiked) { // 只有在原本未按讚的情況下才恢復
-                    likeButtonElement.classList.remove('liked');
-                    likeButtonElement.querySelector('.heart-icon').textContent = '♡';
-                    countElement.textContent = currentCount;
-                }
-                throw new Error(`按讚失敗 (HTTP ${response.status})`);
-           }
-
-           // API 成功，可以選擇用 API 返回的數字更新 (更準確)
-           const data = await response.json(); // { like_count: newCount }
-           if (data && data.like_count !== undefined) {
-               countElement.textContent = data.like_count;
-                // 確保是 liked 狀態 (如果 API 更新成功)
+            const response = await fetch(`/api/news/${newsId}/like`, { method: 'POST' });
+            if (!response.ok) {
+                 // API 失敗，恢復前端狀態
+                 if (!isLiked) { likeButtonElement.classList.remove('liked'); likeButtonElement.querySelector('.heart-icon').textContent = '♡'; countElement.textContent = currentCount; }
+                 throw new Error(`按讚失敗 (HTTP ${response.status})`);
+            }
+            const data = await response.json(); // 獲取後端返回的真實數量
+            if (data && data.like_count !== undefined) {
+                countElement.textContent = data.like_count; // 更新為真實數量
+                // 確保狀態正確 (防止極端情況下 API 成功但前端未更新)
                 likeButtonElement.classList.add('liked');
                 likeButtonElement.querySelector('.heart-icon').textContent = '♥';
-           }
-
-       } catch (error) {
-            console.error("按讚 API 請求失敗:", error);
-            // 可以在這裡提示用戶按讚失敗
-            // 恢復前端狀態
-             if (!isLiked) {
-                likeButtonElement.classList.remove('liked');
-                likeButtonElement.querySelector('.heart-icon').textContent = '♡';
-                countElement.textContent = currentCount;
             }
-       } finally {
-            likeButtonElement.disabled = false; // 無論成功失敗都重新啟用按鈕
-       }
-   }
+        } catch (error) {
+             console.error("按讚 API 請求失敗:", error);
+             // API 失敗，恢復前端狀態
+             if (!isLiked) { likeButtonElement.classList.remove('liked'); likeButtonElement.querySelector('.heart-icon').textContent = '♡'; countElement.textContent = currentCount; }
+             // 可以選擇性地 alert 提示用戶
+             // alert(`按讚失敗: ${error.message}`);
+        } finally {
+             likeButtonElement.disabled = false; // 重新啟用按鈕
+        }
+    }
 
-   // --- Close Modal if User Clicks Outside ---
-   window.onclick = function(event) {
-       if (event.target == detailModal) { // 點擊 Modal 背景
-           closeNewsDetailModal();
-       }
-       // 保留之前的 Modal 關閉邏輯 (如果需要)
-       // else if (event.target == editModal) { closeModal(); }
-       // else if (event.target == addModal) { closeAddModal(); }
-   }
+    // --- Close Modal if User Clicks Outside ---
+    window.onclick = function(event) { if (event.target == detailModal) { closeNewsDetailModal(); } }
 
-    // --- 頁面初始加載 ---
-    fetchNews(1); // 預設加載第一頁
+     // --- 頁面初始加載 ---
+     fetchNews(1);
 
-}); // End of DOMContentLoaded
+ }); // End of DOMContentLoaded
