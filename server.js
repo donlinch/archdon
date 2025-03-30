@@ -89,6 +89,58 @@ app.get('/api/products/:id', async (req, res) => {
       }
   }
 
+// API endpoint to CREATE a new product
+app.post('/api/products', async (req, res) => {
+  // Get data from the request body
+  const { name, description, price, image_url, seven_eleven_url } = req.body;
+
+  // --- Basic Input Validation (Similar to PUT) ---
+  if (typeof name !== 'string' || name.trim() === '') {
+       return res.status(400).json({ error: 'Product name cannot be empty.' });
+  }
+  let priceValue = null;
+  if (price !== undefined && price !== null && price !== '') {
+      priceValue = parseFloat(price);
+      if (isNaN(priceValue)) {
+          return res.status(400).json({ error: 'Invalid price format. Must be a number.' });
+      }
+       if (priceValue < 0) {
+          return res.status(400).json({ error: 'Price cannot be negative.'})
+      }
+  }
+  const isValidUrl = (urlString) => { /* ... (same validation function as in PUT) ... */
+     if (!urlString) return true; try { new URL(urlString); return true; } catch (_) { return false; }
+  };
+  // if (!isValidUrl(image_url)) { /* ... (optional check) ... */ }
+  if (!isValidUrl(seven_eleven_url)) {
+      return res.status(400).json({ error: 'Invalid 7-11 link URL format.' });
+  }
+  // --- End Validation ---
+
+  try {
+      // Construct the INSERT query
+      const result = await pool.query(
+          `INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+           RETURNING *`, // Return the newly created row (including its ID)
+          [
+              name,
+              description || null,
+              priceValue,
+              image_url || null,
+              seven_eleven_url || null
+          ]
+      );
+
+      // Send back the newly created product data with status 201 (Created)
+      res.status(201).json(result.rows[0]);
+
+  } catch (err) {
+      console.error('Error adding new product:', err);
+      res.status(500).json({ error: 'Internal Server Error during insert.' });
+  }
+});
+
   // Validate URLs (optional but good practice)
   const isValidUrl = (urlString) => {
      if (!urlString) return true; // Allow empty URLs
