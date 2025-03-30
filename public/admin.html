@@ -117,6 +117,13 @@
                 <label for="add-product-seven-eleven-url">7-11 連結:</label>
                 <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url">
             </div>
+        
+            <!-- *** 新增: 顯示點擊次數 (唯讀) *** -->
+             <div class="form-group">
+                <label>點擊次數:</label>
+                <span id="edit-product-click-count" style="font-weight: bold; padding: 8px; display: inline-block;">-</span>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="action-btn save-btn">新增商品</button>
                 <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
