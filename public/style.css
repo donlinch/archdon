@@ -38,21 +38,21 @@ header {
 /* Header Logo Style - Responsive */
 #header-logo {
     /* 預設 (手機優先) 的高度 */
-    height: 60px; /* *** 手機上的 Logo 高度 (可調整) *** */
+    height: auto; /* *** 手機上的 Logo 高度 (可調整) *** */
     width: auto;  /* 寬度自動 */
     vertical-align: middle;
     display: inline-block;
 }
 
 /* 較大螢幕的 Logo 高度 */
-@media (min-width: 100px) {
+@media (min-width: auto) {
     #header-logo {
         height: auto; /* *** 平板上的 Logo 高度 (可調整) *** */
     }
 }
 
 /* 更大桌面螢幕的 Logo 高度 */
-@media (min-width: 80px) {
+@media (min-width: auto) {
     #header-logo {
         height: auto; /* *** 桌面上的 Logo 高度 (可調整) *** */
     }
