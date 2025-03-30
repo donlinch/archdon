@@ -112,14 +112,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Function to Close the Edit Modal ---
     window.closeModal = function() {
-         if (editModal) { // Check specifically for editModal
+         if (editModal) {
             editModal.style.display = 'none';
          }
     }
 
     // --- Function to Close the Add Modal ---
     window.closeAddModal = function() {
-        if (addModal) { // Check specifically for addModal
+        if (addModal) {
            addModal.style.display = 'none';
         }
     }
@@ -130,14 +130,35 @@ document.addEventListener('DOMContentLoaded', () => {
         openEditModal(id);
     };
 
-    // --- Attach Delete Function to Global Scope ---
-    window.deleteProduct = function(id) {
-        console.log('Attempting to delete product with ID:', id);
+    // --- *** CORRECTED Delete Function *** ---
+    window.deleteProduct = async function(id) { // <<< Added async keyword
+        console.log('Attempting to delete product with ID:', id); // <<< Corrected 'onsole' to 'console'
         if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
-            alert(`刪除功能尚未實作 (商品 ID: ${id})`);
-            // Later: Implement DELETE request
-        }
-    };
+            try {
+                const response = await fetch(`/api/products/${id}`, { // <<< Added await
+                    method: 'DELETE',
+                });
+                if (response.status === 204 || response.ok) {
+                    console.log(`Product with ID: ${id} deleted successfully.`);
+                    await fetchAndDisplayProducts(); // <<< Added await
+                } else {
+                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
+                    try {
+                        const errorData = await response.json(); // <<< Added await
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = `${errorMsg}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert(`刪除時發生錯誤：${error.message}`);
+            }
+        } else {
+            console.log('Deletion cancelled by user.');
+        } // <<< Corrected closing brace for if
+    }; // <<< Corrected closing brace for function
 
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddForm = function() {
