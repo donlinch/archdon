@@ -51,6 +51,47 @@
 
      </div>
 
+<!-- Edit Product Modal -->
+<div id="edit-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">×</span>
+        <h2>編輯商品</h2>
+        <form id="edit-product-form">
+            <!-- Hidden input to store product ID -->
+            <input type="hidden" id="edit-product-id">
+
+            <div class="form-group">
+                <label for="edit-product-name">商品名稱:</label>
+                <input type="text" id="edit-product-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-product-description">商品描述:</label>
+                <textarea id="edit-product-description" name="description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="edit-product-price">價格 (NT$):</label>
+                <input type="number" id="edit-product-price" name="price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-product-image-url">圖片路徑:</label>
+                <input type="text" id="edit-product-image-url" name="image_url">
+                <img id="edit-image-preview" src="" alt="Image Preview" style="max-width: 100px; max-height: 100px; display: block; margin-top: 5px;">
+            </div>
+             <div class="form-group">
+                <label for="edit-product-seven-eleven-url">7-11 連結:</label>
+                <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="action-btn save-btn">儲存變更</button>
+                <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button>
+            </div>
+             <p id="edit-form-error" style="color: red; margin-top: 10px;"></p>
+        </form>
+    </div>
+</div>
+
+
      <!-- 連結 Admin 頁面專用的 JavaScript -->
      <script src="admin.js"></script>
  </body>

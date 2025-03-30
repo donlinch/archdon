@@ -35,7 +35,35 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// --- Catch-all for SPA (Single Page Application) - Optional for now ---
+// API endpoint to get a SINGLE product by ID
+
+app.get('/api/products/:id', async (req, res) => {
+  const { id } = req.params; // Get the ID from the URL parameter
+  // Input validation: Ensure ID is a number
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'Invalid product ID format.' });
+  }
+
+  try {
+      const result = await pool.query(
+          // Select all relevant fields for editing
+          'SELECT id, name, description, price, image_url, seven_eleven_url FROM products WHERE id = $1',
+          [id] // Use parameterized query to prevent SQL injection
+      );
+
+      if (result.rows.length === 0) {
+          // No product found with that ID
+          return res.status(404).json({ error: 'Product not found.' });
+      }
+
+      res.json(result.rows[0]); // Send the single product object
+  } catch (err) {
+      console.error(`Error fetching product with ID ${id}:`, err);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+//-- Catch-all for SPA (Single Page Application) - Optional for now ---
 // If you have client-side routing later, uncomment this:
 /*
 app.get('*', (req, res) => {
