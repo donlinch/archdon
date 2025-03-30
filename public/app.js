@@ -59,15 +59,19 @@ document.addEventListener('DOMContentLoaded', () => {
             contentDiv.appendChild(price);
 
             // *** 將內部元素附加到 <a> 連結卡片 ***
-            cardLink.appendChild(imageContainer); // Add image container first
-            cardLink.appendChild(contentDiv);     // Add content div after
-            const cartIcon = document.createElement('span'); // Use span or i tag
-            cartIcon.className = 'cart-icon';
-            cartIcon.innerHTML = '🛒'; 
-            // *** 將連結卡片附加到 Grid ***
-            grid.appendChild(cardLink);
-        });
-    }
+         cardLink.appendChild(imageContainer); // Add image container first
+         cardLink.appendChild(contentDiv);     // Add content div after
+
+         // *** Create and APPEND the cart icon ***
+         const cartIcon = document.createElement('span');
+         cartIcon.className = 'cart-icon';
+         cartIcon.innerHTML = '🛒';
+         cardLink.appendChild(cartIcon); // <<< --- THIS LINE WAS MISSING! Add it here.
+
+         // *** 將連結卡片附加到 Grid ***
+         grid.appendChild(cardLink);
+     }); // End of productList.forEach
+} // End of displayProducts function
     // --- Function to Fetch Products from API ---
     async function fetchProducts() {
         const grid = document.getElementById('product-grid');

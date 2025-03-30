@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.innerHTML = `
                     <td>${product.id}</td>
                     <td>${product.name || ''}</td>
-                    <td>${product.price !== null ? `NT$ ${product.price.toLocaleString()}` : 'N/A'}</td>
+                    <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
                     <td><img src="${product.image_url || ''}" alt="${product.name || ''}" style="width: 50px; height: auto;"></td>
                     <td>
                         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
