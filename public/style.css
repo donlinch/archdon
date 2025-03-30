@@ -334,8 +334,8 @@ main h2::after {
 /* --- Shopping Cart Icon Styles --- */
 .cart-icon {
     position: absolute;
-    bottom: 1rem;
-    right: 1rem;
+    bottom: 0.1rem;
+    right: 0.1rem;
     /* Remove font-size and color, use width/height */
     width: 15px;  /* Adjust size as needed */
     height: 15px; /* Adjust size as needed */
