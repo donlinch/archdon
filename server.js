@@ -241,6 +241,142 @@ app.post('/api/products/:id/click', async (req, res) => {
 });
 
 
+
+// --- 新增: 音樂管理 API Routes ---
+
+// POST /api/music - 新增音樂項目
+app.post('/api/music', async (req, res) => {
+  // 從請求主體獲取資料
+  const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
+
+  // --- 基本輸入驗證 ---
+  if (typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ error: '音樂標題不能為空。' });
+  }
+  if (typeof artist !== 'string' || artist.trim() === '') {
+      return res.status(400).json({ error: '歌手名稱不能為空。' });
+  }
+  // 驗證 release_date 是否是有效的日期格式 (YYYY-MM-DD) 或可被 JS Date 解析
+  let formattedReleaseDate = null;
+  if (release_date) {
+      try {
+          // 嘗試轉換為 Date 物件再轉回 ISO 字串 (YYYY-MM-DD) 來標準化/驗證
+          formattedReleaseDate = new Date(release_date).toISOString().split('T')[0];
+      } catch (e) {
+          return res.status(400).json({ error: '無效的發行日期格式。請使用 YYYY-MM-DD。' });
+      }
+  } else {
+      // 如果沒提供發行日期，是否允許？或是設為必填？這裡先設為 null
+      // return res.status(400).json({ error: '發行日期不能為空。' });
+  }
+
+  const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
+  if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面圖片路徑格式。' }); }
+  if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
+  // --- 結束驗證 ---
+
+  try {
+      // 執行 INSERT 語句
+      const result = await pool.query(
+          `INSERT INTO music (title, artist, cover_art_url, platform_url, release_date, description, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+           RETURNING *`, // 返回新插入的行
+          [
+              title,
+              artist,
+              cover_art_url || null,
+              platform_url || null,
+              formattedReleaseDate, // 使用格式化/驗證過的日期
+              description || null
+          ]
+      );
+      // 以 201 Created 狀態回傳新建立的音樂資料
+      res.status(201).json(result.rows[0]);
+  } catch (err) {
+      console.error('新增音樂時出錯:', err);
+      res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
+  }
+});
+
+// PUT /api/music/:id - 更新音樂項目
+app.put('/api/music/:id', async (req, res) => {
+  const { id } = req.params;
+  // 從請求主體獲取要更新的資料
+  const { title, artist, cover_art_url, platform_url, release_date, description } = req.body;
+
+  // --- 輸入驗證 ---
+  if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的音樂 ID 格式。' }); }
+  if (typeof title !== 'string' || title.trim() === '') { return res.status(400).json({ error: '音樂標題不能為空。' }); }
+  if (typeof artist !== 'string' || artist.trim() === '') { return res.status(400).json({ error: '歌手名稱不能為空。' }); }
+
+  let formattedReleaseDate = null;
+  if (release_date) {
+      try { formattedReleaseDate = new Date(release_date).toISOString().split('T')[0]; }
+      catch (e) { return res.status(400).json({ error: '無效的發行日期格式。請使用 YYYY-MM-DD。' }); }
+  }
+  // else { return res.status(400).json({ error: '發行日期不能為空。' }); } // 如果要求必填
+
+  const isValidUrl = (urlString) => { if (!urlString) return true; return urlString.startsWith('/') || urlString.startsWith('http://') || urlString.startsWith('https://'); };
+  if (cover_art_url && !isValidUrl(cover_art_url)) { return res.status(400).json({ error: '無效的封面圖片路徑格式。' }); }
+  if (platform_url && !isValidUrl(platform_url)) { return res.status(400).json({ error: '無效的平台連結格式。' }); }
+  // --- 結束驗證 ---
+
+  try {
+      // 執行 UPDATE 語句
+      const result = await pool.query(
+          `UPDATE music
+           SET title = $1, artist = $2, cover_art_url = $3, platform_url = $4, release_date = $5, description = $6, updated_at = NOW()
+           WHERE id = $7
+           RETURNING *`, // 返回更新後的行
+          [
+              title,
+              artist,
+              cover_art_url || null,
+              platform_url || null,
+              formattedReleaseDate,
+              description || null,
+              id // WHERE 條件的 ID
+          ]
+      );
+
+      if (result.rowCount === 0) {
+          // 如果沒有找到對應 ID 的記錄
+          return res.status(404).json({ error: '找不到音樂項目，無法更新。' });
+      }
+      // 以 200 OK 狀態回傳更新後的音樂資料
+      res.status(200).json(result.rows[0]);
+  } catch (err) {
+      console.error(`更新音樂 ID ${id} 時出錯:`, err);
+      res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
+  }
+});
+
+// DELETE /api/music/:id - 刪除音樂項目
+app.delete('/api/music/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // --- 驗證 ---
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: '無效的音樂 ID 格式。' });
+  }
+  // --- 結束驗證 ---
+
+  try {
+      // 執行 DELETE 語句
+      const result = await pool.query('DELETE FROM music WHERE id = $1', [id]);
+
+      if (result.rowCount === 0) {
+          // 如果沒有找到對應 ID 的記錄
+          return res.status(404).json({ error: '找不到音樂項目，無法刪除。' });
+      }
+      // 成功刪除，返回 204 No Content
+      res.status(204).send();
+  } catch (err) {
+      console.error(`刪除音樂 ID ${id} 時出錯:`, err);
+      // 如果 music 表有被其他表引用，這裡可以添加外鍵錯誤檢查 (err.code === '23503')
+      res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+  }
+});
 // --- 可選的 SPA Catch-all 路由 (目前註解掉) ---
 /*
 app.get('*', (req, res) => {
