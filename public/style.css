@@ -23,15 +23,14 @@ body {
     padding-bottom: 80px;
 }
 
-/* Header Styles - *** 調整 Padding *** */
+/* Header Styles */
 header {
     background-color: #FFB74D; /* Warm Orange */
     color: #424242;
-    /* *** 減小上下 Padding *** */
-    padding: 0.5rem 1rem; /* 上下 0.5rem，左右 1rem (可微調) */
+    /* 調整上下 Padding 以控制 Header 高度 */
+    padding: 0.5rem 1rem;
     text-align: center;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem; /* Header 和下方內容的間距 */
+    margin-bottom: 2rem; /* 增加 Header 和下方內容間距 */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     line-height: 1;
 }
@@ -39,17 +38,28 @@ header {
 /* Header Logo Style - Responsive */
 #header-logo {
     /* 預設 (手機優先) 的高度 */
-    height: 240px; /* *** 手機上的 Logo 高度 (可調整) *** */
+    height: 35px; /* 手機上的 Logo 高度 (可調整) */
     width: auto;  /* 寬度自動 */
     vertical-align: middle;
     display: inline-block;
 }
-
+/* 較大螢幕的 Logo 高度 */
+@media (min-width: 768px) {
+    #header-logo {
+        height: 40px; /* 平板上的 Logo 高度 (可調整) */
+    }
+}
+/* 更大桌面螢幕的 Logo 高度 */
+@media (min-width: 992px) {
+    #header-logo {
+        height: 45px; /* 桌面上的 Logo 高度 (可調整) */
+    }
+}
 
 header h1 {
     margin: 0;
     line-height: inherit;
-    color: #424242; /* 深色文字對比度更好 */
+    /* 移除 H1 的 color 設定，讓 a 標籤繼承 header 的 color */
 }
 
 
@@ -111,15 +121,80 @@ main {
 .product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
 .product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
 
+/* --- News List Styles --- */
+.news-list {
+    margin-top: 1.5rem;
+}
+.news-card {
+    display: flex;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+    position: relative; /* *** 需要相對定位來容納絕對定位的 actions *** */
+}
+ .news-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+/* 日期標籤 */
+.news-card .date-tag { flex-shrink: 0; background-color: #E57373; color: white; padding: 1.5rem 1rem; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 70px; }
+.news-card .date-tag .month { font-size: 0.8rem; display: block; margin-bottom: 0.2rem; text-transform: uppercase; }
+.news-card .date-tag .day { font-size: 1.8rem; font-weight: bold; line-height: 1; display: block; }
+ .news-card .date-tag .weekday { font-size: 0.7rem; display: block; margin-top: 0.2rem; }
+/* 縮圖 */
+.news-card .thumbnail { flex-shrink: 0; width: 120px; height: 100px; overflow: hidden; }
+ @media (max-width: 600px) { .news-card .thumbnail { width: 90px; height: 75px; } }
+.news-card .thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* 主要內容區 - *** 增加右側 padding *** */
+.news-card .content-wrapper {
+    flex-grow: 1; padding: 0.8rem 1rem; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+    /* *** 為右側按讚區留出空間 *** */
+    padding-right: 55px; /* 可調整 */
+}
+.news-card .news-title { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; max-height: calc(1.1rem * 1.4 * 2); }
+.news-card .news-summary { font-size: 0.85rem; color: #666; line-height: 1.5; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.85rem * 1.5 * 2); }
+/* 底部互動區 (按讚) - *** 修改為絕對定位和垂直佈局 *** */
+.news-card .actions {
+    position: absolute; /* 絕對定位 */
+    right: 1rem;        /* 離右邊緣距離 */
+    top: 50%;           /* 垂直基準線 */
+    transform: translateY(-50%); /* 垂直居中 */
+    display: flex;
+    flex-direction: column; /* 垂直排列 */
+    align-items: center;    /* 水平居中 */
+    gap: 0.1rem;          /* 微小間距 */
+    z-index: 2;
+}
+.news-card .like-button { background: none; border: none; cursor: pointer; padding: 2px 5px; display: inline-flex; align-items: center; color: #aaa; font-size: 0.9rem; line-height: 1; margin: 0; }
+.news-card .like-button.liked { color: #E57373; font-weight: bold; }
+.news-card .like-button .heart-icon { font-size: 1.3em; transition: transform 0.2s ease; line-height: 1; }
+.news-card .like-button:hover .heart-icon { transform: scale(1.2); }
+.news-card .like-count { font-size: 0.8rem; color: #aaa; text-align: center; line-height: 1; }
+
+/* --- 分頁控制 --- */
+#pagination-controls { text-align: center; margin-top: 2rem; }
+#pagination-controls button { padding: 8px 12px; margin: 0 3px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease; }
+#pagination-controls button:hover { background-color: #eee; }
+#pagination-controls button.active { background-color: #FFB74D; color: white; border-color: #FFB74D; font-weight: bold; cursor: default; }
+ #pagination-controls button:disabled { opacity: 0.6; cursor: not-allowed; }
+#pagination-controls span { padding: 8px 5px; }
+
+/* --- 消息詳情 Modal --- */
+#news-detail-modal .modal-content { max-width: 700px; padding: 0; overflow: hidden; }
+#news-detail-modal .detail-image { width: 100%; max-height: 400px; object-fit: cover; display: block; }
+#news-detail-modal .detail-content { padding: 1.5rem 2rem 2rem 2rem; }
+#news-detail-modal .detail-title { font-size: 1.6rem; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
+#news-detail-modal .detail-meta { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
+#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; white-space: pre-wrap; }
+#news-detail-modal .close-btn { top: 15px; right: 15px; background-color: rgba(0,0,0,0.3); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; line-height: 1; padding: 0; text-align: center; }
+ #news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
+
 
 /* --- Footer Styles --- */
-footer {
-    background-color: #424242;
-    color: #FAFAFA;
-    padding: 2.5rem 1rem 1.5rem 1rem;
-    margin-top: 4rem;
-    text-align: center;
-}
+footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 1rem; margin-top: 4rem; text-align: center; }
 .footer-container { max-width: 1100px; margin: 0 auto; }
 .footer-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #616161; }
 .footer-nav a { color: #eeeeee; text-decoration: none; font-size: 0.95rem; transition: color 0.2s ease; }
@@ -127,14 +202,12 @@ footer {
 .footer-social { margin-bottom: 1.5rem; }
 .footer-copyright p { font-size: 0.85rem; color: #bdbdbd; line-height: 1.5; }
 
-/* --- Modal Styles --- */
-/* (假設這些樣式主要用於 admin 頁面, 保持原樣) */
+/* --- Modal Styles (General) --- */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding-top: 50px; }
-.modal[style*="display: flex"] { display: flex !important; }
+.modal[style*="display: flex"] { display: flex !important; } /* Ensure flex centering works with JS */
 .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
 .close-btn:hover { color: #333; }
-/* ... (其他 Modal 內部樣式) ... */
 .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
@@ -144,8 +217,10 @@ footer {
 .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
 .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
 .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+/* Image previews */
 #edit-image-preview, #add-image-preview, #edit-cover-preview, #add-cover-preview, #edit-news-thumbnail-preview, #add-news-thumbnail-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
 #edit-image-preview[src], #add-image-preview[src], #edit-cover-preview[src], #add-cover-preview[src], #edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src] { display: block; }
+/* Form errors */
 #edit-form-error, #add-form-error, #edit-music-form-error, #add-music-form-error, #edit-news-form-error, #add-news-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
 
 
