@@ -152,6 +152,44 @@ app.post('/api/products', async (req, res) => {
 });
 
 
+ // API endpoint to DELETE a product by ID
+ app.delete('/api/products/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // --- Validation ---
+  if (isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'Invalid product ID format.' });
+  }
+  // --- End Validation ---
+
+  try {
+      // Construct the DELETE query
+      const result = await pool.query(
+          'DELETE FROM products WHERE id = $1',
+          [id]
+      );
+
+      if (result.rowCount === 0) {
+          // If rowCount is 0, it means no row with that ID was found to delete
+          return res.status(404).json({ error: 'Product not found, cannot delete.' });
+      }
+
+      // Send success response with status 204 (No Content)
+      // Status 204 is often used for successful DELETE requests where there's no body to return
+      res.status(204).send();
+      // Alternatively, send status 200 with a success message:
+      // res.status(200).json({ message: 'Product deleted successfully.' });
+
+  } catch (err) {
+      console.error(`Error deleting product with ID ${id}:`, err);
+      // Check for foreign key constraint errors if applicable (e.g., if orders reference products)
+      if (err.code === '23503') { // PostgreSQL foreign key violation error code
+           return res.status(409).json({ error: 'Cannot delete product because it is referenced elsewhere (e.g., in orders).' });
+      }
+      res.status(500).json({ error: 'Internal Server Error during delete.' });
+  }
+});
+
 // --- Optional Catch-all for SPA ---
 /*
 app.get('*', (req, res) => {
