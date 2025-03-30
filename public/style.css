@@ -562,10 +562,26 @@ main h2::after {
 }
 
 /* Optional: 根據 Logo 高度微調 Header 的 padding */
-header {
-    /* padding: 1rem 1rem; */ /* 你可能需要稍微調整上下 padding */
-    /* 確保 header 內有足夠空間容納 logo */
-    line-height: 1; /* 避免 h1 的行高影響垂直對齊 */
+#header-logo {
+    /* 預設 (手機優先) 的高度 */
+    height: 35px; /* *** 為手機設定一個較小的高度 *** */
+    width: auto;  /* 寬度自動縮放以保持比例 */
+    vertical-align: middle; /* 嘗試垂直居中 */
+    display: inline-block; /* 確保 vertical-align 生效 */
+}
+
+/* 當螢幕寬度變大時 (例如平板或更大) */
+@media (min-width: 768px) { /* 你可以調整這個斷點 */
+    #header-logo {
+        height: 45px; /* *** 在較大螢幕上稍微增加高度 *** */
+    }
+}
+
+/* 對於更大的桌面螢幕 (可選) */
+@media (min-width: 992px) {
+    #header-logo {
+        height: 50px; /* *** 再次增加高度 *** */
+    }
 }
 
 header h1 {
