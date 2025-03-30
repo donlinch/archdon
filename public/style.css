@@ -174,11 +174,56 @@ main h2::after {
     padding-top: 0.5rem;
 }
 
-/* Footer Styles */
-footer {
-    background-color: #424242; /* Dark Grey footer */
+ /* --- Footer Styles --- */
+ footer {
+    background-color: #424242; /* Use the existing dark footer color */
     color: #FAFAFA; /* Light text */
+    padding: 2.5rem 1rem 1.5rem 1rem; /* More padding top/bottom */
+    margin-top: 4rem; /* More space above footer */
     text-align: center;
-    padding: 1.5rem 0;
-    margin-top: 3rem;
+}
+
+.footer-container {
+    max-width: 1100px; /* Limit footer content width */
+    margin: 0 auto; /* Center container */
+}
+
+.footer-nav {
+    display: flex; /* Arrange links in a row */
+    justify-content: center; /* Center the links horizontally */
+    flex-wrap: wrap; /* Allow links to wrap on smaller screens */
+    gap: 1rem 2rem; /* Row gap and column gap */
+    margin-bottom: 1.5rem; /* Space below nav links */
+    padding-bottom: 1.5rem; /* Space below nav links */
+    border-bottom: 1px solid #616161; /* Subtle separator line */
+}
+
+.footer-nav a {
+    color: #eeeeee; /* Slightly off-white for links */
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+}
+
+.footer-nav a:hover,
+.footer-nav a.admin-link:hover { /* Hover effect */
+    color: #FFB74D; /* Use header color for hover */
+}
+
+/* Optional: Slightly different style for admin link if needed */
+/*
+.footer-nav a.admin-link {
+    color: #B0BEC5; // Example: Blue Grey
+}
+*/
+
+.footer-social {
+    margin-bottom: 1.5rem; /* Space below social icons (if any) */
+    /* Add styles for social icons here if you add them */
+}
+
+.footer-copyright p {
+    font-size: 0.85rem;
+    color: #bdbdbd; /* Lighter grey for copyright */
+    line-height: 1.5;
 }
