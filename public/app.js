@@ -63,10 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
          cardLink.appendChild(contentDiv);     // Add content div after
 
          // *** Create and APPEND the cart icon ***
-         const cartIcon = document.createElement('span');
-         cartIcon.className = 'cart-icon';
-         cartIcon.innerHTML = '🛒';
-         cardLink.appendChild(cartIcon); // <<< --- THIS LINE WAS MISSING! Add it here.
+         const cartIcon = document.createElement('img'); 
+         cartIcon.src = '/images/shop.png'; 
+         cartIcon.alt = '購物車';
+         cardLink.appendChild(cartIcon);  // <<< --- THIS LINE WAS MISSING! Add it here.
 
          // *** 將連結卡片附加到 Grid ***
          grid.appendChild(cardLink);
