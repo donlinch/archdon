@@ -408,3 +408,118 @@ main h2::after {
  .product-card .price {
      padding-right: 0.5rem; /* Add a little space just in case */
  }
+
+ /* --- Music List Styles --- */
+ .music-list {
+    /* 可以移除 grid 相關樣式 */
+    /* display: grid; ... */
+    width: 100%; /* 列表佔滿寬度 */
+    margin-top: 1.5rem; /* 與篩選按鈕的間距 */
+}
+
+.music-list-item {
+    display: flex; /* *** 使用 Flexbox 實現橫向排列 *** */
+    align-items: center; /* 垂直居中對齊 */
+    padding: 0.8rem 0.5rem; /* 上下 padding，左右稍微小一點 */
+    border-bottom: 1px solid #eee; /* 項目之間的分隔線 */
+    gap: 1rem; /* 各個元素之間的間距 */
+    transition: background-color 0.2s ease;
+}
+
+.music-list-item:hover {
+    background-color: #f9f9f9; /* 鼠標懸停時的背景色 */
+}
+
+/* 封面圖片 */
+.music-list-item .cover {
+    flex-shrink: 0; /* 防止圖片被壓縮 */
+    width: 50px;    /* 固定封面寬度 */
+    height: 50px;   /* 固定封面高度 */
+    border-radius: 4px; /* 可選：小圓角 */
+    overflow: hidden;
+}
+.music-list-item .cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 歌曲資訊 (包含標題和歌手) */
+.music-list-item .info {
+    flex-grow: 1; /* 佔據大部分剩餘空間 */
+    /* 防止文字過長溢出 */
+    overflow: hidden;
+    /* 內部也可以用 flex 垂直排列 */
+    /* display: flex; */
+    /* flex-direction: column; */
+}
+.music-list-item .info .title {
+    display: block; /* 佔滿一行 */
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0.1rem; /* 與歌手的間距 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.music-list-item .info .artist {
+    display: block; /* 佔滿一行 */
+    font-size: 0.8rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 播放按鈕 (連結) */
+.music-list-item .play-link {
+    flex-shrink: 0; /* 不壓縮 */
+    display: inline-flex; /* 使用 inline-flex 讓內部圖標居中 */
+    align-items: center;
+    justify-content: center;
+    width: 36px; /* 按鈕大小 */
+    height: 36px;
+    border: 1px solid #ddd;
+    border-radius: 50%; /* 圓形按鈕 */
+    color: #555;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.music-list-item .play-link:hover {
+    background-color: #eee;
+    color: #333;
+    border-color: #ccc;
+}
+ /* 播放圖標 (可以使用 SVG, Font Awesome 或簡單字符) */
+.music-list-item .play-link::before { /* 用偽元素顯示播放圖標 */
+    content: '▶'; /* 簡單的播放符號 */
+    font-size: 0.8rem;
+}
+
+/* 發行日期 */
+.music-list-item .release-date {
+    flex-shrink: 0; /* 不壓縮 */
+    font-size: 0.8rem;
+    color: #888;
+    min-width: 70px; /* 給日期一個最小寬度，避免換行 */
+    text-align: right; /* 日期靠右對齊 */
+}
+
+/* --- 手機版響應式調整 (可選) --- */
+@media (max-width: 600px) {
+    .music-list-item {
+        gap: 0.6rem; /* 縮小手機上的間距 */
+        padding: 0.6rem 0.3rem;
+    }
+    .music-list-item .cover {
+        width: 40px;
+        height: 40px;
+    }
+    .music-list-item .info .title { font-size: 0.9rem; }
+    .music-list-item .info .artist { font-size: 0.75rem; }
+    .music-list-item .play-link { width: 32px; height: 32px; }
+    .music-list-item .play-link::before { font-size: 0.7rem; }
+    .music-list-item .release-date { font-size: 0.75rem; min-width: 60px; }
+}
