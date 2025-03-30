@@ -334,8 +334,8 @@ main h2::after {
 /* --- Shopping Cart Icon Styles --- */
 .cart-icon {
     position: absolute;
-    bottom: 0.1rem;
-    right: 0.1rem;
+    bottom: 1rem;
+    right: 1rem;
     /* Remove font-size and color, use width/height */
     width: 15px;  /* Adjust size as needed */
     height: 15px; /* Adjust size as needed */
@@ -349,7 +349,7 @@ main h2::after {
 .cart-icon:hover {
     /* Remove color change, keep transform */
     /* color: #E57373; --- Remove this */
-    transform: scale(1.15); /* Slightly increase scale effect? */
+    transform: scale(0.3); /* Slightly increase scale effect? */
 }
 /* Optional: Adjust card content padding if icon overlaps */
 .product-card .card-content {
