@@ -1,14 +1,11 @@
 /*
-   Color Palette:
-   Peach:    #F3D2AC
-   Pink:     #F3B8B1
-   Lavender: #CECBD6
-   Teal:     #7DC8CA
-   Mint:     #CAE9E0
-   ---
-   Light Grey BG: #f8f9fa
-   Dark Text:     #343a40
-   Medium Text:   #6c757d
+    New Color Palette Proposal:
+    Warm Orange (Header): #FFB74D
+    Coral Red   (Accent 1): #E57373
+    Blue Grey   (Accent 2): #B0BEC5
+    Light Grey BG:          #FAFAFA
+    Dark Text:              #424242
+    Medium Text:            #757575
 */
 
 /* Basic Reset & Body Style */
@@ -21,19 +18,19 @@
 body {
     font-family: 'Noto Sans TC', sans-serif;
     line-height: 1.6;
-    color: #343a40; /* Dark Text */
-    background-color: #f8f9fa; /* Keep light grey background */
+    color: #424242; /* Dark Text */
+    background-color: #FAFAFA; /* Light Grey BG */
     padding-bottom: 80px;
 }
 
 /* Header Styles */
 header {
-    background-color: #7DC8CA; /* Teal */
-    color: #fff; /* White text on Teal */
+    background-color: #FFB74D; /* Warm Orange */
+    color: #424242; /* Dark Text (better contrast on orange) */
     padding: 1.5rem 1rem;
     text-align: center;
     margin-bottom: 2.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Softer shadow */
 }
 
 header h1 {
@@ -52,7 +49,7 @@ main {
 main h2 {
     text-align: center;
     margin-bottom: 2rem;
-    color: #F3B8B1; /* Pink */
+    color: #E57373; /* Coral Red */
     font-size: 1.8rem;
     font-weight: 700;
     padding-bottom: 0.5rem;
@@ -69,7 +66,7 @@ main h2::after {
     left: 0;
     width: 60%;
     height: 3px;
-    background-color: #F3D2AC; /* Peach underline */
+    background-color: #FFB74D; /* Warm Orange underline */
     margin-left: 20%;
 }
 
@@ -102,32 +99,31 @@ main h2::after {
 }
 
 
-/* Individual Product Card Styles (Now an <a> tag) */
-.product-card, /* Style the link itself */
+/* Individual Product Card Styles (<a> tag) */
+.product-card,
 .product-card:link,
 .product-card:visited {
     background-color: #fff;
-    border: 1px solid #CECBD6; /* Lavender border */
+    border: 1px solid #ECEFF1; /* Lighter Blue Grey for border */
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; /* Add border-color transition */
     display: flex;
     flex-direction: column;
     height: 100%;
     text-align: center;
-    /* Remove default link styling */
     text-decoration: none;
-    color: inherit; /* Inherit text color from body/parent */
+    color: inherit;
 }
 
 /* HOVER EFFECT */
 .product-card:hover {
     transform: scale(1.03);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
     z-index: 10;
     position: relative;
-    border-color: #F3B8B1; /* Pink border on hover */
+    border-color: #B0BEC5; /* Blue Grey border on hover */
 }
 
 /* Style for the image container */
@@ -159,13 +155,13 @@ main h2::after {
 .product-card h3 { /* Product Name */
     font-size: 1.05rem;
     margin-bottom: 0.4rem;
-    color: #343a40; /* Dark Text */
+    color: #424242; /* Dark Text */
     font-weight: 700;
 }
 
 .product-card p { /* Product Description */
     font-size: 0.85rem;
-    color: #6c757d; /* Medium Text */
+    color: #757575; /* Medium Text */
     line-height: 1.4;
     margin-bottom: 0.8rem;
 }
@@ -173,15 +169,15 @@ main h2::after {
 .product-card .price { /* Product Price */
     font-weight: bold;
     font-size: 1.1rem;
-    color: #F3D2AC; /* Peach Price */
+    color: #E57373; /* Coral Red Price */
     margin-top: auto;
     padding-top: 0.5rem;
 }
 
 /* Footer Styles */
 footer {
-    background-color: #343a40; /* Keep Dark footer */
-    color: #f8f9fa;
+    background-color: #424242; /* Dark Grey footer */
+    color: #FAFAFA; /* Light text */
     text-align: center;
     padding: 1.5rem 0;
     margin-top: 3rem;
