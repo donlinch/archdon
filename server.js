@@ -27,27 +27,47 @@ const basicAuthMiddleware = (req, res, next) => {
 };
 
 
-// --- 記錄 Page View 中間件 ---
+
+// --- 記錄 Page View 中間件 (現在放在 Traffic API 之後，但在管理 API 之前比較好) ---
 app.use(async (req, res, next) => {
-  const isPageRequest = !req.path.startsWith('/api/') && req.path.indexOf('.') === -1 && req.method === 'GET';
-  if (isPageRequest) {
+  // 只記錄非 API 的 GET 請求
+  const shouldLog = !req.path.startsWith('/api/') && req.method === 'GET';
+
+  if (shouldLog) {
       const pagePath = req.path;
-      console.log(`[Page View Middleware] Checking request for: ${pagePath}`); // [除錯]
+      console.log(`[PV Mid] Should Log: YES for ${pagePath}`); // [除錯]
       try {
-          await pool.query( `INSERT INTO page_views (page, view_date, view_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (page, view_date) DO UPDATE SET view_count = page_views.view_count + 1`, [pagePath] );
-          console.log(`[Page View Middleware] Page view recorded/updated for: ${pagePath}`); // [除錯]
+          const sql = `
+              INSERT INTO page_views (page, view_date, view_count)
+              VALUES ($1, CURRENT_DATE, 1)
+              ON CONFLICT (page, view_date) -- 確保有 UNIQUE 約束在 (page, view_date)
+              DO UPDATE SET view_count = page_views.view_count + 1
+              RETURNING *; -- 返回被插入或更新的行，確認操作
+          `;
+          const params = [pagePath];
+          console.log(`[PV Mid] Executing SQL: ${sql.replace(/\s+/g, ' ')} with params:`, params); // [除錯] 打印執行的 SQL
+
+          const result = await pool.query(sql, params);
+
+          // *** 新增：檢查 INSERT/UPDATE 是否真的影響了行 ***
+          if (result.rowCount > 0) {
+              console.log(`[PV Mid] SUCCESS: Page view recorded/updated for: ${pagePath}. Result:`, result.rows[0]); // [除錯]
+          } else {
+              // 這種情況理論上不應該發生，除非 ON CONFLICT 有問題或沒有匹配行被更新
+              console.warn(`[PV Mid] WARN: Query executed for ${pagePath} but rowCount is 0. This might indicate an issue.`);
+          }
+
       } catch (err) {
-          if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`[Page View Middleware] Duplicate key for ${pagePath}`); }
-          else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[Page View Middleware] ON CONFLICT race condition for ${pagePath}`); }
-          else { console.error('[Page View Middleware] Error logging page view:', err); }
+          // ... (之前的錯誤處理不變) ...
+           if (err.code === '23505') { console.warn(`[PV Mid] Constraint violation for ${pagePath}. Check UNIQUE constraint on (page, view_date).`); }
+           else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[PV Mid] ON CONFLICT race condition for ${pagePath}`); }
+           else { console.error('[PV Mid] Error logging page view:', err); } // 打印詳細錯誤
       }
   } else {
-       console.log(`[Page View Middleware] Skipping log for: ${req.method} ${req.path}`); // [除錯]
+       console.log(`[PV Mid] Skipping log for: ${req.method} ${req.path}`); // [除錯]
   }
-  next(); // *** 確保總是調用 next() ***
+  next();
 });
-
-
 
 // --- 公開 API Routes (不需要認證) ---
 
@@ -183,6 +203,8 @@ app.post('/api/news/:id/like', async (req, res) => {
     }
 });
 // --- *** 新增: 獲取每日流量數據 API *** ---
+
+
 
 
 
