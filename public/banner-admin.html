@@ -13,16 +13,14 @@
         #banner-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
         #banner-list-table th, #banner-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; /* 垂直居中 */ }
         #banner-list-table th { background-color: #e9ecef; }
-        /* 列寬調整 */
-        #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 8%; }  /* ID */
-        #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 20%; text-align: center;} /* 圖片預覽 */
-        #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 30%; } /* 圖片網址 */
-        #banner-list-table th:nth-child(4), #banner-list-table td:nth-child(4) { width: 15%; } /* 連結網址 */
-        #banner-list-table th:nth-child(5), #banner-list-table td:nth-child(5) { width: 10%; text-align: center; } /* 排序 */
-        #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 17%; text-align: center;} /* 操作 */
-
-        #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; } /* 預覽圖大小 */
-
+     /* 列寬調整 - 需要重新分配寬度 */
+     #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 6%; }  /* ID */
+    #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 18%; text-align: center;} /* 圖片預覽 */
+    #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 25%; } /* 圖片網址 */
+    #banner-list-table th:nth-child(4), #banner-list-table td:nth-child(4) { width: 15%; } /* 連結網址 */
+    #banner-list-table th:nth-child(5), #banner-list-table td:nth-child(5) { width: 12%; text-align: center; } /* *** 所屬頁面 (新增) *** */
+    #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 排序 */
+    #banner-list-table th:nth-child(7), #banner-list-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
         /* Modal 圖片預覽 */
          #edit-banner-preview, #add-banner-preview { max-width: 200px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
          #edit-banner-preview[src], #add-banner-preview[src] { display: block; }
