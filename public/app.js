@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 direction: 'horizontal', // 水平輪播
                 loop: banners.length > 1, // 只有一張以上圖片時才循環
                 autoplay: {
-                    delay: 4000, // 自動播放間隔 (毫秒)
+                    delay: 12000, // 自動播放間隔 (毫秒)
                     disableOnInteraction: false, // 用戶操作後是否停止自動播放 (false=不停止)
                 },
                 slidesPerView: 1, // 每次顯示一張

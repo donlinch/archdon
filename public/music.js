@@ -6,6 +6,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentArtistFilter = null; // 用於追蹤當前篩選的歌手
 
+
+// --- 複製過來的 Banner 相關代碼 ---
+const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
+let bannerSwiper = null;
+
+async function fetchAndDisplayBanners() {
+    if (!bannerWrapper) { /* ... */ return; }
+    bannerWrapper.innerHTML = '<div class="swiper-slide" style="...">載入中...</div>';
+    try {
+        const response = await fetch('/api/banners'); // **注意：這裡獲取所有 banner**
+        if (!response.ok) { throw new Error(/* ... */); }
+        const banners = await response.json();
+        bannerWrapper.innerHTML = '';
+        if (!banners || banners.length === 0) {
+             bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy Logo" style="..."></div>';
+        } else {
+            banners.forEach(banner => { /* ... 生成 slide ... */ });
+        }
+        if (bannerSwiper) { bannerSwiper.destroy(true, true); bannerSwiper = null; }
+        if (bannerWrapper.children.length > 0) {
+            bannerSwiper = new Swiper('#banner-carousel', {
+                loop: banners && banners.length > 1,
+                autoplay: { delay: 12000, disableOnInteraction: false, pauseOnMouseEnter: true }, // <-- 速度在這裡調
+                pagination: { el: '#banner-carousel .swiper-pagination', clickable: true },
+                navigation: { nextEl: '#banner-carousel .swiper-button-next', prevEl: '#banner-carousel .swiper-button-prev' },
+                // ... 其他 Swiper 選項
+            });
+        }
+    } catch (error) { /* ... 錯誤處理 ... */ }
+}
+// --- Banner 代碼結束 ---
+
+
     /**
      * 獲取並顯示歌手篩選按鈕
      */
