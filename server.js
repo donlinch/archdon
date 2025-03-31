@@ -14,45 +14,39 @@ const pool = new Pool({
 });
 
 // --- 中間件 (Middleware) ---
-app.use(express.static(path.join(__dirname, 'public'))); // *** 靜態文件服務在最前面 ***
-app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 目錄下的靜態檔案
+app.use(express.json()); // 解析請求主體中的 JSON 資料
 
-// --- *** 將記錄 Page View 中間件移到這裡 *** ---
-// --- (在靜態文件和 API 路由定義之間) ---
+// --- *** 將基本認證中間件函數定義移到這裡 (所有路由之前) *** ---
+const basicAuthMiddleware = (req, res, next) => {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin'; // 從 .env 讀取帳號
+    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // 從 .env 讀取密碼 (務必修改!)
+    const authHeader = req.headers.authorization; // 獲取 Authorization 標頭
+    if (!authHeader) { /* 要求認證 */ res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"'); return res.status(401).send('需要認證才能訪問管理區域。'); }
+    try { const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':'); const user = auth[0]; const pass = auth[1]; if (user === adminUser && pass === adminPass) { next(); } else { /* 認證失敗 */ res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"'); return res.status(401).send('認證失敗。'); } } catch (error) { console.error("認證標頭解析錯誤:", error); res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"'); return res.status(401).send('認證失敗 (格式錯誤)。'); }
+};
+
+
+// --- 記錄 Page View 中間件 ---
 app.use(async (req, res, next) => {
-    // *** 修改條件判斷: 只排除 /api/ 路徑下的 GET 請求 ***
-    //    這樣可以記錄 /, /music.html, /news.html 等
-    //    同時避免記錄 API 調用本身
-    const isApiRequest = req.path.startsWith('/api/');
-    const shouldLog = !isApiRequest && req.method === 'GET'; // 記錄所有非 API 的 GET 請求
-
-    // 另一種更精確的判斷 (只記錄 HTML 文件請求):
-    // const isHtmlPage = (req.path === '/' || req.path.endsWith('.html')) && req.method === 'GET';
-    // const shouldLog = isHtmlPage;
-
-    if (shouldLog) {
-        const pagePath = req.path;
-        console.log(`[Page View Middleware] Checking request for: ${pagePath}`); // [除錯]
-        try {
-            await pool.query(
-                `INSERT INTO page_views (page, view_date, view_count)
-                 VALUES ($1, CURRENT_DATE, 1)
-                 ON CONFLICT (page, view_date)
-                 DO UPDATE SET view_count = page_views.view_count + 1`,
-                [pagePath]
-            );
-            console.log(`[Page View Middleware] Page view recorded/updated for: ${pagePath}`); // [除錯]
-        } catch (err) {
-            // ... (錯誤處理邏輯不變) ...
-             if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`[Page View Middleware] Duplicate key for ${pagePath}`); }
-             else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[Page View Middleware] ON CONFLICT race condition for ${pagePath}`); }
-             else { console.error('[Page View Middleware] Error logging page view:', err); }
-        }
-    } else {
-         console.log(`[Page View Middleware] Skipping log for: ${req.method} ${req.path}`); // [除錯]
-    }
-    next(); // *** 確保總是調用 next() ***
+  const isPageRequest = !req.path.startsWith('/api/') && req.path.indexOf('.') === -1 && req.method === 'GET';
+  if (isPageRequest) {
+      const pagePath = req.path;
+      console.log(`[Page View Middleware] Checking request for: ${pagePath}`); // [除錯]
+      try {
+          await pool.query( `INSERT INTO page_views (page, view_date, view_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (page, view_date) DO UPDATE SET view_count = page_views.view_count + 1`, [pagePath] );
+          console.log(`[Page View Middleware] Page view recorded/updated for: ${pagePath}`); // [除錯]
+      } catch (err) {
+          if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`[Page View Middleware] Duplicate key for ${pagePath}`); }
+          else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[Page View Middleware] ON CONFLICT race condition for ${pagePath}`); }
+          else { console.error('[Page View Middleware] Error logging page view:', err); }
+      }
+  } else {
+       console.log(`[Page View Middleware] Skipping log for: ${req.method} ${req.path}`); // [除錯]
+  }
+  next(); // *** 確保總是調用 next() ***
 });
+
 
 
 // --- 公開 API Routes (不需要認證) ---
@@ -193,46 +187,21 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
-
-// --- *** 將 Traffic API 定義移到這裡 *** ---
+// --- *** Traffic API 定義 (現在肯定在 basicAuthMiddleware 定義之後) *** ---
 // GET daily traffic data (受保護)
-app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => {
-  console.log("接收到 /api/analytics/traffic 請求"); // [除錯]
-  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0]; console.log(`計算起始日期: ${startDateString}`); // [除錯]
+app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => { // <-- 使用 basicAuthMiddleware
+  console.log("接收到 /api/analytics/traffic 請求");
+  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0]; console.log(`計算起始日期: ${startDateString}`);
   try {
       const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
-      console.log("執行的 SQL:", queryText, "參數:", [startDateString]); // [除錯]
+      console.log("執行的 SQL:", queryText, "參數:", [startDateString]);
       const result = await pool.query(queryText, [startDateString]);
-      console.log("資料庫查詢結果行數:", result.rowCount); // [除錯]
+      console.log("資料庫查詢結果行數:", result.rowCount);
       const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
-      console.log("準備回傳的流量數據:", trafficData); // [除錯]
-      res.status(200).json(trafficData); // *** 確保是 json() ***
+      console.log("準備回傳的流量數據:", trafficData);
+      res.status(200).json(trafficData);
   } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); console.error('錯誤堆疊:', err.stack); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
 });
-
-
-// --- 記錄 Page View 中間件 (現在放在 Traffic API 之後) ---
-app.use(async (req, res, next) => {
-const isPageRequest = !req.path.startsWith('/api/') && req.path.indexOf('.') === -1 && req.method === 'GET';
-if (isPageRequest) {
-    const pagePath = req.path;
-    try {
-        // 假設 page 和 view_date 有聯合唯一約束
-        await pool.query( `INSERT INTO page_views (page, view_date, view_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (page, view_date) DO UPDATE SET view_count = page_views.view_count + 1`, [pagePath] );
-        console.log(`Page view recorded/updated for: ${pagePath}`);
-    } catch (err) {
-        if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`Duplicate page view entry for ${pagePath} on CURRENT_DATE, likely constraint issue or race condition.`); }
-        else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`Ignoring ON CONFLICT error for ${pagePath}: ${err.message}`); }
-        else { console.error('記錄 page view 時出錯:', err); }
-    }
-}
-next(); // 繼續處理請求
-});
-
-
-
-
-
 
 
 
