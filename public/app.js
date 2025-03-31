@@ -1,127 +1,115 @@
-// public/app.js
+// public/app.js (完整替換)
 document.addEventListener('DOMContentLoaded', () => {
-    // 獲取商品格線和排序連結的 DOM 元素 (保持不變)
+    // 獲取商品格線和排序連結的 DOM 元素
     const grid = document.getElementById('product-grid');
     const sortLinks = document.querySelectorAll('.sort-link');
 
-    // *** 新增: 獲取 Banner 輪播相關元素 ***
-    // !! 重要: 請確保你的 index.html 中輪播容器的 ID 是 'banner-carousel' !!
+    // 獲取 Banner 輪播相關元素
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
     let bannerSwiper = null; // 用於儲存 Swiper 實例
 
     /**
-     * 從後端 API 獲取 Banner 資料並初始化輪播
+     * 從後端 API 獲取指定頁面的 Banner 資料並初始化輪播
+     * @param {string} pageIdentifier - 頁面標識符 ('home', 'music', 'news')
      */
-    async function fetchAndDisplayBanners() {
+    async function fetchAndDisplayBanners(pageIdentifier = 'home') { // 預設獲取 home
         if (!bannerWrapper) {
             console.warn("未找到 Banner 輪播的 swiper-wrapper 元素 (選擇器: #banner-carousel .swiper-wrapper)。請檢查 index.html。");
-            // 可以嘗試顯示錯誤或隱藏輪播區
-             const carouselElement = document.getElementById('banner-carousel');
-             if (carouselElement) carouselElement.style.display = 'none'; // 隱藏輪播區
+            const carouselElement = document.getElementById('banner-carousel');
+            if (carouselElement) carouselElement.style.display = 'none';
             return;
         }
-        // 可以先放一個 Loading 狀態的 slide (可選)
+
         bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入中...</div>';
 
         try {
-            const response = await fetch('/api/banners'); // 從後端獲取 banners
+            // *** 修改這裡：添加 ?page= Query 參數 ***
+            const apiUrl = `/api/banners?page=${encodeURIComponent(pageIdentifier)}`;
+            console.log(`[Banner] Fetching banners from: ${apiUrl}`); // 除錯日誌
+            const response = await fetch(apiUrl);
+
             if (!response.ok) {
-                throw new Error(`獲取 Banners 失敗 (HTTP ${response.status})`);
+                 let errorText = `獲取 Banners 失敗 (HTTP ${response.status})`;
+                 try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
+                 throw new Error(errorText);
             }
             const banners = await response.json();
+            console.log(`[Banner] Received ${banners.length} banners for page '${pageIdentifier}'.`); // 除錯日誌
 
-            bannerWrapper.innerHTML = ''; // 清空 Loading 或舊內容
+            bannerWrapper.innerHTML = ''; // 清空 Loading
 
             if (!banners || banners.length === 0) {
-                // 如果沒有 Banner，顯示預設圖片或Logo
-                console.log("後端未返回 Banner 數據，顯示預設內容。");
+                console.log(`[Banner] 後端未返回 '${pageIdentifier}' 頁面的 Banner 數據，顯示預設內容。`);
+                // 顯示預設圖片或Logo
                 bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy Logo" style="max-height: 80%; object-fit: contain;"></div>';
-                // 如果連預設圖都沒有，可以隱藏
-                // const carouselElement = document.getElementById('banner-carousel');
-                // if (carouselElement) carouselElement.style.display = 'none';
             } else {
                 // 有 Banner 數據，創建 Slides
                 banners.forEach(banner => {
                     const slide = document.createElement('div');
-                    slide.className = 'swiper-slide'; // Swiper 需要的 class
+                    slide.className = 'swiper-slide';
 
                     const img = document.createElement('img');
                     img.src = banner.image_url;
-                     // 嘗試從 image_url 推斷 alt 或使用後端提供的 alt (如果有的話)
-                    img.alt = banner.alt_text || `Banner ${banner.id || ''}`; // 你可能需要在後端 API 和管理介面加上 alt_text 欄位
+                    // 使用後端提供的 alt_text 或預設文字
+                    img.alt = banner.alt_text || `Banner ${banner.id || ''}`;
 
                     // 如果 banner 有 link_url，則將圖片包在連結中
                     if (banner.link_url) {
                         const link = document.createElement('a');
                         link.href = banner.link_url;
-                        link.target = '_blank'; // 在新分頁開啟
-                        link.rel = 'noopener noreferrer'; // 安全性考量
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
                         link.appendChild(img);
                         slide.appendChild(link);
                     } else {
-                        // 沒有連結，直接放置圖片
                         slide.appendChild(img);
                     }
-                    bannerWrapper.appendChild(slide); // 將 slide 添加到 wrapper
+                    bannerWrapper.appendChild(slide);
                 });
             }
 
             // *** 初始化 Swiper ***
-            // 先銷毀可能存在的舊 Swiper 實例，防止重複初始化
             if (bannerSwiper) {
-                console.log("銷毀舊的 Swiper 實例。");
-                bannerSwiper.destroy(true, true); // true, true 表示同時移除事件監聽器和樣式
+                console.log("[Banner] 銷毀舊的 Swiper 實例。");
+                bannerSwiper.destroy(true, true);
                 bannerSwiper = null;
             }
 
-            // 只有在確定有 Slide (即使是預設 Slide) 的情況下才初始化
             if (bannerWrapper.children.length > 0) {
-                console.log("初始化新的 Swiper 實例。");
-                // !! 重要: 確保你的 index.html 中輪播容器的 ID 是 'banner-carousel' !!
+                console.log("[Banner] 初始化新的 Swiper 實例。");
                 bannerSwiper = new Swiper('#banner-carousel', {
-                    // --- Swiper 配置 ---
-                    direction: 'horizontal',        // 方向: 水平
-                    loop: banners && banners.length > 1, // 只有多於一張圖時才循環
+                    direction: 'horizontal',
+                    // *** 只有在 banners 陣列確實有數據且多於1張時才 loop ***
+                    loop: banners && banners.length > 1,
                     autoplay: {
-                        delay: 4000,                // 自動播放延遲 (4秒)
-                        disableOnInteraction: false,// 用戶互動後不停止自動播放
-                        pauseOnMouseEnter: true,    // 滑鼠移入時暫停 (可選)
+                        delay: 4000,
+                        disableOnInteraction: false,
+                        pauseOnMouseEnter: true,
                     },
-                    slidesPerView: 1,              // 每次只顯示1張
-                    spaceBetween: 0,               // Slide 之間無間距
-                    grabCursor: true,              // 顯示手型游標
-
-                    // 分頁器 (小圓點)
+                    slidesPerView: 1,
+                    spaceBetween: 0,
+                    grabCursor: true,
                     pagination: {
-                        el: '#banner-carousel .swiper-pagination', // 選擇器指向分頁容器
-                        clickable: true,             // 允許點擊小圓點切換
+                        el: '#banner-carousel .swiper-pagination',
+                        clickable: true,
                     },
-
-                    // 導航按鈕 (左右箭頭)
                     navigation: {
-                        nextEl: '#banner-carousel .swiper-button-next', // 選擇器指向下一頁按鈕
-                        prevEl: '#banner-carousel .swiper-button-prev', // 選擇器指向上一頁按鈕
+                        nextEl: '#banner-carousel .swiper-button-next',
+                        prevEl: '#banner-carousel .swiper-button-prev',
                     },
-
-                    // 鍵盤控制 (可選)
                     keyboard: {
                         enabled: true,
                     },
-
-                    // 滾輪控制 (可選, 可能干擾頁面滾動)
-                    // mousewheel: true,
                 });
-                console.log("Swiper 初始化完成。");
+                console.log("[Banner] Swiper 初始化完成。");
             } else {
-                 console.log("Wrapper 中沒有 Slides，不初始化 Swiper。");
+                 console.log("[Banner] Wrapper 中沒有 Slides，不初始化 Swiper。");
             }
 
-
         } catch (error) {
-            console.error("獲取或處理 Banner 輪播時出錯:", error);
-            // 顯示錯誤訊息
+            console.error("[Banner] 獲取或處理 Banner 輪播時出錯:", error);
             bannerWrapper.innerHTML = `<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color: #d33;">輪播圖載入失敗: ${error.message}</div>`;
-             // 可以考慮隱藏導航和分頁
+            // 隱藏導航和分頁
              const carouselElement = document.getElementById('banner-carousel');
              if (carouselElement) {
                  const navNext = carouselElement.querySelector('.swiper-button-next');
@@ -150,9 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 頁面初始加載 ---
-    // 同時開始加載 Banner 和商品
     console.log("頁面初始加載：開始獲取 Banners 和 Products。");
-    fetchAndDisplayBanners(); // *** 載入 Banner ***
+    // *** 修改這裡：明確指定獲取 'home' 頁面的 Banner ***
+    fetchAndDisplayBanners('home');
     fetchProducts('latest'); // 載入最新商品
 
 }); // --- End of DOMContentLoaded ---
