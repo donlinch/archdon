@@ -74,18 +74,25 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 公開 API Routes (不需要認證) ---
 
-// GET all Banners (Sorted for public display)
+// GET /api/banners (修改為可選的頁面過濾)
 app.get('/api/banners', async (req, res) => {
-    console.log("[API] Received GET /api/banners request");
+    const pageLocation = req.query.page; // 獲取 page 查詢參數
+    console.log(`[Public API] GET /api/banners requested for page: ${pageLocation || 'all'}`);
     try {
-        // 按照 display_order 升序排列 (數字小的優先)，相同排序值則按 ID 升序
-        const queryText = 'SELECT id, image_url, link_url, alt_text FROM banners ORDER BY display_order ASC, id ASC';
-        const result = await pool.query(queryText);
-        console.log(`[API] Found ${result.rowCount} banners for public display.`);
-        res.status(200).json(result.rows);
+        let queryText = 'SELECT id, image_url, link_url, alt_text FROM banners';
+        const queryParams = [];
+        if (pageLocation) {
+            queryText += ' WHERE page_location = $1'; // *** 新增篩選條件 ***
+            queryParams.push(pageLocation);
+        }
+        queryText += ' ORDER BY display_order ASC, id ASC'; // 統一用 display_order
+
+        const result = await pool.query(queryText, queryParams);
+        console.log(`[Public API] Found ${result.rowCount} banners for page: ${pageLocation || 'all'}`);
+        res.json(result.rows);
     } catch (err) {
-        console.error('[API Error] 獲取公開 Banner 列表時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取輪播圖。' });
+        console.error(`[Public API Error] 獲取 Banner (page: ${pageLocation || 'all'}) 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
 
@@ -256,16 +263,16 @@ app.get('/api/analytics/monthly-traffic', basicAuthMiddleware, async (req, res) 
   } catch (err) { console.error('獲取月度流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); }
 });
 
-
-// --- *** Banner 管理 API (受保護) *** ---
-
-// GET all Banners for Admin (includes display_order)
-app.get('/api/admin/banners', basicAuthMiddleware, async (req, res) => {
-    console.log("[Admin API] Received GET /api/admin/banners request");
+// --- Banner 管理 API (使用你的原有方式，在路由上加 middleware) ---
+// GET /api/admin/banners (獲取列表)
+app.get('/api/admin/banners', basicAuthMiddleware, async (req, res) => { // <-- 添加 middleware
+    console.log("[Admin API] GET /api/admin/banners request received");
     try {
-        // 按 display_order 升序，再按 id 升序
-        const queryText = 'SELECT id, image_url, link_url, display_order, alt_text, updated_at FROM banners ORDER BY display_order ASC, id ASC';
-        const result = await pool.query(queryText);
+        // *** 修改：加入 page_location ***
+        const result = await pool.query(
+            `SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at
+             FROM banners ORDER BY display_order ASC, id ASC`
+        );
         console.log(`[Admin API] Found ${result.rowCount} banners for admin list.`);
         res.json(result.rows);
     } catch (err) {
@@ -274,17 +281,21 @@ app.get('/api/admin/banners', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// GET a single banner by ID (for editing form population - optional but good practice)
-// Note: banner-admin.js currently fetches all and finds, which is okay too.
-// If you prefer fetching single, uncomment this and adjust banner-admin.js's openEditBannerModal
-/*
-app.get('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => {
+// *** 新增：GET /api/admin/banners/:id (獲取單一 Banner) ***
+app.get('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 middleware
     const { id } = req.params;
-     console.log(`[Admin API] Received GET /api/admin/banners/${id} request`);
+    console.log(`[Admin API] GET /api/admin/banners/${id} request received`);
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
     try {
-        const result = await pool.query('SELECT id, image_url, link_url, alt_text, display_order FROM banners WHERE id = $1', [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到指定的 Banner。' }); }
+        const result = await pool.query(
+            `SELECT id, image_url, link_url, display_order, alt_text, page_location
+             FROM banners WHERE id = $1`, // 包含 page_location
+            [id]
+        );
+        if (result.rows.length === 0) {
+            console.warn(`[Admin API] Banner with ID ${id} not found.`);
+            return res.status(404).json({ error: '找不到指定的 Banner。' });
+        }
         console.log(`[Admin API] Found banner for ID ${id}:`, result.rows[0]);
         res.status(200).json(result.rows[0]);
     } catch (err) {
@@ -292,42 +303,25 @@ app.get('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
-*/
 
-
-// CREATE a new Banner
-app.post('/api/admin/banners', basicAuthMiddleware, async (req, res) => {
-    console.log("[Admin API] Received POST /api/admin/banners request");
-    const { image_url, link_url, display_order, alt_text } = req.body;
-
-    // 驗證
-    if (typeof image_url !== 'string' || image_url.trim() === '') {
-        return res.status(400).json({ error: '圖片網址不能為空。' });
-    }
-    const order = (display_order !== undefined && display_order !== null && display_order !== '') ? parseInt(display_order) : 0;
-    if (isNaN(order)) {
-        return res.status(400).json({ error: '排序必須是有效的數字。' });
-    }
-    const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
-    if (!isValidUrl(image_url)) { return res.status(400).json({ error: '圖片網址格式不正確。' }); }
-    if (link_url && !isValidUrl(link_url)) { return res.status(400).json({ error: '連結網址格式不正確。' }); }
-
-    console.log("[Admin API] Creating banner with data:", { image_url, link_url, alt_text, display_order: order });
-
+// POST /api/admin/banners (新增 Banner)
+app.post('/api/admin/banners', basicAuthMiddleware, async (req, res) => { // <-- 添加 middleware
+    console.log("[Admin API] POST /api/admin/banners request received");
+    // *** 修改：包含 page_location ***
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
+    // 驗證...
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
+    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = display_order !== null ? parseInt(display_order) : 0;
+    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    // URL 驗證...
     try {
-        const queryText = `
-            INSERT INTO banners (image_url, link_url, display_order, alt_text, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, NOW(), NOW())
-            RETURNING *;
-        `;
-        const params = [
-            image_url.trim(),
-            link_url ? link_url.trim() : null,
-            order,
-            alt_text ? alt_text.trim() : null
-        ];
-        const result = await pool.query(queryText, params);
-        console.log("[Admin API] Banner created successfully:", result.rows[0]);
+        // *** 修改：加入 page_location ***
+        const result = await pool.query(
+            `INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
+            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]
+        );
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('[Admin API Error] 新增 Banner 時出錯:', err);
@@ -335,42 +329,27 @@ app.post('/api/admin/banners', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// UPDATE a Banner by ID
-app.put('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => {
+// PUT /api/admin/banners/:id (更新 Banner)
+app.put('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 middleware
     const { id } = req.params;
-    console.log(`[Admin API] Received PUT /api/admin/banners/${id} request`);
+    console.log(`[Admin API] PUT /api/admin/banners/${id} request received`);
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    const { image_url, link_url, display_order, alt_text } = req.body;
-
-    // 驗證 (同 POST)
-    if (typeof image_url !== 'string' || image_url.trim() === '') { return res.status(400).json({ error: '圖片網址不能為空。' }); }
-    const order = (display_order !== undefined && display_order !== null && display_order !== '') ? parseInt(display_order) : 0;
-    if (isNaN(order)) { return res.status(400).json({ error: '排序必須是有效的數字。' }); }
-    const isValidUrl = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
-    if (!isValidUrl(image_url)) { return res.status(400).json({ error: '圖片網址格式不正確。' }); }
-    if (link_url && !isValidUrl(link_url)) { return res.status(400).json({ error: '連結網址格式不正確。' }); }
-
-    console.log(`[Admin API] Updating banner ID ${id} with data:`, { image_url, link_url, alt_text, display_order: order });
-
+    // *** 修改：包含 page_location ***
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
+    // 驗證...
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
+    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = display_order !== null ? parseInt(display_order) : 0;
+    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    // URL 驗證...
     try {
-        const queryText = `
-            UPDATE banners
-            SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, updated_at = NOW()
-            WHERE id = $5
-            RETURNING *;
-        `;
-         const params = [
-            image_url.trim(),
-            link_url ? link_url.trim() : null,
-            order,
-            alt_text ? alt_text.trim() : null,
-            id
-        ];
-        const result = await pool.query(queryText, params);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到 Banner，無法更新。' });
-        }
-         console.log("[Admin API] Banner updated successfully:", result.rows[0]);
+        // *** 修改：加入 page_location ***
+        const result = await pool.query(
+            `UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW()
+             WHERE id = $6 RETURNING *`,
+            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]
+        );
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err);
@@ -378,19 +357,15 @@ app.put('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// DELETE a Banner by ID
-app.delete('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => {
+// DELETE /api/admin/banners/:id (刪除 Banner)
+app.delete('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => { // <-- 添加 middleware
     const { id } = req.params;
-    console.log(`[Admin API] Received DELETE /api/admin/banners/${id} request`);
+    console.log(`[Admin API] DELETE /api/admin/banners/${id} request received`);
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-
     try {
         const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到 Banner，無法刪除。' });
-        }
-        console.log(`[Admin API] Banner ID ${id} deleted successfully.`);
-        res.status(204).send(); // 成功，無內容返回
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
+        res.status(204).send();
     } catch (err) {
         console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err);
         res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
