@@ -185,43 +185,52 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- *** 新增: 獲取每日流量數據 API *** ---
 
 
-// --- 新增/修改: 記錄 Page View (Upsert 邏輯) ---
-app.use(async (req, res, next) => {
-  const isPageRequest = !req.path.startsWith('/api/') && req.path.indexOf('.') === -1 && req.method === 'GET';
 
-  if (isPageRequest) {
-      const pagePath = req.path; // 獲取頁面路徑
-      try {
-          // 使用 INSERT ... ON CONFLICT 來實現 Upsert
-          // 如果 page 和 view_date 的組合已存在，則更新 view_count
-          // 需要確保 page 和 view_date 上有唯一約束 (UNIQUE constraint) 或主鍵
-          // 如果沒有唯一約束，這個 ON CONFLICT 會報錯，需要先查詢再決定 INSERT 或 UPDATE
-          await pool.query(
-              `INSERT INTO page_views (page, view_date, view_count)
-               VALUES ($1, CURRENT_DATE, 1)
-               ON CONFLICT (page, view_date) -- 假設 page 和 view_date 是聯合唯一鍵
-               DO UPDATE SET view_count = page_views.view_count + 1`,
-              [pagePath]
-          );
-          console.log(`Page view recorded/updated for: ${pagePath}`);
-      } catch (err) {
-          // 如果 ON CONFLICT 報錯 (因為沒有唯一約束)
-          if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { // PostgreSQL unique violation
-               // 可以忽略這個錯誤，或者嘗試 UPDATE
-               console.warn(`Duplicate page view entry for ${pagePath} on CURRENT_DATE, likely constraint issue or race condition.`);
-               // 嘗試 UPDATE (如果 ON CONFLICT 不可用)
-               // await pool.query('UPDATE page_views SET view_count = view_count + 1 WHERE page = $1 AND view_date = CURRENT_DATE', [pagePath]);
-          } else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-               // 高併發下可能出現的特殊錯誤，通常可以忽略
-               console.warn(`Ignoring ON CONFLICT error for ${pagePath}: ${err.message}`);
-          }
-          else {
-              console.error('記錄 page view 時出錯:', err);
-          }
-      }
-  }
-  next(); // 繼續處理請求
+
+
+// --- *** 將 Traffic API 定義移到這裡 *** ---
+// GET daily traffic data (受保護)
+app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => {
+  console.log("接收到 /api/analytics/traffic 請求"); // [除錯]
+  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0]; console.log(`計算起始日期: ${startDateString}`); // [除錯]
+  try {
+      const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
+      console.log("執行的 SQL:", queryText, "參數:", [startDateString]); // [除錯]
+      const result = await pool.query(queryText, [startDateString]);
+      console.log("資料庫查詢結果行數:", result.rowCount); // [除錯]
+      const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
+      console.log("準備回傳的流量數據:", trafficData); // [除錯]
+      res.status(200).json(trafficData); // *** 確保是 json() ***
+  } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); console.error('錯誤堆疊:', err.stack); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
 });
+
+
+// --- 記錄 Page View 中間件 (現在放在 Traffic API 之後) ---
+app.use(async (req, res, next) => {
+const isPageRequest = !req.path.startsWith('/api/') && req.path.indexOf('.') === -1 && req.method === 'GET';
+if (isPageRequest) {
+    const pagePath = req.path;
+    try {
+        // 假設 page 和 view_date 有聯合唯一約束
+        await pool.query( `INSERT INTO page_views (page, view_date, view_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (page, view_date) DO UPDATE SET view_count = page_views.view_count + 1`, [pagePath] );
+        console.log(`Page view recorded/updated for: ${pagePath}`);
+    } catch (err) {
+        if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`Duplicate page view entry for ${pagePath} on CURRENT_DATE, likely constraint issue or race condition.`); }
+        else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`Ignoring ON CONFLICT error for ${pagePath}: ${err.message}`); }
+        else { console.error('記錄 page view 時出錯:', err); }
+    }
+}
+next(); // 繼續處理請求
+});
+
+
+
+
+
+
+
+
+
 
 // --- 受保護的管理頁面和 API Routes ---
 
