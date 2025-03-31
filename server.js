@@ -183,37 +183,46 @@ app.post('/api/news/:id/like', async (req, res) => {
     }
 });
 // --- *** 新增: 獲取每日流量數據 API *** ---
-app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => { // 添加 basicAuthMiddleware 保護
-  // 可以添加日期範圍參數，先獲取最近 30 天
+// --- *** 修改: 獲取每日流量數據 API (帶除錯和修正) *** ---
+app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => {
+  console.log("接收到 /api/analytics/traffic 請求"); // [除錯] 記錄請求
+
   const daysToFetch = 30;
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - daysToFetch);
+  const startDateString = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  console.log(`計算起始日期: ${startDateString}`); // [除錯] 記錄日期
 
   try {
-      // 查詢 page_views 表，按日期聚合瀏覽量
-      // *** 注意: 這裡的 SQL 假設你的表格和欄位名稱如截圖所示 ***
-      const result = await pool.query(
-          `SELECT
-              view_date,             -- 日期欄位
-              SUM(view_count) AS count -- 加總每日計數 (如果同一天有多條記錄)
+      // *** 嘗試修正後的 SQL 查詢 ***
+      const queryText = `
+          SELECT
+              view_date,
+              SUM(view_count)::bigint AS count -- 嘗試顯式轉換為 bigint
           FROM page_views
-          WHERE view_date >= $1      -- 篩選日期範圍
+          WHERE view_date >= $1
           GROUP BY view_date
-          ORDER BY view_date ASC`,   -- 按日期排序
-          [startDate.toISOString().split('T')[0]] // 將日期格式化為 YYYY-MM-DD
-      );
+          ORDER BY view_date ASC
+      `;
+      console.log("執行的 SQL:", queryText, "參數:", [startDateString]); // [除錯] 記錄 SQL
+
+      const result = await pool.query(queryText, [startDateString]);
+      console.log("資料庫查詢結果行數:", result.rowCount); // [除錯] 記錄結果行數
 
       // 格式化回傳數據
       const trafficData = result.rows.map(row => ({
-          date: new Date(row.view_date).toISOString().split('T')[0], // 確保是 YYYY-MM-DD
-          count: parseInt(row.count) // 確保是數字
+          date: new Date(row.view_date).toISOString().split('T')[0],
+          count: parseInt(row.count) // SUM 返回的可能是 string 或 bigint，安全起見轉換
       }));
 
+      console.log("準備回傳的流量數據:", trafficData); // [除錯] 記錄回傳數據
       res.status(200).json(trafficData);
 
   } catch (err) {
-      console.error('獲取流量數據時出錯:', err);
-      res.status(500).json({ error: '伺服器內部錯誤' });
+      // *** 詳細記錄錯誤信息 ***
+      console.error('獲取流量數據時發生嚴重錯誤:', err); // 打印完整錯誤對象
+      console.error('錯誤堆疊:', err.stack); // 打印錯誤堆疊
+      res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); // 返回更具體的錯誤信息
   }
 });
 
