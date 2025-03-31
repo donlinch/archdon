@@ -14,39 +14,45 @@ const pool = new Pool({
 });
 
 // --- 中間件 (Middleware) ---
-app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 目錄下的靜態檔案
-app.use(express.json()); // 解析請求主體中的 JSON 資料
+app.use(express.static(path.join(__dirname, 'public'))); // *** 靜態文件服務在最前面 ***
+app.use(express.json());
 
-// --- 基本認證中間件函數 ---
-const basicAuthMiddleware = (req, res, next) => {
-    const adminUser = process.env.ADMIN_USERNAME || 'admin'; // 從 .env 讀取帳號
-    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // 從 .env 讀取密碼 (務必修改!)
+// --- *** 將記錄 Page View 中間件移到這裡 *** ---
+// --- (在靜態文件和 API 路由定義之間) ---
+app.use(async (req, res, next) => {
+    // *** 修改條件判斷: 只排除 /api/ 路徑下的 GET 請求 ***
+    //    這樣可以記錄 /, /music.html, /news.html 等
+    //    同時避免記錄 API 調用本身
+    const isApiRequest = req.path.startsWith('/api/');
+    const shouldLog = !isApiRequest && req.method === 'GET'; // 記錄所有非 API 的 GET 請求
 
-    const authHeader = req.headers.authorization; // 獲取 Authorization 標頭
+    // 另一種更精確的判斷 (只記錄 HTML 文件請求):
+    // const isHtmlPage = (req.path === '/' || req.path.endsWith('.html')) && req.method === 'GET';
+    // const shouldLog = isHtmlPage;
 
-    if (!authHeader) { // 如果沒有標頭，要求認證
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('需要認證才能訪問管理區域。');
-    }
-
-    try { // 使用 try-catch 處理可能的解析錯誤
-        // 解析 'Basic base64string'
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-
-        if (user === adminUser && pass === adminPass) { // 檢查憑證
-            next(); // 憑證正確，繼續處理請求
-        } else {
-            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-            return res.status(401).send('認證失敗。'); // 憑證錯誤
+    if (shouldLog) {
+        const pagePath = req.path;
+        console.log(`[Page View Middleware] Checking request for: ${pagePath}`); // [除錯]
+        try {
+            await pool.query(
+                `INSERT INTO page_views (page, view_date, view_count)
+                 VALUES ($1, CURRENT_DATE, 1)
+                 ON CONFLICT (page, view_date)
+                 DO UPDATE SET view_count = page_views.view_count + 1`,
+                [pagePath]
+            );
+            console.log(`[Page View Middleware] Page view recorded/updated for: ${pagePath}`); // [除錯]
+        } catch (err) {
+            // ... (錯誤處理邏輯不變) ...
+             if (err.code === '23505' || err.message.includes('duplicate key value violates unique constraint')) { console.warn(`[Page View Middleware] Duplicate key for ${pagePath}`); }
+             else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[Page View Middleware] ON CONFLICT race condition for ${pagePath}`); }
+             else { console.error('[Page View Middleware] Error logging page view:', err); }
         }
-    } catch (error) { // 處理 Base64 解析錯誤等
-        console.error("認證標頭解析錯誤:", error);
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('認證失敗 (格式錯誤)。');
+    } else {
+         console.log(`[Page View Middleware] Skipping log for: ${req.method} ${req.path}`); // [除錯]
     }
-};
+    next(); // *** 確保總是調用 next() ***
+});
 
 
 // --- 公開 API Routes (不需要認證) ---
