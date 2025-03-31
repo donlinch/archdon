@@ -179,9 +179,9 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 
 .banner-swiper {
     width: 100%;
-    height: 450px; /* 或者使用 aspect-ratio */
+    height: 400px; /* 或者使用 aspect-ratio */
     /* aspect-ratio: 16 / 6; */ /* 示例比例 */
-    background-color: #eee; /* 加載時的背景色 */
+    background-color: #FFB74D; /* 加載時的背景色 */
 }
 .banner-swiper .swiper-slide {
     text-align: center;
