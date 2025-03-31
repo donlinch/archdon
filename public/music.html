@@ -1,210 +1,181 @@
 <!DOCTYPE html>
- <html lang="zh-TW">
- <head>
-    <!-- 基礎設定 -->
+<html lang="zh-TW">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- 主標題與描述 (音樂頁專屬) -->
     <title>SunnyYummy 音樂作品 | 最新專輯、MV 收藏與幕後花絮</title>
     <meta name="description" content="SunnyYummy 官方音樂專區｜完整收藏最新發行專輯、熱門單曲與獨家 MV 幕後花絮，立即線上聆聽！">
     
-    <!-- Canonical URL (避免重複內容) -->
-    <link rel="canonical" href="https://sunnyyummy.onrender.com/music.html" />
-    
-    <!-- Open Graph 社群標籤 (音樂頁專屬) -->
+    <!-- Open Graph 標籤 -->
     <meta property="og:title" content="SunnyYummy 音樂作品 | 專輯與 MV 收藏">
     <meta property="og:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲與獨家幕後花絮！">
     <meta property="og:image" content="https://sunnyyummy.onrender.com/images/music-og-preview.jpg">
     <meta property="og:url" content="https://sunnyyummy.onrender.com/music.html">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="SunnyYummy">
     
-    <!-- Twitter Card 優化 -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="SunnyYummy 音樂作品 | 專輯與 MV 收藏">
-    <meta name="twitter:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲與獨家幕後花絮！">
-    <meta name="twitter:image" content="https://sunnyyummy.onrender.com/images/music-og-preview.jpg">
-    
-    <!-- 預載關鍵資源 -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preload" href="js/music-player.js" as="script">
-    
-    <!-- CSS 優先載入 -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Favicon 與 PWA 設定 -->
+    <!-- Favicon -->
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#FFB74D">
     
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
-<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <!-- (可選) 音樂專頁專用字體 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Roboto:wght@300;500&display=swap" rel="stylesheet"> <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"> 
-     <style>
-         /* --- Music Page Specific Styles --- */
-         /* (可以在這裡加少量特定樣式，或之後移到 style.css) */
+    
+    <!-- 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 音樂頁專用樣式 */
+        .artist-filter-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.6rem 1rem;
+            margin: 2rem 0;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .artist-filter-nav button {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #B0BEC5;
+            border-radius: 15px;
+            background-color: transparent;
+            color: #757575;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .artist-filter-nav button:hover {
+            background-color: #ECEFF1;
+            border-color: #78909C;
+            color: #424242;
+        }
+        .artist-filter-nav button.active {
+            background-color: #E57373;
+            color: white;
+            border-color: #E57373;
+            font-weight: bold;
+        }
 
-         /* 歌手篩選導覽列 */
-         .artist-filter-nav {
-             display: flex;
-             justify-content: center;
-             flex-wrap: wrap;
-             gap: 0.6rem 1rem; /* 稍微調整間距 */
-             margin-bottom: 2rem;
-             padding-bottom: 1rem;
-             border-bottom: 1px solid #eee; /* 更細的分隔線 */
-         }
-         .artist-filter-nav button { /* 用 button 可能比 a 標籤語意更好 */
-             padding: 0.4rem 0.8rem;
-             border: 1px solid #B0BEC5; /* Blue Grey border */
-             border-radius: 15px; /* 圓角按鈕 */
-             background-color: transparent;
-             color: #757575; /* Medium text */
-             cursor: pointer;
-             font-size: 0.9rem;
-             transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-         }
-         .artist-filter-nav button:hover {
-             background-color: #ECEFF1; /* Light hover */
-             border-color: #78909C;
-             color: #424242;
-         }
-         .artist-filter-nav button.active { /* 當前選中歌手的樣式 */
-             background-color: #E57373; /* Coral Red background */
-             color: white;
-             border-color: #E57373;
-             font-weight: bold;
-         }
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding: 0 1rem;
+        }
+        @media (min-width: 600px) {
+            .album-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.2rem;
+            }
+        }
+        @media (min-width: 900px) {
+            .album-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1.5rem;
+            }
+        }
+        @media (min-width: 1200px) {
+            .album-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 1.2rem;
+            }
+        }
 
-         /* 音樂格線 (可以複用 .product-grid 的部分樣式) */
-         .album-grid {
-             /* 樣式可以之後在 style.css 調整 */
-             display: grid;
-             grid-template-columns: repeat(2, 1fr); /* 手機預設 2 欄 */
-             gap: 1rem; /* 音樂間距可以稍大? */
-         }
-         @media (min-width: 600px) { .album-grid { grid-template-columns: repeat(3, 1fr); gap: 1.2rem; } }
-         @media (min-width: 900px) { .album-grid { grid-template-columns: repeat(4, 1fr); gap: 1.5rem; } }
-         @media (min-width: 1200px) { .album-grid { grid-template-columns: repeat(5, 1fr); gap: 1.2rem; } }
-
-
-         /* 音樂卡片樣式 */
-         .album-card {
-             display: block; /* 讓整個卡片是連結 */
-             text-decoration: none;
-             color: inherit;
-             background-color: #fff;
-             border-radius: 6px;
-             overflow: hidden;
-             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-             transition: transform 0.2s ease, box-shadow 0.2s ease;
-         }
-         .album-card:hover {
-             transform: translateY(-4px);
-             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.12);
-         }
-         .album-card .cover-image {
-             width: 100%;
-             /* aspect-ratio: 1 / 1;  讓圖片容器保持方形 */
-             height: 180px; /* 或者固定高度 */
-             overflow: hidden;
-         }
-         .album-card .cover-image img {
-             display: block;
-             width: 100%;
-             height: 100%;
-             object-fit: cover; /* 封面通常用 cover 填滿 */
-         }
-         .album-card .album-info {
-             padding: 0.8rem; /* 卡片內部 padding */
-         }
-         .album-card h3 { /* 專輯標題 */
-             font-size: 0.95rem;
-             font-weight: bold;
-             margin-bottom: 0.2rem;
-             white-space: nowrap;
-             overflow: hidden;
-             text-overflow: ellipsis;
-         }
-         .album-card .artist { /* 歌手名稱 */
-             font-size: 0.8rem;
-             color: #757575; /* Medium text */
-             margin-bottom: 0.3rem;
-             white-space: nowrap;
-             overflow: hidden;
-             text-overflow: ellipsis;
-         }
-          .album-card .release-date { /* 發行日期 */
-              font-size: 0.75rem;
-              color: #aaa;
-          }
-         /* 可以不顯示描述，或點擊後顯示 */
-         /* .album-card .description { ... } */
-
-     </style>
- </head>
- <body>
-     <!-- Header (可以複製 index.html 的 header 區塊) -->
-     <header>
-        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
-            <!-- Additional required wrapper -->
+        .album-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background-color: #fff;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease;
+        }
+        .album-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.12);
+        }
+        .album-card .cover-image {
+            width: 100%;
+            height: 180px;
+            overflow: hidden;
+        }
+        .album-card .cover-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .album-card .album-info {
+            padding: 0.8rem;
+        }
+        .album-card h3 {
+            font-size: 0.95rem;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .album-card .artist {
+            font-size: 0.8rem;
+            color: #757575;
+            margin-bottom: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .album-card .release-date {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <!-- 輪播圖區域 -->
+        <div id="banner-carousel" class="swiper banner-swiper">
             <div class="swiper-wrapper" id="banner-wrapper">
-                <!-- Slides 會由 JavaScript 動態載入 -->
+                <!-- 輪播圖將由 JavaScript 動態載入 -->
             </div>
-            <!-- If we need pagination -->
             <div class="swiper-pagination"></div>
-     
-            <!-- If we need navigation buttons -->
             <div class="swiper-button-prev"></div>
             <div class="swiper-button-next"></div>
         </div>
-         <!-- 可以加導覽 -->
-     </header>
+    </header>
 
-     <main>
-
+    <main>
         <nav class="category-nav">
-            <a href="/" >週邊商品</a>  <!-- Current page, marked active -->
-            <a href="/music.html" class="active">音樂專輯</a>        <!-- Placeholder -->
-            <a href="/news.html">最新消息</a>        <!-- Placeholder -->
-            
-          
+            <a href="/">週邊商品</a>
+            <a href="/music.html" class="active">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
         </nav>
-         <!-- 歌手篩選導覽列 (將由 JS 填充按鈕) -->
-         <nav class="artist-filter-nav" id="artist-filter">
-             <p>正在加載歌手列表...</p>
-         </nav>
 
-         <!-- 音樂專輯格線 (將由 JS 填充卡片) -->
-         <div class="music-list" id="music-list">
-             <p>正在加載音樂專輯...</p>
-         </div>
-     </main>
+        <!-- 歌手篩選導覽列 -->
+        <nav class="artist-filter-nav" id="artist-filter">
+            <p>正在加載歌手列表...</p>
+        </nav>
 
-     <!-- Footer (可以複製 index.html 的 footer 區塊) -->
-     <footer>
-         <div class="footer-container">
-             <nav class="footer-nav">
-                 <a href="/">週邊商品</a>
-                 <a href="/music.html" class="active">音樂專輯</a> <!-- 將此頁設為 active -->
-                 
-                 <a href="/news.html">最新消息</a>
-                
-                
-                  <!-- 新增音樂管理連結 -->
-             </nav>
-             <div class="footer-copyright">
-                 <p>© 2023 SunnyYummy. All rights reserved.</p>
-             </div>
-         </div>
-     </footer>
+        <!-- 音樂專輯格線 -->
+        <div id="music-list">
+            <p>正在加載音樂專輯...</p>
+        </div>
+    </main>
 
-     <!-- 連結音樂頁面專用的 JavaScript -->
-     <script src="music.js"></script>
- </body>
- </html>
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html" class="active">音樂專輯</a>
+                <a href="/news.html">最新消息</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2023 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="music.js"></script>
+</body>
+</html>
