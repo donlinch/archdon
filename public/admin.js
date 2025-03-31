@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDaily = document.getElementById('btn-daily');
     const btnMonthly = document.getElementById('btn-monthly');
     let currentChart = null; // 用於儲存 Chart.js 實例
-    let currentGranularity = 'daily'; // 當前圖表粒度
+    let currentGranularity = 'daily'; // 當前圖表粒度 
 
     // --- Function to Fetch and Display ALL Products in the Table ---
     async function fetchAndDisplayProducts() {
