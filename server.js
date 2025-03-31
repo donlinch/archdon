@@ -229,7 +229,58 @@ app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => { // 
 });
 
 
+// --- *** 新增: 獲取每月流量數據 API *** ---
+app.get('/api/analytics/monthly-traffic', basicAuthMiddleware, async (req, res) => { // 同樣需要保護
+  console.log("接收到 /api/analytics/monthly-traffic 請求");
 
+  // 可選：接收年份參數，例如 /api/analytics/monthly-traffic?year=2025
+  // 如果不提供年份，則預設獲取所有年份的數據 (或當前年份)
+  const targetYear = req.query.year ? parseInt(req.query.year) : null;
+  // const currentYear = new Date().getFullYear(); // 或者只獲取當前年份
+
+  let queryText = `
+      SELECT
+          to_char(date_trunc('month', view_date), 'YYYY-MM') AS view_month, -- 將月份格式化為 'YYYY-MM'
+          SUM(view_count)::bigint AS count
+      FROM page_views
+  `;
+  const queryParams = [];
+
+  if (targetYear) {
+      // 如果指定了年份，添加 WHERE 子句
+      queryText += ` WHERE date_part('year', view_date) = $1`;
+      queryParams.push(targetYear);
+      console.log(`篩選年份: ${targetYear}`); // [除錯]
+  }
+  // else { // 如果不指定年份，則獲取所有月份，或只獲取今年的
+  //     queryText += ` WHERE date_part('year', view_date) = $1`;
+  //     queryParams.push(currentYear);
+  // }
+
+
+  queryText += ` GROUP BY view_month ORDER BY view_month ASC`; // 按月份分組和排序
+
+  console.log("執行的 SQL:", queryText.replace(/\s+/g, ' '), "參數:", queryParams); // [除錯]
+
+  try {
+      const result = await pool.query(queryText, queryParams);
+      console.log("資料庫查詢結果行數:", result.rowCount); // [除錯]
+
+      // 格式化回傳數據
+      const monthlyTrafficData = result.rows.map(row => ({
+          month: row.view_month, // YYYY-MM
+          count: parseInt(row.count)
+      }));
+
+      console.log("準備回傳的月度流量數據:", monthlyTrafficData); // [除錯]
+      res.status(200).json(monthlyTrafficData);
+
+  } catch (err) {
+      console.error('獲取月度流量數據時發生嚴重錯誤:', err);
+      console.error('錯誤堆疊:', err.stack);
+      res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' });
+  }
+});
 
 
 // --- 受保護的管理頁面和 API Routes ---
