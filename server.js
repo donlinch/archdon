@@ -26,7 +26,50 @@ const basicAuthMiddleware = (req, res, next) => {
     try { const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':'); const user = auth[0]; const pass = auth[1]; if (user === adminUser && pass === adminPass) { next(); } else { /* 認證失敗 */ res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"'); return res.status(401).send('認證失敗。'); } } catch (error) { console.error("認證標頭解析錯誤:", error); res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"'); return res.status(401).send('認證失敗 (格式錯誤)。'); }
 };
 
+// --- 記錄 Page View 中間件 ---
+app.use(async (req, res, next) => {
+  // *** 修改: 明確指定要記錄的路徑 ***
+  const pathsToLog = ['/', '/index.html', '/music.html', '/news.html'];
+  const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
 
+  if (shouldLog) {
+      const pagePath = req.path;
+      console.log(`[PV Mid] Should Log: YES for ${pagePath}`);
+      try {
+          const sql = `
+              INSERT INTO page_views (page, view_date, view_count)
+              VALUES ($1, CURRENT_DATE, 1)
+              ON CONFLICT (page, view_date)
+              DO UPDATE SET view_count = page_views.view_count + 1
+              RETURNING *;
+          `;
+          const params = [pagePath];
+          console.log(`[PV Mid] Executing SQL: ${sql.replace(/\s+/g, ' ')} with params:`, params);
+          const result = await pool.query(sql, params);
+          if (result.rowCount > 0) {
+              console.log(`[PV Mid] SUCCESS: Page view recorded/updated for: ${pagePath}. Result:`, result.rows[0]);
+          } else {
+              console.warn(`[PV Mid] WARN: Query executed for ${pagePath} but rowCount is 0.`);
+          }
+      } catch (err) {
+          if (err.code === '23505') { 
+              console.warn(`[PV Mid] Constraint violation for ${pagePath}.`); 
+          }
+          else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { 
+              console.warn(`[PV Mid] ON CONFLICT race condition for ${pagePath}`); 
+          }
+          else { 
+              console.error('[PV Mid] Error logging page view:', err); 
+          }
+      }
+  } else {
+      // 只有當 method 不是 GET 或 path 不在列表中時才跳過
+      if (req.method === 'GET') { // 只打印 GET 請求的跳過信息，避免過多日誌
+           console.log(`[PV Mid] Skipping log for non-tracked page: ${req.method} ${req.path}`);
+      }
+  }
+  next();
+});
 
 // --- 記錄 Page View 中間件 (現在放在 Traffic API 之後，但在管理 API 之前比較好) ---
 app.use(async (req, res, next) => {
