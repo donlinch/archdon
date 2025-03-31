@@ -15,31 +15,57 @@ const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper')
 let bannerSwiper = null;
 
 async function fetchAndDisplayBanners() {
-    if (!bannerWrapper) { /* ... */ return; }
-    bannerWrapper.innerHTML = '<div class="swiper-slide" style="...">載入中...</div>';
+    if (!bannerWrapper) {
+        console.warn("Banner wrapper not found");
+        return;
+    }
+
+    bannerWrapper.innerHTML = '<div class="swiper-slide">載入中...</div>';
+
     try {
-        const response = await fetch('/api/banners'); // **注意：這裡獲取所有 banner**
-        if (!response.ok) { throw new Error(/* ... */); }
+        const response = await fetch('/api/banners?page=news');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
         const banners = await response.json();
         bannerWrapper.innerHTML = '';
-        if (!banners || banners.length === 0) {
-             bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy Logo" style="..."></div>';
+
+        if (banners.length === 0) {
+            bannerWrapper.innerHTML = `
+                <div class="swiper-slide">
+                    <img src="/images/default-banner.jpg" alt="預設 Banner">
+                </div>
+            `;
         } else {
-            banners.forEach(banner => { /* ... 生成 slide ... */ });
-        }
-        if (bannerSwiper) { bannerSwiper.destroy(true, true); bannerSwiper = null; }
-        if (bannerWrapper.children.length > 0) {
-            bannerSwiper = new Swiper('#banner-carousel', {
-                loop: banners && banners.length > 1,
-                autoplay: { delay: 12000, disableOnInteraction: false, pauseOnMouseEnter: true }, // <-- 速度在這裡調
-                pagination: { el: '#banner-carousel .swiper-pagination', clickable: true },
-                navigation: { nextEl: '#banner-carousel .swiper-button-next', prevEl: '#banner-carousel .swiper-button-prev' },
-                // ... 其他 Swiper 選項
+            banners.forEach(banner => {
+                const slide = document.createElement('div');
+                slide.className = 'swiper-slide';
+                // ...slide 內容構建...
+                bannerWrapper.appendChild(slide);
             });
         }
-    } catch (error) { /* ... 錯誤處理 ... */ }
+
+        // 確保 Swiper 容器可見
+        document.getElementById('banner-carousel').style.display = 'block';
+        
+        // 初始化 Swiper
+        if (bannerSwiper) bannerSwiper.destroy();
+        bannerSwiper = new Swiper('#banner-carousel', {
+            loop: banners.length > 1,
+            autoplay: { delay: 12000 },
+            pagination: { el: '.swiper-pagination' },
+            navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+            observer: true
+        });
+
+    } catch (error) {
+        console.error("Banner 錯誤:", error);
+        bannerWrapper.innerHTML = `
+            <div class="swiper-slide error-slide">
+                輪播加載失敗: ${error.message}
+            </div>
+        `;
+    }
 }
-// --- Banner 代碼結束 ---
 
 
 
