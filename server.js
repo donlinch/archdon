@@ -13,9 +13,7 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
 
-// --- 中間件 (Middleware) ---
-app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 目錄下的靜態檔案
-app.use(express.json()); // 解析請求主體中的 JSON 資料
+
 
 // --- *** 將基本認證中間件函數定義移到這裡 (所有路由之前) *** ---
 const basicAuthMiddleware = (req, res, next) => {
@@ -72,46 +70,35 @@ app.use(async (req, res, next) => {
 });
 
 // --- 記錄 Page View 中間件 (現在放在 Traffic API 之後，但在管理 API 之前比較好) ---
+// --- 修正後的 Page View 中間件 ---
 app.use(async (req, res, next) => {
-  // 只記錄非 API 的 GET 請求
-  const shouldLog = !req.path.startsWith('/api/') && req.method === 'GET';
+  // *** 明確指定要記錄的路徑 ***
+  const pathsToLog = ['/', '/index.html', '/music.html', '/news.html'];
+  const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
 
   if (shouldLog) {
-      const pagePath = req.path;
-      console.log(`[PV Mid] Should Log: YES for ${pagePath}`); // [除錯]
+      const pagePath = req.path === '/' ? '/index.html' : req.path; // 統一主頁路徑
+      console.log(`[PV Mid] Should Log: YES for ${pagePath}`);
       try {
           const sql = `
               INSERT INTO page_views (page, view_date, view_count)
               VALUES ($1, CURRENT_DATE, 1)
-              ON CONFLICT (page, view_date) -- 確保有 UNIQUE 約束在 (page, view_date)
+              ON CONFLICT (page, view_date)
               DO UPDATE SET view_count = page_views.view_count + 1
-              RETURNING *; -- 返回被插入或更新的行，確認操作
+              RETURNING *;
           `;
           const params = [pagePath];
-          console.log(`[PV Mid] Executing SQL: ${sql.replace(/\s+/g, ' ')} with params:`, params); // [除錯] 打印執行的 SQL
-
           const result = await pool.query(sql, params);
-
-          // *** 新增：檢查 INSERT/UPDATE 是否真的影響了行 ***
-          if (result.rowCount > 0) {
-              console.log(`[PV Mid] SUCCESS: Page view recorded/updated for: ${pagePath}. Result:`, result.rows[0]); // [除錯]
-          } else {
-              // 這種情況理論上不應該發生，除非 ON CONFLICT 有問題或沒有匹配行被更新
-              console.warn(`[PV Mid] WARN: Query executed for ${pagePath} but rowCount is 0. This might indicate an issue.`);
-          }
-
+          console.log(`[PV Mid] 記錄成功: ${pagePath}`);
       } catch (err) {
-          // ... (之前的錯誤處理不變) ...
-           if (err.code === '23505') { console.warn(`[PV Mid] Constraint violation for ${pagePath}. Check UNIQUE constraint on (page, view_date).`); }
-           else if (err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) { console.warn(`[PV Mid] ON CONFLICT race condition for ${pagePath}`); }
-           else { console.error('[PV Mid] Error logging page view:', err); } // 打印詳細錯誤
+          console.error('[PV Mid] 記錄失敗:', err);
       }
-  } else {
-       console.log(`[PV Mid] Skipping log for: ${req.method} ${req.path}`); // [除錯]
   }
   next();
 });
 
+// 靜態文件服務應該放在 Page View 中間件之後
+app.use(express.static(path.join(__dirname, 'public')));
 // --- 公開 API Routes (不需要認證) ---
 
 // GET all products (支持排序: latest, popular)
