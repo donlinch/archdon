@@ -1,131 +1,295 @@
-// public/music.js (完整替換)
+// public/music.js
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM 元素引用 ---
     const artistFilterNav = document.getElementById('artist-filter');
-    const musicListContainer = document.getElementById('music-list'); // 確保 ID 正確
+    const musicListContainer = document.getElementById('music-list');
     let currentArtistFilter = null;
 
-    // --- Banner 相關代碼 ---
-    const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper'); // 確保 HTML 中有這個元素
+    // --- Banner 相關元素 ---
+    const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
     let bannerSwiper = null;
 
+    // --- 函數定義 ---
+
+    /**
+     * 獲取並顯示音樂頁專用輪播圖
+     */
     async function fetchAndDisplayBanners() {
-        console.log("[Music Banner] fetchAndDisplayBanners called"); // 添加日誌
+        console.log("[Music] Fetching banners for music page");
         if (!bannerWrapper) {
-             console.warn("[Music Banner] 未找到 Banner wrapper 元素 (#banner-carousel .swiper-wrapper)。");
-             const carouselElement = document.getElementById('banner-carousel');
-             if (carouselElement) carouselElement.style.display = 'none'; // 隱藏輪播區
-             return;
+            console.warn("Banner wrapper element not found");
+            const carouselElement = document.getElementById('banner-carousel');
+            if (carouselElement) carouselElement.style.display = 'none';
+            return;
         }
-        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">Banner 載入中...</div>';
+
+        // 顯示載中狀態
+        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
 
         try {
-            // **重要：目前這會獲取所有 Banner，因為你的 API (/api/banners) 還沒有按頁面篩選功能**
-            // **如果你之後實現了後端篩選，這裡需要改成 fetch('/api/banners?page=music')**
-            const response = await fetch('/api/banners');
-            console.log("[Music Banner] API Response Status:", response.status); // 添加日誌
+            // 重點修改：只請求 music 頁面的輪播圖
+            const response = await fetch('/api/banners?page_location=music');
+            console.log("[Music] Banner API response status:", response.status);
 
             if (!response.ok) {
-                let errorText = `獲取 Banners 失敗 (HTTP ${response.status})`;
-                try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
+                let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
+                try {
+                    const data = await response.json();
+                    errorText += `: ${data.error || response.statusText}`;
+                } catch (e) {}
                 throw new Error(errorText);
             }
+
             const banners = await response.json();
-            console.log("[Music Banner] Received banners:", banners); // 添加日誌
+            console.log(`[Music] Received ${banners.length} banners for music page`);
 
-            bannerWrapper.innerHTML = ''; // 清空 Loading
+            bannerWrapper.innerHTML = ''; // 清空載入狀態
 
-            if (!banners || banners.length === 0) {
-                console.log("[Music Banner] 未收到 Banner 數據，顯示預設 Logo。");
-                bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy Logo" style="max-height: 80%; object-fit: contain;"></div>';
+            if (banners.length === 0) {
+                // 沒有專用輪播圖時顯示預設圖片
+                console.log("[Music] No banners for music page, showing default");
+                const defaultSlide = document.createElement('div');
+                defaultSlide.className = 'swiper-slide';
+                defaultSlide.innerHTML = '<img src="/images/music-default-banner.jpg" alt="音樂專輯" style="width:100%; height:100%; object-fit:cover;">';
+                bannerWrapper.appendChild(defaultSlide);
             } else {
-                 console.log(`[Music Banner] 渲染 ${banners.length} 個 Banner Slides...`); // 添加日誌
+                // 渲染輪播圖
                 banners.forEach(banner => {
                     const slide = document.createElement('div');
                     slide.className = 'swiper-slide';
-                    const img = document.createElement('img');
-                    img.src = banner.image_url;
-                    img.alt = banner.alt_text || `Banner ${banner.id || ''}`;
+
                     if (banner.link_url) {
                         const link = document.createElement('a');
                         link.href = banner.link_url;
                         link.target = '_blank';
                         link.rel = 'noopener noreferrer';
-                        link.appendChild(img);
+                        link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '音樂專輯輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
                         slide.appendChild(link);
                     } else {
-                        slide.appendChild(img);
+                        slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '音樂專輯輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
                     }
+
                     bannerWrapper.appendChild(slide);
                 });
             }
 
+            // 初始化/重新初始化 Swiper
             if (bannerSwiper) {
-                console.log("[Music Banner] 銷毀舊 Swiper 實例。");
                 bannerSwiper.destroy(true, true);
                 bannerSwiper = null;
             }
 
             if (bannerWrapper.children.length > 0) {
-                console.log("[Music Banner] 初始化 Swiper...");
-                bannerSwiper = new Swiper('#banner-carousel', { // 確保 HTML 中有 #banner-carousel
-                    loop: banners && banners.length > 1,
-                     // *** 輪播速度 (12000毫秒 = 12秒) ***
-                    autoplay: { delay: 12000, disableOnInteraction: false, pauseOnMouseEnter: true },
-                    pagination: { el: '#banner-carousel .swiper-pagination', clickable: true },
-                    navigation: { nextEl: '#banner-carousel .swiper-button-next', prevEl: '#banner-carousel .swiper-button-prev' },
+                bannerSwiper = new Swiper('#banner-carousel', {
+                    loop: banners.length > 1,
+                    autoplay: {
+                        delay: 10000,  // 10秒輪播
+                        disableOnInteraction: false,
+                        pauseOnMouseEnter: true
+                    },
+                    pagination: {
+                        el: '.swiper-pagination',
+                        clickable: true
+                    },
+                    navigation: {
+                        nextEl: '.swiper-button-next',
+                        prevEl: '.swiper-button-prev'
+                    },
                     slidesPerView: 1,
                     spaceBetween: 0,
-                    grabCursor: true,
-                    keyboard: { enabled: true },
+                    effect: 'fade',
+                    fadeEffect: {
+                        crossFade: true
+                    }
                 });
-                console.log("[Music Banner] Swiper 初始化完成。");
-            } else {
-                 console.log("[Music Banner] Wrapper 為空，不初始化 Swiper。");
             }
-
         } catch (error) {
-            console.error("[Music Banner] 處理 Banner 時出錯:", error);
-            bannerWrapper.innerHTML = `<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color: #d33;">輪播圖載入失敗: ${error.message}</div>`;
-            // 隱藏導航和分頁
-             const carouselElement = document.getElementById('banner-carousel');
-             if (carouselElement) {
-                 const navNext = carouselElement.querySelector('.swiper-button-next');
-                 const navPrev = carouselElement.querySelector('.swiper-button-prev');
-                 const pagination = carouselElement.querySelector('.swiper-pagination');
-                 if(navNext) navNext.style.display = 'none';
-                 if(navPrev) navPrev.style.display = 'none';
-                 if(pagination) pagination.style.display = 'none';
-             }
+            console.error("[Music] Banner error:", error);
+            bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
+            
+            // 隱藏導航元素
+            const carouselElement = document.getElementById('banner-carousel');
+            if (carouselElement) {
+                const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
+                navElements.forEach(el => el.style.display = 'none');
+            }
         }
     }
-    // --- Banner 代碼結束 ---
 
-
+    /**
+     * 獲取並顯示歌手列表
+     */
     async function fetchAndDisplayArtists() {
-        // ... (你的 fetchAndDisplayArtists 函數內容不變) ...
-        if (!artistFilterNav) { console.error("歌手篩選導覽列 'artist-filter' 未找到！"); return; } artistFilterNav.innerHTML = '<p>正在加載歌手列表...</p>'; try { const response = await fetch('/api/artists'); if (!response.ok) throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`); const artists = await response.json(); artistFilterNav.innerHTML = ''; const allButton = document.createElement('button'); allButton.textContent = '全部歌手'; allButton.classList.add('active'); allButton.addEventListener('click', () => { setActiveArtistButton(allButton); currentArtistFilter = null; fetchAndDisplayAlbums(currentArtistFilter); }); artistFilterNav.appendChild(allButton); artists.forEach(artist => { const button = document.createElement('button'); button.textContent = artist; button.dataset.artist = artist; button.addEventListener('click', () => { setActiveArtistButton(button); currentArtistFilter = artist; fetchAndDisplayAlbums(currentArtistFilter); }); artistFilterNav.appendChild(button); }); } catch (error) { console.error("獲取歌手列表失敗:", error); if (artistFilterNav) artistFilterNav.innerHTML = '<p>無法加載歌手列表。</p>'; }
+        if (!artistFilterNav) {
+            console.error("Artist filter nav element not found");
+            return;
+        }
+
+        artistFilterNav.innerHTML = '<p>正在加載歌手列表...</p>';
+
+        try {
+            const response = await fetch('/api/artists');
+            if (!response.ok) {
+                throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`);
+            }
+
+            const artists = await response.json();
+            artistFilterNav.innerHTML = '';
+
+            // 全部歌手按鈕
+            const allButton = document.createElement('button');
+            allButton.textContent = '全部歌手';
+            allButton.classList.add('active');
+            allButton.addEventListener('click', () => {
+                setActiveArtistButton(allButton);
+                currentArtistFilter = null;
+                fetchAndDisplayAlbums(currentArtistFilter);
+            });
+            artistFilterNav.appendChild(allButton);
+
+            // 各歌手按鈕
+            artists.forEach(artist => {
+                const button = document.createElement('button');
+                button.textContent = artist;
+                button.dataset.artist = artist;
+                button.addEventListener('click', () => {
+                    setActiveArtistButton(button);
+                    currentArtistFilter = artist;
+                    fetchAndDisplayAlbums(currentArtistFilter);
+                });
+                artistFilterNav.appendChild(button);
+            });
+
+        } catch (error) {
+            console.error("[Music] Fetch artists error:", error);
+            if (artistFilterNav) {
+                artistFilterNav.innerHTML = '<p>無法加載歌手列表</p>';
+            }
+        }
     }
 
-    async function fetchAndDisplayAlbums(artist = null) {
-        // ... (你的 fetchAndDisplayAlbums 函數內容不變) ...
-         if (!musicListContainer) { console.error("音樂列表容器 'music-list' 未找到！"); return; } musicListContainer.innerHTML = '<p>正在加載音樂列表...</p>'; let apiUrl = '/api/music'; if (artist) { apiUrl += `?artist=${encodeURIComponent(artist)}`; } console.log(`正在獲取音樂: ${apiUrl}`); try { const response = await fetch(apiUrl); if (!response.ok) throw new Error(`獲取音樂列表失敗 (HTTP ${response.status})`); const musicList = await response.json(); console.log("獲取的音樂數據:", musicList); musicListContainer.innerHTML = ''; if (musicList.length === 0) { musicListContainer.innerHTML = '<p>找不到相關的音樂項目。</p>'; return; } musicList.forEach((music, index) => { console.log(`正在渲染第 ${index + 1} 項音樂: ${music.title}`); const item = document.createElement('div'); item.className = 'music-list-item'; const coverDiv = document.createElement('div'); coverDiv.className = 'cover'; const img = document.createElement('img'); img.src = music.cover_art_url || '/images/placeholder.png'; img.alt = music.title || '封面'; coverDiv.appendChild(img); const infoDiv = document.createElement('div'); infoDiv.className = 'info'; const titleSpan = document.createElement('span'); titleSpan.className = 'title'; titleSpan.textContent = music.title || '未知標題'; const artistSpan = document.createElement('span'); artistSpan.className = 'artist'; artistSpan.textContent = music.artist || '未知歌手'; infoDiv.appendChild(titleSpan); infoDiv.appendChild(artistSpan); const playLink = document.createElement('a'); playLink.className = 'play-link'; playLink.href = music.platform_url || '#'; if (music.platform_url) { playLink.target = '_blank'; playLink.rel = 'noopener noreferrer'; playLink.setAttribute('title', `在外部平台播放 ${music.title}`); } else { playLink.style.opacity = '0.5'; playLink.style.cursor = 'default'; playLink.onclick = (e) => e.preventDefault(); } const dateSpan = document.createElement('span'); dateSpan.className = 'release-date'; dateSpan.textContent = music.release_date ? new Date(music.release_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-') : '---- -- --'; item.appendChild(coverDiv); item.appendChild(infoDiv); item.appendChild(playLink); item.appendChild(dateSpan); musicListContainer.appendChild(item); }); } catch (error) { console.error("處理音樂列表時出錯:", error); if (musicListContainer) musicListContainer.innerHTML = '<p>無法加載音樂列表。</p>'; }
-    }
-
+    /**
+     * 設置當前選中的歌手按鈕
+     */
     function setActiveArtistButton(activeButton) {
-        // ... (你的 setActiveArtistButton 函數內容不變) ...
-         if (!artistFilterNav) return; artistFilterNav.querySelectorAll('button').forEach(btn => btn.classList.remove('active')); if (activeButton) { activeButton.classList.add('active'); }
+        if (!artistFilterNav) return;
+        
+        // 移除所有按鈕的 active 類
+        artistFilterNav.querySelectorAll('button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 添加 active 類到當前按鈕
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
     }
 
-    // --- 頁面初始加載 ---
+    /**
+     * 獲取並顯示專輯列表
+     */
+    async function fetchAndDisplayAlbums(artist = null) {
+        if (!musicListContainer) {
+            console.error("Music list container not found");
+            return;
+        }
+
+        musicListContainer.innerHTML = '<p>正在加載音樂列表...</p>';
+
+        try {
+            let apiUrl = '/api/music';
+            if (artist) {
+                apiUrl += `?artist=${encodeURIComponent(artist)}`;
+            }
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`獲取音樂列表失敗 (HTTP ${response.status})`);
+            }
+
+            const musicList = await response.json();
+            musicListContainer.innerHTML = '';
+
+            if (musicList.length === 0) {
+                musicListContainer.innerHTML = '<p>找不到相關的音樂項目</p>';
+                return;
+            }
+
+            // 創建專輯格線容器
+            const albumGrid = document.createElement('div');
+            albumGrid.className = 'album-grid';
+
+            // 填充專輯卡片
+            musicList.forEach(music => {
+                const albumCard = document.createElement('a');
+                albumCard.className = 'album-card';
+                albumCard.href = music.platform_url || '#';
+                
+                if (music.platform_url) {
+                    albumCard.target = '_blank';
+                    albumCard.rel = 'noopener noreferrer';
+                } else {
+                    albumCard.onclick = (e) => e.preventDefault();
+                }
+
+                // 封面圖片
+                const coverDiv = document.createElement('div');
+                coverDiv.className = 'cover-image';
+                const coverImg = document.createElement('img');
+                coverImg.src = music.cover_art_url || '/images/placeholder.png';
+                coverImg.alt = music.title || '專輯封面';
+                coverDiv.appendChild(coverImg);
+
+                // 專輯資訊
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'album-info';
+                
+                const title = document.createElement('h3');
+                title.textContent = music.title || '未知專輯';
+                
+                const artist = document.createElement('p');
+                artist.className = 'artist';
+                artist.textContent = music.artist || '未知歌手';
+                
+                const date = document.createElement('p');
+                date.className = 'release-date';
+                date.textContent = music.release_date 
+                    ? new Date(music.release_date).toLocaleDateString('zh-TW') 
+                    : '發行日期未知';
+
+                infoDiv.appendChild(title);
+                infoDiv.appendChild(artist);
+                infoDiv.appendChild(date);
+
+                albumCard.appendChild(coverDiv);
+                albumCard.appendChild(infoDiv);
+                albumGrid.appendChild(albumCard);
+            });
+
+            musicListContainer.appendChild(albumGrid);
+
+        } catch (error) {
+            console.error("[Music] Fetch albums error:", error);
+            if (musicListContainer) {
+                musicListContainer.innerHTML = `<p>無法加載音樂列表: ${error.message}</p>`;
+            }
+        }
+    }
+
+    // --- 頁面初始化 ---
     async function initializePage() {
-        console.log("Music Page: Initializing..."); // 添加日誌
-        // *** 修改這裡：同時開始加載 Banner 和 Artists ***
-        fetchAndDisplayBanners(); // 開始獲取 Banner
-        await fetchAndDisplayArtists(); // 等待歌手列表加載完成
-        fetchAndDisplayAlbums();      // 加載所有音樂項目
-        console.log("Music Page: Initialization sequence complete."); // 添加日誌
+        console.log("[Music] Initializing page");
+        try {
+            await Promise.all([
+                fetchAndDisplayBanners(),
+                fetchAndDisplayArtists()
+            ]);
+            await fetchAndDisplayAlbums();
+            console.log("[Music] Page initialized");
+        } catch (error) {
+            console.error("[Music] Initialization error:", error);
+        }
     }
 
-    initializePage(); // 執行初始化
-
-}); // End of DOMContentLoaded
+    initializePage();
+});
