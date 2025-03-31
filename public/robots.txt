@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /music-admin.html
+Disallow: /news-admin.html
+Disallow: /api/ # 可能不需要，但明確禁止爬取 API
+
+Sitemap: https://sunnyyummy.onrender.com/sitemap.xml
