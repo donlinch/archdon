@@ -516,15 +516,18 @@ app.get('*', (req, res, next) => {
 
 // --- 404 處理 (放在所有路由之後) ---
 app.use((req, res, next) => {
-  res.status(404).sendFile(path.join(__dirname, 'public', '404.html')); // 或者返回簡單文字 res.status(404).send('找不到頁面');
-});
-
-// --- 全局錯誤處理 (放在所有路由和中間件之後) ---
-app.use((err, req, res, next) => {
-    console.error("全局錯誤處理:", err.stack);
-    res.status(500).send('伺服器發生了一些問題！');
-});
-
+    // 註解掉或刪除這行:
+    // res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  
+    // 改成直接發送文字:
+    res.status(404).send('抱歉，找不到您要訪問的頁面。');
+  });
+  
+  // --- 全局錯誤處理 (這個保持不變) ---
+  app.use((err, req, res, next) => {
+      console.error("全局錯誤處理:", err.stack);
+      res.status(500).send('伺服器發生了一些問題！');
+  });
 
 // --- 啟動伺服器 ---
 app.listen(PORT, () => {
