@@ -175,3 +175,36 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
     font-weight: bold;
     cursor: default;
 }
+
+
+.banner-swiper {
+    width: 100%;
+    height: 450px; /* 或者使用 aspect-ratio */
+    /* aspect-ratio: 16 / 6; */ /* 示例比例 */
+    background-color: #eee; /* 加載時的背景色 */
+}
+.banner-swiper .swiper-slide {
+    text-align: center;
+    font-size: 18px;
+    background: #fff; /* 可選 */
+
+    /* Center slide text vertically */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.banner-swiper .swiper-slide img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 確保圖片填滿容器，可能裁剪 */
+}
+/* 調整導航按鈕顏色 (Swiper 預設是藍色) */
+.banner-swiper .swiper-button-prev,
+.banner-swiper .swiper-button-next {
+    color: #FFB74D; /* 改成你的主題橙色 */
+}
+ /* 調整分頁點顏色 */
+ .banner-swiper .swiper-pagination-bullet-active {
+    background: #FFB74D;
+}

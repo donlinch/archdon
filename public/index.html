@@ -29,17 +29,39 @@
         <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#FFB74D">
+
+       
+
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
+<!-- Swiper JS -->
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
     </head>
 <body>
 
     <header>
-        <h1>
-            <a href="/" title="返回 SunnyYummy 首頁"> 
-                <img src="/images/SunnyYummy.png" alt="SunnyYummy Logo" id="header-logo">  
-            </a>
-        </h1>
-    </header>
+       <!-- *** 這裡就是替換後的 Swiper 結構 *** -->
+        <!-- Slider main container -->
+        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
+            <!-- Additional required wrapper -->
+            <div class="swiper-wrapper" id="banner-wrapper">
+                <!-- Slides 會由 JavaScript 動態載入 -->
+                <!-- 初始可以留空，或放一個 loading slide -->
+                <!-- <div class="swiper-slide"><img src="/images/placeholder-banner.jpg" alt="Banner Loading..."></div> -->
+            </div>
+            <!-- If we need pagination -->
+            <div class="swiper-pagination"></div>
 
+            <!-- If we need navigation buttons -->
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div>
+        </div>
+
+</header>
+ 
     <main>
         
         <!-- This div will hold the product cards -->
