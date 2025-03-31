@@ -182,7 +182,40 @@ app.post('/api/news/:id/like', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+// --- *** 新增: 獲取每日流量數據 API *** ---
+app.get('/api/analytics/traffic', basicAuthMiddleware, async (req, res) => { // 添加 basicAuthMiddleware 保護
+  // 可以添加日期範圍參數，先獲取最近 30 天
+  const daysToFetch = 30;
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysToFetch);
 
+  try {
+      // 查詢 page_views 表，按日期聚合瀏覽量
+      // *** 注意: 這裡的 SQL 假設你的表格和欄位名稱如截圖所示 ***
+      const result = await pool.query(
+          `SELECT
+              view_date,             -- 日期欄位
+              SUM(view_count) AS count -- 加總每日計數 (如果同一天有多條記錄)
+          FROM page_views
+          WHERE view_date >= $1      -- 篩選日期範圍
+          GROUP BY view_date
+          ORDER BY view_date ASC`,   -- 按日期排序
+          [startDate.toISOString().split('T')[0]] // 將日期格式化為 YYYY-MM-DD
+      );
+
+      // 格式化回傳數據
+      const trafficData = result.rows.map(row => ({
+          date: new Date(row.view_date).toISOString().split('T')[0], // 確保是 YYYY-MM-DD
+          count: parseInt(row.count) // 確保是數字
+      }));
+
+      res.status(200).json(trafficData);
+
+  } catch (err) {
+      console.error('獲取流量數據時出錯:', err);
+      res.status(500).json({ error: '伺服器內部錯誤' });
+  }
+});
 
 // --- 受保護的管理頁面和 API Routes ---
 
