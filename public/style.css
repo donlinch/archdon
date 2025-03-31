@@ -208,3 +208,19 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
  .banner-swiper .swiper-pagination-bullet-active {
     background: #FFB74D;
 }
+
+/* banner-admin.html 或 style.css */
+#banner-list-table tr.banner-group-header td {
+    background-color: #dee2e6; /* 比表頭淺一點的灰色 */
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #495057;
+    padding: 12px 10px !important; /* 增加上下 padding */
+    border-top: 2px solid #adb5bd; /* 上方加粗邊框 */
+    border-bottom: 1px solid #adb5bd;
+}
+
+/* 可以稍微增加不同組之間的間距 */
+#banner-list-table tr.banner-group-header:not(:first-child) td {
+     border-top-width: 4px; /* 第一個標題除外，其他標題上方邊框加粗 */
+}
