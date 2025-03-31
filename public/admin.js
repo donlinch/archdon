@@ -1,91 +1,11 @@
 // public/admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References ---
+    // --- DOM Element References (商品列表和 Modal) ---
     const productListBody = document.querySelector('#product-list-table tbody');
     const productListContainer = document.getElementById('product-list-container');
     const productTable = document.getElementById('product-list-table');
     const loadingMessage = productListContainer ? productListContainer.querySelector('p') : null;
 
-
-// --- *** 新增: 繪製流量圖表函數 *** ---
-async function displayTrafficChart() {
-    const ctx = document.getElementById('traffic-chart');
-    const chartContainer = ctx ? ctx.parentElement : null;
-
-    if (!ctx || !chartContainer) {
-        console.warn("找不到 traffic-chart 的 canvas 元素。");
-        return; // 找不到 canvas 就不執行
-    }
-
-    // 添加加載提示
-    const loadingP = document.createElement('p');
-    loadingP.textContent = '正在加載流量數據...';
-    chartContainer.appendChild(loadingP);
-
-    try {
-        const response = await fetch('/api/analytics/traffic'); // 請求流量數據 API
-        if (!response.ok) {
-            // 嘗試讀取後端錯誤信息
-            let errorMsg = `無法獲取流量數據 (HTTP ${response.status})`;
-             try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e){}
-            throw new Error(errorMsg);
-        }
-        const trafficData = await response.json(); // [{date: '...', count: ...}]
-
-        // 移除加載提示
-        loadingP.remove();
-
-        if (trafficData.length === 0) {
-             chartContainer.innerHTML = '<h2>最近 30 天流量趨勢</h2><p>（尚無流量數據）</p>';
-             return;
-         }
-
-        // 準備 Chart.js 需要的數據格式
-        const labels = trafficData.map(item => item.date);
-        const dataPoints = trafficData.map(item => item.count);
-
-        // 創建圖表
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '每日頁面瀏覽量',
-                    data: dataPoints,
-                    borderColor: 'rgb(54, 162, 235)', // 藍色線條
-                    backgroundColor: 'rgba(54, 162, 235, 0.1)', // 區域填充色
-                    fill: true, // 啟用區域填充
-                    tension: 0.2 // 線條平滑度
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } } // Y 軸從 0 開始，刻度最小為 1
-                },
-                responsive: true,
-                maintainAspectRatio: false, // 允許圖表調整大小
-                plugins: {
-                    title: { display: false }, // 禁用 Chart.js 默認標題，我們用 h2 了
-                    legend: { display: true, position: 'top' } // 顯示圖例
-                }
-            }
-        });
-    } catch (error) {
-        console.error("繪製流量圖表失敗:", error);
-        // 顯示錯誤訊息
-         loadingP.remove(); // 移除加載提示
-         chartContainer.innerHTML = `<h2>最近 30 天流量趨勢</h2><p style="color: red;">無法載入圖表: ${error.message}</p>`;
-    }
-}
-
-// --- 在初始加載時調用繪製圖表函數 ---
-fetchAndDisplayProducts(); // 保持原有的加載商品列表
-displayTrafficChart();   // *** 新增調用 ***
-
-
-
-
-    // --- Edit Modal elements ---
     const editModal = document.getElementById('edit-modal');
     const editForm = document.getElementById('edit-product-form');
     const editProductId = document.getElementById('edit-product-id');
@@ -98,115 +18,35 @@ displayTrafficChart();   // *** 新增調用 ***
     const editProductClickCount = document.getElementById('edit-product-click-count');
     const editFormError = document.getElementById('edit-form-error');
 
-    // --- Add Modal elements ---
     const addModal = document.getElementById('add-modal');
     const addForm = document.getElementById('add-product-form');
     const addProductName = document.getElementById('add-product-name');
     const addProductDescription = document.getElementById('add-product-description');
     const addProductPrice = document.getElementById('add-product-price');
     const addProductImageUrl = document.getElementById('add-product-image-url');
+    // const addImagePreview = document.getElementById('add-image-preview'); // HTML 中沒有此 ID
     const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
     const addFormError = document.getElementById('add-form-error');
 
+    // --- *** 圖表相關元素 *** ---
+    const trafficChartCanvas = document.getElementById('traffic-chart');
+    const chartLoadingMsg = document.getElementById('chart-loading-msg'); // 確保 HTML 中有此 ID
+    const chartErrorMsg = document.getElementById('chart-error-msg');     // 確保 HTML 中有此 ID
+    const btnDaily = document.getElementById('btn-daily');
+    const btnMonthly = document.getElementById('btn-monthly');
+    let currentChart = null; // 用於儲存 Chart.js 實例
+    let currentGranularity = 'daily'; // 當前圖表粒度
+
     // --- Function to Fetch and Display ALL Products in the Table ---
     async function fetchAndDisplayProducts() {
-        if (!productListBody || !productListContainer || !productTable) {
-            console.error("Admin page table elements not found.");
-            if(loadingMessage) loadingMessage.textContent = '頁面結構錯誤，無法載入列表。';
-            return;
-        }
-
-        try {
-            if (loadingMessage) loadingMessage.style.display = 'block';
-            if (productTable) productTable.style.display = 'none';
-
-            // 注意：這裡獲取的是默認排序(按創建時間)的商品，因為 Admin 頁面不處理排序切換
-            // 如果需要 Admin 頁面也能按點擊排序，這裡也需要加 ?sort=popular
-            const response = await fetch('/api/products');
-            if (!response.ok) {
-                throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
-            }
-            const products = await response.json();
-
-            if (loadingMessage) loadingMessage.style.display = 'none';
-            if (productTable) productTable.style.display = 'table';
-
-            productListBody.innerHTML = '';
-
-            if (products.length === 0) {
-                // 注意：現在有 6 個欄位了
-                productListBody.innerHTML = '<tr><td colspan="6">目前沒有商品。</td></tr>';
-                return;
-            }
-
-            products.forEach(product => {
-                const row = document.createElement('tr');
-                row.dataset.productId = product.id;
-                // *** 修改 row.innerHTML 以包含點擊次數欄位 ***
-                row.innerHTML = `
-                    <td>${product.id}</td>
-                    <td>${product.name || ''}</td>
-                    <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
-                    <td>${product.click_count !== null ? product.click_count : '0'}</td> <!-- 新增點擊次數列 -->
-                    <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                    <td>
-                        <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
-                        <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
-                    </td>
-                `;
-                productListBody.appendChild(row);
-            });
-
-        } catch (error) {
-            console.error("獲取管理商品列表失敗:", error);
-            if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。';
-            if (productTable) productTable.style.display = 'none';
-        }
+        // ... (這個函數的內部邏輯保持不變) ...
+        if (!productListBody || !productListContainer || !productTable) { console.error("Admin page table elements not found."); if(loadingMessage) loadingMessage.textContent = '頁面結構錯誤，無法載入列表。'; return; } try { if (loadingMessage) loadingMessage.style.display = 'block'; if (productTable) productTable.style.display = 'none'; const response = await fetch('/api/products'); if (!response.ok) { throw new Error(`HTTP 錯誤！狀態: ${response.status}`); } const products = await response.json(); if (loadingMessage) loadingMessage.style.display = 'none'; if (productTable) productTable.style.display = 'table'; productListBody.innerHTML = ''; if (products.length === 0) { productListBody.innerHTML = '<tr><td colspan="6">目前沒有商品。</td></tr>'; return; } products.forEach(product => { const row = document.createElement('tr'); row.dataset.productId = product.id; row.innerHTML = `<td>${product.id}</td><td>${product.name || ''}</td><td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td><td>${product.click_count !== null ? product.click_count : '0'}</td><td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td><td><button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button><button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button></td>`; productListBody.appendChild(row); }); } catch (error) { console.error("獲取管理商品列表失敗:", error); if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。'; if (productTable) productTable.style.display = 'none'; }
     }
-
 
     // --- Function to Open and Populate the Edit Modal ---
     async function openEditModal(id) {
-        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError];
-        if (requiredEditElements.some(el => !el)) {
-             console.error("一個或多個編輯 Modal 元件在 HTML 中缺失。");
-             alert("編輯視窗元件錯誤，無法開啟。請檢查 admin.html 檔案。");
-             return;
-         }
-         editFormError.textContent = '';
-         editForm.reset();
-         editImagePreview.style.display = 'none';
-         editImagePreview.src = '';
-
-         try {
-             const response = await fetch(`/api/products/${id}`); // API 已包含 click_count
-             if (!response.ok) {
-                 if (response.status === 404) throw new Error('找不到該商品。');
-                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`);
-             }
-             const product = await response.json();
-
-             editProductId.value = product.id;
-             editProductName.value = product.name || '';
-             editProductDescription.value = product.description || '';
-             editProductPrice.value = product.price !== null ? product.price : '';
-             editProductImageUrl.value = product.image_url || '';
-             editProductSevenElevenUrl.value = product.seven_eleven_url || '';
-             // *** 填充點擊次數到 Modal 中的 span ***
-             editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0';
-
-             if (product.image_url) {
-                 editImagePreview.src = product.image_url;
-                 editImagePreview.style.display = 'block';
-             } else {
-                 editImagePreview.style.display = 'none';
-             }
-             editModal.style.display = 'flex';
-
-         } catch (error) {
-              console.error(`獲取商品 ${id} 進行編輯時出錯:`, error);
-              alert(`無法載入編輯資料： ${error.message}`);
-         }
+        // ... (這個函數的內部邏輯保持不變, 確保包含填充點擊數) ...
+        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError]; if (requiredEditElements.some(el => !el)) { console.error("一個或多個編輯 Modal 元件在 HTML 中缺失。"); alert("編輯視窗元件錯誤，無法開啟。請檢查 admin.html 檔案。"); return; } editFormError.textContent = ''; editForm.reset(); editImagePreview.style.display = 'none'; editImagePreview.src = ''; try { const response = await fetch(`/api/products/${id}`); if (!response.ok) { if (response.status === 404) throw new Error('找不到該商品。'); throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); } const product = await response.json(); editProductId.value = product.id; editProductName.value = product.name || ''; editProductDescription.value = product.description || ''; editProductPrice.value = product.price !== null ? product.price : ''; editProductImageUrl.value = product.image_url || ''; editProductSevenElevenUrl.value = product.seven_eleven_url || ''; editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0'; if (product.image_url) { editImagePreview.src = product.image_url; editImagePreview.style.display = 'block'; } else { editImagePreview.style.display = 'none'; } editModal.style.display = 'flex'; } catch (error) { console.error(`獲取商品 ${id} 進行編輯時出錯:`, error); alert(`無法載入編輯資料： ${error.message}`); }
     }
 
     // --- Function to Close the Edit Modal ---
@@ -220,27 +60,14 @@ displayTrafficChart();   // *** 新增調用 ***
 
     // --- Attach Delete Function to Global Scope ---
     window.deleteProduct = async function(id) {
-        if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
-            try {
-                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                if (response.status === 204 || response.ok) {
-                    await fetchAndDisplayProducts();
-                } else {
-                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { errorMsg = `${errorMsg}: ${response.statusText}`; }
-                    throw new Error(errorMsg);
-                }
-            } catch (error) { alert(`刪除時發生錯誤：${error.message}`); }
-        }
+        // ... (這個函數的內部邏輯保持不變) ...
+        if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { try { const response = await fetch(`/api/products/${id}`, { method: 'DELETE' }); if (response.status === 204 || response.ok) { await fetchAndDisplayProducts(); } else { let errorMsg = `刪除失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { errorMsg = `${errorMsg}: ${response.statusText}`; } throw new Error(errorMsg); } } catch (error) { alert(`刪除時發生錯誤：${error.message}`); } }
     };
 
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddForm = function() {
-        const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError];
-        if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤，無法開啟。請檢查 admin.html 檔案。"); return; }
-        addFormError.textContent = '';
-        addForm.reset();
-        addModal.style.display = 'flex';
+         // ... (這個函數的內部邏輯保持不變) ...
+         const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError]; if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤，無法開啟。請檢查 admin.html 檔案。"); return; } addFormError.textContent = ''; addForm.reset(); addModal.style.display = 'flex';
     }
 
     // --- Close Modals if User Clicks Outside of Modal Content ---
@@ -249,27 +76,84 @@ displayTrafficChart();   // *** 新增調用 ***
     // --- Edit Form Submission Listener ---
     if (editForm) {
         editForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); editFormError.textContent = ''; const productId = editProductId.value; if (!productId) { editFormError.textContent = '錯誤：找不到商品 ID。'; return; }
-            let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
-            const updatedData = { name: editProductName.value.trim(), description: editProductDescription.value.trim(), price: priceValue, image_url: editProductImageUrl.value.trim() || null, seven_eleven_url: editProductSevenElevenUrl.value.trim() || null };
-            if (!updatedData.name) { editFormError.textContent = '商品名稱不能為空。'; return; } if (updatedData.price !== null && isNaN(updatedData.price)) { editFormError.textContent = '價格必須是有效的數字。'; return; } if (updatedData.price !== null && updatedData.price < 0) { editFormError.textContent = '價格不能是負數。'; return; } const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); if (!isBasicUrlValid(updatedData.seven_eleven_url)) { editFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; return; }
-            try { const response = await fetch(`/api/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }); if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); } closeModal(); await fetchAndDisplayProducts();
-            } catch (error) { editFormError.textContent = `儲存錯誤：${error.message}`; }
+             // ... (這個函數的內部邏輯保持不變) ...
+             event.preventDefault(); editFormError.textContent = ''; const productId = editProductId.value; if (!productId) { editFormError.textContent = '錯誤：找不到商品 ID。'; return; } let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value); const updatedData = { name: editProductName.value.trim(), description: editProductDescription.value.trim(), price: priceValue, image_url: editProductImageUrl.value.trim() || null, seven_eleven_url: editProductSevenElevenUrl.value.trim() || null }; if (!updatedData.name) { editFormError.textContent = '商品名稱不能為空。'; return; } if (updatedData.price !== null && isNaN(updatedData.price)) { editFormError.textContent = '價格必須是有效的數字。'; return; } if (updatedData.price !== null && updatedData.price < 0) { editFormError.textContent = '價格不能是負數。'; return; } const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); if (!isBasicUrlValid(updatedData.seven_eleven_url)) { editFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; return; } try { const response = await fetch(`/api/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }); if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); } closeModal(); await fetchAndDisplayProducts(); } catch (error) { editFormError.textContent = `儲存錯誤：${error.message}`; }
         });
     } else { console.error("編輯表單元素未找到。"); }
 
     // --- Add Form Submission Listener ---
     if (addForm) {
         addForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); addFormError.textContent = ''; let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value);
-            const newProductData = { name: addProductName.value.trim(), description: addProductDescription.value.trim(), price: priceValue, image_url: addProductImageUrl.value.trim() || null, seven_eleven_url: addProductSevenElevenUrl.value.trim() || null };
-            if (!newProductData.name) { addFormError.textContent = '商品名稱不能為空。'; return; } if (newProductData.price !== null && isNaN(newProductData.price)) { addFormError.textContent = '價格必須是有效的數字。'; return; } if (newProductData.price !== null && newProductData.price < 0) { addFormError.textContent = '價格不能是負數。'; return; } const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); if (!isBasicUrlValid(newProductData.seven_eleven_url)) { addFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; return; }
-            try { const response = await fetch(`/api/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newProductData) }); if (!response.ok) { let errorMsg = `新增失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); } closeAddModal(); await fetchAndDisplayProducts();
-            } catch (error) { addFormError.textContent = `新增錯誤：${error.message}`; }
+             // ... (這個函數的內部邏輯保持不變) ...
+             event.preventDefault(); addFormError.textContent = ''; let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value); const newProductData = { name: addProductName.value.trim(), description: addProductDescription.value.trim(), price: priceValue, image_url: addProductImageUrl.value.trim() || null, seven_eleven_url: addProductSevenElevenUrl.value.trim() || null }; if (!newProductData.name) { addFormError.textContent = '商品名稱不能為空。'; return; } if (newProductData.price !== null && isNaN(newProductData.price)) { addFormError.textContent = '價格必須是有效的數字。'; return; } if (newProductData.price !== null && newProductData.price < 0) { addFormError.textContent = '價格不能是負數。'; return; } const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); if (!isBasicUrlValid(newProductData.seven_eleven_url)) { addFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; return; } try { const response = await fetch(`/api/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newProductData) }); if (!response.ok) { let errorMsg = `新增失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); } closeAddModal(); await fetchAndDisplayProducts(); } catch (error) { addFormError.textContent = `新增錯誤：${error.message}`; }
         });
     } else { console.error("新增表單元素未找到。"); }
 
-    // --- Initial Load ---
-    fetchAndDisplayProducts();
 
-});
+    // --- *** 圖表相關邏輯 *** ---
+
+    /**
+     * 獲取並繪製流量圖表
+     * @param {string} granularity - 'daily' 或 'monthly'
+     */
+    async function displayTrafficChart(granularity = 'daily') {
+        if (!trafficChartCanvas) { console.warn("找不到 traffic-chart canvas 元素。"); return; }
+        const ctx = trafficChartCanvas.getContext('2d');
+        currentGranularity = granularity;
+
+        if (chartLoadingMsg) chartLoadingMsg.style.display = 'block';
+        if (chartErrorMsg) chartErrorMsg.style.display = 'none';
+        if (currentChart) { currentChart.destroy(); currentChart = null; }
+        trafficChartCanvas.style.display = 'none';
+
+        let apiUrl = '/api/analytics/traffic';
+        if (granularity === 'monthly') { apiUrl = '/api/analytics/monthly-traffic'; }
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) { let errorMsg = `無法獲取流量數據 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e){} throw new Error(errorMsg); }
+            const trafficData = await response.json();
+
+            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
+            trafficChartCanvas.style.display = 'block';
+
+            if (trafficData.length === 0) {
+                if (chartErrorMsg) { chartErrorMsg.textContent = '（尚無流量數據）'; chartErrorMsg.style.display = 'block'; chartErrorMsg.style.color = '#888'; }
+                return;
+            }
+
+            const labels = trafficData.map(item => item.date || item.month);
+            const dataPoints = trafficData.map(item => item.count);
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: [{ label: granularity === 'daily' ? '每日頁面瀏覽量' : '每月頁面瀏覽量', data: dataPoints, borderColor: granularity === 'daily' ? 'rgb(54, 162, 235)' : 'rgb(255, 159, 64)', backgroundColor: granularity === 'daily' ? 'rgba(54, 162, 235, 0.1)' : 'rgba(255, 159, 64, 0.1)', fill: true, tension: 0.2 }] },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: granularity === 'daily' ? 1 : undefined } } }, responsive: true, maintainAspectRatio: false, plugins: { title: { display: false }, legend: { display: true, position: 'top' } } }
+            });
+        } catch (error) {
+            console.error(`繪製 ${granularity} 流量圖表失敗:`, error);
+            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
+            if (chartErrorMsg) { chartErrorMsg.textContent = `無法載入圖表: ${error.message}`; chartErrorMsg.style.display = 'block'; chartErrorMsg.style.color = 'red'; }
+        }
+    }
+
+    // --- 為切換按鈕添加事件監聽器 ---
+    if (btnDaily && btnMonthly) {
+        const toggleButtons = [btnDaily, btnMonthly];
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const newGranularity = button.dataset.granularity;
+                if (newGranularity !== currentGranularity) {
+                    toggleButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    displayTrafficChart(newGranularity);
+                }
+            });
+        });
+    } else { console.warn("找不到圖表切換按鈕。"); }
+
+    // --- Initial Load ---
+    fetchAndDisplayProducts(); // 載入商品列表
+    displayTrafficChart('daily'); // 預設載入每日流量圖表
+
+}); // --- End of DOMContentLoaded ---
