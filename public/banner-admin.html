@@ -3,27 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>輪播圖管理 - SunnyYummy</title> <!-- 修改 Title -->
+    <title>輪播圖管理 - SunnyYummy</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* 管理頁面通用樣式 (如果 style.css 沒有，可以在這裡加) */
-        /* ... 可以複製其他 admin 頁面的樣式 ... */
+        /* 管理頁面通用樣式 */
+        body { background-color: #fff; color: #333; }
+        .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
         /* 特定表格樣式 */
         #banner-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
-        #banner-list-table th, #banner-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; /* 垂直居中 */ }
+        #banner-list-table th, #banner-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
         #banner-list-table th { background-color: #e9ecef; }
-     /* 列寬調整 - 需要重新分配寬度 */
-     #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 6%; }  /* ID */
-    #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 18%; text-align: center;} /* 圖片預覽 */
-    #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 25%; } /* 圖片網址 */
-    #banner-list-table th:nth-child(4), #banner-list-table td:nth-child(4) { width: 15%; } /* 連結網址 */
-    #banner-list-table th:nth-child(5), #banner-list-table td:nth-child(5) { width: 12%; text-align: center; } /* *** 所屬頁面 (新增) *** */
-    #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 排序 */
-    #banner-list-table th:nth-child(7), #banner-list-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
+        /* 列寬調整 */
+        #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 6%; }  /* ID */
+        #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 18%; text-align: center;} /* 圖片預覽 */
+        #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 25%; } /* 圖片網址 */
+        #banner-list-table th:nth-child(4), #banner-list-table td:nth-child(4) { width: 15%; } /* 連結網址 */
+        #banner-list-table th:nth-child(5), #banner-list-table td:nth-child(5) { width: 12%; text-align: center; } /* 所屬頁面 */
+        #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 排序 */
+        #banner-list-table th:nth-child(7), #banner-list-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
+
+        #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
+
         /* Modal 圖片預覽 */
          #edit-banner-preview, #add-banner-preview { max-width: 200px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
          #edit-banner-preview[src], #add-banner-preview[src] { display: block; }
+
+        /* 其他 Modal 樣式可以從 style.css 或其他 admin 頁面複製 */
+         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
+         .modal[style*="display: flex"] { display: flex !important; }
+         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+         .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+         .close-btn:hover { color: #333; }
+         .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
+         .form-group { margin-bottom: 1rem; }
+         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+         .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 1rem;} /* 統一表單樣式 */
+         .form-group textarea { resize: vertical; min-height: 80px; }
+         .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+         .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer;}
+         .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+         .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+         .form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; }
+         p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; } /* 統一錯誤訊息樣式 */
+
     </style>
 </head>
 <body>
@@ -32,24 +55,25 @@
         <a href="/admin.html">商品管理</a>
         <a href="/music-admin.html">音樂管理</a>
         <a href="/news-admin.html">消息管理</a>
-        <a href="/banner-admin.html" class="active">輪播圖管理</a> <!-- 新增連結並設為 active -->
+        <a href="/banner-admin.html" class="active">輪播圖管理</a>
     </nav>
 
     <div class="admin-container">
         <h1>輪播圖管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button class="add-news-btn" style="background-color: #fd7e14;" onclick="showAddBannerForm()">新增輪播圖</button> <!-- 修改 onclick 和按鈕文字/顏色 -->
+        <button class="add-news-btn" style="background-color: #fd7e14; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;" onclick="showAddBannerForm()">新增輪播圖</button>
 
         <h2>現有輪播圖列表</h2>
         <div id="banner-list-container">
             <p>正在加載輪播圖...</p>
-            <table id="banner-list-table" style="display: none;"> <!-- 修改 ID -->
+            <table id="banner-list-table" style="display: none;">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>圖片預覽</th>
                         <th>圖片網址</th>
                         <th>連結網址</th>
+                        <th>所屬頁面</th> <!-- *** 確認這個標頭存在 *** -->
                         <th>排序</th>
                         <th>操作</th>
                     </tr>
@@ -62,26 +86,37 @@
     </div> <!-- End of admin-container -->
 
     <!-- Add Banner Modal -->
-    <div id="add-banner-modal" class="modal"> <!-- 修改 ID -->
+    <div id="add-banner-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeAddBannerModal()">×</span> <!-- 修改 onclick -->
+            <span class="close-btn" onclick="closeAddBannerModal()">×</span>
             <h2>新增輪播圖</h2>
-            <form id="add-banner-form"> <!-- 修改 ID -->
+            <form id="add-banner-form">
                 <div class="form-group">
                     <label for="add-banner-image-url">圖片網址:</label>
                     <input type="text" id="add-banner-image-url" name="image_url" required>
                     <img id="add-banner-preview" src="" alt="圖片預覽">
-                    <small style="color: #888; display: block; margin-top: 4px;">建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px (將依比例縮放或裁剪)</small>
+                    <small>建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px</small>
                 </div>
                  <div class="form-group">
                     <label for="add-banner-alt-text">圖片替代文字 (Alt Text):</label>
                     <input type="text" id="add-banner-alt-text" name="alt_text" placeholder="例如: SunnyYummy 夏日特賣">
-                     <small style="color: #888; display: block; margin-top: 4px;">簡短描述圖片內容，用於無障礙和 SEO。</small>
+                     <small>簡短描述圖片內容，用於無障礙和 SEO。</small>
                 </div>
                 <div class="form-group">
                     <label for="add-banner-link-url">連結網址 (可選):</label>
                     <input type="url" id="add-banner-link-url" name="link_url" placeholder="https://...">
                 </div>
+
+                <!-- *** 確認這個下拉選單存在 *** -->
+                <div class="form-group">
+                    <label for="add-banner-page-location">顯示於頁面:</label>
+                    <select id="add-banner-page-location" name="page_location" required>
+                        <option value="home">首頁 (預設)</option>
+                        <option value="music">音樂頁</option>
+                        <option value="news">最新消息頁</option>
+                    </select>
+                </div>
+
                  <div class="form-group">
                     <label for="add-banner-display-order">排序 (數字越小越前面):</label>
                     <input type="number" id="add-banner-display-order" name="display_order" value="0" required>
@@ -90,23 +125,23 @@
                     <button type="submit" class="action-btn save-btn">確認新增</button>
                     <button type="button" class="action-btn cancel-btn" onclick="closeAddBannerModal()">取消</button>
                 </div>
-                <p id="add-banner-form-error" style="color: red; margin-top: 10px;"></p> <!-- 修改 ID -->
+                <p id="add-banner-form-error"></p>
             </form>
         </div>
     </div>
 
     <!-- Edit Banner Modal -->
-    <div id="edit-banner-modal" class="modal"> <!-- 修改 ID -->
+    <div id="edit-banner-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeEditBannerModal()">×</span> <!-- 修改 onclick -->
+            <span class="close-btn" onclick="closeEditBannerModal()">×</span>
             <h2>編輯輪播圖</h2>
-            <form id="edit-banner-form"> <!-- 修改 ID -->
-                <input type="hidden" id="edit-banner-id"> <!-- 隱藏欄位存 ID -->
+            <form id="edit-banner-form">
+                <input type="hidden" id="edit-banner-id">
                 <div class="form-group">
                     <label for="edit-banner-image-url">圖片網址:</label>
                     <input type="text" id="edit-banner-image-url" name="image_url" required>
                      <img id="edit-banner-preview" src="" alt="圖片預覽">
-                    <small style="color: #888; display: block; margin-top: 4px;">建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px (將依比例縮放或裁剪)</small>
+                    <small>建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px</small>
                 </div>
                  <div class="form-group">
                     <label for="edit-banner-alt-text">圖片替代文字 (Alt Text):</label>
@@ -116,6 +151,17 @@
                     <label for="edit-banner-link-url">連結網址 (可選):</label>
                     <input type="url" id="edit-banner-link-url" name="link_url">
                 </div>
+
+                <!-- *** 確認這個下拉選單存在 *** -->
+                <div class="form-group">
+                    <label for="edit-banner-page-location">顯示於頁面:</label>
+                    <select id="edit-banner-page-location" name="page_location" required>
+                        <option value="home">首頁</option>
+                        <option value="music">音樂頁</option>
+                        <option value="news">最新消息頁</option>
+                    </select>
+                </div>
+
                  <div class="form-group">
                     <label for="edit-banner-display-order">排序 (數字越小越前面):</label>
                     <input type="number" id="edit-banner-display-order" name="display_order" required>
@@ -124,11 +170,11 @@
                     <button type="submit" class="action-btn save-btn">儲存變更</button>
                     <button type="button" class="action-btn cancel-btn" onclick="closeEditBannerModal()">取消</button>
                 </div>
-                <p id="edit-banner-form-error" style="color: red; margin-top: 10px;"></p> <!-- 修改 ID -->
+                <p id="edit-banner-form-error"></p>
             </form>
         </div>
     </div>
 
-    <script src="banner-admin.js"></script> <!-- 修改 JS 文件名 -->
+    <script src="banner-admin.js"></script>
 </body>
 </html>
