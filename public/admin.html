@@ -57,11 +57,33 @@
         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
         <!-- ... rest of the content ... -->
     </div>
-      <!-- *** 新增: 圖表容器 *** -->
-      <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;"> <!-- 控制大小和位置 -->
-        <h2>最近 30 天流量趨勢</h2>
+     
+    
+
+    <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;">
+        <h2>最近流量趨勢</h2> <!-- 修改標題，不再寫死 30 天 -->
+    
+        <!-- *** 新增: 時間粒度切換按鈕 *** -->
+        <div class="chart-controls" style="text-align: center; margin-bottom: 1rem;">
+            <button id="btn-daily" class="chart-toggle-btn active" data-granularity="daily">每日 (近30天)</button>
+            <button id="btn-monthly" class="chart-toggle-btn" data-granularity="monthly">每月 (所有)</button>
+            <!-- 可選: 年份選擇器 (較複雜，先不做) -->
+            <!-- <select id="year-selector" style="display:none;"><option value="">所有年份</option></select> -->
+        </div>
+        <!-- *** 切換按鈕結束 *** -->
+    
         <canvas id="traffic-chart"></canvas>
+        <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
+        <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
     </div>
+
+
+
+
+
+
+
+
     <!-- *** 圖表容器結束 *** -->
          <h2>現有商品列表</h2>
          <div id="product-list-container">
