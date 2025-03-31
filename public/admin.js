@@ -6,6 +6,85 @@ document.addEventListener('DOMContentLoaded', () => {
     const productTable = document.getElementById('product-list-table');
     const loadingMessage = productListContainer ? productListContainer.querySelector('p') : null;
 
+
+// --- *** 新增: 繪製流量圖表函數 *** ---
+async function displayTrafficChart() {
+    const ctx = document.getElementById('traffic-chart');
+    const chartContainer = ctx ? ctx.parentElement : null;
+
+    if (!ctx || !chartContainer) {
+        console.warn("找不到 traffic-chart 的 canvas 元素。");
+        return; // 找不到 canvas 就不執行
+    }
+
+    // 添加加載提示
+    const loadingP = document.createElement('p');
+    loadingP.textContent = '正在加載流量數據...';
+    chartContainer.appendChild(loadingP);
+
+    try {
+        const response = await fetch('/api/analytics/traffic'); // 請求流量數據 API
+        if (!response.ok) {
+            // 嘗試讀取後端錯誤信息
+            let errorMsg = `無法獲取流量數據 (HTTP ${response.status})`;
+             try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e){}
+            throw new Error(errorMsg);
+        }
+        const trafficData = await response.json(); // [{date: '...', count: ...}]
+
+        // 移除加載提示
+        loadingP.remove();
+
+        if (trafficData.length === 0) {
+             chartContainer.innerHTML = '<h2>最近 30 天流量趨勢</h2><p>（尚無流量數據）</p>';
+             return;
+         }
+
+        // 準備 Chart.js 需要的數據格式
+        const labels = trafficData.map(item => item.date);
+        const dataPoints = trafficData.map(item => item.count);
+
+        // 創建圖表
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '每日頁面瀏覽量',
+                    data: dataPoints,
+                    borderColor: 'rgb(54, 162, 235)', // 藍色線條
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)', // 區域填充色
+                    fill: true, // 啟用區域填充
+                    tension: 0.2 // 線條平滑度
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } } // Y 軸從 0 開始，刻度最小為 1
+                },
+                responsive: true,
+                maintainAspectRatio: false, // 允許圖表調整大小
+                plugins: {
+                    title: { display: false }, // 禁用 Chart.js 默認標題，我們用 h2 了
+                    legend: { display: true, position: 'top' } // 顯示圖例
+                }
+            }
+        });
+    } catch (error) {
+        console.error("繪製流量圖表失敗:", error);
+        // 顯示錯誤訊息
+         loadingP.remove(); // 移除加載提示
+         chartContainer.innerHTML = `<h2>最近 30 天流量趨勢</h2><p style="color: red;">無法載入圖表: ${error.message}</p>`;
+    }
+}
+
+// --- 在初始加載時調用繪製圖表函數 ---
+fetchAndDisplayProducts(); // 保持原有的加載商品列表
+displayTrafficChart();   // *** 新增調用 ***
+
+
+
+
     // --- Edit Modal elements ---
     const editModal = document.getElementById('edit-modal');
     const editForm = document.getElementById('edit-product-form');

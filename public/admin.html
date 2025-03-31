@@ -57,6 +57,12 @@
         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
         <!-- ... rest of the content ... -->
     </div>
+      <!-- *** 新增: 圖表容器 *** -->
+      <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;"> <!-- 控制大小和位置 -->
+        <h2>最近 30 天流量趨勢</h2>
+        <canvas id="traffic-chart"></canvas>
+    </div>
+    <!-- *** 圖表容器結束 *** -->
          <h2>現有商品列表</h2>
          <div id="product-list-container">
              <p>正在加載商品...</p>
