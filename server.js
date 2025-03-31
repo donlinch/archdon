@@ -69,33 +69,6 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// --- 記錄 Page View 中間件 (現在放在 Traffic API 之後，但在管理 API 之前比較好) ---
-// --- 修正後的 Page View 中間件 ---
-app.use(async (req, res, next) => {
-  // *** 明確指定要記錄的路徑 ***
-  const pathsToLog = ['/', '/index.html', '/music.html', '/news.html'];
-  const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
-  if (shouldLog) {
-      const pagePath = req.path === '/' ? '/index.html' : req.path; // 統一主頁路徑
-      console.log(`[PV Mid] Should Log: YES for ${pagePath}`);
-      try {
-          const sql = `
-              INSERT INTO page_views (page, view_date, view_count)
-              VALUES ($1, CURRENT_DATE, 1)
-              ON CONFLICT (page, view_date)
-              DO UPDATE SET view_count = page_views.view_count + 1
-              RETURNING *;
-          `;
-          const params = [pagePath];
-          const result = await pool.query(sql, params);
-          console.log(`[PV Mid] 記錄成功: ${pagePath}`);
-      } catch (err) {
-          console.error('[PV Mid] 記錄失敗:', err);
-      }
-  }
-  next();
-});
 
 // 靜態文件服務應該放在 Page View 中間件之後
 app.use(express.static(path.join(__dirname, 'public')));
