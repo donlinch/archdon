@@ -14,7 +14,7 @@ body { font-family: 'Noto Sans TC', sans-serif; line-height: 1.5; color: #424242
 
 /* Header Styles */
 header { background-color: #FFB74D; color: #424242; padding: 0.5rem 1rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); line-height: 1; }
-#header-logo { height: 200px; width: auto; vertical-align: middle; display: inline-block; }
+#header-logo { height: 200px; width: auto; vertical-align: middle; display: inline-block; } /* (注意：這個 ID 在你的 HTML 中似乎沒有使用) */
 
 header h1 { margin: 0; line-height: inherit; }
 
@@ -27,13 +27,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .category-nav a.active { color: #E57373; font-weight: 700; border-bottom-color: #FFB74D; }
 .category-nav a:not(.active):hover { color: #424242; border-bottom-color: #B0BEC5; }
 
-/* Product Grid Layout - 更緊湊 */
+/* --- Product Grid Layout (For index.html) --- */
 .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
 @media (min-width: 600px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
 @media (min-width: 900px) { .product-grid { grid-template-columns: repeat(4, 1fr); gap: 1.2rem; } }
 @media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; } }
 
-/* Individual Product Card Styles - 更緊湊 */
+/* Individual Product Card Styles (For index.html) */
 .product-card, .product-card:link, .product-card:visited { background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 100%; text-align: center; text-decoration: none; color: inherit; position: relative; }
 .product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
 .product-card .image-container { width: 100%; height: 160px; overflow: hidden; margin-bottom: 0.4rem; padding: 0.4rem 0.4rem 0 0.4rem; }
@@ -43,61 +43,110 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
 .product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
 
-/* --- News List Styles --- */
-.news-list { margin-top: 1.5rem; }
+/* --- Music Page Styles (music.html) --- */
+/* 歌手篩選樣式 */
+.artist-filter-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 2rem 0; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+.artist-filter-nav button { padding: 0.4rem 0.8rem; border: 1px solid #B0BEC5; border-radius: 15px; background-color: transparent; color: #757575; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease; }
+.artist-filter-nav button:hover { background-color: #ECEFF1; border-color: #78909C; color: #424242; }
+.artist-filter-nav button.active { background-color: #E57373; color: white; border-color: #E57373; font-weight: bold; }
 
-.news-card { display: flex; align-items: stretch; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; transition: box-shadow 0.2s ease; /* position: relative; <-- 移除 */ }
- .news-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-/* 日期標籤 */
+/* 專輯網格佈局 */
+.album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; padding: 0 1rem; margin-top: 1.5rem; }
+@media (min-width: 600px) { .album-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 900px) { .album-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1200px) { .album-grid { grid-template-columns: repeat(5, 1fr); gap: 1.8rem; } }
+
+/* 專輯卡片樣式 */
+.album-card { display: block; text-decoration: none; color: inherit; background-color: transparent; border-radius: 6px; overflow: visible; box-shadow: none; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; }
+.album-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
+.album-card .cover-image { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 6px; margin-bottom: 0.8rem; background-color: #eee; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); }
+.album-card .cover-image img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.album-card:hover .cover-image img { transform: scale(1.05); }
+.album-card .cover-image::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.5); font-size: 2rem; color: rgba(255, 255, 255, 0.8); background-color: rgba(0, 0, 0, 0.4); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; line-height: 1; }
+.album-card:hover .cover-image::after { opacity: 1; }
+.album-card .album-info { padding: 0 0.2rem; text-align: left; }
+.album-card .album-info h3 { font-size: 0.9rem; font-weight: 600; color: #333; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.album-card .album-info .artist { font-size: 0.8rem; color: #666; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.album-card .album-info .release-date { font-size: 0.75rem; color: #999; }
+
+
+/* --- News List Styles (news.html) --- */
+.news-list { margin-top: 1.5rem; }
+.news-card { display: flex; align-items: stretch; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; transition: box-shadow 0.2s ease; }
+.news-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
 .news-card .date-tag { flex-shrink: 0; background-color: #E57373; color: white; padding: 1.5rem 1rem; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 70px; }
 .news-card .date-tag .month { font-size: 0.8rem; display: block; margin-bottom: 0.2rem; text-transform: uppercase; }
 .news-card .date-tag .day { font-size: 1.8rem; font-weight: bold; line-height: 1; display: block; }
- .news-card .date-tag .weekday { font-size: 0.7rem; display: block; margin-top: 0.2rem; }
-/* 縮圖 */
+.news-card .date-tag .weekday { font-size: 0.7rem; display: block; margin-top: 0.2rem; }
 .news-card .thumbnail { flex-shrink: 0; width: 120px; height: 100px; overflow: hidden; }
- @media (max-width: 600px) { .news-card .thumbnail { width: 90px; height: 75px; } }
+@media (max-width: 600px) { .news-card .thumbnail { width: 90px; height: 75px; } }
 .news-card .thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
-/* 主要內容區 */
 .news-card .content-wrapper { flex-grow: 1; padding: 0.8rem 1rem; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; cursor: pointer; }
 .news-card .news-title { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; max-height: calc(1.1rem * 1.4 * 2); }
 .news-card .news-summary { font-size: 0.85rem; color: #666; line-height: 1.5; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.85rem * 1.5 * 2); }
-/* 底部互動區 (按讚) - *** 修改為 Flex 欄 *** */
-.news-card .actions {
-       /* position: absolute; <-- 移除 */
-       flex-shrink: 0; /* 不壓縮 */
-       width: 60px;    /* *** 設定固定寬度 (可調整) *** */
-       padding: 0.5rem 0;
-       display: flex;
-       flex-direction: column; /* 垂直堆疊 */
-       align-items: center;    /* 水平居中 */
-       justify-content: center;/* 垂直居中 */
-       gap: 0.1rem;
-       border-left: 1px solid #eee; /* 可選分隔線 */
-       /* background-color: #f8f8f8; */ /* 可選背景色 */
-}
+.news-card .actions { flex-shrink: 0; width: 60px; padding: 0.5rem 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; border-left: 1px solid #eee; }
 .news-card .like-button { background: none; border: none; cursor: pointer; padding: 2px 5px; display: inline-flex; align-items: center; color: #aaa; font-size: 0.9rem; line-height: 1; margin: 0; }
 .news-card .like-button.liked { color: #E57373; font-weight: bold; }
 .news-card .like-button .heart-icon { font-size: 1.3em; transition: transform 0.2s ease; line-height: 1; }
 .news-card .like-button:hover .heart-icon { transform: scale(1.2); }
 .news-card .like-count { font-size: 0.8rem; color: #aaa; text-align: center; line-height: 1; }
 
-/* --- 分頁控制 --- */
+/* --- News Pagination --- */
 #pagination-controls { text-align: center; margin-top: 2rem; }
 #pagination-controls button { padding: 8px 12px; margin: 0 3px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease; }
 #pagination-controls button:hover { background-color: #eee; }
 #pagination-controls button.active { background-color: #FFB74D; color: white; border-color: #FFB74D; font-weight: bold; cursor: default; }
- #pagination-controls button:disabled { opacity: 0.6; cursor: not-allowed; }
+#pagination-controls button:disabled { opacity: 0.6; cursor: not-allowed; }
 #pagination-controls span { padding: 8px 5px; }
 
-/* --- 消息詳情 Modal --- */
+/* --- News Detail Modal (news.html) --- */
 #news-detail-modal .modal-content { max-width: 700px; padding: 0; overflow: hidden; }
 #news-detail-modal .detail-image { width: 100%; max-height: 400px; object-fit: cover; display: block; }
 #news-detail-modal .detail-content { padding: 1.5rem 2rem 2rem 2rem; }
 #news-detail-modal .detail-title { font-size: 1.6rem; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
 #news-detail-modal .detail-meta { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
-#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555;   }
+#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; /* 移除 white-space: pre-wrap; 因為 JS 會處理換行 */ }
 #news-detail-modal .close-btn { top: 15px; right: 15px; background-color: rgba(0,0,0,0.3); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; line-height: 1; padding: 0; text-align: center; }
- #news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
+#news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
+
+/* --- News Detail Page Styles (news-detail.html) --- */
+.news-detail-container { max-width: 800px; margin: 2rem auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+.news-detail-container #news-detail-image { display: block; width: 100%; object-fit: cover; max-height: 450px; }
+.news-detail-text-content { padding: 1.5rem 2rem 2rem 2rem; }
+.news-detail-container #news-detail-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.8rem; line-height: 1.3; color: #333; }
+.news-detail-container #news-detail-meta { border-bottom: 1px solid #eee; padding-bottom: 1rem; } /* 移到這裡 */
+.news-detail-container #news-detail-body { font-size: 1rem; color: #555; line-height: 1.8; white-space: pre-wrap; /* 確保這裡保留換行 */ }
+.news-detail-container #news-detail-body p { margin-bottom: 1.5rem; /* 段落間距 */ }
+.news-detail-container #news-detail-body img { max-width: 100%; height: auto; margin: 1.5rem auto; display: block; border-radius: 6px; }
+.news-detail-container #news-detail-body h2,
+.news-detail-container #news-detail-body h3,
+.news-detail-container #news-detail-body h4 { margin: 2rem 0 1rem; color: #333; font-weight: 700; }
+.news-detail-container #news-detail-body h2 { font-size: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+.news-detail-container #news-detail-body h3 { font-size: 1.3rem; }
+.news-detail-container #news-detail-body h4 { font-size: 1.1rem; }
+.news-detail-container #news-detail-body ul,
+.news-detail-container #news-detail-body ol { margin: 1.5rem 0; padding-left: 2rem; }
+.news-detail-container #news-detail-body li { margin-bottom: 0.5rem; }
+.news-detail-container #news-detail-body blockquote { border-left: 4px solid #FFB74D; padding-left: 1.5rem; margin: 1.5rem 0; color: #666; font-style: italic; }
+
+/* News Detail Share Section */
+.news-share { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; } /* 確保有正確的選擇器 */
+.copy-link-button { background-color: #6c757d; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.9em; margin-left: 10px; font-weight: bold; }
+.copy-link-button:hover { background-color: #5a6268; }
+
+/* News Detail Responsive */
+@media (max-width: 900px) {
+    .news-detail-container { max-width: 95%; margin: 1.5rem auto; }
+    .news-detail-text-content { padding: 1.2rem 1.5rem 1.5rem 1.5rem; }
+    .news-detail-container #news-detail-title { font-size: 1.5rem; }
+}
+@media (max-width: 600px) {
+    .news-detail-container { margin: 1rem auto; border-radius: 4px; }
+    .news-detail-text-content { padding: 1rem; }
+    .news-detail-container #news-detail-title { font-size: 1.3rem; }
+    .news-detail-container #news-detail-meta { font-size: 0.85em; }
+    .news-detail-container #news-detail-body { font-size: 0.95rem; line-height: 1.7; }
+}
 
 
 /* --- Footer Styles --- */
@@ -106,10 +155,10 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 .footer-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #616161; }
 .footer-nav a { color: #eeeeee; text-decoration: none; font-size: 0.95rem; transition: color 0.2s ease; }
 .footer-nav a:hover, .footer-nav a.admin-link:hover { color: #FFB74D; }
-.footer-social { margin-bottom: 1.5rem; }
+.footer-social { margin-bottom: 1.5rem; } /* (目前未使用) */
 .footer-copyright p { font-size: 0.85rem; color: #bdbdbd; line-height: 1.5; }
 
-/* --- Modal Styles (General) --- */
+/* --- Modal Styles (General - for Admin pages) --- */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding-top: 50px; }
 .modal[style*="display: flex"] { display: flex !important; }
 .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -118,31 +167,29 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
-.form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
 .form-group textarea { resize: vertical; min-height: 80px; }
 .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
-.form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
+.form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer; }
 .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
 .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-#edit-image-preview, #add-image-preview, #edit-cover-preview, #add-cover-preview, #edit-news-thumbnail-preview, #add-news-thumbnail-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
-#edit-image-preview[src], #add-image-preview[src], #edit-cover-preview[src], #add-cover-preview[src], #edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src] { display: block; }
-#edit-form-error, #add-form-error, #edit-music-form-error, #add-music-form-error, #edit-news-form-error, #add-news-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
+.form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; } /* Admin Modal 提示 */
+/* Admin Modal 圖片預覽 */
+#edit-image-preview, #add-image-preview,
+#edit-cover-preview, #add-cover-preview,
+#edit-news-thumbnail-preview, #add-news-thumbnail-preview,
+#edit-banner-preview, #add-banner-preview {
+    max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain;
+}
+#edit-image-preview[src], #add-image-preview[src],
+#edit-cover-preview[src], #add-cover-preview[src],
+#edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src],
+#edit-banner-preview[src], #add-banner-preview[src] {
+    display: block;
+}
+/* Admin Modal 錯誤訊息 */
+p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
 
-
-/* --- Music List Styles --- */
-.music-list { width: 100%; margin-top: 1.5rem; }
-.music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; }
-.music-list-item:hover { background-color: #f9f9f9; }
-.music-list-item .cover { flex-shrink: 0; width: 50px; height: 50px; border-radius: 4px; overflow: hidden; }
-.music-list-item .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.music-list-item .info { flex-grow: 1; overflow: hidden; }
-.music-list-item .info .title { display: block; font-size: 0.95rem; font-weight: bold; color: #333; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.music-list-item .info .artist { display: block; font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.music-list-item .play-link { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #ddd; border-radius: 50%; color: #555; text-decoration: none; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
-.music-list-item .play-link:hover { background-color: #eee; color: #333; border-color: #ccc; }
-.music-list-item .play-link::before { content: '▶'; font-size: 0.8rem; }
-.music-list-item .release-date { flex-shrink: 0; font-size: 0.8rem; color: #888; min-width: 70px; text-align: right; }
-@media (max-width: 600px) { .music-list-item { gap: 0.6rem; padding: 0.6rem 0.3rem; } .music-list-item .cover { width: 40px; height: 40px; } .music-list-item .info .title { font-size: 0.9rem; } .music-list-item .info .artist { font-size: 0.75rem; } .music-list-item .play-link { width: 32px; height: 32px; } .music-list-item .play-link::before { font-size: 0.7rem; } .music-list-item .release-date { font-size: 0.75rem; min-width: 60px; } }
 
 /* --- Admin Navigation Styles --- */
 .admin-nav { background-color: #f8f9fa; padding: 1rem 0; text-align: center; border-bottom: 1px solid #dee2e6; margin-bottom: 1rem; }
@@ -151,240 +198,32 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 .admin-nav a.active { background-color: #007bff; color: white; font-weight: bold; }
 
 
-
-/* --- 圖表控制按鈕樣式 --- */
-.chart-controls button.chart-toggle-btn {
-    padding: 6px 12px;
-    margin: 0 5px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    color: #555;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    font-size: 0.9em;
-}
-.chart-controls button.chart-toggle-btn:hover {
-    background-color: #eee;
-    border-color: #bbb;
-}
-.chart-controls button.chart-toggle-btn.active {
-    background-color: #007bff; /* Admin 主題色 */
-    color: white;
-    border-color: #007bff;
-    font-weight: bold;
-    cursor: default;
-}
+/* --- Admin Chart Styles --- */
+.chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; } /* (來自 admin.html inline style) */
+.chart-controls { text-align: center; margin-bottom: 1rem; } /* (來自 admin.html inline style) */
+.chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
+.chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
+.chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
 
 
-.banner-swiper {
-    width: 100%;
-    height: 370px; /* 或者使用 aspect-ratio */
-    /* aspect-ratio: 16 / 6; */ /* 示例比例 */
-    background-color: #FFB74D; /* 加載時的背景色 */
-}
-.banner-swiper .swiper-slide {
-    text-align: center;
-    font-size: 18px;
-    background: #FFB74D; /* 可選 */
-
-    /* Center slide text vertically */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.banner-swiper .swiper-slide img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* 確保圖片填滿容器，可能裁剪 */
-}
-/* 調整導航按鈕顏色 (Swiper 預設是藍色) */
+/* --- Banner Swiper Styles (All Pages) --- */
+.banner-swiper { width: 100%; height: 370px; background-color: #FFB74D; margin-bottom: 2rem; /* 和 Header 分開 */ }
+.banner-swiper .swiper-slide { text-align: center; font-size: 18px; background: #f0f0f0; /* 預設背景 */ display: flex; justify-content: center; align-items: center; }
+.banner-swiper .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .banner-swiper .swiper-button-prev,
-.banner-swiper .swiper-button-next {
-    color: #FFB74D; /* 改成你的主題橙色 */
-}
- /* 調整分頁點顏色 */
- .banner-swiper .swiper-pagination-bullet-active {
-    background: #FFB74D;
-}
+.banner-swiper .swiper-button-next { color: rgba(255, 255, 255, 0.7); /* 白色半透明 */ --swiper-navigation-size: 30px; /* 按鈕大小 */ }
+.banner-swiper .swiper-button-prev:hover,
+.banner-swiper .swiper-button-next:hover { color: rgba(255, 255, 255, 1); }
+.banner-swiper .swiper-pagination-bullet { background: rgba(0, 0, 0, 0.3); opacity: 0.8; }
+.banner-swiper .swiper-pagination-bullet-active { background: #fff; opacity: 1; }
 
-/* banner-admin.html 或 style.css */
-#banner-list-table tr.banner-group-header td {
-    background-color: #dee2e6; /* 比表頭淺一點的灰色 */
-    font-weight: bold;
-    font-size: 1.1em;
-    color: #495057;
-    padding: 12px 10px !important; /* 增加上下 padding */
-    border-top: 2px solid #adb5bd; /* 上方加粗邊框 */
-    border-bottom: 1px solid #adb5bd;
-}
 
-/* 可以稍微增加不同組之間的間距 */
-#banner-list-table tr.banner-group-header:not(:first-child) td {
-     border-top-width: 4px; /* 第一個標題除外，其他標題上方邊框加粗 */
-}
+/* --- Banner Admin Table Styles --- */
+#banner-list-table tr.banner-group-header td { background-color: #dee2e6; font-weight: bold; font-size: 1.1em; color: #495057; padding: 12px 10px !important; border-top: 2px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#banner-list-table tr.banner-group-header:not(:first-child) td { border-top-width: 4px; }
+#banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
 
-/* --- News Detail Page Styles --- */
-.news-detail-container {
-    max-width: 800px; /* 限制內容最大寬度，提高易讀性 */
-    margin: 2rem auto; /* 水平居中，上下留白 */
-    background-color: #fff; /* 白色背景，像 Modal */
-    border-radius: 8px; /* 圓角 */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 添加陰影 */
-    overflow: hidden; /* 確保內部元素圓角生效 */
-}
-
-.news-detail-container #news-detail-image {
-    /* 圖片樣式已在 HTML style 中設定，這裡可選 */
-    display: block; /* 確保圖片是塊級元素 */
-    width: 100%; /* 圖片寬度佔滿容器 */
-    object-fit: cover; /* 圖片填滿，可能裁剪 */
-    max-height: 450px; /* 限制最大高度 */
-}
-
-.news-detail-text-content {
-    padding: 1.5rem 2rem 2rem 2rem; /* 為文字內容添加內邊距 */
-}
-
-/* 可以為詳情頁的標題、meta、body 定義更細緻的樣式 */
-.news-detail-container #news-detail-title {
-    font-size: 1.8rem; /* 稍大一點的標題 */
-    font-weight: 700;
-    margin-bottom: 0.8rem;
-    line-height: 1.3;
-    color: #333;
-}
-
-.news-detail-container #news-detail-body p {
-    margin-bottom: 1rem; /* 為段落之間添加一些間距 */
-}
-
-/* 考慮到手機端，容器左右邊距可以小一點 */
-@media (max-width: 900px) {
-    .news-detail-container {
-        max-width: 95%;
-        margin: 1.5rem auto;
-    }
-    .news-detail-text-content {
-        padding: 1.2rem 1.5rem 1.5rem 1.5rem;
-    }
-    .news-detail-container #news-detail-title {
-        font-size: 1.5rem;
-    }
-}
-
-@media (max-width: 600px) {
-    .news-detail-container {
-        margin: 1rem auto;
-        border-radius: 4px; /* 手機端圓角可以小點 */
-    }
-     .news-detail-text-content {
-        padding: 1rem;
-        white-space: pre-wrap; 
-    }
-     .news-detail-container #news-detail-title {
-        font-size: 1.3rem;
-        white-space: pre-wrap; 
-    }
-     .news-detail-container #news-detail-meta {
-        font-size: 0.85em;
-        white-space: pre-wrap; 
-     }
-     #news-detail-body {
-        line-height: 1.8; /* 你原有的行高 */
-        white-space: pre-wrap; /* 保留空白和換行 */
-    }
-}
-/* --- 新聞詳情頁面專用樣式 --- */
-.news-detail-text-content {
-    padding: 2rem;
-    line-height: 1.8; /* 增加行高 */
-}
-
-#news-detail-body {
-    font-size: 1rem;
-    color: #555;
-    line-height: 1.8; /* 增加行高 */
-}
-
-#news-detail-body p {
-    margin-bottom: 1.5rem; /* 增加段落間距 */
-}
-
-#news-detail-body img {
-    max-width: 100%;
-    height: auto;
-    margin: 1.5rem auto;
-    display: block;
-    border-radius: 6px;
-}
-
-#news-detail-body h2,
-#news-detail-body h3,
-#news-detail-body h4 {
-    margin: 2rem 0 1rem;
-    color: #333;
-    font-weight: 700;
-}
-
-#news-detail-body h2 {
-    font-size: 1.5rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5rem;
-}
-
-#news-detail-body h3 {
-    font-size: 1.3rem;
-}
-
-#news-detail-body h4 {
-    font-size: 1.1rem;
-}
-
-#news-detail-body ul,
-#news-detail-body ol {
-    margin: 1.5rem 0;
-    padding-left: 2rem;
-}
-
-#news-detail-body li {
-    margin-bottom: 0.5rem;
-}
-
-#news-detail-body blockquote {
-    border-left: 4px solid #FFB74D;
-    padding-left: 1.5rem;
-    margin: 1.5rem 0;
-    color: #666;
-    font-style: italic;
-}
-
-/* 響應式調整 */
-@media (max-width: 768px) {
-    .news-detail-text-content {
-        padding: 1.5rem;
-    }
-    
-    #news-detail-title {
-        font-size: 1.5rem;
-    }
-    
-    #news-detail-body {
-        font-size: 0.95rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .news-detail-text-content {
-        padding: 1rem;
-    }
-    
-    #news-detail-title {
-        font-size: 1.3rem;
-    }
-    
-    #news-detail-body {
-        font-size: 0.9rem;
-    }
-}
+/* --- Music List Styles (Old - 可能不再使用) --- */
+/* .music-list { width: 100%; margin-top: 1.5rem; } */
+/* .music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; } */
+/* ... (其他 .music-list-item 相關樣式，如果確認不用可以刪除) ... */
