@@ -3,16 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 根據載入的新聞動態修改 Title (可選，需 JS 操作 document.title) -->
-    <title>SunnyYummy 新聞詳情</title>
-
-    <!-- SEO Meta (可選，最好由 JS 根據載入內容動態修改) -->
-    <!-- <meta name="description" content="..."> -->
-    <!-- <link rel="canonical" href="..."> -->
-    <!-- <meta property="og:title" content="..."> -->
-    <!-- <meta property="og:description" content="..."> -->
-    <!-- <meta property="og:image" content="..."> -->
-    <!-- <meta property="og:url" content="..."> -->
+    <title>SunnyYummy 新聞詳情</title> <!-- JS 會動態修改 -->
 
     <!-- 絕對路徑 CSS -->
     <link rel="stylesheet" href="/style.css">
@@ -20,50 +11,80 @@
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <!-- <link rel="manifest" href="/manifest.json"> --> <!-- 如果需要 PWA 功能 -->
-    <!-- <meta name="theme-color" content="#FFB74D"> -->
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 
+    <!-- Open Graph Meta 標籤 (重要 for Facebook) -->
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="SunnyYummy" />
+    <meta property="og:title" content="SunnyYummy 新聞" /> <!-- 通用標題, JS 會更新 -->
+    <meta property="og:description" content="查看 SunnyYummy 最新消息與活動！" /> <!-- 通用描述, JS 可更新 -->
+    <meta property="og:image" content="https://sunnyyummy.onrender.com/images/share-preview.jpg" /> <!-- 通用預覽圖, JS 會更新 -->
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/news.html" /> <!-- 通用 URL, JS 會更新 -->
+
+    <style>
+      /* 可選: 為複製按鈕添加一點樣式 */
+      .copy-link-button {
+        background-color: #6c757d; /* 灰色背景 */
+        color: white;
+        border: none;
+        padding: 3px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        margin-left: 10px; /* 與前一個連結的間距 */
+        font-weight: bold;
+      }
+      .copy-link-button:hover {
+        background-color: #5a6268;
+      }
+    </style>
+
 </head>
 <body>
-    <!-- 根據你的要求，移除了 <header> 和 Banner -->
-
     <main>
         <!-- 分類導覽列 -->
         <nav class="category-nav">
             <a href="/">週邊商品</a>
             <a href="/music.html">音樂專輯</a>
-            <a href="/news.html" class="active">最新消息</a> <!-- 標示當前頁面 -->
+            <a href="/news.html" class="active">最新消息</a>
         </nav>
-        
 
         <!-- 新聞內容區域 -->
         <article id="news-content-area">
-            <!-- 內容容器，用於模擬 Modal 外觀 -->
+            <!-- 內容容器 -->
             <div class="news-detail-container">
                 <!-- 初始載入訊息 -->
                 <p style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
 
-                <!-- 新聞大圖 (由 JS 控制顯示和 src) -->
-                <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; display: none; border-radius: 6px 6px 0 0;">
+                <!-- 新聞大圖 -->
+                <img src="" alt="" id="news-detail-image" style="display: none;"> <!-- JS 控制顯示 -->
 
-                <!-- 文字內容容器 (用於 padding) -->
+                <!-- 文字內容容器 -->
                 <div class="news-detail-text-content">
-                    <!-- 新聞標題 (由 JS 填充) -->
+                    <!-- 新聞標題 -->
                     <h1 id="news-detail-title"></h1>
-                    <!-- Meta 資訊：日期、更新時間 (由 JS 填充) -->
-                    <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;"></p>
-                    <!-- 新聞內文 (由 JS 填充) --><!-- 在 meta 資訊下方添加 -->
-<div class="news-share" style="margin: 1.5rem 0; padding: 1rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">
-  <span style="margin-right: 1rem; color: #888;">分享:</span>
-  <a href="#" class="share-link" style="margin-right: 0.8rem; color: #4267B2;">Facebook</a>
-  <a href="#" class="share-link" style="margin-right: 0.8rem; color: #1DA1F2;">Twitter</a>
-</div>  
-  <div id="news-detail-body"></div>
+                    <!-- Meta 資訊 -->
+                    <p id="news-detail-meta"></p>
+
+                    <!-- *** 分享區塊 *** -->
+                    <div class="news-share" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                      <strong style="margin-right: 10px; color: #555; font-weight: 500;">分享到:</strong>
+                      <!-- Facebook -->
+                      <a id="share-facebook" href="#" target="_blank" rel="noopener noreferrer" class="share-link" style="color: #3b5998; text-decoration: none; font-weight: bold; margin-right: 15px;">Facebook</a>
+                      <!-- Threads (複製連結按鈕) -->
+                      <button id="share-threads-copy" class="copy-link-button">複製連結 (貼到 Threads)</button>
+                      <!-- Instagram (連結到 Profile) -->
+                      <a id="share-instagram-profile" href="https://www.instagram.com/YOUR_INSTAGRAM_USERNAME" target="_blank" rel="noopener noreferrer" class="share-link" style="color: #E1306C; text-decoration: none; font-weight: bold; margin-left: 15px;">Instagram</a>
+                      <!-- *** 將 YOUR_INSTAGRAM_USERNAME 換成你的實際帳號 *** -->
+                    </div>
+                    <!-- *** 分享區塊結束 *** -->
+
+                    <!-- 新聞內文 -->
+                    <div id="news-detail-body"></div>
                 </div>
             </div>
         </article>
@@ -71,7 +92,8 @@
 
     <!-- 頁腳 -->
     <footer>
-        <div class="footer-container">
+      <!-- ... footer 內容 ... -->
+       <div class="footer-container">
             <nav class="footer-nav">
                 <a href="/">週邊商品</a>
                 <a href="/music.html">音樂專輯</a>
@@ -81,12 +103,8 @@
                 <p>© 2023 SunnyYummy. All rights reserved.</p>
             </div>
         </div>
-     
-
     </footer>
 
-    <!-- JavaScript (Swiper 不再需要，因為沒有 Banner) -->
-    <!-- <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script> -->
     <!-- 絕對路徑 JS -->
     <script src="/news-detail.js"></script>
 </body>
