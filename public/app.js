@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // bannerWrapper.innerHTML = '<div class="swiper-slide">載入中...</div>';
 
         try {
-            const response = await fetch('/api/banners?page=app');
+            const response = await fetch('/api/banners?page=home');
             if (!response.ok) {
                 throw new Error(`獲取 Banners 失敗 (HTTP ${response.status})`);
             }
