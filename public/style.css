@@ -224,3 +224,73 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 #banner-list-table tr.banner-group-header:not(:first-child) td {
      border-top-width: 4px; /* 第一個標題除外，其他標題上方邊框加粗 */
 }
+
+/* --- News Detail Page Styles --- */
+.news-detail-container {
+    max-width: 800px; /* 限制內容最大寬度，提高易讀性 */
+    margin: 2rem auto; /* 水平居中，上下留白 */
+    background-color: #fff; /* 白色背景，像 Modal */
+    border-radius: 8px; /* 圓角 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 添加陰影 */
+    overflow: hidden; /* 確保內部元素圓角生效 */
+}
+
+.news-detail-container #news-detail-image {
+    /* 圖片樣式已在 HTML style 中設定，這裡可選 */
+    display: block; /* 確保圖片是塊級元素 */
+    width: 100%; /* 圖片寬度佔滿容器 */
+    object-fit: cover; /* 圖片填滿，可能裁剪 */
+    max-height: 450px; /* 限制最大高度 */
+}
+
+.news-detail-text-content {
+    padding: 1.5rem 2rem 2rem 2rem; /* 為文字內容添加內邊距 */
+}
+
+/* 可以為詳情頁的標題、meta、body 定義更細緻的樣式 */
+.news-detail-container #news-detail-title {
+    font-size: 1.8rem; /* 稍大一點的標題 */
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    line-height: 1.3;
+    color: #333;
+}
+
+.news-detail-container #news-detail-body p {
+    margin-bottom: 1rem; /* 為段落之間添加一些間距 */
+}
+
+/* 考慮到手機端，容器左右邊距可以小一點 */
+@media (max-width: 900px) {
+    .news-detail-container {
+        max-width: 95%;
+        margin: 1.5rem auto;
+    }
+    .news-detail-text-content {
+        padding: 1.2rem 1.5rem 1.5rem 1.5rem;
+    }
+    .news-detail-container #news-detail-title {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .news-detail-container {
+        margin: 1rem auto;
+        border-radius: 4px; /* 手機端圓角可以小點 */
+    }
+     .news-detail-text-content {
+        padding: 1rem;
+    }
+     .news-detail-container #news-detail-title {
+        font-size: 1.3rem;
+    }
+     .news-detail-container #news-detail-meta {
+        font-size: 0.85em;
+     }
+     #news-detail-body {
+         font-size: 0.95rem; /* 手機字號可略小 */
+         line-height: 1.7;
+         white-space: pre-wrap; 
+     }
+}

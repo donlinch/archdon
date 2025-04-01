@@ -35,22 +35,47 @@
       </article>
     </main>
 
-  <!-- Footer -->
-  <footer>
-    <div class="footer-container">
-      <nav class="footer-nav">
+  <!-- Footer --><!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 新聞詳情</title>
+    <link rel="stylesheet" href="/style.css">
+    <!-- 其他 head 內容 -->
+  </head>
+  <body>
+    <!-- (移除 Header，如果你確定不要 Banner 的話) -->
+    <!-- <header> ... </header> -->
+  
+    <main>
+      <nav class="category-nav">
         <a href="/">週邊商品</a>
         <a href="/music.html">音樂專輯</a>
         <a href="/news.html" class="active">最新消息</a>
       </nav>
-      <div class="footer-copyright">
-        <p>© 2023 SunnyYummy. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- 引入必要的 JS -->
-  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script> <!-- CDN 不用改 -->
-  <script src="/news-detail.js"></script> <!-- *** 修改這裡：加上 / *** -->
-</body>
-</html>
+  
+      <article id="news-content-area" style="margin-top: 2rem;">
+        <!-- *** 新增：內容容器 *** -->
+        <div class="news-detail-container">
+          <p style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p> <!-- 將 P 移入 -->
+          <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; display: none; border-radius: 6px 6px 0 0;"> <!-- 圖片可以考慮加頂部圓角 -->
+          <!-- *** 新增：文字內容的內邊距容器 *** -->
+          <div class="news-detail-text-content">
+            <h1 id="news-detail-title"></h1>
+            <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;"></p> <!-- 可選：加底線分隔 -->
+            <div id="news-detail-body" style="line-height: 1.8; /* 稍微增加行高 */"></div>
+          </div>
+        </div>
+      </article>
+    </main>
+  
+    <!-- Footer -->
+    <footer>
+        <!-- ... footer 內容 ... -->
+    </footer>
+  
+    <script src="/news-detail.js"></script>
+  </body>
+  </html>
+  
