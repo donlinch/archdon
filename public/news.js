@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // 重點修改：只請求 news 頁面的輪播圖
-            const response = await fetch('/api/banners?page_location=news');
+            const response = await fetch('/api/banners?page=news');
             console.log("[News] Banner API response status:", response.status);
 
             if (!response.ok) {
