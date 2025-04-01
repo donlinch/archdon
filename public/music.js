@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // 重點修改：只請求 music 頁面的輪播圖
-            const response = await fetch('/api/banners?page_location=music');
+            const response = await fetch('/api/banners?page=music');
             console.log("[Music] Banner API response status:", response.status);
 
             if (!response.ok) {

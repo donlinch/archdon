@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // *** 新增: 獲取 Banner 輪播相關元素 ***
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
-    let bannerSwiper = null; // 用於儲存 Swiper 實例
+    let bannerSwiper = null;
 
     /**
      * 從後端 API 獲取 Banner 資料並初始化輪播
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // bannerWrapper.innerHTML = '<div class="swiper-slide">載入中...</div>';
 
         try {
-            const response = await fetch('/api/banners');
+            const response = await fetch('/api/banners?page=app');
             if (!response.ok) {
                 throw new Error(`獲取 Banners 失敗 (HTTP ${response.status})`);
             }
