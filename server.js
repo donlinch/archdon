@@ -371,6 +371,22 @@ app.delete('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => { 
         res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
     }
 });
+
+// --- *** 新增：提供新聞詳情頁面的路由 *** ---
+
+app.use(express.static(path.join(__dirname, 'public')));
+ 
+// 這個路由會匹配 /news/後面跟著數字ID的請求
+app.get('/news/:id(\\d+)', (req, res, next) => {
+    res.sendFile(path.join(__dirname, 'public', 'news-detail.html'));
+});
+
+app.use((req, res, next) => {
+    res.status(404).send('抱歉，找不到您要訪問的頁面。');
+});
+
+
+
 // --- Banner 管理 API 結束 ---
 
 
