@@ -211,44 +211,64 @@ document.addEventListener('DOMContentLoaded', () => {
      * 打開並填充消息詳情 Modal
      */
     async function openNewsDetailModal(newsId) {
-        if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) { console.error("Missing modal elements"); return; }
-        detailImage.src = ''; detailTitle.textContent = '加載中...'; detailMeta.textContent = ''; detailBody.innerHTML = ''; // 清空 innerHTML
+        if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) { 
+            console.error("Missing modal elements"); 
+            return; 
+        }
+        
+        detailImage.src = ''; 
+        detailTitle.textContent = '加載中...'; 
+        detailMeta.textContent = ''; 
+        detailBody.innerHTML = '';
         detailModal.style.display = 'flex';
+        
         try {
             const response = await fetch(`/api/news/${newsId}`);
             if (!response.ok) {
                 let errorText = `無法獲取消息詳情 (HTTP ${response.status})`;
-                try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
+                try { 
+                    const data = await response.json(); 
+                    errorText += `: ${data.error || response.statusText}`; 
+                } catch (e) {}
                 throw new Error(errorText);
             }
+            
             const newsItem = await response.json();
-
+    
             detailImage.src = newsItem.image_url || '/images/placeholder.png';
             detailImage.alt = newsItem.title || '消息圖片';
             detailTitle.textContent = newsItem.title || '無標題';
+            
             let metaText = '';
-            if (newsItem.event_date) { metaText += `活動日期: ${new Date(newsItem.event_date).toLocaleDateString('zh-TW')} | `; }
+            if (newsItem.event_date) { 
+                metaText += `活動日期: ${new Date(newsItem.event_date).toLocaleDateString('zh-TW')} | `; 
+            }
             metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString('zh-TW')}`;
             detailMeta.textContent = metaText;
-
-            // --- *** 修改這裡：使用 innerHTML 處理內文和換行 *** ---
+    
+            // --- 修改這裡：處理內文中的網址轉換為連結 ---
             if (newsItem.content) {
-                // 將換行符 (\n) 替換成 HTML 的 <br> 標籤
-                const formattedContent = (newsItem.content).replace(/\n/g, '<br>');
-                // **重要：直接使用 innerHTML 將內容（包含可能的<a>標籤和<br>標籤）插入**
+                // 1. 先將換行符 (\n) 替換成 <br>
+                let formattedContent = newsItem.content.replace(/\n/g, '<br>');
+                
+                // 2. 使用正則表達式將網址轉換為 <a> 標籤
+                formattedContent = formattedContent.replace(
+                    /(https?:\/\/[^\s]+)/g, 
+                    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+                );
+                
+                // 3. 使用 innerHTML 安全地插入處理後的內容
                 detailBody.innerHTML = formattedContent;
             } else {
-                detailBody.textContent = '沒有詳細內容。'; // 如果沒內容，用 textContent
+                detailBody.textContent = '沒有詳細內容。';
             }
-            // --- *** 修改結束 *** ---
-
+            
         } catch (error) {
             console.error("[News] Detail modal error:", error);
             detailTitle.textContent = '加載失敗';
-            detailBody.textContent = error.message; // 錯誤信息用 textContent
+            detailBody.textContent = error.message;
         }
     }
-
     /**
      * 處理按讚請求
      */
