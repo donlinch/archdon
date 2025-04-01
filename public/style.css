@@ -281,12 +281,15 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
     }
      .news-detail-text-content {
         padding: 1rem;
+        white-space: pre-wrap; 
     }
      .news-detail-container #news-detail-title {
         font-size: 1.3rem;
+        white-space: pre-wrap; 
     }
      .news-detail-container #news-detail-meta {
         font-size: 0.85em;
+        white-space: pre-wrap; 
      }
      #news-detail-body {
          font-size: 0.95rem; /* 手機字號可略小 */
