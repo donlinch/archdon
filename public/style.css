@@ -292,8 +292,7 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
         white-space: pre-wrap; 
      }
      #news-detail-body {
-         font-size: 0.95rem; /* 手機字號可略小 */
-         line-height: 1.7;
-         white-space: pre-wrap; 
-     }
+        line-height: 1.8; /* 你原有的行高 */
+        white-space: pre-wrap; /* 保留空白和換行 */
+    }
 }

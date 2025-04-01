@@ -1,69 +1,85 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SunnyYummy 新聞詳情</title>
-  <link rel="stylesheet" href="/style.css"> <!-- *** 修改這裡：加上 / *** -->
- 
-
-
-
-><!DOCTYPE html>
-<html lang="zh-TW">
-  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 根據載入的新聞動態修改 Title (可選，需 JS 操作 document.title) -->
     <title>SunnyYummy 新聞詳情</title>
+
+    <!-- SEO Meta (可選，最好由 JS 根據載入內容動態修改) -->
+    <!-- <meta name="description" content="..."> -->
+    <!-- <link rel="canonical" href="..."> -->
+    <!-- <meta property="og:title" content="..."> -->
+    <!-- <meta property="og:description" content="..."> -->
+    <!-- <meta property="og:image" content="..."> -->
+    <!-- <meta property="og:url" content="..."> -->
+
+    <!-- 絕對路徑 CSS -->
     <link rel="stylesheet" href="/style.css">
-    <!-- 其他 head 內容 -->
-  </head>
-  <body>
-    <!-- (移除 Header，如果你確定不要 Banner 的話) -->
-    <!-- <header> ... </header> -->
-  
+
+    <!-- Favicon and PWA icons (使用絕對路徑) -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- <link rel="manifest" href="/manifest.json"> --> <!-- 如果需要 PWA 功能 -->
+    <!-- <meta name="theme-color" content="#FFB74D"> -->
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <!-- 根據你的要求，移除了 <header> 和 Banner -->
+
     <main>
-      <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html" class="active">最新消息</a>
-      </nav>
-  
-      <article id="news-content-area" style="margin-top: 2rem;">
-        <!-- *** 新增：內容容器 *** -->
-        <div class="news-detail-container">
-          <p style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p> <!-- 將 P 移入 -->
-          <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; display: none; border-radius: 6px 6px 0 0;"> <!-- 圖片可以考慮加頂部圓角 -->
-          <!-- *** 新增：文字內容的內邊距容器 *** -->
-          <div class="news-detail-text-content">
-            <h1 id="news-detail-title"></h1>
-            <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;"></p> <!-- 可選：加底線分隔 -->
-            <div id="news-detail-body" style="line-height: 1.8; /* 稍微增加行高 */"></div>
-          </div>
-        </div>
-      </article>
-    </main>
-  
-
-  
-
-
-
-  <footer>
-    <div class="footer-container">
-        <nav class="footer-nav">
+        <!-- 分類導覽列 -->
+        <nav class="category-nav">
             <a href="/">週邊商品</a>
-            <a href="/music.html" >音樂專輯</a>
-            <a href="/news.html" class="active">最新消息</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html" class="active">最新消息</a> <!-- 標示當前頁面 -->
         </nav>
-        <div class="footer-copyright">
-            <p>© 2023 SunnyYummy. All rights reserved.</p>
-        </div>
-    </div>
-</footer>
 
-<!-- JavaScript -->
-<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-<script src="/news-detail.js"></script>
+        <!-- 新聞內容區域 -->
+        <article id="news-content-area">
+            <!-- 內容容器，用於模擬 Modal 外觀 -->
+            <div class="news-detail-container">
+                <!-- 初始載入訊息 -->
+                <p style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
+
+                <!-- 新聞大圖 (由 JS 控制顯示和 src) -->
+                <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; display: none; border-radius: 6px 6px 0 0;">
+
+                <!-- 文字內容容器 (用於 padding) -->
+                <div class="news-detail-text-content">
+                    <!-- 新聞標題 (由 JS 填充) -->
+                    <h1 id="news-detail-title"></h1>
+                    <!-- Meta 資訊：日期、更新時間 (由 JS 填充) -->
+                    <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;"></p>
+                    <!-- 新聞內文 (由 JS 填充) -->
+                    <div id="news-detail-body"></div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <!-- 頁腳 -->
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html">音樂專輯</a>
+                <a href="/news.html" class="active">最新消息</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2023 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript (Swiper 不再需要，因為沒有 Banner) -->
+    <!-- <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script> -->
+    <!-- 絕對路徑 JS -->
+    <script src="/news-detail.js"></script>
 </body>
 </html>
