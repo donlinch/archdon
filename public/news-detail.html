@@ -4,20 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SunnyYummy 新聞詳情</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css"> <!-- *** 修改這裡：加上 / *** -->
+  <!-- 檢查其他 head 內容中的相對路徑，例如 favicon -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon"> <!-- 通常已經是 / 開頭 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png"> <!-- 也要檢查 -->
+  <!-- Swiper CSS (如果是 CDN 連結則不用改) -->
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
   <!-- 其他 head 內容 -->
 </head>
 <body>
   <!-- Header -->
   <header>
-    <div id="banner-carousel" class="swiper banner-swiper">
-      <div class="swiper-wrapper" id="banner-wrapper">
-        <!-- 輪播圖將由 JS 載入 -->
-      </div>
-      <div class="swiper-pagination"></div>
-      <div class="swiper-button-prev"></div>
-      <div class="swiper-button-next"></div>
-    </div>
+   
   </header>
 
   <main>
@@ -28,13 +27,13 @@
     </nav>
 
     <article id="news-content-area" style="margin-top: 2rem;">
-      <p>正在載入新聞內容...</p>
-      <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; margin-bottom: 1rem; display: none;">
-      <h1 id="news-detail-title"></h1>
-      <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem;"></p>
-      <div id="news-detail-body" style="line-height: 1.7;"></div>
-    </article>
-  </main>
+        <p>正在載入新聞內容...</p>
+        <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; margin-bottom: 1rem; display: none;">
+        <h1 id="news-detail-title"></h1>
+        <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem;"></p>
+        <div id="news-detail-body" style="line-height: 1.7;"></div>
+      </article>
+    </main>
 
   <!-- Footer -->
   <footer>
@@ -51,7 +50,7 @@
   </footer>
 
   <!-- 引入必要的 JS -->
-  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-  <script src="news-detail.js"></script>
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script> <!-- CDN 不用改 -->
+  <script src="/news-detail.js"></script> <!-- *** 修改這裡：加上 / *** -->
 </body>
 </html>
