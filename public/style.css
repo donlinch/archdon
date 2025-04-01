@@ -95,7 +95,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 #news-detail-modal .detail-content { padding: 1.5rem 2rem 2rem 2rem; }
 #news-detail-modal .detail-title { font-size: 1.6rem; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
 #news-detail-modal .detail-meta { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
-#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; white-space: pre-wrap; }
+#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555;   }
 #news-detail-modal .close-btn { top: 15px; right: 15px; background-color: rgba(0,0,0,0.3); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; line-height: 1; padding: 0; text-align: center; }
  #news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
 
@@ -294,5 +294,97 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
      #news-detail-body {
         line-height: 1.8; /* 你原有的行高 */
         white-space: pre-wrap; /* 保留空白和換行 */
+    }
+}
+/* --- 新聞詳情頁面專用樣式 --- */
+.news-detail-text-content {
+    padding: 2rem;
+    line-height: 1.8; /* 增加行高 */
+}
+
+#news-detail-body {
+    font-size: 1rem;
+    color: #555;
+    line-height: 1.8; /* 增加行高 */
+}
+
+#news-detail-body p {
+    margin-bottom: 1.5rem; /* 增加段落間距 */
+}
+
+#news-detail-body img {
+    max-width: 100%;
+    height: auto;
+    margin: 1.5rem auto;
+    display: block;
+    border-radius: 6px;
+}
+
+#news-detail-body h2,
+#news-detail-body h3,
+#news-detail-body h4 {
+    margin: 2rem 0 1rem;
+    color: #333;
+    font-weight: 700;
+}
+
+#news-detail-body h2 {
+    font-size: 1.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+#news-detail-body h3 {
+    font-size: 1.3rem;
+}
+
+#news-detail-body h4 {
+    font-size: 1.1rem;
+}
+
+#news-detail-body ul,
+#news-detail-body ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+}
+
+#news-detail-body li {
+    margin-bottom: 0.5rem;
+}
+
+#news-detail-body blockquote {
+    border-left: 4px solid #FFB74D;
+    padding-left: 1.5rem;
+    margin: 1.5rem 0;
+    color: #666;
+    font-style: italic;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .news-detail-text-content {
+        padding: 1.5rem;
+    }
+    
+    #news-detail-title {
+        font-size: 1.5rem;
+    }
+    
+    #news-detail-body {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .news-detail-text-content {
+        padding: 1rem;
+    }
+    
+    #news-detail-title {
+        font-size: 1.3rem;
+    }
+    
+    #news-detail-body {
+        font-size: 0.9rem;
     }
 }
