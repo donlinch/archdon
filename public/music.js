@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (carouselElement) carouselElement.style.display = 'none';
             return;
         }
-
+ 
         // 顯示載中狀態
         bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
 

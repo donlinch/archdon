@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!grid) {
             console.error("商品格線元素未找到！");
             return;
-        }
+        } 
         grid.innerHTML = '<p>正在加載商品...</p>'; // 顯示加載訊息
 
         let apiUrl = '/api/products'; // 基本 API URL

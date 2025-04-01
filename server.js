@@ -12,7 +12,7 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
-
+ 
 // --- *** 基本認證中間件函數定義 (所有路由之前) *** ---
 const basicAuthMiddleware = (req, res, next) => {
     const adminUser = process.env.ADMIN_USERNAME || 'admin'; // 從 .env 讀取帳號
