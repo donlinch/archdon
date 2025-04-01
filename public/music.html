@@ -23,89 +23,8 @@
     <!-- 字體 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <style>
-        /* 唱片架風格 */
-        .music-container {
-            background: linear-gradient(to bottom, #f5f5f5 0%, #e0e0e0 100%);
-            padding: 2rem;
-            min-height: 70vh;
-        }
-        
-        .record-shelf {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 2rem;
-            perspective: 1000px;
-        }
-        
-        .record-item {
-            position: relative;
-            transition: all 0.3s ease;
-            transform-style: preserve-3d;
-        }
-        
-        .record-item:hover {
-            transform: translateY(-10px) rotateX(10deg);
-        }
-        
-        .record-cover {
-            width: 100%;
-            aspect-ratio: 1/1;
-            border-radius: 4px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            object-fit: cover;
-            transition: all 0.3s ease;
-        }
-        
-        .record-item:hover .record-cover {
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-        }
-        
-        .record-info {
-            position: absolute;
-            bottom: -40px;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 0.5rem;
-            opacity: 0;
-            transition: all 0.3s ease;
-            border-radius: 0 0 4px 4px;
-        }
-        
-        .record-item:hover .record-info {
-            opacity: 1;
-            bottom: -50px;
-        }
-        
-        .play-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.9);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .record-item:hover .play-button {
-            opacity: 1;
-        }
-        </style>
-        
-        <div class="music-container">
-            <div class="record-shelf" id="music-list">
-                <!-- 專輯將由 JavaScript 動態載入 -->
-            </div>
-        </div>
+     
+   
 </head>
 <body>
     <header>
@@ -127,14 +46,17 @@
             <a href="/news.html">最新消息</a>
         </nav>
 
+       
         <!-- 歌手篩選導覽列 -->
         <nav class="artist-filter-nav" id="artist-filter">
             <p>正在加載歌手列表...</p>
         </nav>
 
         <!-- 音樂專輯格線 -->
-        <div id="music-list">
-            <p>正在加載音樂專輯...</p>
+        <div class="music-container">
+            <div class="record-shelf" id="music-list">
+                <!-- 專輯將由 JavaScript 動態載入 -->
+            </div>
         </div>
     </main>
 
