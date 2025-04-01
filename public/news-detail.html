@@ -1,16 +1,57 @@
-<main>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SunnyYummy 新聞詳情</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- 其他 head 內容 -->
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div id="banner-carousel" class="swiper banner-swiper">
+      <div class="swiper-wrapper" id="banner-wrapper">
+        <!-- 輪播圖將由 JS 載入 -->
+      </div>
+      <div class="swiper-pagination"></div>
+      <div class="swiper-button-prev"></div>
+      <div class="swiper-button-next"></div>
+    </div>
+  </header>
+
+  <main>
     <nav class="category-nav">
-        <a href="/" >週邊商品</a>
-        <a href="/music.html" >音樂專輯</a>
-        <a href="/news.html" class="active" >最新消息</a> <!-- 這裡可以標示 active -->
+      <a href="/">週邊商品</a>
+      <a href="/music.html">音樂專輯</a>
+      <a href="/news.html" class="active">最新消息</a>
     </nav>
 
     <article id="news-content-area" style="margin-top: 2rem;">
-        <!-- 內容將由 JS 載入 -->
-        <p>正在載入新聞內容...</p>
-        <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; margin-bottom: 1rem; display: none;">
-        <h1 id="news-detail-title"></h1>
-        <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem;"></p>
-        <div id="news-detail-body" style="line-height: 1.7;"></div>
+      <p>正在載入新聞內容...</p>
+      <img src="" alt="" id="news-detail-image" style="max-width: 100%; height: auto; margin-bottom: 1rem; display: none;">
+      <h1 id="news-detail-title"></h1>
+      <p id="news-detail-meta" style="color: #888; font-size: 0.9em; margin-bottom: 1.5rem;"></p>
+      <div id="news-detail-body" style="line-height: 1.7;"></div>
     </article>
-</main>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <nav class="footer-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html" class="active">最新消息</a>
+      </nav>
+      <div class="footer-copyright">
+        <p>© 2023 SunnyYummy. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 引入必要的 JS -->
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+  <script src="news-detail.js"></script>
+</body>
+</html>

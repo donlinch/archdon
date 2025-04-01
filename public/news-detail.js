@@ -1,4 +1,4 @@
-// public/news-detail.js (示意)
+// public/news-detail.js
 document.addEventListener('DOMContentLoaded', async () => {
     const contentArea = document.getElementById('news-content-area');
     const detailImage = document.getElementById('news-detail-image');
@@ -56,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         detailBody.textContent = newsItem.content || '沒有詳細內容。';
         // 如果 content 可能包含換行，可以使用 pre-wrap 樣式或替換換行符為 <br>
         // detailBody.style.whiteSpace = 'pre-wrap';
-
 
     } catch (error) {
         console.error("載入新聞詳情失敗:", error);
