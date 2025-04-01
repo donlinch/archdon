@@ -200,12 +200,11 @@ app.get('/api/news', async (req, res) => {
     }
 });
 
-// GET a single news item by ID
+// API to get SINGLE news item data (JSON)
 app.get('/api/news/:id', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
     try {
-        // 在 SELECT 中也獲取 summary 和 thumbnail_url，以便管理介面可能需要
         const result = await pool.query('SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, updated_at FROM news WHERE id = $1', [id]);
         if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該消息。' }); }
         res.status(200).json(result.rows[0]);
@@ -232,8 +231,7 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- 受保護的管理頁面和 API Routes ---
 
 // 保護管理 HTML 頁面的訪問 (*** 確保包含 banner-admin.html ***)
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'], basicAuthMiddleware);
-
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html', '/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 // --- *** Traffic API 定義 *** ---
 // GET daily traffic data (受保護)
@@ -372,18 +370,7 @@ app.delete('/api/admin/banners/:id', basicAuthMiddleware, async (req, res) => { 
     }
 });
 
-// --- *** 新增：提供新聞詳情頁面的路由 *** ---
 
-app.use(express.static(path.join(__dirname, 'public')));
- 
-// 這個路由會匹配 /news/後面跟著數字ID的請求
-app.get('/news/:id(\\d+)', (req, res, next) => {
-    res.sendFile(path.join(__dirname, 'public', 'news-detail.html'));
-});
-
-app.use((req, res, next) => {
-    res.status(404).send('抱歉，找不到您要訪問的頁面。');
-});
 
 
 
@@ -491,7 +478,17 @@ app.delete('/api/news/:id', basicAuthMiddleware, async (req, res) => {
     } catch (err) { console.error(`刪除消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
 });
 
+// --- *** 新增：提供新聞詳情頁面的路由 *** ---
 
+  
+// 這個路由會匹配 /news/後面跟著數字ID的請求
+app.get('/news/:id(\\d+)', (req, res, next) => {
+    res.sendFile(path.join(__dirname, 'public', 'news-detail.html'));
+});
+
+app.use((req, res, next) => {
+    res.status(404).send('抱歉，找不到您要訪問的頁面。');
+});
 // --- 可選的 SPA Catch-all 路由 ---
 // ... (保持不變) ...
 /*
