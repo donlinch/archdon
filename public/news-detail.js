@@ -53,7 +53,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         detailMeta.textContent = metaText;
 
         // 使用 textContent 以防止 XSS，如果內容確定是安全的 HTML，可以用 innerHTML
-        detailBody.textContent = newsItem.content || '沒有詳細內容。';
+        if (newsItem.content) {
+            // 簡單處理換行符，替換為 <br> 或 <p>
+            const formattedContent = newsItem.content
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            detailBody.innerHTML = `<p>${formattedContent}</p>`;
+        } else {
+            detailBody.textContent = '沒有詳細內容。';
+        }
         // 如果 content 可能包含換行，可以使用 pre-wrap 樣式或替換換行符為 <br>
         // detailBody.style.whiteSpace = 'pre-wrap';
 
