@@ -23,6 +23,87 @@
     <!-- 字體 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
+    <style>
+        /* 播放器風格 */
+        .music-player-style {
+            background-color: #121212;
+            color: white;
+            padding: 2rem;
+            min-height: 80vh;
+        }
+        
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .album-card {
+            background: #282828;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .album-card:hover {
+            background: #383838;
+            transform: scale(1.03);
+        }
+        
+        .album-cover {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        
+        .album-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .album-artist {
+            color: #b3b3b3;
+            font-size: 0.9rem;
+        }
+        
+        .now-playing-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #181818;
+            border-top: 1px solid #282828;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .now-playing-cover {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            margin-right: 1rem;
+        }
+        
+        .now-playing-info {
+            flex-grow: 1;
+        }
+        
+        .now-playing-title {
+            font-weight: bold;
+        }
+        
+        .now-playing-artist {
+            color: #b3b3b3;
+            font-size: 0.9rem;
+        }
+        </style>
      
    
 </head>
