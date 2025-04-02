@@ -131,11 +131,12 @@ function renderSongList(songs) {
         let scoreButtonsHTML = '';
         if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
             scoreButtonsHTML = song.scores
-                .filter(score => score.type && score.pdf_url)
+                .filter(score => score.type && score.pdf_url && score.id) // 確保 score 有 ID
                 .map(score => `
                     <button class="action-btn score-type-btn list-score-btn"
                             data-song-id="${song.id}"
-                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            data-score-id="${score.id}" // *** 新增 data-score-id ***
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}" // 保留 pdf url 以備不時之需
                             title="查看 ${song.title} - ${score.type}">
                         ${score.type}
                     </button>
@@ -405,46 +406,19 @@ function handleArtistFilterClick(event) {
 
 function handleSongListItemClick(event) {
     const target = event.target;
-
     if (target.tagName === 'BUTTON' && target.classList.contains('list-score-btn')) {
         const songId = target.dataset.songId;
-        const encodedPdfUrl = target.dataset.pdfUrl;
+        const scoreId = target.dataset.scoreId; // *** 直接獲取 scoreId ***
 
-        if (songId && encodedPdfUrl && allSongsData) {
-            console.log(`樂譜按鈕點擊: Song ID ${songId}, PDF URL (encoded): ${encodedPdfUrl}`);
-
-            const songData = allSongsData.find(song => song.id.toString() === songId);
-
-            if (songData) {
-                const previousSongId = currentSongId;
-                currentSongId = parseInt(songId, 10);
-
-                // *** Only render song details if the song ID actually changed ***
-                if (previousSongId !== currentSongId) {
-                    renderSongDetail(songData); // This now sets display: flex
-                } else if (songDetailContainer.style.display === 'none') {
-                    // If clicking a different score for the *same* song, but the container was hidden, show it.
-                    songDetailContainer.style.display = 'flex';
-                    songDetailContainer.style.flexDirection = 'column';
-                }
-
-
-                // Update active states
-                document.querySelectorAll('.list-score-btn.active').forEach(btn => btn.classList.remove('active'));
-                target.classList.add('active');
-                document.querySelectorAll('#song-list li.active').forEach(li => li.classList.remove('active'));
-                target.closest('li')?.classList.add('active');
-
-                loadPdf(encodedPdfUrl); // Load the PDF
-            } else {
-                console.error(`找不到歌曲 ID ${songId} 的快取數據。`);
-            }
+        if (songId && scoreId) {
+            console.log(`偵測到點擊，跳轉至: /score-viewer.html?musicId=${songId}&scoreId=${scoreId}`);
+            window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
         } else {
-             console.warn('無法處理樂譜按鈕點擊：缺少 songId 或 pdfUrl 或 allSongsData。');
+             console.warn('無法處理樂譜按鈕點擊：缺少 songId 或 scoreId。');
+             alert('無法打開樂譜，按鈕數據不完整。');
         }
     }
 }
-
 
 function onPrevPage() {
     if (currentPageNum <= 1) return;
