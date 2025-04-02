@@ -227,15 +227,14 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 /* .music-list { width: 100%; margin-top: 1.5rem; } */
 /* .music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; } */
 /* ... (其他 .music-list-item 相關樣式，如果確認不用可以刪除) ... *//* PDF 檢視器容器 */
-#pdf-viewer-container {
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background-color: #f5f5f5;
-    margin-top: 1rem;
-    position: relative;
-    min-height: 500px;
-    max-height: 80vh;
-    overflow: auto;
+#pdf-viewer-container canvas {
+    display: block;
+    margin: 1rem auto;
+    max-width: 95%;
+    height: auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    /* *** 新增: 確保有白色背景 *** */
+    background-color: white;
 }
 
 /* PDF 畫布 */
@@ -296,61 +295,88 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     margin-top: 1rem; /* 和樂譜選擇器之間加點間距 */
 }
 /* 當 JS 添加 visible class 時顯示 */
-#song-detail-container.visible #pdf-viewer-container {
-    /* display: block;  <-- JS 會在 loadPdf 時設定 */
+#song-detail-container {
+    flex: 2 1 600px; /* flex-grow, flex-shrink, flex-basis */
+    display: flex; /* *** 改為 flex *** */
+    flex-direction: column; /* *** 新增: 垂直堆疊子元素 *** */
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    min-height: 600px; /* 可選: 設定最小高度 */
+    /* *** 使用 visibility 和 opacity 控制初始隱藏與動畫 *** */
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
+
+    /* YouTube 播放器樣式 (保持不變或微調) */
+#youtube-player {
+    margin-bottom: 1.5rem;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+#youtube-player iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 4px;
+}
 }
 
-#pdf-viewer-container canvas {
-    display: block;
-    margin: 1rem auto;
-    max-width: 95%;
-    height: auto;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    background-color: white; /* *** 給 Canvas 一個白色背景 *** */
+/* *** 新增 .visible class *** */
+#song-detail-container.visible {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out, visibility 0s linear 0s;
+}
+
+/* PDF 預覽區 */
+#pdf-viewer-container {
+    border: 1px solid #ddd;
+    max-height: 80vh;
+    overflow: auto;
+    background-color: #e8e8e8;
+    position: relative;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    /* *** 改為 flex 佈局 *** */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* *** 新增: 允許容器垂直增長 *** */
+    min-height: 400px; /* *** 新增: 避免完全摺疊 *** */
+    /* display: none; 由 JS 控制 */
 }
 
 #pdf-loading, #pdf-error {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
     color: #666;
-    font-size: 1.1em;
+    font-size: 1.1rem;
     padding: 1rem;
-    background-color: rgba(255, 255, 255, 0.9); /* 提高背景不透明度 */
-    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
     z-index: 10; /* 確保在 Canvas 上方 */
-    display: none; /* *** 確保初始隱藏 *** */
+    display: none; /* 由 JS 控制 */
 }
-#pdf-error { color: red; font-weight: bold; }
-
-/* PDF 分頁控制 */
+#pdf-error { color: red; }
+/* PDF 分頁 */
 #pdf-pagination {
     text-align: center;
     padding: 0.8rem 0;
     background-color: #f8f9fa;
     border-top: 1px solid #ddd;
-    display: none; /* *** 初始隱藏 *** */
-    /* 使用 Flexbox 讓按鈕和頁碼居中 */
+    /* *** 改為 flex 佈局 *** */
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px; /* 元素間距 */
+    flex-shrink: 0; /* *** 新增: 防止被壓縮 *** */
+    /* display: none; 由 JS 控制 */
 }
 #pdf-pagination button {
-     padding: 5px 10px;
-     margin: 0; /* 移除左右 margin */
-     cursor: pointer;
-     border: 1px solid #ccc;
-     border-radius: 4px;
+    padding: 5px 10px; margin: 0; cursor: pointer;
+    border: 1px solid #ccc; background-color: #fff; border-radius: 3px;
 }
- #pdf-pagination button:disabled {
-     opacity: 0.5;
-     cursor: not-allowed;
- }
- #pdf-pagination span {
-     margin: 0 5px;
-     font-size: 0.9em;
-     color: #555;
- }
+#pdf-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+#pdf-pagination span { margin: 0 5px; color: #555; font-size: 0.9em;}
