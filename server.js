@@ -197,13 +197,8 @@ app.get('/api/scores/proxy', (req, res) => {
              return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
         }
 
-        const contentType = pdfRes.headers['content-type'];
-        if (!contentType || !contentType.toLowerCase().startsWith('application/pdf')) {
-             console.warn(`對 ${decodedUrl} 的代理請求返回非 PDF 內容類型：${contentType}`);
-            res.setHeader('Content-Type', contentType || 'application/pdf');
-        } else {
-             res.setHeader('Content-Type', 'application/pdf');
-        }
+        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
+        res.setHeader('Content-Type', 'application/pdf');
 
         pdfRes.pipe(res);
 
