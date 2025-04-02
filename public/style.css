@@ -107,23 +107,50 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
 }
 
 
+.music-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+}
 /* 專輯網格佈局 (music.html) */
+
 .album-grid {
     display: grid;
-    /* ... grid-template-columns 和 gap ... */
+    /* 預設 (手機) 2 欄 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem; /* 可以根據視覺調整間距 */
+    width: 100%; /* 佔滿父容器寬度 */
+    max-width: 1100px; /* 與 main 寬度一致或稍小 */
+    padding: 0 1rem; /* 內部左右 padding */
+    box-sizing: border-box;
     margin-top: 1.5rem;
-    /* *** 添加 margin auto *** */
-    margin-left: auto;
+    margin-left: auto; /* 配合 max-width 實現居中 */
     margin-right: auto;
-    /* *** 確保有寬度限制，auto 才能生效 *** */
-    /* 例如：與 main 寬度一致或稍小 */
-    max-width: 1100px; /* 需要根據你的設計調整 */
-    padding: 0 1rem; /* 內部 padding */
-    width: 100%; /* 佔滿可用寬度，但受 max-width 限制 */
 }
-@media (min-width: 600px) { .album-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 900px) { .album-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (min-width: 1200px) { .album-grid { grid-template-columns: repeat(5, 1fr); gap: 1.8rem; } }
+
+/* 使用 Media Query 調整不同螢幕寬度下的欄數 */
+@media (min-width: 600px) {
+    .album-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem; /* 可調整平板間距 */
+    }
+}
+@media (min-width: 900px) {
+    .album-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem; /* 可調整桌面間距 */
+    }
+}
+@media (min-width: 1200px) {
+    .album-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1.8rem; /* 可調整寬螢幕間距 */
+    }
+}
+
+
+
 
 /* 專輯卡片樣式 (music.html) */
 .album-card { display: block; text-decoration: none; color: inherit; background-color: transparent; border-radius: 6px; overflow: visible; box-shadow: none; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; }
