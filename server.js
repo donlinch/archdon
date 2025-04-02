@@ -110,22 +110,35 @@ app.get('/api/scores/songs', async (req, res) => {
     const { artist } = req.query;
     try {
         let queryText = `
-            SELECT DISTINCT m.id, m.title, m.artist, m.cover_art_url, m.release_date /* 加入其他需要的欄位 */
+            SELECT DISTINCT
+                m.id,
+                m.title,
+                m.artist,
+                m.cover_art_url,
+                m.release_date,
+                m.youtube_video_id, -- 同時獲取 YouTube ID
+                COALESCE(
+                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
+                     FROM scores s
+                     WHERE s.music_id = m.id),
+                    '[]'::json
+                ) AS scores -- 將關聯的 scores 聚合成 JSON 陣列
             FROM music m
-            INNER JOIN scores s ON m.id = s.music_id
+            INNER JOIN scores s ON m.id = s.music_id -- 確保只返回有樂譜的歌曲
         `;
         const queryParams = [];
         if (artist && artist !== 'All') {
             queryText += ' WHERE m.artist = $1';
             queryParams.push(decodeURIComponent(artist));
         }
-        queryText += ' ORDER BY m.release_date DESC NULLS LAST, m.title ASC';
+        // *** 修改排序：先按歌手，再按發行日期/標題 ***
+        queryText += ' ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC';
 
         const result = await pool.query(queryText, queryParams);
-        res.json(result.rows);
+        res.json(result.rows); // 現在每首歌的 row 都會包含 scores 陣列
     } catch (err) {
-        console.error('獲取帶有樂譜的歌曲時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取帶有樂譜的歌曲時發生內部伺服器錯誤' });
+        console.error('獲取帶有樂譜的歌曲列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
     }
 });
 

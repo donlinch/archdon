@@ -85,96 +85,76 @@ async function fetchArtists() {
         artistFilterContainer.innerHTML = '<p style="color: red;">無法載入歌手列表。</p>';
     }
 }
-
+// --- 修改：獲取歌曲列表並快取 ---
 async function fetchSongs(artist = 'All') {
-     if (!songList) return;
-    songList.innerHTML = '<p>載入歌曲中...</p>';
-    currentSongId = null;
-    if (songDetailContainer) songDetailContainer.classList.remove('visible');
-    try {
-        const decodedArtist = decodeURIComponent(artist);
-        const url = decodedArtist === 'All' ? '/api/scores/songs' : `/api/scores/songs?artist=${artist}`;
-        const songs = await fetchApi(url, `Error fetching songs for artist ${decodedArtist}`);
-        renderSongList(songs);
-    } catch (error) {
-        songList.innerHTML = '<p style="color: red;">無法載入歌曲列表。</p>';
-    }
+    if (!songList) return;
+   songList.innerHTML = '<p>載入歌曲中...</p>';
+   currentSongId = null; // 清除當前顯示詳情的歌曲 ID
+   if (songDetailContainer) songDetailContainer.classList.remove('visible'); // 隱藏詳情區
+   try {
+       const decodedArtist = decodeURIComponent(artist);
+       const url = decodedArtist === 'All' ? '/api/scores/songs' : `/api/scores/songs?artist=${artist}`;
+       // *** 修改：將獲取的數據存儲到 allSongsData ***
+       allSongsData = await fetchApi(url, `Error fetching songs for artist ${decodedArtist}`);
+       renderSongList(allSongsData); // 使用快取的數據渲染
+   } catch (error) {
+       songList.innerHTML = '<p style="color: red;">無法載入歌曲列表。</p>';
+       allSongsData = []; // 清空快取
+   }
 }
 
-async function fetchSongDetail(songId) {
-     const requiredElements = [songDetailContainer, songInfo, youtubePlayerContainer, scoreSelectorContainer, pdfViewerContainer];
-     if (requiredElements.some(el => !el)) {
-         console.error("獲取歌曲詳情所需的 DOM 元素不完整。");
-         return;
-     }
-    if (currentSongId === songId) {
-        console.log("已顯示此歌曲:", songId);
-        return;
-    }
+ 
 
-    currentSongId = songId;
-    songInfo.textContent = '載入歌曲詳情中...';
-    youtubePlayerContainer.innerHTML = '';
-    scoreSelectorContainer.innerHTML = '';
-    pdfViewerContainer.style.display = 'none';
-    if(pdfError) pdfError.style.display = 'none';
-    if(pdfLoading) pdfLoading.style.display = 'none';
-    if(pdfPagination) pdfPagination.style.display = 'none';
-    songDetailContainer.classList.add('visible');
-
-    document.querySelectorAll('#song-list li').forEach(li => {
-        li.classList.toggle('active', li.dataset.songId === songId.toString());
-    });
-
-    try {
-        const song = await fetchApi(`/api/music/${songId}`, `Error fetching song detail for id ${songId}`);
-        renderSongDetail(song);
-
-        // 不再自動載入第一個樂譜
-        if (song.scores && song.scores.length > 0) {
-             console.log(`歌曲 ${songId} 包含 ${song.scores.length} 個樂譜。等待使用者選擇。`);
-        } else {
-             console.log(`歌曲 ${songId} 沒有樂譜。`);
-             pdfViewerContainer.style.display = 'none';
-        }
-
-    } catch (error) {
-        songInfo.textContent = '無法載入歌曲詳情。';
-        console.error('Song Detail Fetch Error:', error);
-    }
-}
-
-// --- 渲染函數 ---
-function renderArtistFilters(artists) {
-     if (!artistFilterContainer) return;
-     const decodedCurrentArtist = decodeURIComponent(currentArtist);
-    let buttonsHTML = `<button class="artist-filter-btn ${decodedCurrentArtist === 'All' ? 'active' : ''}" data-artist="All">全部歌手</button>`;
-    artists.forEach(artist => {
-        const encodedArtist = encodeURIComponent(artist);
-        buttonsHTML += `<button class="artist-filter-btn ${decodedCurrentArtist === artist ? 'active' : ''}" data-artist="${encodedArtist}">${artist}</button>`;
-    });
-    artistFilterContainer.innerHTML = buttonsHTML;
-}
-
+// --- 修改：渲染歌曲列表，直接包含樂譜按鈕 ---
 function renderSongList(songs) {
-     if (!songList) return;
+    if (!songList) return;
     if (!songs || !Array.isArray(songs) || songs.length === 0) {
         songList.innerHTML = '<p>此分類下沒有包含樂譜的歌曲。</p>';
         return;
     }
-    songList.innerHTML = songs.map(song => `
-        <li data-song-id="${song.id}">
-            <span class="song-title">${song.title || '未知標題'}</span>
-            <span class="song-artist">${song.artist || '未知歌手'}</span>
-        </li>
-    `).join('');
+    songList.innerHTML = songs.map(song => {
+        // 為每首歌生成樂譜按鈕 HTML
+        let scoreButtonsHTML = '';
+        if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
+            scoreButtonsHTML = song.scores
+                .filter(score => score.type && score.pdf_url) // 過濾無效數據
+                .map(score => `
+                    <button class="action-btn score-type-btn list-score-btn"
+                            data-song-id="${song.id}"
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            title="查看 ${song.title} - ${score.type}">
+                        ${score.type}
+                    </button>
+                `).join('');
+        } else {
+            scoreButtonsHTML = '<span style="font-size: 0.8em; color: #999;">(無可用樂譜)</span>';
+        }
+
+        // 在 li 中加入按鈕區塊
+        return `
+            <li data-song-id="${song.id}" class="${currentSongId === song.id ? 'active' : ''}">
+                <div class="song-list-info">
+                     <span class="song-title">${song.title || '未知標題'}</span>
+                     <span class="song-artist">${song.artist || '未知歌手'}</span>
+                 </div>
+                 <div class="song-list-scores">
+                     ${scoreButtonsHTML}
+                 </div>
+            </li>
+        `;
+    }).join('');
 }
 
+// --- 修改：渲染歌曲詳情（只顯示標題和 YouTube） ---
 function renderSongDetail(song) {
-    if (!songInfo || !youtubePlayerContainer || !scoreSelectorContainer) return;
+    if (!songInfo || !youtubePlayerContainer || !songDetailContainer) return;
+
+    // *** 清空舊的樂譜選擇器，因為按鈕現在在列表裡了 ***
+    if (scoreSelectorContainer) scoreSelectorContainer.innerHTML = '';
 
     songInfo.textContent = `${song.title || '未知標題'} - ${song.artist || '未知歌手'}`;
 
+    // 渲染 YouTube 播放器
     if (song.youtube_video_id) {
         youtubePlayerContainer.innerHTML = `
             <iframe
@@ -185,29 +165,13 @@ function renderSongDetail(song) {
                 referrerpolicy="strict-origin-when-cross-origin"
                 allowfullscreen>
             </iframe>`;
+         youtubePlayerContainer.style.display = 'block'; // 確保 YouTube 容器可見
     } else {
         youtubePlayerContainer.innerHTML = '<p>此歌曲沒有可用的 YouTube 影片。</p>';
+         youtubePlayerContainer.style.display = 'block'; // 顯示提示訊息
     }
-
-    if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
-        const scoreButtonsHTML = song.scores
-            .filter(score => score.type && score.pdf_url)
-            .map(score => `
-            <button class="action-btn score-type-btn" data-pdf-url="${encodeURIComponent(score.pdf_url)}">
-                ${score.type}
-            </button>
-        `).join('');
-
-        if (scoreButtonsHTML) {
-             scoreSelectorContainer.innerHTML = `<h3>選擇樂譜類型:</h3> ${scoreButtonsHTML}`;
-        } else {
-             scoreSelectorContainer.innerHTML = '<p>此歌曲沒有可用的樂譜連結。</p>';
-             if(pdfViewerContainer) pdfViewerContainer.style.display = 'none';
-        }
-    } else {
-        scoreSelectorContainer.innerHTML = '<p>此歌曲沒有可用的樂譜。</p>';
-        if(pdfViewerContainer) pdfViewerContainer.style.display = 'none';
-    }
+     // 確保詳情容器可見
+     songDetailContainer.classList.add('visible');
 }
 
 // --- PDF.js 相關函數 ---
@@ -363,24 +327,52 @@ function handleArtistFilterClick(event) {
     }
 }
 
-function handleSongListItemClick(event) {
-    const listItem = event.target.closest('li[data-song-id]');
-    if (listItem) {
-        const songId = listItem.dataset.songId;
-        if(songId) fetchSongDetail(songId);
-    }
-}
+ 
 
-function handleScoreButtonClick(event) {
+
+// --- 修改：歌曲列表點擊處理 (現在主要由樂譜按鈕處理) ---
+function handleSongListItemClick(event) {
     const target = event.target;
-    if (target && target.tagName === 'BUTTON' && target.classList.contains('score-type-btn')) {
-        if (!scoreSelectorContainer) return;
-        scoreSelectorContainer.querySelectorAll('.score-type-btn').forEach(btn => btn.classList.remove('active'));
-        target.classList.add('active');
+
+    // 檢查是否點擊了樂譜按鈕
+    if (target.tagName === 'BUTTON' && target.classList.contains('list-score-btn')) {
+        const songId = target.dataset.songId;
         const encodedPdfUrl = target.dataset.pdfUrl;
-        if(encodedPdfUrl) loadPdf(encodedPdfUrl);
+
+        if (songId && encodedPdfUrl) {
+            console.log(`Score button clicked: Song ID ${songId}, PDF URL (encoded): ${encodedPdfUrl}`);
+
+            // 從快取的 allSongsData 中找到對應的歌曲數據
+            const songData = allSongsData.find(song => song.id.toString() === songId);
+
+            if (songData) {
+                currentSongId = parseInt(songId, 10); // 更新當前顯示詳情的歌曲 ID
+                renderSongDetail(songData); // 顯示歌曲標題和 YouTube
+
+                 // 移除所有按鈕的 active 狀態
+                 document.querySelectorAll('.list-score-btn.active').forEach(btn => btn.classList.remove('active'));
+                 // 給當前按鈕添加 active 狀態
+                 target.classList.add('active');
+                 // 移除所有列表項的 active 狀態
+                 document.querySelectorAll('#song-list li.active').forEach(li => li.classList.remove('active'));
+                  // 給父列表項添加 active 狀態
+                 target.closest('li')?.classList.add('active');
+
+
+                loadPdf(encodedPdfUrl); // 載入 PDF
+            } else {
+                console.error(`找不到歌曲 ID ${songId} 的快取數據。`);
+                 // 可能需要重新 fetchSongDetail(songId) 作為後備
+            }
+        }
     }
-}
+    }
+
+
+
+
+
+
 
 function onPrevPage() {
     if (currentPageNum <= 1) return;
@@ -393,23 +385,20 @@ function onNextPage() {
     currentPageNum++;
     queueRenderPage(currentPageNum);
 }
-
-// --- 初始化 ---
+// --- 初始化 (保持不變) ---
 document.addEventListener('DOMContentLoaded', () => {
-    const essentialElements = [artistFilterContainer, songList, scoreSelectorContainer, pdfPrevBtn, pdfNextBtn, pdfPagination, pdfCanvas, pdfViewerContainer, pdfLoading, pdfError, pdfPageNum, pdfPageCount];
+    const essentialElements = [artistFilterContainer, songList, /*scoreSelectorContainer,*/ pdfPrevBtn, pdfNextBtn, pdfPagination, pdfCanvas, pdfViewerContainer, pdfLoading, pdfError, pdfPageNum, pdfPageCount]; // 移除了 scoreSelectorContainer 的必要性檢查
     if (essentialElements.some(el => !el)) {
         console.error("頁面初始化失敗：缺少必要的 DOM 元素。請檢查 HTML 結構和 ID 是否正確。");
         if(document.body) document.body.innerHTML = '<p style="color:red; padding: 2rem; text-align: center;">頁面載入錯誤，缺少必要的元件。</p>';
         return;
     }
-
     fetchArtists();
-    fetchSongs('All'); // 預設載入所有歌曲
+    fetchSongs('All');
 
-    // --- 事件監聽器綁定 ---
     artistFilterContainer.addEventListener('click', handleArtistFilterClick);
-    songList.addEventListener('click', handleSongListItemClick);
-    scoreSelectorContainer.addEventListener('click', handleScoreButtonClick);
+    songList.addEventListener('click', handleSongListItemClick); // *** 修改：現在列表的點擊主要處理樂譜按鈕 ***
+    // scoreSelectorContainer.removeEventListener('click', handleScoreButtonClick); // *** 移除舊的監聽器 ***
     pdfPrevBtn.addEventListener('click', onPrevPage);
     pdfNextBtn.addEventListener('click', onNextPage);
 });
