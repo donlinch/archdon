@@ -94,8 +94,8 @@ async function fetchSongs(artist = 'All') {
     if (!songList) return;
     songList.innerHTML = '<p>載入歌曲中...</p>';
     currentSongId = null;
-    // *** CHANGE: Hide details when fetching new list ***
-    if (songDetailContainer) songDetailContainer.classList.remove('visible');
+    // *** CHANGE: Use display: none to hide ***
+    if (songDetailContainer) songDetailContainer.style.display = 'none';
     try {
         const decodedArtist = decodeURIComponent(artist);
         const url = decodedArtist === 'All' ? '/api/scores/songs' : `/api/scores/songs?artist=${artist}`;
@@ -106,7 +106,6 @@ async function fetchSongs(artist = 'All') {
         allSongsData = []; // 出錯時清空
     }
 }
-
 // --- 渲染函數 ---
 function renderArtistFilters(artists) {
      if (!artistFilterContainer) return;
@@ -160,15 +159,15 @@ function renderSongList(songs) {
 function renderSongDetail(song) {
     if (!songInfo || !youtubePlayerContainer || !songDetailContainer) return;
 
-    // Reset/hide PDF viewer elements when changing songs
-    if (pdfViewerContainer) pdfViewerContainer.style.display = 'none'; // Hide viewer initially
+    // Reset/hide PDF viewer elements when changing songs (Keep this logic)
+    if (pdfViewerContainer) pdfViewerContainer.style.display = 'none';
     if (pdfCanvas) pdfCanvas.style.display = 'none';
     if (pdfPagination) pdfPagination.style.display = 'none';
     if (pdfLoading) pdfLoading.style.display = 'none';
     if (pdfError) pdfError.style.display = 'none';
-    currentPdfDoc = null; // Reset PDF document
+    currentPdfDoc = null;
 
-    if (scoreSelectorContainer) scoreSelectorContainer.innerHTML = ''; // Clear old score buttons if any
+    if (scoreSelectorContainer) scoreSelectorContainer.innerHTML = '';
 
     songInfo.textContent = `${song.title || '未知標題'} - ${song.artist || '未知歌手'}`;
 
@@ -185,12 +184,15 @@ function renderSongDetail(song) {
         youtubePlayerContainer.style.display = 'block';
     } else {
         youtubePlayerContainer.innerHTML = '<p>此歌曲沒有可用的 YouTube 影片。</p>';
-        youtubePlayerContainer.style.display = 'block'; // Still show the message container
+        youtubePlayerContainer.style.display = 'block';
     }
 
-    // ** CHANGE HERE: Toggle visibility class **
-    songDetailContainer.classList.add('visible');
-    // songDetailContainer.style.display = 'flex'; // Remove this direct style setting
+    // ** CHANGE HERE: Set display to flex directly **
+    songDetailContainer.style.display = 'flex';
+    songDetailContainer.style.flexDirection = 'column'; // Ensure direction is set
+
+    // Remove the class if it was added previously
+    songDetailContainer.classList.remove('visible');
 }
 
 
@@ -402,7 +404,6 @@ function handleArtistFilterClick(event) {
 function handleSongListItemClick(event) {
     const target = event.target;
 
-    // 檢查是否點擊了樂譜按鈕
     if (target.tagName === 'BUTTON' && target.classList.contains('list-score-btn')) {
         const songId = target.dataset.songId;
         const encodedPdfUrl = target.dataset.pdfUrl;
@@ -416,18 +417,23 @@ function handleSongListItemClick(event) {
                 const previousSongId = currentSongId;
                 currentSongId = parseInt(songId, 10);
 
-                // 只有在歌曲 ID 改變時才重新渲染歌曲詳情 (YouTube)
+                // *** Only render song details if the song ID actually changed ***
                 if (previousSongId !== currentSongId) {
-                     renderSongDetail(songData);
+                    renderSongDetail(songData); // This now sets display: flex
+                } else if (songDetailContainer.style.display === 'none') {
+                    // If clicking a different score for the *same* song, but the container was hidden, show it.
+                    songDetailContainer.style.display = 'flex';
+                    songDetailContainer.style.flexDirection = 'column';
                 }
 
-                // 更新按鈕和列表項的 active 狀態
+
+                // Update active states
                 document.querySelectorAll('.list-score-btn.active').forEach(btn => btn.classList.remove('active'));
                 target.classList.add('active');
                 document.querySelectorAll('#song-list li.active').forEach(li => li.classList.remove('active'));
                 target.closest('li')?.classList.add('active');
 
-                loadPdf(encodedPdfUrl); // 總是載入對應的 PDF
+                loadPdf(encodedPdfUrl); // Load the PDF
             } else {
                 console.error(`找不到歌曲 ID ${songId} 的快取數據。`);
             }
@@ -436,6 +442,7 @@ function handleSongListItemClick(event) {
         }
     }
 }
+
 
 function onPrevPage() {
     if (currentPageNum <= 1) return;
