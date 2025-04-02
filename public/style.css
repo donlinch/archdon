@@ -115,7 +115,7 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
 }
 /* 專輯網格佈局 (music.html) */
 
-.a.album-grid {
+.album-grid {
     display: grid;
     /* 預設 (手機) 2 欄 */
     grid-template-columns: repeat(2, 1fr);
