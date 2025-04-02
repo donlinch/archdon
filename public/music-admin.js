@@ -1,198 +1,398 @@
 // public/music-admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References (修改選擇器 ID) ---
-    const albumListBody = document.querySelector('#album-list-table tbody'); // *** 修改 ID ***
-    const albumListContainer = document.getElementById('album-list-container'); // *** 修改 ID ***
-    const albumTable = document.getElementById('album-list-table'); // *** 修改 ID ***
+    // --- DOM 元素引用 ---
+    const albumListBody = document.querySelector('#album-list-table tbody');
+    const albumListContainer = document.getElementById('album-list-container');
+    const albumTable = document.getElementById('album-list-table');
     const loadingMessage = albumListContainer ? albumListContainer.querySelector('p') : null;
 
-    // --- Edit Modal elements (修改 ID) ---
-    const editModal = document.getElementById('edit-music-modal'); // *** 修改 ID ***
-    const editForm = document.getElementById('edit-music-form'); // *** 修改 ID ***
-    const editMusicId = document.getElementById('edit-music-id'); // *** 修改 ID ***
-    const editMusicTitle = document.getElementById('edit-music-title'); // *** 修改 ID ***
-    const editMusicArtist = document.getElementById('edit-music-artist'); // *** 修改 ID ***
-    const editMusicReleaseDate = document.getElementById('edit-music-release-date'); // *** 新增 ***
-    const editMusicDescription = document.getElementById('edit-music-description'); // *** 修改 ID ***
-    const editMusicCoverUrl = document.getElementById('edit-music-cover-url'); // *** 修改 ID ***
-    const editCoverPreview = document.getElementById('edit-cover-preview'); // *** 修改 ID ***
-    const editMusicPlatformUrl = document.getElementById('edit-music-platform-url'); // *** 修改 ID ***
-    // const editProductClickCount = ...; // *** 移除點擊次數相關 ***
-    const editFormError = document.getElementById('edit-music-form-error'); // *** 修改 ID ***
+    // --- 編輯 Modal 元素 ---
+    const editModal = document.getElementById('edit-music-modal');
+    const editForm = document.getElementById('edit-music-form');
+    const editMusicId = document.getElementById('edit-music-id');
+    const editMusicTitle = document.getElementById('edit-music-title');
+    const editMusicArtist = document.getElementById('edit-music-artist');
+    const editMusicReleaseDate = document.getElementById('edit-music-release-date');
+    const editMusicDescription = document.getElementById('edit-music-description');
+    const editMusicCoverUrl = document.getElementById('edit-music-cover-url');
+    const editCoverPreview = document.getElementById('edit-cover-preview');
+    const editMusicPlatformUrl = document.getElementById('edit-music-platform-url');
+    const editMusicYoutubeId = document.getElementById('edit-music-youtube-id'); // 新增
+    const editScoresContainer = document.getElementById('edit-scores-container'); // 新增
+    const editFormError = document.getElementById('edit-music-form-error');
 
-    // --- Add Modal elements (修改 ID) ---
-    const addModal = document.getElementById('add-music-modal'); // *** 修改 ID ***
-    const addForm = document.getElementById('add-music-form'); // *** 修改 ID ***
-    const addMusicTitle = document.getElementById('add-music-title'); // *** 修改 ID ***
-    const addMusicArtist = document.getElementById('add-music-artist'); // *** 修改 ID ***
-    const addMusicReleaseDate = document.getElementById('add-music-release-date'); // *** 新增 ***
-    const addMusicDescription = document.getElementById('add-music-description'); // *** 修改 ID ***
-    const addMusicCoverUrl = document.getElementById('add-music-cover-url'); // *** 修改 ID ***
-    // const addImagePreview = ...; // Add modal HTML 中沒有預覽 ID
-    const addMusicPlatformUrl = document.getElementById('add-music-platform-url'); // *** 修改 ID ***
-    const addFormError = document.getElementById('add-music-form-error'); // *** 修改 ID ***
+    // --- 新增 Modal 元素 ---
+    const addModal = document.getElementById('add-music-modal');
+    const addForm = document.getElementById('add-music-form');
+    const addMusicTitle = document.getElementById('add-music-title');
+    const addMusicArtist = document.getElementById('add-music-artist');
+    const addMusicReleaseDate = document.getElementById('add-music-release-date');
+    const addMusicDescription = document.getElementById('add-music-description');
+    const addMusicCoverUrl = document.getElementById('add-music-cover-url');
+    const addCoverPreview = document.getElementById('add-cover-preview'); // 確保 HTML 中有此 ID
+    const addMusicPlatformUrl = document.getElementById('add-music-platform-url');
+    const addMusicYoutubeId = document.getElementById('add-music-youtube-id'); // 新增
+    const addScoresContainer = document.getElementById('add-scores-container'); // 新增
+    const addFormError = document.getElementById('add-music-form-error');
 
-    // --- Function to Fetch and Display ALL Music in the Table ---
-    async function fetchAndDisplayMusic() { // *** 修改函數名 ***
-        if (!albumListBody || !albumListContainer || !albumTable) { /* ... 錯誤處理 ... */ return; }
+    // --- 預覽圖片功能 (新增/編輯共用) ---
+    function setupImagePreview(inputElement, previewElement) {
+        if (inputElement && previewElement) {
+            inputElement.addEventListener('input', () => {
+                const url = inputElement.value.trim();
+                previewElement.src = url; // 先設置 src
+                if (url) {
+                    previewElement.style.display = 'block';
+                    // onerror 必須在 src 設置之後才能正確觸發
+                    previewElement.onerror = () => {
+                        console.warn("圖片預覽失敗，URL:", url);
+                        previewElement.style.display = 'none';
+                        previewElement.src = ''; // 清空無效 src
+                    };
+                } else {
+                    previewElement.style.display = 'none';
+                    previewElement.src = '';
+                }
+            });
+            // 初始檢查一次
+            const initialUrl = inputElement.value.trim();
+             if (initialUrl) {
+                 previewElement.src = initialUrl;
+                 previewElement.style.display = 'block';
+                 previewElement.onerror = () => { previewElement.style.display = 'none'; previewElement.src = ''; };
+             } else {
+                 previewElement.style.display = 'none';
+             }
+        } else {
+             console.warn("圖片預覽設定失敗：找不到輸入元素或預覽元素。 Input:", inputElement, "Preview:", previewElement);
+        }
+    }
+    // 在 DOMContentLoaded 後調用
+    setupImagePreview(addMusicCoverUrl, addCoverPreview);
+    setupImagePreview(editMusicCoverUrl, editCoverPreview);
+
+
+    // --- 新增：動態添加樂譜輸入行的函數 ---
+    // 將其掛載到 window 上，以便 HTML 中的 onclick 可以調用
+    window.addScoreInputRow = function(modalPrefix) {
+        const container = document.getElementById(`${modalPrefix}-scores-container`);
+        if (!container) {
+            console.error(`找不到樂譜容器： #${modalPrefix}-scores-container`);
+            return;
+        }
+        const scoreIndex = container.children.length; // 用於區分 name 屬性
+        const div = document.createElement('div');
+        div.classList.add('score-input-row');
+        // **注意 name 屬性的格式：scores[index][fieldName]**
+        div.innerHTML = `
+            <input type="hidden" name="scores[${scoreIndex}][id]" value=""> <!-- 用於編輯時傳遞現有 score ID -->
+            <input type="text" name="scores[${scoreIndex}][type]" placeholder="樂譜類型 (例: 鋼琴譜)" style="flex: 1;" required>
+            <input type="url" name="scores[${scoreIndex}][pdf_url]" placeholder="PDF 網址 (https://...)" style="flex: 2;" required>
+            <input type="number" name="scores[${scoreIndex}][display_order]" value="0" title="排序 (數字越小越前)" style="width: 70px; text-align: center;" required>
+            <button type="button" onclick="this.parentElement.remove()" title="移除此樂譜">移除</button> <!-- 添加 title 提示 -->
+        `;
+        container.appendChild(div);
+    }
+
+
+    // --- 獲取並顯示所有音樂 ---
+    async function fetchAndDisplayMusic() {
+        if (!albumListBody || !albumListContainer || !albumTable || !loadingMessage) {
+            console.error("音樂列表的 DOM 元素不完整。");
+            return;
+        }
         try {
-            if (loadingMessage) loadingMessage.style.display = 'block';
-            if (albumTable) albumTable.style.display = 'none';
+            loadingMessage.style.display = 'block';
+            loadingMessage.textContent = '正在加載音樂...'; // 確保顯示載入訊息
+            albumTable.style.display = 'none';
+            albumListBody.innerHTML = ''; // 清空舊內容
 
-            const response = await fetch('/api/music'); // *** 修改 API URL ***
-            if (!response.ok) throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
-            const musicList = await response.json(); // *** 修改變數名 ***
+            const response = await fetch('/api/music');
+            if (!response.ok) {
+                throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
+            }
+            const musicList = await response.json();
 
-            if (loadingMessage) loadingMessage.style.display = 'none';
-            if (albumTable) albumTable.style.display = 'table';
-            albumListBody.innerHTML = '';
+            loadingMessage.style.display = 'none'; // 隱藏載入訊息
 
             if (musicList.length === 0) {
-                albumListBody.innerHTML = '<tr><td colspan="6">目前沒有音樂項目。</td></tr>'; // *** 修改 Colspan ***
+                albumTable.style.display = 'table'; // 顯示表格框架
+                albumListBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1rem;">目前沒有音樂項目。</td></tr>';
                 return;
             }
 
-            musicList.forEach(music => { // *** 修改變數名 ***
+            albumTable.style.display = 'table'; // 顯示表格
+            musicList.forEach(music => {
                 const row = document.createElement('tr');
-                row.dataset.musicId = music.id; // *** 修改 dataset ***
-                // *** 修改 row.innerHTML 以匹配音樂欄位 ***
+                row.dataset.musicId = music.id;
+                const releaseDateFormatted = music.release_date
+                    ? new Date(music.release_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                    : 'N/A';
                 row.innerHTML = `
                     <td>${music.id}</td>
-                    <td>${music.title || ''}</td>
-                    <td>${music.artist || ''}</td>
-                    <td>${music.release_date ? new Date(music.release_date).toLocaleDateString() : 'N/A'}</td> <!-- 格式化日期 -->
-                    <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                    <td title="${music.title || ''}">${music.title || ''}</td> <!-- 添加 title 提示完整名稱 -->
+                    <td title="${music.artist || ''}">${music.artist || ''}</td>
+                    <td>${releaseDateFormatted}</td>
+                    <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''} 封面" style="max-width: 60px; max-height: 60px; height: auto; border: 1px solid #eee; object-fit: contain; display: block; margin: auto;"></td> <!-- 圖片居中顯示 -->
                     <td>
-                        <button class="action-btn edit-btn" onclick="editMusic(${music.id})">編輯</button> <!-- *** 修改 onclick *** -->
-                        <button class="action-btn delete-btn" onclick="deleteMusic(${music.id})">刪除</button> <!-- *** 修改 onclick *** -->
+                        <button class="action-btn edit-btn" onclick="window.editMusic(${music.id})">編輯</button> <!-- 使用 window. 前綴確保全局可見 -->
+                        <button class="action-btn delete-btn" onclick="window.deleteMusic(${music.id})">刪除</button> <!-- 使用 window. 前綴確保全局可見 -->
                     </td>
                 `;
                 albumListBody.appendChild(row);
             });
-        } catch (error) { console.error("獲取管理音樂列表失敗:", error); /* ... 錯誤處理 ... */ }
+        } catch (error) {
+            console.error("獲取管理音樂列表失敗:", error);
+            if(loadingMessage) loadingMessage.textContent = '無法載入音樂列表。';
+            albumTable.style.display = 'none'; // 隱藏表格
+        }
     }
 
-    // --- Function to Open and Populate the Edit Music Modal ---
-    async function openEditMusicModal(id) { // *** 修改函數名 ***
-         const requiredEditElements = [editModal, editForm, editMusicId, editMusicTitle, editMusicArtist, editMusicReleaseDate, editMusicDescription, editMusicCoverUrl, editCoverPreview, editMusicPlatformUrl, editFormError]; // *** 更新檢查列表 ***
-         if (requiredEditElements.some(el => !el)) { /* ... 報錯 ... */ return; }
-         editFormError.textContent = ''; editForm.reset(); editCoverPreview.style.display = 'none'; editCoverPreview.src = ''; // *** 修改預覽 ID ***
 
-         try {
-             const response = await fetch(`/api/music/${id}`); // *** 修改 API URL ***
-             if (!response.ok) { if (response.status === 404) throw new Error('找不到該音樂項目。'); throw new Error(`無法獲取音樂資料 (HTTP ${response.status})`); }
-             const music = await response.json(); // *** 修改變數名 ***
+    // --- 開啟並填充編輯音樂 Modal ---
+    async function openEditMusicModal(id) {
+        const requiredEditElements = [editModal, editForm, editMusicId, editMusicTitle, editMusicArtist, editMusicReleaseDate, editMusicDescription, editMusicCoverUrl, editCoverPreview, editMusicPlatformUrl, editMusicYoutubeId, editScoresContainer, editFormError];
+        if (requiredEditElements.some(el => !el)) {
+            console.error("編輯 Modal 的必要元素缺失。Elements:", {editModal, editForm, editMusicId, editMusicTitle, editMusicArtist, editMusicReleaseDate, editMusicDescription, editMusicCoverUrl, editCoverPreview, editMusicPlatformUrl, editMusicYoutubeId, editScoresContainer, editFormError});
+            alert("無法開啟編輯視窗，頁面元件錯誤。請檢查控制台。");
+            return;
+        }
+        editFormError.textContent = '';
+        editForm.reset();
+        editCoverPreview.src = ''; // 清空 src
+        editCoverPreview.style.display = 'none'; // 預設隱藏
+        editScoresContainer.innerHTML = ''; // 清空舊的樂譜行
 
-             // *** 填充音樂表單欄位 ***
-             editMusicId.value = music.id;
-             editMusicTitle.value = music.title || '';
-             editMusicArtist.value = music.artist || '';
-             // 處理日期格式 (需要 YYYY-MM-DD)
-             editMusicReleaseDate.value = music.release_date ? music.release_date.split('T')[0] : '';
-             editMusicDescription.value = music.description || '';
-             editMusicCoverUrl.value = music.cover_art_url || '';
-             editMusicPlatformUrl.value = music.platform_url || '';
-             // *** 移除點擊次數填充 ***
+        try {
+            const response = await fetch(`/api/music/${id}`);
+            if (!response.ok) {
+                if (response.status === 404) throw new Error('找不到該音樂項目。');
+                throw new Error(`無法獲取音樂資料 (HTTP ${response.status})`);
+            }
+            const music = await response.json();
 
-             if (music.cover_art_url) { editCoverPreview.src = music.cover_art_url; editCoverPreview.style.display = 'block'; } // *** 修改預覽 ID 和 src ***
-             else { editCoverPreview.style.display = 'none'; }
-             editModal.style.display = 'flex';
-         } catch (error) { console.error(`獲取音樂 ${id} 進行編輯時出錯:`, error); alert(`無法載入編輯資料： ${error.message}`); }
+            // 填充基礎音樂資訊
+            editMusicId.value = music.id;
+            editMusicTitle.value = music.title || '';
+            editMusicArtist.value = music.artist || '';
+            editMusicReleaseDate.value = music.release_date ? music.release_date.split('T')[0] : '';
+            editMusicDescription.value = music.description || '';
+            editMusicCoverUrl.value = music.cover_art_url || '';
+            editMusicPlatformUrl.value = music.platform_url || '';
+            editMusicYoutubeId.value = music.youtube_video_id || ''; // 填充 YouTube ID
+
+            // 觸發封面預覽更新
+            setupImagePreview(editMusicCoverUrl, editCoverPreview);
+            const event = new Event('input'); // 手動觸發 input 事件來顯示初始圖片
+            editMusicCoverUrl.dispatchEvent(event);
+
+
+            // 填充現有樂譜
+            if (music.scores && Array.isArray(music.scores)) {
+                music.scores.forEach((score, index) => {
+                    // 確保 addScoreInputRow 在 window 上
+                    if (typeof window.addScoreInputRow === 'function') {
+                        window.addScoreInputRow('edit'); // 添加空的輸入行結構
+                        const row = editScoresContainer.children[index]; // 獲取剛添加的行
+                        if (row) {
+                            // 填充數據
+                            row.querySelector('input[name^="scores"][name$="[id]"]').value = score.id || '';
+                            row.querySelector('input[name^="scores"][name$="[type]"]').value = score.type || '';
+                            row.querySelector('input[name^="scores"][name$="[pdf_url]"]').value = score.pdf_url || '';
+                            row.querySelector('input[name^="scores"][name$="[display_order]"]').value = score.display_order !== undefined ? score.display_order : 0;
+                        } else {
+                             console.error(`無法找到索引為 ${index} 的樂譜輸入行。`);
+                        }
+                    } else {
+                        console.error('addScoreInputRow 函數未定義在 window 上。');
+                    }
+                });
+            }
+
+            editModal.style.display = 'flex'; // 顯示 Modal
+        } catch (error) {
+            console.error(`獲取音樂 ${id} 進行編輯時出錯:`, error);
+            alert(`無法載入編輯資料： ${error.message}`);
+        }
     }
 
-    // --- Function to Close the Edit Music Modal ---
-    window.closeEditMusicModal = function() { if (editModal) { editModal.style.display = 'none'; } } // *** 修改函數名 ***
+    // --- 關閉編輯/新增 Modal 的函數 ---
+    window.closeEditMusicModal = function() { if (editModal) { editModal.style.display = 'none'; } }
+    window.closeAddMusicModal = function() { if (addModal) { addModal.style.display = 'none'; } }
 
-    // --- Function to Close the Add Music Modal ---
-    window.closeAddMusicModal = function() { if (addModal) { addModal.style.display = 'none'; } } // *** 修改函數名 ***
-
-    // --- Attach Edit Function to Global Scope ---
-    window.editMusic = function(id) { openEditMusicModal(id); }; // *** 修改函數名 ***
-
-    // --- Attach Delete Function to Global Scope ---
-    window.deleteMusic = async function(id) { // *** 修改函數名 ***
-        if (confirm(`確定要刪除音樂 ID: ${id} 嗎？`)) {
+    // --- 將函數掛載到 window 以便 HTML onclick 調用 ---
+    window.editMusic = openEditMusicModal; // 直接賦值函數引用
+    window.deleteMusic = async function(id) {
+        if (confirm(`確定要刪除音樂 ID: ${id} 嗎？此操作也會刪除關聯的樂譜。`)) {
             try {
-                const response = await fetch(`/api/music/${id}`, { method: 'DELETE' }); // *** 修改 API URL ***
+                const response = await fetch(`/api/music/${id}`, { method: 'DELETE' });
                 if (response.status === 204 || response.ok) {
-                    await fetchAndDisplayMusic(); // *** 修改調用函數 ***
+                    console.log(`音樂 ID ${id} 已刪除。`);
+                    await fetchAndDisplayMusic();
                 } else {
-                    let errorMsg = `刪除失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { errorMsg = `${errorMsg}: ${response.statusText}`; } throw new Error(errorMsg);
+                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) { /*忽略解析錯誤*/ }
+                    throw new Error(errorMsg);
                 }
-            } catch (error) { alert(`刪除時發生錯誤：${error.message}`); }
+            } catch (error) {
+                alert(`刪除時發生錯誤：${error.message}`);
+                console.error(`刪除音樂 ID ${id} 時出錯:`, error);
+            }
         }
     };
-
-    // --- Attach Show Add Form Function to Global Scope ---
-    window.showAddMusicForm = function() { // *** 修改函數名 ***
-        const requiredAddElements = [addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addFormError]; // *** 更新檢查列表 ***
-        if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤，無法開啟。"); return; }
-        addFormError.textContent = ''; addForm.reset(); addModal.style.display = 'flex';
+    window.showAddMusicForm = function() {
+        const requiredAddElements = [addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addMusicYoutubeId, addScoresContainer, addFormError, addCoverPreview]; // 添加 addCoverPreview
+        if (requiredAddElements.some(el => !el)) {
+             console.error("新增 Modal 的必要元素缺失。Elements:", {addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addMusicYoutubeId, addScoresContainer, addFormError, addCoverPreview});
+             alert("新增視窗元件錯誤，無法開啟。請檢查控制台。");
+             return;
+        }
+        addFormError.textContent = '';
+        addForm.reset();
+        addScoresContainer.innerHTML = ''; // 清空樂譜區
+        addCoverPreview.src = ''; // 清空預覽 src
+        addCoverPreview.style.display = 'none'; // 隱藏預覽
+        addModal.style.display = 'flex';
     }
 
-    // --- Close Modals if User Clicks Outside ---
-    window.onclick = function(event) { if (event.target == editModal) { closeEditMusicModal(); } else if (event.target == addModal) { closeAddMusicModal(); } } // *** 修改調用函數 ***
+    // --- 點擊 Modal 外部關閉 ---
+    window.onclick = function(event) {
+        if (event.target == editModal) { closeEditMusicModal(); }
+        else if (event.target == addModal) { closeAddMusicModal(); }
+    }
 
-    // --- Edit Music Form Submission Listener ---
+    // --- 表單提交處理函數 (共用邏輯) ---
+    async function handleFormSubmit(event, isEditMode) {
+        event.preventDefault();
+        const form = event.target;
+        const modalPrefix = isEditMode ? 'edit' : 'add';
+        const formErrorElement = document.getElementById(`${modalPrefix}-music-form-error`);
+        formErrorElement.textContent = ''; // 清除舊錯誤
+
+        const musicId = isEditMode ? document.getElementById('edit-music-id').value : null;
+
+        // --- 收集樂譜數據 ---
+        const scoresContainer = document.getElementById(`${modalPrefix}-scores-container`);
+        const scoreRows = scoresContainer.querySelectorAll('.score-input-row');
+        const scores = [];
+        let scoreValidationError = false;
+
+        scoreRows.forEach(row => {
+            if (scoreValidationError) return; // 如果前面已有錯誤，不再處理後續行
+
+            const idInput = row.querySelector('input[name^="scores"][name$="[id]"]');
+            const typeInput = row.querySelector('input[name^="scores"][name$="[type]"]');
+            const urlInput = row.querySelector('input[name^="scores"][name$="[pdf_url]"]');
+            const orderInput = row.querySelector('input[name^="scores"][name$="[display_order]"]');
+
+            const typeValue = typeInput.value.trim();
+            const urlValue = urlInput.value.trim();
+
+            // 只有當類型和 URL 都填寫時才加入，並進行基本驗證
+            if (typeValue || urlValue) { // 只要填了其中一個就進行驗證
+                 if (!typeValue) {
+                     formErrorElement.textContent = '樂譜類型不能為空 (如果已填寫 URL)。';
+                     typeInput.focus();
+                     scoreValidationError = true;
+                     return;
+                 }
+                 if (!urlValue || !(urlValue.startsWith('https://') || urlValue.startsWith('http://'))) { // 允許 http 和 https
+                     formErrorElement.textContent = '請輸入有效的 PDF 網址 (需以 http:// 或 https:// 開頭)。';
+                     urlInput.focus();
+                     scoreValidationError = true;
+                     return;
+                 }
+                scores.push({
+                    id: isEditMode && idInput && idInput.value ? parseInt(idInput.value, 10) : undefined, // 編輯模式下才傳送 ID
+                    type: typeValue,
+                    pdf_url: urlValue,
+                    display_order: parseInt(orderInput.value, 10) || 0
+                });
+             }
+        });
+
+        if (scoreValidationError) return; // 如果樂譜驗證失敗，停止提交
+        // --- 樂譜數據收集結束 ---
+
+        // 收集基礎音樂數據
+        const formData = {
+             title: form.elements['title'].value.trim(),
+             artist: form.elements['artist'].value.trim(),
+             release_date: form.elements['release_date'].value || null,
+             description: form.elements['description'].value.trim(),
+             cover_art_url: form.elements['cover_art_url'].value.trim() || null,
+             platform_url: form.elements['platform_url'].value.trim() || null,
+             youtube_video_id: form.elements['youtube_video_id'] ? form.elements['youtube_video_id'].value.trim() || null : null,
+             scores: scores // 加入收集到的樂譜陣列
+        };
+
+        // 基礎數據驗證
+        if (!formData.title) { formErrorElement.textContent = '專輯標題不能為空。'; return; }
+        if (!formData.artist) { formErrorElement.textContent = '歌手名稱不能為空。'; return; }
+        const isValidUrl = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+        // 放寬封面和平台連結的驗證，允許相對路徑
+        if (formData.cover_art_url && !isValidUrl(formData.cover_art_url)) { formErrorElement.textContent = '封面圖片路徑格式不正確 (應為 / 開頭或 http(s):// 開頭)。'; return; }
+        if (formData.platform_url && !(formData.platform_url.startsWith('http://') || formData.platform_url.startsWith('https://'))) { formErrorElement.textContent = '平台連結格式不正確 (需以 http(s):// 開頭)。'; return; }
+        // 可選：驗證 YouTube ID 格式 (例如：檢查長度或字符)
+         if (formData.youtube_video_id && !/^[a-zA-Z0-9_-]{11}$/.test(formData.youtube_video_id)) {
+             formErrorElement.textContent = 'YouTube 影片 ID 格式不正確 (應為 11 位字符)。'; return;
+         }
+
+
+        // --- 發送請求 ---
+        const apiUrl = isEditMode ? `/api/music/${musicId}` : '/api/music';
+        const method = isEditMode ? 'PUT' : 'POST';
+        const successAction = isEditMode ? '更新' : '新增';
+        const errorAction = isEditMode ? '儲存' : '新增';
+
+        try {
+            console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2)); // 調試用
+            const response = await fetch(apiUrl, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (!response.ok) {
+                let errorMsg = `${successAction}失敗 (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) { /* 忽略解析錯誤 */ }
+                throw new Error(errorMsg);
+            }
+
+            console.log(`音樂 ${successAction}成功。`);
+            if (isEditMode) {
+                closeEditMusicModal();
+            } else {
+                closeAddMusicModal();
+            }
+            await fetchAndDisplayMusic(); // 重新載入列表
+
+        } catch (error) {
+            formErrorElement.textContent = `${errorAction}錯誤：${error.message}`;
+            console.error(`${errorAction}音樂時發生錯誤:`, error);
+        }
+    }
+
+    // --- 綁定表單提交事件 ---
     if (editForm) {
-        editForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); editFormError.textContent = ''; const musicId = editMusicId.value; if (!musicId) { /* ... 報錯 ... */ return; }
-            // *** 收集音樂表單數據 ***
-            const updatedData = {
-                 title: editMusicTitle.value.trim(),
-                 artist: editMusicArtist.value.trim(),
-                 release_date: editMusicReleaseDate.value || null, // 直接取 date input 的值
-                 description: editMusicDescription.value.trim(),
-                 cover_art_url: editMusicCoverUrl.value.trim() || null,
-                 platform_url: editMusicPlatformUrl.value.trim() || null
-            };
-            // *** 驗證音樂數據 ***
-            if (!updatedData.title) { editFormError.textContent = '專輯標題不能為空。'; return; }
-            if (!updatedData.artist) { editFormError.textContent = '歌手名稱不能為空。'; return; }
-            // 可以添加更嚴格的日期驗證
-            const isValidUrl = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
-            if (!isValidUrl(updatedData.cover_art_url)) { editFormError.textContent = '封面圖片路徑格式不正確。'; return; }
-            if (!isValidUrl(updatedData.platform_url)) { editFormError.textContent = '平台連結格式不正確。'; return; }
+        editForm.addEventListener('submit', (event) => handleFormSubmit(event, true));
+    } else {
+        console.error("編輯音樂表單元素未找到。");
+    }
 
-            try { // *** 發送 PUT 請求到 /api/music/:id ***
-                const response = await fetch(`/api/music/${musicId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) });
-                if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
-                closeEditMusicModal(); // *** 修改調用函數 ***
-                await fetchAndDisplayMusic(); // *** 修改調用函數 ***
-            } catch (error) { editFormError.textContent = `儲存錯誤：${error.message}`; }
-        });
-    } else { console.error("編輯音樂表單元素未找到。"); }
-
-    // --- Add Music Form Submission Listener ---
     if (addForm) {
-        addForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); addFormError.textContent = '';
-            // *** 收集新增音樂表單數據 ***
-            const newMusicData = {
-                title: addMusicTitle.value.trim(),
-                artist: addMusicArtist.value.trim(),
-                release_date: addMusicReleaseDate.value || null,
-                description: addMusicDescription.value.trim(),
-                cover_art_url: addMusicCoverUrl.value.trim() || null,
-                platform_url: addMusicPlatformUrl.value.trim() || null
-            };
-            // *** 驗證新增音樂數據 ***
-             if (!newMusicData.title) { addFormError.textContent = '專輯標題不能為空。'; return; }
-             if (!newMusicData.artist) { addFormError.textContent = '歌手名稱不能為空。'; return; }
-             const isValidUrl = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
-             if (!isValidUrl(newMusicData.cover_art_url)) { addFormError.textContent = '封面圖片路徑格式不正確。'; return; }
-             if (!isValidUrl(newMusicData.platform_url)) { addFormError.textContent = '平台連結格式不正確。'; return; }
+        addForm.addEventListener('submit', (event) => handleFormSubmit(event, false));
+    } else {
+        console.error("新增音樂表單元素未找到。");
+    }
 
-            try { // *** 發送 POST 請求到 /api/music ***
-                const response = await fetch(`/api/music`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMusicData) });
-                if (!response.ok) { let errorMsg = `新增失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
-                closeAddMusicModal(); // *** 修改調用函數 ***
-                await fetchAndDisplayMusic(); // *** 修改調用函數 ***
-            } catch (error) { addFormError.textContent = `新增錯誤：${error.message}`; }
-        });
-    } else { console.error("新增音樂表單元素未找到。"); }
-
-    // --- Initial Load ---
-    fetchAndDisplayMusic(); // *** 修改調用函數 ***
+    // --- 初始載入 ---
+    fetchAndDisplayMusic(); // 頁面載入時獲取音樂列表
 
 }); // End of DOMContentLoaded

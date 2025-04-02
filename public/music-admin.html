@@ -44,7 +44,44 @@
           #edit-cover-preview, #add-cover-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; } /* *** 修改 ID *** */
           #edit-cover-preview[src], #add-cover-preview[src] { display: block; } /* *** 修改 ID *** */
           #edit-music-form-error, #add-music-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; } /* *** 修改 ID *** */
-      </style>
+     /* --- 新增：樂譜輸入行樣式 --- */
+     .score-input-row {
+              display: flex;
+              gap: 10px; /* 輸入框之間的間距 */
+              margin-bottom: 10px; /* 每行樂譜之間的間距 */
+              align-items: center; /* 垂直居中對齊 */
+          }
+          .score-input-row input[type="text"],
+          .score-input-row input[type="url"] {
+              flex-grow: 1; /* 讓類型和網址輸入框自動填滿空間 */
+          }
+          .score-input-row input[name$="[type]"] {
+              flex-basis: 150px; /* 給類型一個基礎寬度 */
+              min-width: 120px;
+          }
+           .score-input-row input[name$="[pdf_url]"] {
+               flex-basis: 250px; /* 給網址一個基礎寬度 */
+                min-width: 200px;
+           }
+          .score-input-row input[name$="[display_order]"] {
+              width: 70px; /* 固定排序輸入框寬度 */
+              text-align: center;
+          }
+          .score-input-row button { /* 移除按鈕樣式 */
+              padding: 5px 8px;
+              background-color: #dc3545; /* 紅色 */
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              height: fit-content; /* 讓按鈕高度自適應 */
+              align-self: center; /* 垂直居中 */
+              flex-shrink: 0; /* 防止按鈕被壓縮 */
+          }
+          /* --- 樂譜樣式結束 --- */
+     
+     
+     </style>
   </head>
   <body>
       <!-- *** 新增: 管理分頁導覽 *** -->
@@ -95,6 +132,25 @@
                   <div class="form-group"> <label for="add-music-description">專輯描述:</label> <textarea id="add-music-description" name="description" rows="3"></textarea> </div>
                   <div class="form-group"> <label for="add-music-cover-url">封面圖片路徑:</label> <input type="text" id="add-music-cover-url" name="cover_art_url" placeholder="例如: /images/album.jpg"> <img id="add-cover-preview" src="" alt="封面預覽"> </div>
                   <div class="form-group"> <label for="add-music-platform-url">平台連結 (可選):</label> <input type="url" id="add-music-platform-url" name="platform_url" placeholder="https://..."> </div>
+                  
+                   <!-- *** 新增 YouTube ID 輸入框 *** -->
+                   <div class="form-group">
+                    <label for="add-music-youtube-id">YouTube 影片 ID (可選):</label>
+                    <input type="text" id="add-music-youtube-id" name="youtube_video_id" placeholder="例如: dQw4w9WgXcQ">
+                    <small>只需貼上影片網址最後面的 ID 部分。</small>
+                </div>
+                <!-- *** 新增 樂譜管理區塊 *** -->
+                <div class="form-group">
+                    <label>樂譜 (可選):</label>
+                    <div id="add-scores-container">
+                        <!-- 樂譜輸入行會由 JS 在此處添加 -->
+                    </div>
+                    <button type="button" class="action-btn" onclick="addScoreInputRow('add')" style="background-color: #6c757d; color: white; margin-top: 5px; border:none;">+ 新增樂譜</button>
+                </div>
+                <!-- *** 樂譜管理區塊結束 *** -->
+                  
+                  
+                  
                   <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddMusicModal()">取消</button> </div> <!-- *** 修改 onclick *** -->
                   <p id="add-music-form-error"></p> <!-- *** 修改 ID *** -->
               </form>
@@ -115,7 +171,25 @@
                   <div class="form-group"> <label for="edit-music-description">專輯描述:</label> <textarea id="edit-music-description" name="description" rows="3"></textarea> </div>
                   <div class="form-group"> <label for="edit-music-cover-url">封面圖片路徑:</label> <input type="text" id="edit-music-cover-url" name="cover_art_url"> <img id="edit-cover-preview" src="" alt="封面預覽"> </div>
                   <div class="form-group"> <label for="edit-music-platform-url">平台連結:</label> <input type="url" id="edit-music-platform-url" name="platform_url"> </div>
-                  <!-- *** 移除 Edit Modal 中的點擊次數顯示 (通常不在這裡編輯) *** -->
+                   <!-- *** 新增 YouTube ID 輸入框 *** -->
+                   <div class="form-group">
+                    <label for="edit-music-youtube-id">YouTube 影片 ID (可選):</label>
+                    <input type="text" id="edit-music-youtube-id" name="youtube_video_id" placeholder="例如: dQw4w9WgXcQ">
+                    <small>只需貼上影片網址最後面的 ID 部分。</small>
+                </div>
+                <!-- *** 新增 樂譜管理區塊 *** -->
+                 <div class="form-group">
+                    <label>樂譜 (可選):</label>
+                    <div id="edit-scores-container">
+                        <!-- 編輯時，JS 會填充這裡 -->
+                    </div>
+                    <button type="button" class="action-btn" onclick="addScoreInputRow('edit')" style="background-color: #6c757d; color: white; margin-top: 5px; border:none;">+ 新增樂譜</button>
+                </div>
+                <!-- *** 樂譜管理區塊結束 *** -->
+                   
+                  
+                  
+                
                   <div class="form-actions"> <button type="submit" class="action-btn save-btn">儲存變更</button> <button type="button" class="action-btn cancel-btn" onclick="closeEditMusicModal()">取消</button> </div> <!-- *** 修改 onclick *** -->
                   <p id="edit-music-form-error"></p> <!-- *** 修改 ID *** -->
               </form>

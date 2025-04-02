@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 樂譜中心</title>
+    <meta name="description" content="查找 SunnyYummy 歌曲的樂譜，包括吉他譜、鋼琴譜等。">
+    <!-- 絕對路徑 CSS -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- Favicon and PWA icons (使用絕對路徑) -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- PDF.js CSS (可選, 用於文字層/註釋，如果需要選取文字等功能) -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css"> -->
+    <style>
+        /* --- Score Page Specific Styles --- */
+        main { padding-bottom: 3rem; } /* 避免被 footer 遮擋 */
+        .content-container {
+            display: flex;
+            flex-wrap: wrap; /* 在小螢幕上換行 */
+            gap: 2rem;
+            margin-top: 1.5rem;
+            align-items: flex-start; /* 頂部對齊 */
+        }
+
+        /* 歌曲列表容器 */
+        #song-list-container {
+            flex: 1 1 300px; /* flex-grow, flex-shrink, flex-basis */
+            min-width: 250px; /* 最小寬度 */
+            background: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            max-height: 75vh; /* 限制最大高度 */
+            display: flex;
+            flex-direction: column;
+        }
+        #song-list-container h2 {
+             margin-top: 0;
+             margin-bottom: 1rem;
+             font-size: 1.2rem;
+             color: #555;
+             border-bottom: 1px solid #eee;
+             padding-bottom: 0.5rem;
+         }
+        #song-list {
+            list-style: none;
+            padding: 0;
+            margin: 0; /* 清除 ul 的預設 margin */
+            overflow-y: auto; /* 列表內部滾動 */
+            flex-grow: 1; /* 佔滿剩餘空間 */
+        }
+        #song-list li {
+            padding: 0.8rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s ease;
+             display: flex; /* 使用 flex 排列標題和歌手 */
+             justify-content: space-between; /* 將標題和歌手推到兩端 */
+             align-items: center;
+        }
+        #song-list li:last-child { border-bottom: none; }
+        #song-list li:hover { background-color: #f1f1f1; }
+        #song-list li.active {
+            background-color: #FFB74D; /* 主題色 */
+            color: #424242; /* 深色文字 */
+            font-weight: bold;
+        }
+         #song-list li.active .song-artist { /* Active 狀態下歌手文字顏色 */
+            color: #616161;
+         }
+        #song-list .song-title {
+             font-weight: 500; /* 中等粗細 */
+             flex-grow: 1; /* 標題佔據主要空間 */
+             margin-right: 1rem; /* 和歌手名稱之間留點空隙 */
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+        }
+        #song-list .song-artist {
+            font-size: 0.85em;
+            color: #757575;
+            flex-shrink: 0; /* 防止歌手名稱被壓縮 */
+        }
+        #song-list-container #song-list-loading,
+         #song-list-container #song-list-error {
+             padding: 1rem;
+             text-align: center;
+             color: #888;
+        }
+         #song-list-container #song-list-error { color: red; }
+
+        /* 歌曲詳情容器 */
+        #song-detail-container {
+            flex: 2 1 600px; /* flex-grow, flex-shrink, flex-basis */
+            display: none; /* 初始隱藏 */
+             background: #fff;
+             padding: 1.5rem;
+             border-radius: 6px;
+             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        #song-info {
+             margin-top: 0;
+             margin-bottom: 1.5rem;
+             font-size: 1.5rem;
+             font-weight: 700;
+             color: #333;
+             padding-bottom: 1rem;
+             border-bottom: 1px solid #eee;
+         }
+        #youtube-player { margin-bottom: 1.5rem; }
+        #youtube-player iframe {
+            width: 100%;
+            aspect-ratio: 16 / 9; /* 保持 16:9 比例 */
+            border: none;
+            border-radius: 4px; /* 輕微圓角 */
+        }
+        #score-selector { margin-bottom: 1rem; }
+        #score-selector h3 { margin-bottom: 0.8rem; font-size: 1.1rem; color: #555; }
+        #score-selector button.score-type-btn { /* 複用 .action-btn */
+             padding: 6px 12px;
+             margin-right: 8px;
+             margin-bottom: 8px;
+             cursor: pointer;
+             border: 1px solid #B0BEC5;
+             background-color: #fff;
+             color: #555;
+             border-radius: 4px;
+             transition: all 0.2s ease;
+             font-size: 0.9rem;
+        }
+         #score-selector button.score-type-btn:hover {
+            background-color: #ECEFF1;
+            border-color: #78909C;
+        }
+        #score-selector button.score-type-btn.active {
+             background-color: #E57373; /* 強調色 */
+             color: white;
+             border-color: #E57373;
+             font-weight: bold;
+         }
+
+        /* PDF 預覽區 */
+        #pdf-viewer-container {
+            border: 1px solid #ddd;
+            min-height: 500px; /* 確保有最小高度 */
+            max-height: 80vh; /* 最大高度，超出會滾動 */
+            overflow: auto; /* 內部滾動 */
+            background-color: #e8e8e8; /* 淺灰背景 */
+            position: relative; /* 相對定位，用於放置載入/錯誤訊息 */
+             border-radius: 4px;
+             margin-bottom: 0.5rem; /* 和分頁按鈕間留空隙 */
+        }
+        #pdf-viewer-container canvas {
+             display: block; /* 避免下方多餘空隙 */
+             margin: 1rem auto; /* 水平居中並留出上下邊距 */
+             max-width: 95%; /* 限制最大寬度 */
+             height: auto; /* 高度自適應 */
+             box-shadow: 0 0 10px rgba(0,0,0,0.1); /* 輕微陰影 */
+         }
+        #pdf-loading, #pdf-error {
+             position: absolute;
+             top: 50%; left: 50%;
+             transform: translate(-50%, -50%);
+             text-align: center;
+             color: #666;
+             font-size: 1.1rem;
+             padding: 1rem;
+             background-color: rgba(255, 255, 255, 0.8);
+             border-radius: 4px;
+         }
+        #pdf-error { color: red; }
+
+        /* PDF 分頁 */
+        #pdf-pagination { text-align: center; margin-top: 0.8rem; }
+        #pdf-pagination button {
+             padding: 5px 10px; margin: 0 5px; cursor: pointer;
+             border: 1px solid #ccc; background-color: #fff; border-radius: 3px;
+         }
+        #pdf-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #pdf-pagination span { margin: 0 5px; color: #555; }
+
+         /* Artist Filter 樣式 (可複用 music.html 的) */
+        .artist-filter-nav {
+             display: flex;
+             justify-content: center;
+             flex-wrap: wrap;
+             gap: 0.6rem 1rem;
+             margin: 1.5rem 0;
+             padding-bottom: 1rem;
+             border-bottom: 1px solid #eee;
+         }
+        .artist-filter-nav button.artist-filter-btn {
+             padding: 0.4rem 0.8rem;
+             border: 1px solid #B0BEC5;
+             border-radius: 15px;
+             background-color: transparent;
+             color: #757575;
+             cursor: pointer;
+             font-size: 0.9rem;
+             transition: all 0.2s ease;
+         }
+        .artist-filter-nav button.artist-filter-btn:hover {
+             background-color: #ECEFF1;
+             border-color: #78909C;
+             color: #424242;
+         }
+        .artist-filter-nav button.artist-filter-btn.active {
+             background-color: #E57373;
+             color: white;
+             border-color: #E57373;
+             font-weight: bold;
+         }
+
+    </style>
+</head>
+<body>
+    <header>
+         <!-- 簡單標題 -->
+         <div style="background-color: #FFB74D; padding: 1rem; text-align: center;">
+             <h1 style="color: #424242; margin: 0;">SunnyYummy 樂譜中心</h1>
+         </div>
+    </header>
+
+    <main>
+        <!-- 分類導覽 -->
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html" class="active">樂譜中心</a>
+        </nav>
+
+        <!-- 歌手篩選區 -->
+        <nav class="artist-filter-nav" id="artist-filter">
+            <p id="artist-loading-msg">正在載入歌手列表...</p>
+        </nav>
+
+        <!-- 主要內容容器 -->
+        <div class="content-container">
+            <!-- 歌曲列表區 -->
+            <div id="song-list-container">
+                <h2>歌曲列表</h2>
+                <ul id="song-list">
+                    <p id="song-list-loading">選擇歌手以查看歌曲...</p>
+                    <p id="song-list-error" style="display: none; color: red;"></p>
+                </ul>
+            </div>
+
+            <!-- 歌曲詳情區 (初始隱藏) -->
+            <div id="song-detail-container">
+                <h2 id="song-info">請先從左側選擇歌曲</h2>
+                <!-- YouTube 播放器容器 -->
+                <div id="youtube-player">
+                    <!-- YouTube iframe 會動態插入這裡 -->
+                </div>
+                <!-- 樂譜選擇器 -->
+                <div id="score-selector">
+                    <h3>選擇樂譜類型:</h3>
+                    <!-- 樂譜類型按鈕/列表會動態插入這裡 -->
+                    <p id="score-loading-msg" style="display: none;">載入樂譜選項...</p>
+                    <p id="score-error-msg" style="display: none; color: red;"></p>
+                </div>
+                <!-- PDF 預覽容器 -->
+                <div id="pdf-viewer-container" style="display: none;">
+                    <div id="pdf-loading" style="display: none;">正在載入樂譜...</div>
+                    <div id="pdf-error" style="display: none;">無法載入樂譜。</div>
+                    <canvas id="pdf-canvas"></canvas>
+                    <!-- PDF 分頁控制 -->
+                    <div id="pdf-pagination" style="display: none;">
+                       <button id="pdf-prev" disabled>< 上一頁</button>
+                       <span>第 <span id="pdf-page-num"></span> / <span id="pdf-page-count"></span> 頁</span>
+                       <button id="pdf-next" disabled>下一頁 ></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <!-- 頁腳內容 -->
+         <div class="footer-container">
+             <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html">音樂專輯</a>
+                <a href="/news.html">最新消息</a>
+                <a href="/scores.html" class="active">樂譜中心</a>
+             </nav>
+            <div class="footer-copyright">
+                <p>© 2024 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PDF.js 函式庫 (使用 ES Module 版本) -->
+    <script src="//mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+
+    <!-- 你的自訂腳本 (也使用 ES Module) -->
+    <script src="/scores.js" type="module"></script>
+</body>
+</html>
