@@ -108,7 +108,19 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
 
 
 /* 專輯網格佈局 (music.html) */
-.album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; padding: 0 1rem; margin-top: 1.5rem; }
+.album-grid {
+    display: grid;
+    /* ... grid-template-columns 和 gap ... */
+    margin-top: 1.5rem;
+    /* *** 添加 margin auto *** */
+    margin-left: auto;
+    margin-right: auto;
+    /* *** 確保有寬度限制，auto 才能生效 *** */
+    /* 例如：與 main 寬度一致或稍小 */
+    max-width: 1100px; /* 需要根據你的設計調整 */
+    padding: 0 1rem; /* 內部 padding */
+    width: 100%; /* 佔滿可用寬度，但受 max-width 限制 */
+}
 @media (min-width: 600px) { .album-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 900px) { .album-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1200px) { .album-grid { grid-template-columns: repeat(5, 1fr); gap: 1.8rem; } }
