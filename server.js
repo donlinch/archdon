@@ -109,33 +109,48 @@ app.get('/api/scores/artists', async (req, res) => {
 app.get('/api/scores/songs', async (req, res) => {
     const { artist } = req.query;
     try {
+        // *** 修改後的 SQL 查詢 ***
         let queryText = `
-            SELECT DISTINCT
+            SELECT
                 m.id,
                 m.title,
                 m.artist,
                 m.cover_art_url,
                 m.release_date,
-                m.youtube_video_id, -- 同時獲取 YouTube ID
-                COALESCE(
-                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
-                     FROM scores s
-                     WHERE s.music_id = m.id),
-                    '[]'::json
-                ) AS scores -- 將關聯的 scores 聚合成 JSON 陣列
-            FROM music m
-            INNER JOIN scores s ON m.id = s.music_id -- 確保只返回有樂譜的歌曲
+                m.youtube_video_id,
+                s_agg.scores
+            FROM (
+                -- 先選出符合條件且有樂譜的獨立歌曲 ID
+                SELECT DISTINCT m_inner.id
+                FROM music m_inner
+                INNER JOIN scores s_inner ON m_inner.id = s_inner.music_id
         `;
         const queryParams = [];
+        let paramIndex = 1; // 用於參數化查詢
+
         if (artist && artist !== 'All') {
-            queryText += ' WHERE m.artist = $1';
+            queryText += ` WHERE m_inner.artist = $${paramIndex++}`;
             queryParams.push(decodeURIComponent(artist));
         }
-        // *** 修改排序：先按歌手，再按發行日期/標題 ***
-        queryText += ' ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC';
+
+        // 將子查詢的 DISTINCT 結果與 music 和聚合後的 scores JOIN
+        queryText += `
+            ) AS distinct_music
+            JOIN music m ON m.id = distinct_music.id
+            LEFT JOIN LATERAL ( -- 使用 LATERAL JOIN 和子查詢來聚合 scores
+                SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC) AS scores
+                FROM scores s
+                WHERE s.music_id = m.id
+            ) s_agg ON true
+            ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC;
+        `;
+        // *** SQL 查詢修改結束 ***
+
+        console.log("Executing query:", queryText.replace(/\s+/g, ' '), "with params:", queryParams); // 打印查詢語句和參數
 
         const result = await pool.query(queryText, queryParams);
-        res.json(result.rows); // 現在每首歌的 row 都會包含 scores 陣列
+        res.json(result.rows); // 返回包含 scores 陣列的歌曲列表
+
     } catch (err) {
         console.error('獲取帶有樂譜的歌曲列表時出錯:', err.stack || err);
         res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
