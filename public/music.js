@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 全部歌手按鈕
             const allButton = document.createElement('button');
             allButton.textContent = '全部歌手';
-            allButton.classList.add('active');
+            allButton.classList.add('artist-filter-btn', 'active');  // 添加 artist-filter-btn
             allButton.addEventListener('click', () => {
                 setActiveArtistButton(allButton);
                 currentArtistFilter = null;
@@ -151,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
             artists.forEach(artist => {
                 const button = document.createElement('button');
                 button.textContent = artist;
+                button.classList.add('artist-filter-btn');  // 添加這行
+
                 button.dataset.artist = artist;
                 button.addEventListener('click', () => {
                     setActiveArtistButton(button);
