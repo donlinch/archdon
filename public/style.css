@@ -226,4 +226,58 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 /* --- Music List Styles (Old - 可能不再使用) --- */
 /* .music-list { width: 100%; margin-top: 1.5rem; } */
 /* .music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; } */
-/* ... (其他 .music-list-item 相關樣式，如果確認不用可以刪除) ... */
+/* ... (其他 .music-list-item 相關樣式，如果確認不用可以刪除) ... *//* PDF 檢視器容器 */
+#pdf-viewer-container {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #f5f5f5;
+    margin-top: 1rem;
+    position: relative;
+    min-height: 500px;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+/* PDF 畫布 */
+#pdf-canvas {
+    display: block;
+    margin: 1rem auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background-color: white;
+    max-width: 100%;
+}
+
+/* 分頁控制 */
+#pdf-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+}
+
+#pdf-pagination button {
+    padding: 0.5rem 1rem;
+    margin: 0 0.5rem;
+    border: 1px solid #ccc;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#pdf-pagination button:hover {
+    background-color: #eee;
+}
+
+#pdf-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#pdf-pagination span {
+    margin: 0 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}

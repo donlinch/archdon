@@ -220,23 +220,26 @@ function renderSongDetail(song) {
     }
 }
 
-// --- PDF.js 相關函數 ---
-async function loadPdf(encodedPdfUrl) { // 接收編碼後的 URL
+// 改進 loadPdf 函數
+async function loadPdf(encodedPdfUrl) {
     if (!encodedPdfUrl || typeof encodedPdfUrl !== 'string') {
         console.warn('No PDF URL provided or invalid URL format.');
         if(pdfViewerContainer) pdfViewerContainer.style.display = 'none';
         return;
     }
-     // 確保相關元素都存在
-     if (!pdfLoading || !pdfError || !pdfCanvas || !pdfViewerContainer || !pdfPrevBtn || !pdfNextBtn || !pdfPageNum || !pdfPageCount) {
-         console.error("PDF viewer DOM elements missing.");
-         return;
-     }
+    
+    // 確保相關元素都存在
+    if (!pdfLoading || !pdfError || !pdfCanvas || !pdfViewerContainer || 
+        !pdfPrevBtn || !pdfNextBtn || !pdfPageNum || !pdfPageCount) {
+        console.error("PDF viewer DOM elements missing.");
+        return;
+    }
 
+    // 顯示載入狀態
     pdfLoading.style.display = 'block';
     pdfError.style.display = 'none';
     pdfCanvas.style.display = 'none';
-    pdfViewerContainer.style.display = 'block'; // 顯示容器
+    pdfViewerContainer.style.display = 'block';
     pdfPrevBtn.disabled = true;
     pdfNextBtn.disabled = true;
     pdfPageNum.textContent = '-';
@@ -244,64 +247,97 @@ async function loadPdf(encodedPdfUrl) { // 接收編碼後的 URL
     currentPdfDoc = null;
     currentPageNum = 1;
 
-    // 使用已經編碼好的 URL 構造代理 URL
-    const proxyUrl = `/api/scores/proxy?url=${encodedPdfUrl}`;
-    console.log("Requesting PDF via proxy:", proxyUrl);
-
     try {
-        const loadingTask = pdfjsLib.getDocument(proxyUrl);
+        // 使用代理 URL 載入 PDF
+        const proxyUrl = `/api/scores/proxy?url=${encodedPdfUrl}`;
+        console.log("Requesting PDF via proxy:", proxyUrl);
+
+        const loadingTask = pdfjsLib.getDocument({
+            url: proxyUrl,
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/cmaps/',
+            cMapPacked: true
+        });
+        
         currentPdfDoc = await loadingTask.promise;
         console.log('PDF loaded successfully. Pages:', currentPdfDoc.numPages);
+        
+        // 更新 UI 狀態
         pdfLoading.style.display = 'none';
         pdfPageCount.textContent = currentPdfDoc.numPages;
         pdfCanvas.style.display = 'block';
+        
+        // 顯示分頁控制
+        document.getElementById('pdf-pagination').style.display = 'flex';
+        
+        // 渲染第一頁
         renderPage(currentPageNum);
-    } catch (reason) {
-        console.error('Error loading PDF:', reason);
+    } catch (error) {
+        console.error('Error loading PDF:', error);
         pdfLoading.style.display = 'none';
-        pdfError.textContent = `無法載入 PDF。請檢查連結是否有效或稍後再試。(錯誤: ${reason.message || reason})`;
+        pdfError.textContent = `無法載入 PDF。請檢查連結是否有效或稍後再試。`;
+        if (error.message) {
+            pdfError.textContent += ` (錯誤: ${error.message})`;
+        }
         pdfError.style.display = 'block';
         pdfCanvas.style.display = 'none';
     }
 }
 
+// 改進 renderPage 函數
 function renderPage(num) {
     if (!currentPdfDoc || !pdfCanvas) return;
     pdfPageRendering = true;
     if(pdfPageNum) pdfPageNum.textContent = num;
 
+    // 禁用分頁按鈕
     if(pdfPrevBtn) pdfPrevBtn.disabled = true;
     if(pdfNextBtn) pdfNextBtn.disabled = true;
 
     currentPdfDoc.getPage(num).then(function(page) {
         console.log(`Rendering page ${num}`);
-         // 確保容器可見且有寬度
-         if (!pdfViewerContainer || pdfViewerContainer.clientWidth === 0) {
-             console.warn("PDF viewer container has no width, using default scale.");
-             renderPageWithViewport(page, page.getViewport({ scale: 1.5 })); // 提供一個預設 scale
-             return;
-         }
+        
+        // 計算適合的縮放比例
+        const viewport = page.getViewport({ scale: 1.0 });
+        const containerWidth = pdfViewerContainer.clientWidth * 0.9; // 留邊距
+        const scale = containerWidth / viewport.width;
+        const scaledViewport = page.getViewport({ scale: scale });
 
-        // 使用容器寬度計算縮放比例
-        const desiredWidth = pdfViewerContainer.clientWidth * 0.95; // 留點邊距
-        const viewportOriginal = page.getViewport({ scale: 1 });
-        const scale = desiredWidth / viewportOriginal.width;
-        const viewport = page.getViewport({ scale: scale });
+        // 設定 canvas 尺寸
+        pdfCanvas.height = scaledViewport.height;
+        pdfCanvas.width = scaledViewport.width;
 
-        renderPageWithViewport(page, viewport, num);
-
-    }).catch(function(pageError){
-         console.error(`Error getting page ${num}:`, pageError);
-         pdfPageRendering = false;
-         if(pdfError) {
-             pdfError.textContent = `獲取頁面 ${num} 時出錯。`;
-             pdfError.style.display = 'block';
-         }
-         // 即使出錯也嘗試更新按鈕狀態
-         if(pdfPrevBtn) pdfPrevBtn.disabled = (num <= 1);
-         if(pdfNextBtn && currentPdfDoc) pdfNextBtn.disabled = (num >= currentPdfDoc.numPages);
+        // 渲染 PDF 頁面
+        const renderContext = {
+            canvasContext: pdfCanvas.getContext('2d'),
+            viewport: scaledViewport
+        };
+        
+        const renderTask = page.render(renderContext);
+        
+        renderTask.promise.then(function() {
+            console.log(`Page ${num} rendered`);
+            pdfPageRendering = false;
+            
+            // 更新分頁按鈕狀態
+            if(pdfPrevBtn) pdfPrevBtn.disabled = (num <= 1);
+            if(pdfNextBtn) pdfNextBtn.disabled = (num >= currentPdfDoc.numPages);
+            
+            // 處理排隊中的頁面渲染請求
+            if (pageNumPending !== null) {
+                renderPage(pageNumPending);
+                pageNumPending = null;
+            }
+        });
+    }).catch(function(error) {
+        console.error(`Error rendering page ${num}:`, error);
+        pdfPageRendering = false;
+        if(pdfError) {
+            pdfError.textContent = `渲染頁面時出錯: ${error.message || error}`;
+            pdfError.style.display = 'block';
+        }
     });
 }
+
 
 // 將實際的 Canvas 渲染邏輯獨立出來
 function renderPageWithViewport(page, viewport, pageNumber) {
