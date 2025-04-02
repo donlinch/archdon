@@ -29,6 +29,20 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .category-nav a.active { color: #E57373; font-weight: 700; border-bottom-color: #FFB74D; }
 .category-nav a:not(.active):hover { color: #424242; border-bottom-color: #B0BEC5; }
 
+
+/* 添加在全局按鈕樣式之後 */
+button.artist-filter-btn {
+    all: unset; /* 重置所有繼承的樣式 */
+}
+
+nav#artist-filter.artist-filter-nav button.artist-filter-btn {
+    /* 然後重新應用我們的樣式 */
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #B0BEC5;
+    border-radius: 15px;
+    /* 其他樣式保持不變 */
+}
+
 /* --- Product Grid Layout (For index.html) --- */
 .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
 @media (min-width: 600px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
@@ -59,18 +73,24 @@ nav#artist-filter.artist-filter-nav {
 }
 /* *** 提高按鈕樣式選擇器的特異性 *** */
 nav#artist-filter.artist-filter-nav button.artist-filter-btn {
-    padding: 0.4rem 0.8rem;
-    border: 1px solid #B0BEC5;
-    border-radius: 15px;
-    background-color: transparent;
-    color: #757575;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    /* 清除可能的繼承樣式 */
-    text-decoration: none;
-    border-bottom: none; /* 確保沒有繼承 .category-nav a 的底部邊框 */
-    line-height: 1.5; /* 確保行高正常 */
+    padding: 0.4rem 0.8rem !important;
+    border: 1px solid #B0BEC5 !important;
+    border-radius: 15px !important;
+    background-color: transparent !important;
+    color: #757575 !important;
+    cursor: pointer !important;
+    font-size: 0.9rem !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    border-bottom: none !important;
+    line-height: 1.5 !important;
+    /* 新增以下屬性確保按鈕行為 */
+    display: inline-block !important;
+    margin: 0 !important;
+    font-family: inherit !important;
+    box-shadow: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
 }
 /* *** 提高 hover 樣式的特異性 *** */
 nav#artist-filter.artist-filter-nav button.artist-filter-btn:hover {
