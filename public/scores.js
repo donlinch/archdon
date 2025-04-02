@@ -239,6 +239,7 @@ async function loadPdf(encodedPdfUrl) {
     }
 }
 
+
 function renderPage(num) {
     if (!currentPdfDoc || !pdfCanvas || !pdfViewerContainer || !pdfPageNum || !pdfPrevBtn || !pdfNextBtn) {
         console.error("無法渲染頁面：缺少 PDF 文件物件或必要的 DOM 元素。");
@@ -250,13 +251,33 @@ function renderPage(num) {
     pdfPrevBtn.disabled = true;
     pdfNextBtn.disabled = true;
 
+    // 使用 Promise 獲取頁面
     currentPdfDoc.getPage(num).then(function(page) {
-        console.log(`獲取到頁面 ${num} 物件，使用固定比例 1.0 進行渲染測試。`);
+        console.log(`獲取到頁面 ${num} 物件，開始計算尺寸並渲染。`);
 
-        // *** 直接使用固定比例 1.0 ***
-        const fixedScale = 1.0;
-        const viewport = page.getViewport({ scale: fixedScale });
-        renderPageWithViewport(page, viewport, num); // 直接調用渲染函數
+        // *** --- 恢復動態計算比例 --- ***
+        // 使用 setTimeout(0) 確保容器寬度已被計算
+        setTimeout(() => {
+            // 確保容器可見
+            if (pdfViewerContainer.style.display !== 'block') {
+                 pdfViewerContainer.style.display = 'block';
+             }
+
+            let desiredWidth = pdfViewerContainer.clientWidth * 0.95;
+            if (desiredWidth <= 0) {
+                console.warn("PDF 檢視器容器寬度為 0 或負數，使用後備寬度 600px。");
+                desiredWidth = 600; // 提供一個後備寬度
+            }
+            console.log(`計算得到的 desiredWidth: ${desiredWidth}`); // 增加日誌
+
+            const viewportOriginal = page.getViewport({ scale: 1 });
+            const scale = desiredWidth / viewportOriginal.width;
+            const viewport = page.getViewport({ scale: scale });
+            console.log(`計算得到的 scale: ${scale}, viewport width: ${viewport.width}, height: ${viewport.height}`); // 增加日誌
+
+            renderPageWithViewport(page, viewport, num);
+
+        }, 0); // 延遲執行以等待 DOM 更新
 
     }).catch(function(pageError){
          console.error(`獲取頁面 ${num} 時出錯:`, pageError);
@@ -270,9 +291,10 @@ function renderPage(num) {
     });
 }
 
+// 修改 renderPageWithViewport 確保 Canvas 可見
 function renderPageWithViewport(page, viewport, pageNumber) {
-    if (!pdfCanvas || !pdfError || !pdfPrevBtn || !pdfNextBtn) {
-        console.error("渲染頁面時缺少必要的 Canvas 或控制按鈕。");
+    if (!pdfCanvas || !pdfError || !pdfPrevBtn || !pdfNextBtn || !pdfViewerContainer) { // 添加 pdfViewerContainer 檢查
+        console.error("渲染頁面時缺少必要的 Canvas 或控制按鈕或容器。");
         pdfPageRendering = false;
         return;
     }
@@ -284,10 +306,20 @@ function renderPageWithViewport(page, viewport, pageNumber) {
             pdfError.textContent = '無法渲染 PDF (Canvas Context Error)。';
             pdfError.style.display = 'block';
          }
+         pdfViewerContainer.style.display = 'block'; // 確保容器可見以顯示錯誤
+         pdfCanvas.style.display = 'none'; // 隱藏 canvas
+         if(pdfPagination) pdfPagination.style.display = 'none'; // 隱藏分頁
          if(pdfPrevBtn) pdfPrevBtn.disabled = (pageNumber <= 1);
          if(currentPdfDoc && pdfNextBtn) pdfNextBtn.disabled = (pageNumber >= currentPdfDoc.numPages);
          return;
     }
+
+    // *** 確保 Canvas 和容器都可見 ***
+    pdfCanvas.style.display = 'block';
+    pdfViewerContainer.style.display = 'block';
+    if(pdfPagination) pdfPagination.style.display = 'block'; // 如果有分頁也顯示
+    // *** --- ***
+
     pdfCanvas.height = viewport.height;
     pdfCanvas.width = viewport.width;
 
@@ -313,10 +345,13 @@ function renderPageWithViewport(page, viewport, pageNumber) {
             pdfError.textContent = `渲染頁面 ${pageNumber} 時出錯。`;
             pdfError.style.display = 'block';
         }
+         pdfCanvas.style.display = 'none'; // 渲染出錯時隱藏 canvas
+         if(pdfPagination) pdfPagination.style.display = 'none'; // 隱藏分頁
         if(pdfPrevBtn) pdfPrevBtn.disabled = (pageNumber <= 1);
         if(currentPdfDoc && pdfNextBtn) pdfNextBtn.disabled = (pageNumber >= currentPdfDoc.numPages);
     });
 }
+
 
 function queueRenderPage(num) {
     if (pdfPageRendering) {

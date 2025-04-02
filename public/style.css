@@ -281,3 +281,76 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     font-size: 0.9rem;
     color: #666;
 }
+
+
+/* PDF 檢視器容器 */
+#pdf-viewer-container {
+    border: 1px solid #ddd;
+    min-height: 500px; /* 保持最小高度 */
+    background-color: #e0e0e0; /* 稍微深一點的背景，方便觀察 */
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    display: none; /* *** 初始仍然隱藏 *** */
+    width: 100%; /* *** 確保容器佔滿寬度 *** */
+    margin-top: 1rem; /* 和樂譜選擇器之間加點間距 */
+}
+/* 當 JS 添加 visible class 時顯示 */
+#song-detail-container.visible #pdf-viewer-container {
+    /* display: block;  <-- JS 會在 loadPdf 時設定 */
+}
+
+#pdf-viewer-container canvas {
+    display: block;
+    margin: 1rem auto;
+    max-width: 95%;
+    height: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    background-color: white; /* *** 給 Canvas 一個白色背景 *** */
+}
+
+#pdf-loading, #pdf-error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #666;
+    font-size: 1.1em;
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.9); /* 提高背景不透明度 */
+    border-radius: 5px;
+    z-index: 10; /* 確保在 Canvas 上方 */
+    display: none; /* *** 確保初始隱藏 *** */
+}
+#pdf-error { color: red; font-weight: bold; }
+
+/* PDF 分頁控制 */
+#pdf-pagination {
+    text-align: center;
+    padding: 0.8rem 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+    display: none; /* *** 初始隱藏 *** */
+    /* 使用 Flexbox 讓按鈕和頁碼居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* 元素間距 */
+}
+#pdf-pagination button {
+     padding: 5px 10px;
+     margin: 0; /* 移除左右 margin */
+     cursor: pointer;
+     border: 1px solid #ccc;
+     border-radius: 4px;
+}
+ #pdf-pagination button:disabled {
+     opacity: 0.5;
+     cursor: not-allowed;
+ }
+ #pdf-pagination span {
+     margin: 0 5px;
+     font-size: 0.9em;
+     color: #555;
+ }
