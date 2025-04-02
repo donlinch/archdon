@@ -47,8 +47,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 
 /* --- Music Page Styles (music.html & scores.html) --- */
 /* 歌手篩選樣式 */
-.artist-filter-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 2rem 0; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
-.artist-filter-nav button.artist-filter-btn { /* Specific to button elements inside */
+/* *** 提高容器選擇器特異性 (可選，但更明確) *** */
+nav#artist-filter.artist-filter-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin: 2rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+/* *** 提高按鈕樣式選擇器的特異性 *** */
+nav#artist-filter.artist-filter-nav button.artist-filter-btn {
     padding: 0.4rem 0.8rem;
     border: 1px solid #B0BEC5;
     border-radius: 15px;
@@ -57,18 +67,25 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    /* 清除可能的繼承樣式 */
+    text-decoration: none;
+    border-bottom: none; /* 確保沒有繼承 .category-nav a 的底部邊框 */
+    line-height: 1.5; /* 確保行高正常 */
 }
-.artist-filter-nav button.artist-filter-btn:hover {
+/* *** 提高 hover 樣式的特異性 *** */
+nav#artist-filter.artist-filter-nav button.artist-filter-btn:hover {
     background-color: #ECEFF1;
     border-color: #78909C;
     color: #424242;
 }
-.artist-filter-nav button.artist-filter-btn.active {
+/* *** 提高 active 樣式的特異性 *** */
+nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
     background-color: #E57373;
     color: white;
     border-color: #E57373;
     font-weight: bold;
 }
+
 
 /* 專輯網格佈局 (music.html) */
 .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; padding: 0 1rem; margin-top: 1.5rem; }
@@ -411,21 +428,19 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 }
 
 /* PDF viewer container (scores.html) */
-/* PDF viewer container (scores.html) */
 #pdf-viewer-container {
     border: 1px solid #ddd;
-    /* max-height: 80vh; */ /* *** 移除 max-height，讓 flex-grow 生效 *** */
-    overflow: auto; /* 內部滾動 */
+    /* max-height: 80vh; */ /* 移除 max-height */
+    overflow: auto;
     background-color: #e8e8e8;
     position: relative;
     border-radius: 4px;
     margin-bottom: 0.5rem;
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* *** 確保能佔滿父容器剩餘空間 *** */
-    min-height: 400px; /* *** 保持最小高度 *** */
-    /* display: none; 由 JS 控制 */
-    z-index: 1; /* 確保在正常流中 */
+    flex-grow: 1;
+    min-height: 400px;
+    z-index: 1;
 }
 #pdf-viewer-container canvas {
      display: block;
@@ -434,9 +449,9 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
      height: auto;
      box-shadow: 0 0 10px rgba(0,0,0,0.1);
      background-color: white;
-     border: 1px dashed blue; /* *** 添加臨時邊框以便觀察 *** */
-     position: relative; /* *** 確保相對定位 *** */
-     z-index: 2; /* *** 確保在容器背景之上 *** */
+     /* border: 1px dashed blue; */ /* 移除臨時邊框 */
+     position: relative;
+     z-index: 2;
 }
 #pdf-loading, #pdf-error {
      position: absolute;
@@ -446,12 +461,12 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
      color: #666;
      font-size: 1.1rem;
      padding: 1rem;
-     background-color: rgba(255, 255, 255, 0.95); /* 加深一點背景 */
+     background-color: rgba(255, 255, 255, 0.95);
      border-radius: 4px;
-     z-index: 10; /* 確保在最上層 */
-     display: none; /* 由 JS 控制 */
-     border: 1px solid orange; /* 臨時邊框 */
-     min-width: 150px; /* 確保錯誤信息本身可見 */
+     z-index: 10;
+     display: none;
+     /* border: 1px solid orange; */ /* 移除臨時邊框 */
+     min-width: 150px;
 }
 #pdf-error { color: red; font-weight: bold;}
 
@@ -466,9 +481,8 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
-    /* display: none; 由 JS 控制 */
-    position: relative; /* 確保在正常流 */
-    z-index: 5; /* 確保在 Canvas 之上 (雖然佈局上應該在下面) */
+    position: relative;
+    z-index: 5;
 }
 #pdf-pagination button {
      padding: 5px 10px; margin: 0; cursor: pointer;
@@ -476,3 +490,107 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 }
 #pdf-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 #pdf-pagination span { margin: 0 5px; color: #555; font-size: 0.9em;}
+
+/* --- score-viewer.html specific styles --- */
+main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; }
+.viewer-header {
+    background-color: #FFB74D;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.viewer-header a { color: #424242; text-decoration: none; font-weight: 500; }
+.viewer-header h1 { font-size: 1.2rem; color: #424242; margin: 0; text-align: center; flex-grow: 1; }
+.viewer-header button {
+    padding: 5px 10px;
+    border: 1px solid #424242;
+    background: white;
+    color: #424242;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.viewer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 0.5rem; /* 上下保留 padding，左右減小 */
+    gap: 1.5rem;
+}
+#youtube-player-viewer {
+    width: 100%;
+    max-width: 800px;
+    flex-shrink: 0;
+}
+#youtube-player-viewer iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 4px;
+}
+#pdf-viewer-container-viewer {
+    width: 100%;
+    /* max-width: 95%; */ /* 移除 max-width */
+    border: 1px solid #ccc;
+    background-color: #e8e8e8;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 60vh;
+}
+#pdf-viewer-container-viewer canvas {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%; /* 確保 Canvas 不超出容器 */
+    height: auto;
+    background-color: white;
+}
+#pdf-pagination-viewer {
+    padding: 0.8rem 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+#pdf-loading-viewer, #pdf-error-viewer {
+     position: absolute; top: 40%; left: 50%;
+     transform: translate(-50%, -50%); z-index: 10;
+     padding: 1rem; background-color: rgba(255,255,255,0.95);
+     border-radius: 5px; text-align: center; color: #666;
+     display: none;
+     min-width: 150px;
+     /* border: 1px solid orange; */ /* 移除臨時邊框 */
+}
+#pdf-error-viewer { color: red; font-weight: bold;}
+
+/* Print styles for score-viewer.html */
+@media print {
+    body { background-color: white; }
+    .viewer-header, #youtube-player-viewer, #pdf-pagination-viewer, footer { display: none !important; }
+    main.score-viewer-main { padding: 0; margin: 0;}
+    .viewer-content { padding: 0; }
+    #pdf-viewer-container-viewer {
+        border: none;
+        box-shadow: none;
+        width: 100%;
+        max-width: 100%;
+        min-height: auto;
+        overflow: visible;
+    }
+    #pdf-viewer-container-viewer canvas {
+         max-width: 100%;
+         box-shadow: none;
+         margin: 0;
+    }
+    #pdf-viewer-container-viewer canvas {
+        page-break-inside: avoid;
+        page-break-before: auto;
+        page-break-after: auto;
+    }
+}
