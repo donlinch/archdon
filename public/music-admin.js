@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editMusicCoverUrl = document.getElementById('edit-music-cover-url');
     const editCoverPreview = document.getElementById('edit-cover-preview');
     const editMusicPlatformUrl = document.getElementById('edit-music-platform-url');
-    const editMusicYoutubeId = document.getElementById('edit-music-youtube-id'); // 新增
-    const editScoresContainer = document.getElementById('edit-scores-container'); // 新增
+    const editMusicYoutubeId = document.getElementById('edit-music-youtube-id');
+    const editScoresContainer = document.getElementById('edit-scores-container');
     const editFormError = document.getElementById('edit-music-form-error');
 
     // --- 新增 Modal 元素 ---
@@ -31,30 +31,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const addMusicCoverUrl = document.getElementById('add-music-cover-url');
     const addCoverPreview = document.getElementById('add-cover-preview'); // 確保 HTML 中有此 ID
     const addMusicPlatformUrl = document.getElementById('add-music-platform-url');
-    const addMusicYoutubeId = document.getElementById('add-music-youtube-id'); // 新增
-    const addScoresContainer = document.getElementById('add-scores-container'); // 新增
+    const addMusicYoutubeId = document.getElementById('add-music-youtube-id');
+    const addScoresContainer = document.getElementById('add-scores-container');
     const addFormError = document.getElementById('add-music-form-error');
 
-    // --- 預覽圖片功能 (新增/編輯共用) ---
+    // --- 預覽圖片功能 ---
     function setupImagePreview(inputElement, previewElement) {
         if (inputElement && previewElement) {
             inputElement.addEventListener('input', () => {
                 const url = inputElement.value.trim();
-                previewElement.src = url; // 先設置 src
+                previewElement.src = url; // 嘗試設置 src
                 if (url) {
                     previewElement.style.display = 'block';
-                    // onerror 必須在 src 設置之後才能正確觸發
-                    previewElement.onerror = () => {
+                    previewElement.onerror = () => { // 監聽錯誤
                         console.warn("圖片預覽失敗，URL:", url);
                         previewElement.style.display = 'none';
-                        previewElement.src = ''; // 清空無效 src
+                        previewElement.src = '';
                     };
                 } else {
                     previewElement.style.display = 'none';
                     previewElement.src = '';
                 }
             });
-            // 初始檢查一次
+             // 確保頁面載入或 Modal 打開時也能觸發一次檢查
             const initialUrl = inputElement.value.trim();
              if (initialUrl) {
                  previewElement.src = initialUrl;
@@ -64,36 +63,33 @@ document.addEventListener('DOMContentLoaded', () => {
                  previewElement.style.display = 'none';
              }
         } else {
-             console.warn("圖片預覽設定失敗：找不到輸入元素或預覽元素。 Input:", inputElement, "Preview:", previewElement);
+             console.warn("圖片預覽設定失敗：找不到輸入元素或預覽元素。 Input ID:", inputElement?.id, "Preview ID:", previewElement?.id);
         }
     }
-    // 在 DOMContentLoaded 後調用
+    // 在 DOMContentLoaded 後為兩個 Modal 的預覽設置監聽
     setupImagePreview(addMusicCoverUrl, addCoverPreview);
     setupImagePreview(editMusicCoverUrl, editCoverPreview);
 
 
-    // --- 新增：動態添加樂譜輸入行的函數 ---
-    // 將其掛載到 window 上，以便 HTML 中的 onclick 可以調用
+    // --- 動態添加樂譜輸入行的函數 ---
     window.addScoreInputRow = function(modalPrefix) {
         const container = document.getElementById(`${modalPrefix}-scores-container`);
         if (!container) {
             console.error(`找不到樂譜容器： #${modalPrefix}-scores-container`);
             return;
         }
-        const scoreIndex = container.children.length; // 用於區分 name 屬性
+        const scoreIndex = container.querySelectorAll('.score-input-row').length; // 更可靠的計算方式
         const div = document.createElement('div');
         div.classList.add('score-input-row');
-        // **注意 name 屬性的格式：scores[index][fieldName]**
         div.innerHTML = `
-            <input type="hidden" name="scores[${scoreIndex}][id]" value=""> <!-- 用於編輯時傳遞現有 score ID -->
+            <input type="hidden" name="scores[${scoreIndex}][id]" value="">
             <input type="text" name="scores[${scoreIndex}][type]" placeholder="樂譜類型 (例: 鋼琴譜)" style="flex: 1;" required>
             <input type="url" name="scores[${scoreIndex}][pdf_url]" placeholder="PDF 網址 (https://...)" style="flex: 2;" required>
             <input type="number" name="scores[${scoreIndex}][display_order]" value="0" title="排序 (數字越小越前)" style="width: 70px; text-align: center;" required>
-            <button type="button" onclick="this.parentElement.remove()" title="移除此樂譜">移除</button> <!-- 添加 title 提示 -->
+            <button type="button" onclick="this.parentElement.remove()" title="移除此樂譜">移除</button>
         `;
         container.appendChild(div);
     }
-
 
     // --- 獲取並顯示所有音樂 ---
     async function fetchAndDisplayMusic() {
@@ -103,25 +99,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             loadingMessage.style.display = 'block';
-            loadingMessage.textContent = '正在加載音樂...'; // 確保顯示載入訊息
+            loadingMessage.textContent = '正在加載音樂...';
             albumTable.style.display = 'none';
-            albumListBody.innerHTML = ''; // 清空舊內容
+            albumListBody.innerHTML = '';
 
             const response = await fetch('/api/music');
-            if (!response.ok) {
-                throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             const musicList = await response.json();
 
-            loadingMessage.style.display = 'none'; // 隱藏載入訊息
+            loadingMessage.style.display = 'none';
 
             if (musicList.length === 0) {
-                albumTable.style.display = 'table'; // 顯示表格框架
+                albumTable.style.display = 'table';
                 albumListBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1rem;">目前沒有音樂項目。</td></tr>';
                 return;
             }
 
-            albumTable.style.display = 'table'; // 顯示表格
+            albumTable.style.display = 'table';
             musicList.forEach(music => {
                 const row = document.createElement('tr');
                 row.dataset.musicId = music.id;
@@ -130,13 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     : 'N/A';
                 row.innerHTML = `
                     <td>${music.id}</td>
-                    <td title="${music.title || ''}">${music.title || ''}</td> <!-- 添加 title 提示完整名稱 -->
+                    <td title="${music.title || ''}">${music.title || ''}</td>
                     <td title="${music.artist || ''}">${music.artist || ''}</td>
                     <td>${releaseDateFormatted}</td>
-                    <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''} 封面" style="max-width: 60px; max-height: 60px; height: auto; border: 1px solid #eee; object-fit: contain; display: block; margin: auto;"></td> <!-- 圖片居中顯示 -->
+                    <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''} 封面" style="max-width: 60px; max-height: 60px; height: auto; border: 1px solid #eee; object-fit: contain; display: block; margin: auto;"></td>
                     <td>
-                        <button class="action-btn edit-btn" onclick="window.editMusic(${music.id})">編輯</button> <!-- 使用 window. 前綴確保全局可見 -->
-                        <button class="action-btn delete-btn" onclick="window.deleteMusic(${music.id})">刪除</button> <!-- 使用 window. 前綴確保全局可見 -->
+                        <button class="action-btn edit-btn" onclick="window.editMusic(${music.id})">編輯</button>
+                        <button class="action-btn delete-btn" onclick="window.deleteMusic(${music.id})">刪除</button>
                     </td>
                 `;
                 albumListBody.appendChild(row);
@@ -144,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("獲取管理音樂列表失敗:", error);
             if(loadingMessage) loadingMessage.textContent = '無法載入音樂列表。';
-            albumTable.style.display = 'none'; // 隱藏表格
+            if(albumTable) albumTable.style.display = 'none';
         }
     }
 
@@ -159,19 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         editFormError.textContent = '';
         editForm.reset();
-        editCoverPreview.src = ''; // 清空 src
-        editCoverPreview.style.display = 'none'; // 預設隱藏
+        editCoverPreview.src = '';
+        editCoverPreview.style.display = 'none';
         editScoresContainer.innerHTML = ''; // 清空舊的樂譜行
 
         try {
-            const response = await fetch(`/api/music/${id}`);
+            const response = await fetch(`/api/music/${id}`); // 後端需返回 scores
             if (!response.ok) {
                 if (response.status === 404) throw new Error('找不到該音樂項目。');
                 throw new Error(`無法獲取音樂資料 (HTTP ${response.status})`);
             }
             const music = await response.json();
 
-            // 填充基礎音樂資訊
+            // 填充基礎資訊
             editMusicId.value = music.id;
             editMusicTitle.value = music.title || '';
             editMusicArtist.value = music.artist || '';
@@ -179,49 +173,45 @@ document.addEventListener('DOMContentLoaded', () => {
             editMusicDescription.value = music.description || '';
             editMusicCoverUrl.value = music.cover_art_url || '';
             editMusicPlatformUrl.value = music.platform_url || '';
-            editMusicYoutubeId.value = music.youtube_video_id || ''; // 填充 YouTube ID
+            editMusicYoutubeId.value = music.youtube_video_id || '';
 
-            // 觸發封面預覽更新
-            setupImagePreview(editMusicCoverUrl, editCoverPreview);
-            const event = new Event('input'); // 手動觸發 input 事件來顯示初始圖片
-            editMusicCoverUrl.dispatchEvent(event);
+            // 手動觸發封面預覽更新
+             setupImagePreview(editMusicCoverUrl, editCoverPreview); // 確保監聽器已設定
+             const event = new Event('input', { bubbles: true }); // 創建 input 事件
+             editMusicCoverUrl.dispatchEvent(event); // 觸發事件以更新預覽
 
 
             // 填充現有樂譜
             if (music.scores && Array.isArray(music.scores)) {
                 music.scores.forEach((score, index) => {
-                    // 確保 addScoreInputRow 在 window 上
                     if (typeof window.addScoreInputRow === 'function') {
-                        window.addScoreInputRow('edit'); // 添加空的輸入行結構
-                        const row = editScoresContainer.children[index]; // 獲取剛添加的行
+                        window.addScoreInputRow('edit');
+                        const row = editScoresContainer.children[index];
                         if (row) {
-                            // 填充數據
                             row.querySelector('input[name^="scores"][name$="[id]"]').value = score.id || '';
                             row.querySelector('input[name^="scores"][name$="[type]"]').value = score.type || '';
                             row.querySelector('input[name^="scores"][name$="[pdf_url]"]').value = score.pdf_url || '';
                             row.querySelector('input[name^="scores"][name$="[display_order]"]').value = score.display_order !== undefined ? score.display_order : 0;
-                        } else {
-                             console.error(`無法找到索引為 ${index} 的樂譜輸入行。`);
-                        }
-                    } else {
-                        console.error('addScoreInputRow 函數未定義在 window 上。');
-                    }
+                        } else { console.error(`無法找到索引為 ${index} 的樂譜輸入行。`); }
+                    } else { console.error('addScoreInputRow 函數未定義在 window 上。'); }
                 });
+            } else {
+                 console.log(`音樂 ID ${id} 沒有關聯的樂譜資料。`);
             }
 
-            editModal.style.display = 'flex'; // 顯示 Modal
+            editModal.style.display = 'flex';
         } catch (error) {
             console.error(`獲取音樂 ${id} 進行編輯時出錯:`, error);
             alert(`無法載入編輯資料： ${error.message}`);
         }
     }
 
-    // --- 關閉編輯/新增 Modal 的函數 ---
-    window.closeEditMusicModal = function() { if (editModal) { editModal.style.display = 'none'; } }
-    window.closeAddMusicModal = function() { if (addModal) { addModal.style.display = 'none'; } }
+    // --- 關閉 Modal ---
+    window.closeEditMusicModal = function() { if (editModal) editModal.style.display = 'none'; }
+    window.closeAddMusicModal = function() { if (addModal) addModal.style.display = 'none'; }
 
-    // --- 將函數掛載到 window 以便 HTML onclick 調用 ---
-    window.editMusic = openEditMusicModal; // 直接賦值函數引用
+    // --- 將編輯和刪除函數掛載到 window ---
+    window.editMusic = openEditMusicModal;
     window.deleteMusic = async function(id) {
         if (confirm(`確定要刪除音樂 ID: ${id} 嗎？此操作也會刪除關聯的樂譜。`)) {
             try {
@@ -231,10 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await fetchAndDisplayMusic();
                 } else {
                     let errorMsg = `刪除失敗 (HTTP ${response.status})`;
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) { /*忽略解析錯誤*/ }
+                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /*忽略*/ }
                     throw new Error(errorMsg);
                 }
             } catch (error) {
@@ -243,8 +230,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+
+    // --- 顯示新增 Modal ---
     window.showAddMusicForm = function() {
-        const requiredAddElements = [addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addMusicYoutubeId, addScoresContainer, addFormError, addCoverPreview]; // 添加 addCoverPreview
+        const requiredAddElements = [addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addMusicYoutubeId, addScoresContainer, addFormError, addCoverPreview];
         if (requiredAddElements.some(el => !el)) {
              console.error("新增 Modal 的必要元素缺失。Elements:", {addModal, addForm, addMusicTitle, addMusicArtist, addMusicReleaseDate, addMusicDescription, addMusicCoverUrl, addMusicPlatformUrl, addMusicYoutubeId, addScoresContainer, addFormError, addCoverPreview});
              alert("新增視窗元件錯誤，無法開啟。請檢查控制台。");
@@ -260,8 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 點擊 Modal 外部關閉 ---
     window.onclick = function(event) {
-        if (event.target == editModal) { closeEditMusicModal(); }
-        else if (event.target == addModal) { closeAddMusicModal(); }
+        if (event.target == editModal) closeEditMusicModal();
+        else if (event.target == addModal) closeAddMusicModal();
     }
 
     // --- 表單提交處理函數 (共用邏輯) ---
@@ -281,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let scoreValidationError = false;
 
         scoreRows.forEach(row => {
-            if (scoreValidationError) return; // 如果前面已有錯誤，不再處理後續行
+            if (scoreValidationError) return;
 
             const idInput = row.querySelector('input[name^="scores"][name$="[id]"]');
             const typeInput = row.querySelector('input[name^="scores"][name$="[type]"]');
@@ -290,31 +279,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const typeValue = typeInput.value.trim();
             const urlValue = urlInput.value.trim();
+            const orderValue = orderInput.value.trim();
 
-            // 只有當類型和 URL 都填寫時才加入，並進行基本驗證
-            if (typeValue || urlValue) { // 只要填了其中一個就進行驗證
+            // 只要填了其中一個就進行驗證
+            if (typeValue || urlValue) {
                  if (!typeValue) {
                      formErrorElement.textContent = '樂譜類型不能為空 (如果已填寫 URL)。';
                      typeInput.focus();
                      scoreValidationError = true;
                      return;
                  }
-                 if (!urlValue || !(urlValue.startsWith('https://') || urlValue.startsWith('http://'))) { // 允許 http 和 https
-                     formErrorElement.textContent = '請輸入有效的 PDF 網址 (需以 http:// 或 https:// 開頭)。';
+                 // 稍微放寬 URL 驗證，允許相對路徑和 http/https
+                 if (!urlValue || !(urlValue.startsWith('/') || urlValue.startsWith('http://') || urlValue.startsWith('https://'))) {
+                     formErrorElement.textContent = '請輸入有效的 PDF 網址 (需以 / 或 http(s):// 開頭)。';
                      urlInput.focus();
                      scoreValidationError = true;
                      return;
                  }
+                  // 驗證排序是否為數字
+                 const orderNum = parseInt(orderValue, 10);
+                  if (isNaN(orderNum)) {
+                      formErrorElement.textContent = '樂譜排序必須是數字。';
+                      orderInput.focus();
+                      scoreValidationError = true;
+                      return;
+                  }
+
                 scores.push({
-                    id: isEditMode && idInput && idInput.value ? parseInt(idInput.value, 10) : undefined, // 編輯模式下才傳送 ID
+                    id: isEditMode && idInput && idInput.value ? parseInt(idInput.value, 10) : undefined,
                     type: typeValue,
                     pdf_url: urlValue,
-                    display_order: parseInt(orderInput.value, 10) || 0
+                    display_order: orderNum
                 });
              }
         });
 
-        if (scoreValidationError) return; // 如果樂譜驗證失敗，停止提交
+        if (scoreValidationError) return;
         // --- 樂譜數據收集結束 ---
 
         // 收集基礎音樂數據
@@ -326,19 +326,17 @@ document.addEventListener('DOMContentLoaded', () => {
              cover_art_url: form.elements['cover_art_url'].value.trim() || null,
              platform_url: form.elements['platform_url'].value.trim() || null,
              youtube_video_id: form.elements['youtube_video_id'] ? form.elements['youtube_video_id'].value.trim() || null : null,
-             scores: scores // 加入收集到的樂譜陣列
+             scores: scores
         };
 
         // 基礎數據驗證
         if (!formData.title) { formErrorElement.textContent = '專輯標題不能為空。'; return; }
         if (!formData.artist) { formErrorElement.textContent = '歌手名稱不能為空。'; return; }
-        const isValidUrl = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
-        // 放寬封面和平台連結的驗證，允許相對路徑
-        if (formData.cover_art_url && !isValidUrl(formData.cover_art_url)) { formErrorElement.textContent = '封面圖片路徑格式不正確 (應為 / 開頭或 http(s):// 開頭)。'; return; }
+        const isValidUrlOrPath = (url) => !url || url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://');
+        if (formData.cover_art_url && !isValidUrlOrPath(formData.cover_art_url)) { formErrorElement.textContent = '封面圖片路徑格式不正確 (應為 / 開頭或 http(s):// 開頭)。'; return; }
         if (formData.platform_url && !(formData.platform_url.startsWith('http://') || formData.platform_url.startsWith('https://'))) { formErrorElement.textContent = '平台連結格式不正確 (需以 http(s):// 開頭)。'; return; }
-        // 可選：驗證 YouTube ID 格式 (例如：檢查長度或字符)
          if (formData.youtube_video_id && !/^[a-zA-Z0-9_-]{11}$/.test(formData.youtube_video_id)) {
-             formErrorElement.textContent = 'YouTube 影片 ID 格式不正確 (應為 11 位字符)。'; return;
+             formErrorElement.textContent = 'YouTube 影片 ID 格式不正確 (應為 11 位英數字元、底線或減號)。'; return;
          }
 
 
@@ -349,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorAction = isEditMode ? '儲存' : '新增';
 
         try {
-            console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2)); // 調試用
+            console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2));
             const response = await fetch(apiUrl, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
@@ -358,10 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 let errorMsg = `${successAction}失敗 (HTTP ${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.error || errorMsg;
-                } catch (e) { /* 忽略解析錯誤 */ }
+                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /*忽略*/ }
                 throw new Error(errorMsg);
             }
 
