@@ -10,7 +10,8 @@ let allSongsData = [];
 // 設定 PDF.js worker 的來源路徑
 if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions && typeof pdfjsLib.GlobalWorkerOptions.workerSrc === 'string') {
     try {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.mjs';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.legacy.js';
+        console.log('PDF.js workerSrc 設定為 legacy 版本。');
     } catch (e) {
         console.warn('無法設定 PDF.js workerSrc (可能在不支援的環境中):', e);
     }
