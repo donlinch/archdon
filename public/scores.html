@@ -217,6 +217,60 @@
              font-weight: bold;
          }
 
+
+/* scores.html 或 style.css */
+
+#song-list li {
+    display: flex; /* 改為 Flexbox 佈局 */
+    justify-content: space-between; /* 資訊和按鈕分開 */
+    align-items: center; /* 垂直居中 */
+    padding: 0.8rem 1rem;
+    cursor: default; /* 列表項本身不再需要點擊效果 */
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+#song-list li:last-child { border-bottom: none; }
+/* 保持 hover 效果，但可能需要調整 */
+/* #song-list li:hover { background-color: #f8f9fa; } */
+#song-list li.active { background-color: #FFF9C4; /* 改用淡黃色標示整行 */ color: #424242; font-weight: normal; } /* active 狀態現在應用在整行 */
+
+.song-list-info {
+    flex-grow: 1; /* 讓歌曲資訊佔據多餘空間 */
+    margin-right: 1rem; /* 與按鈕間隔 */
+}
+
+.song-list-scores {
+    flex-shrink: 0; /* 防止按鈕被壓縮 */
+    display: flex;
+    flex-wrap: wrap; /* 按鈕多時可以換行 */
+    gap: 5px; /* 按鈕之間的間隔 */
+    justify-content: flex-end; /* 按鈕靠右 */
+}
+
+/* 樂譜按鈕樣式 (在列表中) */
+.list-score-btn {
+    padding: 3px 8px;
+    font-size: 0.8em;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    color: #555;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+.list-score-btn:hover {
+    background-color: #e0e0e0;
+    border-color: #bbb;
+}
+.list-score-btn.active { /* 被選中查看的樂譜按鈕 */
+    background-color: #E57373;
+    color: white;
+    border-color: #E57373;
+    font-weight: bold;
+}
+
+
+
     </style>
 </head>
 <body>
@@ -247,8 +301,8 @@
             <div id="song-list-container">
                 <h2>歌曲列表</h2>
                 <ul id="song-list">
-                    <p id="song-list-loading">選擇歌手以查看歌曲...</p>
-                    <p id="song-list-error" style="display: none; color: red;"></p>
+                    <p>載入歌曲中...</p>
+                    <!-- 歌曲項目會由 JS 生成 -->
                 </ul>
             </div>
 
