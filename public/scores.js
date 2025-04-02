@@ -8,15 +8,16 @@ let allSongsData = [];
 // --- *** 修改結束 *** ---
 
 // 設定 PDF.js worker 的來源路徑
-if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions && typeof pdfjsLib.GlobalWorkerOptions.workerSrc === 'string') {
+if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
     try {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.legacy.js';
-        console.log('PDF.js workerSrc 設定為 legacy 版本。');
+        // *** 改回 .mjs worker ***
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.mjs';
+        console.log('PDF.js workerSrc 設定回 mjs 版本。');
     } catch (e) {
-        console.warn('無法設定 PDF.js workerSrc (可能在不支援的環境中):', e);
+        console.warn('無法設定 PDF.js workerSrc:', e);
     }
 } else {
-    console.warn('PDF.js GlobalWorkerOptions.workerSrc 無法設定，可能使用預設 worker 或發生錯誤。');
+    console.warn('PDF.js GlobalWorkerOptions 無法設定。');
 }
 
 // --- DOM 元素獲取 ---
