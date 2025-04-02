@@ -1,3 +1,5 @@
+/* public/style.css */
+
 /*
     Color Palette:
     Warm Orange (Header): #FFB74D
@@ -6,7 +8,7 @@
     Light Grey BG:          #FAFAFA
     Dark Text:              #424242
     Medium Text:            #757575
-*/ 
+*/
 
 /* Basic Reset & Body Style */
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -43,20 +45,38 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
 .product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
 
-/* --- Music Page Styles (music.html) --- */
+/* --- Music Page Styles (music.html & scores.html) --- */
 /* 歌手篩選樣式 */
 .artist-filter-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 2rem 0; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
-.artist-filter-nav button { padding: 0.4rem 0.8rem; border: 1px solid #B0BEC5; border-radius: 15px; background-color: transparent; color: #757575; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease; }
-.artist-filter-nav button:hover { background-color: #ECEFF1; border-color: #78909C; color: #424242; }
-.artist-filter-nav button.active { background-color: #E57373; color: white; border-color: #E57373; font-weight: bold; }
+.artist-filter-nav button.artist-filter-btn { /* Specific to button elements inside */
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #B0BEC5;
+    border-radius: 15px;
+    background-color: transparent;
+    color: #757575;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+.artist-filter-nav button.artist-filter-btn:hover {
+    background-color: #ECEFF1;
+    border-color: #78909C;
+    color: #424242;
+}
+.artist-filter-nav button.artist-filter-btn.active {
+    background-color: #E57373;
+    color: white;
+    border-color: #E57373;
+    font-weight: bold;
+}
 
-/* 專輯網格佈局 */
+/* 專輯網格佈局 (music.html) */
 .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; padding: 0 1rem; margin-top: 1.5rem; }
 @media (min-width: 600px) { .album-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 900px) { .album-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1200px) { .album-grid { grid-template-columns: repeat(5, 1fr); gap: 1.8rem; } }
 
-/* 專輯卡片樣式 */
+/* 專輯卡片樣式 (music.html) */
 .album-card { display: block; text-decoration: none; color: inherit; background-color: transparent; border-radius: 6px; overflow: visible; box-shadow: none; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; }
 .album-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
 .album-card .cover-image { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 6px; margin-bottom: 0.8rem; background-color: #eee; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); }
@@ -68,7 +88,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .album-card .album-info h3 { font-size: 0.9rem; font-weight: 600; color: #333; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .album-card .album-info .artist { font-size: 0.8rem; color: #666; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .album-card .album-info .release-date { font-size: 0.75rem; color: #999; }
-
 
 /* --- News List Styles (news.html) --- */
 .news-list { margin-top: 1.5rem; }
@@ -105,7 +124,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 #news-detail-modal .detail-content { padding: 1.5rem 2rem 2rem 2rem; }
 #news-detail-modal .detail-title { font-size: 1.6rem; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
 #news-detail-modal .detail-meta { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
-#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; /* 移除 white-space: pre-wrap; 因為 JS 會處理換行 */ }
+#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; white-space: pre-wrap; /* Use pre-wrap to preserve line breaks */ }
 #news-detail-modal .close-btn { top: 15px; right: 15px; background-color: rgba(0,0,0,0.3); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; line-height: 1; padding: 0; text-align: center; }
 #news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
 
@@ -114,9 +133,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .news-detail-container #news-detail-image { display: block; width: 100%; object-fit: cover; max-height: 450px; }
 .news-detail-text-content { padding: 1.5rem 2rem 2rem 2rem; }
 .news-detail-container #news-detail-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.8rem; line-height: 1.3; color: #333; }
-.news-detail-container #news-detail-meta { border-bottom: 1px solid #eee; padding-bottom: 1rem; } /* 移到這裡 */
-.news-detail-container #news-detail-body { font-size: 1rem; color: #555; line-height: 1.8; white-space: pre-wrap; /* 確保這裡保留換行 */ }
-.news-detail-container #news-detail-body p { margin-bottom: 1.5rem; /* 段落間距 */ }
+.news-detail-container #news-detail-meta { border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+.news-detail-container #news-detail-body { font-size: 1rem; color: #555; line-height: 1.8; white-space: pre-wrap; }
+.news-detail-container #news-detail-body p { margin-bottom: 1.5rem; }
 .news-detail-container #news-detail-body img { max-width: 100%; height: auto; margin: 1.5rem auto; display: block; border-radius: 6px; }
 .news-detail-container #news-detail-body h2,
 .news-detail-container #news-detail-body h3,
@@ -130,7 +149,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
 .news-detail-container #news-detail-body blockquote { border-left: 4px solid #FFB74D; padding-left: 1.5rem; margin: 1.5rem 0; color: #666; font-style: italic; }
 
 /* News Detail Share Section */
-.news-share { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; } /* 確保有正確的選擇器 */
+.news-share { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
 .copy-link-button { background-color: #6c757d; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.9em; margin-left: 10px; font-weight: bold; }
 .copy-link-button:hover { background-color: #5a6268; }
 
@@ -148,14 +167,13 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
     .news-detail-container #news-detail-body { font-size: 0.95rem; line-height: 1.7; }
 }
 
-
 /* --- Footer Styles --- */
 footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 1rem; margin-top: 4rem; text-align: center; }
 .footer-container { max-width: 1100px; margin: 0 auto; }
 .footer-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #616161; }
 .footer-nav a { color: #eeeeee; text-decoration: none; font-size: 0.95rem; transition: color 0.2s ease; }
 .footer-nav a:hover, .footer-nav a.admin-link:hover { color: #FFB74D; }
-.footer-social { margin-bottom: 1.5rem; } /* (目前未使用) */
+.footer-social { margin-bottom: 1.5rem; }
 .footer-copyright p { font-size: 0.85rem; color: #bdbdbd; line-height: 1.5; }
 
 /* --- Modal Styles (General - for Admin pages) --- */
@@ -173,8 +191,7 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer; }
 .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
 .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-.form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; } /* Admin Modal 提示 */
-/* Admin Modal 圖片預覽 */
+.form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; }
 #edit-image-preview, #add-image-preview,
 #edit-cover-preview, #add-cover-preview,
 #edit-news-thumbnail-preview, #add-news-thumbnail-preview,
@@ -187,9 +204,7 @@ footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 
 #edit-banner-preview[src], #add-banner-preview[src] {
     display: block;
 }
-/* Admin Modal 錯誤訊息 */
 p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
-
 
 /* --- Admin Navigation Styles --- */
 .admin-nav { background-color: #f8f9fa; padding: 1rem 0; text-align: center; border-bottom: 1px solid #dee2e6; margin-bottom: 1rem; }
@@ -197,122 +212,165 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 .admin-nav a:hover { background-color: #e9ecef; color: #212529; }
 .admin-nav a.active { background-color: #007bff; color: white; font-weight: bold; }
 
-
 /* --- Admin Chart Styles --- */
-.chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; } /* (來自 admin.html inline style) */
-.chart-controls { text-align: center; margin-bottom: 1rem; } /* (來自 admin.html inline style) */
+.chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; }
+.chart-controls { text-align: center; margin-bottom: 1rem; }
 .chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
 .chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
 .chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
 
-
 /* --- Banner Swiper Styles (All Pages) --- */
-.banner-swiper { width: 100%; height: 370px; background-color: #FFB74D; margin-bottom: 2rem; /* 和 Header 分開 */ }
-.banner-swiper .swiper-slide { text-align: center; font-size: 18px; background: #f0f0f0; /* 預設背景 */ display: flex; justify-content: center; align-items: center; }
+.banner-swiper { width: 100%; height: 370px; background-color: #FFB74D; margin-bottom: 2rem; }
+.banner-swiper .swiper-slide { text-align: center; font-size: 18px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; }
 .banner-swiper .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .banner-swiper .swiper-button-prev,
-.banner-swiper .swiper-button-next { color: rgba(255, 255, 255, 0.7); /* 白色半透明 */ --swiper-navigation-size: 30px; /* 按鈕大小 */ }
+.banner-swiper .swiper-button-next { color: rgba(255, 255, 255, 0.7); --swiper-navigation-size: 30px; }
 .banner-swiper .swiper-button-prev:hover,
 .banner-swiper .swiper-button-next:hover { color: rgba(255, 255, 255, 1); }
 .banner-swiper .swiper-pagination-bullet { background: rgba(0, 0, 0, 0.3); opacity: 0.8; }
 .banner-swiper .swiper-pagination-bullet-active { background: #fff; opacity: 1; }
-
 
 /* --- Banner Admin Table Styles --- */
 #banner-list-table tr.banner-group-header td { background-color: #dee2e6; font-weight: bold; font-size: 1.1em; color: #495057; padding: 12px 10px !important; border-top: 2px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
 #banner-list-table tr.banner-group-header:not(:first-child) td { border-top-width: 4px; }
 #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
 
-/* --- Music List Styles (Old - 可能不再使用) --- */
-/* .music-list { width: 100%; margin-top: 1.5rem; } */
-/* .music-list-item { display: flex; align-items: center; padding: 0.8rem 0.5rem; border-bottom: 1px solid #eee; gap: 1rem; transition: background-color 0.2s ease; } */
-/* ... (其他 .music-list-item 相關樣式，如果確認不用可以刪除) ... *//* PDF 檢視器容器 */
-#pdf-viewer-container canvas {
-    display: block;
-    margin: 1rem auto;
-    max-width: 95%;
-    height: auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    /* *** 新增: 確保有白色背景 *** */
-    background-color: white;
-}
-
-/* PDF 畫布 */
-#pdf-canvas {
-    display: block;
-    margin: 1rem auto;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    background-color: white;
-    max-width: 100%;
-}
-
-/* 分頁控制 */
-#pdf-pagination {
+/* --- Scores Page Specific Styles (scores.html) --- */
+.content-container { /* Container for song list and details */
     display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5rem;
-    background-color: #f5f5f5;
-    border-top: 1px solid #ddd;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    align-items: flex-start;
 }
 
-#pdf-pagination button {
-    padding: 0.5rem 1rem;
-    margin: 0 0.5rem;
+/* Song list container */
+#song-list-container {
+    flex: 1 1 300px;
+    min-width: 250px;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    max-height: 75vh;
+    display: flex;
+    flex-direction: column;
+}
+#song-list-container h2 {
+     margin-top: 0;
+     margin-bottom: 1rem;
+     font-size: 1.2rem;
+     color: #555;
+     border-bottom: 1px solid #eee;
+     padding-bottom: 0.5rem;
+}
+#song-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+#song-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    cursor: default;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+#song-list li:last-child { border-bottom: none; }
+#song-list li.active {
+    background-color: #FFF9C4;
+    color: #424242;
+    font-weight: normal;
+}
+.song-list-info {
+    flex-grow: 1;
+    margin-right: 1rem;
+    overflow: hidden; /* Prevent long text from breaking layout */
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#song-list .song-title {
+     font-weight: 500;
+     display: block; /* Ensure it takes block space */
+     overflow: hidden;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+}
+#song-list .song-artist {
+    font-size: 0.85em;
+    color: #757575;
+    display: block; /* Ensure it takes block space */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.song-list-scores {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: flex-end;
+}
+/* Score buttons within the list */
+.list-score-btn {
+    padding: 3px 8px;
+    font-size: 0.8em;
     border: 1px solid #ccc;
-    background-color: white;
-    border-radius: 4px;
+    background-color: #f0f0f0;
+    color: #555;
     cursor: pointer;
+    border-radius: 3px;
     transition: all 0.2s ease;
 }
-
-#pdf-pagination button:hover {
-    background-color: #eee;
+.list-score-btn:hover {
+    background-color: #e0e0e0;
+    border-color: #bbb;
 }
-
-#pdf-pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.list-score-btn.active {
+    background-color: #E57373;
+    color: white;
+    border-color: #E57373;
+    font-weight: bold;
 }
-
-#pdf-pagination span {
-    margin: 0 0.5rem;
-    font-size: 0.9rem;
-    color: #666;
+#song-list-container #song-list-loading, /* Loading/Error inside list container */
+#song-list-container #song-list-error {
+     padding: 1rem;
+     text-align: center;
+     color: #888;
 }
+#song-list-container #song-list-error { color: red; }
 
-
-/* PDF 檢視器容器 */
-#pdf-viewer-container {
-    border: 1px solid #ddd;
-    min-height: 500px; /* 保持最小高度 */
-    background-color: #e0e0e0; /* 稍微深一點的背景，方便觀察 */
-    position: relative;
-    border-radius: 4px;
-    overflow: hidden;
-    display: none; /* *** 初始仍然隱藏 *** */
-    width: 100%; /* *** 確保容器佔滿寬度 *** */
-    margin-top: 1rem; /* 和樂譜選擇器之間加點間距 */
-}
-/* 當 JS 添加 visible class 時顯示 */
+/* Song detail container (scores.html) */
 #song-detail-container {
-    flex: 2 1 600px; /* flex-grow, flex-shrink, flex-basis */
-    display: flex; /* *** 改為 flex *** */
-    flex-direction: column; /* *** 新增: 垂直堆疊子元素 *** */
+    flex: 2 1 600px;
+    display: flex;
+    flex-direction: column;
     background: #fff;
     padding: 1.5rem;
     border-radius: 6px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    min-height: 600px; /* 可選: 設定最小高度 */
-    /* *** 使用 visibility 和 opacity 控制初始隱藏與動畫 *** */
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
+    min-height: 600px; /* 保持最小高度 */
+    display: none; /* 初始隱藏，由 JS 控制 */
+    overflow: visible; /* *** 確保內容不會被意外截斷 *** */
+}
 
-    /* YouTube 播放器樣式 (保持不變或微調) */
+#song-info {
+     margin-top: 0;
+     margin-bottom: 1.5rem;
+     font-size: 1.5rem;
+     font-weight: 700;
+     color: #333;
+     padding-bottom: 1rem;
+     border-bottom: 1px solid #eee;
+     flex-shrink: 0; /* Prevent shrinking */
+}
 #youtube-player {
     margin-bottom: 1.5rem;
-    flex-shrink: 0; /* 防止被壓縮 */
+    flex-shrink: 0;
 }
 #youtube-player iframe {
     width: 100%;
@@ -320,63 +378,101 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     border: none;
     border-radius: 4px;
 }
+#score-selector { /* Container for score buttons inside details */
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+#score-selector h3 {
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
+    color: #555;
+}
+#score-selector button.score-type-btn { /* Score buttons inside details */
+     padding: 6px 12px;
+     margin-right: 8px;
+     margin-bottom: 8px;
+     cursor: pointer;
+     border: 1px solid #B0BEC5;
+     background-color: #fff;
+     color: #555;
+     border-radius: 4px;
+     transition: all 0.2s ease;
+     font-size: 0.9rem;
+}
+#score-selector button.score-type-btn:hover {
+    background-color: #ECEFF1;
+    border-color: #78909C;
+}
+#score-selector button.score-type-btn.active {
+     background-color: #E57373;
+     color: white;
+     border-color: #E57373;
+     font-weight: bold;
 }
 
-/* *** 新增 .visible class *** */
-#song-detail-container.visible {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 0.3s ease-in-out, visibility 0s linear 0s;
-}
-
-/* PDF 預覽區 */
+/* PDF viewer container (scores.html) */
+/* PDF viewer container (scores.html) */
 #pdf-viewer-container {
     border: 1px solid #ddd;
-    max-height: 80vh;
-    overflow: auto;
+    /* max-height: 80vh; */ /* *** 移除 max-height，讓 flex-grow 生效 *** */
+    overflow: auto; /* 內部滾動 */
     background-color: #e8e8e8;
     position: relative;
     border-radius: 4px;
     margin-bottom: 0.5rem;
-    /* *** 改為 flex 佈局 *** */
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* *** 新增: 允許容器垂直增長 *** */
-    min-height: 400px; /* *** 新增: 避免完全摺疊 *** */
+    flex-grow: 1; /* *** 確保能佔滿父容器剩餘空間 *** */
+    min-height: 400px; /* *** 保持最小高度 *** */
     /* display: none; 由 JS 控制 */
+    z-index: 1; /* 確保在正常流中 */
 }
-
+#pdf-viewer-container canvas {
+     display: block;
+     margin: 1rem auto;
+     max-width: 95%;
+     height: auto;
+     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+     background-color: white;
+     border: 1px dashed blue; /* *** 添加臨時邊框以便觀察 *** */
+     position: relative; /* *** 確保相對定位 *** */
+     z-index: 2; /* *** 確保在容器背景之上 *** */
+}
 #pdf-loading, #pdf-error {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    color: #666;
-    font-size: 1.1rem;
-    padding: 1rem;
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: 4px;
-    z-index: 10; /* 確保在 Canvas 上方 */
-    display: none; /* 由 JS 控制 */
+     position: absolute;
+     top: 50%; left: 50%;
+     transform: translate(-50%, -50%);
+     text-align: center;
+     color: #666;
+     font-size: 1.1rem;
+     padding: 1rem;
+     background-color: rgba(255, 255, 255, 0.95); /* 加深一點背景 */
+     border-radius: 4px;
+     z-index: 10; /* 確保在最上層 */
+     display: none; /* 由 JS 控制 */
+     border: 1px solid orange; /* 臨時邊框 */
+     min-width: 150px; /* 確保錯誤信息本身可見 */
 }
-#pdf-error { color: red; }
-/* PDF 分頁 */
+#pdf-error { color: red; font-weight: bold;}
+
+/* PDF Pagination (scores.html) */
 #pdf-pagination {
     text-align: center;
     padding: 0.8rem 0;
     background-color: #f8f9fa;
     border-top: 1px solid #ddd;
-    /* *** 改為 flex 佈局 *** */
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px; /* 元素間距 */
-    flex-shrink: 0; /* *** 新增: 防止被壓縮 *** */
+    gap: 10px;
+    flex-shrink: 0;
     /* display: none; 由 JS 控制 */
+    position: relative; /* 確保在正常流 */
+    z-index: 5; /* 確保在 Canvas 之上 (雖然佈局上應該在下面) */
 }
 #pdf-pagination button {
-    padding: 5px 10px; margin: 0; cursor: pointer;
-    border: 1px solid #ccc; background-color: #fff; border-radius: 3px;
+     padding: 5px 10px; margin: 0; cursor: pointer;
+     border: 1px solid #ccc; background-color: #fff; border-radius: 3px;
 }
 #pdf-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 #pdf-pagination span { margin: 0 5px; color: #555; font-size: 0.9em;}
