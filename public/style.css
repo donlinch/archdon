@@ -116,7 +116,7 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
 .album-grid {
     display: grid;
     /* 預設 (手機) 2 欄 */
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     width: 100%;
     padding: 0 1rem;
