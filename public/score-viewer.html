@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>樂譜檢視 - SunnyYummy</title> <!-- JS 會動態修改 -->
+    <meta name="robots" content="noindex, nofollow"> <!-- 不建議搜尋引擎索引此頁 -->
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f0f0f0; /* 頁面背景稍暗區分 */ padding-bottom: 0; } /* 移除底部 padding */
+        main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; } /* 移除主內容區域限制 */
+        .viewer-header {
+            background-color: #FFB74D;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .viewer-header a { color: #424242; text-decoration: none; font-weight: 500; }
+        .viewer-header h1 { font-size: 1.2rem; color: #424242; margin: 0; text-align: center; flex-grow: 1; }
+        .viewer-header button {
+            padding: 5px 10px;
+            border: 1px solid #424242;
+            background: white;
+            color: #424242;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .viewer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 水平居中 */
+            padding: 1.5rem;
+            gap: 1.5rem;
+        }
+        #youtube-player-viewer { /* 新 ID */
+            width: 100%;
+            max-width: 800px; /* 限制 YouTube 最大寬度 */
+            flex-shrink: 0;
+        }
+        #youtube-player-viewer iframe {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: none;
+            border-radius: 4px;
+        }
+        #pdf-viewer-container-viewer { /* 新 ID */
+            width: 100%;
+            max-width: 95%; /* 限制 PDF 最大寬度，留點邊距 */
+            border: 1px solid #ccc;
+            background-color: #e8e8e8;
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden; /* 內部 Canvas 不溢出 */
+            display: flex; /* 使用 flex 佈局 */
+            flex-direction: column; /* 垂直堆疊 */
+            min-height: 60vh; /* 最小高度 */
+        }
+        #pdf-viewer-container-viewer canvas { /* 新 ID */
+            display: block;
+            margin: 0 auto; /* 水平居中 */
+            width: 100%; /* Canvas 寬度充滿容器 */
+            max-width: 100%; /* Canvas 不超過容器 */
+            height: auto;
+            background-color: white;
+        }
+        #pdf-pagination-viewer { /* 新 ID */
+            padding: 0.8rem 0;
+            background-color: #f8f9fa;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+         #pdf-loading-viewer, #pdf-error-viewer { /* 新 ID */
+             position: absolute; top: 40%; left: 50%; /* 稍微上移 */
+             transform: translate(-50%, -50%); z-index: 10;
+             padding: 1rem; background-color: rgba(255,255,255,0.95);
+             border-radius: 5px; text-align: center; color: #666;
+             display: none; /* JS 控制 */
+             min-width: 150px;
+             border: 1px solid orange;
+         }
+         #pdf-error-viewer { color: red; font-weight: bold;}
+
+        /* 列印樣式 */
+        @media print {
+            body { background-color: white; }
+            .viewer-header, #youtube-player-viewer, #pdf-pagination-viewer, footer { display: none !important; }
+            main.score-viewer-main { padding: 0; margin: 0;}
+            .viewer-content { padding: 0; }
+            #pdf-viewer-container-viewer {
+                border: none;
+                box-shadow: none;
+                width: 100%;
+                max-width: 100%;
+                min-height: auto;
+                overflow: visible; /* 列印時顯示所有內容 */
+            }
+            #pdf-viewer-container-viewer canvas {
+                 max-width: 100%;
+                 box-shadow: none;
+                 margin: 0;
+            }
+            /* 嘗試強制分頁 (效果可能因瀏覽器而異) */
+            #pdf-viewer-container-viewer canvas {
+                page-break-inside: avoid;
+                page-break-before: auto;
+                page-break-after: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="viewer-header">
+        <a href="/scores.html">< 返回樂譜中心</a>
+        <h1 id="viewer-title">載入中...</h1>
+        <button id="print-score-btn">列印樂譜</button>
+    </header>
+
+    <main class="score-viewer-main">
+        <div class="viewer-content">
+            <!-- YouTube 播放器容器 -->
+            <div id="youtube-player-viewer" style="display: none;"></div>
+
+            <!-- PDF 預覽容器 -->
+            <div id="pdf-viewer-container-viewer" style="display: none;">
+                <div id="pdf-loading-viewer" style="display: none;">正在載入樂譜...</div>
+                <div id="pdf-error-viewer" style="display: none;">無法載入樂譜。</div>
+                <canvas id="pdf-canvas-viewer"></canvas> <!-- 新 ID -->
+                <!-- PDF 分頁控制 -->
+                <div id="pdf-pagination-viewer" style="display: none;">
+                   <button id="pdf-prev-viewer">< 上一頁</button> <!-- 新 ID -->
+                   <span>第 <span id="pdf-page-num-viewer"></span> / <span id="pdf-page-count-viewer"></span> 頁</span> <!-- 新 ID -->
+                   <button id="pdf-next-viewer">下一頁 ></button> <!-- 新 ID -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <!-- 可以放一個簡單的頁尾，或者在列印時隱藏 -->
+        <div class="footer-container" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #ddd;">
+            <div class="footer-copyright">
+                <p>© 2024 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PDF.js 函式庫 (使用 ES Module 版本) -->
+    <script src="//mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
+
+    <!-- 新的檢視器腳本 -->
+    <script src="/score-viewer.js" type="module"></script>
+</body>
+</html>
