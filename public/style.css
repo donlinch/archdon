@@ -69,28 +69,28 @@ nav#artist-filter.artist-filter-nav {
     gap: 0.6rem 1rem;
     margin: 2rem 0;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #eee; /* *** 確保這個邊框存在 *** */
 }
-/* *** 提高按鈕樣式選擇器的特異性 *** */
+
+/* *** 修改這裡：移除 !important 和 border-bottom: none *** */
 nav#artist-filter.artist-filter-nav button.artist-filter-btn {
-    padding: 0.4rem 0.8rem !important;
-    border: 1px solid #B0BEC5 !important;
-    border-radius: 15px !important;
-    background-color: transparent !important;
-    color: #757575 !important;
-    cursor: pointer !important;
-    font-size: 0.9rem !important;
-    transition: all 0.2s ease !important;
-    text-decoration: none !important;
-    border-bottom: none !important;
-    line-height: 1.5 !important;
-    /* 新增以下屬性確保按鈕行為 */
-    display: inline-block !important;
-    margin: 0 !important;
-    font-family: inherit !important;
-    box-shadow: none !important;
-    appearance: none !important;
-    -webkit-appearance: none !important;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #B0BEC5;
+    border-radius: 15px;
+    background-color: transparent;
+    color: #757575;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    /* border-bottom: none !important; */ /* *** 移除這一行 *** */
+    line-height: 1.5;
+    display: inline-block;
+    margin: 0;
+    font-family: inherit;
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
 }
 /* *** 提高 hover 樣式的特異性 *** */
 nav#artist-filter.artist-filter-nav button.artist-filter-btn:hover {
@@ -98,14 +98,12 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn:hover {
     border-color: #78909C;
     color: #424242;
 }
-/* *** 提高 active 樣式的特異性 *** */
 nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
     background-color: #E57373;
     color: white;
     border-color: #E57373;
     font-weight: bold;
 }
-
 
 .music-container {
     display: flex;
