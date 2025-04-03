@@ -20,18 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFormError = document.getElementById('edit-form-error');
     // Modal 內的銷售區塊元素
     const editVariationListDiv = document.getElementById('edit-variation-list');
-    const recordSalesBtn = document.getElementById('record-sales-btn');
+    // recordSalesBtn 在 openEditModal 中獲取
     const recordSalesError = document.getElementById('record-sales-error');
     const recordSalesSuccess = document.getElementById('record-sales-success');
 
     const addModal = document.getElementById('add-modal');
     const addForm = document.getElementById('add-product-form');
     const addProductName = document.getElementById('add-product-name');
-    const addProductDescription = document.getElementById('add-product-description'); // 確保存在
-    const addProductPrice = document.getElementById('add-product-price');       // 確保存在
-    const addProductImageUrl = document.getElementById('add-product-image-url'); // 確保存在
+    const addProductDescription = document.getElementById('add-product-description');
+    const addProductPrice = document.getElementById('add-product-price');
+    const addProductImageUrl = document.getElementById('add-product-image-url');
     const addImagePreview = document.getElementById('add-image-preview');
-    const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url'); // 確保存在
+    const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
     const addFormError = document.getElementById('add-form-error');
 
     // --- 銷售報告區塊元素 ---
@@ -54,19 +54,38 @@ document.addEventListener('DOMContentLoaded', () => {
     let trafficChartInstance = null; // 儲存流量圖表實例
     let currentGranularity = 'daily';
 
+    // --- 檢查必要元素是否存在 ---
+    function checkElements(...elements) {
+        for (const el of elements) {
+            if (!el) {
+                console.error("初始化錯誤：缺少必要的 DOM 元素。請檢查 HTML ID 是否正確。缺失的元素可能為:", elements.map(e => e ? e.id : '未找到').join(', '));
+                // 可以選擇在此處禁用相關功能或顯示錯誤訊息給使用者
+                return false;
+            }
+        }
+        return true;
+    }
+    // 執行檢查
+    const coreElementsExist = checkElements(
+        productListBody, productListContainer, productTable, editModal, editForm, addModal, addForm,
+        salesReportSection, salesReportTitle, salesReportChartCanvas, salesReportLoading, salesReportError, salesReportNoData,
+        trafficChartCanvas, chartLoadingMsg, chartErrorMsg, btnDaily, btnMonthly
+    );
+    if (!coreElementsExist) {
+        console.error("頁面核心元件缺失，部分功能可能無法運作。");
+        // 可以顯示一個更明顯的錯誤訊息給使用者
+        if(document.body) document.body.insertAdjacentHTML('afterbegin', '<p style="background:red; color:white; padding:10px; text-align:center; font-weight:bold;">頁面載入錯誤，缺少核心元件，請聯繫管理員檢查HTML結構！</p>');
+    }
+
+
     // --- Function to Fetch and Display ALL Products in the Table ---
     async function fetchAndDisplayProducts() {
-        if (!productListBody || !productListContainer || !productTable) {
-            console.error("Admin page table elements not found.");
-            if(loadingMessage) loadingMessage.textContent='頁面結構錯誤，無法載入列表。';
-            return;
-        }
+        if (!productListBody || !productListContainer || !productTable) return; // 依賴檢查已在前面完成
         try {
             if (loadingMessage) loadingMessage.style.display = 'block';
             if (productTable) productTable.style.display = 'none';
 
-            // API 需要返回包含 total_inventory 的數據
-            const response = await fetch('/api/products');
+            const response = await fetch('/api/products'); // API 應返回包含 total_inventory 的數據
             if (!response.ok) { throw new Error(`HTTP 錯誤！狀態: ${response.status}`); }
             const products = await response.json();
 
@@ -84,14 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.dataset.productId = product.id;
                 const inventory = product.total_inventory !== undefined ? product.total_inventory : 'N/A';
                 const lowStock = (inventory !== 'N/A' && inventory <= 5); // 假設庫存 <= 5 為低庫存
+                // 確保 td 數量和順序正確 (7個)
                 row.innerHTML = `
                     <td>${product.id}</td>
                     <td title="${product.name || ''}">${product.name || ''}</td>
                     <td style="text-align:right; padding-right: 10px;">${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
                     <td style="text-align:center;">${product.click_count !== null ? product.click_count : '0'}</td>
                     <td style="text-align:center; font-weight: ${lowStock ? 'bold' : 'normal'}; color: ${lowStock ? 'red' : 'inherit'};" title="總庫存">${inventory}</td>
-                    <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="max-width: 50px; height: auto; border: 1px solid #eee; display: block; margin: 0 auto;"></td>
-                    <td style="text-align:center;">
+                    <td style="text-align:center;"> <!-- 圖片預覽欄 -->
+                        <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="max-width: 50px; max-height: 50px; height: auto; border: 1px solid #eee; display: inline-block; vertical-align: middle;">
+                    </td>
+                    <td style="text-align:center;"> <!-- 操作欄 -->
                         <button class="action-btn edit-btn" onclick="window.editProduct(${product.id})">編輯</button>
                         <button class="action-btn delete-btn" onclick="window.deleteProduct(${product.id})">刪除</button>
                         <button class="action-btn view-sales-btn" data-product-id="${product.id}" data-product-name="${product.name || '商品'}">查看銷售</button>
@@ -108,16 +130,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Function to Open and Populate the Edit Modal ---
     async function openEditModal(id) {
-        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError, editVariationListDiv, recordSalesBtn, recordSalesError, recordSalesSuccess];
+        // 檢查 Edit Modal 內部必要的元素
+        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError, editVariationListDiv, recordSalesError, recordSalesSuccess];
         if (requiredEditElements.some(el => !el)) { console.error("編輯 Modal 元件缺失"); alert("編輯視窗元件錯誤"); return; }
+
         editFormError.textContent = ''; editForm.reset(); editImagePreview.style.display = 'none'; editImagePreview.src = '';
         editVariationListDiv.innerHTML = '<p style="color: #888; text-align: center;">正在載入規格...</p>';
         recordSalesError.textContent = ''; recordSalesSuccess.textContent = '';
 
         try {
-            // API 需要返回商品及其 variations (含 inventory_count)
             const response = await fetch(`/api/products/${id}`);
-            if (!response.ok) {
+             if (!response.ok) {
                  let errorMsg = `無法獲取商品資料 (HTTP ${response.status})`;
                  if (response.status === 404) errorMsg = '找不到該商品。';
                  else { try { const data = await response.json(); errorMsg += `: ${data.error || ''}`; } catch(e){} }
@@ -129,8 +152,19 @@ document.addEventListener('DOMContentLoaded', () => {
             editProductId.value = product.id; editProductName.value = product.name || ''; editProductDescription.value = product.description || ''; editProductPrice.value = product.price !== null ? product.price : ''; editProductImageUrl.value = product.image_url || ''; editProductSevenElevenUrl.value = product.seven_eleven_url || ''; editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0';
             if (product.image_url) { editImagePreview.src = product.image_url; editImagePreview.style.display = 'block'; } else { editImagePreview.style.display = 'none'; }
 
-            // Fill variations, inventory inputs, and sales inputs
             renderVariationsForEditing(product.variations || []);
+
+            // Attach event listener for record sales button *after* modal content is ready
+            const recordSalesBtn = document.getElementById('record-sales-btn'); // Get button inside modal
+            if (recordSalesBtn) {
+                // Use cloneNode trick to remove potential previous listeners
+                recordSalesBtn.replaceWith(recordSalesBtn.cloneNode(true));
+                const newRecordSalesBtn = document.getElementById('record-sales-btn');
+                newRecordSalesBtn.addEventListener('click', handleRecordSalesClick);
+                newRecordSalesBtn.disabled = !(product.variations && product.variations.length > 0);
+            } else {
+                console.error("無法在 Modal 中找到 #record-sales-btn");
+            }
 
             editModal.style.display = 'flex';
         } catch (error) { console.error(`獲取商品 ${id} 編輯資料出錯:`, error); alert(`無法載入編輯資料： ${error.message}`); }
@@ -142,12 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
         editVariationListDiv.innerHTML = '';
 
         if (!variations || variations.length === 0) {
-            editVariationListDiv.innerHTML = '<p style="color: #888; text-align: center;">此商品沒有設定規格。請先新增商品，再編輯以添加規格。</p>';
-            if(recordSalesBtn) recordSalesBtn.disabled = true;
+            editVariationListDiv.innerHTML = '<p style="color: #888; text-align: center;">此商品尚未設定規格。請聯絡管理員在資料庫中添加。</p>'; // Adjusted message
+            // Button disable/enable is handled in openEditModal
             return;
         }
-
-        if(recordSalesBtn) recordSalesBtn.disabled = false;
 
         variations.forEach(variation => {
             const itemDiv = document.createElement('div');
@@ -158,12 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
             nameSpan.classList.add('variation-name');
             nameSpan.textContent = variation.name || '未命名規格';
 
-            // Display current inventory
             const inventoryDisplaySpan = document.createElement('span');
             inventoryDisplaySpan.classList.add('variation-inventory-display');
             inventoryDisplaySpan.textContent = `庫存: ${variation.inventory_count !== undefined ? variation.inventory_count : 'N/A'}`;
 
-            // Input for updating inventory
             const inventoryInputDiv = document.createElement('div');
             inventoryInputDiv.classList.add('variation-inventory-input');
             const inventoryLabel = document.createElement('label');
@@ -174,13 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
             inventoryInput.id = `inventory-input-${variation.id}`;
             inventoryInput.min = '0';
             inventoryInput.placeholder = '數量';
-            inventoryInput.dataset.variationId = variation.id; // Store ID for saving
-            inventoryInput.value = variation.inventory_count !== undefined ? variation.inventory_count : ''; // Pre-fill
+            inventoryInput.dataset.variationId = variation.id;
+            inventoryInput.value = variation.inventory_count !== undefined ? variation.inventory_count : '';
             inventoryInputDiv.appendChild(inventoryLabel);
             inventoryInputDiv.appendChild(inventoryInput);
 
-
-            // Input for recording sales quantity
             const salesInputDiv = document.createElement('div');
             salesInputDiv.classList.add('variation-sales-input');
             const salesLabel = document.createElement('label');
@@ -191,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             salesInput.id = `sales-input-${variation.id}`;
             salesInput.min = '0';
             salesInput.placeholder = '數量';
-            salesInput.dataset.variationId = variation.id; // Store ID for recording sales
+            salesInput.dataset.variationId = variation.id;
             salesInputDiv.appendChild(salesLabel);
             salesInputDiv.appendChild(salesInput);
 
@@ -204,56 +232,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Handle "Record Sales" Button Click in Modal ---
-    if (recordSalesBtn) {
-        recordSalesBtn.addEventListener('click', async () => {
-            if (!editVariationListDiv) return;
-            recordSalesError.textContent = ''; recordSalesSuccess.textContent = '';
+    // --- Handle "Record Sales" Button Click ---
+    async function handleRecordSalesClick() {
+        const recordSalesBtn = document.getElementById('record-sales-btn'); // Re-get the button just in case
+        if (!editVariationListDiv || !recordSalesBtn) {
+             console.error("無法執行記錄銷售：缺少必要元素。");
+             return;
+        }
+        recordSalesError.textContent = ''; recordSalesSuccess.textContent = '';
 
-            const salesEntries = [];
-            const salesInputs = editVariationListDiv.querySelectorAll('.variation-sales-input input');
+        const salesEntries = [];
+        const salesInputs = editVariationListDiv.querySelectorAll('.variation-sales-input input');
 
-            salesInputs.forEach(input => {
-                const quantity = parseInt(input.value);
-                const variationId = input.dataset.variationId;
-                if (!isNaN(quantity) && quantity > 0 && variationId) {
-                    salesEntries.push({ variationId: variationId, quantity: quantity });
-                }
-            });
-
-            if (salesEntries.length === 0) { recordSalesError.textContent = '請至少輸入一個規格的售出數量。'; return; }
-
-            recordSalesBtn.disabled = true; recordSalesBtn.textContent = '記錄中...';
-
-            try {
-                const response = await fetch('/api/admin/sales-log', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: salesEntries })
-                });
-                if (!response.ok) {
-                    let errorMsg = `記錄銷售失敗 (HTTP ${response.status})`; try{ const data = await response.json(); errorMsg += `: ${data.error || '請重試'}`;} catch(e){} throw new Error(errorMsg);
-                }
-                const result = await response.json();
-                recordSalesSuccess.textContent = result.message || '銷售記錄成功！';
-                salesInputs.forEach(input => input.value = ''); // Clear inputs
-                setTimeout(() => { recordSalesSuccess.textContent = ''; }, 3000);
-
-                // Refresh the sales report chart
-                const currentProductId = editProductId.value;
-                if (currentReportProductId === currentProductId) {
-                    const currentProductName = editProductName.value;
-                    await displayProductVariationSalesChart(currentProductId, currentProductName);
-                } else {
-                    await displayOverallSalesChart(currentGranularity === 'monthly' ? 'monthly' : 'daily');
-                }
-                 // Refresh product list to show updated inventory potentially (if backend auto-decrements)
-                 // Even if not, good to keep list fresh in case other changes happened
-                 await fetchAndDisplayProducts();
-
-
-            } catch (error) { console.error('記錄銷售時出錯:', error); recordSalesError.textContent = `記錄失敗: ${error.message || error}`;
-            } finally { recordSalesBtn.disabled = false; recordSalesBtn.textContent = '記錄本次銷售'; }
+        salesInputs.forEach(input => {
+            const quantity = parseInt(input.value);
+            const variationId = input.dataset.variationId;
+            if (!isNaN(quantity) && quantity > 0 && variationId) {
+                salesEntries.push({ variationId: variationId, quantity: quantity });
+            }
         });
-    } else { console.error("找不到記錄銷售按鈕 (#record-sales-btn)"); }
+
+        if (salesEntries.length === 0) { recordSalesError.textContent = '請至少輸入一個規格的售出數量。'; return; }
+
+        recordSalesBtn.disabled = true; recordSalesBtn.textContent = '記錄中...';
+
+        try {
+            const response = await fetch('/api/admin/sales-log', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: salesEntries })
+            });
+            if (!response.ok) {
+                let errorMsg = `記錄銷售失敗 (HTTP ${response.status})`; try{ const data = await response.json(); errorMsg += `: ${data.error || '請重試'}`;} catch(e){} throw new Error(errorMsg);
+            }
+            const result = await response.json();
+            recordSalesSuccess.textContent = result.message || '銷售記錄成功！';
+            salesInputs.forEach(input => input.value = ''); // Clear inputs
+            setTimeout(() => { recordSalesSuccess.textContent = ''; }, 3000);
+
+            // Refresh sales report chart and product list
+            const currentProductId = editProductId.value;
+             if (currentReportProductId === currentProductId) {
+                const currentProductName = editProductName.value;
+                await displayProductVariationSalesChart(currentProductId, currentProductName);
+             } else {
+                await displayOverallSalesChart(currentGranularity === 'monthly' ? 'monthly' : 'daily');
+             }
+             await fetchAndDisplayProducts(); // Refresh product list
+
+        } catch (error) { console.error('記錄銷售時出錯:', error); recordSalesError.textContent = `記錄失敗: ${error.message || error}`;
+        } finally {
+            // Ensure button is re-enabled even if errors occur before fetch or during chart refresh
+             if(recordSalesBtn) {
+                 recordSalesBtn.disabled = false;
+                 recordSalesBtn.textContent = '記錄本次銷售';
+             }
+        }
+    }
 
     // --- Handle Edit Form Submission (Save Product + Inventory) ---
     if (editForm) {
@@ -265,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Collect basic product data
             let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
-            const productData = { /* ... name, description, etc ... */
+            const productData = {
                 name: editProductName.value.trim(), description: editProductDescription.value.trim(), price: priceValue, image_url: editProductImageUrl.value.trim() || null, seven_eleven_url: editProductSevenElevenUrl.value.trim() || null
             };
             if (!productData.name) { editFormError.textContent = '商品名稱不能為空。'; return; }
@@ -276,26 +309,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const inventoryInputs = editVariationListDiv.querySelectorAll('.variation-inventory-input input');
             let inventoryValidationError = false;
             inventoryInputs.forEach(input => {
+                if(inventoryValidationError) return;
                 const variationId = input.dataset.variationId;
                 const inventoryCountStr = input.value.trim();
-                if (variationId && inventoryCountStr !== '') { // Only process if ID exists and input is not empty
+                 // **修正: 允許空值 (代表不更新)，但輸入非數字或負數則報錯**
+                if (variationId && inventoryCountStr !== '') {
                     const inventoryCount = parseInt(inventoryCountStr);
                     if (isNaN(inventoryCount) || inventoryCount < 0) {
-                        editFormError.textContent = `規格 #${variationId} 的庫存數量無效。`;
+                        // Try to get variation name for better error message
+                         const nameElement = input.closest('.variation-item')?.querySelector('.variation-name');
+                         const variationName = nameElement ? nameElement.textContent : `ID ${variationId}`;
+                        editFormError.textContent = `規格 "${variationName}" 的庫存數量必須是非負整數。`;
                         inventoryValidationError = true;
-                        input.focus(); // Highlight the problematic input
-                        return; // Stop processing further inputs
+                        input.focus();
+                    } else {
+                        inventoryUpdates.push({ variationId: variationId, inventory_count: inventoryCount });
                     }
-                    inventoryUpdates.push({ variationId: variationId, inventory_count: inventoryCount });
-                } else if (variationId && inventoryCountStr === ''){
-                     editFormError.textContent = `請為規格 #${variationId} 輸入庫存數量。`;
-                     inventoryValidationError = true;
-                     input.focus();
-                     return;
                 }
+                 // Removed validation requiring input if variation exists - allow no change
             });
 
-            if (inventoryValidationError) return; // Stop if validation failed
+            if (inventoryValidationError) return;
 
             const saveButton = editForm.querySelector('.save-btn');
             if(saveButton) saveButton.disabled = true;
@@ -305,26 +339,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 const productResponse = await fetch(`/api/products/${productId}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productData)
                 });
-                if (!productResponse.ok) { /* ... error handling ... */ throw new Error(`商品資料儲存失敗 (HTTP ${productResponse.status})`); }
+                 if (!productResponse.ok) {
+                     let errorMsg = `商品資料儲存失敗 (HTTP ${productResponse.status})`;
+                     try{ const data = await productResponse.json(); errorMsg += `: ${data.error || ''}`;} catch(e){}
+                     throw new Error(errorMsg);
+                 }
 
-                // 4. Update inventory counts (using Promise.all for concurrent updates)
+                // 4. Update inventory counts
                 if (inventoryUpdates.length > 0) {
                     console.log("準備更新庫存:", inventoryUpdates);
                     const inventoryPromises = inventoryUpdates.map(update =>
                         fetch(`/api/admin/variations/${update.variationId}`, {
                             method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inventory_count: update.inventory_count })
-                        }).then(res => {
+                        }).then(async res => { // Make inner function async to use await
                             if (!res.ok) {
-                                // Log error but don't stop other updates immediately
                                 console.error(`更新規格 ${update.variationId} 庫存失敗 (HTTP ${res.status})`);
-                                return res.json().catch(() => ({ error: `HTTP ${res.status}` })).then(errData => Promise.reject(errData)); // Propagate error
+                                // Try to get error message from response body
+                                let detailError = `HTTP ${res.status}`;
+                                try {
+                                    const errData = await res.json();
+                                    detailError = errData.error || detailError;
+                                } catch(e) { /* Ignore parsing error */ }
+                                // Throw a more specific error to be caught by Promise.all catch
+                                throw new Error(`庫存更新失敗 (規格ID ${update.variationId}): ${detailError}`);
                             }
-                            return res.json(); // Or just return true/status code if no body expected
+                            // Optionally return something, or just resolve
+                            // return res.json();
                         })
                     );
                      // Wait for all inventory updates to finish
                      await Promise.all(inventoryPromises);
-                     console.log("所有庫存更新請求已發送。");
+                     console.log("所有請求的庫存更新已完成。");
                 }
 
                 // 5. Close modal and refresh list on overall success
@@ -333,18 +378,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error('儲存商品或庫存時出錯:', error);
-                editFormError.textContent = `儲存錯誤：${error.error || error.message || '未知錯誤'}`;
+                editFormError.textContent = `儲存錯誤：${error.message || '請檢查網絡或聯繫管理員'}`;
             } finally {
                  if(saveButton) saveButton.disabled = false;
             }
         });
     } else { console.error("編輯表單元素 (#edit-product-form) 未找到。"); }
 
+
     // --- Display Overall Sales Chart ---
     async function displayOverallSalesChart(timeframe = 'daily') {
-        if (!salesReportChartCanvas || !salesReportLoading || !salesReportError || !salesReportNoData || !salesReportTitle) return;
+         if (!salesReportChartCanvas || !salesReportLoading || !salesReportError || !salesReportNoData || !salesReportTitle) return;
         currentReportProductId = null;
-        salesReportTitle.textContent = timeframe === 'monthly' ? '整體月銷售趨勢' : '整體日銷售趨勢'; // 更新標題
+        salesReportTitle.textContent = timeframe === 'monthly' ? '整體月銷售趨勢' : '整體日銷售趨勢';
         salesReportLoading.style.display = 'block'; salesReportError.style.display = 'none'; salesReportNoData.style.display = 'none';
         if (salesReportChartInstance) { salesReportChartInstance.destroy(); salesReportChartInstance = null; }
         salesReportChartCanvas.style.display = 'none';
@@ -352,7 +398,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const apiUrl = `/api/admin/analytics/overall-sales-trend?timeframe=${timeframe}`;
             const response = await fetch(apiUrl);
-            if (!response.ok) { throw new Error(`獲取趨勢數據失敗 (HTTP ${response.status})`); }
+             if (!response.ok) {
+                 let errorMsg = `無法獲取趨勢數據 (HTTP ${response.status})`;
+                 try{ const data = await response.json(); errorMsg += `: ${data.error || ''}`;} catch(e){}
+                 throw new Error(errorMsg);
+             }
             const salesData = await response.json();
             salesReportLoading.style.display = 'none';
 
@@ -370,38 +420,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Display Product Variation Sales Chart ---
     async function displayProductVariationSalesChart(productId, productName) {
-         if (!salesReportChartCanvas || !salesReportLoading || !salesReportError || !salesReportNoData || !salesReportTitle) return;
-         currentReportProductId = productId;
-         salesReportTitle.textContent = `商品「${productName}」各規格銷售統計`;
-         salesReportLoading.style.display = 'block'; salesReportError.style.display = 'none'; salesReportNoData.style.display = 'none';
-         if (salesReportChartInstance) { salesReportChartInstance.destroy(); salesReportChartInstance = null; }
-         salesReportChartCanvas.style.display = 'none';
+        if (!salesReportChartCanvas || !salesReportLoading || !salesReportError || !salesReportNoData || !salesReportTitle) return;
+        currentReportProductId = productId;
+        salesReportTitle.textContent = `商品「${productName}」各規格銷售統計`;
+        salesReportLoading.style.display = 'block'; salesReportError.style.display = 'none'; salesReportNoData.style.display = 'none';
+        if (salesReportChartInstance) { salesReportChartInstance.destroy(); salesReportChartInstance = null; }
+        salesReportChartCanvas.style.display = 'none';
 
-         try {
-             const apiUrl = `/api/admin/products/${productId}/variation-sales-summary`;
-             const response = await fetch(apiUrl);
-             if (!response.ok) { throw new Error(`獲取規格銷售數據失敗 (HTTP ${response.status})`); }
-             const variationSales = await response.json();
-             salesReportLoading.style.display = 'none';
-
-             if (!variationSales || variationSales.length === 0 || variationSales.every(v => v.total_sold === 0)) {
-                 salesReportNoData.textContent = `商品「${productName}」尚無銷售記錄。`; salesReportNoData.style.display = 'block'; return;
+        try {
+            const apiUrl = `/api/admin/products/${productId}/variation-sales-summary`;
+            const response = await fetch(apiUrl);
+             if (!response.ok) {
+                 let errorMsg = `無法獲取規格銷售數據 (HTTP ${response.status})`;
+                 try{ const data = await response.json(); errorMsg += `: ${data.error || ''}`;} catch(e){}
+                 throw new Error(errorMsg);
              }
-             salesReportChartCanvas.style.display = 'block';
-             const labels = variationSales.map(item => item.variation_name || '未命名');
-             const data = variationSales.map(item => item.total_sold);
-             const backgroundColors = variationSales.map((_, i) => `hsl(${(i * 360 / variationSales.length) % 360}, 70%, 60%)`); // Use HSL for more distinct colors
+            const variationSales = await response.json();
+            salesReportLoading.style.display = 'none';
 
-             const ctx = salesReportChartCanvas.getContext('2d');
-             salesReportChartInstance = new Chart(ctx, {
-                 type: 'doughnut', // Changed to doughnut for better label display potentially
-                 data: {
-                     labels: labels,
-                     datasets: [{ label: '銷售數量', data: data, backgroundColor: backgroundColors, borderColor: '#fff', borderWidth: 1 }]
-                 },
-                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, title: { display: false } } } // Legend on the right
-             });
-         } catch (error) { console.error(`繪製商品 ${productId} 規格銷售圖失敗:`, error); salesReportLoading.style.display = 'none'; salesReportError.textContent = `無法載入商品銷售圖: ${error.message}`; salesReportError.style.display = 'block'; }
+            if (!variationSales || variationSales.length === 0 || variationSales.every(v => v.total_sold === 0)) {
+                salesReportNoData.textContent = `商品「${productName}」尚無銷售記錄。`; salesReportNoData.style.display = 'block'; return;
+            }
+            salesReportChartCanvas.style.display = 'block';
+            const labels = variationSales.map(item => item.variation_name || '未命名');
+            const data = variationSales.map(item => item.total_sold);
+             const backgroundColors = variationSales.map((_, i) => `hsl(${(i * (360 / (variationSales.length || 1)) + 30) % 360}, 75%, 65%)`); // Adjusted HSL calculation
+
+
+            const ctx = salesReportChartCanvas.getContext('2d');
+            salesReportChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: '銷售數量', data: data, backgroundColor: backgroundColors, borderColor: '#fff', borderWidth: 1 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, title: { display: false } } }
+            });
+        } catch (error) { console.error(`繪製商品 ${productId} 規格銷售圖失敗:`, error); salesReportLoading.style.display = 'none'; salesReportError.textContent = `無法載入商品銷售圖: ${error.message}`; salesReportError.style.display = 'block'; }
     }
 
     // --- Event Listener for Product List ---
@@ -416,40 +471,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     await displayProductVariationSalesChart(productId, productName);
                 }
             }
-            // Edit and Delete still use onclick attributes for simplicity here
+            // Edit and Delete buttons still rely on global onclick functions
         });
     }
 
     // --- Helper Functions and Global Scope Attachments ---
     window.closeModal = function() { if (editModal) { editModal.style.display = 'none'; } }
     window.closeAddModal = function() { if (addModal) { addModal.style.display = 'none'; } }
-    window.editProduct = function(id) { openEditModal(id); }; // Expose edit function
-    window.deleteProduct = async function(id) { // Expose delete function
-         if (confirm(`確定要刪除商品 ID: ${id} 嗎？相關規格和銷售記錄也會被處理或可能 orphaned，請謹慎操作！`)) { // Added warning
-             try {
-                 // Note: Backend should ideally handle cascading deletes or restrict deletion if variations/logs exist.
-                 // Simple deletion for now:
-                 const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    window.editProduct = function(id) { openEditModal(id); };
+    window.deleteProduct = async function(id) {
+        if (confirm(`確定要刪除商品 ID: ${id} 嗎？相關規格和銷售記錄將無法恢復！`)) {
+            try {
+                 // Consider backend constraint or cascade for related data
+                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
                  if (response.status === 204 || response.ok) {
-                    await fetchAndDisplayProducts(); // Refresh list
-                    // Reset sales report if it was showing the deleted product
-                    if (currentReportProductId === id.toString()) {
+                    await fetchAndDisplayProducts();
+                    if (currentReportProductId === id.toString()) { // Use toString for comparison
                         await displayOverallSalesChart();
                     }
-                 } else { let errorMsg = `刪除失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+                 } else { let errorMsg = `刪除失敗 (HTTP ${response.status})`; try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
              } catch (error) { alert(`刪除時發生錯誤：${error.message}`); }
-         }
+        }
     };
-    window.showAddForm = function() { // Expose add function
-         const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError, addImagePreview];
-         if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤"); return; }
-         addFormError.textContent = ''; addForm.reset();
-         addImagePreview.src = ''; addImagePreview.style.display = 'none';
-         addModal.style.display = 'flex';
+    window.showAddForm = function() {
+        const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError, addImagePreview];
+        if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤"); return; }
+        addFormError.textContent = ''; addForm.reset();
+        addImagePreview.src = ''; addImagePreview.style.display = 'none';
+        addModal.style.display = 'flex';
     };
-    window.onclick = function(event) { if (event.target == editModal) { closeModal(); } else if (event.target == addModal) { closeAddModal(); } }
+    // Close modal on outside click
+    window.onclick = function(event) {
+        if (event.target == editModal) { closeModal(); }
+        else if (event.target == addModal) { closeAddModal(); }
+    }
 
-    // Add Product Form Submission (remains mostly the same, does not handle variations)
+    // --- Add Product Form Submission ---
     if (addForm) {
         addForm.addEventListener('submit', async (event) => {
             event.preventDefault(); addFormError.textContent = '';
@@ -461,9 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // ... more validation ...
             try {
                 const response = await fetch(`/api/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newProductData) });
-                if (!response.ok) { /* ... error handling ... */ throw new Error(`新增失敗 (HTTP ${response.status})`); }
+                 if (!response.ok) {
+                     let errorMsg = `新增失敗 (HTTP ${response.status})`;
+                     try{ const data = await response.json(); errorMsg += `: ${data.error || ''}`;} catch(e){}
+                     throw new Error(errorMsg);
+                 }
                 closeAddModal();
-                await fetchAndDisplayProducts(); // Refresh list
+                await fetchAndDisplayProducts();
             } catch (error) { addFormError.textContent = `新增錯誤：${error.message}`; }
         });
     } else { console.error("新增表單元素 (#add-product-form) 未找到。"); }
@@ -475,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = inputElement.value.trim();
                 previewElement.src = url; previewElement.style.display = url ? 'block' : 'none';
             });
-            const initialUrl = inputElement.value.trim(); // Check on load
+            const initialUrl = inputElement.value.trim();
             if (initialUrl) { previewElement.src = initialUrl; previewElement.style.display = 'block'; }
              else { previewElement.style.display = 'none'; }
         }
@@ -483,26 +544,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setupImagePreview(editProductImageUrl, editImagePreview);
     setupImagePreview(addProductImageUrl, addImagePreview);
 
-    // --- Traffic Chart Logic (using trafficChartInstance) ---
+    // --- Traffic Chart Logic ---
     async function displayTrafficChart(granularity = 'daily') {
-        if (!trafficChartCanvas) { console.warn("找不到 traffic-chart canvas 元素。"); return; }
+        if (!trafficChartCanvas || !chartLoadingMsg || !chartErrorMsg) return;
         const ctx = trafficChartCanvas.getContext('2d'); currentGranularity = granularity;
-        if (chartLoadingMsg) chartLoadingMsg.style.display = 'block'; if (chartErrorMsg) chartErrorMsg.style.display = 'none';
-        if (trafficChartInstance) { trafficChartInstance.destroy(); trafficChartInstance = null; } // Use correct variable
+        chartLoadingMsg.style.display = 'block'; chartErrorMsg.style.display = 'none';
+        if (trafficChartInstance) { trafficChartInstance.destroy(); trafficChartInstance = null; }
         trafficChartCanvas.style.display = 'none';
         let apiUrl = '/api/analytics/traffic'; if (granularity === 'monthly') { apiUrl = '/api/analytics/monthly-traffic'; }
         try {
             const response = await fetch(apiUrl);
-            if (!response.ok) { /* ... error handling ... */ }
+            if (!response.ok) { /* ... */ throw new Error(`HTTP ${response.status}`); }
             const trafficData = await response.json();
-            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none'; trafficChartCanvas.style.display = 'block';
-            if (trafficData.length === 0) { if (chartErrorMsg) { chartErrorMsg.textContent='...';} return; }
+            chartLoadingMsg.style.display = 'none'; trafficChartCanvas.style.display = 'block';
+            if (trafficData.length === 0) { chartErrorMsg.textContent='（尚無流量數據）'; chartErrorMsg.style.display='block'; chartErrorMsg.style.color='#888'; return; }
             const labels = trafficData.map(item => item.date || item.month); const dataPoints = trafficData.map(item => item.count);
-            trafficChartInstance = new Chart(ctx, { // Use correct variable
+            trafficChartInstance = new Chart(ctx, {
                 type: 'line', data: { labels: labels, datasets: [{ label: granularity === 'daily' ? '每日瀏覽量' : '每月瀏覽量', data: dataPoints, borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.1)', fill: true, tension: 0.2 }] },
-                options: { /* ... options ... */ }
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, title: { display: false } } }
             });
-        } catch (error) { console.error(`繪製 ${granularity} 流量圖表失敗:`, error); /* ... error handling ... */ }
+        } catch (error) { console.error(`繪製 ${granularity} 流量圖表失敗:`, error); chartLoadingMsg.style.display = 'none'; chartErrorMsg.textContent=`無法載入流量圖: ${error.message}`; chartErrorMsg.style.display='block'; }
     }
     // --- Traffic Chart Button Listeners ---
     if (btnDaily && btnMonthly) {
@@ -516,14 +577,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-    } else { console.warn("找不到圖表切換按鈕。"); }
+    } else { console.warn("找不到流量圖表切換按鈕。"); }
 
     // --- Initial Page Load ---
     async function initializePage() {
-        await fetchAndDisplayProducts();    // Load product list (includes total inventory)
-        await displayTrafficChart('daily'); // Load traffic chart
-        await displayOverallSalesChart();   // Load overall sales report chart
-        console.log("Admin page initialized.");
+        // Ensure core elements exist before proceeding
+        if (!coreElementsExist) return;
+
+        try {
+            await fetchAndDisplayProducts();    // Load product list
+            await displayTrafficChart('daily'); // Load traffic chart
+            await displayOverallSalesChart();   // Load overall sales report chart
+            console.log("Admin page initialized.");
+        } catch (error) {
+            console.error("頁面初始化過程中發生錯誤:", error);
+            // Optionally display a general error message on the page
+        }
     }
 
     initializePage();
