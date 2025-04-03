@@ -23,36 +23,36 @@
          #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 10%; text-align: center;} /* << 總庫存 >> */
          #product-list-table th:nth-child(7), #product-list-table td:nth-child(7) { width: 30%; text-align: center;} /* 操作 */
 
-         /* --- 其他樣式 (保持不變) --- */
+         /* --- 操作按鈕樣式 --- */
          .action-btn { padding: 5px 8px; margin: 0 3px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap; vertical-align: middle; }
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
          .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
          .view-sales-btn { background-color: #17a2b8; border-color: #17a2b8; color: white; }
          .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
-         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 30px; padding-bottom: 30px;}
+
+         /* --- Modal 相關樣式 --- */
+         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; /* JS 控制 */ justify-content: center; align-items: center; padding-top: 30px; padding-bottom: 30px;} /* 增加垂直 padding */
          .modal[style*="display: flex"] { display: flex !important; }
-         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 700px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+         /* 加大 Modal 寬度以容納更多內容 */
+         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 750px; /* 加寬 */ width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; /* 允許內容滾動 */ }
          .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+         .close-btn:hover { color: #333; }
          .form-group { margin-bottom: 1rem; }
          .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
          .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
          .form-group textarea { resize: vertical; min-height: 80px; }
          .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
          .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
-         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain;}
+         .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+         .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
          #edit-image-preview[src], #add-image-preview[src] { display: block; }
          #edit-form-error, #add-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
-         .variation-input-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; }
-         .variation-input-section label { font-size: 1rem; margin-bottom: 0.8rem; display: block;}
-         .variation-input-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-         .variation-input-row input[type="text"], .variation-input-row input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em; }
-         .variation-input-row input[name$="[name]"] { flex: 2; }
-         .variation-input-row input[name$="[inventory_count]"] { flex: 1; text-align: center; }
-         .variation-input-row input[name$="[sku]"] { flex: 1; }
-         .variation-input-row .delete-btn { flex-shrink: 0; padding: 5px 8px; background-color:#dc3545; color:white; border-color:#dc3545;}
-         .variation-input-section small { color: #666; font-size: 0.85em; display: block; margin-top: 5px;}
-         .variation-sales-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; }
-         .variation-sales-section h4 { margin-bottom: 0.8rem; font-size: 1.1em; color: #333; }
+
+         /* --- Modal 內銷售區塊樣式 --- */
+         .variation-sales-section, .variation-input-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; } /* 統一區塊樣式 */
+         .variation-sales-section h4, .variation-input-section label:first-child { margin-bottom: 0.8rem; font-size: 1.1em; color: #333; font-weight: bold; display:block;} /* 區塊標題 */
+         /* 編輯 Modal 內的規格顯示/輸入列 */
          .variation-item { display: flex; flex-wrap: wrap; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; gap: 10px; }
          .variation-item:last-child { border-bottom: none; }
          .variation-item span { margin-right: 5px; white-space: normal; }
@@ -62,18 +62,33 @@
          .variation-inventory-input input, .variation-sales-input input { width: 70px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 3px;}
          .variation-inventory-input { margin-left: auto; }
          .variation-sales-input { margin-left: 10px; }
-         #record-sales-btn { background-color: #198754; color: white; border-color: #198754; }
+         /* 新增 Modal 內的規格輸入列 */
+         .variation-input-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+         .variation-input-row input[type="text"], .variation-input-row input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em; }
+         .variation-input-row input[name$="[name]"] { flex: 2; } /* 規格名稱欄位寬一點 */
+         .variation-input-row input[name$="[inventory_count]"] { flex: 1; text-align: center; } /* 庫存欄位 */
+         .variation-input-row input[name$="[sku]"] { flex: 1; } /* SKU 欄位 */
+         .variation-input-row .delete-btn { flex-shrink: 0; padding: 5px 8px; background-color:#dc3545; color:white; border-color:#dc3545;} /* 移除按鈕 */
+         .variation-input-section small { color: #666; font-size: 0.85em; display: block; margin-top: 5px;}
+
+         #record-sales-btn { background-color: #198754; color: white; border-color: #198754; } /* 獨立的記錄銷售按鈕 */
          #record-sales-btn:disabled { background-color: #aaa; cursor: not-allowed; border-color: #aaa;}
          #record-sales-error, #record-sales-success { font-size: 0.9em; min-height: 1em; margin-top: 5px; text-align: right;}
+
+
+         /* --- 流量圖表樣式 --- */
          .chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; }
          .chart-controls { text-align: center; margin-bottom: 1rem; }
-         .chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; }
+         .chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
          .chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
-         .chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+         .chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
+
+         /* --- 銷售報告區塊樣式 --- */
          #sales-report-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6; }
          #sales-report-title { margin-bottom: 1rem; color: #007bff; font-size: 1.5em; }
          #sales-report-chart-container { position: relative; height: 350px; }
          #sales-report-loading, #sales-report-error, #sales-report-nodata { position: absolute; top: 40%; left: 0; right: 0; text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.8); border-radius: 4px; }
+
      </style>
  </head>
  <body>
@@ -107,13 +122,16 @@
              <p>正在加載商品...</p>
              <table id="product-list-table" style="display: none;">
                  <thead>
-                     <tr> <!-- ** 調整順序 ** -->
+                     <tr> <!-- ** 調整欄位順序 ** -->
                          <th>ID</th>
                          <th>名稱</th>
                          <th>價格</th>
+                         <th>總庫存</th>
+                       
+                         
+                         
                          <th>點擊數</th>
-                         <th>圖片預覽</th>
-                         <th>總庫存</th> <!-- << 移到這裡 >> -->
+                         <th>圖片預覽</th> <!-- << 移到這裡 >> -->
                          <th>操作</th>
                      </tr>
                  </thead>
@@ -125,7 +143,7 @@
 
          <!-- 銷售報告區塊 -->
          <div id="sales-report-section">
-             <h2 id="sales-report-title">整體銷售趨勢</h2>
+             <h2 id="sales-report-title">整體銷售趨勢</h2> <!-- 標題會由 JS 更新 -->
              <div id="sales-report-chart-container">
                   <canvas id="sales-report-chart"></canvas>
                   <p id="sales-report-loading" style="display: none;">正在載入報告數據...</p>
@@ -151,7 +169,7 @@
 
                 <!-- 商品規格輸入區塊 -->
                 <div class="variation-input-section">
-                    <label>商品規格 (至少新增一項，若商品無規格則免填):</label>
+                    <label>商品規格 (若商品無規格則此區免填):</label> <!-- 修改提示文字 -->
                     <div id="add-variations-container" style="margin-bottom: 10px;">
                         <!-- JS 會在此處添加輸入列 -->
                     </div>
@@ -186,11 +204,13 @@
                  <!-- 規格庫存與銷售記錄區塊 -->
                  <div class="variation-sales-section">
                      <h4>規格庫存 & 記錄銷售</h4>
+                     <!-- **修改: 將容器 ID 改為 edit-variation-list** -->
                      <div id="edit-variation-list">
                          <p style="color: #888; text-align: center;">正在載入規格...</p>
                      </div>
                       <!-- 新增規格按鈕 (編輯時) -->
                      <div style="margin-top: 10px;">
+                         <!-- **修改: onclick 調用 'edit'** -->
                          <button type="button" class="action-btn" onclick="addVariationInputRow('edit')" style="background-color: #6c757d; color: white; border:none; padding: 5px 10px; font-size: 0.9em;">+ 新增規格</button>
                      </div>
                      <!-- 記錄銷售按鈕區域 -->
