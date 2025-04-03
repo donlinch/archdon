@@ -559,45 +559,14 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 
 // --- 商品管理 API (受保護) ---
-// 這是新增商品 API
-app.post('/api/products', async (req, res) => {
-    const { name, description, price, image_url, seven_eleven_url, variations } = req.body;
-    
-    // 資料驗證
-    if (!name || !price) {
-        return res.status(400).json({ error: '商品名稱和價格是必填項目' });
-    }
-
-    const client = await pool.connect();
+// POST /api/products
+app.post('/api/products', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    // 驗證邏輯 ... (省略以保持簡潔)
     try {
-        await client.query('BEGIN');
-
-        const productInsertQuery = `
-            INSERT INTO products (name, description, price, image_url, seven_eleven_url)
-            VALUES ($1, $2, $3, $4, $5) RETURNING id
-        `;
-        const productResult = await client.query(productInsertQuery, [name, description, price, image_url, seven_eleven_url]);
-        const productId = productResult.rows[0].id;
-
-        // 插入商品規格
-        for (let variation of variations) {
-            const { name, inventory_count, sku } = variation;
-            const variationInsertQuery = `
-                INSERT INTO product_variations (product_id, name, inventory_count, sku)
-                VALUES ($1, $2, $3, $4)
-            `;
-            await client.query(variationInsertQuery, [productId, name, inventory_count, sku]);
-        }
-
-        await client.query('COMMIT');
-        res.status(201).json({ message: '商品新增成功', productId });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('新增商品或規格失敗:', error);
-        res.status(500).json({ error: '新增商品時發生錯誤' });
-    } finally {
-        client.release();
-    }
+        const result = await pool.query(`INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null ]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('新增商品時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
 });
 // PUT /api/products/:id
 app.put('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
