@@ -142,39 +142,6 @@
              </form>
          </div>
      </div>
-
-     <button class="action-btn view-sales-btn" data-product-id="${product.id}" data-product-name="${product.name}">查看銷售</button>
-
-<!-- 商品銷售詳情區塊 (預設隱藏) -->
-<div id="product-sales-details" style="display: none; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6;">
-    <h2>商品銷售詳情</h2>
-    <h3 id="sales-detail-product-name" style="margin-bottom: 1rem; color: #007bff;"></h3>
-
-    <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
-
-        <!-- 左側：規格列表與記錄 -->
-        <div style="flex: 1 1 400px;">
-            <h4>規格銷售數量 (點擊 +1 記錄售出)</h4>
-            <ul id="variation-list" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-top: 0.5rem;">
-                <!-- 規格列表將由 JS 動態填入 -->
-                <p id="variation-list-loading" style="padding: 1rem; text-align: center; color: #888;">請先從上方列表選擇商品</p>
-            </ul>
-            <p id="variation-list-error" style="color: red; margin-top: 10px;"></p>
-        </div>
-
-        <!-- 右側：銷售圖表 -->
-        <div id="sales-chart-container" style="flex: 1 1 400px; min-width: 300px; position: relative; height: 350px;">
-             <h4>銷售分佈圖</h4>
-             <canvas id="variation-sales-chart"></canvas>
-             <p id="sales-chart-loading" style="text-align: center; color: #888; display: none;">正在載入圖表...</p>
-             <p id="sales-chart-error" style="text-align: center; color: red; display: none;"></p>
-             <p id="sales-chart-nodata" style="text-align: center; color: #888; display: none;">尚無銷售數據可繪製圖表。</p>
-        </div>
-
-    </div>
-</div>
-<!-- 商品銷售詳情區塊結束 -->
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- *** 確保 admin.js 的 script 標籤在 Chart.js 之後 *** -->
