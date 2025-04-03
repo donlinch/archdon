@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!checkElements(productListBody, productListContainer, productTable, loadingMessage)) return;
         try {
             loadingMessage.style.display = 'block'; productTable.style.display = 'none'; productListBody.innerHTML = '';
-            const response = await fetch('/api/products?sort=latest');
+            const response = await fetch('/api/admin/products?sort=latest'); // <<< 新的
+
             if (!response.ok) { let errorMsg = `獲取商品資料失敗 (HTTP ${response.status})`; try { const data = await response.json(); errorMsg += `: ${data.error || ''}`; } catch(e){} throw new Error(errorMsg); }
             const products = await response.json();
             loadingMessage.style.display = 'none'; productTable.style.display = 'table';
@@ -111,8 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 使用驗證過的 variationIdNum
             console.log(`準備發送 PUT /api/admin/variations/${variationIdNum}`); 
-            const response = await fetch(`/api/admin/variations/${variationIdNum}`, { // <<< 使用 variationIdNum
-                method: 'PUT', 
+            const response = await fetch(`/api/admin/products/${productId}`);                 method: 'PUT', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ inventory_count: newInventoryCount }) 
             });

@@ -430,8 +430,7 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- 受保護的管理頁面和 API Routes ---
 
 // 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html', '/inventory-admin.html'], basicAuthMiddleware);// 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 // --- 流量分析 API ---
@@ -466,170 +465,76 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => { // basicAuthMidd
 });
 
 // --- Banner 管理 API ---
-// GET /api/admin/banners
-app.get('/api/admin/banners', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/banners request received");
-    try {
-        const result = await pool.query(
-            `SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at
-             FROM banners ORDER BY display_order ASC, id ASC`
-        );
-        console.log(`[Admin API] Found ${result.rowCount} banners for admin list.`);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-// GET /api/admin/banners/:id
-app.get('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] GET /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query(
-            `SELECT id, image_url, link_url, display_order, alt_text, page_location
-             FROM banners WHERE id = $1`,
-            [id]
-        );
-        if (result.rows.length === 0) {
-            console.warn(`[Admin API] Banner with ID ${id} not found.`);
-            return res.status(404).json({ error: '找不到指定的 Banner。' });
-        }
-        console.log(`[Admin API] Found banner for ID ${id}:`, result.rows[0]);
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/admin/banners
-app.post('/api/admin/banners', async (req, res) => {
-    console.log("[Admin API] POST /api/admin/banners request received");
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
-    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; // 處理 0
-    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(
-            `INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
-            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[Admin API Error] 新增 Banner 時出錯:', err);
-        res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// PUT /api/admin/banners/:id
-app.put('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] PUT /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
-    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0;
-    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(
-            `UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW()
-             WHERE id = $6 RETURNING *`,
-            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]
-        );
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// DELETE /api/admin/banners/:id
-app.delete('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] DELETE /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-    }
-});
-
-
-// --- 商品管理 API (受保護) ---
-// **修改: GET /api/products (獲取列表，包含總庫存)**
-// server.js (修改 line 517 附近的 GET /api/products)
-app.get('/api/products', basicAuthMiddleware, async (req, res) => { // <<< 假設這個是管理員版本，加上 basicAuthMiddleware
+// GET /api/admin/products (獲取列表，包含總庫存和規格 ID)
+app.get('/api/admin/products', async (req, res) => { // basicAuthMiddleware 由上面的 app.use 保護
     const sortBy = req.query.sort || 'latest';
     let orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
     if (sortBy === 'popular') {
         orderByClause = 'ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC';
     }
     try {
-        // *** 修改後的 SQL 查詢 - 同時包含 total_inventory 和 variations ***
         const queryText = `
             SELECT
-                p.id, 
-                p.name, 
-                p.description, 
-                p.price, 
-                p.image_url, 
-                p.seven_eleven_url, 
-                p.click_count,
-                -- 計算總庫存 (可以保留 Group By 或在子查詢/聚合後計算)
+                p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count,
                 COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory,
-                -- 聚合 variations 陣列 (確保包含 id)
                 COALESCE(
                     json_agg(
                         json_build_object(
                             'id', pv.id, 
                             'name', pv.name, 
                             'inventory_count', pv.inventory_count
-                            -- 如果需要 sku: , 'sku', pv.sku 
                         ) ORDER BY pv.name ASC
-                    ) FILTER (WHERE pv.id IS NOT NULL), -- 只聚合有效的 variation
+                    ) FILTER (WHERE pv.id IS NOT NULL),
                     '[]'::json
                 ) AS variations
             FROM products p
             LEFT JOIN product_variations pv ON p.id = pv.product_id
-            GROUP BY p.id -- 按商品分組以計算 SUM 和 AGG
+            GROUP BY p.id
             ${orderByClause}
         `;
         const result = await pool.query(queryText);
-        // 返回的數據應包含 total_inventory 和 variations 陣列
         res.json(result.rows); 
     } catch (err) {
-        console.error('獲取商品列表 (管理員 - 含庫存和規格) 時出錯:', err);
+        console.error('獲取商品列表 (管理員) 時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
 
-// **修改: GET /api/products/:id (獲取單一商品，包含規格)**
-app.get('/api/products/:id', async (req, res) => {
+// GET /api/admin/products/:id (獲取單一商品，包含規格和總庫存)
+app.get('/api/admin/products/:id', async (req, res) => { // basicAuthMiddleware 由上面的 app.use 保護
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
     try {
+        // 先獲取商品基本資料
         const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
         if (productResult.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
         const product = productResult.rows[0];
+        
+        // 再獲取規格資料
         const variationsResult = await pool.query(
             'SELECT id, name, sku, inventory_count FROM product_variations WHERE product_id = $1 ORDER BY name ASC',
             [id]
         );
         product.variations = variationsResult.rows;
+
+        // 計算總庫存
+        let totalInventory = 0;
+        if (product.variations && product.variations.length > 0) {
+            totalInventory = product.variations.reduce((sum, variation) => {
+                const count = Number(variation.inventory_count); 
+                return sum + (isNaN(count) ? 0 : count);
+            }, 0);
+        }
+        product.total_inventory = totalInventory; 
+
         res.json(product);
-    } catch (err) { /* ... */ }
+    } catch (err) { 
+        console.error(`獲取商品 ID ${id} (管理員) 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
 });
+
 
 // **修改: POST /api/products (新增商品及規格 - 受保護)**
 app.post('/api/products', basicAuthMiddleware, async (req, res) => {
