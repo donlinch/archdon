@@ -542,24 +542,25 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 // --- 商品管理 API (受保護) ---
 // **修改: GET /api/products (獲取列表，包含總庫存)**
-app.get('/api/products', async (req, res) => { // basicAuthMiddleware 應用於 /api/admin/*，但商品列表通常是公開的，移除非 admin 路徑
+app.get('/api/products', async (req, res) => {
     const sortBy = req.query.sort || 'latest';
     let orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
     if (sortBy === 'popular') {
         orderByClause = 'ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC';
     }
     try {
+        // 這個查詢計算 total_inventory
         const queryText = `
             SELECT
                 p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count,
-                COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory
+                COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory -- 計算總庫存
             FROM products p
             LEFT JOIN product_variations pv ON p.id = pv.product_id
             GROUP BY p.id
             ${orderByClause}
         `;
         const result = await pool.query(queryText);
-        res.json(result.rows);
+        res.json(result.rows); // 返回的數據應包含 total_inventory
     } catch (err) {
         console.error('獲取商品列表 (含庫存) 時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
@@ -567,28 +568,21 @@ app.get('/api/products', async (req, res) => { // basicAuthMiddleware 應用於 
 });
 
 // **修改: GET /api/products/:id (獲取單一商品，包含規格)**
-app.get('/api/products/:id', async (req, res) => { // 這個也應該是公開的
+app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
     try {
         const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
         if (productResult.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
         const product = productResult.rows[0];
-
-        // 查詢關聯的規格
         const variationsResult = await pool.query(
             'SELECT id, name, sku, inventory_count FROM product_variations WHERE product_id = $1 ORDER BY name ASC',
             [id]
         );
-        product.variations = variationsResult.rows; // 將規格附加到商品物件
-
+        product.variations = variationsResult.rows;
         res.json(product);
-    } catch (err) {
-        console.error(`獲取商品 ID ${id} (含規格) 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
+    } catch (err) { /* ... */ }
 });
-
 
 // **修改: POST /api/products (新增商品及規格 - 受保護)**
 app.post('/api/products', basicAuthMiddleware, async (req, res) => {
