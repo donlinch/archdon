@@ -48,24 +48,7 @@
         <a href="/inventory-admin.html" class="active">庫存管理</a> <!-- 新增連結 -->
     </nav>
 
-    row.innerHTML = `
-    <td>${product.id}</td>
-    <td title="${product.name || ''}">${product.name || '未命名商品'}</td>
-    <td class="variations-cell" style="text-align:left; line-height: 1.5; padding-left: 15px; white-space: normal; vertical-align: top;">
-        ${product.variations.map(variation => {
-            const variationId = variation.id; // 確保這裡的 id 是有效的
-            const count = variation.inventory_count || '未知';
-            return `<div class="variation-row-container">
-                <div class="variation-display-item" data-variation-id="${variationId}" data-current-inventory="${count}">
-                    <span>${variation.name || '未命名'}: <span class="inventory-count-text">${count}</span></span>
-                    <button class="action-btn edit-inventory-btn">編輯</button>
-                </div>
-            </div>`;
-        }).join('')}
-    </td>
-`;
-
-
+    
 
     <div class="admin-container">
         <h1>商品庫存管理</h1>
@@ -79,12 +62,13 @@
              <table id="inventory-product-list-table" style="display: none;">
                  <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>名稱</th>
-                        <th>圖片預覽</th>
-                        <th>點擊數</th>
-                        <th>庫存</th> <!-- 這裡可能指的是規格庫存? -->
-                        <!-- 缺少 總庫存 和 操作 的表頭 -->
+                     <th>ID</th>             <!-- 1 -->
+                     <th>名稱</th>           <!-- 2 -->
+                     <th>圖片預覽</th>       <!-- 3 -->
+                     <th>點擊數</th>         <!-- 4 -->
+                     <th>規格庫存</th>       <!-- 5 -->
+                     <th>總庫存</th>         <!-- 6 (新增) -->
+                     <th>操作</th> 
                     </tr>
                  </thead>
                  <tbody>

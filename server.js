@@ -568,27 +568,48 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 // --- 商品管理 API (受保護) ---
 // **修改: GET /api/products (獲取列表，包含總庫存)**
-app.get('/api/products', async (req, res) => {
+// server.js (修改 line 517 附近的 GET /api/products)
+app.get('/api/products', basicAuthMiddleware, async (req, res) => { // <<< 假設這個是管理員版本，加上 basicAuthMiddleware
     const sortBy = req.query.sort || 'latest';
     let orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
     if (sortBy === 'popular') {
         orderByClause = 'ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC';
     }
     try {
-        // 這個查詢計算 total_inventory
+        // *** 修改後的 SQL 查詢 - 同時包含 total_inventory 和 variations ***
         const queryText = `
             SELECT
-                p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count,
-                COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory -- 計算總庫存
+                p.id, 
+                p.name, 
+                p.description, 
+                p.price, 
+                p.image_url, 
+                p.seven_eleven_url, 
+                p.click_count,
+                -- 計算總庫存 (可以保留 Group By 或在子查詢/聚合後計算)
+                COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory,
+                -- 聚合 variations 陣列 (確保包含 id)
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', pv.id, 
+                            'name', pv.name, 
+                            'inventory_count', pv.inventory_count
+                            -- 如果需要 sku: , 'sku', pv.sku 
+                        ) ORDER BY pv.name ASC
+                    ) FILTER (WHERE pv.id IS NOT NULL), -- 只聚合有效的 variation
+                    '[]'::json
+                ) AS variations
             FROM products p
             LEFT JOIN product_variations pv ON p.id = pv.product_id
-            GROUP BY p.id
+            GROUP BY p.id -- 按商品分組以計算 SUM 和 AGG
             ${orderByClause}
         `;
         const result = await pool.query(queryText);
-        res.json(result.rows); // 返回的數據應包含 total_inventory
+        // 返回的數據應包含 total_inventory 和 variations 陣列
+        res.json(result.rows); 
     } catch (err) {
-        console.error('獲取商品列表 (含庫存) 時出錯:', err);
+        console.error('獲取商品列表 (管理員 - 含庫存和規格) 時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
