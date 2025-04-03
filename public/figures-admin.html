@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公仔管理後台</title>
+    <link rel="stylesheet" href="style.css"> <!-- 引入你的通用樣式 -->
+    <style>
+        /* 頁面特定樣式 */
+        body { font-family: 'Noto Sans TC', sans-serif; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; }
+        #figure-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #figure-table th, #figure-table td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }
+        #figure-table th { background-color: #f2f2f2; }
+        #figure-table img { max-width: 80px; height: auto; display: block; }
+        .variations-list { padding-left: 0; list-style: none; margin: 0; }
+        .variations-list li { margin-bottom: 5px; font-size: 0.9em; }
+        .actions button { margin-right: 5px; padding: 5px 10px; cursor: pointer; }
+        .add-btn-container { margin-bottom: 20px; text-align: right; }
+        #add-figure-btn, #save-figure-btn, .cancel-btn { padding: 10px 15px; cursor: pointer; }
+
+        /* Modal 樣式 (簡易) */
+        .modal {
+            display: none; /* 預設隱藏 */
+            position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.6);
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888;
+            width: 80%; max-width: 600px; border-radius: 8px; position: relative;
+        }
+        .close-btn { position: absolute; top: 10px; right: 15px; color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea { width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        #variations-container .variation-item { display: flex; align-items: center; margin-bottom: 10px; border: 1px dashed #eee; padding: 10px; border-radius: 4px;}
+        #variations-container .variation-item input { margin-right: 10px; }
+        #variations-container .variation-item input[type="text"] { flex-grow: 1; } /* 名稱佔用更多空間 */
+        #variations-container .variation-item input[type="number"] { width: 80px; }
+        #variations-container .variation-item button { padding: 5px 8px; background-color: #f44336; color: white; border: none; cursor: pointer; border-radius: 3px; margin-left: auto;}
+        #add-variation-btn { margin-top: 10px; padding: 8px 12px; }
+
+    </style>
+</head>
+<body>
+    <h1>公仔管理</h1>
+
+    <div class="add-btn-container">
+        <button id="add-figure-btn">＋ 新增公仔</button>
+    </div>
+
+    <div id="figure-list-container">
+        <table id="figure-table">
+            <thead>
+                <tr>
+                    <th>圖片</th>
+                    <th>商品名</th>
+                    <th>規格 & 數量</th>
+                    <th>買入價格</th>
+                    <th>賣出價格</th>
+                    <th>叫貨方法</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="figure-table-body">
+                <!-- 公仔列表將由 JavaScript 載入 -->
+                <tr><td colspan="7">正在載入公仔資料...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 新增/編輯 Modal -->
+    <div id="figure-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">×</span>
+            <h2 id="modal-title">新增公仔</h2>
+            <form id="figure-form">
+                <input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
+
+                <div class="form-group">
+                    <label for="figure-name">商品名 *</label>
+                    <input type="text" id="figure-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="figure-image-url">圖片連結</label>
+                    <input type="text" id="figure-image-url" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="figure-purchase-price">買入價格</label>
+                    <input type="number" id="figure-purchase-price" step="0.01" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="figure-selling-price">賣出價格</label>
+                    <input type="number" id="figure-selling-price" step="0.01" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="figure-ordering-method">叫貨方法</label>
+                    <textarea id="figure-ordering-method"></textarea>
+                </div>
+
+                <hr>
+                <h4>規格與數量</h4>
+                <div id="variations-container">
+                    <!-- 規格輸入欄位將由 JavaScript 動態加入 -->
+                </div>
+                <button type="button" id="add-variation-btn">＋ 新增規格</button>
+
+                <hr style="margin-top: 20px;">
+                <div style="text-align: right; margin-top: 20px;">
+                     <button type="button" class="cancel-btn">取消</button>
+                     <button type="submit" id="save-figure-btn">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="figures-admin.js"></script>
+</body>
+</html>
