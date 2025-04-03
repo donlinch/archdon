@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const productTable = document.getElementById('inventory-product-list-table');
     const loadingMessage = productListContainer ? productListContainer.querySelector('p') : null;
 
+    
     // --- 檢查元素是否存在 ---
     function checkElements(...elements) {
         const missingElementDetails = []; let allExist = true;
@@ -62,46 +63,102 @@ document.addEventListener('DOMContentLoaded', () => {
     function showEditInventoryInput(displayItem) { const container = displayItem.closest('.variation-row-container'); if (!container) return; const editItem = container.querySelector('.variation-edit-item'); if (editItem) { displayItem.style.display = 'none'; editItem.style.display = 'flex'; const input = editItem.querySelector('.inventory-edit-input'); if (input) { input.focus(); input.select(); } const statusSpan = editItem.querySelector('.edit-inventory-status'); if(statusSpan) statusSpan.textContent = ''; } }
     function hideEditInventoryInput(editItem) { const container = editItem.closest('.variation-row-container'); if (!container) return; const displayItem = container.querySelector('.variation-display-item'); if (displayItem) { editItem.style.display = 'none'; displayItem.style.display = 'flex'; const currentInventory = displayItem.dataset.currentInventory; const input = editItem.querySelector('.inventory-edit-input'); if(input) input.value = currentInventory; } }
     async function saveInventoryChange(editItem) {
+        // 1. 先獲取所有需要的元素和 ID
         const input = editItem.querySelector('.inventory-edit-input');
         const statusSpan = editItem.querySelector('.edit-inventory-status');
-        const variationId = editItem.dataset.variationId;
+        const variationId = editItem.dataset.variationId; // <<< 先宣告和獲取
         const container = editItem.closest('.variation-row-container');
         const displayItem = container ? container.querySelector('.variation-display-item') : null;
         const countTextSpan = displayItem ? displayItem.querySelector('.inventory-count-text') : null;
-
-        if (!input || !variationId || variationId === 'undefined' || variationId === 'null' || !statusSpan || !displayItem || !countTextSpan) { console.error("保存庫存時缺少必要元素或有效的 variationId:", { input, variationId, statusSpan, displayItem, countTextSpan }); if(statusSpan) { statusSpan.textContent = '內部錯誤(ID缺失)'; statusSpan.style.color = 'red'; } return; }
-
-        const newInventoryStr = input.value.trim(); const newInventoryCount = parseInt(newInventoryStr);
-
-        // **修正: 補上 isNaN 的右括號 ')'**
-        if (isNaN(newInventoryCount)) {
+    
+        // 2. **嚴格檢查 variationId**
+        //    檢查 variationId 是否存在、非 'undefined' 字串、非 'null' 字串，且轉換為數字後不是 NaN
+        const variationIdNum = variationId ? parseInt(variationId, 10) : NaN; 
+        if (!input || !statusSpan || !displayItem || !countTextSpan || isNaN(variationIdNum)) {
+            console.error("保存庫存時缺少必要元素或無效的 variationId:", { 
+                inputExists: !!input, 
+                statusSpanExists: !!statusSpan, 
+                displayItemExists: !!displayItem, 
+                countTextSpanExists: !!countTextSpan, 
+                variationIdRaw: variationId,
+                variationIdParsed: variationIdNum 
+            });
+            if (statusSpan) { 
+                statusSpan.textContent = `內部錯誤(ID無效: ${variationId})`; // 顯示原始 ID 幫助調試
+                statusSpan.style.color = 'red'; 
+            }
+            return; 
+        }
+        
+        // 3. 現在可以安全地打印了 (修正了末尾的 '/')
+        console.log("Attempting to save Variation ID:", variationIdNum); 
+    
+        const newInventoryStr = input.value.trim(); 
+        const newInventoryCount = parseInt(newInventoryStr, 10); // <<< 加上 radix 10
+    
+        // 修正: 檢查 isNaN 語法是正確的，但確保 newInventoryCount 是從解析後的數字來的
+        if (isNaN(newInventoryCount)) { // 檢查解析後的結果
             statusSpan.textContent = '請輸入數字!'; statusSpan.style.color = 'red'; input.focus(); return;
         }
         if (newInventoryCount < 0) {
             statusSpan.textContent = '不能小於0!'; statusSpan.style.color = 'red'; input.focus(); return;
         }
-
-        const saveButton = editItem.querySelector('.save-inventory-btn'); const cancelButton = editItem.querySelector('.cancel-inventory-btn');
+    
+        const saveButton = editItem.querySelector('.save-inventory-btn'); 
+        const cancelButton = editItem.querySelector('.cancel-inventory-btn');
         if(saveButton) saveButton.disabled = true; if(cancelButton) cancelButton.disabled = true; statusSpan.textContent = '保存中...'; statusSpan.style.color = 'grey';
-
+    
         try {
-            console.log(`準備發送 PUT /api/admin/variations/${variationId}`);
-            const response = await fetch(`/api/admin/variations/${variationId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inventory_count: newInventoryCount }) });
-            if (!response.ok) { let errorMsg = `保存失敗(${response.status})`; try{ const data = await response.json(); errorMsg += `: ${data.error || ''}`;} catch(e){} throw new Error(errorMsg); }
+            // 使用驗證過的 variationIdNum
+            console.log(`準備發送 PUT /api/admin/variations/${variationIdNum}`); 
+            const response = await fetch(`/api/admin/variations/${variationIdNum}`, { // <<< 使用 variationIdNum
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ inventory_count: newInventoryCount }) 
+            });
+    
+            if (!response.ok) { 
+                let errorMsg = `保存失敗(${response.status})`; 
+                try { 
+                    const data = await response.json(); 
+                    // 如果後端返回了更詳細的錯誤信息，顯示它
+                    errorMsg += `: ${data.error || response.statusText}`; 
+                } catch(e){ 
+                    errorMsg += `: ${response.statusText}`; // 如果沒有 JSON body，使用狀態文本
+                } 
+                throw new Error(errorMsg); 
+            }
+            
             const updatedVariation = await response.json();
-
-            countTextSpan.textContent = updatedVariation.inventory_count; displayItem.dataset.currentInventory = updatedVariation.inventory_count;
-            const lowStock = (updatedVariation.inventory_count !== undefined && updatedVariation.inventory_count <= 5); const nameAndCountSpan = displayItem.querySelector('span:first-child');
-            if(nameAndCountSpan) { nameAndCountSpan.style.fontWeight = lowStock ? 'bold' : 'normal'; nameAndCountSpan.style.color = lowStock ? 'red' : 'inherit'; }
-
+    
+            countTextSpan.textContent = updatedVariation.inventory_count; 
+            displayItem.dataset.currentInventory = updatedVariation.inventory_count;
+            const lowStock = (updatedVariation.inventory_count !== undefined && updatedVariation.inventory_count <= 5); 
+            const nameAndCountSpan = displayItem.querySelector('span:first-child');
+            if(nameAndCountSpan) { 
+                nameAndCountSpan.style.fontWeight = lowStock ? 'bold' : 'normal'; 
+                nameAndCountSpan.style.color = lowStock ? 'red' : 'inherit'; 
+            }
+    
             statusSpan.textContent = '已保存!'; statusSpan.style.color = 'green';
             setTimeout(() => hideEditInventoryInput(editItem), 1500);
-
+    
             const productId = displayItem.closest('tr')?.dataset.productId;
-            if (productId) { await updateProductTotalInventoryInRow(productId); }
-
-        } catch (error) { console.error(`保存規格 ${variationId} 庫存失敗:`, error); statusSpan.textContent = `錯誤!`; statusSpan.style.color = 'red'; }
-         finally { if(saveButton) saveButton.disabled = false; if(cancelButton) cancelButton.disabled = false; }
+            if (productId) { 
+                // 等待總庫存更新完成 (如果需要確保順序)
+                await updateProductTotalInventoryInRow(productId); 
+            }
+    
+        } catch (error) { 
+            console.error(`保存規格 ${variationIdNum} 庫存失敗:`, error); 
+            // 在狀態欄顯示更詳細的錯誤信息
+            statusSpan.textContent = `錯誤: ${error.message || '未知錯誤'}`; 
+            statusSpan.style.color = 'red'; 
+        }
+         finally { 
+            if(saveButton) saveButton.disabled = false; 
+            if(cancelButton) cancelButton.disabled = false; 
+        }
     }
     // --- 更新指定商品行的總庫存顯示 ---
     async function updateProductTotalInventoryInRow(productId) {
