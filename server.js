@@ -1004,6 +1004,31 @@ app.get('/scores', (req, res) => {
 });
 
 
+app.put('/api/admin/variations/:variationId', basicAuthMiddleware, async (req, res) => {
+    const { variationId } = req.params;
+    const { inventory_count } = req.body; // 只接受 inventory_count
+    // 嚴格驗證輸入
+    if (isNaN(parseInt(variationId)) || inventory_count === undefined || inventory_count === null || isNaN(parseInt(inventory_count)) || parseInt(inventory_count) < 0) {
+        return res.status(400).json({ error: '無效的規格 ID 或庫存數量（必須是非負整數）。' });
+    }
+    const newInventoryCount = parseInt(inventory_count); // 確保是整數
+
+    try {
+        const result = await pool.query(
+            'UPDATE product_variations SET inventory_count = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, inventory_count', // 返回更新後的資料
+            [newInventoryCount, variationId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的規格。' });
+        }
+        console.log(`規格 ${variationId} 庫存已更新為 ${newInventoryCount}`);
+        res.json(result.rows[0]); // 返回更新後的規格資料
+    } catch (err) {
+        console.error(`更新規格 ${variationId} 庫存時出錯:`, err);
+        res.status(500).json({ error: '更新庫存時發生內部伺服器錯誤。' });
+    }
+});
+
 // --- 404 處理 ---
 // 這個應該是最後的路由處理
 app.use((req, res, next) => {
