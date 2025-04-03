@@ -1,170 +1,841 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const productListBody = document.querySelector('#product-list-table tbody');
-    const productListContainer = document.getElementById('product-list-container');
-    const productTable = document.getElementById('product-list-table');
-    const loadingMessage = productListContainer ? productListContainer.querySelector('p') : null;
+// server.js
+require('dotenv').config(); // 從 .env 載入環境變數
+const https = require('https'); // <--- 確保引入 https
+const express = require('express');
+const path = require('path');
+const { Pool } = require('pg'); // PostgreSQL 客戶端
 
-    const editModal = document.getElementById('edit-modal');
-    const editForm = document.getElementById('edit-product-form');
-    const editProductId = document.getElementById('edit-product-id');
-    const editProductName = document.getElementById('edit-product-name');
-    const editProductDescription = document.getElementById('edit-product-description');
-    const editProductPrice = document.getElementById('edit-product-price');
-    const editProductImageUrl = document.getElementById('edit-product-image-url');
-    const editImagePreview = document.getElementById('edit-image-preview');
-    const editProductSevenElevenUrl = document.getElementById('edit-product-seven-eleven-url');
-    const editProductClickCount = document.getElementById('edit-product-click-count');
-    const editFormError = document.getElementById('edit-form-error');
+const app = express();
+const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
 
-    const addModal = document.getElementById('add-modal');
-    const addForm = document.getElementById('add-product-form');
-    const addProductName = document.getElementById('add-product-name');
-    const addProductDescription = document.getElementById('add-product-description');
-    const addProductPrice = document.getElementById('add-product-price');
-    const addProductImageUrl = document.getElementById('add-product-image-url');
-    const addImagePreview = document.getElementById('add-image-preview');
-    const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
-    const addFormError = document.getElementById('add-form-error');
-    const addVariationsContainer = document.getElementById('add-variations-container');
+// --- 資料庫連接池設定 ---
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
+});
 
-    // --- Fetch and Display All Products ---
-    async function fetchAndDisplayProducts() {
-        if (!productListBody || !productListContainer || !productTable) return;
-        try {
-            if (loadingMessage) loadingMessage.style.display = 'block';
-            if (productTable) productTable.style.display = 'none';
+// --- 基本認證中間件函數定義 ---
+const basicAuthMiddleware = (req, res, next) => {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
+    const authHeader = req.headers.authorization;
 
-            const response = await fetch('/api/products');
-            if (!response.ok) { throw new Error(`HTTP 錯誤！狀態: ${response.status}`); }
-            const products = await response.json();
-
-            if (loadingMessage) loadingMessage.style.display = 'none';
-            if (productTable) productTable.style.display = 'table';
-            productListBody.innerHTML = '';
-
-            if (products.length === 0) {
-                productListBody.innerHTML = '<tr><td colspan="6">目前沒有商品。</td></tr>';
-                return;
-            }
-
-            products.forEach(product => {
-                const row = document.createElement('tr');
-                row.dataset.productId = product.id;
-                row.innerHTML = `
-                    <td>${product.id}</td>
-                    <td title="${product.name || ''}">${product.name || ''}</td>
-                    <td style="text-align:right; padding-right: 15px;">${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
-                    <td style="text-align:center;">${product.click_count !== null ? product.click_count : '0'}</td>
-                    <td style="text-align:center;">
-                        <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="max-width: 50px; max-height: 50px; height: auto; border: 1px solid #eee; display: inline-block; vertical-align: middle;">
-                    </td>
-                    <td style="text-align:center;">
-                        <button class="action-btn edit-btn" onclick="window.editProduct(${product.id})">編輯</button>
-                        <button class="action-btn delete-btn" onclick="window.deleteProduct(${product.id})">刪除</button>
-                    </td>
-                `;
-                productListBody.appendChild(row);
-            });
-        } catch (error) {
-            console.error("獲取管理商品列表失敗:", error);
-            if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。';
-            if (productTable) productTable.style.display = 'none';
-        }
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('需要認證才能訪問管理區域。');
     }
 
-    // --- Open Edit Modal ---
-    async function openEditModal(id) {
-        if (!checkElements(editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError)) return;
+    try {
+        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+        const user = auth[0];
+        const pass = auth[1];
 
-        editFormError.textContent = ''; editForm.reset(); editImagePreview.style.display = 'none'; editImagePreview.src = '';
+        if (user === adminUser && pass === adminPass) {
+            next(); // 認證成功，繼續下一個中間件或路由處理
+        } else {
+            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
+            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+            return res.status(401).send('認證失敗。');
+        }
+    } catch (error) {
+        console.error("認證標頭解析錯誤:", error);
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('認證失敗 (格式錯誤)。');
+    }
+};
 
+// --- JSON 請求體解析中間件 ---
+// 必須放在所有需要讀取 req.body 的路由之前
+app.use(express.json());
+
+// --- 記錄 Page View 中間件 ---
+app.use(async (req, res, next) => {
+    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html']; // 添加 scores.html
+    // 確保只記錄 'GET' 請求且路徑在列表中
+    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
+
+    if (shouldLog) {
+        const pagePath = req.path;
+        console.log(`[PV Mid] Logging view for: ${pagePath}`);
         try {
-            const response = await fetch(`/api/products/${id}`);
-            if (!response.ok) { throw new Error('無法獲取商品資料'); }
-            const product = await response.json();
-
-            editProductId.value = product.id;
-            editProductName.value = product.name || '';
-            editProductDescription.value = product.description || '';
-            editProductPrice.value = product.price !== null ? product.price : '';
-            editProductImageUrl.value = product.image_url || '';
-            editProductSevenElevenUrl.value = product.seven_eleven_url || '';
-            editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0';
-            if (product.image_url) { editImagePreview.src = product.image_url; editImagePreview.style.display = 'block'; } else { editImagePreview.style.display = 'none'; }
-
-            // Fetch variations and populate them
-            if (product.variations) {
-                product.variations.forEach((variation, index) => {
-                    window.addVariationInputRow('edit');
-                    const row = document.querySelector(`#edit-variations-container .variation-input-row:nth-child(${index + 1})`);
-                    if (row) {
-                        row.querySelector('input[name="variations[${index}][name]"]').value = variation.name;
-                        row.querySelector('input[name="variations[${index}][inventory_count]"]').value = variation.inventory_count;
-                        row.querySelector('input[name="variations[${index}][sku]"]').value = variation.sku || '';
-                    }
-                });
+            const sql = `
+                INSERT INTO page_views (page, view_date, view_count)
+                VALUES ($1, CURRENT_DATE, 1)
+                ON CONFLICT (page, view_date)
+                DO UPDATE SET view_count = page_views.view_count + 1;
+                -- 移除 RETURNING * 除非確實需要回傳值
+            `;
+            const params = [pagePath];
+            await pool.query(sql, params);
+            // console.log(`[PV Mid] Page view recorded/updated for: ${pagePath}`); // 僅在需要時啟用詳細日誌
+        } catch (err) {
+            // 處理可能的並發衝突 (ON CONFLICT 應該能處理大部分情況)
+            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
+                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
+            } else {
+                console.error('[PV Mid] Error logging page view:', err.stack || err);
             }
+        }
+    }
+    next(); // 確保總是調用 next()
+});
 
-            editModal.style.display = 'flex';
-        } catch (error) { console.error(`獲取商品 ${id} 編輯資料出錯:`, error); alert(`無法載入編輯資料： ${error.message}`); }
+// --- 靜態文件服務 ---
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- 公開 API Routes ---
+
+// --- 樂譜 API ---
+// GET /api/scores/artists - 取得擁有樂譜的獨立歌手列表
+app.get('/api/scores/artists', async (req, res) => {
+    try {
+        const queryText = `
+            SELECT DISTINCT m.artist
+            FROM music m
+            JOIN scores s ON m.id = s.music_id
+            WHERE m.artist IS NOT NULL AND m.artist <> ''
+            ORDER BY m.artist ASC
+        `;
+        const result = await pool.query(queryText);
+        const artists = result.rows.map(row => row.artist);
+        res.json(artists);
+    } catch (err) {
+        console.error('獲取帶有樂譜的歌手時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取歌手列表時發生內部伺服器錯誤' });
+    }
+});
+
+// GET /api/scores/songs?artist=... - 取得包含樂譜的歌曲列表，可選依歌手過濾
+app.get('/api/scores/songs', async (req, res) => {
+    const { artist } = req.query;
+    try {
+        // *** 修改後的 SQL 查詢 ***
+        let queryText = `
+            SELECT
+                m.id,
+                m.title,
+                m.artist,
+                m.cover_art_url,
+                m.release_date,
+                m.youtube_video_id,
+                s_agg.scores
+            FROM (
+                -- 先選出符合條件且有樂譜的獨立歌曲 ID
+                SELECT DISTINCT m_inner.id
+                FROM music m_inner
+                INNER JOIN scores s_inner ON m_inner.id = s_inner.music_id
+        `;
+        const queryParams = [];
+        let paramIndex = 1; // 用於參數化查詢
+
+        if (artist && artist !== 'All') {
+            queryText += ` WHERE m_inner.artist = $${paramIndex++}`;
+            queryParams.push(decodeURIComponent(artist));
+        }
+
+        // 將子查詢的 DISTINCT 結果與 music 和聚合後的 scores JOIN
+        queryText += `
+            ) AS distinct_music
+            JOIN music m ON m.id = distinct_music.id
+            LEFT JOIN LATERAL ( -- 使用 LATERAL JOIN 和子查詢來聚合 scores
+                SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC) AS scores
+                FROM scores s
+                WHERE s.music_id = m.id
+            ) s_agg ON true
+            ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC;
+        `;
+        // *** SQL 查詢修改結束 ***
+
+
+        const result = await pool.query(queryText, queryParams);
+        res.json(result.rows); // 返回包含 scores 陣列的歌曲列表
+
+    } catch (err) {
+        console.error('獲取帶有樂譜的歌曲列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
+    }
+});
+
+// GET /api/scores/proxy?url=ENCODED_PDF_URL - PDF 代理
+app.get('/api/scores/proxy', (req, res) => {
+    const pdfUrl = req.query.url;
+
+    if (!pdfUrl || typeof pdfUrl !== 'string') {
+        console.warn('代理請求被拒：缺少或無效的 URL 參數。');
+        return res.status(400).send('缺少或無效的 PDF URL。');
     }
 
-    // --- Handle Add Product Form Submission ---
-    addForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    let decodedUrl;
+    try {
+        decodedUrl = decodeURIComponent(pdfUrl);
+        const allowedDomains = ['raw.githubusercontent.com'];
+        const urlObject = new URL(decodedUrl);
 
-        let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value);
-        const newProductData = {
-            name: addProductName.value.trim(),
-            description: addProductDescription.value.trim(),
-            price: priceValue,
-            image_url: addProductImageUrl.value.trim() || null,
-            seven_eleven_url: addProductSevenElevenUrl.value.trim() || null,
-            variations: [] // Initialize variations array
-        };
-
-        const variationRows = addVariationsContainer.querySelectorAll('.variation-input-row');
-        variationRows.forEach((row, index) => {
-            const name = row.querySelector(`input[name="variations[${index}][name]"]`).value.trim();
-            const inventoryCount = parseInt(row.querySelector(`input[name="variations[${index}][inventory_count]"]`).value.trim());
-            const sku = row.querySelector(`input[name="variations[${index}][sku]"]`).value.trim();
-
-            if (name && !isNaN(inventoryCount)) {
-                newProductData.variations.push({ name, inventory_count: inventoryCount, sku });
-            }
-        });
-
-        try {
-            const response = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newProductData) });
-            if (!response.ok) {
-                throw new Error('新增商品失敗');
-            }
-            closeAddModal();
-            await fetchAndDisplayProducts();
-        } catch (error) {
-            addFormError.textContent = `新增錯誤：${error.message}`;
+        if (!allowedDomains.includes(urlObject.hostname)) {
+           console.warn(`代理請求被阻止，不允許的網域：${urlObject.hostname} (URL: ${decodedUrl})`);
+           return res.status(403).send('不允許從此網域進行代理。');
         }
-    });
 
-    // --- Helper Functions ---
-    function closeModal() { if (editModal) { editModal.style.display = 'none'; } }
-    function closeAddModal() { if (addModal) { addModal.style.display = 'none'; } }
+    } catch (e) {
+        console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
+        return res.status(400).send('無效的 URL 格式或編碼。');
+    }
 
-    window.editProduct = openEditModal;
-    window.deleteProduct = async function(id) {
-        if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
+    console.log(`正在代理 PDF 請求：${decodedUrl}`);
+
+    const pdfRequest = https.get(decodedUrl, (pdfRes) => {
+        // 處理重定向
+        if (pdfRes.statusCode >= 300 && pdfRes.statusCode < 400 && pdfRes.headers.location) {
+            console.log(`正在跟隨從 ${decodedUrl} 到 ${pdfRes.headers.location} 的重定向`);
             try {
-                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    await fetchAndDisplayProducts();
-                } else {
-                    throw new Error(`刪除失敗`);
+                const redirectUrlObject = new URL(pdfRes.headers.location, decodedUrl);
+                const allowedDomains = ['raw.githubusercontent.com'];
+                 if (!allowedDomains.includes(redirectUrlObject.hostname)) {
+                   console.warn(`代理重定向被阻止，不允許的網域：${redirectUrlObject.hostname}`);
+                   return res.status(403).send('重定向目標網域不被允許。');
                 }
-            } catch (error) {
-                alert(`刪除商品時發生錯誤：${error.message}`);
-            }
+                const redirectedRequest = https.get(redirectUrlObject.href, (redirectedRes) => {
+                     if (redirectedRes.statusCode !== 200) {
+                        console.error(`獲取重定向 PDF 時出錯：狀態碼：${redirectedRes.statusCode}，URL：${redirectUrlObject.href}`);
+                        const statusCodeToSend = redirectedRes.statusCode >= 400 ? redirectedRes.statusCode : 502;
+                        return res.status(statusCodeToSend).send(`無法獲取重定向的 PDF：${redirectedRes.statusMessage}`);
+                    }
+                     res.setHeader('Content-Type', redirectedRes.headers['content-type'] || 'application/pdf');
+                     redirectedRes.pipe(res);
+                }).on('error', (err) => {
+                     console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時發生錯誤：`, err.message);
+                     if (!res.headersSent) res.status(500).send('透過代理獲取重定向 PDF 時出錯。');
+                });
+                redirectedRequest.setTimeout(15000, () => {
+                    console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時超時`);
+                    redirectedRequest.destroy();
+                    if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
+                });
+                return;
+             } catch (e) {
+                console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
+                return res.status(500).send('從來源收到無效的重定向位置。');
+             }
         }
-    };
 
-    fetchAndDisplayProducts();
+        if (pdfRes.statusCode !== 200) {
+            console.error(`獲取 PDF 時出錯：狀態碼：${pdfRes.statusCode}，URL：${decodedUrl}`);
+            const statusCodeToSend = pdfRes.statusCode >= 400 ? pdfRes.statusCode : 502;
+             return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
+        }
+
+        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
+        res.setHeader('Content-Type', 'application/pdf');
+
+        pdfRes.pipe(res);
+
+    }).on('error', (err) => {
+        console.error(`向 ${decodedUrl} 發起 PDF 請求期間發生網路或連線錯誤：`, err.message);
+         if (!res.headersSent) {
+             res.status(502).send('錯誤的網關：連接 PDF 來源時出錯。');
+         } else {
+             res.end();
+         }
+    });
+     pdfRequest.setTimeout(15000, () => {
+         console.error(`向 ${decodedUrl} 發起初始 PDF 請求時超時`);
+         pdfRequest.destroy();
+         if (!res.headersSent) {
+             res.status(504).send('網關超時：連接 PDF 來源時超時。');
+         }
+     });
+});
+
+// GET /api/banners?page=... (已更新過濾邏輯)
+app.get('/api/banners', async (req, res) => {
+    const pageLocation = req.query.page;
+    console.log(`[Public API] GET /api/banners requested for page: ${pageLocation || 'all'}`);
+    try {
+        let queryText = 'SELECT id, image_url, link_url, alt_text FROM banners';
+        const queryParams = [];
+        if (pageLocation) {
+            queryText += ' WHERE page_location = $1';
+            queryParams.push(pageLocation);
+        }
+        queryText += ' ORDER BY display_order ASC, id ASC';
+        const result = await pool.query(queryText, queryParams);
+        console.log(`[Public API] Found ${result.rowCount} banners for page: ${pageLocation || 'all'}`);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(`[Public API Error] 獲取 Banner (page: ${pageLocation || 'all'}) 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/products?sort=...
+app.get('/api/products', async (req, res) => {
+    const sortBy = req.query.sort || 'latest';
+    let orderByClause = 'ORDER BY created_at DESC, id DESC'; // 添加 id 排序確保穩定
+    if (sortBy === 'popular') {
+        orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC'; // 添加 id 排序確保穩定
+    }
+    try {
+        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products ${orderByClause}`;
+        const result = await pool.query(queryText);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取商品列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/products/:id
+app.get('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
+    try {
+        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取商品 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/products/:id/click
+app.post('/api/products/:id/click', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
+    try {
+        await pool.query('UPDATE products SET click_count = click_count + 1 WHERE id = $1', [id]);
+        res.status(204).send();
+    } catch (err) {
+        console.error(`記錄商品 ID ${id} 點擊時出錯:`, err);
+        res.status(204).send(); // 出錯也靜默處理
+    }
+});
+
+// GET /api/artists
+app.get('/api/artists', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL AND artist <> \'\' ORDER BY artist ASC');
+        const artists = result.rows.map(row => row.artist);
+        res.json(artists);
+    } catch (err) {
+        console.error('獲取歌手列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/music?artist=...
+app.get('/api/music', async (req, res) => {
+    const artistFilter = req.query.artist || null;
+    let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
+    const queryParams = [];
+    if (artistFilter && artistFilter !== 'All') { // 修改: 不等於 'All' 才加入條件
+         queryText += ' WHERE artist = $1';
+         queryParams.push(decodeURIComponent(artistFilter)); // 解碼
+    }
+    queryText += ' ORDER BY release_date DESC NULLS LAST, title ASC'; // 處理可能的 null 日期，並添加標題排序
+    try {
+        const result = await pool.query(queryText, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取音樂列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/music/:id (已更新包含 scores 和 youtube_video_id)
+app.get('/api/music/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id, 10))) {
+         return res.status(400).json({ error: '無效的音樂 ID' });
+    }
+    try {
+        const queryText = `
+            SELECT
+                m.*,
+                COALESCE(
+                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
+                     FROM scores s
+                     WHERE s.music_id = m.id),
+                    '[]'::json
+                ) AS scores
+            FROM music m
+            WHERE m.id = $1;
+        `;
+        const result = await pool.query(queryText, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到音樂' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取 ID 為 ${id} 的音樂時出錯：`, err.stack || err);
+        res.status(500).json({ error: '獲取音樂詳情時發生內部伺服器錯誤' });
+    }
+});
+
+// GET /api/news?page=...&limit=...
+app.get('/api/news', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    if (page <= 0 || limit <= 0) { return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); }
+    const offset = (page - 1) * limit;
+    try {
+        const countResult = await pool.query('SELECT COUNT(*) FROM news');
+        const totalItems = parseInt(countResult.rows[0].count);
+        const newsResult = await pool.query(`SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at FROM news ORDER BY updated_at DESC, id DESC LIMIT $1 OFFSET $2`, [limit, offset]); // 添加 id 排序
+        const totalPages = Math.ceil(totalItems / limit);
+        res.status(200).json({ totalItems, totalPages, currentPage: page, limit, news: newsResult.rows });
+    } catch (err) {
+        console.error('獲取最新消息列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/news/:id (單一新聞)
+app.get('/api/news/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    try {
+        const result = await pool.query('SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, updated_at FROM news WHERE id = $1', [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該消息。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取消息 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/news/:id/like
+app.post('/api/news/:id/like', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    try {
+        const result = await pool.query('UPDATE news SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要按讚的消息。' }); }
+        res.status(200).json({ like_count: result.rows[0].like_count });
+    } catch (err) {
+        console.error(`處理消息 ID ${id} 按讚時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// --- 受保護的管理頁面和 API Routes ---
+
+// 保護管理 HTML 頁面
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'], basicAuthMiddleware);
+// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+
+// --- 流量分析 API ---
+// GET /api/analytics/traffic
+app.get('/api/analytics/traffic', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+  console.log("接收到 /api/analytics/traffic 請求");
+  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0]; console.log(`計算起始日期: ${startDateString}`);
+  try {
+      const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
+      const result = await pool.query(queryText, [startDateString]);
+      const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
+      res.status(200).json(trafficData);
+  } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
+});
+
+// GET /api/analytics/monthly-traffic
+app.get('/api/analytics/monthly-traffic', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+  console.log("接收到 /api/analytics/monthly-traffic 請求");
+  const targetYear = req.query.year ? parseInt(req.query.year) : null;
+  let queryText = `SELECT to_char(date_trunc('month', view_date), 'YYYY-MM') AS view_month, SUM(view_count)::bigint AS count FROM page_views`;
+  const queryParams = [];
+  if (targetYear && !isNaN(targetYear)) { // 驗證年份
+      queryText += ` WHERE date_part('year', view_date) = $1`;
+      queryParams.push(targetYear);
+  }
+  queryText += ` GROUP BY view_month ORDER BY view_month ASC`;
+  try {
+      const result = await pool.query(queryText, queryParams);
+      const monthlyTrafficData = result.rows.map(row => ({ month: row.view_month, count: parseInt(row.count) }));
+      res.status(200).json(monthlyTrafficData);
+  } catch (err) { console.error('獲取月度流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); }
+});
+
+// --- Banner 管理 API ---
+// GET /api/admin/banners
+app.get('/api/admin/banners', async (req, res) => {
+    console.log("[Admin API] GET /api/admin/banners request received");
+    try {
+        const result = await pool.query(
+            `SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at
+             FROM banners ORDER BY display_order ASC, id ASC`
+        );
+        console.log(`[Admin API] Found ${result.rowCount} banners for admin list.`);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/banners/:id
+app.get('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[Admin API] GET /api/admin/banners/${id} request received`);
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    try {
+        const result = await pool.query(
+            `SELECT id, image_url, link_url, display_order, alt_text, page_location
+             FROM banners WHERE id = $1`,
+            [id]
+        );
+        if (result.rows.length === 0) {
+            console.warn(`[Admin API] Banner with ID ${id} not found.`);
+            return res.status(404).json({ error: '找不到指定的 Banner。' });
+        }
+        console.log(`[Admin API] Found banner for ID ${id}:`, result.rows[0]);
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/admin/banners
+app.post('/api/admin/banners', async (req, res) => {
+    console.log("[Admin API] POST /api/admin/banners request received");
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
+    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; // 處理 0
+    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    try {
+        const result = await pool.query(
+            `INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
+            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[Admin API Error] 新增 Banner 時出錯:', err);
+        res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// PUT /api/admin/banners/:id
+app.put('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[Admin API] PUT /api/admin/banners/${id} request received`);
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
+    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0;
+    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    try {
+        const result = await pool.query(
+            `UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW()
+             WHERE id = $6 RETURNING *`,
+            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]
+        );
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// DELETE /api/admin/banners/:id
+app.delete('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[Admin API] DELETE /api/admin/banners/${id} request received`);
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+    }
+});
+
+
+// --- 商品管理 API (受保護) ---
+// 這是新增商品 API
+app.post('/api/products', async (req, res) => {
+    const { name, description, price, image_url, seven_eleven_url, variations } = req.body;
+    
+    // 資料驗證
+    if (!name || !price) {
+        return res.status(400).json({ error: '商品名稱和價格是必填項目' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const productInsertQuery = `
+            INSERT INTO products (name, description, price, image_url, seven_eleven_url)
+            VALUES ($1, $2, $3, $4, $5) RETURNING id
+        `;
+        const productResult = await client.query(productInsertQuery, [name, description, price, image_url, seven_eleven_url]);
+        const productId = productResult.rows[0].id;
+
+        // 插入商品規格
+        for (let variation of variations) {
+            const { name, inventory_count, sku } = variation;
+            const variationInsertQuery = `
+                INSERT INTO product_variations (product_id, name, inventory_count, sku)
+                VALUES ($1, $2, $3, $4)
+            `;
+            await client.query(variationInsertQuery, [productId, name, inventory_count, sku]);
+        }
+
+        await client.query('COMMIT');
+        res.status(201).json({ message: '商品新增成功', productId });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('新增商品或規格失敗:', error);
+        res.status(500).json({ error: '新增商品時發生錯誤' });
+    } finally {
+        client.release();
+    }
+});
+// PUT /api/products/:id
+app.put('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query(`UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null, id ]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`更新商品 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+// DELETE /api/products/:id
+app.delete('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除商品 ID ${id} 時出錯:`, err); /* ... 其他錯誤處理 ... */ res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+});
+
+
+// --- 音樂管理 API (受保護 - POST/PUT/DELETE) ---
+// POST /api/music (已更新包含 scores 和 youtube_video_id)
+app.post('/api/music', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
+    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
+    // 可以在此處添加更多驗證
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const musicInsertQuery = `INSERT INTO music (title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;`;
+        const musicResult = await client.query(musicInsertQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null]);
+        const newMusic = musicResult.rows[0];
+        if (scores && Array.isArray(scores) && scores.length > 0) {
+            const scoreInsertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
+            for (const score of scores) { if (score.type && score.pdf_url) await client.query(scoreInsertQuery, [newMusic.id, score.type, score.pdf_url, score.display_order || 0]); }
+        }
+        await client.query('COMMIT');
+        newMusic.scores = scores || [];
+        res.status(201).json(newMusic);
+    } catch (err) { await client.query('ROLLBACK'); console.error('新增音樂時出錯:', err.stack || err); res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
+    } finally { client.release(); }
+});
+
+// PUT /api/music/:id (已更新包含 scores 和 youtube_video_id，並包含詳細日誌)
+app.put('/api/music/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    if (isNaN(parseInt(id, 10))) { return res.status(400).json({ error: '無效的音樂 ID' }); }
+    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
+    console.log(`[DEBUG PUT /api/music/${id}] Received data:`, JSON.stringify(req.body, null, 2)); // Log 1
+
+    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
+
+    const client = await pool.connect();
+    try {
+        console.log(`[DEBUG PUT /api/music/${id}] Starting transaction...`); // Log 2
+        await client.query('BEGIN');
+        const musicUpdateQuery = `UPDATE music SET title = $1, artist = $2, release_date = $3, description = $4, cover_art_url = $5, platform_url = $6, youtube_video_id = $7, updated_at = NOW() WHERE id = $8 RETURNING *;`;
+        const musicParams = [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null, id];
+        console.log(`[DEBUG PUT /api/music/${id}] Executing music update query with params:`, musicParams); // Log 3
+        const musicResult = await client.query(musicUpdateQuery, musicParams);
+
+        if (musicResult.rowCount === 0) {
+             console.warn(`[DEBUG PUT /api/music/${id}] Music not found, rolling back.`); // Log 4
+             await client.query('ROLLBACK');
+             return res.status(404).json({ error: '找不到音樂' });
+         }
+        const updatedMusic = musicResult.rows[0];
+        console.log(`[DEBUG PUT /api/music/${id}] Music table updated successfully.`); // Log 5
+
+        const incomingScoreIds = new Set();
+        const scoresToUpdate = [];
+        const scoresToInsert = [];
+        if (scores && Array.isArray(scores)) {
+             console.log(`[DEBUG PUT /api/music/${id}] Processing ${scores.length} incoming scores.`); // Log 6
+             scores.forEach(score => {
+                 if (score.type && score.pdf_url) {
+                     if (score.id) {
+                         const scoreIdInt = parseInt(score.id, 10);
+                         if (!isNaN(scoreIdInt)) { incomingScoreIds.add(scoreIdInt); scoresToUpdate.push(score); }
+                         else { console.warn(`[DEBUG PUT /api/music/${id}] Invalid score ID received: ${score.id}, treating as new.`); scoresToInsert.push(score); }
+                     } else { scoresToInsert.push(score); }
+                 } else { console.warn(`[DEBUG PUT /api/music/${id}] Skipping incomplete score data:`, score); }
+             });
+         } else { console.log(`[DEBUG PUT /api/music/${id}] No valid scores array received or array is empty.`); } // Log 7
+
+         const existingScoresResult = await client.query('SELECT id FROM scores WHERE music_id = $1', [id]);
+         const existingScoreIds = new Set(existingScoresResult.rows.map(r => r.id));
+         console.log(`[DEBUG PUT /api/music/${id}] Existing score IDs in DB:`, [...existingScoreIds]); // Log 8
+         console.log(`[DEBUG PUT /api/music/${id}] Incoming score IDs from request:`, [...incomingScoreIds]); // Log 9
+
+         const scoreIdsToDelete = [...existingScoreIds].filter(existingId => !incomingScoreIds.has(existingId));
+         if (scoreIdsToDelete.length > 0) {
+             const deleteQuery = `DELETE FROM scores WHERE id = ANY($1::int[])`;
+             console.log(`[DEBUG PUT /api/music/${id}] Deleting score IDs:`, scoreIdsToDelete); // Log 10
+             await client.query(deleteQuery, [scoreIdsToDelete]);
+         }
+         if (scoresToUpdate.length > 0) {
+             const updateQuery = `UPDATE scores SET type = $1, pdf_url = $2, display_order = $3, updated_at = NOW() WHERE id = $4 AND music_id = $5;`;
+             console.log(`[DEBUG PUT /api/music/${id}] Updating ${scoresToUpdate.length} scores.`); // Log 11
+             for (const score of scoresToUpdate) {
+                 if (existingScoreIds.has(parseInt(score.id, 10))) {
+                     console.log(`[DEBUG PUT /api/music/${id}] Updating score ID ${score.id} with data:`, score); // Log 12
+                     await client.query(updateQuery, [score.type, score.pdf_url, score.display_order || 0, score.id, id]);
+                 } else { console.warn(`[DEBUG PUT /api/music/${id}] Attempted to update score ID ${score.id} which does not belong to music ID ${id} or was marked for deletion. Skipping.`); } // Log 13
+             }
+         }
+         if (scoresToInsert.length > 0) {
+             const insertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
+              console.log(`[DEBUG PUT /api/music/${id}] Inserting ${scoresToInsert.length} new scores.`); // Log 14
+             for (const score of scoresToInsert) {
+                  console.log(`[DEBUG PUT /api/music/${id}] Inserting new score with data:`, score); // Log 15
+                 await client.query(insertQuery, [id, score.type, score.pdf_url, score.display_order || 0]);
+             }
+         }
+        console.log(`[DEBUG PUT /api/music/${id}] Attempting to COMMIT transaction.`); // Log 16
+        await client.query('COMMIT');
+        console.log(`[DEBUG PUT /api/music/${id}] Transaction COMMITTED successfully.`); // Log 17
+         const finalScoresResult = await pool.query('SELECT id, type, pdf_url, display_order FROM scores WHERE music_id = $1 ORDER BY display_order ASC, type ASC', [id]);
+         updatedMusic.scores = finalScoresResult.rows;
+        res.json(updatedMusic);
+    } catch (err) {
+        console.error(`[DEBUG PUT /api/music/${id}] Error occurred, rolling back transaction. Error:`, err.stack || err); // Log 18
+         if (!res.headersSent) {
+            await client.query('ROLLBACK');
+            res.status(500).json({ error: '更新音樂時發生內部伺服器錯誤' });
+        }
+    } finally {
+         console.log(`[DEBUG PUT /api/music/${id}] Releasing client.`); // Log 19
+        client.release();
+    }
+});
+
+// DELETE /api/music/:id
+app.delete('/api/music/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query('DELETE FROM music WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除音樂 ID ${id} 時出錯：`, err.stack || err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+});
+
+// --- 消息管理 API (受保護) ---
+// POST /api/news
+app.post('/api/news', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query(`INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`, [ title, event_date || null, summary || null, content || null, thumbnail_url || null, image_url || null ]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('新增消息時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
+});
+// PUT /api/news/:id
+app.put('/api/news/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query(`UPDATE news SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW() WHERE id = $7 RETURNING *`, [ title, event_date || null, summary || null, content || null, thumbnail_url || null, image_url || null, id ]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`更新消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+// DELETE /api/news/:id
+app.delete('/api/news/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    const { id } = req.params;
+    // 驗證邏輯 ... (省略以保持簡潔)
+    try {
+        const result = await pool.query('DELETE FROM news WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`刪除消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+});
+
+
+// --- 新聞詳情頁面路由 ---
+app.get('/news/:id(\\d+)', (req, res, next) => {
+    // 可以在這裡先檢查 ID 是否存在，如果不存在可以提前返回 404
+    // 但目前讓 news-detail.js 去處理 API 請求的 404 也可以
+    res.sendFile(path.join(__dirname, 'public', 'news-detail.html'));
+});
+
+// --- 樂譜中心頁面路由 ---
+app.get('/scores', (req, res) => {
+     res.sendFile(path.join(__dirname, 'public', 'scores.html'));
+});
+
+
+// --- 404 處理 ---
+// 這個應該是最後的路由處理
+app.use((req, res, next) => {
+    // 檢查請求是否是針對已知的前端路由
+    const knownFrontendRoutes = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'];
+    if (knownFrontendRoutes.includes(req.path) || req.path.match(/^\/news\/\d+$/)) {
+        // 如果是已知前端路由但前面沒有匹配到（例如直接訪問 /music），
+        // 並且請求 accept html，則返回對應的 html 文件
+        // 這裡的邏輯可能需要根據你的具體需求調整，目前是假設靜態服務會處理 .html 結尾的
+         if (req.accepts('html')) {
+             // 嘗試找到對應的 html 文件，如果找不到，則最終還是 404
+             const filePath = path.join(__dirname, 'public', req.path === '/' ? 'index.html' : req.path);
+             // 注意：這裡不直接 sendFile，讓 express.static 處理或最終落到下面的 404
+             return next();
+         }
+    }
+
+    // 對於 API 或其他未匹配的請求，返回 404
+    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
+    res.status(404).send('抱歉，找不到您要訪問的頁面。');
+});
+
+
+// --- 全局錯誤處理 ---
+app.use((err, req, res, next) => {
+    console.error("全局錯誤處理:", err.stack || err);
+    // 避免在已經發送標頭後再次發送
+    if (res.headersSent) {
+        return next(err); // 交給 Express 預設處理
+    }
+    res.status(err.status || 500).send(process.env.NODE_ENV === 'production' ? '伺服器發生了一些問題！' : `伺服器錯誤: ${err.message}`);
+});
+
+// --- 啟動伺服器 ---
+app.listen(PORT, () => {
+    console.log(`伺服器正在監聽 port ${PORT}`);
+    pool.query('SELECT NOW()')
+        .then(result => {
+            if (result && result.rows.length > 0) {
+                console.log('資料庫連接成功於', result.rows[0].now);
+            } else {
+                 console.log('資料庫已連接，但無法獲取時間。');
+            }
+        })
+        .catch(err => {
+             console.error('資料庫連接錯誤:', err.stack || err);
+        });
 });
