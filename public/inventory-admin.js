@@ -1,4 +1,4 @@
-// public/inventory-admin.js
+// public/inventory-admin.js (v2 - Fixed scope issue for coreElementsExist)
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Element References ---
     const productListBody = document.querySelector('#inventory-product-list-table tbody');
@@ -35,19 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Function to Fetch and Display Products in the Inventory Table ---
     async function fetchAndDisplayInventoryProducts() {
+        // **在函數內部再次檢查依賴的元素**
         if (!checkElements(productListBody, productListContainer, productTable, loadingMessage)) {
              console.error("無法獲取商品列表，缺少必要的 HTML 元素。");
-             return; // 如果缺少元素，停止執行
+             // 可以在此處更新 UI 狀態，例如顯示永久性錯誤訊息
+             if(loadingMessage) loadingMessage.textContent = '頁面元素錯誤，無法載入列表。';
+             if(productTable) productTable.style.display = 'none';
+             return;
         }
 
         try {
             loadingMessage.style.display = 'block';
             productTable.style.display = 'none';
-            productListBody.innerHTML = ''; // 清空舊內容
+            productListBody.innerHTML = '';
 
-            // **使用現有的 /api/products API，但期望它返回 total_inventory**
-            // 未來可以考慮創建 /api/admin/inventory/products?include=variations 等更專用的 API
-            const response = await fetch('/api/products?sort=latest'); // 沿用之前的 API，假設它返回 total_inventory
+            const response = await fetch('/api/products?sort=latest');
             if (!response.ok) {
                 let errorMsg = `獲取商品資料失敗 (HTTP ${response.status})`;
                 try { const data = await response.json(); errorMsg += `: ${data.error || ''}`; } catch(e){}
@@ -59,20 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
             productTable.style.display = 'table';
 
             if (products.length === 0) {
-                productListBody.innerHTML = '<tr><td colspan="5">目前沒有商品資料。</td></tr>'; // Colspan 變為 5
+                productListBody.innerHTML = '<tr><td colspan="5">目前沒有商品資料。</td></tr>';
                 return;
             }
 
             products.forEach(product => {
                 const row = document.createElement('tr');
-                row.dataset.productId = product.id; // 儲存 ID 供未來使用
-
-                // **注意: 這裡的 total_inventory 取決於 GET /api/products 是否返回這個欄位**
-                // 如果 API 還沒修改，這裡會顯示 N/A
+                row.dataset.productId = product.id;
                 const inventory = product.total_inventory !== undefined ? product.total_inventory : 'N/A';
-                const lowStock = (inventory !== 'N/A' && inventory <= 5); // 假設低庫存閾值為 5
+                const lowStock = (inventory !== 'N/A' && inventory <= 5);
 
-                // 渲染表格行 (5個 td)
                 row.innerHTML = `
                     <td>${product.id}</td>
                     <td title="${product.name || ''}">${product.name || '未命名商品'}</td>
@@ -89,14 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("獲取商品庫存列表失敗:", error);
             if (loadingMessage) loadingMessage.textContent = `無法載入商品資料: ${error.message}`;
-            if (productTable) productTable.style.display = 'none'; // 隱藏表格框架
-            productListBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding: 1rem;">加載失敗，請檢查網絡或聯繫管理員。</td></tr>`; // Colspan 5
+            if (productTable) productTable.style.display = 'none';
+            productListBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center; padding: 1rem;">加載失敗，請檢查網絡或聯繫管理員。</td></tr>`;
         }
     }
 
     // --- Initial Page Load ---
     async function initializeInventoryPage() {
-        if (!coreElementsExist) return; // 如果核心元素缺失，不執行初始化
+        // **將核心元素檢查移到這裡**
+        const coreElementsExist = checkElements(
+            productListBody, productListContainer, productTable, loadingMessage
+        );
+
+        if (!coreElementsExist) {
+            console.error("停止執行 inventory-admin.js 初始化，因缺少核心頁面元件。");
+            return; // 如果核心元素缺失，不執行初始化
+        }
+
         try {
             await fetchAndDisplayInventoryProducts(); // 獲取並顯示商品列表
             console.log("Inventory admin page initialized.");
