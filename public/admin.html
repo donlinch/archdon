@@ -8,24 +8,29 @@
      <style>
          /* 簡單的 Admin 頁面特定樣式 */
          body { background-color: #fff; color: #333; }
-         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); } /* 稍微加寬 */
-         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; /* 幫助列寬分配 */ }
-         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; /* 防止內容換行 */ }
-         #product-list-table th { background-color: #e9ecef; }
-         /* 為特定列設定大致寬度 */
-         #product-list-table th:nth-child(1), #product-list-table td:nth-child(1) { width: 8%; }  /* ID */
-         #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 30%; } /* 名稱 */
-         #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 12%; } /* 價格 */
-         #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 15%; text-align: center;} /* 點擊數 - 新增 */
-         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; text-align: center;} /* 圖片 */
-         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
+         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-         .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;} /* 調整按鈕 padding */
+         /* --- 商品列表表格樣式 --- */
+         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
+         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; /* 垂直居中 */ }
+         #product-list-table th { background-color: #e9ecef; }
+         /* 列寬設定 (調整過的操作欄寬度) */
+         #product-list-table th:nth-child(1), #product-list-table td:nth-child(1) { width: 6%; }  /* ID */
+         #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 28%; } /* 名稱 */
+         #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 10%; text-align: right; padding-right: 15px; } /* 價格 */
+         #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 10%; text-align: center;} /* 點擊數 */
+         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 12%; text-align: center;} /* 圖片 */
+         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 34%; text-align: center;} /* 操作 (加寬) */
+
+         /* --- 操作按鈕樣式 --- */
+         .action-btn { padding: 5px 8px; margin: 0 3px; /* 調整按鈕間距 */ cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap; vertical-align: middle; }
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
          .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
+         /* 查看銷售按鈕樣式 */
+         .view-sales-btn { background-color: #17a2b8; border-color: #17a2b8; color: white; }
          .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
 
-         /* --- Modal 相關樣式 (保持不變) --- */
+         /* --- Modal 相關樣式 --- */
          .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; /* JS 控制 */ justify-content: center; align-items: center; padding-top: 50px; }
          .modal[style*="display: flex"] { display: flex !important; }
          .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -39,53 +44,52 @@
          .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
          .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
          .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
+         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
          #edit-image-preview[src], #add-image-preview[src] { display: block; }
          #edit-form-error, #add-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
+
+         /* --- 流量圖表樣式 --- */
+         .chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; }
+         .chart-controls { text-align: center; margin-bottom: 1rem; }
+         .chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
+         .chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
+         .chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
+
+         /* --- 銷售詳情區塊樣式 --- */
+         #variation-list li { transition: background-color 0.1s ease; }
+         #variation-list li:hover { background-color: #f8f9fa; }
+         #variation-list li:last-child { border-bottom: none !important; } /* 確保最後一項沒底線 */
+         .record-sale-btn { background-color: #28a745; color: white; border: none; } /* 記錄按鈕樣式 */
+         .record-sale-btn:disabled { background-color: #aaa; cursor: not-allowed; }
+
      </style>
  </head>
  <body>
     <nav class="admin-nav">
-        <a href="/admin.html" class="active">商品管理</a> <!-- 原本就有，設為 active -->
+        <a href="/admin.html" class="active">商品管理</a>
         <a href="/music-admin.html">音樂管理</a>
         <a href="/news-admin.html">消息管理</a>
-        <a href="/banner-admin.html">輪播圖管理</a> <!-- 新增連結 -->
+        <a href="/banner-admin.html">輪播圖管理</a>
     </nav>
 
     <div class="admin-container">
         <h1>商品管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
-        <!-- ... rest of the content ... -->
-    </div>
-     
-    
 
-    <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;">
-        <h2>最近流量趨勢</h2> <!-- 修改標題，不再寫死 30 天 -->
-    
-        <!-- *** 新增: 時間粒度切換按鈕 *** -->
-        <div class="chart-controls" style="text-align: center; margin-bottom: 1rem;">
-            <button id="btn-daily" class="chart-toggle-btn active" data-granularity="daily">每日 (近30天)</button>
-            <button id="btn-monthly" class="chart-toggle-btn" data-granularity="monthly">每月 (所有)</button>
-            <!-- 可選: 年份選擇器 (較複雜，先不做) -->
-            <!-- <select id="year-selector" style="display:none;"><option value="">所有年份</option></select> -->
+        <!-- 流量圖表區塊 -->
+        <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;">
+            <h2>最近流量趨勢</h2>
+            <div class="chart-controls" style="text-align: center; margin-bottom: 1rem;">
+                <button id="btn-daily" class="chart-toggle-btn active" data-granularity="daily">每日 (近30天)</button>
+                <button id="btn-monthly" class="chart-toggle-btn" data-granularity="monthly">每月 (所有)</button>
+            </div>
+            <canvas id="traffic-chart"></canvas>
+            <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
+            <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
         </div>
-        <!-- *** 切換按鈕結束 *** -->
-    
-        <canvas id="traffic-chart"></canvas>
-        <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
-        <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
-    </div>
 
-
-
-
-
-
-
-
-    <!-- *** 圖表容器結束 *** -->
+         <!-- 商品列表區塊 -->
          <h2>現有商品列表</h2>
          <div id="product-list-container">
              <p>正在加載商品...</p>
@@ -95,19 +99,51 @@
                          <th>ID</th>
                          <th>名稱</th>
                          <th>價格</th>
-                         <th>點擊數</th> <!-- *** 新增標題 *** -->
+                         <th>點擊數</th>
                          <th>圖片預覽</th>
                          <th>操作</th>
                      </tr>
                  </thead>
                  <tbody>
-                     <!-- 商品列將由 JavaScript 動態填入 -->
+                     <!-- 商品列將由 JavaScript 動態填入 (JS 會生成包含 '查看銷售' 的按鈕) -->
                  </tbody>
              </table>
-         </div>
+         </div> <!-- End of product-list-container -->
+
+         <!-- 商品銷售詳情區塊 (放在 admin-container 內部) -->
+        <div id="product-sales-details" style="display: none; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6;">
+            <h2>商品銷售詳情</h2>
+            <h3 id="sales-detail-product-name" style="margin-bottom: 1rem; color: #007bff;"></h3>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-start;">
+
+                <!-- 左側：規格列表與記錄 -->
+                <div style="flex: 1 1 400px; min-width: 300px;">
+                    <h4>規格銷售數量 (點擊 +1 記錄售出)</h4>
+                    <ul id="variation-list" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; margin-top: 0.5rem; background-color: #fff;">
+                        <!-- 初始提示/載入狀態 -->
+                        <p id="variation-list-loading" style="padding: 1rem; text-align: center; color: #888;">請先從上方列表選擇商品</p>
+                        <!-- 規格列表將由 JS 動態填入 -->
+                    </ul>
+                    <p id="variation-list-error" style="color: red; margin-top: 10px; min-height: 1em;"></p>
+                </div>
+
+                <!-- 右側：銷售圖表 -->
+                <div id="sales-chart-container" style="flex: 1 1 400px; min-width: 300px; position: relative; height: 350px;">
+                     <h4>銷售分佈圖</h4>
+                     <canvas id="variation-sales-chart"></canvas>
+                     <p id="sales-chart-loading" style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: #888; display: none;">正在載入圖表...</p>
+                     <p id="sales-chart-error" style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: red; display: none;"></p>
+                     <p id="sales-chart-nodata" style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: #888; display: none;">尚無銷售數據可繪製圖表。</p>
+                </div>
+
+            </div>
+        </div>
+        <!-- 商品銷售詳情區塊結束 -->
+
      </div> <!-- End of admin-container -->
 
-     <!-- Add Product Modal (保持不變) -->
+     <!-- Add Product Modal -->
      <div id="add-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeAddModal()">×</span>
@@ -124,7 +160,7 @@
         </div>
     </div>
 
-     <!-- Edit Product Modal (保持不變, 內部已有 click count span) -->
+     <!-- Edit Product Modal -->
      <div id="edit-modal" class="modal">
          <div class="modal-content">
              <span class="close-btn" onclick="closeModal()">×</span>
@@ -142,11 +178,10 @@
              </form>
          </div>
      </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- *** 確保 admin.js 的 script 標籤在 Chart.js 之後 *** -->
+    <!-- 引入 Chart.js (只需要引入一次) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <!-- 引入你的 admin.js -->
      <script src="admin.js"></script>
  </body>
  </html>
