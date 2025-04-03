@@ -250,18 +250,44 @@ app.get('/api/banners', async (req, res) => {
 });
 
 // GET /api/products?sort=...
+// 修改: GET /api/products (獲取列表，包含規格名稱和庫存)
 app.get('/api/products', async (req, res) => {
     const sortBy = req.query.sort || 'latest';
-    let orderByClause = 'ORDER BY created_at DESC, id DESC'; // 添加 id 排序確保穩定
+    let orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
     if (sortBy === 'popular') {
-        orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC'; // 添加 id 排序確保穩定
+        orderByClause = 'ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC';
     }
+
     try {
-        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products ${orderByClause}`;
+        // 使用 LEFT JOIN 和 JSON_AGG 來聚合每個商品的規格資訊
+        const queryText = `
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.image_url,
+                p.seven_eleven_url,
+                p.click_count,
+                -- **修改: 使用 JSON_AGG 聚合規格物件**
+                COALESCE(
+                    (SELECT json_agg(json_build_object('name', pv.name, 'inventory_count', pv.inventory_count) ORDER BY pv.name ASC)
+                     FROM product_variations pv
+                     WHERE pv.product_id = p.id),
+                    '[]'::json
+                ) AS variations
+            FROM products p
+            ${orderByClause};
+        `;
+        // json_build_object('name', pv.name, 'inventory_count', pv.inventory_count) 創建包含名稱和庫存的 JSON 物件
+        // json_agg(...) 將這些物件聚合成一個 JSON 陣列
+        // ORDER BY pv.name ASC 確保規格按名稱排序
+        // COALESCE(..., '[]'::json) 如果沒有規格，返回一個空 JSON 陣列
+
         const result = await pool.query(queryText);
-        res.json(result.rows);
+        res.json(result.rows); // 返回的每筆商品數據現在會包含 variations 陣列 [{name: 'S', inventory_count: 10}, ...]
     } catch (err) {
-        console.error('獲取商品列表時出錯:', err);
+        console.error('獲取商品列表 (含規格詳情) 時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
