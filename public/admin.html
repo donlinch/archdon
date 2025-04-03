@@ -8,33 +8,27 @@
      <style>
          /* 簡單的 Admin 頁面特定樣式 */
          body { background-color: #fff; color: #333; }
-         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-
-         /* --- 商品列表表格樣式 --- */
-         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
-         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; /* 垂直居中 */ }
+         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); } /* 稍微加寬 */
+         #product-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; /* 幫助列寬分配 */ }
+         #product-list-table th, #product-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; /* 防止內容換行 */ }
          #product-list-table th { background-color: #e9ecef; }
-         /* 列寬設定 (總庫存移到後面) */
-         #product-list-table th:nth-child(1), #product-list-table td:nth-child(1) { width: 5%; }  /* ID */
-         #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 27%; } /* 名稱 */
-         #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 8%; text-align: right; padding-right: 10px; } /* 價格 */
-         #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 8%; text-align: center;} /* 點擊數 */
-         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 12%; text-align: center;} /* 圖片 */
-         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 10%; text-align: center;} /* << 總庫存 >> */
-         #product-list-table th:nth-child(7), #product-list-table td:nth-child(7) { width: 30%; text-align: center;} /* 操作 */
+         /* 為特定列設定大致寬度 */
+         #product-list-table th:nth-child(1), #product-list-table td:nth-child(1) { width: 8%; }  /* ID */
+         #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 30%; } /* 名稱 */
+         #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 12%; } /* 價格 */
+         #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 15%; text-align: center;} /* 點擊數 - 新增 */
+         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; text-align: center;} /* 圖片 */
+         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
 
-         /* --- 操作按鈕樣式 --- */
-         .action-btn { padding: 5px 8px; margin: 0 3px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap; vertical-align: middle; }
+         .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;} /* 調整按鈕 padding */
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
          .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
-         .view-sales-btn { background-color: #17a2b8; border-color: #17a2b8; color: white; }
          .add-product-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
 
-         /* --- Modal 相關樣式 --- */
-         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; /* JS 控制 */ justify-content: center; align-items: center; padding-top: 30px; padding-bottom: 30px;} /* 增加垂直 padding */
+         /* --- Modal 相關樣式 (保持不變) --- */
+         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; /* JS 控制 */ justify-content: center; align-items: center; padding-top: 50px; }
          .modal[style*="display: flex"] { display: flex !important; }
-         /* 加大 Modal 寬度以容納更多內容 */
-         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 750px; /* 加寬 */ width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; /* 允許內容滾動 */ }
+         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
          .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
          .close-btn:hover { color: #333; }
          .form-group { margin-bottom: 1rem; }
@@ -45,93 +39,64 @@
          .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
          .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
          .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
+         #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
          #edit-image-preview[src], #add-image-preview[src] { display: block; }
          #edit-form-error, #add-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
-
-         /* --- Modal 內銷售區塊樣式 --- */
-         .variation-sales-section, .variation-input-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; } /* 統一區塊樣式 */
-         .variation-sales-section h4, .variation-input-section label:first-child { margin-bottom: 0.8rem; font-size: 1.1em; color: #333; font-weight: bold; display:block;} /* 區塊標題 */
-         /* 編輯 Modal 內的規格顯示/輸入列 */
-         .variation-item { display: flex; flex-wrap: wrap; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; gap: 10px; }
-         .variation-item:last-child { border-bottom: none; }
-         .variation-item span { margin-right: 5px; white-space: normal; }
-         .variation-name { font-weight: 500; min-width: 100px; flex-basis: 150px; flex-grow: 1;}
-         .variation-inventory-display { color: #666; font-size: 0.9em; min-width: 70px; text-align: right;}
-         .variation-inventory-input label, .variation-sales-input label { font-size: 0.9em; color: #555; flex-shrink: 0;}
-         .variation-inventory-input input, .variation-sales-input input { width: 70px; padding: 5px; text-align: center; border: 1px solid #ccc; border-radius: 3px;}
-         .variation-inventory-input { margin-left: auto; }
-         .variation-sales-input { margin-left: 10px; }
-         /* 新增 Modal 內的規格輸入列 */
-         .variation-input-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-         .variation-input-row input[type="text"], .variation-input-row input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em; }
-         .variation-input-row input[name$="[name]"] { flex: 2; } /* 規格名稱欄位寬一點 */
-         .variation-input-row input[name$="[inventory_count]"] { flex: 1; text-align: center; } /* 庫存欄位 */
-         .variation-input-row input[name$="[sku]"] { flex: 1; } /* SKU 欄位 */
-         .variation-input-row .delete-btn { flex-shrink: 0; padding: 5px 8px; background-color:#dc3545; color:white; border-color:#dc3545;} /* 移除按鈕 */
-         .variation-input-section small { color: #666; font-size: 0.85em; display: block; margin-top: 5px;}
-
-         #record-sales-btn { background-color: #198754; color: white; border-color: #198754; } /* 獨立的記錄銷售按鈕 */
-         #record-sales-btn:disabled { background-color: #aaa; cursor: not-allowed; border-color: #aaa;}
-         #record-sales-error, #record-sales-success { font-size: 0.9em; min-height: 1em; margin-top: 5px; text-align: right;}
-
-
-         /* --- 流量圖表樣式 --- */
-         .chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; }
-         .chart-controls { text-align: center; margin-bottom: 1rem; }
-         .chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
-         .chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
-         .chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
-
-         /* --- 銷售報告區塊樣式 --- */
-         #sales-report-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6; }
-         #sales-report-title { margin-bottom: 1rem; color: #007bff; font-size: 1.5em; }
-         #sales-report-chart-container { position: relative; height: 350px; }
-         #sales-report-loading, #sales-report-error, #sales-report-nodata { position: absolute; top: 40%; left: 0; right: 0; text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.8); border-radius: 4px; }
-
      </style>
  </head>
  <body>
     <nav class="admin-nav">
-        <a href="/admin.html" class="active">商品管理</a>
+        <a href="/admin.html" class="active">商品管理</a> <!-- 原本就有，設為 active -->
         <a href="/music-admin.html">音樂管理</a>
         <a href="/news-admin.html">消息管理</a>
-        <a href="/banner-admin.html">輪播圖管理</a>
+        <a href="/banner-admin.html">輪播圖管理</a> <!-- 新增連結 -->
     </nav>
 
     <div class="admin-container">
         <h1>商品管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
         <button class="add-product-btn" onclick="showAddForm()">新增商品</button>
+        <!-- ... rest of the content ... -->
+    </div>
+     
+    
 
-        <!-- 流量圖表區塊 -->
-        <div class="chart-container">
-            <h2>最近流量趨勢</h2>
-            <div class="chart-controls">
-                <button id="btn-daily" class="chart-toggle-btn active" data-granularity="daily">每日 (近30天)</button>
-                <button id="btn-monthly" class="chart-toggle-btn" data-granularity="monthly">每月 (所有)</button>
-            </div>
-            <canvas id="traffic-chart"></canvas>
-            <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
-            <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
+    <div class="chart-container" style="position: relative; height:300px; width:80%; margin: 2rem auto;">
+        <h2>最近流量趨勢</h2> <!-- 修改標題，不再寫死 30 天 -->
+    
+        <!-- *** 新增: 時間粒度切換按鈕 *** -->
+        <div class="chart-controls" style="text-align: center; margin-bottom: 1rem;">
+            <button id="btn-daily" class="chart-toggle-btn active" data-granularity="daily">每日 (近30天)</button>
+            <button id="btn-monthly" class="chart-toggle-btn" data-granularity="monthly">每月 (所有)</button>
+            <!-- 可選: 年份選擇器 (較複雜，先不做) -->
+            <!-- <select id="year-selector" style="display:none;"><option value="">所有年份</option></select> -->
         </div>
+        <!-- *** 切換按鈕結束 *** -->
+    
+        <canvas id="traffic-chart"></canvas>
+        <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
+        <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
+    </div>
 
-         <!-- 商品列表區塊 -->
+
+
+
+
+
+
+
+    <!-- *** 圖表容器結束 *** -->
          <h2>現有商品列表</h2>
          <div id="product-list-container">
              <p>正在加載商品...</p>
              <table id="product-list-table" style="display: none;">
                  <thead>
-                     <tr> <!-- ** 調整欄位順序 ** -->
+                     <tr>
                          <th>ID</th>
                          <th>名稱</th>
                          <th>價格</th>
-                         <th>總庫存</th>
-                       
-                         
-                         
-                         <th>點擊數</th>
-                         <th>圖片預覽</th> <!-- << 移到這裡 >> -->
+                         <th>點擊數</th> <!-- *** 新增標題 *** -->
+                         <th>圖片預覽</th>
                          <th>操作</th>
                      </tr>
                  </thead>
@@ -139,23 +104,10 @@
                      <!-- 商品列將由 JavaScript 動態填入 -->
                  </tbody>
              </table>
-         </div> <!-- End of product-list-container -->
-
-         <!-- 銷售報告區塊 -->
-         <div id="sales-report-section">
-             <h2 id="sales-report-title">整體銷售趨勢</h2> <!-- 標題會由 JS 更新 -->
-             <div id="sales-report-chart-container">
-                  <canvas id="sales-report-chart"></canvas>
-                  <p id="sales-report-loading" style="display: none;">正在載入報告數據...</p>
-                  <p id="sales-report-error" style="display: none;"></p>
-                  <p id="sales-report-nodata" style="display: none;">尚無銷售數據可產生報告。</p>
-             </div>
          </div>
-         <!-- 銷售報告區塊結束 -->
-
      </div> <!-- End of admin-container -->
 
-     <!-- Add Product Modal (包含規格輸入) -->
+     <!-- Add Product Modal (保持不變) -->
      <div id="add-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeAddModal()">×</span>
@@ -166,75 +118,35 @@
                 <div class="form-group"> <label for="add-product-price">價格:</label> <input type="number" id="add-product-price" name="price" step="0.01" placeholder="例如: 490" required> </div>
                 <div class="form-group"> <label for="add-product-image-url">圖片路徑:</label> <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg"> <img id="add-image-preview" src="" alt="圖片預覽"> </div>
                 <div class="form-group"> <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label> <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://..."> </div>
-
-                <!-- 商品規格輸入區塊 -->
-                <div class="variation-input-section">
-                    <label>商品規格 (若商品無規格則此區免填):</label> <!-- 修改提示文字 -->
-                    <div id="add-variations-container" style="margin-bottom: 10px;">
-                        <!-- JS 會在此處添加輸入列 -->
-                    </div>
-                    <button type="button" class="action-btn" onclick="addVariationInputRow('add')" style="background-color: #6c757d; color: white; margin-top: 5px; border:none; padding: 5px 10px; font-size: 0.9em;">+ 新增規格欄位</button>
-                    <small>請務必輸入規格名稱和初始庫存。SKU 為選填。</small>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="action-btn save-btn">確認新增</button>
-                    <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
-                </div>
+                <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button> </div>
                 <p id="add-form-error"></p>
             </form>
         </div>
     </div>
 
-     <!-- Edit Product Modal (包含規格編輯/記錄銷售) -->
+     <!-- Edit Product Modal (保持不變, 內部已有 click count span) -->
      <div id="edit-modal" class="modal">
          <div class="modal-content">
              <span class="close-btn" onclick="closeModal()">×</span>
              <h2>編輯商品</h2>
              <form id="edit-product-form">
                  <input type="hidden" id="edit-product-id">
-                 <!-- 商品基本資料欄位 -->
                  <div class="form-group"> <label for="edit-product-name">商品名稱:</label> <input type="text" id="edit-product-name" name="name" required> </div>
                  <div class="form-group"> <label for="edit-product-description">商品描述:</label> <textarea id="edit-product-description" name="description" rows="3"></textarea> </div>
                  <div class="form-group"> <label for="edit-product-price">價格:</label> <input type="number" id="edit-product-price" name="price" step="0.01" required> </div>
                  <div class="form-group"> <label for="edit-product-image-url">圖片路徑:</label> <input type="text" id="edit-product-image-url" name="image_url"> <img id="edit-image-preview" src="" alt="圖片預覽"> </div>
                  <div class="form-group"> <label for="edit-product-seven-eleven-url">7-11 連結:</label> <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url"> </div>
                  <div class="form-group"> <label>點擊次數:</label> <span id="edit-product-click-count" style="font-weight: bold; padding: 8px 0; display: inline-block;">-</span> </div>
-
-                 <!-- 規格庫存與銷售記錄區塊 -->
-                 <div class="variation-sales-section">
-                     <h4>規格庫存 & 記錄銷售</h4>
-                     <!-- **修改: 將容器 ID 改為 edit-variation-list** -->
-                     <div id="edit-variation-list">
-                         <p style="color: #888; text-align: center;">正在載入規格...</p>
-                     </div>
-                      <!-- 新增規格按鈕 (編輯時) -->
-                     <div style="margin-top: 10px;">
-                         <!-- **修改: onclick 調用 'edit'** -->
-                         <button type="button" class="action-btn" onclick="addVariationInputRow('edit')" style="background-color: #6c757d; color: white; border:none; padding: 5px 10px; font-size: 0.9em;">+ 新增規格</button>
-                     </div>
-                     <!-- 記錄銷售按鈕區域 -->
-                     <div style="text-align: right; margin-top: 1rem;">
-                         <button type="button" id="record-sales-btn" class="action-btn">記錄本次銷售</button>
-                     </div>
-                     <p id="record-sales-error" style="color: red; text-align: right;"></p>
-                     <p id="record-sales-success" style="color: green; text-align: right;"></p>
-                     <small style="display: block; text-align: right; margin-top: 5px;">注意：庫存需在此處修改後，點擊下方「儲存變更」生效。記錄銷售獨立提交。</small>
-                 </div>
-
-                 <!-- 表單主要操作按鈕 -->
-                 <div class="form-actions">
-                     <button type="submit" class="action-btn save-btn">儲存變更</button> <!-- 會儲存商品資料+庫存 -->
-                     <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button>
-                 </div>
+                 <div class="form-actions"> <button type="submit" class="action-btn save-btn">儲存變更</button> <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button> </div>
                  <p id="edit-form-error"></p>
              </form>
          </div>
      </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 引入 Chart.js (只需要引入一次) -->
+    <!-- *** 確保 admin.js 的 script 標籤在 Chart.js 之後 *** -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 引入你的 admin.js -->
+
      <script src="admin.js"></script>
  </body>
  </html>
