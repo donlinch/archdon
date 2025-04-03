@@ -1,37 +1,33 @@
 // server.js
-require('dotenv').config(); // 從 .env 載入環境變數
-const https = require('https'); // <--- 確保引入 https
+require('dotenv').config();
+const https = require('https');
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg'); // PostgreSQL 客戶端
+const { Pool } = require('pg');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
+const PORT = process.env.PORT || 3000;
 
 // --- 資料庫連接池設定 ---
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// --- 基本認證中間件函數定義 ---
+// --- 基本認證中間件 ---
 const basicAuthMiddleware = (req, res, next) => {
     const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
+    const adminPass = process.env.ADMIN_PASSWORD || 'password';
     const authHeader = req.headers.authorization;
-
     if (!authHeader) {
         res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
         return res.status(401).send('需要認證才能訪問管理區域。');
     }
-
     try {
         const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-
+        const user = auth[0]; const pass = auth[1];
         if (user === adminUser && pass === adminPass) {
-            next(); // 認證成功，繼續下一個中間件或路由處理
+            next();
         } else {
             console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
             res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
@@ -44,40 +40,26 @@ const basicAuthMiddleware = (req, res, next) => {
     }
 };
 
-// --- JSON 請求體解析中間件 ---
-// 必須放在所有需要讀取 req.body 的路由之前
-app.use(express.json());
+// --- 中間件 ---
+app.use(express.json()); // 解析 JSON 請求體
 
 // --- 記錄 Page View 中間件 ---
 app.use(async (req, res, next) => {
-    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html']; // 添加 scores.html
-    // 確保只記錄 'GET' 請求且路徑在列表中
+    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html'];
     const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
     if (shouldLog) {
         const pagePath = req.path;
-        console.log(`[PV Mid] Logging view for: ${pagePath}`);
+        // console.log(`[PV Mid] Logging view for: ${pagePath}`); // 詳細日誌
         try {
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date)
-                DO UPDATE SET view_count = page_views.view_count + 1;
-                -- 移除 RETURNING * 除非確實需要回傳值
-            `;
-            const params = [pagePath];
-            await pool.query(sql, params);
-            // console.log(`[PV Mid] Page view recorded/updated for: ${pagePath}`); // 僅在需要時啟用詳細日誌
+            const sql = `INSERT INTO page_views (page, view_date, view_count) VALUES ($1, CURRENT_DATE, 1) ON CONFLICT (page, view_date) DO UPDATE SET view_count = page_views.view_count + 1;`;
+            await pool.query(sql, [pagePath]);
         } catch (err) {
-            // 處理可能的並發衝突 (ON CONFLICT 應該能處理大部分情況)
             if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
-            } else {
-                console.error('[PV Mid] Error logging page view:', err.stack || err);
-            }
+                console.warn(`[PV Mid] CONFLICT/Race condition for ${pagePath}. Handled.`);
+            } else { console.error('[PV Mid] Error logging page view:', err.stack || err); }
         }
     }
-    next(); // 確保總是調用 next()
+    next();
 });
 
 // --- 靜態文件服務 ---
@@ -559,35 +541,277 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 
 // --- 商品管理 API (受保護) ---
-// POST /api/products
-app.post('/api/products', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
+// **修改: GET /api/products (獲取列表，包含總庫存)**
+app.get('/api/products', async (req, res) => { // basicAuthMiddleware 應用於 /api/admin/*，但商品列表通常是公開的，移除非 admin 路徑
+    const sortBy = req.query.sort || 'latest';
+    let orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
+    if (sortBy === 'popular') {
+        orderByClause = 'ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC';
+    }
     try {
-        const result = await pool.query(`INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null ]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('新增商品時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
+        const queryText = `
+            SELECT
+                p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count,
+                COALESCE(SUM(pv.inventory_count), 0)::integer AS total_inventory
+            FROM products p
+            LEFT JOIN product_variations pv ON p.id = pv.product_id
+            GROUP BY p.id
+            ${orderByClause}
+        `;
+        const result = await pool.query(queryText);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取商品列表 (含庫存) 時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
 });
-// PUT /api/products/:id
-app.put('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+
+// **修改: GET /api/products/:id (獲取單一商品，包含規格)**
+app.get('/api/products/:id', async (req, res) => { // 這個也應該是公開的
     const { id } = req.params;
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
     try {
-        const result = await pool.query(`UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null, id ]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`更新商品 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+        const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+        if (productResult.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
+        const product = productResult.rows[0];
+
+        // 查詢關聯的規格
+        const variationsResult = await pool.query(
+            'SELECT id, name, sku, inventory_count FROM product_variations WHERE product_id = $1 ORDER BY name ASC',
+            [id]
+        );
+        product.variations = variationsResult.rows; // 將規格附加到商品物件
+
+        res.json(product);
+    } catch (err) {
+        console.error(`獲取商品 ID ${id} (含規格) 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
 });
-// DELETE /api/products/:id
-app.delete('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    // 驗證邏輯 ... (省略以保持簡潔)
+
+
+// **修改: POST /api/products (新增商品及規格 - 受保護)**
+app.post('/api/products', basicAuthMiddleware, async (req, res) => {
+    const { name, description, price, image_url, seven_eleven_url, variations } = req.body;
+
+    // 基本驗證
+    if (!name || price === undefined || price === null) {
+        return res.status(400).json({ error: '商品名稱和價格為必填項。' });
+    }
+    if (isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+        return res.status(400).json({ error: '價格必須是非負數字。' });
+    }
+    if (variations && !Array.isArray(variations)) {
+        return res.status(400).json({ error: '規格資料格式必須是陣列。' });
+    }
+
+    const client = await pool.connect();
     try {
-        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法刪除。' }); }
+        await client.query('BEGIN');
+
+        // 1. 插入商品基本資料
+        const productInsertQuery = `
+            INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            RETURNING id;
+        `;
+        const productResult = await client.query(productInsertQuery, [
+            name, description || null, price, image_url || null, seven_eleven_url || null
+        ]);
+        const newProductId = productResult.rows[0].id;
+        console.log(`新增商品成功，ID: ${newProductId}`);
+
+        // 2. 插入商品規格資料 (如果有的話)
+        let insertedVariations = [];
+        if (variations && variations.length > 0) {
+            const variationInsertQuery = `
+                INSERT INTO product_variations (product_id, name, inventory_count, sku, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, NOW(), NOW())
+                RETURNING *;
+            `;
+            for (const variation of variations) {
+                // 規格驗證
+                if (!variation.name || variation.inventory_count === undefined || variation.inventory_count === null) {
+                    throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或初始庫存。`);
+                }
+                const inventoryCount = parseInt(variation.inventory_count);
+                if (isNaN(inventoryCount) || inventoryCount < 0) {
+                    throw new Error(`規格 "${variation.name}" 的庫存必須是非負整數。`);
+                }
+                const sku = variation.sku ? variation.sku.trim() : null;
+
+                const variationResult = await client.query(variationInsertQuery, [
+                    newProductId, variation.name.trim(), inventoryCount, sku
+                ]);
+                insertedVariations.push(variationResult.rows[0]);
+                console.log(`新增規格 "${variation.name}" for product ${newProductId}`);
+            }
+        }
+
+        await client.query('COMMIT');
+        console.log(`交易成功提交 for product ${newProductId}`);
+
+        // 返回新增的商品資料及規格
+        const finalProductResult = await client.query('SELECT * FROM products WHERE id = $1', [newProductId]);
+        const finalProduct = finalProductResult.rows[0];
+        finalProduct.variations = insertedVariations; // 使用插入時返回的規格資料
+
+        res.status(201).json(finalProduct);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('新增商品及規格時出錯:', err);
+        res.status(500).json({ error: `新增過程中發生錯誤: ${err.message}` }); // 返回更詳細的錯誤
+    } finally {
+        client.release();
+    }
+});
+
+// **修改: PUT /api/products/:id (更新商品及規格 - 受保護)**
+app.put('/api/products/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, image_url, seven_eleven_url, variations } = req.body;
+
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
+    // 基本驗證
+    if (!name || price === undefined || price === null) { return res.status(400).json({ error: '商品名稱和價格為必填項。' }); }
+    if (isNaN(parseFloat(price)) || parseFloat(price) < 0) { return res.status(400).json({ error: '價格必須是非負數字。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 更新商品基本資料
+        const productUpdateQuery = `
+            UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW()
+            WHERE id = $6
+            RETURNING *;
+        `;
+        const productResult = await client.query(productUpdateQuery, [ name, description || null, price, image_url || null, seven_eleven_url || null, id ]);
+
+        if (productResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到商品，無法更新。' });
+        }
+        console.log(`商品 ${id} 基本資料更新成功`);
+
+        // 2. 處理規格 (更新、新增、刪除)
+        const variationsToProcess = variations || [];
+        const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
+
+        // 獲取目前資料庫中的規格 ID
+        const existingVariationsResult = await client.query('SELECT id FROM product_variations WHERE product_id = $1', [id]);
+        const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
+        console.log(`Product ${id}: Existing variation IDs:`, [...existingVariationIds]);
+        console.log(`Product ${id}: Incoming variation IDs:`, [...incomingVariationIds]);
+
+
+        // 找出需要刪除的規格 (存在於 DB 但不在請求中)
+        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
+        if (variationIdsToDelete.length > 0) {
+             // 在刪除前檢查是否有銷售記錄關聯 (如果 ON DELETE RESTRICT)
+             const checkSalesQuery = `SELECT 1 FROM sales_logs WHERE variation_id = ANY($1::int[]) LIMIT 1`;
+             const salesCheckResult = await client.query(checkSalesQuery, [variationIdsToDelete]);
+             if (salesCheckResult.rowCount > 0) {
+                 await client.query('ROLLBACK');
+                 return res.status(409).json({ error: `無法刪除規格，因為其有關聯的銷售記錄。請先處理銷售記錄。涉及的規格 ID: ${variationIdsToDelete.join(', ')}` });
+             }
+
+            const deleteQuery = `DELETE FROM product_variations WHERE id = ANY($1::int[])`;
+            console.log(`Product ${id}: Deleting variation IDs:`, variationIdsToDelete);
+            await client.query(deleteQuery, [variationIdsToDelete]);
+        }
+
+        // 遍歷請求中的規格進行更新或新增
+        const variationUpdateQuery = `UPDATE product_variations SET name = $1, inventory_count = $2, sku = $3, updated_at = NOW() WHERE id = $4 AND product_id = $5`;
+        const variationInsertQuery = `INSERT INTO product_variations (product_id, name, inventory_count, sku, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())`;
+
+        for (const variation of variationsToProcess) {
+            // 驗證規格資料
+            if (!variation.name || variation.inventory_count === undefined || variation.inventory_count === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或庫存。`); }
+            const inventoryCount = parseInt(variation.inventory_count);
+            if (isNaN(inventoryCount) || inventoryCount < 0) { throw new Error(`規格 "${variation.name}" 的庫存必須是非負整數。`); }
+            const sku = variation.sku ? variation.sku.trim() : null;
+            const variationId = variation.id ? parseInt(variation.id) : null;
+
+            if (variationId && existingVariationIds.has(variationId)) {
+                // 更新現有規格
+                 console.log(`Product ${id}: Updating variation ID ${variationId} with name=${variation.name}, inv=${inventoryCount}`);
+                await client.query(variationUpdateQuery, [variation.name.trim(), inventoryCount, sku, variationId, id]);
+            } else {
+                // 新增規格
+                 console.log(`Product ${id}: Inserting new variation with name=${variation.name}, inv=${inventoryCount}`);
+                await client.query(variationInsertQuery, [id, variation.name.trim(), inventoryCount, sku]);
+            }
+        }
+
+        await client.query('COMMIT');
+        console.log(`商品 ${id} 及規格更新交易成功提交`);
+
+        // 重新獲取更新後的商品及規格資料返回
+        const finalProductResult = await client.query('SELECT * FROM products WHERE id = $1', [id]);
+        const finalVariationsResult = await client.query('SELECT * FROM product_variations WHERE product_id = $1 ORDER BY name ASC', [id]);
+        const updatedProduct = finalProductResult.rows[0];
+        updatedProduct.variations = finalVariationsResult.rows;
+
+        res.status(200).json(updatedProduct);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`更新商品 ID ${id} 及規格時出錯:`, err);
+        res.status(500).json({ error: `更新過程中發生錯誤: ${err.message}` });
+    } finally {
+        client.release();
+    }
+});
+
+
+// **修改: DELETE /api/products/:id (刪除商品 - 受保護)**
+app.delete('/api/products/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // 由於 product_variations 表設置了 ON DELETE CASCADE，刪除 products 會自動刪除關聯的 variations
+        // 但 sales_logs 設置了 ON DELETE RESTRICT，如果有關聯記錄，刪除 variations 會失敗
+        // 所以需要先檢查 sales_logs
+        const checkSalesQuery = `SELECT 1 FROM sales_logs sl JOIN product_variations pv ON sl.variation_id = pv.id WHERE pv.product_id = $1 LIMIT 1`;
+        const salesCheckResult = await client.query(checkSalesQuery, [id]);
+        if (salesCheckResult.rowCount > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: `無法刪除商品，因為其規格有關聯的銷售記錄。請先處理銷售記錄。` });
+        }
+
+        // 先刪除 product_variations (如果沒有設定 CASCADE，或者想手動控制)
+        // await client.query('DELETE FROM product_variations WHERE product_id = $1', [id]);
+
+        // 然後刪除 products
+        const result = await client.query('DELETE FROM products WHERE id = $1', [id]);
+
+        if (result.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到商品，無法刪除。' });
+        }
+
+        await client.query('COMMIT');
+        console.log(`商品 ${id} 及關聯規格 (如果設置了 CASCADE) 已刪除`);
         res.status(204).send();
-    } catch (err) { console.error(`刪除商品 ID ${id} 時出錯:`, err); /* ... 其他錯誤處理 ... */ res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`刪除商品 ID ${id} 時出錯:`, err);
+        // 檢查是否是外鍵約束錯誤
+        if (err.code === '23503') { // Foreign key violation
+             res.status(409).json({ error: '無法刪除，可能存在關聯數據（例如銷售記錄）。' });
+        } else {
+             res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+        }
+    } finally {
+        client.release();
+    }
 });
 
 
