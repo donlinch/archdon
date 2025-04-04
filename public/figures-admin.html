@@ -44,6 +44,16 @@
         #variations-container .variation-item button { padding: 5px 8px; background-color: #f44336; color: white; border: none; cursor: pointer; border-radius: 3px; margin-left: auto;}
         #add-variation-btn { margin-top: 10px; padding: 8px 12px; }
 
+        .form-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group-inline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
     </style>
 </head>
 <body>
@@ -69,18 +79,16 @@
                     <th>圖片</th>
                     <th>商品名</th>
                     <th>規格 & 數量</th>
-                   
+                    <th>顯示</th>
                     <th>買入價格</th>
                     <th>賣出價格</th>
                     <th>叫貨方法</th>
                     <th>操作</th>
-                    <th>顯示</th>
-                    
                 </tr>
             </thead>
             <tbody id="figure-table-body">
                 <!-- 公仔列表將由 JavaScript 載入 -->
-                <tr><td colspan="7">正在載入公仔資料...</td></tr>
+                <tr><td colspan="8">正在載入商品資料...</td></tr>
             </tbody>
         </table>
     </div>
@@ -105,7 +113,6 @@
 <h2 id="modal-title">新增商品</h2>
 <form id="figure-form">
 <input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
-
 <div class="form-group">
     <label for="figure-name">商品名 *</label>
     <input type="text" id="figure-name" required>
@@ -114,12 +121,11 @@
     <label for="figure-image-url">圖片連結</label>
     <input type="text" id="figure-image-url" placeholder="https://...">
 </div>
- <!-- START: 新增的是否顯示 Checkbox -->
- <div class="form-group form-group-inline">
-     <label for="figure-is-displayed">是否顯示於前台?</label>
-     <input type="checkbox" id="figure-is-displayed" name="is_displayed" value="true" checked> <!-- 預設勾選 (對應 DB 預設 TRUE) -->
-     <span style="font-size: 0.9em; color: #666;">(勾選=是, 取消=否)</span>
- </div>
+<div class="form-group form-group-inline">
+    <label for="figure-is-displayed">是否顯示於前台?</label>
+    <input type="checkbox" id="figure-is-displayed" name="is_displayed" value="true" checked>
+    <span style="font-size: 0.9em; color: #666;">(勾選=是, 取消=否)</span>
+</div>
  <!-- END: 新增的是否顯示 Checkbox -->
 <div class="form-group">
     <label for="figure-purchase-price">買入價格</label>
