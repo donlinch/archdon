@@ -461,11 +461,170 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => { // basicAuthMidd
 
 
 // --- 保護的管理頁面和 API Routes ---
+
+
+
+
+
+
+
+
 // *** 在這個陣列中加入新的管理頁面和 API 前綴 ***
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html', '/inventory-admin.html', '/figures-admin.html'], basicAuthMiddleware);
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html', '/inventory-admin.html', '/figures-admin.html' ,'sales-report.html' ], basicAuthMiddleware);
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/admin/*
 
 // --- 新增: 公仔管理 API (受保護) ---
+
+
+// --- 銷售報表 API ---
+
+// 獲取銷售數據列表
+app.get('/api/sales', async (req, res) => {
+    const { name, period, start_date, end_date, group_by_name } = req.query;
+    
+    try {
+        let queryText = 'SELECT ';
+        
+        if (group_by_name === 'true') {
+            queryText += `
+                product_name as name,
+                SUM(quantity) as total_quantity,
+                SUM(quantity * unit_price) as total_amount,
+                MIN(sale_date) as first_sale_date,
+                MAX(sale_date) as last_sale_date
+            FROM sales
+            `;
+        } else {
+            queryText += `
+                id,
+                product_name as name,
+                quantity,
+                unit_price,
+                sale_date,
+                (quantity * unit_price) as amount
+            FROM sales
+            `;
+        }
+        
+        const whereClauses = [];
+        const queryParams = [];
+        let paramIndex = 1;
+        
+        // 產品名稱篩選
+        if (name) {
+            whereClauses.push(`product_name = $${paramIndex++}`);
+            queryParams.push(name);
+        }
+        
+        // 時間範圍篩選
+        if (period) {
+            let dateCondition = '';
+            switch (period) {
+                case 'today':
+                    dateCondition = `sale_date::date = CURRENT_DATE`;
+                    break;
+                case 'this_month':
+                    dateCondition = `sale_date >= date_trunc('month', CURRENT_DATE)`;
+                    break;
+                case 'last_month':
+                    dateCondition = `sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
+                                     AND sale_date < date_trunc('month', CURRENT_DATE)`;
+                    break;
+                case 'custom':
+                    if (start_date && end_date) {
+                        dateCondition = `sale_date::date BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+                        queryParams.push(start_date, end_date);
+                    }
+                    break;
+            }
+            if (dateCondition) whereClauses.push(dateCondition);
+        }
+        
+        if (whereClauses.length > 0) {
+            queryText += ' WHERE ' + whereClauses.join(' AND ');
+        }
+        
+        if (group_by_name === 'true') {
+            queryText += ' GROUP BY product_name ORDER BY total_quantity DESC';
+        } else {
+            queryText += ' ORDER BY sale_date DESC';
+        }
+        
+        const result = await pool.query(queryText, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取銷售數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售數據時發生內部伺服器錯誤' });
+    }
+});
+
+// 獲取銷售報表數據 (用於圖表)
+app.get('/api/sales/report', async (req, res) => {
+    const { period, start_date, end_date } = req.query;
+    
+    if (!period) {
+        return res.status(400).json({ error: '必須指定時間範圍' });
+    }
+    
+    try {
+        let dateCondition = '';
+        let groupByClause = '';
+        const queryParams = [];
+        
+        switch (period) {
+            case 'this_month':
+                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE)`;
+                groupByClause = `GROUP BY date_trunc('day', sale_date)`;
+                break;
+            case 'last_month':
+                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
+                                AND sale_date < date_trunc('month', CURRENT_DATE)`;
+                groupByClause = `GROUP BY date_trunc('day', sale_date)`;
+                break;
+            case 'last_3_months':
+                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '3 months')`;
+                groupByClause = `GROUP BY date_trunc('month', sale_date)`;
+                break;
+            case 'custom':
+                if (start_date && end_date) {
+                    dateCondition = `WHERE sale_date::date BETWEEN $1 AND $2`;
+                    queryParams.push(start_date, end_date);
+                    groupByClause = `GROUP BY date_trunc('day', sale_date)`;
+                }
+                break;
+        }
+        
+        const queryText = `
+            SELECT 
+                date_trunc('day', sale_date) as date,
+                SUM(quantity) as total_quantity,
+                SUM(quantity * unit_price) as total_amount
+            FROM sales
+            ${dateCondition}
+            ${groupByClause}
+            ORDER BY date ASC
+        `;
+        
+        const result = await pool.query(queryText, queryParams);
+        
+        // 格式化數據供圖表使用
+        const chartData = {
+            labels: result.rows.map(row => new Date(row.date).toLocaleDateString()),
+            quantities: result.rows.map(row => row.total_quantity),
+            amounts: result.rows.map(row => row.total_amount)
+        };
+        
+        res.json(chartData);
+    } catch (err) {
+        console.error('獲取銷售報表數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售報表數據時發生內部伺服器錯誤' });
+    }
+});
+
+
+
+
+
 
 // GET /api/admin/figures - 獲取所有公仔列表 (包含規格)
 app.get('/api/admin/figures', async (req, res) => {
