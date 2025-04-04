@@ -83,30 +83,7 @@
             <span id="existing-products-list">載入中...</span>
         </p>
     </div>
-    <!-- 商品名稱列表區塊結束 -->
-
-
-                <form id="sales-form">
-                    <input type="hidden" id="sale-id"> <!-- 用於編輯時儲存 ID -->
-                    <div class="form-group">
-                        <label for="product-name">商品名稱 <span style="color: red;">*</span></label>
-                        <input type="text" id="product-name" required>
-                        <!-- 建議未來改為下拉選單，從商品/公仔列表選擇 -->
-                    </div>
-                    <div class="form-group">
-                        <label for="quantity-sold">銷售數量 <span style="color: red;">*</span></label>
-                        <input type="number" id="quantity-sold" required min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="sale-timestamp">銷售時間 <span style="color: red;">*</span></label>
-                        <!-- datetime-local 的值格式需要是 YYYY-MM-DDTHH:mm -->
-                        <input type="datetime-local" id="sale-timestamp" required>
-                    </div>
-                    <div id="form-error" class="error-message"></div>
-                    <div class="form-actions">
-                        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display: none;">取消編輯</button>
-                        <button type="submit" id="save-btn" class="btn-success">新增紀錄</button>
-                    </div>
+   
                 </form>
             </section>
 
@@ -132,6 +109,30 @@
             </section>
         </div>
 
+         <!-- 商品名稱列表區塊結束 -->
+
+
+         <form id="sales-form">
+            <input type="hidden" id="sale-id"> <!-- 用於編輯時儲存 ID -->
+            <div class="form-group">
+                <label for="product-name">商品名稱 <span style="color: red;">*</span></label>
+                <input type="text" id="product-name" required>
+                <!-- 建議未來改為下拉選單，從商品/公仔列表選擇 -->
+            </div>
+            <div class="form-group">
+                <label for="quantity-sold">銷售數量 <span style="color: red;">*</span></label>
+                <input type="number" id="quantity-sold" required min="1">
+            </div>
+            <div class="form-group">
+                <label for="sale-timestamp">銷售時間 <span style="color: red;">*</span></label>
+                <!-- datetime-local 的值格式需要是 YYYY-MM-DDTHH:mm -->
+                <input type="datetime-local" id="sale-timestamp" required>
+            </div>
+            <div id="form-error" class="error-message"></div>
+            <div class="form-actions">
+                <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display: none;">取消編輯</button>
+                <button type="submit" id="save-btn" class="btn-success">新增紀錄</button>
+            </div>
         <!-- 銷售彙總 -->
         <section class="summary-section">
             <h2>銷售彙總 (根據篩選條件)</h2>
