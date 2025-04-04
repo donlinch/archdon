@@ -14,7 +14,17 @@
         /* ... */
 
         /* 新增: 售出按鈕樣式 */
-        
+        .sell-btn {
+            padding: 2px 6px;
+            font-size: 0.8em;
+            margin-left: 8px;
+            cursor: pointer;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        .sell-btn:hover { background-color: #45a049; }
 
         /* 新增: 銷售紀錄 Modal 樣式 */
         #record-sale-modal .modal-content {
@@ -120,7 +130,10 @@
                      <label>目前庫存:</label>
                      <input type="number" id="sale-current-stock" readonly>
                  </div>
-                 
+                 <div class="form-group">
+                     <label for="sale-quantity-sold">售出數量 *</label>
+                     <input type="number" id="sale-quantity-sold" min="1" required>
+                 </div>
                  <div class="form-group">
                     <label for="sale-timestamp">銷售時間 (可選)</label>
                     <input type="datetime-local" id="sale-timestamp"> <!-- HTML5 日期時間選擇器 -->
@@ -129,7 +142,10 @@
                     <label for="sale-notes">備註 (可選)</label>
                     <textarea id="sale-notes" rows="2"></textarea>
                  </div>
-              
+                 <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="cancel-btn">取消</button>
+                    <button type="submit" id="submit-sale-btn">確認售出</button>
+                 </div>
              </form>
         </div>
     </div>
