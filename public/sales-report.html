@@ -76,16 +76,35 @@
             <!-- 新增/編輯表單 -->
             <section class="form-section">
                 <h2 id="form-title">新增銷售紀錄</h2>
-
-    <!-- 新增這個區塊來顯示商品名稱 -->
-    <div id="existing-products-container" style="margin-bottom: 15px; font-size: 0.9em; color: #555; max-height: 100px; overflow-y: auto; background-color: #eee; padding: 8px; border-radius: 4px;">
-        <p style="margin: 0;"><strong>參考商品名稱 (按字母排序):</strong> <br>
-            <span id="existing-products-list">載入中...</span>
-        </p>
-    </div>
-   
+                <form id="sales-form">
+                    <input type="hidden" id="sale-id"> <!-- 用於編輯時儲存 ID -->
+                    <div class="form-group">
+                        <label for="product-name">商品名稱 <span style="color: red;">*</span></label>
+                        <input type="text" id="product-name" required>
+                        <!-- 建議未來改為下拉選單，從商品/公仔列表選擇 -->
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity-sold">銷售數量 <span style="color: red;">*</span></label>
+                        <input type="number" id="quantity-sold" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="sale-timestamp">銷售時間 <span style="color: red;">*</span></label>
+                        <!-- datetime-local 的值格式需要是 YYYY-MM-DDTHH:mm -->
+                        <input type="datetime-local" id="sale-timestamp" required>
+                    </div>
+                    <div id="form-error" class="error-message"></div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display: none;">取消編輯</button>
+                        <button type="submit" id="save-btn" class="btn-success">新增紀錄</button>
+                    </div>
                 </form>
             </section>
+
+
+            <input type="text" id="product-name" required list="product-suggestions"> <!-- 可選：增加 datalist -->
+
+
+
 
             <!-- 篩選條件 -->
             <section class="filter-section">
@@ -109,7 +128,6 @@
             </section>
         </div>
 
-        
         <!-- 銷售彙總 -->
         <section class="summary-section">
             <h2>銷售彙總 (根據篩選條件)</h2>
