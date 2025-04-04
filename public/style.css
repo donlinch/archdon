@@ -761,3 +761,58 @@ button#save-figure-btn, button#submit-sale-btn {
 button#save-figure-btn:hover, button#submit-sale-btn:hover {
     background-color: #45a049; /* 綠色加深 */
 }
+
+
+/* 調整規格與數量區域 */
+.variations-list {
+    padding-left: 0;
+    list-style: none;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.variations-list li {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* 規格名稱與數量分開顯示 */
+.variations-list li span {
+    font-weight: bold;
+}
+
+.variations-list li .variation-quantity {
+    font-weight: normal;
+    color: #757575;
+}
+
+/* 調整規格與數量的視覺間距 */
+#figure-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 表格的交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* 操作按鈕與規格間的間隔 */
+#figure-table .actions button {
+    margin-right: 8px;
+}
+
+/* Hover效果 */
+#figure-table tr:hover {
+    background-color: #e9e9e9;
+}
