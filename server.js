@@ -423,9 +423,12 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- 受保護的管理頁面和 API Routes ---
 
 // 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'], basicAuthMiddleware);
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html','figures-admin.html'], basicAuthMiddleware);
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+
+
+
 
 // --- 流量分析 API ---
 // GET /api/analytics/traffic
@@ -465,13 +468,190 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => { // basicAuthMidd
 
 
 
+// --- 新增: 銷售報告 API (受保護) ---
+app.get('/api/analytics/sales-report', async (req, res) => {
+    const { startDate, endDate } = req.query; // 從查詢參數獲取日期範圍
+
+    // 基本日期驗證 (範例，可以做得更完善)
+    let queryStartDate = startDate ? new Date(startDate) : null;
+    let queryEndDate = endDate ? new Date(endDate) : null;
+
+    // 設置預設日期範圍 (例如：過去 30 天)
+    if (!queryStartDate || !queryEndDate || isNaN(queryStartDate) || isNaN(queryEndDate)) {
+        queryEndDate = new Date(); // 今天結束
+        queryStartDate = new Date();
+        queryStartDate.setDate(queryEndDate.getDate() - 30); // 30 天前開始
+    } else {
+        // 確保結束日期包含當天結束時間
+         queryEndDate.setHours(23, 59, 59, 999);
+    }
+
+    // 將日期轉換為 ISO 格式給 SQL 使用
+    const startDateISO = queryStartDate.toISOString();
+    const endDateISO = queryEndDate.toISOString();
+
+    console.log(`[Sales Report API] Fetching data from ${startDateISO} to ${endDateISO}`);
+
+    const client = await pool.connect();
+    try {
+        // 1. 總銷售件數
+        const totalItemsResult = await client.query(
+            `SELECT COALESCE(SUM(quantity_sold), 0)::integer AS total_items
+             FROM sales_log
+             WHERE sale_timestamp BETWEEN $1 AND $2`,
+            [startDateISO, endDateISO]
+        );
+        const totalItemsSold = totalItemsResult.rows[0].total_items;
+
+        // 2. 銷售趨勢 (按日)
+        const trendResult = await client.query(
+            `SELECT DATE(sale_timestamp AT TIME ZONE 'Asia/Taipei') AS sale_date, -- 按台北時間分組日期
+                    SUM(quantity_sold)::integer AS daily_quantity
+             FROM sales_log
+             WHERE sale_timestamp BETWEEN $1 AND $2
+             GROUP BY sale_date
+             ORDER BY sale_date ASC`,
+            [startDateISO, endDateISO]
+        );
+        const salesTrend = trendResult.rows.map(row => ({
+            date: row.sale_date.toISOString().split('T')[0], // 格式化為 YYYY-MM-DD
+            quantity: row.daily_quantity
+        }));
+
+        // 3. 熱銷商品排行 (依數量, 包含公仔和規格名稱)
+        const topProductsResult = await client.query(
+            `SELECT
+                f.name AS figure_name,
+                fv.name AS variation_name,
+                SUM(sl.quantity_sold)::integer AS total_quantity
+             FROM sales_log sl
+             JOIN figure_variations fv ON sl.figure_variation_id = fv.id
+             JOIN figures f ON fv.figure_id = f.id
+             WHERE sl.sale_timestamp BETWEEN $1 AND $2
+             GROUP BY f.name, fv.name
+             ORDER BY total_quantity DESC
+             LIMIT 10`, // 例如限制前 10 名
+            [startDateISO, endDateISO]
+        );
+        const topSellingProducts = topProductsResult.rows;
+
+        // 4. 詳細銷售紀錄
+        const detailedLogResult = await client.query(
+            `SELECT
+                sl.sale_timestamp,
+                f.name AS figure_name,
+                fv.name AS variation_name,
+                sl.quantity_sold
+             FROM sales_log sl
+             JOIN figure_variations fv ON sl.figure_variation_id = fv.id
+             JOIN figures f ON fv.figure_id = f.id
+             WHERE sl.sale_timestamp BETWEEN $1 AND $2
+             ORDER BY sl.sale_timestamp DESC`,
+            [startDateISO, endDateISO]
+        );
+        // 格式化時間戳
+        const detailedLog = detailedLogResult.rows.map(row => ({
+             timestamp: row.sale_timestamp, // 前端可以再格式化
+             figureName: row.figure_name,
+             variationName: row.variation_name,
+             quantity: row.quantity_sold
+         }));
+
+        res.status(200).json({
+            summary: {
+                totalItemsSold: totalItemsSold,
+                startDate: startDateISO.split('T')[0], // 回傳實際使用的日期範圍
+                endDate: endDateISO.split('T')[0]
+            },
+            trend: salesTrend,
+            topProducts: topSellingProducts,
+            details: detailedLog
+        });
+
+    } catch (err) {
+        console.error('[Sales Report API Error] 獲取銷售報告數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售報告數據時發生伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+
+// --- 新增: 記錄銷售的 API 端點 (重要!) ---
+// 這個端點應該由你的庫存管理或其他觸發銷售的地方調用
+// 例如，在 figures-admin.html 中加入 "售出" 按鈕後觸發
+app.post('/api/admin/figures/sell', async (req, res) => {
+    // basicAuthMiddleware 已在 '/api/admin' 層級應用
+    const { figure_variation_id, quantity_sold } = req.body;
+
+    console.log(`[Sell API] Received request: variation_id=${figure_variation_id}, quantity=${quantity_sold}`);
+
+    // 驗證輸入
+    const variationId = parseInt(figure_variation_id);
+    const quantity = parseInt(quantity_sold);
+
+    if (isNaN(variationId) || variationId <= 0) {
+        return res.status(400).json({ error: '無效的公仔規格 ID。' });
+    }
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '售出數量必須是正整數。' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN'); // 開始交易
+
+        // 1. 檢查庫存是否足夠
+        const checkStockResult = await client.query(
+            'SELECT quantity FROM figure_variations WHERE id = $1 FOR UPDATE', // FOR UPDATE 鎖定行
+            [variationId]
+        );
+
+        if (checkStockResult.rowCount === 0) {
+            throw new Error(`找不到 ID 為 ${variationId} 的公仔規格。`);
+        }
+
+        const currentStock = checkStockResult.rows[0].quantity;
+        if (currentStock < quantity) {
+            throw new Error(`庫存不足。規格 ID ${variationId} 目前庫存 ${currentStock}，欲售出 ${quantity}。`);
+        }
+
+        // 2. 更新庫存 (減去售出數量)
+        const newStock = currentStock - quantity;
+        await client.query(
+            'UPDATE figure_variations SET quantity = $1, updated_at = NOW() WHERE id = $2',
+            [newStock, variationId]
+        );
+        console.log(`[Sell API] Updated stock for variation ${variationId} from ${currentStock} to ${newStock}`);
+
+        // 3. 記錄銷售日誌
+        await client.query(
+            'INSERT INTO sales_log (figure_variation_id, quantity_sold, sale_timestamp) VALUES ($1, $2, NOW())',
+            [variationId, quantity]
+        );
+        console.log(`[Sell API] Logged sale for variation ${variationId}, quantity ${quantity}`);
+
+        await client.query('COMMIT'); // 提交交易
+
+        res.status(200).json({ message: '銷售紀錄成功', newStock: newStock });
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // 出錯時回滾
+        console.error('[Sell API Error] 記錄銷售時出錯:', err.stack || err);
+        // 根據錯誤類型回傳不同狀態碼
+        if (err.message.includes('庫存不足') || err.message.includes('找不到 ID')) {
+             res.status(400).json({ error: `銷售失敗：${err.message}` });
+        } else {
+            res.status(500).json({ error: `記錄銷售過程中發生伺服器內部錯誤: ${err.message}` });
+        }
+    } finally {
+        client.release();
+    }
+});
 
 
 
 
-// *** 在這個陣列中加入新的管理頁面和 API 前綴 ***
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html', '/inventory-admin.html', '/figures-admin.html' ,'sales-report.html' ], basicAuthMiddleware);
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/admin/*
 
 // --- 新增: 公仔管理 API (受保護) ---
 
