@@ -646,3 +646,118 @@ main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; }
         page-break-after: auto;
     }
 }
+
+
+/* 一般表格樣式 */
+#figure-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    margin-top: 20px;
+}
+
+/* 表格標題欄 */
+#figure-table th {
+    background-color: #4CAF50; /* 綠色背景 */
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 1.1em;
+}
+
+/* 表格內容 */
+#figure-table td {
+    padding: 10px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #f2f2f2; /* 淺灰色背景 */
+}
+
+/* 鼠標懸停行顏色 */
+#figure-table tr:hover {
+    background-color: #ddd; /* 深灰色背景 */
+}
+
+/* 調整按鈕樣式 */
+button {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+}
+
+/* 編輯和刪除按鈕 */
+button.edit-btn {
+    background-color: #4CAF50; /* 綠色 */
+    color: white;
+}
+
+button.delete-btn {
+    background-color: #f44336; /* 紅色 */
+    color: white;
+}
+
+button.edit-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
+
+button.delete-btn:hover {
+    background-color: #e53935; /* 紅色加深 */
+}
+
+/* 售出按鈕樣式 */
+.sell-btn {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    margin-left: 8px;
+    cursor: pointer;
+    background-color: #4CAF50; /* 綠色 */
+    color: white;
+    border: none;
+    border-radius: 3px;
+}
+
+.sell-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
+
+/* 表單欄位和標籤 */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+/* Modal 視窗 */
+.modal-content {
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal 按鈕 */
+button.cancel-btn {
+    background-color: #f44336; /* 紅色 */
+    color: white;
+}
+
+button.cancel-btn:hover {
+    background-color: #e53935; /* 紅色加深 */
+}
+
+button#save-figure-btn, button#submit-sale-btn {
+    background-color: #4CAF50; /* 綠色 */
+    color: white;
+}
+
+button#save-figure-btn:hover, button#submit-sale-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
