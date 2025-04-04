@@ -1406,6 +1406,11 @@ app.get('/figures-admin.html', (req, res) => { // basicAuthMiddleware 已在上�
     res.sendFile(path.join(__dirname, 'public', 'figures-admin.html'));
 });
 
+
+
+
+
+
 // --- 404 處理 ---
 // 這個應該是最後的路由處理
 app.use((req, res, next) => {
