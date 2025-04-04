@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** 獲取並顯示所有公仔 */
     async function fetchAndDisplayFigures() {
-        tableBody.innerHTML = '<tr><td colspan="7">正在載入商品資料...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7">正在載入公仔資料...</td></tr>';
         try {
             const response = await fetch('/api/admin/figures');
             if (!response.ok) {
@@ -30,8 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
             allFiguresData = await response.json(); // 儲存數據供編輯使用
             displayFigures(allFiguresData);
         } catch (error) {
-            console.error("獲取商品列表失敗:", error);
-            tableBody.innerHTML = '<tr><td colspan="7">無法載入商品資料，請稍後再試。</td></tr>';
+            console.error("獲取公仔列表失敗:", error);
+            tableBody.innerHTML = '<tr><td colspan="7">無法載入公仔資料，請稍後再試。</td></tr>';
         }
     }
 
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = ''; // 清空表格
 
         if (!figures || figures.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">目前沒有商品資料。</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7">目前沒有公仔資料。</td></tr>';
             return;
         }
 
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** 打開新增 Modal */
     function openAddModal() {
-        modalTitle.textContent = '新增商品';
+        modalTitle.textContent = '新增公仔';
         figureForm.reset(); // 清空表單
         figureIdInput.value = ''; // 確保 ID 為空
         variationsContainer.innerHTML = ''; // 清空規格區域
@@ -126,11 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function openEditModal(id) {
         const figure = allFiguresData.find(f => f.id === id);
         if (!figure) {
-            alert('找不到要編輯的商品資料！');
+            alert('找不到要編輯的公仔資料！');
             return;
         }
 
-        modalTitle.textContent = '編輯商品';
+        modalTitle.textContent = '編輯公仔';
         figureForm.reset(); // 先清空
 
         // 填入基本資料
@@ -270,17 +270,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             closeModal();
             await fetchAndDisplayFigures(); // 重新載入列表
-             alert(`商品 ${method === 'POST' ? '新增' : '更新'} 成功！`);
+             alert(`公仔 ${method === 'POST' ? '新增' : '更新'} 成功！`);
 
         } catch (error) {
-            console.error("儲存商品失敗:", error);
-            alert(`儲存商品失敗: ${error.message}`);
+            console.error("儲存公仔失敗:", error);
+            alert(`儲存公仔失敗: ${error.message}`);
         }
     }
 
     /** 刪除公仔 */
     async function deleteFigure(id, name) {
-        if (!confirm(`確定要刪除商品 "${name}" 嗎？\n（相關的規格資料也會一併刪除）`)) {
+        if (!confirm(`確定要刪除公仔 "${name}" 嗎？\n（相關的規格資料也會一併刪除）`)) {
             return;
         }
 
@@ -290,17 +290,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                 if (response.status === 404) { throw new Error('找不到要刪除的商品。'); }
+                 if (response.status === 404) { throw new Error('找不到要刪除的公仔。'); }
                  else { throw new Error(`刪除失敗 (${response.status})`); }
             }
 
             // response.status === 204 表示成功
-            alert(`商品 "${name}" 已成功刪除。`);
+            alert(`公仔 "${name}" 已成功刪除。`);
             await fetchAndDisplayFigures(); // 重新載入列表
 
         } catch (error) {
-            console.error("刪除商品失敗:", error);
-            alert(`刪除商品失敗: ${error.message}`);
+            console.error("刪除公仔失敗:", error);
+            alert(`刪除公仔失敗: ${error.message}`);
         }
     }
 
