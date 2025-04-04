@@ -435,12 +435,12 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/a
 
 
 
+// --- 公仔管理 API (修改 & 新增) ---
 
-// GET /api/admin/figures - 獲取所有公仔列表 (包含規格)
+// GET /api/admin/figures - (修改) 獲取列表，加入 is_selling
 app.get('/api/admin/figures', async (req, res) => {
     console.log("[Admin API] GET /api/admin/figures requested");
     try {
-        // 使用 LEFT JOIN 和 JSON_AGG 來聚合每個公仔的規格資訊
         const queryText = `
             SELECT
                 f.id,
@@ -449,6 +449,7 @@ app.get('/api/admin/figures', async (req, res) => {
                 f.purchase_price,
                 f.selling_price,
                 f.ordering_method,
+                f.is_selling, -- *** 新增欄位 ***
                 f.created_at,
                 f.updated_at,
                 COALESCE(
@@ -456,15 +457,15 @@ app.get('/api/admin/figures', async (req, res) => {
                         json_build_object(
                             'id', v.id,
                             'name', v.name,
-                            'quantity', v.quantity
-                        ) ORDER BY v.name ASC -- 確保規格按名稱排序
+                            'quantity', v.quantity -- *** 包含當前庫存 ***
+                        ) ORDER BY v.name ASC
                     )
                      FROM figure_variations v
                      WHERE v.figure_id = f.id),
-                    '[]'::json -- 如果沒有規格，返回空 JSON 陣列
+                    '[]'::json
                 ) AS variations
             FROM figures f
-            ORDER BY f.created_at DESC; -- 按創建時間降序排列
+            ORDER BY f.created_at DESC;
         `;
         const result = await pool.query(queryText);
         console.log(`[Admin API] Found ${result.rowCount} figures.`);
@@ -475,204 +476,400 @@ app.get('/api/admin/figures', async (req, res) => {
     }
 });
 
-// POST /api/admin/figures - 新增公仔及其規格
+// POST /api/admin/figures - (修改) 新增公仔，加入 is_selling
 app.post('/api/admin/figures', async (req, res) => {
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    // *** 加入 is_selling 到解構賦值 ***
+    const { name, image_url, purchase_price, selling_price, ordering_method, is_selling, variations } = req.body;
     console.log("[Admin API] POST /api/admin/figures received:", req.body);
 
-    // 基本驗證
-    if (!name) {
-        return res.status(400).json({ error: '公仔名稱為必填項。' });
-    }
-    if (variations && !Array.isArray(variations)) {
-        return res.status(400).json({ error: '規格資料格式必須是陣列。' });
-    }
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+
+    // *** 處理 is_selling，若未提供則預設為 true ***
+    const sellingStatus = typeof is_selling === 'boolean' ? is_selling : true;
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN'); // 開始交易
-
-        // 1. 插入公仔基本資料
+        await client.query('BEGIN');
         const figureInsertQuery = `
-            INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *; -- 返回插入的整筆資料
+            INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method, is_selling) -- *** 加入 is_selling ***
+            VALUES ($1, $2, $3, $4, $5, $6) -- *** 增加參數 ***
+            RETURNING *;
         `;
         const figureResult = await client.query(figureInsertQuery, [
-            name,
-            image_url || null,
-            purchase_price || 0,
-            selling_price || 0,
-            ordering_method || null
+            name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, sellingStatus // *** 傳入 sellingStatus ***
         ]);
         const newFigure = figureResult.rows[0];
         const newFigureId = newFigure.id;
-        console.log(`[Admin API] Inserted figure with ID: ${newFigureId}`);
+        console.log(`[Admin API] Inserted figure with ID: ${newFigureId}, is_selling=${sellingStatus}`);
 
-        // 2. 插入公仔規格資料 (如果有的話)
+        // 插入規格 (保持不變)
         let insertedVariations = [];
         if (variations && variations.length > 0) {
             const variationInsertQuery = `
                 INSERT INTO figure_variations (figure_id, name, quantity)
-                VALUES ($1, $2, $3)
-                RETURNING *; -- 返回插入的規格資料
+                VALUES ($1, $2, $3) RETURNING *;
             `;
-            for (const variation of variations) {
-                if (!variation.name || variation.quantity === undefined || variation.quantity === null) {
-                    throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`);
-                }
-                const quantity = parseInt(variation.quantity);
-                if (isNaN(quantity) || quantity < 0) {
-                    throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`);
-                }
-                // 檢查規格名稱是否重複 (在同一個公仔下) - 可選，因為有 UNIQUE 約束
-                console.log(`[Admin API] Inserting variation for figure ${newFigureId}: Name=${variation.name}, Quantity=${quantity}`);
-                const variationResult = await client.query(variationInsertQuery, [
-                    newFigureId, variation.name.trim(), quantity
-                ]);
-                insertedVariations.push(variationResult.rows[0]);
+            for (const variation of variations) { /* ... 驗證和插入邏輯 ... */
+                 if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
+                 const quantity = parseInt(variation.quantity);
+                 if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+                 console.log(`[Admin API] Inserting variation for figure ${newFigureId}: Name=${variation.name}, Quantity=${quantity}`);
+                 const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
+                 insertedVariations.push(variationResult.rows[0]);
             }
         }
 
-        await client.query('COMMIT'); // 提交交易
+        await client.query('COMMIT');
         console.log(`[Admin API] Transaction committed for new figure ID: ${newFigureId}`);
+        newFigure.variations = insertedVariations;
+        res.status(201).json(newFigure);
 
-        newFigure.variations = insertedVariations; // 將新增的規格附加到回傳的公仔物件
-        res.status(201).json(newFigure); // 回傳 201 Created 和新增的公仔資料
-
-    } catch (err) {
-        await client.query('ROLLBACK'); // 出錯時回滾交易
+    } catch (err) { /* ... 錯誤處理和 ROLLBACK ... */
+        await client.query('ROLLBACK');
         console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
-        // 檢查是否是唯一性約束錯誤 (重複的規格名稱)
         if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') {
              res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` });
         } else {
             res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` });
         }
-    } finally {
-        client.release(); // 釋放客戶端連接回連接池
-    }
+    } finally { client.release(); }
 });
 
-// PUT /api/admin/figures/:id - 更新公仔及其規格
+// PUT /api/admin/figures/:id - (修改) 更新公仔，加入 is_selling
 app.put('/api/admin/figures/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    // *** 加入 is_selling 到解構賦值 ***
+    const { name, image_url, purchase_price, selling_price, ordering_method, is_selling, variations } = req.body;
     console.log(`[Admin API] PUT /api/admin/figures/${id} received:`, req.body);
 
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
     if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
     if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+     // *** is_selling 是可選的更新，但如果提供了，必須是布林值 ***
+     if (req.body.hasOwnProperty('is_selling') && typeof is_selling !== 'boolean') {
+        return res.status(400).json({ error: 'is_selling 欄位必須是 true 或 false。' });
+     }
+
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-
-        // 1. 更新公仔基本資料
+        // 1. 更新公仔基本資料 (包含 is_selling)
         const figureUpdateQuery = `
             UPDATE figures
-            SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW()
-            WHERE id = $6
+            SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, is_selling = $6, updated_at = NOW() -- *** 加入 is_selling ***
+            WHERE id = $7
             RETURNING *;
         `;
-        const figureResult = await client.query(figureUpdateQuery, [
-            name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id
-        ]);
+         // *** 確定 is_selling 的值，如果請求中沒有，則保持原值 (透過 SELECT 或省略更新)
+         // 為了簡化，這裡假設如果 req.body 包含 is_selling 就更新它，否則不更新此欄位。
+         // 一個更健壯的方法是先 SELECT 出原值，但這裡我們先處理傳入的值。
+         // 注意：如果 is_selling 未包含在請求中，此處傳入 undefined 會導致 SQL 錯誤，需妥善處理。
+         // 改進：只在 is_selling 在 body 中明確存在時才更新它。
+        let figureResult;
+        if (req.body.hasOwnProperty('is_selling')) {
+            figureResult = await client.query(figureUpdateQuery, [
+                name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, is_selling, id
+            ]);
+             console.log(`[Admin API] Updating figure ${id} with is_selling=${is_selling}`);
+        } else {
+            // 如果請求沒包含 is_selling，則執行不更新 is_selling 的 SQL
+            const figureUpdateQueryWithoutSelling = `
+                UPDATE figures
+                SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW()
+                WHERE id = $6 RETURNING *;`;
+             figureResult = await client.query(figureUpdateQueryWithoutSelling, [
+                name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id
+            ]);
+             console.log(`[Admin API] Updating figure ${id} without changing is_selling`);
+        }
 
-        if (figureResult.rowCount === 0) {
+
+        if (figureResult.rowCount === 0) { /* ... 找不到，ROLLBACK ... */
             await client.query('ROLLBACK');
             return res.status(404).json({ error: '找不到要更新的公仔。' });
         }
         const updatedFigure = figureResult.rows[0];
-        console.log(`[Admin API] Updated figure basics for ID: ${id}`);
 
-        // 2. 處理規格 (更新、新增、刪除)
+        // 2. 處理規格 (更新、新增、刪除) - 邏輯基本不變
+        /* ... 處理 variations 的邏輯 ... */
         const variationsToProcess = variations || [];
         const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
-
-        // 獲取目前資料庫中的規格 ID
         const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]);
         const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
-        console.log(`[Admin API] Figure ${id}: Existing variation IDs:`, [...existingVariationIds]);
-        console.log(`[Admin API] Figure ${id}: Incoming variation IDs:`, [...incomingVariationIds]);
-
-        // 找出需要刪除的規格 (存在於 DB 但不在請求中)
         const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
+
+        // *** 刪除前檢查銷售紀錄 ***
         if (variationIdsToDelete.length > 0) {
+             const checkSalesQuery = `SELECT 1 FROM figure_sales_log WHERE variation_id = ANY($1::int[]) LIMIT 1`;
+             const salesCheckResult = await client.query(checkSalesQuery, [variationIdsToDelete]);
+             if (salesCheckResult.rowCount > 0) {
+                 await client.query('ROLLBACK');
+                 // 返回更具體的信息
+                 const soldVariationIds = (await client.query(`SELECT DISTINCT variation_id FROM figure_sales_log WHERE variation_id = ANY($1::int[])`, [variationIdsToDelete])).rows.map(r => r.variation_id);
+                 return res.status(409).json({ error: `無法刪除規格，因為其有關聯的銷售記錄 (規格 ID: ${soldVariationIds.join(', ')})。請先處理銷售記錄或將規格數量設為 0。` });
+             }
+            // 如果沒有銷售紀錄，才執行刪除
             const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`;
             console.log(`[Admin API] Figure ${id}: Deleting variation IDs:`, variationIdsToDelete);
             await client.query(deleteQuery, [variationIdsToDelete]);
         }
-
-        // 遍歷請求中的規格進行更新或新增
+        // 更新/插入規格邏輯
         const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
         const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
-        let finalVariations = []; // 用於收集最終的規格資料
-
-        for (const variation of variationsToProcess) {
-            // 驗證規格資料
+        let finalVariations = [];
+         for (const variation of variationsToProcess) {
             if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
             const quantity = parseInt(variation.quantity);
             if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
             const variationId = variation.id ? parseInt(variation.id) : null;
-
             if (variationId && existingVariationIds.has(variationId)) {
-                // 更新現有規格
-                console.log(`[Admin API] Figure ${id}: Updating variation ID ${variationId} with Name=${variation.name}, Quantity=${quantity}`);
                 await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]);
-                // 從 DB 重新獲取更新後的數據，或者直接構造（這裡選擇後者）
-                 finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity });
+                finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity });
             } else {
-                // 新增規格 (可能是前端新加的，或 ID 無效/不匹配)
-                console.log(`[Admin API] Figure ${id}: Inserting new variation with Name=${variation.name}, Quantity=${quantity}`);
-                const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]);
-                 finalVariations.push(insertResult.rows[0]); // 使用插入後返回的資料
+                 const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]);
+                 finalVariations.push(insertResult.rows[0]);
             }
         }
 
+
         await client.query('COMMIT');
         console.log(`[Admin API] Transaction committed for updating figure ID: ${id}`);
-
-        // 整理返回的數據
-        updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); // 按名稱排序
+        updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name));
         res.status(200).json(updatedFigure);
 
-    } catch (err) {
+    } catch (err) { /* ... 錯誤處理和 ROLLBACK ... */
         await client.query('ROLLBACK');
         console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
-         // 檢查是否是唯一性約束錯誤 (重複的規格名稱)
         if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') {
              res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` });
         } else {
             res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` });
         }
-    } finally {
-        client.release();
-    }
+    } finally { client.release(); }
 });
 
-
-// DELETE /api/admin/figures/:id - 刪除公仔 (及其規格，因為 ON DELETE CASCADE)
+// DELETE /api/admin/figures/:id - (修改) 刪除公仔
+// 需要先檢查是否有規格關聯銷售紀錄 (因為規格會被 CASCADE 刪除)
 app.delete('/api/admin/figures/:id', async (req, res) => {
     const { id } = req.params;
     console.log(`[Admin API] DELETE /api/admin/figures/${id} requested`);
 
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
 
+    const client = await pool.connect();
     try {
-        // 因為設定了 ON DELETE CASCADE，只需要刪除 figures 表中的記錄
-        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
+        await client.query('BEGIN');
+
+        // 檢查該公仔下的所有規格是否有銷售紀錄
+        const checkSalesQuery = `
+            SELECT 1
+            FROM figure_sales_log sl
+            JOIN figure_variations v ON sl.variation_id = v.id
+            WHERE v.figure_id = $1
+            LIMIT 1;
+        `;
+        const salesCheckResult = await client.query(checkSalesQuery, [id]);
+
+        if (salesCheckResult.rowCount > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: '無法刪除公仔，因為其下的某些規格有關聯的銷售記錄。請先處理這些銷售記錄。' });
+        }
+
+        // 如果沒有銷售紀錄，可以安全刪除 (ON DELETE CASCADE 會處理規格)
+        const result = await client.query('DELETE FROM figures WHERE id = $1', [id]);
 
         if (result.rowCount === 0) {
+             await client.query('ROLLBACK');
             return res.status(404).json({ error: '找不到要刪除的公仔。' });
         }
 
-        console.log(`[Admin API] Deleted figure ID: ${id} and its variations (due to CASCADE)`);
-        res.status(204).send(); // 成功刪除，回傳 204 No Content
+         await client.query('COMMIT');
+        console.log(`[Admin API] Deleted figure ID: ${id} and its variations (due to CASCADE and no sales logs)`);
+        res.status(204).send();
 
     } catch (err) {
+         await client.query('ROLLBACK');
         console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err);
+        // 這裡的錯誤可能是其他問題，比如資料庫連接等
         res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' });
+    } finally {
+        client.release();
+    }
+});
+
+
+// *** 新增 API: 記錄單筆銷售 ***
+app.post('/api/admin/variations/:variationId/sell', async (req, res) => {
+    const { variationId } = req.params;
+    const { quantity_sold } = req.body;
+    console.log(`[Admin API] POST /api/admin/variations/${variationId}/sell received:`, req.body);
+
+    // --- 輸入驗證 ---
+    if (isNaN(parseInt(variationId))) {
+        return res.status(400).json({ error: '無效的規格 ID。' });
+    }
+    const qtySold = parseInt(quantity_sold);
+    if (isNaN(qtySold) || qtySold <= 0) {
+        return res.status(400).json({ error: '售出數量必須是正整數。' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 檢查庫存是否足夠 (並鎖定該行以防併發問題 - FOR UPDATE)
+        const checkStockQuery = `
+            SELECT quantity FROM figure_variations WHERE id = $1 FOR UPDATE;
+        `;
+        const stockResult = await client.query(checkStockQuery, [variationId]);
+
+        if (stockResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的規格。' });
+        }
+        const currentStock = stockResult.rows[0].quantity;
+        if (currentStock < qtySold) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: `庫存不足 (目前庫存: ${currentStock})。` }); // 409 Conflict 更適合庫存不足
+        }
+
+        // 2. 更新庫存
+        const updateStockQuery = `
+            UPDATE figure_variations SET quantity = quantity - $1 WHERE id = $2 RETURNING quantity;
+        `;
+        const updatedStockResult = await client.query(updateStockQuery, [qtySold, variationId]);
+        const newStock = updatedStockResult.rows[0].quantity;
+
+        // 3. 記錄銷售日誌
+        const logSaleQuery = `
+            INSERT INTO figure_sales_log (variation_id, quantity_sold) VALUES ($1, $2) RETURNING *;
+        `;
+        const saleLogResult = await client.query(logSaleQuery, [variationId, qtySold]);
+
+        await client.query('COMMIT');
+        console.log(`[Admin API] Sale logged for variation ${variationId}, quantity: ${qtySold}. New stock: ${newStock}`);
+        // 返回更新後的庫存和銷售記錄信息
+        res.status(201).json({
+            message: '銷售記錄成功',
+            new_stock: newStock,
+            sale_log: saleLogResult.rows[0]
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[Admin API Error] 記錄銷售 (variation ${variationId}) 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '記錄銷售時發生內部伺服器錯誤。' });
+    } finally {
+        client.release();
+    }
+});
+
+// *** 新增 API: 獲取銷售紀錄 ***
+app.get('/api/admin/sales-report', async (req, res) => {
+    // 接收查詢參數: startDate, endDate, figureId, variationId
+    const { startDate, endDate, figureId, variationId } = req.query;
+    console.log("[Admin API] GET /api/admin/sales-report requested with params:", req.query);
+
+    try {
+        let queryText = `
+            SELECT
+                sl.id as log_id,
+                sl.quantity_sold,
+                sl.sale_timestamp,
+                v.id as variation_id,
+                v.name as variation_name,
+                f.id as figure_id,
+                f.name as figure_name
+            FROM figure_sales_log sl
+            JOIN figure_variations v ON sl.variation_id = v.id
+            JOIN figures f ON v.figure_id = f.id
+        `;
+        const queryParams = [];
+        const conditions = [];
+        let paramIndex = 1;
+
+        if (startDate) {
+            conditions.push(`sl.sale_timestamp >= $${paramIndex++}`);
+            queryParams.push(startDate);
+        }
+        if (endDate) {
+             // 為了包含 endDate 當天，查詢條件應該是 < endDate 的下一天
+            const nextDay = new Date(endDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            conditions.push(`sl.sale_timestamp < $${paramIndex++}`);
+            queryParams.push(nextDay.toISOString().split('T')[0]); // 'YYYY-MM-DD' 格式
+        }
+        if (figureId && !isNaN(parseInt(figureId))) {
+            conditions.push(`f.id = $${paramIndex++}`);
+            queryParams.push(parseInt(figureId));
+        }
+        if (variationId && !isNaN(parseInt(variationId))) {
+            conditions.push(`v.id = $${paramIndex++}`);
+            queryParams.push(parseInt(variationId));
+        }
+
+        if (conditions.length > 0) {
+            queryText += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        queryText += ' ORDER BY sl.sale_timestamp DESC'; // 按銷售時間降序排列
+
+        // 添加分頁 (可選，但推薦如果紀錄很多)
+        const limit = parseInt(req.query.limit) || 50; // 預設最多顯示 50 筆
+        const page = parseInt(req.query.page) || 1;
+        const offset = (page - 1) * limit;
+        queryText += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+        queryParams.push(limit, offset);
+
+
+        console.log("[Admin API] Executing sales report query:", queryText, queryParams);
+        const result = await pool.query(queryText, queryParams);
+
+         // 同時獲取總數以便前端計算頁數 (如果需要分頁)
+         let countQueryText = `
+             SELECT COUNT(*)
+             FROM figure_sales_log sl
+             JOIN figure_variations v ON sl.variation_id = v.id
+             JOIN figures f ON v.figure_id = f.id
+         `;
+         if (conditions.length > 0) {
+             // 注意：計算總數的 WHERE 條件需要使用與上面相同的參數，但不包括 LIMIT/OFFSET 的參數
+             const countParams = queryParams.slice(0, conditions.length);
+             countQueryText += ' WHERE ' + conditions.join(' AND ');
+             const countResult = await pool.query(countQueryText, countParams);
+             const totalItems = parseInt(countResult.rows[0].count);
+             const totalPages = Math.ceil(totalItems / limit);
+             res.json({
+                 salesLogs: result.rows,
+                 pagination: {
+                     totalItems,
+                     totalPages,
+                     currentPage: page,
+                     limit
+                 }
+             });
+         } else {
+              // 如果沒有過濾條件，直接計算總數
+             const countResult = await pool.query(countQueryText);
+             const totalItems = parseInt(countResult.rows[0].count);
+             const totalPages = Math.ceil(totalItems / limit);
+             res.json({
+                  salesLogs: result.rows,
+                 pagination: {
+                     totalItems,
+                     totalPages,
+                     currentPage: page,
+                     limit
+                 }
+             });
+         }
+
+
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤。' });
     }
 });
 
