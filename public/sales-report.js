@@ -28,12 +28,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryTopProductQty2 = document.getElementById('summary-top-product-qty-2');
     const summaryTopProductName3 = document.getElementById('summary-top-product-name-3');
     const summaryTopProductQty3 = document.getElementById('summary-top-product-qty-3');
+    const existingProductsListSpan = document.getElementById('existing-products-list');
+const productSuggestionsDatalist = document.getElementById('product-suggestions'); 
 
     const salesTrendChartCtx = document.getElementById('sales-trend-chart').getContext('2d');
     const topProductsChartCtx = document.getElementById('top-products-chart').getContext('2d');
 
     let salesTrendChartInstance = null;
     let topProductsChartInstance = null;
+
+
+
+
+    const fetchExistingProductNames = async () => {
+        try {
+            const response = await fetch('/api/admin/sales/product-names');
+            if (!response.ok) {
+                throw new Error(`獲取商品名稱失敗: ${response.statusText}`);
+            }
+            const productNames = await response.json();
+            renderExistingProductNames(productNames);
+        } catch (error) {
+            console.error('獲取現有商品名稱時出錯:', error);
+            if (existingProductsListSpan) {
+                 existingProductsListSpan.textContent = '載入商品名稱失敗。';
+                 existingProductsListSpan.style.color = 'red';
+            }
+            if (productSuggestionsDatalist) { // 可選
+                productSuggestionsDatalist.innerHTML = '';
+            }
+        }
+    };
+
+
 
     // --- Utility Functions ---
     const showLoading = (show = true) => {

@@ -76,6 +76,16 @@
             <!-- 新增/編輯表單 -->
             <section class="form-section">
                 <h2 id="form-title">新增銷售紀錄</h2>
+
+    <!-- 新增這個區塊來顯示商品名稱 -->
+    <div id="existing-products-container" style="margin-bottom: 15px; font-size: 0.9em; color: #555; max-height: 100px; overflow-y: auto; background-color: #eee; padding: 8px; border-radius: 4px;">
+        <p style="margin: 0;"><strong>參考商品名稱 (按字母排序):</strong> <br>
+            <span id="existing-products-list">載入中...</span>
+        </p>
+    </div>
+    <!-- 商品名稱列表區塊結束 -->
+
+
                 <form id="sales-form">
                     <input type="hidden" id="sale-id"> <!-- 用於編輯時儲存 ID -->
                     <div class="form-group">
