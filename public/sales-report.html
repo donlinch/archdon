@@ -1,358 +1,133 @@
-// public/sales-report.js
-document.addEventListener('DOMContentLoaded', () => {
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const errorMessage = document.getElementById('error-message');
-    const totalItemsSoldEl = document.getElementById('total-items-sold');
-    const salesTrendChartCtx = document.getElementById('salesTrendChart').getContext('2d');
-    const topProductsChartCtx = document.getElementById('topProductsChart').getContext('2d');
-    // const topProductsTableBody = document.getElementById('topProductsTableBody'); // 如果使用表格
-    const detailedLogTableBody = document.getElementById('detailedLogTableBody');
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>銷售報告 - 管理後台</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+     <!-- 添加 date-fns 庫 (Chart.js 時間軸需要) -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/date-fns.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/locale/zh-TW/index.min.js"></script> <!-- 中文 locale -->
 
-    const btnToday = document.getElementById('btn-today');
-    const btnLast7 = document.getElementById('btn-last7');
-    const btnLast30 = document.getElementById('btn-last30');
-    const startDateInput = document.getElementById('start-date');
-    const endDateInput = document.getElementById('end-date');
-    const btnCustomRange = document.getElementById('btn-custom-range');
-    const filterButtons = [btnToday, btnLast7, btnLast30];
+    <style>
+        /* 添加一些此頁面特定的簡單樣式 */
+        .report-container { max-width: 1200px; margin: 20px auto; padding: 15px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-controls { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .filter-controls label { margin-right: 5px; font-weight: bold;}
+        .filter-controls input[type="date"], .filter-controls button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; }
+        .filter-controls button { background-color: #f0f0f0; cursor: pointer; }
+        .filter-controls button.active { background-color: #FFB74D; color: #424242; font-weight: bold; border-color: #FFB74D;}
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { background-color: #f9f9f9; padding: 15px; border-radius: 5px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; margin-bottom: 8px; font-size: 0.9rem; color: #555; }
+        .card p { font-size: 1.8rem; font-weight: bold; color: #E57373; margin: 0; }
+        .chart-section, .table-section { margin-bottom: 30px; }
+        .chart-section h2, .table-section h2 { font-size: 1.3rem; margin-bottom: 15px; color: #444; border-bottom: 2px solid #FFB74D; padding-bottom: 5px;}
+        .chart-container { position: relative; height: 350px; width: 100%; } /* 調整高度 */
+        .table-container { max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tbody tr:hover { background-color: #f5f5f5; }
+        #loading-indicator, #error-message { text-align: center; padding: 20px; font-size: 1.1rem; display: none; }
+        #error-message { color: red; }
+    </style>
+</head>
+<body>
+    <!-- 可以複製 admin.html 的導航列過來 -->
+    <nav class="admin-nav">
+         <a href="/admin.html">商品管理</a>
+         <a href="/music-admin.html">音樂管理</a>
+         <a href="/news-admin.html">消息管理</a>
+         <a href="/banner-admin.html">Banner管理</a>
+         <a href="/figures-admin.html">公仔庫存</a>
+         <a href="/sales-report.html" class="active">銷售報告</a>
+    </nav>
 
-    let salesTrendChartInstance = null;
-    let topProductsChartInstance = null;
+    <div class="report-container">
+        <h1>銷售報告</h1>
 
-     // Chart.js 全局設置 (如果需要，例如中文)
-     Chart.defaults.locale = 'zh-TW';
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <button id="btn-today">今天</button>
+            <button id="btn-last7">過去7天</button>
+            <button id="btn-last30" class="active">過去30天</button>
+            <label for="start-date">自訂範圍:</label>
+            <input type="date" id="start-date">
+            <span>至</span>
+            <input type="date" id="end-date">
+            <button id="btn-custom-range">查詢</button>
+        </div>
 
-    // --- Date Helper Functions ---
-    const formatDate = (date) => {
-        return date.toISOString().split('T')[0]; // YYYY-MM-DD
-    };
+        <!-- Loading and Error Indicators -->
+        <div id="loading-indicator">正在載入報告數據...</div>
+        <div id="error-message"></div>
 
-    const formatDisplayDateTime = (isoString) => {
-        if (!isoString) return '--';
-        try {
-            const date = new Date(isoString);
-             // 使用 Intl.DateTimeFormat 來獲得本地化的日期和時間格式
-             const options = {
-                 year: 'numeric', month: '2-digit', day: '2-digit',
-                 hour: '2-digit', minute: '2-digit', second: '2-digit',
-                 hour12: false // 使用 24 小時制
-             };
-             return new Intl.DateTimeFormat('zh-TW', options).format(date);
-         } catch (e) {
-             console.error("Error formatting date:", e);
-             return isoString; // fallback
-         }
-     };
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="card">
+                <h3>總銷售件數</h3>
+                <p id="total-items-sold">--</p>
+            </div>
+            <!-- 可以根據需要添加更多卡片，例如總銷售額 (如果後端有計算) -->
+        </div>
 
-    // --- API Fetch Function ---
-    const fetchSalesReport = async (startDate, endDate) => {
-        loadingIndicator.style.display = 'block';
-        errorMessage.style.display = 'none';
-        clearReportData(); // 清空舊數據
+        <!-- Sales Trend Chart -->
+        <div class="chart-section">
+            <h2>銷售數量趨勢</h2>
+            <div class="chart-container">
+                <canvas id="salesTrendChart"></canvas>
+            </div>
+        </div>
 
-        try {
-            const response = await fetch(`/api/analytics/sales-report?startDate=${startDate}&endDate=${endDate}`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: `HTTP 錯誤: ${response.status}` }));
-                throw new Error(errorData.error || `無法獲取銷售報告: ${response.statusText}`);
-            }
-            const data = await response.json();
-            console.log("Received sales data:", data); // Debugging
-            updateReportUI(data);
-        } catch (error) {
-            console.error('獲取銷售報告時出錯:', error);
-            errorMessage.textContent = `錯誤: ${error.message}`;
-            errorMessage.style.display = 'block';
-        } finally {
-            loadingIndicator.style.display = 'none';
-        }
-    };
+        <!-- Top Selling Products -->
+        <div class="chart-section">
+             <h2>熱銷商品排行 (Top 10)</h2>
+             <div class="chart-container" style="height: 400px;"> {/* 可能需要更高的高度 */}
+                 <canvas id="topProductsChart"></canvas>
+             </div>
+             {/* 或者使用表格顯示
+             <div class="table-container" id="topProductsTableContainer">
+                 <table>
+                     <thead>
+                         <tr>
+                             <th>排名</th>
+                             <th>公仔名稱</th>
+                             <th>規格</th>
+                             <th>銷售數量</th>
+                         </tr>
+                     </thead>
+                     <tbody id="topProductsTableBody">
+                         </tbody>
+                 </table>
+             </div> */}
+         </div>
 
-    // --- UI Update Functions ---
-    const clearReportData = () => {
-        totalItemsSoldEl.textContent = '--';
-        if (salesTrendChartInstance) salesTrendChartInstance.destroy();
-        if (topProductsChartInstance) topProductsChartInstance.destroy();
-        // if (topProductsTableBody) topProductsTableBody.innerHTML = '';
-        detailedLogTableBody.innerHTML = '';
-        salesTrendChartInstance = null;
-        topProductsChartInstance = null;
-    };
+        <!-- Detailed Sales Log -->
+        <div class="table-section">
+            <h2>詳細銷售紀錄</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>銷售時間</th>
+                            <th>公仔名稱</th>
+                            <th>規格</th>
+                            <th>數量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailedLogTableBody">
+                        <!-- Data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-    const updateReportUI = (data) => {
-        // Summary
-        totalItemsSoldEl.textContent = data.summary?.totalItemsSold ?? '0';
+    </div>
 
-        // Sales Trend Chart (Line)
-        if (data.trend && data.trend.length > 0) {
-            renderSalesTrendChart(data.trend);
-        } else {
-             renderEmptyChart(salesTrendChartCtx, "無銷售趨勢數據");
-        }
-
-        // Top Selling Products Chart (Bar)
-        if (data.topProducts && data.topProducts.length > 0) {
-            renderTopProductsChart(data.topProducts);
-            // renderTopProductsTable(data.topProducts); // 如果用表格
-        } else {
-             renderEmptyChart(topProductsChartCtx, "無熱銷商品數據");
-             // if (topProductsTableBody) topProductsTableBody.innerHTML = '<tr><td colspan="4">期間內無銷售數據</td></tr>';
-        }
-
-        // Detailed Log Table
-        renderDetailedLog(data.details);
-    };
-
-    // --- Chart Rendering Functions ---
-    const renderSalesTrendChart = (trendData) => {
-        if (salesTrendChartInstance) {
-            salesTrendChartInstance.destroy();
-        }
-        const labels = trendData.map(item => item.date);
-        const quantities = trendData.map(item => item.quantity);
-
-        salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '每日銷售件數',
-                    data: quantities,
-                    borderColor: '#E57373',
-                    backgroundColor: 'rgba(229, 115, 115, 0.1)',
-                    tension: 0.1,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'day',
-                            tooltipFormat: 'yyyy-MM-dd',
-                            displayFormats: {
-                                day: 'MM/dd' // 格式化 X 軸標籤
-                            }
-                        },
-                        adapters: {
-                             date: {
-                                 locale: dateFns.locale.zhTW // 指定 date-fns 的 locale
-                             }
-                         },
-                        title: { display: true, text: '日期' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: '銷售件數' },
-                        ticks: { // 確保 Y 軸刻度為整數
-                             stepSize: 1,
-                             callback: function(value) { if (Number.isInteger(value)) { return value; } },
-                         }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                         callbacks: {
-                             title: function(tooltipItems) {
-                                 // 格式化 tooltip 標題
-                                 const date = new Date(tooltipItems[0].parsed.x);
-                                 return dateFns.format(date, 'yyyy年MM月dd日', { locale: dateFns.locale.zhTW });
-                             }
-                         }
-                     }
-                }
-            }
-        });
-    };
-
-     const renderTopProductsChart = (productData) => {
-         if (topProductsChartInstance) {
-             topProductsChartInstance.destroy();
-         }
-         // 組合名稱，處理可能為 null 的 variation_name
-         const labels = productData.map(p => `${p.figure_name} ${p.variation_name ? '(' + p.variation_name + ')' : ''}`);
-         const quantities = productData.map(p => p.total_quantity);
-
-         topProductsChartInstance = new Chart(topProductsChartCtx, {
-             type: 'bar',
-             data: {
-                 labels: labels,
-                 datasets: [{
-                     label: '銷售數量',
-                     data: quantities,
-                     backgroundColor: [ // 提供多種顏色
-                         'rgba(255, 99, 132, 0.6)',
-                         'rgba(54, 162, 235, 0.6)',
-                         'rgba(255, 206, 86, 0.6)',
-                         'rgba(75, 192, 192, 0.6)',
-                         'rgba(153, 102, 255, 0.6)',
-                         'rgba(255, 159, 64, 0.6)',
-                         'rgba(199, 199, 199, 0.6)',
-                         'rgba(83, 102, 255, 0.6)',
-                         'rgba(40, 159, 64, 0.6)',
-                         'rgba(210, 99, 132, 0.6)'
-                     ],
-                     borderColor: [
-                         'rgba(255, 99, 132, 1)',
-                         'rgba(54, 162, 235, 1)',
-                         'rgba(255, 206, 86, 1)',
-                         'rgba(75, 192, 192, 1)',
-                         'rgba(153, 102, 255, 1)',
-                         'rgba(255, 159, 64, 1)',
-                         'rgba(199, 199, 199, 1)',
-                         'rgba(83, 102, 255, 1)',
-                         'rgba(40, 159, 64, 1)',
-                         'rgba(210, 99, 132, 1)'
-                     ],
-                     borderWidth: 1
-                 }]
-             },
-             options: {
-                 indexAxis: 'y', // 讓標籤在 Y 軸，更易讀長名稱
-                 responsive: true,
-                 maintainAspectRatio: false,
-                 scales: {
-                     x: {
-                         beginAtZero: true,
-                         title: { display: true, text: '銷售數量' },
-                         ticks: { // 確保 X 軸刻度為整數
-                              stepSize: 1,
-                              callback: function(value) { if (Number.isInteger(value)) { return value; } },
-                          }
-                     },
-                     y: {
-                         ticks: {
-                             autoSkip: false // 顯示所有標籤
-                         }
-                     }
-                 },
-                 plugins: {
-                     legend: { display: false } // 只有一個 dataset，不需要圖例
-                 }
-             }
-         });
-     };
-
-    /* // 如果使用表格顯示 Top Products
-    const renderTopProductsTable = (productData) => {
-        topProductsTableBody.innerHTML = ''; // Clear previous data
-        if (!productData || productData.length === 0) {
-            topProductsTableBody.innerHTML = '<tr><td colspan="4">期間內無銷售數據</td></tr>';
-            return;
-        }
-        productData.forEach((product, index) => {
-            const row = `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${product.figure_name}</td>
-                    <td>${product.variation_name || '--'}</td>
-                    <td>${product.total_quantity}</td>
-                </tr>
-            `;
-            topProductsTableBody.innerHTML += row;
-        });
-    };
-    */
-
-     const renderEmptyChart = (ctx, message) => {
-        const chart = Chart.getChart(ctx.canvas); // 嘗試獲取現有圖表實例
-         if (chart) {
-             chart.destroy(); // 銷毀舊圖表
-         }
-         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-         ctx.save();
-         ctx.textAlign = 'center';
-         ctx.textBaseline = 'middle';
-         ctx.fillStyle = '#888';
-         ctx.font = '16px Arial';
-         ctx.fillText(message, ctx.canvas.width / 2, ctx.canvas.height / 2);
-         ctx.restore();
-     };
-
-
-    // --- Table Rendering Function ---
-    const renderDetailedLog = (logData) => {
-        detailedLogTableBody.innerHTML = ''; // Clear previous data
-        if (!logData || logData.length === 0) {
-            detailedLogTableBody.innerHTML = '<tr><td colspan="4">期間內無銷售紀錄</td></tr>';
-            return;
-        }
-        logData.forEach(log => {
-             const row = `
-                <tr>
-                    <td>${formatDisplayDateTime(log.timestamp)}</td>
-                    <td>${log.figureName}</td>
-                    <td>${log.variationName || '--'}</td>
-                    <td>${log.quantity}</td>
-                </tr>
-            `;
-            detailedLogTableBody.innerHTML += row;
-        });
-    };
-
-    // --- Event Listeners ---
-    const setActiveButton = (activeButton) => {
-         filterButtons.forEach(btn => btn.classList.remove('active'));
-         if (activeButton) {
-            activeButton.classList.add('active');
-         }
-         // 清空自訂日期輸入框，除非是自訂按鈕觸發
-         if (activeButton !== btnCustomRange) {
-             startDateInput.value = '';
-             endDateInput.value = '';
-         }
-     };
-
-    btnToday.addEventListener('click', () => {
-        const today = new Date();
-        const startDate = formatDate(today);
-        const endDate = formatDate(today);
-        setActiveButton(btnToday);
-        fetchSalesReport(startDate, endDate);
-    });
-
-    btnLast7.addEventListener('click', () => {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 6); // 包含今天共7天
-        setActiveButton(btnLast7);
-        fetchSalesReport(formatDate(startDate), formatDate(endDate));
-    });
-
-    btnLast30.addEventListener('click', () => {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(endDate.getDate() - 29); // 包含今天共30天
-        setActiveButton(btnLast30);
-        fetchSalesReport(formatDate(startDate), formatDate(endDate));
-    });
-
-    btnCustomRange.addEventListener('click', () => {
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-        if (startDate && endDate) {
-            // 簡單驗證日期順序
-            if (new Date(startDate) > new Date(endDate)) {
-                errorMessage.textContent = '錯誤: 開始日期不能晚於結束日期。';
-                errorMessage.style.display = 'block';
-                return;
-            }
-             setActiveButton(null); // 清除預設按鈕的 active 狀態
-             fetchSalesReport(startDate, endDate);
-        } else {
-            errorMessage.textContent = '請選擇開始和結束日期。';
-            errorMessage.style.display = 'block';
-        }
-    });
-
-     // 當手動選擇日期時，清除預設按鈕的 active 狀態
-     startDateInput.addEventListener('change', () => setActiveButton(null));
-     endDateInput.addEventListener('change', () => setActiveButton(null));
-
-    // --- Initial Load ---
-    // 預設載入過去 30 天的數據
-    btnLast30.click();
-});
+    <script src="sales-report.js"></script>
+</body>
+</html>
