@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const figureIsDisplayedInput = document.getElementById('figure-is-displayed');
+
     const tableBody = document.getElementById('figure-table-body');
     const addFigureBtn = document.getElementById('add-figure-btn');
     const modal = document.getElementById('figure-modal');
@@ -125,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 打開編輯 Modal */
     function openEditModal(id) {
         const figure = allFiguresData.find(f => f.id === id);
+        figureIsDisplayedInput.checked = figure.is_displayed !== false; // 默認 true
+
         if (!figure) {
             alert('找不到要編輯的商品資料！');
             return;
@@ -247,7 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
             purchase_price: parseFloat(figurePurchasePriceInput.value) || 0,
             selling_price: parseFloat(figureSellingPriceInput.value) || 0,
             ordering_method: figureOrderingMethodInput.value.trim() || null,
-            variations: variations // 添加收集到的規格陣列
+            variations: variations, // 添加收集到的規格陣列
+            is_displayed: figureIsDisplayedInput.checked,
         };
 
         const figureId = figureIdInput.value;
