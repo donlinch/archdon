@@ -126,8 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** 打開編輯 Modal */
     function openEditModal(id) {
+        figureIsDisplayedInput.checked = figure.is_displayed !== false; 
         const figure = allFiguresData.find(f => f.id === id);
-        figureIsDisplayedInput.checked = figure.is_displayed !== false; // 默認 true
 
         if (!figure) {
             alert('找不到要編輯的商品資料！');
