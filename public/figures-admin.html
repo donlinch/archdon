@@ -44,6 +44,27 @@
         #variations-container .variation-item button { padding: 5px 8px; background-color: #f44336; color: white; border: none; cursor: pointer; border-radius: 3px; margin-left: auto;}
         #add-variation-btn { margin-top: 10px; padding: 8px 12px; }
 
+  /* 新增: 銷售紀錄區域樣式 */
+  #sales-report-section { margin-top: 40px; border-top: 2px solid #ccc; padding-top: 20px; }
+        #sales-report-section h2 { text-align: center; margin-bottom: 15px; }
+        #sales-filters { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        #sales-filters label { margin-right: 5px;}
+        #sales-filters input[type="date"], #sales-filters select, #sales-filters button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        #sales-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        #sales-table th, #sales-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
+        #sales-table th { background-color: #f2f2f2; }
+        #sales-pagination { margin-top: 15px; text-align: center; }
+        #sales-pagination button { padding: 5px 10px; margin: 0 5px; cursor: pointer; }
+        #sales-pagination button:disabled { cursor: not-allowed; opacity: 0.6; }
+        #sales-pagination span { margin: 0 10px; }
+
+        /* Modal 表單的 is_selling 樣式 */
+        .form-group-checkbox { display: flex; align-items: center; margin-bottom: 15px; }
+        .form-group-checkbox label { margin-right: 10px; margin-bottom: 0; }
+        .form-group-checkbox input[type="checkbox"] { width: auto; margin-right: 5px; }
+
+
+
     </style>
 </head>
 <body>
@@ -58,12 +79,12 @@
             <thead>
                 <tr>
                     <th>圖片</th>
-                    <th>商品名</th>
-                    <th>規格 & 數量</th>
+                    <th>商品名 <span class="is-selling-label">(販售中?)</span></th> <!-- 修改表頭 -->
+                    <th>規格 & 數量 & 操作</th> <!-- 修改表頭 -->
                     <th>買入價格</th>
                     <th>賣出價格</th>
                     <th>叫貨方法</th>
-                    <th>操作</th>
+                    <th>編輯/刪除</th> <!-- 分開操作按鈕 -->
                 </tr>
             </thead>
             <tbody id="figure-table-body">
@@ -118,6 +139,35 @@
         </div>
     </div>
 
+    <!-- *** 新增: 銷售紀錄區塊 *** -->
+    <section id="sales-report-section">
+        <h2>銷售紀錄</h2>
+        <div id="sales-filters">
+            <label for="filter-start-date">開始日期:</label>
+            <input type="date" id="filter-start-date">
+            <label for="filter-end-date">結束日期:</label>
+            <input type="date" id="filter-end-date">
+             <!-- 可以稍後添加公仔/規格過濾下拉選單 -->
+             <!-- <label for="filter-figure">公仔:</label> <select id="filter-figure"><option value="">全部</option></select> -->
+            <button id="filter-sales-btn">查詢</button>
+            <button id="reset-filter-btn">清除條件</button>
+        </div>
+        <table id="sales-table">
+            <thead>
+                <tr>
+                    <th>銷售時間</th>
+                    <th>公仔名稱</th>
+                    <th>規格名稱</th>
+                    <th>售出數量</th>
+                </tr>
+            </thead>
+            <tbody id="sales-table-body">
+                <tr><td colspan="4">請設定日期範圍並查詢。</td></tr>
+            </tbody>
+        </table>
+         <div id="sales-pagination">
+             <!-- 分頁按鈕將由 JS 生成 -->
+         </div>
     <script src="figures-admin.js"></script>
 </body>
 </html>

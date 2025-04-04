@@ -436,6 +436,7 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/a
 
 
 // --- 公仔管理 API (修改 & 新增) ---
+// --- 公仔管理 API (修改 & 新增) ---
 
 // GET /api/admin/figures - (修改) 獲取列表，加入 is_selling
 app.get('/api/admin/figures', async (req, res) => {
@@ -1400,6 +1401,11 @@ app.put('/api/admin/variations/:variationId', basicAuthMiddleware, async (req, r
     }
 });
 
+
+app.get('/figures-admin.html', (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
+    res.sendFile(path.join(__dirname, 'public', 'figures-admin.html'));
+});
+
 // --- 404 處理 ---
 // 這個應該是最後的路由處理
 app.use((req, res, next) => {
@@ -1421,6 +1427,8 @@ app.use((req, res, next) => {
     console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
     res.status(404).send('抱歉，找不到您要訪問的頁面。');
 });
+
+
 
 
 // --- 全局錯誤處理 ---
