@@ -795,6 +795,16 @@ button#save-figure-btn:hover, button#submit-sale-btn:hover {
     color: #757575;
 }
 
+.form-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.form-group-inline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
 /* 調整規格與數量的視覺間距 */
 #figure-table td {
     padding: 12px 15px;
@@ -816,3 +826,4 @@ button#save-figure-btn:hover, button#submit-sale-btn:hover {
 #figure-table tr:hover {
     background-color: #e9e9e9;
 }
+
