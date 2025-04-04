@@ -1,84 +1,95 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>銷售報表系統</title>
-    <link rel="stylesheet" href="/css/styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>銷售報表</title>
 </head>
 <body>
-    <div class="container">
-        <h1>銷售報表系統</h1>
-        
-        <!-- 篩選控制區 -->
-        <div class="filter-controls">
-            <div class="filter-group">
-                <label for="period-select">時間範圍:</label>
-                <select id="period-select">
-                    <option value="today">今日</option>
-                    <option value="this_month" selected>本月</option>
-                    <option value="last_month">上月</option>
-                    <option value="custom">自訂日期</option>
-                </select>
-                
-                <div id="custom-date-range" style="display: none;">
-                    <input type="date" id="start-date">
-                    <span>至</span>
-                    <input type="date" id="end-date">
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <label for="product-filter">產品名稱:</label>
-                <select id="product-filter">
-                    <option value="">全部產品</option>
-                    <!-- 產品選項將由JS動態載入 -->
-                </select>
-            </div>
-            
-            <button id="refresh-btn">刷新數據</button>
-        </div>
-        
-        <!-- 統計摘要區 -->
-        <div class="summary-cards">
-            <div class="card">
-                <h3>總銷售額</h3>
-                <p id="total-sales">NT$ 0</p>
-            </div>
-            <div class="card">
-                <h3>總銷售量</h3>
-                <p id="total-quantity">0</p>
-            </div>
-            <div class="card">
-                <h3>產品種類</h3>
-                <p id="product-count">0</p>
-            </div>
-        </div>
-        
-        <!-- 圖表區 -->
-        <div class="chart-container">
-            <canvas id="sales-chart"></canvas>
-        </div>
-        
-        <!-- 數據表格區 -->
-        <div class="table-container">
-            <table id="sales-table">
-                <thead>
-                    <tr>
-                        <th>產品名稱</th>
-                        <th>銷售數量</th>
-                        <th>單價</th>
-                        <th>總金額</th>
-                        <th>銷售日期</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- 數據將由JS動態載入 -->
-                </tbody>
-            </table>
-        </div>
+    <h1>銷售報表</h1>
+
+    <button onclick="showAddForm()">新增銷售資料</button>
+
+    <table id="sales-table">
+        <thead>
+            <tr>
+                <th>名稱</th>
+                <th>賣出數量</th>
+                <th>時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 這裡會動態加載銷售資料 -->
+        </tbody>
+    </table>
+
+    <div id="add-form" style="display: none;">
+        <h3>新增銷售資料</h3>
+        <form id="form">
+            <input type="text" id="name" placeholder="名稱" required><br>
+            <input type="number" id="quantity" placeholder="賣出數量" required><br>
+            <input type="date" id="sale_date" required><br>
+            <button type="submit">新增</button>
+        </form>
     </div>
-    
-    <script src="/js/sales-report.js"></script>
+
+    <script>
+        // 顯示銷售資料
+        async function fetchSales() {
+            const response = await fetch('/api/sales');
+            const sales = await response.json();
+            const tbody = document.querySelector('#sales-table tbody');
+            tbody.innerHTML = ''; // 清空表格
+            sales.forEach(sale => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sale.name}</td>
+                    <td>${sale.quantity}</td>
+                    <td>${sale.sale_date}</td>
+                    <td>
+                        <button onclick="editSale(${sale.id})">編輯</button>
+                        <button onclick="deleteSale(${sale.id})">刪除</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 新增銷售資料
+        document.querySelector('#form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = document.querySelector('#name').value;
+            const quantity = document.querySelector('#quantity').value;
+            const sale_date = document.querySelector('#sale_date').value;
+
+            await fetch('/api/sales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, quantity, sale_date })
+            });
+
+            fetchSales();  // 刷新資料
+            document.querySelector('#add-form').style.display = 'none';
+        });
+
+        // 刪除銷售資料
+        async function deleteSale(id) {
+            await fetch(`/api/sales/${id}`, { method: 'DELETE' });
+            fetchSales(); // 刷新資料
+        }
+
+        // 編輯銷售資料
+        function editSale(id) {
+            alert(`編輯銷售資料：${id}`);
+        }
+
+        // 顯示新增表單
+        function showAddForm() {
+            document.querySelector('#add-form').style.display = 'block';
+        }
+
+        fetchSales(); // 初始化加載資料
+    </script>
 </body>
 </html>

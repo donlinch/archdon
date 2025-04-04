@@ -476,152 +476,72 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/a
 // --- 新增: 公仔管理 API (受保護) ---
 
 
-// --- 銷售報表 API ---
 
-// 獲取銷售數據列表
+
+
+
+
+// --- 銷售資料 API 路由 ---
+
+// 取得所有銷售資料
 app.get('/api/sales', async (req, res) => {
-    const { name, period, start_date, end_date, group_by_name } = req.query;
-    
     try {
-        let queryText = 'SELECT ';
-        
-        if (group_by_name === 'true') {
-            queryText += `
-                product_name as name,
-                SUM(quantity) as total_quantity,
-                SUM(quantity * unit_price) as total_amount,
-                MIN(sale_date) as first_sale_date,
-                MAX(sale_date) as last_sale_date
-            FROM sales
-            `;
-        } else {
-            queryText += `
-                id,
-                product_name as name,
-                quantity,
-                unit_price,
-                sale_date,
-                (quantity * unit_price) as amount
-            FROM sales
-            `;
-        }
-        
-        const whereClauses = [];
-        const queryParams = [];
-        let paramIndex = 1;
-        
-        // 產品名稱篩選
-        if (name) {
-            whereClauses.push(`product_name = $${paramIndex++}`);
-            queryParams.push(name);
-        }
-        
-        // 時間範圍篩選
-        if (period) {
-            let dateCondition = '';
-            switch (period) {
-                case 'today':
-                    dateCondition = `sale_date::date = CURRENT_DATE`;
-                    break;
-                case 'this_month':
-                    dateCondition = `sale_date >= date_trunc('month', CURRENT_DATE)`;
-                    break;
-                case 'last_month':
-                    dateCondition = `sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
-                                     AND sale_date < date_trunc('month', CURRENT_DATE)`;
-                    break;
-                case 'custom':
-                    if (start_date && end_date) {
-                        dateCondition = `sale_date::date BETWEEN $${paramIndex++} AND $${paramIndex++}`;
-                        queryParams.push(start_date, end_date);
-                    }
-                    break;
-            }
-            if (dateCondition) whereClauses.push(dateCondition);
-        }
-        
-        if (whereClauses.length > 0) {
-            queryText += ' WHERE ' + whereClauses.join(' AND ');
-        }
-        
-        if (group_by_name === 'true') {
-            queryText += ' GROUP BY product_name ORDER BY total_quantity DESC';
-        } else {
-            queryText += ' ORDER BY sale_date DESC';
-        }
-        
-        const result = await pool.query(queryText, queryParams);
+        const result = await pool.query('SELECT * FROM sales ORDER BY sale_date DESC');
         res.json(result.rows);
     } catch (err) {
-        console.error('獲取銷售數據時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售數據時發生內部伺服器錯誤' });
+        console.error('獲取銷售資料出錯:', err.stack || err);
+        res.status(500).json({ error: '無法獲取銷售資料' });
     }
 });
 
-// 獲取銷售報表數據 (用於圖表)
-app.get('/api/sales/report', async (req, res) => {
-    const { period, start_date, end_date } = req.query;
-    
-    if (!period) {
-        return res.status(400).json({ error: '必須指定時間範圍' });
-    }
-    
+// 新增銷售資料
+app.post('/api/sales', async (req, res) => {
+    const { name, quantity, sale_date } = req.body;
     try {
-        let dateCondition = '';
-        let groupByClause = '';
-        const queryParams = [];
-        
-        switch (period) {
-            case 'this_month':
-                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE)`;
-                groupByClause = `GROUP BY date_trunc('day', sale_date)`;
-                break;
-            case 'last_month':
-                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
-                                AND sale_date < date_trunc('month', CURRENT_DATE)`;
-                groupByClause = `GROUP BY date_trunc('day', sale_date)`;
-                break;
-            case 'last_3_months':
-                dateCondition = `WHERE sale_date >= date_trunc('month', CURRENT_DATE - INTERVAL '3 months')`;
-                groupByClause = `GROUP BY date_trunc('month', sale_date)`;
-                break;
-            case 'custom':
-                if (start_date && end_date) {
-                    dateCondition = `WHERE sale_date::date BETWEEN $1 AND $2`;
-                    queryParams.push(start_date, end_date);
-                    groupByClause = `GROUP BY date_trunc('day', sale_date)`;
-                }
-                break;
-        }
-        
-        const queryText = `
-            SELECT 
-                date_trunc('day', sale_date) as date,
-                SUM(quantity) as total_quantity,
-                SUM(quantity * unit_price) as total_amount
-            FROM sales
-            ${dateCondition}
-            ${groupByClause}
-            ORDER BY date ASC
-        `;
-        
-        const result = await pool.query(queryText, queryParams);
-        
-        // 格式化數據供圖表使用
-        const chartData = {
-            labels: result.rows.map(row => new Date(row.date).toLocaleDateString()),
-            quantities: result.rows.map(row => row.total_quantity),
-            amounts: result.rows.map(row => row.total_amount)
-        };
-        
-        res.json(chartData);
+        const result = await pool.query(
+            'INSERT INTO sales (name, quantity, sale_date) VALUES ($1, $2, $3) RETURNING *',
+            [name, quantity, sale_date]
+        );
+        res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error('獲取銷售報表數據時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售報表數據時發生內部伺服器錯誤' });
+        console.error('新增銷售資料出錯:', err.stack || err);
+        res.status(500).json({ error: '無法新增銷售資料' });
     }
 });
 
+// 編輯銷售資料
+app.put('/api/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, quantity, sale_date } = req.body;
+    try {
+        const result = await pool.query(
+            'UPDATE sales SET name = $1, quantity = $2, sale_date = $3 WHERE id = $4 RETURNING *',
+            [name, quantity, sale_date, id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到該銷售資料' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('更新銷售資料出錯:', err.stack || err);
+        res.status(500).json({ error: '無法更新銷售資料' });
+    }
+});
 
+// 刪除銷售資料
+app.delete('/api/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM sales WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到該銷售資料' });
+        }
+        res.status(204).send();
+    } catch (err) {
+        console.error('刪除銷售資料出錯:', err.stack || err);
+        res.status(500).json({ error: '無法刪除銷售資料' });
+    }
+});
 
 
 
