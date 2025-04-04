@@ -8,6 +8,9 @@ const { Pool } = require('pg'); // PostgreSQL 客戶端
 const app = express();
 const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
 
+
+
+
 // --- 資料庫連接池設定 ---
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
@@ -423,7 +426,7 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- 受保護的管理頁面和 API Routes ---
 
 // 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html','figures-admin.html'], basicAuthMiddleware);
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html ','figures-admin.html'], basicAuthMiddleware);
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
@@ -577,88 +580,241 @@ app.get('/api/analytics/sales-report', async (req, res) => {
 });
 
 
-// --- 新增: 記錄銷售的 API 端點 (重要!) ---
-// 這個端點應該由你的庫存管理或其他觸發銷售的地方調用
-// 例如，在 figures-admin.html 中加入 "售出" 按鈕後觸發
-app.post('/api/admin/figures/sell', async (req, res) => {
-    // basicAuthMiddleware 已在 '/api/admin' 層級應用
-    const { figure_variation_id, quantity_sold } = req.body;
 
-    console.log(`[Sell API] Received request: variation_id=${figure_variation_id}, quantity=${quantity_sold}`);
 
-    // 驗證輸入
-    const variationId = parseInt(figure_variation_id);
-    const quantity = parseInt(quantity_sold);
 
-    if (isNaN(variationId) || variationId <= 0) {
-        return res.status(400).json({ error: '無效的公仔規格 ID。' });
+
+
+// GET /api/admin/sales - 獲取銷售紀錄 (可篩選)
+app.get('/api/admin/sales', async (req, res) => {
+    console.log("[Admin API] GET /api/admin/sales requested with query:", req.query);
+    const { startDate, endDate, productName } = req.query;
+    let queryText = `
+        SELECT id, product_name, quantity_sold, sale_timestamp
+        FROM sales_log
+    `;
+    const queryParams = [];
+    const conditions = [];
+    let paramIndex = 1;
+
+    if (startDate) {
+        conditions.push(`sale_timestamp >= $${paramIndex++}`);
+        queryParams.push(startDate);
     }
-    if (isNaN(quantity) || quantity <= 0) {
-        return res.status(400).json({ error: '售出數量必須是正整數。' });
+    if (endDate) {
+        // 包含 endDate 當天，所以用 < 第二天的 00:00
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        conditions.push(`sale_timestamp < $${paramIndex++}`);
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    if (productName) {
+        conditions.push(`product_name ILIKE $${paramIndex++}`); // ILIKE 不區分大小寫
+        queryParams.push(`%${productName}%`); // 模糊匹配
     }
 
-    const client = await pool.connect();
+    if (conditions.length > 0) {
+        queryText += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    queryText += ' ORDER BY sale_timestamp DESC, id DESC'; // 預設按銷售時間降序排列
+
     try {
-        await client.query('BEGIN'); // 開始交易
+        const result = await pool.query(queryText, queryParams);
+        console.log(`[Admin API] Found ${result.rowCount} sales records.`);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' });
+    }
+});
 
-        // 1. 檢查庫存是否足夠
-        const checkStockResult = await client.query(
-            'SELECT quantity FROM figure_variations WHERE id = $1 FOR UPDATE', // FOR UPDATE 鎖定行
-            [variationId]
-        );
+// GET /api/admin/sales/summary - 獲取銷售彙總數據 (可篩選)
+app.get('/api/admin/sales/summary', async (req, res) => {
+    console.log("[Admin API] GET /api/admin/sales/summary requested with query:", req.query);
+    const { startDate, endDate } = req.query;
 
-        if (checkStockResult.rowCount === 0) {
-            throw new Error(`找不到 ID 為 ${variationId} 的公仔規格。`);
-        }
+    // 基本 WHERE 條件子句生成
+    let whereClause = '';
+    const queryParams = [];
+    let paramIndex = 1;
+    if (startDate) {
+        whereClause += `WHERE sale_timestamp >= $${paramIndex++} `;
+        queryParams.push(startDate);
+    }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `;
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
 
-        const currentStock = checkStockResult.rows[0].quantity;
-        if (currentStock < quantity) {
-            throw new Error(`庫存不足。規格 ID ${variationId} 目前庫存 ${currentStock}，欲售出 ${quantity}。`);
-        }
+    try {
+        // 1. 總銷售件數
+        const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
+        const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
+        const totalItems = totalItemsResult.rows[0].total_items;
 
-        // 2. 更新庫存 (減去售出數量)
-        const newStock = currentStock - quantity;
-        await client.query(
-            'UPDATE figure_variations SET quantity = $1, updated_at = NOW() WHERE id = $2',
-            [newStock, variationId]
-        );
-        console.log(`[Sell API] Updated stock for variation ${variationId} from ${currentStock} to ${newStock}`);
+        // 2. 熱銷商品 Top 5
+        const topProductsQuery = `
+            SELECT product_name, SUM(quantity_sold)::integer as total_sold
+            FROM sales_log
+            ${whereClause}
+            GROUP BY product_name
+            ORDER BY total_sold DESC
+            LIMIT 5;
+        `;
+        const topProductsResult = await pool.query(topProductsQuery, queryParams);
+        const topProducts = topProductsResult.rows;
 
-        // 3. 記錄銷售日誌
-        await client.query(
-            'INSERT INTO sales_log (figure_variation_id, quantity_sold, sale_timestamp) VALUES ($1, $2, NOW())',
-            [variationId, quantity]
-        );
-        console.log(`[Sell API] Logged sale for variation ${variationId}, quantity ${quantity}`);
+        // 3. 每日銷售趨勢 (按日期分組)
+        const salesTrendQuery = `
+            SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total
+            FROM sales_log
+            ${whereClause}
+            GROUP BY sale_date
+            ORDER BY sale_date ASC;
+        `;
+        const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
+        // 格式化日期為 YYYY-MM-DD
+        const salesTrend = salesTrendResult.rows.map(row => ({
+            date: new Date(row.sale_date).toISOString().split('T')[0],
+            quantity: row.daily_total
+        }));
 
-        await client.query('COMMIT'); // 提交交易
 
-        res.status(200).json({ message: '銷售紀錄成功', newStock: newStock });
+        res.status(200).json({
+            totalItems,
+            topProducts,
+            salesTrend
+        });
 
     } catch (err) {
-        await client.query('ROLLBACK'); // 出錯時回滾
-        console.error('[Sell API Error] 記錄銷售時出錯:', err.stack || err);
-        // 根據錯誤類型回傳不同狀態碼
-        if (err.message.includes('庫存不足') || err.message.includes('找不到 ID')) {
-             res.status(400).json({ error: `銷售失敗：${err.message}` });
-        } else {
-            res.status(500).json({ error: `記錄銷售過程中發生伺服器內部錯誤: ${err.message}` });
-        }
-    } finally {
-        client.release();
+        console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
     }
 });
 
 
+// POST /api/admin/sales - 新增銷售紀錄
+app.post('/api/admin/sales', async (req, res) => {
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+    console.log("[Admin API] POST /api/admin/sales received:", req.body);
+
+    if (!product_name || !quantity_sold) {
+        return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' });
+    }
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是正整數。' });
+    }
+    // 驗證 sale_timestamp 格式 (如果提供的話)
+    let timestampToInsert = sale_timestamp ? new Date(sale_timestamp) : new Date();
+    if (isNaN(timestampToInsert.getTime())) {
+        console.warn("無效的銷售時間格式，將使用目前時間:", sale_timestamp);
+        timestampToInsert = new Date(); // 無效則使用現在時間
+    }
 
 
+    try {
+        const queryText = `
+            INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp)
+            VALUES ($1, $2, $3)
+            RETURNING id, product_name, quantity_sold, sale_timestamp;
+        `;
+        const result = await pool.query(queryText, [
+            product_name.trim(),
+            quantity,
+            timestampToInsert
+        ]);
+        console.log("[Admin API] Sales record added:", result.rows[0]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[Admin API Error] 新增銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '新增銷售紀錄過程中發生伺服器內部錯誤。' });
+    }
+});
 
-// --- 新增: 公仔管理 API (受保護) ---
+// PUT /api/admin/sales/:id - 更新銷售紀錄
+app.put('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+    console.log(`[Admin API] PUT /api/admin/sales/${id} received:`, req.body);
+
+    const recordId = parseInt(id);
+    if (isNaN(recordId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' });
+    }
+    if (!product_name || !quantity_sold) {
+        return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' });
+    }
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是正整數。' });
+    }
+     // 驗證 sale_timestamp 格式
+    let timestampToUpdate = new Date(sale_timestamp);
+    if (isNaN(timestampToUpdate.getTime())) {
+        console.warn(`無效的銷售時間格式 (ID: ${id})，將保持原時間或更新為現在? 這裡選擇更新為現在:`, sale_timestamp);
+        // 或者你可以決定不更新時間欄位如果格式錯誤
+        // timestampToUpdate = undefined; // 如果不想更新時間
+        return res.status(400).json({ error: '無效的銷售時間格式。' }); // 更嚴格，要求有效時間
+    }
 
 
+    try {
+        const queryText = `
+            UPDATE sales_log
+            SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW()
+            WHERE id = $4
+            RETURNING id, product_name, quantity_sold, sale_timestamp;
+        `;
+        const result = await pool.query(queryText, [
+            product_name.trim(),
+            quantity,
+            timestampToUpdate, // 使用驗證過的 Date 物件
+            recordId
+        ]);
 
+        if (result.rowCount === 0) {
+            console.warn(`[Admin API] Sales record ID ${id} not found for update.`);
+            return res.status(404).json({ error: '找不到要更新的銷售紀錄。' });
+        }
 
+        console.log(`[Admin API] Sales record ID ${id} updated:`, result.rows[0]);
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 更新銷售紀錄 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '更新銷售紀錄過程中發生伺服器內部錯誤。' });
+    }
+});
 
+// DELETE /api/admin/sales/:id - 刪除銷售紀錄
+app.delete('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[Admin API] DELETE /api/admin/sales/${id} requested`);
+
+    const recordId = parseInt(id);
+    if (isNaN(recordId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' });
+    }
+
+    try {
+        const queryText = 'DELETE FROM sales_log WHERE id = $1';
+        const result = await pool.query(queryText, [recordId]);
+
+        if (result.rowCount === 0) {
+            console.warn(`[Admin API] Sales record ID ${id} not found for deletion.`);
+            return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' });
+        }
+
+        console.log(`[Admin API] Deleted sales record ID: ${id}`);
+        res.status(204).send(); // 成功刪除，回傳 204 No Content
+    } catch (err) {
+        console.error(`[Admin API Error] 刪除銷售紀錄 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '刪除銷售紀錄過程中發生伺服器內部錯誤。' });
+    }
+});
 
 
 
