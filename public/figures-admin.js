@@ -125,31 +125,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /** 打開編輯 Modal */
-   // function openEditModal(id) {
-     //   figureIsDisplayedInput.checked = figure.is_displayed !== false; 
-       // const figure = allFiguresData.find(f => f.id === id);
+    function openEditModal(id) {
+        figureIsDisplayedInput.checked = figure.is_displayed !== false; 
+        const figure = allFiguresData.find(f => f.id === id);
 
-        //if (!figure) {
-        //    alert('找不到要編輯的商品資料！');
-        //      return;
-        //}
-
-
-
-        function openEditModal(id) {
-            const figure = allFiguresData.find(f => f.id === id);
-        
-            if (!figure) {
-                alert('找不到要編輯的商品資料！');
-                return;
-            }
-        
-            // 根據 figure.is_displayed 的值來設定勾選狀態
-            const figureIsDisplayedInput = document.getElementById('figure-is-displayed');
-            
-            // 如果 is_displayed 是 true，則勾選 checkbox，否則不勾選
-            figureIsDisplayedInput.checked = figure.is_displayed === true;
+        if (!figure) {
+            alert('找不到要編輯的商品資料！');
+              return;
         }
+
+       
+        
+
+        
 
         modalTitle.textContent = '編輯商品';
         figureForm.reset(); // 先清空
