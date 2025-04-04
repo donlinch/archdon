@@ -214,132 +214,111 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
      };
 
 
-     const renderCharts = (summary) => {
+    const renderCharts = (summary) => {
         resetCharts(); // 清除舊圖表實例
 
-        // 1. 銷售趨勢圖 (使用直條圖)
-        const trendLabels = summary.salesTrend.map(item => item.date); // 日期標籤 (e.g., "2023-11-15")
-        const trendData = summary.salesTrend.map(item => item.quantity);   // 對應的數量
+        // 1. 銷售趨勢圖 (線圖)
+        const trendLabels = summary.salesTrend.map(item => item.date);
+        const trendData = summary.salesTrend.map(item => item.quantity);
 
-        if (salesTrendChartCtx) { // 檢查 canvas context 是否存在
-            salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-                type: 'bar', // 確認是直條圖
-                data: {
-                    labels: trendLabels, // *** 使用正確的標籤變數 ***
-                    datasets: [{
-                        label: '每日銷售件數',
-                        data: trendData, // *** 使用正確的數據變數 ***
-                        backgroundColor: 'rgba(229, 115, 115, 0.6)',
-                        borderColor: '#E57373',
-                        borderWidth: 1
-                    }]
-                },
-                options: { // *** 補回 options 區塊 ***
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            type: 'time', // X 軸仍使用時間類型
-                            time: {
-                                unit: 'day',
-                                tooltipFormat: 'yyyy-MM-dd', // 提示框格式
-                                displayFormats: {
-                                    day: 'MM/dd' // X 軸顯示格式
-                                }
-                            },
-                            adapters: {
-                                date: {
-                                    locale: dateFns.locale.zhTW // 指定 date-fns 的 locale
-                                }
-                            },
-                            title: { display: true, text: '日期' }
+
+
+
+        
+        salesTrendChartInstance = new Chart(salesTrendChartCtx, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: '每日銷售件數',
+                    data: trendData,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'yyyy-MM-dd', // 提示框格式
+                             displayFormats: {
+                                day: 'MM/dd' // X 軸顯示格式
+                            }
                         },
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: '銷售件數' },
-                            ticks: { // 確保 Y 軸刻度為整數
-                                stepSize: 1,
-                                callback: function(value) { if (Number.isInteger(value)) { return value; } },
-                            }
-                        }
+                        title: { display: true, text: '日期' }
                     },
-                    plugins: {
-                        legend: { display: false }, // 對單一數據集隱藏圖例
-                        tooltip: {
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    // 格式化 tooltip 標題
-                                    if (!tooltipItems || tooltipItems.length === 0) return '';
-                                    const date = new Date(tooltipItems[0].parsed.x);
-                                     // 確保日期有效
-                                     if (isNaN(date.getTime())) return tooltipItems[0].label; // Fallback to original label
-                                     try {
-                                         return dateFns.format(date, 'yyyy年MM月dd日', { locale: dateFns.locale.zhTW });
-                                     } catch (e) {
-                                         console.error("Error formatting tooltip title:", e);
-                                         return tooltipItems[0].label; // Fallback
-                                     }
-                                }
-                            }
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: '銷售件數' },
+                        ticks: { // 只顯示整數刻度
+                             stepSize: 1,
+                             precision: 0
                         }
                     }
-                } // *** options 結束 ***
-            });
-        } else {
-             console.error("Sales Trend Chart canvas context not found!");
-        }
+                }
+            }
+        });
 
         // 2. 熱銷商品圖 (長條圖)
         const topProductLabels = summary.topProducts.map(item => escapeHtml(item.product_name));
         const topProductData = summary.topProducts.map(item => item.total_sold);
 
-         if (topProductsChartCtx) { // 檢查 canvas context 是否存在
-             topProductsChartInstance = new Chart(topProductsChartCtx, {
-                 type: 'bar',
-                 data: {
-                     labels: topProductLabels,
-                     datasets: [{
-                         label: '銷售數量',
-                         data: topProductData,
-                         backgroundColor: [
-                            'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)',
-                            'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)', // Add more if needed
-                            'rgba(199, 199, 199, 0.6)', 'rgba(83, 102, 255, 0.6)', 'rgba(40, 159, 64, 0.6)', 'rgba(210, 99, 132, 0.6)'
-                         ],
-                         borderColor: [
-                            'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)', // Add more if needed
-                            'rgba(199, 199, 199, 1)', 'rgba(83, 102, 255, 1)', 'rgba(40, 159, 64, 1)', 'rgba(210, 99, 132, 1)'
-                         ],
-                         borderWidth: 1
-                     }]
-                 },
-                 options: {
-                     indexAxis: 'y', // 讓商品名稱在 Y 軸，更易讀
-                     responsive: true,
-                     maintainAspectRatio: false,
-                     scales: {
-                         x: { // X 軸代表數量
-                             beginAtZero: true,
-                             title: { display: true, text: '銷售數量 (件)' },
-                             ticks: {
-                                 stepSize: 1, // 確保刻度是整數
-                                 precision: 0 // 確保刻度是整數
-                             }
-                         },
-                         y: { // Y 軸代表商品
-                             title: { display: true, text: '商品名稱' }
-                         }
-                     },
-                     plugins: {
-                         legend: { display: false } // 通常單一數據集不需要圖例
-                     }
-                 }
-             });
-         } else {
-             console.error("Top Products Chart canvas context not found!");
-         }
-    }; // *** renderCharts 函數結束 ***
+        topProductsChartInstance = new Chart(topProductsChartCtx, {
+            type: 'bar',
+            data: {
+                labels: topProductLabels,
+                datasets: [{
+                    label: '銷售數量',
+                    data: topProductData,
+                    backgroundColor: [ // 可以為每個條形指定不同顏色
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                 indexAxis: 'y', // 讓商品名稱在 Y 軸，更易讀
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                     x: { // X 軸代表數量
+                        beginAtZero: true,
+                        title: { display: true, text: '銷售數量 (件)' },
+                         ticks: {
+                             stepSize: 1,
+                             precision: 0
+                        }
+                    },
+                    y: { // Y 軸代表商品
+                        title: { display: true, text: '商品名稱' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false } // 通常單一數據集不需要圖例
+                }
+            }
+        });
+    };
+
+
+
+
     
 
      // HTML Escaping function
