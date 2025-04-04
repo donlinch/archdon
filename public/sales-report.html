@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>銷售報表</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="sales-report.js"></script>
 </head>
 <body>
     <h1>銷售報表</h1>
+
+    <h2>銷售圖表</h2>
+    <button onclick="showMonthlyChart()">顯示月度銷售</button>
+    <button onclick="showYearlyChart()">顯示年度銷售</button>
+    
+    <canvas id="sales-chart" width="400" height="200"></canvas>
+    
 
     <button onclick="showAddForm()">新增銷售資料</button>
 
