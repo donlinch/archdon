@@ -659,7 +659,7 @@ main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; }
 /* 表格標題欄 */
 #figure-table th {
     background-color: #4CAF50; /* 綠色背景 */
-    color: white;
+    color: rgb(142, 73, 73);
     padding: 12px 15px;
     text-align: left;
     font-size: 1.1em;
@@ -674,7 +674,7 @@ main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; }
 
 /* 交替行顏色 */
 #figure-table tr:nth-child(even) {
-    background-color: #f2f2f2; /* 淺灰色背景 */
+    background-color: #5837ab; /* 淺灰色背景 */
 }
 
 /* 鼠標懸停行顏色 */
@@ -739,7 +739,7 @@ button.delete-btn:hover {
 .modal-content {
     padding: 20px;
     border-radius: 8px;
-    background-color: #fff;
+    background-color: #80a831;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -777,7 +777,7 @@ button#save-figure-btn:hover, button#submit-sale-btn:hover {
     font-size: 0.9em;
     margin-bottom: 5px;
     padding: 5px 10px;
-    border: 1px solid #ddd;
+    border: 1px solid #28a3bb;
     border-radius: 5px;
     background-color: #f9f9f9;
     display: flex;
