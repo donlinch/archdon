@@ -479,7 +479,7 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware); // 保護 /api/a
 
 
 
-复制
+
 // --- 新增銷售記錄 API ---
 app.post('/api/sales', async (req, res) => {
     const { product_name, quantity, unit_price, sale_date } = req.body;
