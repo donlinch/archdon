@@ -1,4 +1,4 @@
-let salesData = [];  // 存放銷售資料
+let currentChart = null;  // 用來存儲當前的圖表
 
 // 獲取銷售資料並處理
 async function fetchSalesData() {
@@ -69,8 +69,13 @@ function generateChart(type) {
         });
     }
 
+    // 銷毀舊的圖表（如果存在）
+    if (currentChart) {
+        currentChart.destroy();
+    }
+
     // 配置圖表
-    new Chart(ctx, {
+    currentChart = new Chart(ctx, {
         type: 'bar',  // 可根據需求更改圖表類型
         data: {
             labels: labels,

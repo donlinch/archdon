@@ -946,3 +946,71 @@ th {
 tr:hover {
     background-color: #f5f5f5;
 }
+
+/* 美化圖表容器 */
+.chart-container {
+    width: 80%;
+    margin: 0 auto;
+    margin-bottom: 30px;
+}
+
+/* 使表格更具可讀性 */
+#figure-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    margin-top: 20px;
+}
+
+/* 表格標題欄 */
+#figure-table th {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 1.1em;
+}
+
+/* 表格內容 */
+#figure-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* 鼠標懸停行顏色 */
+#figure-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* 編輯和刪除按鈕 */
+button {
+    padding: 8px 12px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+}
+
+button.edit-btn {
+    background-color: #4CAF50; 
+    color: white;
+}
+
+button.delete-btn {
+    background-color: #f44336; 
+    color: white;
+}
+
+button.edit-btn:hover {
+    background-color: #45a049; 
+}
+
+button.delete-btn:hover {
+    background-color: #e53935; 
+}
