@@ -1,6 +1,6 @@
 // public/app.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 獲取 DOM 元素 (只需要一次) ---
+    // --- 獲取 DOM 元素 ---
     const grid = document.getElementById('product-grid');
     const sortLinks = document.querySelectorAll('.sort-link');
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
@@ -9,46 +9,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 函數定義 ---
 
     /**
-     * 從後端 API 獲取 Banner 資料，隨機排序，並初始化輪播
+     * 從後端 API 獲取 Banner 資料並初始化輪播 (恢復預設順序)
      */
     async function fetchAndDisplayBanners() {
         if (!bannerWrapper) {
             console.warn("未找到 Banner 輪播的 swiper-wrapper 元素。");
             return;
         }
-        // 可選: 顯示載入中狀態
-        // bannerWrapper.innerHTML = '<div class="swiper-slide">Banner 載入中...</div>';
-
         try {
-            const response = await fetch('/api/banners?page=home'); // 獲取首頁的 banners
+            const response = await fetch('/api/banners?page=home');
             if (!response.ok) {
                 throw new Error(`獲取 Banners 失敗 (HTTP ${response.status})`);
             }
-            let banners = await response.json(); // *** 使用 let ***
+            // *** 改回 const，不再隨機排序 Banner ***
+            const banners = await response.json();
 
-            // --- 開始 Banner 隨機排序 ---
-            if (banners && banners.length > 1) { // 確保有 banners 且數量超過 1 才排序
-                 console.log("正在執行 Banner 隨機排序...");
-                 banners = [...banners].sort(() => Math.random() - 0.5);
-            }
-            // --- Banner 隨機排序結束 ---
-
-            bannerWrapper.innerHTML = ''; // 清空 Loading 或舊內容
+            bannerWrapper.innerHTML = ''; // 清空舊內容
 
             if (!banners || banners.length === 0) {
-                // 如果沒有 Banner，可以顯示預設圖片或隱藏輪播
-                bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy"></div>'; // 示例 Logo
-                // document.getElementById('banner-carousel').style.display = 'none'; // 隱藏輪播
+                bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy"></div>';
             } else {
-                // 使用排序後的 banners 陣列來創建 slides
+                // 使用從 API 獲取的原始順序創建 slides
                 banners.forEach(banner => {
                     const slide = document.createElement('div');
                     slide.className = 'swiper-slide';
-
                     const img = document.createElement('img');
                     img.src = banner.image_url;
                     img.alt = banner.alt_text || '輪播圖片';
-
                     if (banner.link_url) {
                         const link = document.createElement('a');
                         link.href = banner.link_url;
@@ -63,29 +50,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // *** 初始化 Swiper (使用隨機排序後的 banners) ***
+            // *** 初始化 Swiper ***
             if (bannerSwiper) {
-                bannerSwiper.destroy(true, true); // 銷毀舊實例
+                bannerSwiper.destroy(true, true);
             }
-
             bannerSwiper = new Swiper('#banner-carousel', {
                 direction: 'horizontal',
-                loop: banners && banners.length > 1, // 只有一張以上圖片時才循環
-                autoplay: {
-                    delay: 12000,
-                    disableOnInteraction: false,
-                },
+                loop: banners && banners.length > 1,
+                autoplay: { delay: 12000, disableOnInteraction: false },
                 slidesPerView: 1,
                 spaceBetween: 0,
                 grabCursor: true,
-                pagination: {
-                    el: '#banner-carousel .swiper-pagination',
-                    clickable: true,
-                },
-                navigation: {
-                    nextEl: '#banner-carousel .swiper-button-next',
-                    prevEl: '#banner-carousel .swiper-button-prev',
-                },
+                pagination: { el: '#banner-carousel .swiper-pagination', clickable: true },
+                navigation: { nextEl: '#banner-carousel .swiper-button-next', prevEl: '#banner-carousel .swiper-button-prev' },
                 touchEventsTarget: 'container',
             });
 
@@ -96,8 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } // --- End of fetchAndDisplayBanners ---
 
     /**
-     * 從後端 API 獲取商品資料並觸發顯示
-     * @param {string} sortBy - 排序方式 ('latest' 或 'popular')
+     * 從後端 API 獲取商品資料，根據需要進行隨機排序，並觸發顯示
+     * @param {string} sortBy - 排序方式 ('latest', 'popular', 或 'random')
      */
     async function fetchProducts(sortBy = 'latest') {
         if (!grid) {
@@ -106,11 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         grid.innerHTML = '<p>正在加載商品...</p>';
 
-        let apiUrl = '/api/products';
+        let apiUrl = '/api/products'; // 基礎 URL，預設獲取最新商品
         if (sortBy === 'popular') {
-            apiUrl = '/api/products?sort=popular';
+            apiUrl = '/api/products?sort=popular'; // 熱門排序由後端處理
         }
-        // 不再需要處理 sortBy === 'random' for products
+        // 注意：當 sortBy === 'random' 時，我們仍然從基礎 apiUrl 獲取數據，
+        // 然後在客戶端進行隨機排序。
 
         try {
             console.log(`正在從 ${apiUrl} 獲取商品... (請求排序方式: ${sortBy})`);
@@ -118,10 +96,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             }
-            // *** 這裡改回 const，因為商品不需要客戶端隨機排序了 ***
-            const products = await response.json();
+            // *** 改回 let，因為需要隨機排序 ***
+            let products = await response.json();
 
-            displayProducts(products); // 直接顯示獲取的商品
+            // --- 客戶端商品隨機排序邏輯 ---
+            if (sortBy === 'random') {
+                console.log("正在執行客戶端商品隨機排序...");
+                 if (products && products.length > 0) { // 確保有商品才排序
+                    products = [...products].sort(() => Math.random() - 0.5);
+                 }
+            }
+            // --- 排序邏輯結束 ---
+
+            displayProducts(products); // 將獲取的 (可能已隨機排序的) 商品顯示出來
 
         } catch (error) {
             console.error("獲取商品失敗:", error);
@@ -134,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Array} productList - 商品物件陣列
      */
     function displayProducts(productList) {
+        // 這個函數保持不變，它只負責顯示傳入的 productList
         if (!grid) { return; }
         grid.innerHTML = '';
 
@@ -195,20 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
                 link.classList.add('active');
-                const sortBy = link.dataset.sort; // 獲取 'latest', 'popular', 或 HTML 中添加的 'random'
+                const sortBy = link.dataset.sort; // 獲取 'latest', 'popular', 或 'random'
 
-                // *** 如果你之前為商品添加了 random 排序連結，這裡會調用 fetchProducts('random')
-                // *** 但現在 fetchProducts 不處理 random 了，你需要決定點擊 "隨機推薦" 連結時的行為
-                // *** 1. 讓它依然調用 fetchProducts('random')，但效果等同於 fetchProducts('latest')
-                // *** 2. 移除 HTML 中的 "隨機推薦" 連結
-                // *** 3. 修改此處邏輯，例如點擊隨機時重新加載最新商品：
-                // const effectiveSortBy = (sortBy === 'random') ? 'latest' : sortBy;
-                // fetchProducts(effectiveSortBy);
-
-                // 目前保持原樣，如果點擊 data-sort="random"，會調用 fetchProducts('random')
-                // 而 fetchProducts 函數會忽略 'random' 並使用預設的 apiUrl
                 if (sortBy) {
-                    fetchProducts(sortBy);
+                    fetchProducts(sortBy); // 調用 fetchProducts 處理排序
                 } else {
                     console.warn("排序連結缺少 data-sort 屬性:", link);
                     fetchProducts(); // 按預設排序
@@ -220,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 頁面初始加載 ---
-    fetchAndDisplayBanners(); // 載入並顯示 (隨機排序後的) Banner
+    fetchAndDisplayBanners(); // 載入 Banner (預設順序)
     fetchProducts('latest');    // 載入預設商品 (最新)
 
 }); // --- End of SINGLE DOMContentLoaded ---
