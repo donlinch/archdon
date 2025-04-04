@@ -233,3 +233,4 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts('latest'); // 載入商品
 
 }); // --- End of DOMContentLoaded ---
+ 
