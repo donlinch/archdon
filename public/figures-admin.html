@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品庫存管理後台</title>
+    <title>公仔管理後台</title>
     <link rel="stylesheet" href="style.css"> <!-- 引入你的通用樣式 -->
     <style>
         /* 頁面特定樣式 */
@@ -47,10 +47,10 @@
     </style>
 </head>
 <body>
-    <h1>商品庫存管理</h1>
+    <h1>公仔管理</h1>
 
     <div class="add-btn-container">
-        <button id="add-figure-btn">＋ 新增商品</button>
+        <button id="add-figure-btn">＋ 新增公仔</button>
     </div>
 
     <div id="figure-list-container">
@@ -60,6 +60,7 @@
                     <th>圖片</th>
                     <th>商品名</th>
                     <th>規格 & 數量</th>
+                    <th>顯示</th> 
                     <th>買入價格</th>
                     <th>賣出價格</th>
                     <th>叫貨方法</th>
@@ -68,56 +69,76 @@
             </thead>
             <tbody id="figure-table-body">
                 <!-- 公仔列表將由 JavaScript 載入 -->
-                <tr><td colspan="7">正在載入商品資料...</td></tr>
+                <tr><td colspan="7">正在載入公仔資料...</td></tr>
             </tbody>
         </table>
     </div>
+    <th>顯示</th> <!-- <--- 新增表頭 -->
+    <th>買入價格</th>
+    <th>賣出價格</th>
+    <th>叫貨方法</th>
+    <th>操作</th>
+</tr>
+</thead>
+<tbody id="figure-table-body">
+<!-- 公仔列表將由 JavaScript 載入 -->
+<tr><td colspan="8">正在載入商品資料...</td></tr> <!-- Colspan +1 -->
+</tbody>
+</table>
+</div>
 
-    <!-- 新增/編輯 Modal -->
-    <div id="figure-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">×</span>
-            <h2 id="modal-title">新增商品</h2>
-            <form id="figure-form">
-                <input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
+<!-- 新增/編輯 Modal -->
+<div id="figure-modal" class="modal">
+<div class="modal-content">
+<span class="close-btn">×</span>
+<h2 id="modal-title">新增商品</h2>
+<form id="figure-form">
+<input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
 
-                <div class="form-group">
-                    <label for="figure-name">商品名 *</label>
-                    <input type="text" id="figure-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="figure-image-url">圖片連結</label>
-                    <input type="text" id="figure-image-url" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label for="figure-purchase-price">買入價格</label>
-                    <input type="number" id="figure-purchase-price" step="0.01" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="figure-selling-price">賣出價格</label>
-                    <input type="number" id="figure-selling-price" step="0.01" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="figure-ordering-method">叫貨方法</label>
-                    <textarea id="figure-ordering-method"></textarea>
-                </div>
+<div class="form-group">
+    <label for="figure-name">商品名 *</label>
+    <input type="text" id="figure-name" required>
+</div>
+<div class="form-group">
+    <label for="figure-image-url">圖片連結</label>
+    <input type="text" id="figure-image-url" placeholder="https://...">
+</div>
+ <!-- START: 新增的是否顯示 Checkbox -->
+ <div class="form-group form-group-inline">
+     <label for="figure-is-displayed">是否顯示於前台?</label>
+     <input type="checkbox" id="figure-is-displayed" name="is_displayed" value="true" checked> <!-- 預設勾選 (對應 DB 預設 TRUE) -->
+     <span style="font-size: 0.9em; color: #666;">(勾選=是, 取消=否)</span>
+ </div>
+ <!-- END: 新增的是否顯示 Checkbox -->
+<div class="form-group">
+    <label for="figure-purchase-price">買入價格</label>
+    <input type="number" id="figure-purchase-price" step="0.01" min="0" value="0">
+</div>
+<div class="form-group">
+    <label for="figure-selling-price">賣出價格</label>
+    <input type="number" id="figure-selling-price" step="0.01" min="0" value="0">
+</div>
+<div class="form-group">
+    <label for="figure-ordering-method">叫貨方法</label>
+    <textarea id="figure-ordering-method"></textarea>
+</div>
 
-                <hr>
-                <h4>規格與數量</h4>
-                <div id="variations-container">
-                    <!-- 規格輸入欄位將由 JavaScript 動態加入 -->
-                </div>
-                <button type="button" id="add-variation-btn">＋ 新增規格</button>
+<hr>
+<h4>規格與數量</h4>
+<div id="variations-container">
+    <!-- 規格輸入欄位將由 JavaScript 動態加入 -->
+</div>
+<button type="button" id="add-variation-btn">＋ 新增規格</button>
 
-                <hr style="margin-top: 20px;">
-                <div style="text-align: right; margin-top: 20px;">
-                     <button type="button" class="cancel-btn">取消</button>
-                     <button type="submit" id="save-figure-btn">儲存</button>
-                </div>
-            </form>
-        </div>
-    </div>
+<hr style="margin-top: 20px;">
+<div style="text-align: right; margin-top: 20px;">
+     <button type="button" class="cancel-btn">取消</button>
+     <button type="submit" id="save-figure-btn">儲存</button>
+</div>
+</form>
+</div>
+</div>
 
-    <script src="figures-admin.js"></script>
+<script src="figures-admin.js"></script>
 </body>
 </html>

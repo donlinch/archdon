@@ -3,142 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>公仔管理後台</title>
-    <link rel="stylesheet" href="style.css"> <!-- 引入你的通用樣式 -->
+    <title>輪播圖管理 - SunnyYummy</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* 頁面特定樣式 */
-        body { font-family: 'Noto Sans TC', sans-serif; padding: 20px; }
-        h1 { text-align: center; margin-bottom: 20px; }
-        #figure-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        #figure-table th, #figure-table td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }
-        #figure-table th { background-color: #f2f2f2; }
-        #figure-table img { max-width: 80px; height: auto; display: block; }
-        .variations-list { padding-left: 0; list-style: none; margin: 0; }
-        .variations-list li { margin-bottom: 5px; font-size: 0.9em; }
-        .actions button { margin-right: 5px; padding: 5px 10px; cursor: pointer; }
-        .add-btn-container { margin-bottom: 20px; text-align: right; }
-        #add-figure-btn, #save-figure-btn, .cancel-btn { padding: 10px 15px; cursor: pointer; }
+        /* 管理頁面通用樣式 */
+        body { background-color: #fff; color: #333; }
+        .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-        /* Modal 樣式 (簡易) */
-        .modal {
-            display: none; /* 預設隱藏 */
-            position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
-            overflow: auto; background-color: rgba(0,0,0,0.6);
-        }
-        .modal-content {
-            background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888;
-            width: 80%; max-width: 600px; border-radius: 8px; position: relative;
-        }
-        .close-btn { position: absolute; top: 10px; right: 15px; color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group textarea { width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .form-group textarea { resize: vertical; min-height: 60px; }
-        #variations-container .variation-item { display: flex; align-items: center; margin-bottom: 10px; border: 1px dashed #eee; padding: 10px; border-radius: 4px;}
-        #variations-container .variation-item input { margin-right: 10px; }
-        #variations-container .variation-item input[type="text"] { flex-grow: 1; } /* 名稱佔用更多空間 */
-        #variations-container .variation-item input[type="number"] { width: 80px; }
-        #variations-container .variation-item button { padding: 5px 8px; background-color: #f44336; color: white; border: none; cursor: pointer; border-radius: 3px; margin-left: auto;}
-        #add-variation-btn { margin-top: 10px; padding: 8px 12px; }
+        /* 特定表格樣式 */
+        #banner-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
+        #banner-list-table th, #banner-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+        #banner-list-table th { background-color: #e9ecef; }
+        /* 列寬調整 */
+        #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 6%; }  /* ID */
+        #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 18%; text-align: center;} /* 圖片預覽 */
+        #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 25%; } /* 圖片網址 */
+        #banner-list-table th:nth-child(4), #banner-list-table td:nth-child(4) { width: 15%; } /* 連結網址 */
+        #banner-list-table th:nth-child(5), #banner-list-table td:nth-child(5) { width: 12%; text-align: center; } /* 所屬頁面 */
+        #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 排序 */
+        #banner-list-table th:nth-child(7), #banner-list-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
+
+        #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
+
+        /* Modal 圖片預覽 */
+         #edit-banner-preview, #add-banner-preview { max-width: 200px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
+         #edit-banner-preview[src], #add-banner-preview[src] { display: block; }
+
+        /* 其他 Modal 樣式可以從 style.css 或其他 admin 頁面複製 */
+         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
+         .modal[style*="display: flex"] { display: flex !important; }
+         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+         .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+         .close-btn:hover { color: #333; }
+         .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
+         .form-group { margin-bottom: 1rem; }
+         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+         .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 1rem;} /* 統一表單樣式 */
+         .form-group textarea { resize: vertical; min-height: 80px; }
+         .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+         .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer;}
+         .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+         .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+         .form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; }
+         p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; } /* 統一錯誤訊息樣式 */
 
     </style>
 </head>
 <body>
-    <h1>公仔管理</h1>
+    <!-- 管理分頁導覽 -->
+    <nav class="admin-nav">
+        <a href="/admin.html">商品管理</a>
+        <a href="/music-admin.html">音樂管理</a>
+        <a href="/news-admin.html">消息管理</a>
+        <a href="/banner-admin.html" class="active">輪播圖管理</a>
+    </nav>
 
-    <div class="add-btn-container">
-        <button id="add-figure-btn">＋ 新增公仔</button>
+    <div class="admin-container">
+        <h1>輪播圖管理</h1>
+        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+        <button class="add-news-btn" style="background-color: #fd7e14; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;" onclick="showAddBannerForm()">新增輪播圖</button>
+
+        <h2>現有輪播圖列表</h2>
+        <div id="banner-list-container">
+            <p>正在加載輪播圖...</p>
+            <table id="banner-list-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>圖片預覽</th>
+                        <th>圖片網址</th>
+                        <th>連結網址</th>
+                        <th>所屬頁面</th> <!-- *** 確認這個標頭存在 *** -->
+                        <th>排序</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Banner 列將由 JavaScript 動態填入 -->
+                </tbody>
+            </table>
+        </div>
+    </div> <!-- End of admin-container -->
+
+    <!-- Add Banner Modal -->
+    <div id="add-banner-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAddBannerModal()">×</span>
+            <h2>新增輪播圖</h2>
+            <form id="add-banner-form">
+                <div class="form-group">
+                    <label for="add-banner-image-url">圖片網址:</label>
+                    <input type="text" id="add-banner-image-url" name="image_url" required>
+                    <img id="add-banner-preview" src="" alt="圖片預覽">
+                    <small>建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px</small>
+                </div>
+                 <div class="form-group">
+                    <label for="add-banner-alt-text">圖片替代文字 (Alt Text):</label>
+                    <input type="text" id="add-banner-alt-text" name="alt_text" placeholder="例如: SunnyYummy 夏日特賣">
+                     <small>簡短描述圖片內容，用於無障礙和 SEO。</small>
+                </div>
+                <div class="form-group">
+                    <label for="add-banner-link-url">連結網址 (可選):</label>
+                    <input type="url" id="add-banner-link-url" name="link_url" placeholder="https://...">
+                </div>
+
+                <!-- *** 確認這個下拉選單存在 *** -->
+                <div class="form-group">
+                    <label for="add-banner-page-location">顯示於頁面:</label>
+                    <select id="add-banner-page-location" name="page_location" required>
+                        <option value="home">首頁 (預設)</option>
+                        <option value="music">音樂頁</option>
+                        <option value="news">最新消息頁</option>
+                    </select>
+                </div>
+
+                 <div class="form-group">
+                    <label for="add-banner-display-order">排序 (數字越小越前面):</label>
+                    <input type="number" id="add-banner-display-order" name="display_order" value="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="action-btn save-btn">確認新增</button>
+                    <button type="button" class="action-btn cancel-btn" onclick="closeAddBannerModal()">取消</button>
+                </div>
+                <p id="add-banner-form-error"></p>
+            </form>
+        </div>
     </div>
 
-    <div id="figure-list-container">
-        <table id="figure-table">
-            <thead>
-                <tr>
-                    <th>圖片</th>
-                    <th>商品名</th>
-                    <th>規格 & 數量</th>
-                    <th>顯示</th> 
-                    <th>買入價格</th>
-                    <th>賣出價格</th>
-                    <th>叫貨方法</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="figure-table-body">
-                <!-- 公仔列表將由 JavaScript 載入 -->
-                <tr><td colspan="7">正在載入公仔資料...</td></tr>
-            </tbody>
-        </table>
+    <!-- Edit Banner Modal -->
+    <div id="edit-banner-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditBannerModal()">×</span>
+            <h2>編輯輪播圖</h2>
+            <form id="edit-banner-form">
+                <input type="hidden" id="edit-banner-id">
+                <div class="form-group">
+                    <label for="edit-banner-image-url">圖片網址:</label>
+                    <input type="text" id="edit-banner-image-url" name="image_url" required>
+                     <img id="edit-banner-preview" src="" alt="圖片預覽">
+                    <small>建議尺寸: 寬度 1200px ~ 1600px，高度 400px ~ 600px</small>
+                </div>
+                 <div class="form-group">
+                    <label for="edit-banner-alt-text">圖片替代文字 (Alt Text):</label>
+                    <input type="text" id="edit-banner-alt-text" name="alt_text">
+                 </div>
+                <div class="form-group">
+                    <label for="edit-banner-link-url">連結網址 (可選):</label>
+                    <input type="url" id="edit-banner-link-url" name="link_url">
+                </div>
+
+                <!-- *** 確認這個下拉選單存在 *** -->
+                <div class="form-group">
+                    <label for="edit-banner-page-location">顯示於頁面:</label>
+                    <select id="edit-banner-page-location" name="page_location" required>
+                        <option value="home">首頁</option>
+                        <option value="music">音樂頁</option>
+                        <option value="news">最新消息頁</option>
+                    </select>
+                </div>
+
+                 <div class="form-group">
+                    <label for="edit-banner-display-order">排序 (數字越小越前面):</label>
+                    <input type="number" id="edit-banner-display-order" name="display_order" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="action-btn save-btn">儲存變更</button>
+                    <button type="button" class="action-btn cancel-btn" onclick="closeEditBannerModal()">取消</button>
+                </div>
+                <p id="edit-banner-form-error"></p>
+            </form>
+        </div>
     </div>
-    <th>顯示</th> <!-- <--- 新增表頭 -->
-    <th>買入價格</th>
-    <th>賣出價格</th>
-    <th>叫貨方法</th>
-    <th>操作</th>
-</tr>
-</thead>
-<tbody id="figure-table-body">
-<!-- 公仔列表將由 JavaScript 載入 -->
-<tr><td colspan="8">正在載入商品資料...</td></tr> <!-- Colspan +1 -->
-</tbody>
-</table>
-</div>
 
-<!-- 新增/編輯 Modal -->
-<div id="figure-modal" class="modal">
-<div class="modal-content">
-<span class="close-btn">×</span>
-<h2 id="modal-title">新增商品</h2>
-<form id="figure-form">
-<input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
-
-<div class="form-group">
-    <label for="figure-name">商品名 *</label>
-    <input type="text" id="figure-name" required>
-</div>
-<div class="form-group">
-    <label for="figure-image-url">圖片連結</label>
-    <input type="text" id="figure-image-url" placeholder="https://...">
-</div>
- <!-- START: 新增的是否顯示 Checkbox -->
- <div class="form-group form-group-inline">
-     <label for="figure-is-displayed">是否顯示於前台?</label>
-     <input type="checkbox" id="figure-is-displayed" name="is_displayed" value="true" checked> <!-- 預設勾選 (對應 DB 預設 TRUE) -->
-     <span style="font-size: 0.9em; color: #666;">(勾選=是, 取消=否)</span>
- </div>
- <!-- END: 新增的是否顯示 Checkbox -->
-<div class="form-group">
-    <label for="figure-purchase-price">買入價格</label>
-    <input type="number" id="figure-purchase-price" step="0.01" min="0" value="0">
-</div>
-<div class="form-group">
-    <label for="figure-selling-price">賣出價格</label>
-    <input type="number" id="figure-selling-price" step="0.01" min="0" value="0">
-</div>
-<div class="form-group">
-    <label for="figure-ordering-method">叫貨方法</label>
-    <textarea id="figure-ordering-method"></textarea>
-</div>
-
-<hr>
-<h4>規格與數量</h4>
-<div id="variations-container">
-    <!-- 規格輸入欄位將由 JavaScript 動態加入 -->
-</div>
-<button type="button" id="add-variation-btn">＋ 新增規格</button>
-
-<hr style="margin-top: 20px;">
-<div style="text-align: right; margin-top: 20px;">
-     <button type="button" class="cancel-btn">取消</button>
-     <button type="submit" id="save-figure-btn">儲存</button>
-</div>
-</form>
-</div>
-</div>
-
-<script src="figures-admin.js"></script>
+    <script src="banner-admin.js"></script>
 </body>
 </html>
