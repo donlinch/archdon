@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>公仔管理後台</title>
+    <title>商品庫存管理後台</title>
     <link rel="stylesheet" href="style.css"> <!-- 引入你的通用樣式 -->
     <style>
         /* 頁面特定樣式 */
@@ -47,10 +47,10 @@
     </style>
 </head>
 <body>
-    <h1>公仔管理</h1>
+    <h1>商品庫存管理</h1>
 
     <div class="add-btn-container">
-        <button id="add-figure-btn">＋ 新增公仔</button>
+        <button id="add-figure-btn">＋ 新增商品</button>
     </div>
 
     <div id="figure-list-container">
@@ -68,7 +68,7 @@
             </thead>
             <tbody id="figure-table-body">
                 <!-- 公仔列表將由 JavaScript 載入 -->
-                <tr><td colspan="7">正在載入公仔資料...</td></tr>
+                <tr><td colspan="7">正在載入商品資料...</td></tr>
             </tbody>
         </table>
     </div>
@@ -77,7 +77,7 @@
     <div id="figure-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn">×</span>
-            <h2 id="modal-title">新增公仔</h2>
+            <h2 id="modal-title">新增商品</h2>
             <form id="figure-form">
                 <input type="hidden" id="figure-id"> <!-- 用於編輯時儲存 ID -->
 

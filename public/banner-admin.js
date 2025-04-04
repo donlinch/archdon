@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const figureIdInput = document.getElementById('figure-id');
     const figureNameInput = document.getElementById('figure-name');
     const figureImageUrlInput = document.getElementById('figure-image-url');
+    // --- START: 新增獲取 is_displayed checkbox ---
+    const figureIsDisplayedInput = document.getElementById('figure-is-displayed');
+    // --- END: 新增獲取 is_displayed checkbox ---
     const figurePurchasePriceInput = document.getElementById('figure-purchase-price');
     const figureSellingPriceInput = document.getElementById('figure-selling-price');
     const figureOrderingMethodInput = document.getElementById('figure-ordering-method');
@@ -21,9 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /** 獲取並顯示所有公仔 */
     async function fetchAndDisplayFigures() {
-        tableBody.innerHTML = '<tr><td colspan="7">正在載入公仔資料...</td></tr>';
+        // --- Colspan +1 ---
+        tableBody.innerHTML = '<tr><td colspan="8">正在載入公仔資料...</td></tr>';
         try {
-            const response = await fetch('/api/admin/figures');
+            const response = await fetch('/api/admin/figures'); // API 已更新排序
             if (!response.ok) {
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             }
@@ -31,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
             displayFigures(allFiguresData);
         } catch (error) {
             console.error("獲取公仔列表失敗:", error);
-            tableBody.innerHTML = '<tr><td colspan="7">無法載入公仔資料，請稍後再試。</td></tr>';
+            // --- Colspan +1 ---
+            tableBody.innerHTML = '<tr><td colspan="8">無法載入公仔資料，請稍後再試。</td></tr>';
         }
     }
 
@@ -40,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = ''; // 清空表格
 
         if (!figures || figures.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">目前沒有公仔資料。</td></tr>';
+            // --- Colspan +1 ---
+            tableBody.innerHTML = '<tr><td colspan="8">目前沒有公仔資料。</td></tr>';
             return;
         }
 
@@ -48,19 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = tableBody.insertRow();
             row.setAttribute('data-id', figure.id);
 
-            // 圖片
+            // 圖片 (不變)
             const cellImage = row.insertCell();
             const img = document.createElement('img');
-            img.src = figure.image_url || '/images/placeholder.png'; // 使用預設圖片
+            img.src = figure.image_url || '/images/placeholder.png';
             img.alt = figure.name;
             img.style.maxWidth = '80px';
             img.style.height = 'auto';
             cellImage.appendChild(img);
 
-            // 商品名
+            // 商品名 (不變)
             row.insertCell().textContent = figure.name;
 
-            // 規格 & 數量
+            // 規格 & 數量 (不變)
             const cellVariations = row.insertCell();
             const variationsList = document.createElement('ul');
             variationsList.className = 'variations-list';
@@ -68,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 figure.variations.forEach(v => {
                     const listItem = document.createElement('li');
                     listItem.textContent = `${v.name}: ${v.quantity}`;
-                    listItem.setAttribute('data-variation-id', v.id); // 添加規格ID
+                    listItem.setAttribute('data-variation-id', v.id);
                     variationsList.appendChild(listItem);
                 });
             } else {
@@ -76,16 +82,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             cellVariations.appendChild(variationsList);
 
-            // 買入價格
-             row.insertCell().textContent = formatCurrency(figure.purchase_price);
+            // --- START: 新增顯示 '是/否' 的儲存格 ---
+            const cellDisplay = row.insertCell();
+            cellDisplay.textContent = figure.is_displayed ? '是' : '否';
+            cellDisplay.style.fontWeight = figure.is_displayed ? 'bold' : 'normal';
+            cellDisplay.style.color = figure.is_displayed ? 'green' : '#aaa'; // 綠色表示顯示, 灰色表示隱藏
+            // --- END: 新增顯示 '是/否' 的儲存格 ---
 
-             // 賣出價格
-             row.insertCell().textContent = formatCurrency(figure.selling_price);
+            // 買入價格 (不變)
+            row.insertCell().textContent = formatCurrency(figure.purchase_price);
 
-            // 叫貨方法
+            // 賣出價格 (不變)
+            row.insertCell().textContent = formatCurrency(figure.selling_price);
+
+            // 叫貨方法 (不變)
             row.insertCell().textContent = figure.ordering_method || '-';
 
-            // 操作按鈕
+            // 操作按鈕 (不變)
             const cellActions = row.insertCell();
             cellActions.className = 'actions';
             const editBtn = document.createElement('button');
@@ -102,21 +115,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-     /** 格式化貨幣 */
-     function formatCurrency(amount) {
-        const num = parseFloat(amount);
-        if (isNaN(num)) { return '-'; }
-        // 使用 Intl.NumberFormat 進行本地化格式化 (例如: NT$)
-        // return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
-        // 或者簡單顯示數字
-        return `NT$ ${Math.round(num)}`; // 四捨五入到整數
-     }
+    /** 格式化貨幣 (不變) */
+    function formatCurrency(amount) {
+       // ... (函數內容不變) ...
+       const num = parseFloat(amount);
+       if (isNaN(num)) { return '-'; }
+       return `NT$ ${Math.round(num)}`;
+    }
 
     /** 打開新增 Modal */
     function openAddModal() {
         modalTitle.textContent = '新增公仔';
         figureForm.reset(); // 清空表單
         figureIdInput.value = ''; // 確保 ID 為空
+        // --- START: 重置 is_displayed checkbox 為預設勾選 ---
+        figureIsDisplayedInput.checked = true;
+        // --- END: 重置 is_displayed checkbox 為預設勾選 ---
         variationsContainer.innerHTML = ''; // 清空規格區域
         addVariationInput(); // 預設至少添加一組規格輸入
         modal.style.display = 'block';
@@ -137,11 +151,14 @@ document.addEventListener('DOMContentLoaded', () => {
         figureIdInput.value = figure.id;
         figureNameInput.value = figure.name;
         figureImageUrlInput.value = figure.image_url || '';
+        // --- START: 根據數據設置 is_displayed checkbox ---
+        figureIsDisplayedInput.checked = figure.is_displayed;
+        // --- END: 根據數據設置 is_displayed checkbox ---
         figurePurchasePriceInput.value = figure.purchase_price || 0;
         figureSellingPriceInput.value = figure.selling_price || 0;
         figureOrderingMethodInput.value = figure.ordering_method || '';
 
-        // 填入規格資料
+        // 填入規格資料 (不變)
         variationsContainer.innerHTML = ''; // 清空
         if (figure.variations && figure.variations.length > 0) {
             figure.variations.forEach(v => addVariationInput(v.id, v.name, v.quantity));
@@ -152,45 +169,25 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'block';
     }
 
-    /** 關閉 Modal */
+    /** 關閉 Modal (不變) */
     function closeModal() {
         modal.style.display = 'none';
     }
 
-    /** 動態新增規格輸入欄位到表單 */
+    /** 動態新增規格輸入欄位到表單 (不變) */
     function addVariationInput(id = '', name = '', quantity = 0) {
-        const variationItem = document.createElement('div');
+        // ... (函數內容不變) ...
+         const variationItem = document.createElement('div');
         variationItem.className = 'variation-item';
-        // 隱藏的 ID 輸入 (用於更新)
         const idInput = document.createElement('input');
-        idInput.type = 'hidden';
-        idInput.className = 'variation-id';
-        idInput.value = id || ''; // 如果是新增，ID 為空
-
+        idInput.type = 'hidden'; idInput.className = 'variation-id'; idInput.value = id || '';
         const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.className = 'variation-name';
-        nameInput.placeholder = '規格名稱 (例: 大號)';
-        nameInput.value = name;
-        nameInput.required = true; // 規格名稱必填
-
+        nameInput.type = 'text'; nameInput.className = 'variation-name'; nameInput.placeholder = '規格名稱 (例: 大號)'; nameInput.value = name; nameInput.required = true;
         const quantityInput = document.createElement('input');
-        quantityInput.type = 'number';
-        quantityInput.className = 'variation-quantity';
-        quantityInput.placeholder = '數量';
-        quantityInput.min = '0';
-        quantityInput.value = quantity;
-        quantityInput.required = true; // 數量必填
-
+        quantityInput.type = 'number'; quantityInput.className = 'variation-quantity'; quantityInput.placeholder = '數量'; quantityInput.min = '0'; quantityInput.value = quantity; quantityInput.required = true;
         const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.textContent = '移除';
-        removeBtn.onclick = () => variationItem.remove(); // 點擊移除按鈕時刪除該行
-
-        variationItem.appendChild(idInput);
-        variationItem.appendChild(nameInput);
-        variationItem.appendChild(quantityInput);
-        variationItem.appendChild(removeBtn);
+        removeBtn.type = 'button'; removeBtn.textContent = '移除'; removeBtn.onclick = () => variationItem.remove();
+        variationItem.appendChild(idInput); variationItem.appendChild(nameInput); variationItem.appendChild(quantityInput); variationItem.appendChild(removeBtn);
         variationsContainer.appendChild(variationItem);
     }
 
@@ -198,52 +195,38 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveFigure(event) {
         event.preventDefault(); // 阻止表單默認提交
 
-        // 從表單收集規格資料
+        // 從表單收集規格資料 (不變)
         const variations = [];
         const variationItems = variationsContainer.querySelectorAll('.variation-item');
         let hasInvalidVariation = false;
         variationItems.forEach(item => {
-            const id = item.querySelector('.variation-id').value;
-            const name = item.querySelector('.variation-name').value.trim();
-            const quantity = item.querySelector('.variation-quantity').value;
-
-             // 驗證: 名稱和數量都必須有值
-            if (!name || quantity === '' || quantity === null) {
-                 if(variationItems.length > 1 || (variationItems.length === 1 && (name || quantity))) {
-                      // 如果有多個規格，或只有一個但用戶有輸入，才報錯
-                     alert('每個規格都必須填寫名稱和數量。');
-                     hasInvalidVariation = true;
-                     return; // 跳過這個無效的規格
-                 } else {
-                     // 如果只有一個規格且都是空的，忽略它
-                     return;
-                 }
-            }
-
-            const quantityInt = parseInt(quantity);
-            if (isNaN(quantityInt) || quantityInt < 0) {
-                alert(`規格 "${name}" 的數量必須是非負整數。`);
-                hasInvalidVariation = true;
-                 return; // 跳過這個無效的規格
-            }
-
-
-            variations.push({
-                id: id ? parseInt(id) : null, // 如果有 ID，轉成數字，否則為 null
-                name: name,
-                quantity: quantityInt
-            });
+            // ... (規格收集和驗證邏輯不變) ...
+             const id = item.querySelector('.variation-id').value;
+             const name = item.querySelector('.variation-name').value.trim();
+             const quantity = item.querySelector('.variation-quantity').value;
+             if (!name || quantity === '' || quantity === null) {
+                  if(variationItems.length > 1 || (variationItems.length === 1 && (name || quantity))) {
+                       alert('每個規格都必須填寫名稱和數量。');
+                       hasInvalidVariation = true; return;
+                  } else { return; }
+             }
+             const quantityInt = parseInt(quantity);
+             if (isNaN(quantityInt) || quantityInt < 0) {
+                 alert(`規格 "${name}" 的數量必須是非負整數。`);
+                 hasInvalidVariation = true; return;
+             }
+             variations.push({ id: id ? parseInt(id) : null, name: name, quantity: quantityInt });
         });
-
-         if (hasInvalidVariation) {
-             return; // 如果有驗證錯誤，停止儲存
-         }
+         if (hasInvalidVariation) { return; }
 
 
         // 準備請求資料
         const figureData = {
             name: figureNameInput.value.trim(),
             image_url: figureImageUrlInput.value.trim() || null,
+            // --- START: 加入 is_displayed 值 ---
+            is_displayed: figureIsDisplayedInput.checked, // checkbox 的 checked 屬性直接是布林值
+            // --- END: 加入 is_displayed 值 ---
             purchase_price: parseFloat(figurePurchasePriceInput.value) || 0,
             selling_price: parseFloat(figureSellingPriceInput.value) || 0,
             ordering_method: figureOrderingMethodInput.value.trim() || null,
@@ -264,13 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                 const errorData = await response.json(); // 嘗試讀取錯誤訊息
+                 const errorData = await response.json();
                  throw new Error(`儲存失敗 (${response.status}): ${errorData.error || '未知錯誤'}`);
             }
 
             closeModal();
-            await fetchAndDisplayFigures(); // 重新載入列表
-             alert(`公仔 ${method === 'POST' ? '新增' : '更新'} 成功！`);
+            await fetchAndDisplayFigures(); // 重新載入列表 (會按新的排序)
+            alert(`公仔 ${method === 'POST' ? '新增' : '更新'} 成功！`);
 
         } catch (error) {
             console.error("儲存公仔失敗:", error);
@@ -278,44 +261,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /** 刪除公仔 */
+    /** 刪除公仔 (不變) */
     async function deleteFigure(id, name) {
-        if (!confirm(`確定要刪除公仔 "${name}" 嗎？\n（相關的規格資料也會一併刪除）`)) {
-            return;
-        }
-
+       // ... (函數內容不變) ...
+        if (!confirm(`確定要刪除公仔 "${name}" 嗎？\n（相關的規格資料也會一併刪除）`)) { return; }
         try {
-            const response = await fetch(`/api/admin/figures/${id}`, {
-                method: 'DELETE'
-            });
-
+            const response = await fetch(`/api/admin/figures/${id}`, { method: 'DELETE' });
             if (!response.ok) {
                  if (response.status === 404) { throw new Error('找不到要刪除的公仔。'); }
                  else { throw new Error(`刪除失敗 (${response.status})`); }
             }
-
-            // response.status === 204 表示成功
             alert(`公仔 "${name}" 已成功刪除。`);
-            await fetchAndDisplayFigures(); // 重新載入列表
-
+            await fetchAndDisplayFigures();
         } catch (error) {
             console.error("刪除公仔失敗:", error);
             alert(`刪除公仔失敗: ${error.message}`);
         }
     }
 
-    // --- 事件監聽器 ---
+    // --- 事件監聽器 (不變) ---
     addFigureBtn.addEventListener('click', openAddModal);
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
-    window.addEventListener('click', (event) => { // 點擊 modal 外部關閉
-        if (event.target == modal) {
-            closeModal();
-        }
+    window.addEventListener('click', (event) => {
+        if (event.target == modal) { closeModal(); }
     });
     figureForm.addEventListener('submit', saveFigure);
-    addVariationBtn.addEventListener('click', () => addVariationInput()); // 點擊按鈕新增一組規格欄位
+    addVariationBtn.addEventListener('click', () => addVariationInput());
 
     // --- 初始載入 ---
-    fetchAndDisplayFigures();
+    fetchAndDisplayFigures(); // 第一次載入時就會按照新的排序規則
 });
