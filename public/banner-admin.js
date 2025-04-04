@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!newBannerData.image_url) { addFormError.textContent = '圖片網址不能為空。'; return; }
             if (!newBannerData.page_location) { addFormError.textContent = '請選擇顯示頁面。'; return; } // 驗證 page_location
-
+ 
             try {
                 // *** API 路徑正確 ***
                 const response = await fetch(`/api/admin/banners`, {
