@@ -1,395 +1,321 @@
-// public/banner-admin.js (完整替換)
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References --- (保持不變)
-    const bannerListBody = document.querySelector('#banner-list-table tbody');
-    const bannerListContainer = document.getElementById('banner-list-container');
-    const bannerTable = document.getElementById('banner-list-table');
-    const loadingMessage = bannerListContainer ? bannerListContainer.querySelector('p') : null;
-    const editModal = document.getElementById('edit-banner-modal');
-    const editForm = document.getElementById('edit-banner-form');
-    const editBannerId = document.getElementById('edit-banner-id');
-    const editBannerImageUrl = document.getElementById('edit-banner-image-url');
-    const editBannerLinkUrl = document.getElementById('edit-banner-link-url');
-    const editBannerDisplayOrder = document.getElementById('edit-banner-display-order');
-    const editBannerAltText = document.getElementById('edit-banner-alt-text');
-    const editBannerPreview = document.getElementById('edit-banner-preview');
-    const editFormError = document.getElementById('edit-banner-form-error');
-    const editBannerPageLocation = document.getElementById('edit-banner-page-location');
-    const addModal = document.getElementById('add-banner-modal');
-    const addForm = document.getElementById('add-banner-form');
-    const addBannerImageUrl = document.getElementById('add-banner-image-url');
-    const addBannerLinkUrl = document.getElementById('add-banner-link-url');
-    const addBannerDisplayOrder = document.getElementById('add-banner-display-order');
-    const addBannerAltText = document.getElementById('add-banner-alt-text');
-    const addBannerPreview = document.getElementById('add-banner-preview');
-    const addFormError = document.getElementById('add-banner-form-error');
-    const addBannerPageLocation = document.getElementById('add-banner-page-location');
+    const tableBody = document.getElementById('figure-table-body');
+    const addFigureBtn = document.getElementById('add-figure-btn');
+    const modal = document.getElementById('figure-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const figureForm = document.getElementById('figure-form');
+    const figureIdInput = document.getElementById('figure-id');
+    const figureNameInput = document.getElementById('figure-name');
+    const figureImageUrlInput = document.getElementById('figure-image-url');
+    const figurePurchasePriceInput = document.getElementById('figure-purchase-price');
+    const figureSellingPriceInput = document.getElementById('figure-selling-price');
+    const figureOrderingMethodInput = document.getElementById('figure-ordering-method');
+    const variationsContainer = document.getElementById('variations-container');
+    const addVariationBtn = document.getElementById('add-variation-btn');
+    const closeBtn = modal.querySelector('.close-btn');
+    const cancelBtn = modal.querySelector('.cancel-btn');
 
-    // --- Helper Function for Display Name --- (保持不變)
-    const getLocationDisplayName = (locationKey) => {
-        switch(locationKey) {
-            case 'home': return '首頁';
-            case 'music': return '音樂頁';
-            case 'news': return '最新消息頁';
-            default: return locationKey || '未知';
-        }
-    };
+    let allFiguresData = []; // 用於編輯時查找數據
 
-    // --- *** 修改這個函數來實現分組和排序渲染 *** ---
-    async function fetchAndDisplayBanners() {
-        console.log("fetchAndDisplayBanners called for grouping");
-        if (!bannerListBody || !bannerListContainer || !bannerTable) {
-            if(loadingMessage) loadingMessage.textContent='頁面元素缺失 (表格)';
-            console.error("Table elements missing!");
-            return;
-        }
+    // --- CRUD 函數 ---
 
-        bannerListBody.innerHTML = ''; // 清空舊內容
-        if (loadingMessage) loadingMessage.style.display = 'block';
-        if (bannerTable) bannerTable.style.display = 'none';
-
+    /** 獲取並顯示所有公仔 */
+    async function fetchAndDisplayFigures() {
+        tableBody.innerHTML = '<tr><td colspan="7">正在載入公仔資料...</td></tr>';
         try {
-            const response = await fetch('/api/admin/banners'); // 獲取所有 admin banners
-            console.log("API Response Status:", response.status);
-
+            const response = await fetch('/api/admin/figures');
             if (!response.ok) {
-                let errorText = `HTTP 錯誤！狀態: ${response.status}`;
-                try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
-                throw new Error(errorText);
+                throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             }
-
-            const allBanners = await response.json(); // 獲取包含所有信息的 Banner 陣列
-            console.log("Admin Banners Fetched (for grouping):", allBanners);
-
-            if (loadingMessage) loadingMessage.style.display = 'none';
-            if (bannerTable) bannerTable.style.display = 'table';
-
-            // --- **開始分組和排序** ---
-            const groupedBanners = {
-                home: [],
-                music: [],
-                news: [],
-                other: [] // 用於存放 page_location 為 null 或其他未知值的 banner
-            };
-
-            // 1. 分組
-            allBanners.forEach(banner => {
-                switch (banner.page_location) {
-                    case 'home':
-                        groupedBanners.home.push(banner);
-                        break;
-                    case 'music':
-                        groupedBanners.music.push(banner);
-                        break;
-                    case 'news':
-                        groupedBanners.news.push(banner);
-                        break;
-                    default:
-                        groupedBanners.other.push(banner);
-                        break;
-                }
-            });
-
-            // 2. 組內排序 (雖然 API 可能已排序，但前端再排一次更保險)
-            const sortFn = (a, b) => (a.display_order - b.display_order) || (a.id - b.id);
-            groupedBanners.home.sort(sortFn);
-            groupedBanners.music.sort(sortFn);
-            groupedBanners.news.sort(sortFn);
-            groupedBanners.other.sort(sortFn); // 其他組也排序
-
-            // --- **開始渲染分組後的列表** ---
-            bannerListBody.innerHTML = ''; // 再次清空，確保從頭開始渲染
-
-            // 輔助函數：渲染一個分組到表格
-            const renderGroup = (title, banners) => {
-                // 添加組標題行
-                const headerRow = document.createElement('tr');
-                headerRow.className = 'banner-group-header'; // 添加 class 以便 CSS 定位
-                headerRow.innerHTML = `<td colspan="7" style="background-color: #e9ecef; font-weight: bold; padding: 12px 10px;">${title}</td>`;
-                bannerListBody.appendChild(headerRow);
-
-                if (banners.length === 0) {
-                    // 如果該組沒有 Banner
-                    const emptyRow = document.createElement('tr');
-                    emptyRow.innerHTML = `<td colspan="7" style="text-align: center; color: #888; padding: 15px;">此分類下沒有輪播圖</td>`;
-                    bannerListBody.appendChild(emptyRow);
-                } else {
-                    // 渲染該組的所有 Banner
-                    banners.forEach(banner => {
-                        const row = document.createElement('tr');
-                        row.dataset.bannerId = banner.id;
-                        row.innerHTML = `
-                            <td>${banner.id || 'N/A'}</td>
-                            <td><img src="${banner.image_url || '/images/placeholder.png'}" alt="${banner.alt_text || '預覽'}" class="preview-image"></td>
-                            <td style="white-space: normal; word-break: break-all;">${banner.image_url || ''}</td>
-                            <td style="white-space: normal; word-break: break-all;">${banner.link_url || 'N/A'}</td>
-                            <td>${getLocationDisplayName(banner.page_location)}</td>
-                            <td>${banner.display_order !== null ? banner.display_order : 'N/A'}</td>
-                            <td>
-                                <button class="action-btn edit-btn" onclick="editBanner(${banner.id})">編輯</button>
-                                <button class="action-btn delete-btn" onclick="deleteBanner(${banner.id})">刪除</button>
-                            </td>
-                        `;
-                        bannerListBody.appendChild(row);
-                    });
-                }
-            };
-
-            // 3. 按指定順序渲染分組
-            renderGroup('首頁 (Home)', groupedBanners.home);
-            renderGroup('音樂頁 (Music)', groupedBanners.music);
-            renderGroup('最新消息頁 (News)', groupedBanners.news);
-
-            // (可選) 如果需要顯示未分類的 Banner
-            if (groupedBanners.other.length > 0) {
-                renderGroup('其他/未分類', groupedBanners.other);
-            }
-
-            // --- **渲染結束** ---
-
+            allFiguresData = await response.json(); // 儲存數據供編輯使用
+            displayFigures(allFiguresData);
         } catch (error) {
-            console.error("獲取或處理管理 Banners 列表失敗:", error);
-            if (loadingMessage) loadingMessage.textContent = `無法載入輪播圖列表: ${error.message}`;
-            if (bannerTable) bannerTable.style.display = 'none';
+            console.error("獲取公仔列表失敗:", error);
+            tableBody.innerHTML = '<tr><td colspan="7">無法載入公仔資料，請稍後再試。</td></tr>';
         }
     }
 
-    // --- Function to Open and Populate the Edit Banner Modal ---
-    async function openEditBannerModal(id) {
-        console.log(`openEditBannerModal called for ID: ${id}`);
+    /** 將公仔列表渲染到表格 */
+    function displayFigures(figures) {
+        tableBody.innerHTML = ''; // 清空表格
 
-        const requiredEditElements = [editModal, editForm, editBannerId, editBannerImageUrl,
-                                   editBannerLinkUrl, editBannerDisplayOrder, editBannerAltText,
-                                   editBannerPreview, editFormError, editBannerPageLocation];
-
-        if (requiredEditElements.some(el => !el)) {
-            console.error("編輯 Modal 元件缺失:", requiredEditElements.map((el, i) => el ? '' : i).filter(String));
-            alert("編輯視窗元件錯誤，請檢查 HTML。");
+        if (!figures || figures.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7">目前沒有公仔資料。</td></tr>';
             return;
         }
 
-        editFormError.textContent = '';
-        editForm.reset();
-        editBannerPreview.style.display = 'none';
-        editBannerPreview.src = '';
+        figures.forEach(figure => {
+            const row = tableBody.insertRow();
+            row.setAttribute('data-id', figure.id);
 
-        try {
-            // *** 修改: 使用新的 API 獲取單一 Banner ***
-            const response = await fetch(`/api/admin/banners/${id}`);
-            if (!response.ok) {
-                 let errorText = `無法獲取 Banner 資料 (HTTP ${response.status})`;
-                 if (response.status === 404) errorText = '找不到指定的 Banner。';
-                 else { try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {} }
-                 throw new Error(errorText);
-            }
+            // 圖片
+            const cellImage = row.insertCell();
+            const img = document.createElement('img');
+            img.src = figure.image_url || '/images/placeholder.png'; // 使用預設圖片
+            img.alt = figure.name;
+            img.style.maxWidth = '80px';
+            img.style.height = 'auto';
+            cellImage.appendChild(img);
 
-            const banner = await response.json(); // 直接獲取單一 Banner 對象
-            console.log("找到要編輯的 Banner:", banner);
+            // 商品名
+            row.insertCell().textContent = figure.name;
 
-            editBannerId.value = banner.id;
-            editBannerImageUrl.value = banner.image_url || '';
-            editBannerLinkUrl.value = banner.link_url || '';
-             // *** 確保 display_order 被正確處理 ***
-            editBannerDisplayOrder.value = banner.display_order !== null ? banner.display_order : 0;
-            editBannerAltText.value = banner.alt_text || '';
-             // *** 確保 page_location 被正確處理 ***
-            editBannerPageLocation.value = banner.page_location || 'home'; // 設置 select 的值
-
-            if (banner.image_url) {
-                editBannerPreview.src = banner.image_url;
-                editBannerPreview.style.display = 'block';
+            // 規格 & 數量
+            const cellVariations = row.insertCell();
+            const variationsList = document.createElement('ul');
+            variationsList.className = 'variations-list';
+            if (figure.variations && figure.variations.length > 0) {
+                figure.variations.forEach(v => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${v.name}: ${v.quantity}`;
+                    listItem.setAttribute('data-variation-id', v.id); // 添加規格ID
+                    variationsList.appendChild(listItem);
+                });
             } else {
-                editBannerPreview.style.display = 'none';
+                variationsList.innerHTML = '<li>無規格</li>';
             }
+            cellVariations.appendChild(variationsList);
 
-            editModal.style.display = 'flex';
-        } catch (error) {
-            console.error(`獲取 Banner ${id} 進行編輯時出錯:`, error);
-            alert(`無法載入編輯資料： ${error.message}`);
-        }
+            // 買入價格
+             row.insertCell().textContent = formatCurrency(figure.purchase_price);
+
+             // 賣出價格
+             row.insertCell().textContent = formatCurrency(figure.selling_price);
+
+            // 叫貨方法
+            row.insertCell().textContent = figure.ordering_method || '-';
+
+            // 操作按鈕
+            const cellActions = row.insertCell();
+            cellActions.className = 'actions';
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '編輯';
+            editBtn.className = 'edit-btn';
+            editBtn.onclick = () => openEditModal(figure.id);
+            cellActions.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '刪除';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = () => deleteFigure(figure.id, figure.name);
+            cellActions.appendChild(deleteBtn);
+        });
     }
 
-    // --- Function to Close Modals ---
-    window.closeEditBannerModal = function() { if (editModal) editModal.style.display = 'none'; };
-    window.closeAddBannerModal = function() { if (addModal) addModal.style.display = 'none'; };
+     /** 格式化貨幣 */
+     function formatCurrency(amount) {
+        const num = parseFloat(amount);
+        if (isNaN(num)) { return '-'; }
+        // 使用 Intl.NumberFormat 進行本地化格式化 (例如: NT$)
+        // return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+        // 或者簡單顯示數字
+        return `NT$ ${Math.round(num)}`; // 四捨五入到整數
+     }
 
-    // --- Attach Edit/Delete/ShowAddForm Functions to window scope ---
-    window.editBanner = function(id) { openEditBannerModal(id); };
+    /** 打開新增 Modal */
+    function openAddModal() {
+        modalTitle.textContent = '新增公仔';
+        figureForm.reset(); // 清空表單
+        figureIdInput.value = ''; // 確保 ID 為空
+        variationsContainer.innerHTML = ''; // 清空規格區域
+        addVariationInput(); // 預設至少添加一組規格輸入
+        modal.style.display = 'block';
+    }
 
-    window.deleteBanner = async function(id) {
-        console.log(`準備刪除 Banner ID: ${id}`);
-        if (confirm(`確定要刪除輪播圖 ID: ${id} 嗎？`)) {
-            try {
-                // *** API 路徑正確 ***
-                const response = await fetch(`/api/admin/banners/${id}`, { method: 'DELETE' });
-
-                if (response.status === 204 || response.ok) {
-                    console.log(`Banner ID: ${id} 刪除成功。`);
-                    await fetchAndDisplayBanners(); // 刷新列表
-                } else {
-                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
-            } catch (error) {
-                console.error(`刪除 Banner ID ${id} 時發生錯誤:`, error);
-                alert(`刪除時發生錯誤：${error.message}`);
-            }
-        }
-    };
-
-    window.showAddBannerForm = function() {
-        console.log("顯示新增 Banner 表單");
-        const requiredAddElements = [addModal, addForm, addBannerImageUrl, addBannerLinkUrl,
-                                    addBannerDisplayOrder, addBannerAltText, addBannerPreview,
-                                    addFormError, addBannerPageLocation];
-
-        if (requiredAddElements.some(el => !el)) {
-            console.error("新增視窗元件錯誤:", requiredAddElements.map((el, i) => el ? '' : i).filter(String));
-            alert("新增視窗元件錯誤，請檢查 HTML。");
+    /** 打開編輯 Modal */
+    function openEditModal(id) {
+        const figure = allFiguresData.find(f => f.id === id);
+        if (!figure) {
+            alert('找不到要編輯的公仔資料！');
             return;
         }
 
-        addFormError.textContent = '';
-        addForm.reset();
-        addBannerPreview.style.display = 'none';
-        addBannerPreview.src = '';
-        addBannerDisplayOrder.value = 0; // 預設值
-        addBannerPageLocation.value = 'home'; // 預設值
-        addModal.style.display = 'flex';
-    };
+        modalTitle.textContent = '編輯公仔';
+        figureForm.reset(); // 先清空
 
-    // --- setupImagePreview ---
-    function setupImagePreview(urlInput, previewImg) {
-        if (urlInput && previewImg) {
-            urlInput.addEventListener('input', () => {
-                const url = urlInput.value.trim();
-                previewImg.src = url || ''; // 設置 src，即使是空的
-                previewImg.style.display = url ? 'block' : 'none'; // 根據是否有 url 決定顯示
-                // 可以移除 onerror，因為即使 url 無效，img 標籤也會顯示一個破損圖標
+        // 填入基本資料
+        figureIdInput.value = figure.id;
+        figureNameInput.value = figure.name;
+        figureImageUrlInput.value = figure.image_url || '';
+        figurePurchasePriceInput.value = figure.purchase_price || 0;
+        figureSellingPriceInput.value = figure.selling_price || 0;
+        figureOrderingMethodInput.value = figure.ordering_method || '';
+
+        // 填入規格資料
+        variationsContainer.innerHTML = ''; // 清空
+        if (figure.variations && figure.variations.length > 0) {
+            figure.variations.forEach(v => addVariationInput(v.id, v.name, v.quantity));
+        } else {
+            addVariationInput(); // 如果沒有規格，至少顯示一組空的
+        }
+
+        modal.style.display = 'block';
+    }
+
+    /** 關閉 Modal */
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    /** 動態新增規格輸入欄位到表單 */
+    function addVariationInput(id = '', name = '', quantity = 0) {
+        const variationItem = document.createElement('div');
+        variationItem.className = 'variation-item';
+        // 隱藏的 ID 輸入 (用於更新)
+        const idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.className = 'variation-id';
+        idInput.value = id || ''; // 如果是新增，ID 為空
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'variation-name';
+        nameInput.placeholder = '規格名稱 (例: 大號)';
+        nameInput.value = name;
+        nameInput.required = true; // 規格名稱必填
+
+        const quantityInput = document.createElement('input');
+        quantityInput.type = 'number';
+        quantityInput.className = 'variation-quantity';
+        quantityInput.placeholder = '數量';
+        quantityInput.min = '0';
+        quantityInput.value = quantity;
+        quantityInput.required = true; // 數量必填
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '移除';
+        removeBtn.onclick = () => variationItem.remove(); // 點擊移除按鈕時刪除該行
+
+        variationItem.appendChild(idInput);
+        variationItem.appendChild(nameInput);
+        variationItem.appendChild(quantityInput);
+        variationItem.appendChild(removeBtn);
+        variationsContainer.appendChild(variationItem);
+    }
+
+    /** 儲存 (新增或更新) 公仔 */
+    async function saveFigure(event) {
+        event.preventDefault(); // 阻止表單默認提交
+
+        // 從表單收集規格資料
+        const variations = [];
+        const variationItems = variationsContainer.querySelectorAll('.variation-item');
+        let hasInvalidVariation = false;
+        variationItems.forEach(item => {
+            const id = item.querySelector('.variation-id').value;
+            const name = item.querySelector('.variation-name').value.trim();
+            const quantity = item.querySelector('.variation-quantity').value;
+
+             // 驗證: 名稱和數量都必須有值
+            if (!name || quantity === '' || quantity === null) {
+                 if(variationItems.length > 1 || (variationItems.length === 1 && (name || quantity))) {
+                      // 如果有多個規格，或只有一個但用戶有輸入，才報錯
+                     alert('每個規格都必須填寫名稱和數量。');
+                     hasInvalidVariation = true;
+                     return; // 跳過這個無效的規格
+                 } else {
+                     // 如果只有一個規格且都是空的，忽略它
+                     return;
+                 }
+            }
+
+            const quantityInt = parseInt(quantity);
+            if (isNaN(quantityInt) || quantityInt < 0) {
+                alert(`規格 "${name}" 的數量必須是非負整數。`);
+                hasInvalidVariation = true;
+                 return; // 跳過這個無效的規格
+            }
+
+
+            variations.push({
+                id: id ? parseInt(id) : null, // 如果有 ID，轉成數字，否則為 null
+                name: name,
+                quantity: quantityInt
             });
+        });
+
+         if (hasInvalidVariation) {
+             return; // 如果有驗證錯誤，停止儲存
+         }
+
+
+        // 準備請求資料
+        const figureData = {
+            name: figureNameInput.value.trim(),
+            image_url: figureImageUrlInput.value.trim() || null,
+            purchase_price: parseFloat(figurePurchasePriceInput.value) || 0,
+            selling_price: parseFloat(figureSellingPriceInput.value) || 0,
+            ordering_method: figureOrderingMethodInput.value.trim() || null,
+            variations: variations // 添加收集到的規格陣列
+        };
+
+        const figureId = figureIdInput.value;
+        const method = figureId ? 'PUT' : 'POST';
+        const url = figureId ? `/api/admin/figures/${figureId}` : '/api/admin/figures';
+
+        console.log(`Saving figure... Method: ${method}, URL: ${url}, Data:`, figureData);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(figureData)
+            });
+
+            if (!response.ok) {
+                 const errorData = await response.json(); // 嘗試讀取錯誤訊息
+                 throw new Error(`儲存失敗 (${response.status}): ${errorData.error || '未知錯誤'}`);
+            }
+
+            closeModal();
+            await fetchAndDisplayFigures(); // 重新載入列表
+             alert(`公仔 ${method === 'POST' ? '新增' : '更新'} 成功！`);
+
+        } catch (error) {
+            console.error("儲存公仔失敗:", error);
+            alert(`儲存公仔失敗: ${error.message}`);
         }
     }
 
-    setupImagePreview(addBannerImageUrl, addBannerPreview);
-    setupImagePreview(editBannerImageUrl, editBannerPreview);
+    /** 刪除公仔 */
+    async function deleteFigure(id, name) {
+        if (!confirm(`確定要刪除公仔 "${name}" 嗎？\n（相關的規格資料也會一併刪除）`)) {
+            return;
+        }
 
-    // --- Close Modals on Click Outside ---
-    window.onclick = function(event) {
-        if (event.target == editModal) closeEditBannerModal();
-        else if (event.target == addModal) closeAddBannerModal();
-    };
+        try {
+            const response = await fetch(`/api/admin/figures/${id}`, {
+                method: 'DELETE'
+            });
 
-    // --- Edit Banner Form Submission Listener ---
-    if (editForm) {
-        editForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            editFormError.textContent = '';
-
-            const bannerId = editBannerId.value;
-            if (!bannerId) { editFormError.textContent = '錯誤：找不到 Banner ID。'; return; }
-
-            const displayOrderInput = editBannerDisplayOrder.value.trim();
-            // *** 確保 display_order 是數字 ***
-            const displayOrder = displayOrderInput === '' ? 0 : parseInt(displayOrderInput);
-            if (isNaN(displayOrder)) { editFormError.textContent = '排序必須是有效的數字。'; return; }
-
-            // *** 獲取 page_location ***
-            const pageLocation = editBannerPageLocation.value;
-
-            const updatedData = {
-                image_url: editBannerImageUrl.value.trim(),
-                link_url: editBannerLinkUrl.value.trim() || null,
-                display_order: displayOrder, // 使用處理過的數字
-                alt_text: editBannerAltText.value.trim() || null,
-                page_location: pageLocation // 加入 page_location
-            };
-
-            console.log("準備更新 Banner:", bannerId, JSON.stringify(updatedData, null, 2));
-
-            if (!updatedData.image_url) { editFormError.textContent = '圖片網址不能為空。'; return; }
-            if (!updatedData.page_location) { editFormError.textContent = '請選擇顯示頁面。'; return; } // 驗證 page_location
-
-            try {
-                // *** API 路徑正確 ***
-                const response = await fetch(`/api/admin/banners/${bannerId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedData)
-                });
-
-                if (!response.ok) {
-                    let errorMsg = `儲存失敗 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
-
-                console.log("Banner 更新成功，關閉 Modal 並刷新列表。");
-                closeEditBannerModal();
-                await fetchAndDisplayBanners(); // 刷新列表
-            } catch (error) {
-                console.error("更新 Banner 時發生錯誤:", error);
-                editFormError.textContent = `儲存錯誤：${error.message}`;
+            if (!response.ok) {
+                 if (response.status === 404) { throw new Error('找不到要刪除的公仔。'); }
+                 else { throw new Error(`刪除失敗 (${response.status})`); }
             }
-        });
-    } else {
-        console.error("編輯 Banner 表單元素 (#edit-banner-form) 未找到。");
+
+            // response.status === 204 表示成功
+            alert(`公仔 "${name}" 已成功刪除。`);
+            await fetchAndDisplayFigures(); // 重新載入列表
+
+        } catch (error) {
+            console.error("刪除公仔失敗:", error);
+            alert(`刪除公仔失敗: ${error.message}`);
+        }
     }
 
-    // --- Add Banner Form Submission Listener ---
-    if (addForm) {
-        addForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            addFormError.textContent = '';
+    // --- 事件監聽器 ---
+    addFigureBtn.addEventListener('click', openAddModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (event) => { // 點擊 modal 外部關閉
+        if (event.target == modal) {
+            closeModal();
+        }
+    });
+    figureForm.addEventListener('submit', saveFigure);
+    addVariationBtn.addEventListener('click', () => addVariationInput()); // 點擊按鈕新增一組規格欄位
 
-            const displayOrderInput = addBannerDisplayOrder.value.trim();
-             // *** 確保 display_order 是數字 ***
-            const displayOrder = displayOrderInput === '' ? 0 : parseInt(displayOrderInput);
-            if (isNaN(displayOrder)) { addFormError.textContent = '排序必須是有效的數字。'; return; }
-
-            // *** 獲取 page_location ***
-            const pageLocation = addBannerPageLocation.value;
-
-            const newBannerData = {
-                image_url: addBannerImageUrl.value.trim(),
-                link_url: addBannerLinkUrl.value.trim() || null,
-                display_order: displayOrder, // 使用處理過的數字
-                alt_text: addBannerAltText.value.trim() || null,
-                page_location: pageLocation // 加入 page_location
-            };
-
-            console.log("準備新增 Banner:", JSON.stringify(newBannerData, null, 2));
-
-            if (!newBannerData.image_url) { addFormError.textContent = '圖片網址不能為空。'; return; }
-            if (!newBannerData.page_location) { addFormError.textContent = '請選擇顯示頁面。'; return; } // 驗證 page_location
-
-            try {
-                // *** API 路徑正確 ***
-                const response = await fetch(`/api/admin/banners`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newBannerData)
-                });
-
-                if (!response.ok) {
-                    let errorMsg = `新增失敗 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
-
-                console.log("Banner 新增成功，關閉 Modal 並刷新列表。");
-                closeAddBannerModal();
-                await fetchAndDisplayBanners(); // 刷新列表
-            } catch (error) {
-                console.error("新增 Banner 時發生錯誤:", error);
-                addFormError.textContent = `新增錯誤：${error.message}`;
-            }
-        });
-    } else {
-        console.error("新增 Banner 表單元素 (#add-banner-form) 未找到。");
-    }
-
-    // --- Initial Load ---
-    console.log("Banner Admin JS: Initializing page...");
-    fetchAndDisplayBanners(); // 初始載入列表
+    // --- 初始載入 ---
+    fetchAndDisplayFigures();
 });
