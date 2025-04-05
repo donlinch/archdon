@@ -5,6 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const musicListContainer = document.getElementById('music-list');
     let currentArtistFilter = null;
 
+
+
+
+
+
+
+
+
+
     // --- 輪播圖相關元素 ---
     const randomBannerWrapper = document.querySelector('#random-banner-carousel .swiper-wrapper');
     let randomBannerSwiper = null;
@@ -18,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("[Music] Fetching banners for music page");
         
         try {
-            const response = await fetch('/api/banners?page=home'); /* 選擇 home 或 music 或 news */
-            console.log("[home] Banner API response status:", response.status);/* 選擇 home 或 music 或 news */
+            const response = await fetch('/api/banners?page=Music'); /* 選擇 home 或 music 或 news */
+            console.log("[Music] Banner API response status:", response.status);/* 選擇 home 或 music 或 news */
 
             if (!response.ok) {
                 throw new Error(`獲取輪播圖失敗 (HTTP ${response.status})`);
