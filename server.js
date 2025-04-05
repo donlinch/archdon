@@ -259,7 +259,7 @@ app.get('/api/banners', async (req, res) => {
         const queryParams = [];
         if (pageLocation) {
             queryText += ' WHERE page_location = $1';
-            queryParams.push(pageLocation);
+            queryText += ' ORDER BY RANDOM()';
         }
         queryText += ' ORDER BY display_order ASC, id ASC';
         const result = await pool.query(queryText, queryParams);
