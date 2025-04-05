@@ -15,7 +15,7 @@
 body { font-family: 'Noto Sans TC', sans-serif; line-height: 1.5; color: #424242; background-color: #FAFAFA; padding-bottom: 80px; }
 
 /* Header Styles */
-header { background-color: #FFB74D; color: #424242; padding: 0.5rem 1rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); line-height: 1; }
+header { background-color: #FFB74D; color: #424242; padding: 0.1rem 0.1rem; /* 0.5rem 1rem; */text-align: center; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); line-height: 1; }
 #header-logo { height: 200px; width: auto; vertical-align: middle; display: inline-block; } /* (注意：這個 ID 在你的 HTML 中似乎沒有使用) */
 
 header h1 { margin: 0; line-height: inherit; }
