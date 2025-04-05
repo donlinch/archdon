@@ -1281,20 +1281,28 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     object-fit: cover;
     border-radius: 8px;
 }
+ 
 
-#random-banner-carousel .banner-image {
-    height: 200px; /* 隨機輪播圖較矮 */
-    opacity: 0.9;
-    transition: opacity 0.3s;
-}
 
-#random-banner-carousel .banner-image:hover {
-    opacity: 1;
-}
-
-/* 隨機輪播圖容器樣式 */
+/* 集中樣式到隨機輪播圖 */
 #random-banner-carousel {
-    margin: 2rem auto;
     max-width: 1200px;
+    margin: 2rem auto;
     padding: 0 20px;
+}
+
+.random-banner-swiper .swiper-slide {
+    height: 300px; /* 適當調整高度 */
+}
+
+.banner-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s;
+}
+
+.banner-image:hover {
+    transform: scale(1.02);
 }
