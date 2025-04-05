@@ -226,7 +226,7 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
 
         
         salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: trendLabels,
                 datasets: [{
