@@ -300,7 +300,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 .banner-swiper .swiper-pagination-bullet-active { background: #fff; opacity: 1; }
 
 /* --- Banner Admin Table Styles --- */
-#banner-list-table tr.banner-group-header td { background-color: #dee2e6; font-weight: bold; font-size: 1.1em; color: #495057; padding: 12px 10px !important; border-top: 2px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#banner-list-table tr.banner-group-header td { background-color: #FFB74D; font-weight: bold; font-size: 1.1em; color: #495057; padding: 12px 10px !important; border-top: 2px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
 #banner-list-table tr.banner-group-header:not(:first-child) td { border-top-width: 4px; }
 #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
 
