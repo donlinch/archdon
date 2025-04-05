@@ -343,8 +343,10 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 #song-list li {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     padding: 0.8rem 1rem;
+    gap: 5px 10px;
     cursor: default;
     border-bottom: 1px solid #eee;
     transition: background-color 0.2s ease;
@@ -357,9 +359,11 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 }
 .song-list-info {
     flex-grow: 1;
+    min-width: 150px;
     margin-right: 1rem;
     overflow: hidden; /* Prevent long text from breaking layout */
     text-overflow: ellipsis;
+    flex-direction: column; justify-content: center;
     white-space: nowrap;
 }
 #song-list .song-title {
@@ -380,9 +384,12 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 .song-list-scores {
     flex-shrink: 0;
     display: flex;
+    
     flex-wrap: wrap;
     gap: 5px;
     justify-content: flex-end;
+    flex-shrink: 0;
+    align-items: center;
 }
 /* Score buttons within the list */
 .list-score-btn {
