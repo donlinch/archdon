@@ -44,11 +44,17 @@
     <header>
        <!-- *** 這裡就是替換後的 Swiper 結構 *** -->
         <!-- Slider main container -->
-        <div id="random-banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
+        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
             <!-- Additional required wrapper -->
-            <div class="swiper-wrapper" id="banner-wrapper">  </div>
+            <div class="swiper-wrapper" id="banner-wrapper">
+                <!-- Slides 會由 JavaScript 動態載入 -->
+                <!-- 初始可以留空，或放一個 loading slide -->
+                <!-- <div class="swiper-slide"><img src="/images/placeholder-banner.jpg" alt="Banner Loading..."></div> -->
+            </div>
+            <!-- If we need pagination -->
             <div class="swiper-pagination"></div>
-                 <!-- If we need navigation buttons -->
+
+            <!-- If we need navigation buttons -->
             <div class="swiper-button-prev"></div>
             <div class="swiper-button-next"></div>
         </div>
