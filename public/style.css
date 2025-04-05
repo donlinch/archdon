@@ -1379,3 +1379,40 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 .banner-image:hover {
     transform: scale(1.02);
 }
+
+/* --- Contribution Info Box Style --- */
+.contribution-info {
+    background-color: #fffaf0; /* 淡黃色背景，溫和提示 */
+    border: 1px solid #ffeccc;  /* 淺橙色邊框 */
+    border-left: 5px solid #FFB74D; /* 左側用主題橙色加強提示 */
+    padding: 1rem 1.5rem;      /* 內邊距 */
+    margin: 1.5rem auto;       /* 上下邊距，並水平居中 (如果父容器允許) */
+    border-radius: 6px;        /* 圓角 */
+    text-align: center;        /* 文字居中 */
+    font-size: 0.95rem;        /* 合適的字體大小 */
+    color: #5f4c3a;            /* 略深的暖色文字 */
+    line-height: 1.7;          /* 增加行高，提高可讀性 */
+    max-width: 800px;          /* 限制最大寬度，避免過寬 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* 細微陰影 */
+}
+
+.contribution-info a {
+    color: #E57373;            /* 使用珊瑚紅作為連結顏色 */
+    font-weight: 500;          /* 字體加粗一點 */
+    text-decoration: none;     /* 移除預設下劃線 */
+    transition: color 0.2s ease;
+}
+
+.contribution-info a:hover {
+    color: #d32f2f;            /* 滑鼠懸停時顏色加深 */
+    text-decoration: underline;/* 滑鼠懸停時顯示下劃線 */
+}
+
+/* 如果希望在小屏幕上調整樣式 */
+@media (max-width: 600px) {
+    .contribution-info {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+        text-align: left; /* 小屏幕改回左對齊可能更好讀 */
+    }
+}
