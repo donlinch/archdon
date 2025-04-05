@@ -54,11 +54,16 @@ function renderYouTube(videoId, title) {
                 referrerpolicy="strict-origin-when-cross-origin"
                 allowfullscreen>
             </iframe>`;
-        youtubePlayerContainer.style.display = 'block';
+        youtubePlayerContainer.style.display = 'block'; // 確保容器可見
     } else {
         youtubePlayerContainer.innerHTML = '<p style="text-align:center; color:#666;">此歌曲沒有可用的 YouTube 影片。</p>';
-        youtubePlayerContainer.style.display = 'block';
+        youtubePlayerContainer.style.display = 'block'; // 顯示提示信息
     }
+     // 隱藏 PDF 相關元素
+     if (pdfViewerContainer) pdfViewerContainer.style.display = 'none';
+     if (pdfLoading) pdfLoading.style.display = 'none';
+     if (pdfError) pdfError.style.display = 'none';
+     if (pdfPagination) pdfPagination.style.display = 'none';
 }
 
 // --- PDF.js 渲染邏輯 (與 scores.js 基本相同，但使用新 ID) ---
@@ -174,13 +179,19 @@ function onNextPage() {
 
 // --- 初始化頁面 ---
 async function initializeViewer() {
+    // 初始隱藏兩個主要容器
+    if(youtubePlayerContainer) youtubePlayerContainer.style.display = 'none';
+    if(pdfViewerContainer) pdfViewerContainer.style.display = 'none';
+    if(pdfError) pdfError.style.display = 'none';
+    if(pdfLoading) pdfLoading.style.display = 'block'; // 開始時顯示載入中
+
     if (!musicId || !scoreId) {
         if (viewerTitle) viewerTitle.textContent = '錯誤';
         if (pdfError) {
             pdfError.textContent = '錯誤：缺少歌曲 ID 或樂譜 ID。';
-            pdfError.style.display = 'block';
+            pdfError.style.display = 'block'; // 顯示錯誤
         }
-        if(pdfViewerContainer) pdfViewerContainer.style.display = 'flex'; // 顯示錯誤容器
+        if(pdfLoading) pdfLoading.style.display = 'none'; // 隱藏載入中
         console.error('缺少 musicId 或 scoreId');
         return;
     }
@@ -198,45 +209,67 @@ async function initializeViewer() {
         // 找到目標樂譜
         currentScoreData = currentMusicData.scores.find(s => s.id.toString() === scoreId);
 
-        if (!currentScoreData || !currentScoreData.pdf_url) {
-            throw new Error(`在歌曲 ${musicId} 中找不到樂譜 ID ${scoreId} 或其 PDF URL。`);
+        if (!currentScoreData) { // 檢查是否找到樂譜資料
+            throw new Error(`在歌曲 ${musicId} 中找不到樂譜 ID ${scoreId}。`);
         }
+
+        const scoreUrl = currentScoreData.pdf_url; // 獲取 URL
 
         // 更新頁面標題和 Header
         const pageTitle = `${currentMusicData.title || '樂譜'} - ${currentScoreData.type || '檢視'} | SunnyYummy`;
         document.title = pageTitle;
         if (viewerTitle) viewerTitle.textContent = `${currentMusicData.title} - ${currentScoreData.type}`;
 
-        // 渲染 YouTube
-        renderYouTube(currentMusicData.youtube_video_id, currentMusicData.title);
+        // *** 核心邏輯判斷 ***
+        if (scoreUrl && scoreUrl.toLowerCase().trim().endsWith('.pdf')) {
+            // 連結是 PDF，嘗試載入 PDF
+            console.log("檢測到 PDF 連結，準備載入 PDF:", scoreUrl);
+            if (pdfViewerContainer) pdfViewerContainer.style.display = 'flex'; // 顯示 PDF 容器框架
+            loadPdf(encodeURIComponent(scoreUrl)); // 載入 PDF (包含載入動畫處理)
+            if(youtubePlayerContainer) youtubePlayerContainer.style.display = 'none'; // 確保 YouTube 播放器隱藏
+        } else if (currentMusicData.youtube_video_id) {
+             // 連結不是 PDF，但有 YouTube 影片 ID，顯示影片
+            console.log("連結非 PDF，但找到 YouTube 影片 ID，顯示影片:", currentMusicData.youtube_video_id);
+            renderYouTube(currentMusicData.youtube_video_id, currentMusicData.title);
+            if (pdfViewerContainer) pdfViewerContainer.style.display = 'none'; // 確保 PDF 容器隱藏
+            if (pdfLoading) pdfLoading.style.display = 'none'; // 隱藏 PDF 載入動畫
+        } else {
+            // 連結不是 PDF，也沒有 YouTube 影片，顯示錯誤
+             console.error("連結非 PDF，且找不到 YouTube 影片 ID。");
+             throw new Error(`樂譜檔案格式非 PDF，且找不到備用的 YouTube 影片。`);
+        }
 
-        // 載入 PDF
-        loadPdf(encodeURIComponent(currentScoreData.pdf_url));
+         // 如果 loadPdf 異步執行，loading 狀態由 loadPdf 內部處理
+         // 但如果直接顯示 YouTube，需要在此處隱藏 loading
+         if (!(scoreUrl && scoreUrl.toLowerCase().trim().endsWith('.pdf'))) {
+             if (pdfLoading) pdfLoading.style.display = 'none';
+         }
 
     } catch (error) {
         console.error("初始化樂譜檢視器失敗:", error);
         if (viewerTitle) viewerTitle.textContent = '載入錯誤';
         if (pdfError) {
             pdfError.textContent = `載入失敗：${error.message}`;
-            pdfError.style.display = 'block';
+            pdfError.style.display = 'block'; // 顯示錯誤信息
         }
-        if(pdfViewerContainer) pdfViewerContainer.style.display = 'flex'; // 顯示錯誤容器
+        // 確保所有內容容器都隱藏
+        if(youtubePlayerContainer) youtubePlayerContainer.style.display = 'none';
+        if(pdfViewerContainer) pdfViewerContainer.style.display = 'none';
+        if (pdfLoading) pdfLoading.style.display = 'none'; // 隱藏載入動畫
     }
 }
 
 // --- 事件監聽器 ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (!musicId || !scoreId) {
-        if (viewerTitle) viewerTitle.textContent = '錯誤';
-         if (pdfError) {
-            pdfError.textContent = '無效的頁面連結。';
-            pdfError.style.display = 'block';
-         }
-        if(pdfViewerContainer) pdfViewerContainer.style.display = 'flex';
-        return;
+    // 確保在呼叫 initializeViewer 前，DOM 元素已存在
+    const requiredElements = [viewerTitle, youtubePlayerContainer, pdfViewerContainer, pdfCanvas, pdfLoading, pdfError, pdfPrevBtn, pdfNextBtn, pdfPageNum, pdfPageCount, pdfPagination, printBtn];
+    if (requiredElements.some(el => !el)) {
+        console.error("頁面初始化失敗：缺少必要的 DOM 元素。請檢查 score-viewer.html 的 ID 是否正確。");
+        document.body.innerHTML = '<p style="color:red; padding: 2rem; text-align: center;">頁面載入錯誤，缺少必要的元件。</p>';
+        return; // 阻止後續代碼執行
     }
 
-    initializeViewer();
+    initializeViewer(); // DOM 加載後才開始初始化
 
     if (pdfPrevBtn) pdfPrevBtn.addEventListener('click', onPrevPage);
     if (pdfNextBtn) pdfNextBtn.addEventListener('click', onNextPage);
