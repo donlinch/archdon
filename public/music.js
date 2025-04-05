@@ -14,6 +14,44 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 獲取並顯示隨機輪播圖
      */
+
+
+
+    async function fetchAndDisplayBanners() {
+        const bannerWrapper = document.querySelector('#music-banner-carousel .swiper-wrapper');
+        try {
+            const response = await fetch('/api/banners?page=music'); // 使用音樂頁面的圖片
+            if (!response.ok) {
+                throw new Error('獲取輪播圖失敗');
+            }
+            const banners = await response.json();
+    
+            bannerWrapper.innerHTML = '';
+            if (banners.length === 0) {
+                bannerWrapper.innerHTML = '<div class="swiper-slide">無圖片可顯示</div>';
+            } else {
+                banners.forEach(banner => {
+                    const slide = document.createElement('div');
+                    slide.classList.add('swiper-slide');
+                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">`;
+                    bannerWrapper.appendChild(slide);
+                });
+            }
+    
+            new Swiper('#music-banner-carousel', {
+                loop: true,
+                autoplay: { delay: 8000 },
+                pagination: { el: '.swiper-pagination' },
+            });
+        } catch (error) {
+            console.error('載入輪播圖時出錯:', error);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', fetchAndDisplayBanners);
+
+
+
     async function fetchAndDisplayBanners() {
         console.log("[Music] Fetching banners for music page");
         
