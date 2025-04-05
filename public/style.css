@@ -1264,7 +1264,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 
 .random-banner-swiper .swiper-slide img {
     width: 100%;
-    height: 400px; /* 調整為您喜歡的高度 */
+    height: 200px; /* 調整為您喜歡的高度 */
     object-fit: cover;
     border-radius: 0%;
 }
@@ -1277,7 +1277,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 /* 確保兩個輪播圖圖片顯示一致
 .banner-image {
     width: 100%;
-    height: 400px;  
+    height: 400px; /* 主要輪播圖高度 
     object-fit: cover;
     border-radius: 8px;
 }
