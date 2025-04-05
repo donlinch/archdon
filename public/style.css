@@ -50,7 +50,7 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn {
 @media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; } }
 
 /* Individual Product Card Styles (For index.html) */
-.product-card, .product-card:link, .product-card:visited { background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 100%; text-align: center; text-decoration: none; color: inherit; position: relative; }
+.product-card, .product-card:link, .product-card:visited { background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 90%; /*100% */ text-align: center; text-decoration: none; color: inherit; position: relative; }
 .product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
 .product-card .image-container { width: 100%; height: 160px; overflow: hidden; margin-bottom: 0.4rem; padding: 0.4rem 0.4rem 0 0.4rem; }
 .product-card img { display: block; width: 100%; height: 100%; object-fit: contain; margin: 0 auto; }
@@ -1151,7 +1151,7 @@ tr:hover {
 .card p { font-size: 1.8rem; font-weight: bold; color: #E57373; margin: 0; }
 .chart-section, .table-section { margin-bottom: 30px; }
 .chart-section h2, .table-section h2 { font-size: 1.3rem; margin-bottom: 15px; color: #444; border-bottom: 2px solid #FFB74D; padding-bottom: 5px;}
-.chart-container { position: relative; height: 100px; /*350px */  width: 100%; } /* 圖表容器高度 */
+.chart-container { position: relative; height: 350px; /*350px */  width: 100%; } /* 圖表容器高度 */
 .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; } /* 表格容器樣式 */
 .report-container table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } /* 特定於報告頁的表格 */
 .report-container th, .report-container td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; white-space: nowrap; } /* 防止內容換行 */
