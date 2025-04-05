@@ -5,118 +5,152 @@ document.addEventListener('DOMContentLoaded', () => {
     const musicListContainer = document.getElementById('music-list');
     let currentArtistFilter = null;
 
-    // --- Banner 相關元素 ---
-    const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
-    let bannerSwiper = null;
+    // --- 輪播圖相關元素 ---
+    const randomBannerWrapper = document.querySelector('#random-banner-carousel .swiper-wrapper');
+    let randomBannerSwiper = null;
 
     // --- 函數定義 ---
 
     /**
-     * 獲取並顯示音樂頁專用輪播圖
+     * 獲取並顯示隨機輪播圖
      */
     async function fetchAndDisplayBanners() {
         console.log("[Music] Fetching banners for music page");
-        if (!bannerWrapper) {
-            console.warn("Banner wrapper element not found");
-            const carouselElement = document.getElementById('banner-carousel');
-            if (carouselElement) carouselElement.style.display = 'none';
-            return;
-        }
- 
-        // 顯示載中狀態
-        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
-
+        
         try {
-            // 重點修改：只請求 music 頁面的輪播圖
             const response = await fetch('/api/banners?page=music');
             console.log("[Music] Banner API response status:", response.status);
 
             if (!response.ok) {
-                let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
-                try {
-                    const data = await response.json();
-                    errorText += `: ${data.error || response.statusText}`;
-                } catch (e) {}
-                throw new Error(errorText);
+                throw new Error(`獲取輪播圖失敗 (HTTP ${response.status})`);
             }
 
-            const banners = await response.json();
-            
+            const musicPageBanners = await response.json();
+            console.log(`[Music] Received ${musicPageBanners.length} music page banners`);
 
-            console.log(`[Music] Received ${banners.length} banners for music page`);
+            // 直接渲染隨機輪播圖
+            renderRandomBanner(musicPageBanners);
 
-            bannerWrapper.innerHTML = ''; // 清空載入狀態
-
-            if (banners.length === 0) {
-                // 沒有專用輪播圖時顯示預設圖片
-                console.log("[Music] No banners for music page, showing default");
-                const defaultSlide = document.createElement('div');
-                defaultSlide.className = 'swiper-slide';
-                defaultSlide.innerHTML = '<img src="/images/music-default-banner.jpg" alt="音樂專輯" style="width:100%; height:100%; object-fit:cover;">';
-                bannerWrapper.appendChild(defaultSlide);
-            } else {
-                // 渲染輪播圖
-                banners.forEach(banner => {
-                    const slide = document.createElement('div');
-                    slide.className = 'swiper-slide';
-
-                    if (banner.link_url) {
-                        const link = document.createElement('a');
-                        link.href = banner.link_url;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '音樂專輯輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                        slide.appendChild(link);
-                    } else {
-                        slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '音樂專輯輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                    }
-
-                    bannerWrapper.appendChild(slide);
-                });
-            }
-
-            // 初始化/重新初始化 Swiper
-            if (bannerSwiper) {
-                bannerSwiper.destroy(true, true);
-                bannerSwiper = null;
-            }
-
-            if (bannerWrapper.children.length > 0) {
-                bannerSwiper = new Swiper('#banner-carousel', {
-                    loop: banners.length > 1,
-                    autoplay: {
-                        delay: 10000,  // 10秒輪播
-                        disableOnInteraction: false,
-                        pauseOnMouseEnter: true
-                    },
-                    pagination: {
-                        el: '.swiper-pagination',
-                        clickable: true
-                    },
-                    navigation: {
-                        nextEl: '.swiper-button-next',
-                        prevEl: '.swiper-button-prev'
-                    },
-                    slidesPerView: 1,
-                    spaceBetween: 0,
-                    effect: 'fade',
-                    fadeEffect: {
-                        crossFade: true
-                    }
-                });
-            }
         } catch (error) {
             console.error("[Music] Banner error:", error);
-            bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
-            
-            // 隱藏導航元素
-            const carouselElement = document.getElementById('banner-carousel');
-            if (carouselElement) {
-                const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
-                navElements.forEach(el => el.style.display = 'none');
-            }
+            handleBannerError();
         }
     }
+
+    /**
+     * 渲染隨機輪播圖
+     */
+    function renderRandomBanner(sourceBanners) {
+        if (!randomBannerWrapper) return;
+
+        randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入隨機輪播圖中...</div>';
+
+        // 從音樂頁輪播圖中隨機選擇
+        const randomBanners = getRandomBanners(sourceBanners);
+
+        setTimeout(() => {
+            randomBannerWrapper.innerHTML = '';
+            
+            if (randomBanners.length === 0) {
+                showDefaultBanner(randomBannerWrapper, "隨機推薦");
+            } else {
+                randomBanners.forEach(banner => {
+                    createBannerSlide(banner, randomBannerWrapper);
+                });
+            }
+
+            initRandomSwiper(randomBanners.length);
+        }, 0);
+    }
+
+    /**
+     * 從音樂頁輪播圖中隨機選擇
+     */
+    function getRandomBanners(sourceBanners) {
+        if (sourceBanners.length === 0) return [];
+        
+        // Fisher-Yates 洗牌算法
+        const shuffled = [...sourceBanners];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        return shuffled.slice(0, 5); // 返回最多5個隨機項目
+    }
+
+    /**
+     * 初始化隨機輪播圖的 Swiper
+     */
+    function initRandomSwiper(bannerCount) {
+        if (randomBannerSwiper) {
+            randomBannerSwiper.destroy(true, true);
+            randomBannerSwiper = null;
+        }
+
+        if (randomBannerWrapper.children.length > 0) {
+            randomBannerSwiper = new Swiper('#random-banner-carousel', {
+                loop: bannerCount > 1,
+                autoplay: {
+                    delay: 8000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true
+                },
+                slidesPerView: 1,
+                spaceBetween: 0,
+                effect: 'slide'
+            });
+        }
+    }
+
+    /**
+     * 創建輪播圖幻燈片
+     */
+    function createBannerSlide(banner, wrapper) {
+        const slide = document.createElement('div');
+        slide.className = 'swiper-slide';
+
+        const content = banner.link_url 
+            ? `<a href="${banner.link_url}" target="_blank" rel="noopener noreferrer">
+                 <img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">
+               </a>`
+            : `<img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">`;
+
+        slide.innerHTML = content;
+        wrapper.appendChild(slide);
+    }
+
+    /**
+     * 顯示預設輪播圖
+     */
+    function showDefaultBanner(wrapper, altText) {
+        const defaultSlide = document.createElement('div');
+        defaultSlide.className = 'swiper-slide';
+        defaultSlide.innerHTML = `
+            <img src="/images/music-default-banner.jpg" 
+                 alt="${altText}" 
+                 class="banner-image"
+                 style="object-fit:contain; background-color:#FFB74D;">
+        `;
+        wrapper.appendChild(defaultSlide);
+    }
+
+    /**
+     * 處理輪播圖錯誤
+     */
+    function handleBannerError() {
+        if (randomBannerWrapper) {
+            randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
+        }
+    }
+
+
+
+
 
     /**
      * 獲取並顯示歌手列表
@@ -141,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 全部歌手按鈕
             const allButton = document.createElement('button');
             allButton.textContent = '全部歌手';
-            allButton.classList.add('artist-filter-btn', 'active');  // 添加 artist-filter-btn
+            allButton.classList.add('artist-filter-btn', 'active');
             allButton.addEventListener('click', () => {
                 setActiveArtistButton(allButton);
                 currentArtistFilter = null;
@@ -153,8 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             artists.forEach(artist => {
                 const button = document.createElement('button');
                 button.textContent = artist;
-                button.classList.add('artist-filter-btn');  // 添加這行
-
+                button.classList.add('artist-filter-btn');
                 button.dataset.artist = artist;
                 button.addEventListener('click', () => {
                     setActiveArtistButton(button);
@@ -285,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("[Music] Initializing page");
         try {
             await Promise.all([
-                fetchAndDisplayBanners(),
+                fetchAndDisplayBanners(), // 只需初始化一個輪播
                 fetchAndDisplayArtists()
             ]);
             await fetchAndDisplayAlbums();
