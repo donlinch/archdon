@@ -151,172 +151,118 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('product-grid');
     const sortLinks = document.querySelectorAll('.sort-link');
 
-
-
-
-
-
-
     // *** 新增: 獲取 Banner 輪播相關元素 ***
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
     let bannerSwiper = null;
 
     /**
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
      * 從後端 API 獲取 Banner 資料並初始化輪播
      */
-    
-    
-
-
     async function fetchAndDisplayBanners() {
-        console.log("[home] Fetching banners for home page");
-        
-        try {
-            const response = await fetch('/api/banners?page=home'); /* 選擇 home 或 music 或 news */
-            console.log("[home] Banner API response status:", response.status);/* 選擇 home 或 music 或 news */
-
-            if (!response.ok) {
-                throw new Error(`獲取輪播圖失敗 (HTTP ${response.status})`);
-            }
-
-            const homePageBanners = await response.json();
-            console.log(`[home] Received ${homePageBanners.length} home page banners`);
-
-            // 直接渲染隨機輪播圖
-            renderRandomBanner(homePageBanners);
-
-        } catch (error) {
-            console.error("[home] Banner error:", error);
-            handleBannerError();
+        if (!bannerWrapper) {
+            console.warn("未找到 Banner 輪播的 swiper-wrapper 元素。");
+            return;
         }
-    }
+        // 可以先放一個 Loading 狀態的 slide (可選)
+        // bannerWrapper.innerHTML = '<div class="swiper-slide">載入中...</div>';
 
-    /**
-     * 渲染隨機輪播圖
-     */
-    function renderRandomBanner(sourceBanners) {
-        if (!randomBannerWrapper) return;
+        try {
+            const response = await fetch('/api/banners?page=home');
+            if (!response.ok) {
+                throw new Error(`獲取 Banners 失敗 (HTTP ${response.status})`);
+            }
+            const banners = await response.json();
 
-        randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入隨機輪播圖中...</div>';
+            bannerWrapper.innerHTML = ''; // 清空 Loading 或舊內容
 
-        // 從音樂頁輪播圖中隨機選擇
-        const randomBanners = getRandomBanners(sourceBanners);
-
-        setTimeout(() => {
-            randomBannerWrapper.innerHTML = '';
-            
-            if (randomBanners.length === 0) {
-                showDefaultBanner(randomBannerWrapper, "隨機推薦");
+            if (banners.length === 0) {
+                // 如果沒有 Banner，可以顯示預設圖片或隱藏輪播
+                bannerWrapper.innerHTML = '<div class="swiper-slide"><img src="/images/SunnyYummy.png" alt="Sunny Yummy"></div>'; // 例如，顯示 Logo
+                // 或者隱藏輪播區塊
+                // document.getElementById('banner-carousel').style.display = 'none';
             } else {
-                randomBanners.forEach(banner => {
-                    createBannerSlide(banner, randomBannerWrapper);
+                banners.forEach(banner => {
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+
+                    const img = document.createElement('img');
+                    img.src = banner.image_url;
+                    img.alt = banner.alt_text || '輪播圖片'; // 使用 alt_text 或預設文字
+
+                    if (banner.link_url) {
+                        // 如果有連結，整個 slide 內容包在 a 標籤內
+                        const link = document.createElement('a');
+                        link.href = banner.link_url;
+                        link.target = '_blank'; // 在新分頁開啟
+                        link.rel = 'noopener noreferrer';
+                        link.appendChild(img);
+                        slide.appendChild(link);
+                    } else {
+                        // 沒有連結，直接放圖片
+                        slide.appendChild(img);
+                    }
+                    bannerWrapper.appendChild(slide);
                 });
             }
 
-            initRandomSwiper(randomBanners.length);
-        }, 0);
-    }
-
-    /**
-     * 從音樂頁輪播圖中隨機選擇
-     */
-    function getRandomBanners(sourceBanners) {
-        if (sourceBanners.length === 0) return [];
-        
-        // Fisher-Yates 洗牌算法
-        const shuffled = [...sourceBanners];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-
-        return shuffled.slice(0, 5); // 返回最多5個隨機項目
-    }
-
-    /**
-     * 初始化隨機輪播圖的 Swiper
-     */
-    function initRandomSwiper(bannerCount) {
-        if (randomBannerSwiper) {
-            randomBannerSwiper.destroy(true, true);
-            randomBannerSwiper = null;
-        }
-
-        if (randomBannerWrapper.children.length > 0) {
-            randomBannerSwiper = new Swiper('#random-banner-carousel', {
-                loop: bannerCount > 1,
+            // *** 初始化 Swiper ***
+            // 先銷毀舊的實例 (如果存在)
+            if (bannerSwiper) {
+                bannerSwiper.destroy(true, true);
+            }
+            // 創建新的 Swiper 實例
+            bannerSwiper = new Swiper('#banner-carousel', {
+                // Optional parameters
+                direction: 'horizontal', // 水平輪播
+                loop: banners.length > 1, // 只有一張以上圖片時才循環
                 autoplay: {
-                    delay: 8000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true
+                    delay: 12000, // 自動播放間隔 (毫秒)
+                    disableOnInteraction: false, // 用戶操作後是否停止自動播放 (false=不停止)
                 },
+                slidesPerView: 1, // 每次顯示一張
+                spaceBetween: 0, // Slide 之間的間距
+                grabCursor: true, // 顯示抓取手勢
+
+                // If we need pagination
                 pagination: {
-                    el: '.swiper-pagination',
-                    clickable: true
+                    el: '#banner-carousel .swiper-pagination',
+                    clickable: true, // 分頁點可點擊
                 },
-                slidesPerView: 1,
-                spaceBetween: 0,
-                effect: 'slide'
+
+                // Navigation arrows
+                navigation: {
+                    nextEl: '#banner-carousel .swiper-button-next',
+                    prevEl: '#banner-carousel .swiper-button-prev',
+                },
+
+                // And if we need scrollbar (可選)
+                // scrollbar: {
+                //   el: '.swiper-scrollbar',
+                // },
+
+                // Enable swiping on touch devices (預設啟用)
+                touchEventsTarget: 'container', // 在容器上觸發滑動
+
+                 // 適應不同螢幕尺寸 (可選)
+                // breakpoints: {
+                //     // when window width is >= 640px
+                //     640: {
+                //         slidesPerView: 1,
+                //         spaceBetween: 0
+                //     },
+                //     // when window width is >= 768px
+                //     768: {
+                //          slidesPerView: 1,
+                //          spaceBetween: 0
+                //     }
+                // }
             });
+
+        } catch (error) {
+            console.error("處理 Banner 輪播時出錯:", error);
+            if (bannerWrapper) bannerWrapper.innerHTML = '<div class="swiper-slide">輪播圖載入失敗</div>';
         }
-    }
-
-    /**
-     * 創建輪播圖幻燈片
-     */
-    function createBannerSlide(banner, wrapper) {
-        const slide = document.createElement('div');
-        slide.className = 'swiper-slide';
-
-        const content = banner.link_url 
-            ? `<a href="${banner.link_url}" target="_blank" rel="noopener noreferrer">
-                 <img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">
-               </a>`
-            : `<img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">`;
-
-        slide.innerHTML = content;
-        wrapper.appendChild(slide);
-    }
-
-    /**
-     * 顯示預設輪播圖
-     */
-    function showDefaultBanner(wrapper, altText) {
-        const defaultSlide = document.createElement('div');
-        defaultSlide.className = 'swiper-slide';
-        defaultSlide.innerHTML = `
-            <img src="/images/music-default-banner.jpg" 
-                 alt="${altText}" 
-                 class="banner-image"
-                 style="object-fit:contain; background-color:#FFB74D;">
-        `;
-        wrapper.appendChild(defaultSlide);
-    }
-
-    /**
-     * 處理輪播圖錯誤
-     */
-    function handleBannerError() {
-        if (randomBannerWrapper) {
-            randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
-        }
-    }
-
-
-
-
-
-
-
-
-
+    } // --- End of fetchAndDisplayBanners ---
 
 
     // --- fetchProducts 和 displayProducts 函數保持不變 ---
