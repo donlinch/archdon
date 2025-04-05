@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 音樂作品 | 最新專輯、MV 收藏與幕後花絮</title>
+    <meta name="description" content="SunnyYummy 官方音樂專區｜完整收藏最新發行專輯、熱門單曲與獨家 MV 幕後花絮，立即線上聆聽！">
+    
+    <!-- Open Graph 標籤 -->
+    <meta property="og:title" content="SunnyYummy 音樂作品 | 專輯與 MV 收藏">
+    <meta property="og:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲與獨家幕後花絮！">
+
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/music.html">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    
+    <!-- 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+     
+     
+    
+</head>
+<body>
+    <header>
+     <!-- 第一个轮播图 (保持原有结构) -->
+  
+
+    <!-- 第二个随机轮播图   swiper banner-swiper -->
+    <div id="random-banner-carousel" class="swiper banner-swiper" >
+       
+        <div class="swiper-wrapper" id="banner-wrapper"></div>
+        <div class="swiper-pagination"></div>
+
+        <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div>
+    </div>
+</div>
+
+
+    </header>
+
+    <main>
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html" class="active">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html" >樂譜中心</a>
+              
+        </nav>
+ 
+       
+        <!-- 歌手篩選導覽列 -->
+        <nav class="artist-filter-nav" id="artist-filter">
+            <p>正在加載歌手列表...</p>
+        </nav>
+
+        <!-- 音樂專輯格線 -->
+        <div class="music-container">
+            <div class="record-shelf" id="music-list"> <!-- 確保 ID 是 music-list -->
+               <!-- 專輯將由 JavaScript 動態載入 -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html" class="active">音樂專輯</a>
+                <a href="/news.html">最新消息</a>
+                <a href="/scores.html" >樂譜中心</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2023 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="music2.js"></script>
+</body>
+</html>
