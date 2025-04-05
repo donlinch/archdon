@@ -120,29 +120,23 @@ function renderArtistFilters(artists) {
     artistFilterContainer.innerHTML = buttonsHTML;
 }
 
-// --- === 修改處：渲染歌曲列表 (生成 div 而不是 li) === ---
+// --- 渲染歌曲列表 (直接包含樂譜按鈕) ---
 function renderSongList(songs) {
-    if (!songList) return; // songList 現在是 div
+    if (!songList) return;
     if (!songs || !Array.isArray(songs) || songs.length === 0) {
-        songList.innerHTML = '<p>此分類下沒有包含樂譜或舞蹈的歌曲。</p>'; // 修改提示文字
+        songList.innerHTML = '<p>此分類下沒有包含樂譜的歌曲。</p>';
         return;
     }
-   
-   
-    // 清空舊內容 (包括 "載入中..." 的 p 標籤)
-    songList.innerHTML = '';
-
-    // 為每個歌曲生成一個 div
     songList.innerHTML = songs.map(song => {
         let scoreButtonsHTML = '';
         if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
             scoreButtonsHTML = song.scores
-                .filter(score => score.type && score.pdf_url && score.id)
+                .filter(score => score.type && score.pdf_url && score.id) // 確保 score 有 ID
                 .map(score => `
                     <button class="action-btn score-type-btn list-score-btn"
                             data-song-id="${song.id}"
-                            data-score-id="${score.id}"
-                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            data-score-id="${score.id}" // *** 新增 data-score-id ***
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}" // 保留 pdf url 以備不時之需
                             title="查看 ${song.title} - ${score.type}">
                         ${score.type}
                     </button>
@@ -150,9 +144,8 @@ function renderSongList(songs) {
         }
 
         const isActive = currentSongId !== null && currentSongId === song.id;
-        // *** 使用 div class="song-item" 替換 li ***
         return `
-            <div class="song-item ${isActive ? 'active' : ''}" data-song-id="${song.id}">
+            <li data-song-id="${song.id}" class="${isActive ? 'active' : ''}">
                 <div class="song-list-info">
                      <span class="song-title">${song.title || '未知標題'}</span>
                      <span class="song-artist">${song.artist || '未知歌手'}</span>
@@ -160,8 +153,8 @@ function renderSongList(songs) {
                  <div class="song-list-scores">
                      ${scoreButtonsHTML}
                  </div>
-            </div>
-        `; // *** 結束標籤也改成 div ***
+            </li>
+        `;
     }).join('');
 }
 
@@ -401,39 +394,31 @@ function queueRenderPage(num) {
 
 // --- 事件處理函數 ---
 function handleArtistFilterClick(event) {
-    // *** 修改事件委派的目標檢查 ***
-    // 向上查找父元素，直到找到 .song-item 或 #song-list
-    let target = event.target;
-    let songItemDiv = null;
-    let buttonClicked = null;
-
-    while (target && target !== songList) {
-        if (target.classList && target.classList.contains('list-score-btn')) {
-            buttonClicked = target; // 找到了按鈕
-        }
-        if (target.classList && target.classList.contains('song-item')) {
-            songItemDiv = target; // 找到了歌曲項目 div
-            break; // 同時找到按鈕和項目 div，停止查找
-        }
-        target = target.parentElement;
+    const target = event.target;
+    if (target && target.tagName === 'BUTTON' && target.classList.contains('artist-filter-btn')) {
+        if (!artistFilterContainer) return;
+        artistFilterContainer.querySelectorAll('.artist-filter-btn').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        currentArtist = target.dataset.artist;
+        fetchSongs(currentArtist);
     }
+}
 
-    // 只有當點擊的是按鈕時才處理跳轉
-    if (buttonClicked && songItemDiv) {
-        const songId = buttonClicked.dataset.songId;
-        const scoreId = buttonClicked.dataset.scoreId;
+function handleSongListItemClick(event) {
+    const target = event.target;
+    if (target.tagName === 'BUTTON' && target.classList.contains('list-score-btn')) {
+        const songId = target.dataset.songId;
+        const scoreId = target.dataset.scoreId; // *** 直接獲取 scoreId ***
 
         if (songId && scoreId) {
-            console.log(`偵測到按鈕點擊，跳轉至: /score-viewer.html?musicId=${songId}&scoreId=${scoreId}`);
+            console.log(`偵測到點擊，跳轉至: /score-viewer.html?musicId=${songId}&scoreId=${scoreId}`);
             window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
         } else {
              console.warn('無法處理樂譜按鈕點擊：缺少 songId 或 scoreId。');
              alert('無法打開樂譜，按鈕數據不完整。');
         }
     }
-     // 如果需要點擊整個項目（非按鈕區域）也觸發某個動作（例如顯示詳情），可以在這裡添加 else if (songItemDiv) { ... } 邏輯
 }
-
 
 function onPrevPage() {
     if (currentPageNum <= 1) return;

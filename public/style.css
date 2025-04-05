@@ -334,12 +334,11 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
      padding-bottom: 0.5rem;
 }
 #song-list {
-    /* list-style: none; */ /* 不再需要，因為是 div */
-    padding: 0;           /* 移除可能的預設 padding */
+    list-style: none;
+    padding: 0;
     margin: 0;
-    overflow-y: auto;     /* 保持滾動 */
+    overflow-y: auto;
     flex-grow: 1;
-    /* 不需要 display: flex; flex-direction: column; 讓 div 自然堆疊即可 */
 }
 #song-list li {
     display: flex;
@@ -352,21 +351,8 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     border-bottom: 1px solid #eee;
     transition: background-color 0.2s ease;
 }
-/* === 修改處：選擇器從 li 改為 .song-item === */
-#song-list .song-item {
-    display: flex;
-    align-items: flex-start; /* 頂部對齊 */
-    flex-wrap: wrap;        /* 允許內部換行 */
-    padding: 0.8rem 1rem;
-    gap: 5px 10px;         /* 資訊區和按鈕區的間隙 */
-    cursor: default;
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.2s ease;
-}
-#song-list .song-item:last-child { /* 選擇器修改 */
-    border-bottom: none;
-}
-#song-list .song-item.active { /* 選擇器修改 */
+#song-list li:last-child { border-bottom: none; }
+#song-list li.active {
     background-color: #FFF9C4;
     color: #424242;
     font-weight: normal;
@@ -374,13 +360,11 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 .song-list-info {
     flex-grow: 1;
     min-width: 150px;
-    margin-right: 1rem; /* 與按鈕區的間隙 */
-    overflow: hidden;
+    margin-right: 1rem;
+    overflow: hidden; /* Prevent long text from breaking layout */
     text-overflow: ellipsis;
-    /* display: flex; */ /* 移除，讓 span 自然堆疊或並排 */
-    /* flex-direction: column; */ /* 移除 */
-    /* justify-content: center; */ /* 移除 */
-    white-space: nowrap; /* 保持標題和歌手不換行 */
+    flex-direction: column; justify-content: center;
+    white-space: nowrap;
 }
 #song-list .song-title {
      font-weight: 500;
@@ -400,11 +384,12 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 .song-list-scores {
     flex-shrink: 0;
     display: flex;
+    
     flex-wrap: wrap;
-    gap: 6px; /* 保持 6px 間隙 */
-    justify-content: flex-end; /* 按鈕靠右對齊 (可選) */
+    gap: 5px;
+    justify-content: flex-end;
+    flex-shrink: 0;
     align-items: center;
-    margin-top: 3px; /* 微調與上方文字的距離 */
 }
 /* Score buttons within the list */
 .list-score-btn {
