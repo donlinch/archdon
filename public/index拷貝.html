@@ -66,7 +66,7 @@
             // 初始化 Swiper
             new Swiper('#banner-carousel', {
                 loop: true,
-                autoplay: { delay: 3000 },
+                autoplay: { delay: 8000 },
                 pagination: { el: '.swiper-pagination' },
             });
         } catch (error) {
@@ -74,6 +74,19 @@
             bannerWrapper.innerHTML = '<div class="swiper-slide">載入失敗</div>';
         }
     }
+
+    const images = document.querySelectorAll('.swiper-slide img');
+
+images.forEach(img => {
+    img.onload = function() {
+        if (img.naturalWidth > 1200) {
+            img.style.maxWidth = '500px';  // 設定圖片最大寬度
+        }
+        if (img.naturalHeight > 370) {
+            img.style.maxHeight = '370px';  // 設定圖片最大高度
+        }
+    };
+});
     
     // 頁面加載後執行
     document.addEventListener('DOMContentLoaded', () => {
