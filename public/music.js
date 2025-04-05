@@ -52,28 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    async function fetchAndDisplayBanners() {
-        console.log("[Music] Fetching banners for music page");
-        
-        try {
-            const response = await fetch('/api/banners?page=music');
-            console.log("[Music] Banner API response status:", response.status);
-
-            if (!response.ok) {
-                throw new Error(`獲取輪播圖失敗 (HTTP ${response.status})`);
-            }
-
-            const musicPageBanners = await response.json();
-            console.log(`[Music] Received ${musicPageBanners.length} music page banners`);
-
-            // 直接渲染隨機輪播圖
-            renderRandomBanner(musicPageBanners);
-
-        } catch (error) {
-            console.error("[Music] Banner error:", error);
-            handleBannerError();
-        }
-    }
+ 
 
    
     /**
