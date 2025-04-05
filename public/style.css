@@ -1255,7 +1255,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 /* 隨機輪播圖樣式 */
 #random-banner-carousel {
     max-width: 500px; /* 500px */
-    height: 100px; /* 400px 刪除這一行 */
+    height: 400px; /* 400px 刪除這一行 */
     margin: 0 auto;
     padding: 0 0px;    /*     0px;      */
     background-color: #FFB74D;
