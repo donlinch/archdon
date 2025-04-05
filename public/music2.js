@@ -231,7 +231,174 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ... 保持原有的歌手列表和專輯列表相關函數不變 ...
+
+
+
+
+
+
+
+
+    /**
+     * 獲取並顯示歌手列表
+     */
+    async function fetchAndDisplayArtists() {
+        if (!artistFilterNav) {
+            console.error("Artist filter nav element not found");
+            return;
+        }
+
+        artistFilterNav.innerHTML = '<p>正在加載歌手列表...</p>';
+
+        try {
+            const response = await fetch('/api/artists');
+            if (!response.ok) {
+                throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`);
+            }
+
+            const artists = await response.json();
+            artistFilterNav.innerHTML = '';
+
+            // 全部歌手按鈕
+            const allButton = document.createElement('button');
+            allButton.textContent = '全部歌手';
+            allButton.classList.add('artist-filter-btn', 'active');
+            allButton.addEventListener('click', () => {
+                setActiveArtistButton(allButton);
+                currentArtistFilter = null;
+                fetchAndDisplayAlbums(currentArtistFilter);
+            });
+            artistFilterNav.appendChild(allButton);
+
+            // 各歌手按鈕
+            artists.forEach(artist => {
+                const button = document.createElement('button');
+                button.textContent = artist;
+                button.classList.add('artist-filter-btn');
+                button.dataset.artist = artist;
+                button.addEventListener('click', () => {
+                    setActiveArtistButton(button);
+                    currentArtistFilter = artist;
+                    fetchAndDisplayAlbums(currentArtistFilter);
+                });
+                artistFilterNav.appendChild(button);
+            });
+
+        } catch (error) {
+            console.error("[Music] Fetch artists error:", error);
+            if (artistFilterNav) {
+                artistFilterNav.innerHTML = '<p>無法加載歌手列表</p>';
+            }
+        }
+    }
+
+    /**
+     * 設置當前選中的歌手按鈕
+     */
+    function setActiveArtistButton(activeButton) {
+        if (!artistFilterNav) return;
+        
+        // 移除所有按鈕的 active 類
+        artistFilterNav.querySelectorAll('button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 添加 active 類到當前按鈕
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+    }
+
+    /**
+     * 獲取並顯示專輯列表
+     */
+    async function fetchAndDisplayAlbums(artist = null) {
+        if (!musicListContainer) {
+            console.error("Music list container not found");
+            return;
+        }
+
+        musicListContainer.innerHTML = '<p>正在加載音樂列表...</p>';
+
+        try {
+            let apiUrl = '/api/music';
+            if (artist) {
+                apiUrl += `?artist=${encodeURIComponent(artist)}`;
+            }
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`獲取音樂列表失敗 (HTTP ${response.status})`);
+            }
+
+            const musicList = await response.json();
+            musicListContainer.innerHTML = '';
+
+            if (musicList.length === 0) {
+                musicListContainer.innerHTML = '<p>找不到相關的音樂項目</p>';
+                return;
+            }
+
+            // 創建專輯格線容器
+            const albumGrid = document.createElement('div');
+            albumGrid.className = 'album-grid';
+
+            // 填充專輯卡片
+            musicList.forEach(music => {
+                const albumCard = document.createElement('a');
+                albumCard.className = 'album-card';
+                albumCard.href = music.platform_url || '#';
+                
+                if (music.platform_url) {
+                    albumCard.target = '_blank';
+                    albumCard.rel = 'noopener noreferrer';
+                } else {
+                    albumCard.onclick = (e) => e.preventDefault();
+                }
+
+                // 封面圖片
+                const coverDiv = document.createElement('div');
+                coverDiv.className = 'cover-image';
+                const coverImg = document.createElement('img');
+                coverImg.src = music.cover_art_url || '/images/placeholder.png';
+                coverImg.alt = music.title || '專輯封面';
+                coverDiv.appendChild(coverImg);
+
+                // 專輯資訊
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'album-info';
+                
+                const title = document.createElement('h3');
+                title.textContent = music.title || '未知專輯';
+                
+                const artist = document.createElement('p');
+                artist.className = 'artist';
+                artist.textContent = music.artist || '未知歌手';
+                
+                const date = document.createElement('p');
+                date.className = 'release-date';
+                date.textContent = music.release_date 
+                    ? new Date(music.release_date).toLocaleDateString('zh-TW') 
+                    : '發行日期未知';
+
+                infoDiv.appendChild(title);
+                infoDiv.appendChild(artist);
+                infoDiv.appendChild(date);
+
+                albumCard.appendChild(coverDiv);
+                albumCard.appendChild(infoDiv);
+                albumGrid.appendChild(albumCard);
+            });
+
+            musicListContainer.appendChild(albumGrid);
+
+        } catch (error) {
+            console.error("[Music] Fetch albums error:", error);
+            if (musicListContainer) {
+                musicListContainer.innerHTML = `<p>無法加載音樂列表: ${error.message}</p>`;
+            }
+        }
+    }
 
     // --- 頁面初始化 ---
     async function initializePage() {

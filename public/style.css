@@ -1273,3 +1273,28 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     position: relative;
     margin-top: 10px;
 }
+
+/* 確保兩個輪播圖圖片顯示一致 */
+.banner-image {
+    width: 100%;
+    height: 400px; /* 主要輪播圖高度 */
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+#random-banner-carousel .banner-image {
+    height: 200px; /* 隨機輪播圖較矮 */
+    opacity: 0.9;
+    transition: opacity 0.3s;
+}
+
+#random-banner-carousel .banner-image:hover {
+    opacity: 1;
+}
+
+/* 隨機輪播圖容器樣式 */
+#random-banner-carousel {
+    margin: 2rem auto;
+    max-width: 1200px;
+    padding: 0 20px;
+}

@@ -1167,6 +1167,32 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 });
 
 
+// 在 server.js 的 /api/banners 路由中增加排序參數
+app.get('/api/banners', async (req, res) => {
+    const pageLocation = req.query.page;
+    const sort = req.query.sort || 'display_order'; // 新增排序參數
+    
+    try {
+        let query = 'SELECT * FROM banners';
+        const params = [];
+        
+        if (pageLocation) {
+            query += ' WHERE page_location = $1';
+            params.push(pageLocation);
+        }
+        
+        // 根據排序參數調整
+        query += ` ORDER BY ${sanitizeSortField(sort)} ASC, id ASC`;
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
 // --- 商品管理 API (受保護) ---
 // POST /api/products
 app.post('/api/products', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
