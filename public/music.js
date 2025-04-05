@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("[Music] Fetching banners for music page");
         
         try {
-            const response = await fetch('/api/banners?page=music');
+            const response = await fetch('/api/banners?page=home'); /* 選擇 home 或 music 或 news */
             console.log("[Music] Banner API response status:", response.status);
 
             if (!response.ok) {
