@@ -3,13 +3,14 @@
 // 引入 pdf.js 函式庫 (ES Module 方式) - 確保只有這一行引入 pdfjsLib
 import * as pdfjsLib from '//mozilla.github.io/pdf.js/build/pdf.mjs';
 
-// --- 將 allSongsData 宣告移到最前面 ---
+// --- *** 將 allSongsData 宣告移到最前面 *** ---
 let allSongsData = [];
-// --- 修改結束 ---
+// --- *** 修改結束 *** ---
 
 // 設定 PDF.js worker 的來源路徑
 if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
     try {
+        // *** 改回 .mjs worker ***
         pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.mjs';
         console.log('PDF.js workerSrc 設定回 mjs 版本。');
     } catch (e) {
@@ -33,7 +34,7 @@ const songList = getElement('song-list');
 const songDetailContainer = getElement('song-detail-container');
 const songInfo = getElement('song-info');
 const youtubePlayerContainer = getElement('youtube-player');
-const scoreSelectorContainer = getElement('score-selector');
+const scoreSelectorContainer = getElement('score-selector'); // 雖然不用了，但保留以防萬一
 const pdfViewerContainer = getElement('pdf-viewer-container');
 const pdfCanvas = getElement('pdf-canvas');
 const pdfLoading = getElement('pdf-loading');
@@ -48,7 +49,7 @@ const pdfPagination = getElement('pdf-pagination');
 let currentPdfDoc = null;
 let currentPageNum = 1;
 let currentSongId = null;
-let currentArtist = 'All';
+let currentArtist = 'All'; // 預設顯示全部
 let pdfPageRendering = false;
 let pageNumPending = null;
 
@@ -95,6 +96,7 @@ async function fetchSongs(artist = 'All') {
     if (!songList) return;
     songList.innerHTML = '<p>載入歌曲中...</p>';
     currentSongId = null;
+    // *** CHANGE: Use display: none to hide ***
     if (songDetailContainer) songDetailContainer.style.display = 'none';
     try {
         const decodedArtist = decodeURIComponent(artist);
@@ -106,11 +108,10 @@ async function fetchSongs(artist = 'All') {
         allSongsData = []; // 出錯時清空
     }
 }
-
 // --- 渲染函數 ---
 function renderArtistFilters(artists) {
-    if (!artistFilterContainer) return;
-    const decodedCurrentArtist = decodeURIComponent(currentArtist);
+     if (!artistFilterContainer) return;
+     const decodedCurrentArtist = decodeURIComponent(currentArtist);
     let buttonsHTML = `<button class="artist-filter-btn ${decodedCurrentArtist === 'All' ? 'active' : ''}" data-artist="All">全部歌手</button>`;
     artists.forEach(artist => {
         const encodedArtist = encodeURIComponent(artist);
@@ -130,12 +131,12 @@ function renderSongList(songs) {
         let scoreButtonsHTML = '';
         if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
             scoreButtonsHTML = song.scores
-                .filter(score => score.type && score.pdf_url && score.id)
+                .filter(score => score.type && score.pdf_url && score.id) // 確保 score 有 ID
                 .map(score => `
                     <button class="action-btn score-type-btn list-score-btn"
                             data-song-id="${song.id}"
-                            data-score-id="${score.id}"
-                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            data-score-id="${score.id}" // *** 新增 data-score-id ***
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}" // 保留 pdf url 以備不時之需
                             title="查看 ${song.title} - ${score.type}">
                         ${score.type}
                     </button>
@@ -146,23 +147,22 @@ function renderSongList(songs) {
         return `
             <li data-song-id="${song.id}" class="${isActive ? 'active' : ''}">
                 <div class="song-list-info">
-                    <span class="song-title">${song.title || '未知標題'}</span>
-                    <span class="song-artist">${song.artist || '未知歌手'}</span>
-                </div>
-                <div class="song-list-scores">
-                    ${scoreButtonsHTML}
-                </div>
+                     <span class="song-title">${song.title || '未知標題'}</span>
+                     <span class="song-artist">${song.artist || '未知歌手'}</span>
+                 </div>
+                 <div class="song-list-scores">
+                     ${scoreButtonsHTML}
+                 </div>
             </li>
         `;
     }).join('');
 }
 
-// --- 修改 renderSongDetail 函數 ---
-// 增加檢查 YouTube 影片並顯示
+// --- *** MODIFY renderSongDetail to use visibility class *** ---
 function renderSongDetail(song) {
     if (!songInfo || !youtubePlayerContainer || !songDetailContainer) return;
 
-    // Reset/hide PDF viewer elements when changing songs
+    // Reset/hide PDF viewer elements when changing songs (Keep this logic)
     if (pdfViewerContainer) pdfViewerContainer.style.display = 'none';
     if (pdfCanvas) pdfCanvas.style.display = 'none';
     if (pdfPagination) pdfPagination.style.display = 'none';
@@ -174,7 +174,6 @@ function renderSongDetail(song) {
 
     songInfo.textContent = `${song.title || '未知標題'} - ${song.artist || '未知歌手'}`;
 
-    // 檢查 YouTube 影片 ID
     if (song.youtube_video_id) {
         youtubePlayerContainer.innerHTML = `
             <iframe
@@ -191,11 +190,14 @@ function renderSongDetail(song) {
         youtubePlayerContainer.style.display = 'block';
     }
 
-    // 顯示歌曲詳細資料
+    // ** CHANGE HERE: Set display to flex directly **
     songDetailContainer.style.display = 'flex';
-    songDetailContainer.style.flexDirection = 'column'; 
+    songDetailContainer.style.flexDirection = 'column'; // Ensure direction is set
+
+    // Remove the class if it was added previously
     songDetailContainer.classList.remove('visible');
 }
+
 
 // --- PDF.js 相關函數 ---
 async function loadPdf(encodedPdfUrl) {
@@ -215,6 +217,7 @@ async function loadPdf(encodedPdfUrl) {
     pdfError.style.display = 'none';
     pdfCanvas.style.display = 'none'; // Hide canvas initially
     pdfPagination.style.display = 'none'; // Hide pagination initially
+    // *** CHANGE: Ensure PDF viewer container is flex and visible ***
     pdfViewerContainer.style.display = 'flex';
     pdfViewerContainer.style.flexDirection = 'column'; // Stack canvas and pagination
 
@@ -238,18 +241,22 @@ async function loadPdf(encodedPdfUrl) {
         console.log('loadPdf: PDF 載入成功. 頁數:', currentPdfDoc.numPages);
         pdfLoading.style.display = 'none';
         pdfPageCount.textContent = currentPdfDoc.numPages;
+        // Don't show canvas/pagination here, let renderPage handle it
         renderPage(currentPageNum);
     } catch (reason) {
         console.error('loadPdf: 載入 PDF 時出錯:', reason);
         pdfLoading.style.display = 'none';
         pdfError.textContent = `無法載入 PDF。請檢查連結是否有效或稍後再試。`;
+        if (reason && reason.message) pdfError.textContent += ` (錯誤: ${reason.message})`;
+        else if (typeof reason === 'string') pdfError.textContent += ` (${reason})`;
         pdfError.style.display = 'block';
         pdfCanvas.style.display = 'none';
         pdfPagination.style.display = 'none';
+        // Keep pdfViewerContainer visible to show the error
     }
 }
 
-// --- 渲染頁面 ---
+// --- *** MODIFY renderPage to delay width reading *** ---
 function renderPage(num) {
     if (!currentPdfDoc || !pdfCanvas || !pdfViewerContainer || !pdfPageNum || !pdfPrevBtn || !pdfNextBtn) {
         console.error("renderPage: 無法渲染頁面：缺少 PDF 文件物件或必要的 DOM 元素。");
@@ -261,24 +268,190 @@ function renderPage(num) {
     pdfPrevBtn.disabled = true;
     pdfNextBtn.disabled = true;
 
+    // Use getPage promise
     currentPdfDoc.getPage(num).then(function(page) {
         console.log(`[renderPage] 獲取到頁面 ${num} 物件，準備渲染。`);
 
-        // 使用 requestAnimationFrame 延遲寬度讀取
+        // ** CHANGE: Use requestAnimationFrame to delay width reading slightly **
         requestAnimationFrame(() => {
-             let desiredWidth = pdfViewerContainer.clientWidth * 0.95; 
-            if (desiredWidth <= 0) {
-                console.warn(`[renderPage] PDF 檢視器容器寬度 (${pdfViewerContainer.clientWidth}) 無效，使用後備寬度 600px。`);
-                desiredWidth = 600; 
+             // Double-check visibility before reading width
+            if (window.getComputedStyle(pdfViewerContainer).display === 'none') {
+                 console.warn("[renderPage] pdfViewerContainer 在計算寬度前是 display:none，強制設為 flex。");
+                 pdfViewerContainer.style.display = 'flex';
+                 pdfViewerContainer.style.flexDirection = 'column';
             }
 
+            // Calculate width based on the container *now*
+            let desiredWidth = pdfViewerContainer.clientWidth * 0.95; // 95% of container width
+            if (desiredWidth <= 0) {
+                console.warn(`[renderPage] PDF 檢視器容器寬度 (${pdfViewerContainer.clientWidth}) 無效，使用後備寬度 600px。`);
+                desiredWidth = 600; // Fallback width
+            }
+            console.log(`[renderPage] 計算得到的 desiredWidth: ${desiredWidth}`);
+
             const viewportOriginal = page.getViewport({ scale: 1 });
+            // Prevent division by zero or negative width
             const scale = (viewportOriginal.width > 0 && desiredWidth > 0) ? desiredWidth / viewportOriginal.width : 1;
             const viewport = page.getViewport({ scale: scale });
+            console.log(`[renderPage] 計算得到的 scale: ${scale}, viewport width: ${viewport.width}, height: ${viewport.height}`);
+
             renderPageWithViewport(page, viewport, num);
         });
 
     }).catch(function(pageError){
          console.error(`[renderPage] 獲取頁面 ${num} 時出錯:`, pageError);
+         pdfPageRendering = false;
+         if(pdfError) {
+             pdfError.textContent = `獲取頁面 ${num} 時出錯。`;
+             pdfError.style.display = 'block';
+         }
+         // Keep viewer container visible for error
+         if(pdfCanvas) pdfCanvas.style.display = 'none';
+         if(pdfPagination) pdfPagination.style.display = 'none';
+         if(pdfPrevBtn) pdfPrevBtn.disabled = (num <= 1);
+         if(pdfNextBtn && currentPdfDoc) pdfNextBtn.disabled = (num >= currentPdfDoc.numPages);
     });
 }
+
+// --- *** MODIFY renderPageWithViewport to ensure visibility *** ---
+function renderPageWithViewport(page, viewport, pageNumber) {
+    if (!pdfCanvas || !pdfError || !pdfPrevBtn || !pdfNextBtn || !pdfViewerContainer || !pdfPagination) {
+        console.error("[renderPageWithViewport] 渲染頁面時缺少必要的 Canvas 或控制按鈕或容器或分頁。");
+        pdfPageRendering = false;
+        return;
+    }
+    const canvasContext = pdfCanvas.getContext('2d');
+    if (!canvasContext) {
+         console.error("[renderPageWithViewport] 無法獲取 Canvas 2D 上下文。");
+         pdfPageRendering = false;
+         if (pdfError) {
+            pdfError.textContent = '無法渲染 PDF (Canvas Context Error)。';
+            pdfError.style.display = 'block';
+         }
+         pdfViewerContainer.style.display = 'flex'; // Keep container visible
+         pdfCanvas.style.display = 'none';
+         pdfPagination.style.display = 'none';
+         if(pdfPrevBtn) pdfPrevBtn.disabled = (pageNumber <= 1);
+         if(currentPdfDoc && pdfNextBtn) pdfNextBtn.disabled = (pageNumber >= currentPdfDoc.numPages);
+         return;
+    }
+
+    // *** Ensure elements are visible *before* drawing ***
+    pdfCanvas.style.display = 'block';
+    pdfViewerContainer.style.display = 'flex'; // Ensure container is flex
+    pdfViewerContainer.style.flexDirection = 'column'; // Stack content
+    pdfPagination.style.display = 'flex'; // Use flex for pagination centering
+    pdfError.style.display = 'none'; // Hide any previous errors
+
+    // Use Math.ceil to avoid fractional pixels which can cause issues
+    pdfCanvas.height = Math.ceil(viewport.height);
+    pdfCanvas.width = Math.ceil(viewport.width);
+    console.log(`[renderPageWithViewport] Setting canvas display: block, dimensions: W=${pdfCanvas.width}, H=${pdfCanvas.height}`);
+
+    // Set canvas style dimensions as well to prevent potential CSS override issues (optional but can help)
+    pdfCanvas.style.width = `${pdfCanvas.width}px`;
+    pdfCanvas.style.height = `${pdfCanvas.height}px`;
+
+
+    const renderContext = {
+        canvasContext: canvasContext,
+        viewport: viewport
+    };
+    const renderTask = page.render(renderContext);
+
+    renderTask.promise.then(function() {
+        console.log(`[renderPageWithViewport] 頁面 ${pageNumber} 渲染完成`);
+        pdfPageRendering = false;
+        if(pdfPrevBtn) pdfPrevBtn.disabled = (pageNumber <= 1);
+        if(currentPdfDoc && pdfNextBtn) pdfNextBtn.disabled = (pageNumber >= currentPdfDoc.numPages);
+        if (pageNumPending !== null) {
+            console.log(`[renderPageWithViewport] 處理待定頁面: ${pageNumPending}`);
+            renderPage(pageNumPending);
+            pageNumPending = null;
+        }
+    }).catch(function(renderError) {
+        console.error(`[renderPageWithViewport] 渲染頁面 ${pageNumber} 時出錯:`, renderError);
+        pdfPageRendering = false;
+        if (pdfError) {
+            pdfError.textContent = `渲染頁面 ${pageNumber} 時出錯。`;
+            pdfError.style.display = 'block';
+        }
+         pdfCanvas.style.display = 'none';
+         pdfPagination.style.display = 'none';
+        if(pdfPrevBtn) pdfPrevBtn.disabled = (pageNumber <= 1);
+        if(currentPdfDoc && pdfNextBtn) pdfNextBtn.disabled = (pageNumber >= currentPdfDoc.numPages);
+    });
+}
+
+
+function queueRenderPage(num) {
+    if (pdfPageRendering) {
+        pageNumPending = num;
+    } else {
+        renderPage(num);
+    }
+}
+
+// --- 事件處理函數 ---
+function handleArtistFilterClick(event) {
+    const target = event.target;
+    if (target && target.tagName === 'BUTTON' && target.classList.contains('artist-filter-btn')) {
+        if (!artistFilterContainer) return;
+        artistFilterContainer.querySelectorAll('.artist-filter-btn').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        currentArtist = target.dataset.artist;
+        fetchSongs(currentArtist);
+    }
+}
+
+function handleSongListItemClick(event) {
+    const target = event.target;
+    if (target.tagName === 'BUTTON' && target.classList.contains('list-score-btn')) {
+        const songId = target.dataset.songId;
+        const scoreId = target.dataset.scoreId; // *** 直接獲取 scoreId ***
+
+        if (songId && scoreId) {
+            console.log(`偵測到點擊，跳轉至: /score-viewer.html?musicId=${songId}&scoreId=${scoreId}`);
+            window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
+        } else {
+             console.warn('無法處理樂譜按鈕點擊：缺少 songId 或 scoreId。');
+             alert('無法打開樂譜，按鈕數據不完整。');
+        }
+    }
+}
+
+function onPrevPage() {
+    if (currentPageNum <= 1) return;
+    currentPageNum--;
+    queueRenderPage(currentPageNum);
+}
+
+function onNextPage() {
+    if (!currentPdfDoc || currentPageNum >= currentPdfDoc.numPages) return;
+    currentPageNum++;
+    queueRenderPage(currentPageNum);
+}
+
+// --- 初始化 ---
+document.addEventListener('DOMContentLoaded', () => {
+    const essentialElements = [artistFilterContainer, songList, pdfPrevBtn, pdfNextBtn, pdfPagination, pdfCanvas, pdfViewerContainer, pdfLoading, pdfError, pdfPageNum, pdfPageCount, songDetailContainer, songInfo, youtubePlayerContainer]; // 補上檢查
+    if (essentialElements.some(el => !el)) {
+        console.error("頁面初始化失敗：缺少必要的 DOM 元素。請檢查 HTML 結構和 ID 是否正確。");
+        if(document.body) document.body.innerHTML = '<p style="color:red; padding: 2rem; text-align: center;">頁面載入錯誤，缺少必要的元件。</p>';
+        return;
+    }
+
+    fetchArtists();
+    fetchSongs('All'); // 預設載入所有歌曲
+
+    // --- 事件監聽器綁定 ---
+    artistFilterContainer.addEventListener('click', handleArtistFilterClick);
+    songList.addEventListener('click', handleSongListItemClick);
+    pdfPrevBtn.addEventListener('click', onPrevPage);
+    pdfNextBtn.addEventListener('click', onNextPage);
+
+    // Initially hide the detail container
+    if(songDetailContainer) {
+        songDetailContainer.classList.remove('visible');
+    }
+});
