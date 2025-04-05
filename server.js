@@ -583,8 +583,6 @@ app.get('/api/analytics/sales-report', async (req, res) => {
 
 
 
-
-
 // GET /api/admin/sales - 獲取銷售紀錄 (可篩選)
 app.get('/api/admin/sales', async (req, res) => {
     console.log("[Admin API] GET /api/admin/sales requested with query:", req.query);
@@ -692,26 +690,6 @@ app.get('/api/admin/sales/summary', async (req, res) => {
     } catch (err) {
         console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
         res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
-    }
-});
-
-// GET /api/admin/sales/product-names - 獲取所有不重複的商品名稱 (排序後)
-app.get('/api/admin/sales/product-names', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/sales/product-names requested");
-    try {
-        const queryText = `
-            SELECT DISTINCT product_name
-            FROM sales_log
-            ORDER BY product_name ASC;
-        `;
-        const result = await pool.query(queryText);
-        // 將結果從 { product_name: '...' } 的陣列轉換成只有名稱的字串陣列
-        const productNames = result.rows.map(row => row.product_name);
-        console.log(`[Admin API] Found ${productNames.length} unique product names.`);
-        res.status(200).json(productNames); // 返回字串陣列
-    } catch (err) {
-        console.error('[Admin API Error] 獲取商品名稱列表時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取商品名稱列表時發生伺服器內部錯誤' });
     }
 });
 
