@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     async function fetchAndDisplayBanners() {
-        console.log("[Music] Fetching banners for music page");
+        console.log("[home] Fetching banners for music page");
         
         try {
             const response = await fetch('/api/banners?page=home'); /* 選擇 home 或 music 或 news */
@@ -187,13 +187,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const musicPageBanners = await response.json();
-            console.log(`[Music] Received ${musicPageBanners.length} music page banners`);
+            console.log(`[home] Received ${musicPageBanners.length} home page banners`);
 
             // 直接渲染隨機輪播圖
             renderRandomBanner(musicPageBanners);
 
         } catch (error) {
-            console.error("[Music] Banner error:", error);
+            console.error("[home] Banner error:", error);
             handleBannerError();
         }
     }
