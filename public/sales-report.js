@@ -214,27 +214,29 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
      };
 
 
-    const renderCharts = (summary) => {
-        resetCharts(); // 清除舊圖表實例
-
-        // 1. 銷售趨勢圖 (線圖)
+     const renderCharts = (summary) => {
+        // 明確銷毀舊圖表實例
+        if (salesTrendChartInstance) {
+            salesTrendChartInstance.destroy();
+        }
+        if (topProductsChartInstance) {
+            topProductsChartInstance.destroy();
+        }
+    
+        // 1. 銷售趨勢圖 (現在是長條圖)
         const trendLabels = summary.salesTrend.map(item => item.date);
         const trendData = summary.salesTrend.map(item => item.quantity);
-
-
-
-
-        
+    
         salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'bar',
+            type: 'bar', // 明確設置為長條圖
             data: {
                 labels: trendLabels,
                 datasets: [{
                     label: '每日銷售件數',
                     data: trendData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // 添加背景色
                     borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1,
-                    fill: false
+                    borderWidth: 1 // 添加邊框寬度
                 }]
             },
             options: {
@@ -245,9 +247,9 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
                         type: 'time',
                         time: {
                             unit: 'day',
-                            tooltipFormat: 'yyyy-MM-dd', // 提示框格式
-                             displayFormats: {
-                                day: 'MM/dd' // X 軸顯示格式
+                            tooltipFormat: 'yyyy-MM-dd',
+                            displayFormats: {
+                                day: 'MM/dd'
                             }
                         },
                         title: { display: true, text: '日期' }
@@ -255,15 +257,14 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
                     y: {
                         beginAtZero: true,
                         title: { display: true, text: '銷售件數' },
-                        ticks: { // 只顯示整數刻度
-                             stepSize: 1,
-                             precision: 0
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
                         }
                     }
                 }
             }
         });
-
         // 2. 熱銷商品圖 (長條圖)
         const topProductLabels = summary.topProducts.map(item => escapeHtml(item.product_name));
         const topProductData = summary.topProducts.map(item => item.total_sold);
