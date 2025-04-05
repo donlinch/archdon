@@ -75,32 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * 渲染隨機輪播圖
-     */
-    function renderRandomBanner(sourceBanners) {
-        if (!randomBannerWrapper) return;
-
-        randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入隨機輪播圖中...</div>';
-
-        // 從音樂頁輪播圖中隨機選擇
-        const randomBanners = getRandomBanners(sourceBanners);
-
-        setTimeout(() => {
-            randomBannerWrapper.innerHTML = '';
-            
-            if (randomBanners.length === 0) {
-                showDefaultBanner(randomBannerWrapper, "隨機推薦");
-            } else {
-                randomBanners.forEach(banner => {
-                    createBannerSlide(banner, randomBannerWrapper);
-                });
-            }
-
-            initRandomSwiper(randomBanners.length);
-        }, 0);
-    }
-
+   
     /**
      * 從音樂頁輪播圖中隨機選擇
      */
