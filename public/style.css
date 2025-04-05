@@ -1134,3 +1134,142 @@ th {
 tr:hover {
     background-color: #f5f5f5;
 }
+
+
+
+/* 銷售報告頁面特定樣式 */
+.report-container { max-width: 1200px; margin: 20px auto; padding: 15px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.filter-controls { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.filter-controls label { margin-right: 5px; font-weight: bold;}
+.filter-controls input[type="date"], .filter-controls button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; } /* 統一字體大小 */
+.filter-controls button { background-color: #f0f0f0; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; }
+.filter-controls button:hover { background-color: #e0e0e0; }
+.filter-controls button.active { background-color: #FFB74D; color: #424242; font-weight: bold; border-color: #FFB74D;}
+.summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.card { background-color: #f9f9f9; padding: 15px; border-radius: 5px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card h3 { margin-top: 0; margin-bottom: 8px; font-size: 0.9rem; color: #555; }
+.card p { font-size: 1.8rem; font-weight: bold; color: #E57373; margin: 0; }
+.chart-section, .table-section { margin-bottom: 30px; }
+.chart-section h2, .table-section h2 { font-size: 1.3rem; margin-bottom: 15px; color: #444; border-bottom: 2px solid #FFB74D; padding-bottom: 5px;}
+.chart-container { position: relative; height: 350px; width: 100%; } /* 圖表容器高度 */
+.table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; } /* 表格容器樣式 */
+.report-container table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } /* 特定於報告頁的表格 */
+.report-container th, .report-container td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; white-space: nowrap; } /* 防止內容換行 */
+.report-container th { background-color: #f2f2f2; font-weight: bold; position: sticky; top: 0; z-index: 1; } /* 表頭固定 */
+.report-container tbody tr:nth-child(even) { background-color: #fafafa; } /* 偶數行背景色 */
+.report-container tbody tr:hover { background-color: #f0f0f0; }
+#loading-indicator, #error-message { text-align: center; padding: 20px; font-size: 1.1rem; display: none; border-radius: 4px; }
+#loading-indicator { background-color: #e0f7fa; color: #00796b; }
+#error-message { color: #d32f2f; background-color: #ffebee; border: 1px solid #ef9a9a; }
+
+/* 微調管理導航 */
+.admin-nav a { margin: 0 0.3rem; padding: 0.5rem 0.8rem; } /* 稍微減少間距和內邊距 */
+
+/* public/style.css (在檔案末尾追加或整合) */
+
+/* --- Sales Report Page Specific Styles --- */
+.sales-report-container { /* 如果你在 html 中用了這個 class */
+    max-width: 1400px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.sales-report-container h1, /* 如果用了 container class */
+.container h1, /* 如果直接用 main.container */
+.sales-report-container h2,
+.container h2 {
+     text-align: center; color: #333; margin-bottom: 20px;
+}
+.section-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+.form-section { flex: 1 1 400px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; min-width: 300px; }
+.filter-section { flex: 1 1 400px; background-color: #f0f8ff; padding: 20px; border-radius: 8px; border: 1px solid #d1e7fd; min-width: 300px; }
+.summary-section { width: 100%; margin-bottom: 20px; }
+.summary-cards { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; margin-bottom: 20px; }
+.card { background-color: #fff; padding: 15px 20px; border-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-align: center; flex: 1; min-width: 180px; }
+.card h3 { margin-top: 0; color: #555; font-size: 1rem; margin-bottom: 5px; }
+.card p { font-size: 1.5rem; font-weight: bold; color: #E57373; margin-bottom: 0; }
+.chart-section { width: 100%; display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+/* Chart.js canvas 的直接父容器需要設定 position: relative 和大小 */
+.chart-container {
+    flex: 1 1 500px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    min-height: 350px;
+    position: relative; /* 必須 */
+    min-width: 300px; /* 確保小屏幕下也能顯示 */
+}
+.table-section { width: 100%; overflow-x: auto; }
+#sales-report-table { /* 給 table 一個 ID 可能更好 */
+    width: 100%; border-collapse: collapse; margin-top: 10px;
+}
+#sales-report-table th,
+#sales-report-table td {
+     padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle;
+}
+#sales-report-table th { background-color: #FFB74D; color: #424242; white-space: nowrap; }
+#sales-report-table tbody tr:hover { background-color: #f1f1f1; }
+#sales-report-table td.actions { white-space: nowrap; }
+#sales-report-table td.actions button { margin-right: 5px; margin-bottom: 5px;} /* RWD 時按鈕可能換行 */
+
+/* Form Styles (繼承或覆蓋) */
+.form-section .form-group, .filter-section .form-group { margin-bottom: 15px; }
+.form-section label, .filter-section label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+.form-section input, .filter-section input, .form-section select, .filter-section select {
+    width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem;
+}
+.form-section .form-actions, .filter-section .form-actions { margin-top: 20px; text-align: right; }
+.form-section .form-actions button, .filter-section .form-actions button { margin-left: 10px; }
+
+/* Button Styles (確保與 style.css 一致或覆蓋) */
+button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; font-size: 0.9rem; transition: background-color 0.2s ease; }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-primary:hover { background-color: #0056b3; }
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
+.btn-success { background-color: #28a745; color: white; }
+.btn-success:hover { background-color: #218838; }
+.btn-warning { background-color: #ffc107; color: #212529; }
+.btn-warning:hover { background-color: #e0a800; }
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-danger:hover { background-color: #c82333; }
+
+.error-message { color: red; font-size: 0.9em; margin-top: 5px; min-height: 1.2em; }
+#loading-indicator { text-align: center; padding: 20px; font-style: italic; color: #777; display: none; }
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .chart-container { flex-basis: 100%; } /* 中等屏幕圖表各佔一行 */
+}
+@media (max-width: 768px) {
+    .section-container { flex-direction: column; }
+    .summary-cards { flex-direction: column; }
+    .card { flex-basis: auto; }
+    .form-section, .filter-section { flex-basis: auto; }
+}
+@media (max-width: 576px) {
+     .card p { font-size: 1.3rem; }
+     button { font-size: 0.85rem; padding: 6px 10px;}
+     #sales-report-table th, #sales-report-table td { padding: 8px 6px; font-size: 0.9rem; }
+}
+
+
+/* 隨機輪播圖樣式 */
+#random-banner-carousel {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.random-banner-swiper .swiper-slide img {
+    width: 100%;
+    height: 200px; /* 調整為您喜歡的高度 */
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.random-banner-swiper .swiper-pagination {
+    position: relative;
+    margin-top: 10px;
+}
