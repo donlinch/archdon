@@ -1151,7 +1151,7 @@ tr:hover {
 .card p { font-size: 1.8rem; font-weight: bold; color: #E57373; margin: 0; }
 .chart-section, .table-section { margin-bottom: 30px; }
 .chart-section h2, .table-section h2 { font-size: 1.3rem; margin-bottom: 15px; color: #444; border-bottom: 2px solid #FFB74D; padding-bottom: 5px;}
-.chart-container { position: relative; height: 350px; width: 100%; } /* 圖表容器高度 */
+.chart-container { position: relative; height: 300px; /*350px */  width: 100%; } /* 圖表容器高度 */
 .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; } /* 表格容器樣式 */
 .report-container table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } /* 特定於報告頁的表格 */
 .report-container th, .report-container td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; white-space: nowrap; } /* 防止內容換行 */
