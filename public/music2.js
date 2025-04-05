@@ -237,8 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
     /**
      * 獲取並顯示歌手列表
      */
