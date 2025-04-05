@@ -250,26 +250,39 @@ app.get('/api/scores/proxy', (req, res) => {
      });
 });
 
+
+
+
+
+
+
 // GET /api/banners?page=... (已更新過濾邏輯)
 app.get('/api/banners', async (req, res) => {
-    const pageLocation = req.query.page;
-    console.log(`[Public API] GET /api/banners requested for page: ${pageLocation || 'all'}`);
+    const pageLocation = req.query.page || 'all'; // 默認為 'all'，如果是首頁則用 'home'
+    let queryText = 'SELECT id, image_url, link_url, alt_text FROM banners';
+    const queryParams = [];
+    
+    if (pageLocation !== 'all') {
+        queryText += ' WHERE page_location = $1';
+        queryParams.push(pageLocation);
+    }
+
+    queryText += ' ORDER BY RANDOM() LIMIT 5';  // 隨機選擇 5 張圖片
     try {
-        let queryText = 'SELECT id, image_url, link_url, alt_text FROM banners';
-        const queryParams = [];
-        if (pageLocation) {
-            queryText += ' WHERE page_location = $1';
-            queryParams.push(pageLocation);
-        }
-        queryText += ' ORDER BY display_order ASC, id ASC';
         const result = await pool.query(queryText, queryParams);
-        console.log(`[Public API] Found ${result.rowCount} banners for page: ${pageLocation || 'all'}`);
-        res.json(result.rows);
+        res.json(result.rows); // 返回隨機圖片資料
     } catch (err) {
-        console.error(`[Public API Error] 獲取 Banner (page: ${pageLocation || 'all'}) 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
+        console.error('獲取 Banner 時出錯:', err);
+        res.status(500).json({ error: '伺服器錯誤' });
     }
 });
+
+
+
+
+
+
+
 
 // GET /api/products?sort=...
 app.get('/api/products', async (req, res) => {
