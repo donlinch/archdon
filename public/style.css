@@ -1274,27 +1274,91 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     margin-top: 0px;
 }
 
-/* 確保兩個輪播圖圖片顯示一致 */
+/* 確保兩個輪播圖圖片顯示一致
 .banner-image {
     width: 100%;
-    height: 400px; /* 主要輪播圖高度 */
+    height: 400px;  
     object-fit: cover;
     border-radius: 8px;
 }
+
+*/
  
 
+/* 确保两个页面的轮播图共用相同样式 */
+.banner-swiper {
+    width: 100%;
+    height: 370px; /* 统一高度 */
+    background-color: #FFB74D; /* 统一背景色 */
+    margin-bottom: 2rem;
+}
 
-/* 集中樣式到隨機輪播圖 */
+.banner-swiper .swiper-slide {
+    text-align: center;
+    font-size: 18px;
+    background: #ffb74d; /* 与容器背景一致 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.banner-swiper .swiper-slide img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 图片覆盖模式 */
+}
+
+/* 导航按钮样式统一 */
+.banner-swiper .swiper-button-prev,
+.banner-swiper .swiper-button-next {
+    color: rgba(255, 255, 255, 0.7);
+    --swiper-navigation-size: 30px;
+}
+
+.banner-swiper .swiper-button-prev:hover,
+.banner-swiper .swiper-button-next:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* 分页点样式统一 */
+.banner-swiper .swiper-pagination-bullet {
+    background: rgba(0, 0, 0, 0.3);
+    opacity: 0.8;
+}
+
+.banner-swiper .swiper-pagination-bullet-active {
+    background: #fff;
+    opacity: 1;
+}
+
+/* 移除 music.html 中特定的随机轮播图样式 */
+#random-banner-carousel {
+    max-width: 100% !important; /* 覆盖原有 max-width */
+    margin: 0 auto; /* 居中 */
+    padding: 0; /* 移除内边距 */
+    border-radius: 0; /* 移除圆角 */
+}
+
+
+
+
+
+
+
+/* 集中樣式到隨機輪播圖
 #random-banner-carousel {
     max-width: 500px;
     margin: 1rem auto;
     padding: 0 20px;
-}
+} */
 
 .random-banner-swiper .swiper-slide {
     height: 400px; /* 適當調整高度 */
 }
 
+
+/*
 .banner-image {
     width: 500px;
     height: 400px;
@@ -1302,7 +1366,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     border-radius: 8px;
     transition: transform 0.3s;
 }
-
+*/
 .banner-image:hover {
     transform: scale(1.02);
 }
