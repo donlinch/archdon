@@ -1254,17 +1254,17 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 
 /* 隨機輪播圖樣式 */
 #random-banner-carousel {
-    max-width: 500px;
+    max-width: 100%; /* 500px */
     margin: 0 auto;
-    padding: 0 1px;    /*     0 20px;      */
+    padding: 0 20px;    /*     0 20px;      */
     background-color: #FFB74D;
-    border-radius: 8px;
+    border-radius: 8px; /* 8px */
     
 }
 
 .random-banner-swiper .swiper-slide img {
     width: 100%;
-    height: 200px; /* 調整為您喜歡的高度  400 */
+    height: 400px; /* 調整為您喜歡的高度   */
     object-fit: cover;
     border-radius: 0%;
 }
