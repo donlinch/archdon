@@ -390,7 +390,9 @@ app.get('/api/music/:id', async (req, res) => {
     }
 });
 
-// GET /api/news?page=...&limit=...
+
+
+// 獲取新聞列表 API
 app.get('/api/news', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -399,14 +401,31 @@ app.get('/api/news', async (req, res) => {
     try {
         const countResult = await pool.query('SELECT COUNT(*) FROM news');
         const totalItems = parseInt(countResult.rows[0].count);
-        const newsResult = await pool.query(`SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at FROM news ORDER BY updated_at DESC, id DESC LIMIT $1 OFFSET $2`, [limit, offset]); // 添加 id 排序
+
+        // 修改排序條件：根據 event_date 排序
+        const newsResult = await pool.query(`
+            SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at
+            FROM news
+            ORDER BY event_date DESC, id DESC
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
         const totalPages = Math.ceil(totalItems / limit);
-        res.status(200).json({ totalItems, totalPages, currentPage: page, limit, news: newsResult.rows });
+        res.status(200).json({
+            totalItems,
+            totalPages,
+            currentPage: page,
+            limit,
+            news: newsResult.rows
+        });
     } catch (err) {
         console.error('獲取最新消息列表時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
 
 // GET /api/news/:id (單一新聞)
 app.get('/api/news/:id', async (req, res) => {
