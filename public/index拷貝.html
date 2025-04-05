@@ -37,6 +37,50 @@
 
 <!-- Swiper JS -->
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script>
+    // --- 取得並顯示隨機 Banner 圖片 ---
+    async function fetchAndDisplayBanners() {
+        const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
+        try {
+            const response = await fetch('/api/banners?page=home'); // 從後端獲取頁面為 "home" 的 banner 資料
+            if (!response.ok) {
+                throw new Error('獲取輪播圖失敗');
+            }
+            const banners = await response.json();
+            
+            // 清空現有的輪播圖片
+            bannerWrapper.innerHTML = '';
+            if (banners.length === 0) {
+                bannerWrapper.innerHTML = '<div class="swiper-slide">無圖片可顯示</div>';
+            } else {
+                // 隨機選擇部分圖片來顯示
+                banners.sort(() => Math.random() - 0.5);  // 隨機排序圖片
+                banners.slice(0, 5).forEach(banner => {   // 最多顯示 5 張圖片
+                    const slide = document.createElement('div');
+                    slide.classList.add('swiper-slide');
+                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">`;
+                    bannerWrapper.appendChild(slide);
+                });
+            }
+            
+            // 初始化 Swiper
+            new Swiper('#banner-carousel', {
+                loop: true,
+                autoplay: { delay: 3000 },
+                pagination: { el: '.swiper-pagination' },
+            });
+        } catch (error) {
+            console.error('載入輪播圖時出錯:', error);
+            bannerWrapper.innerHTML = '<div class="swiper-slide">載入失敗</div>';
+        }
+    }
+    
+    // 頁面加載後執行
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchAndDisplayBanners(); // 呼叫函數顯示隨機圖片
+    });
+    </script>
+
 
     </head>
 <body>
@@ -121,6 +165,6 @@
     </footer>
 
     <!-- Link to your JavaScript file -->
-    <script src="app.js"></script>
+    <script src="app拷貝.js"></script>
 </body>
 </html>
