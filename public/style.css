@@ -1292,7 +1292,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 }
 
 .random-banner-swiper .swiper-slide {
-    height: 500px; /* 適當調整高度 */
+    height: 400px; /* 適當調整高度 */
 }
 
 .banner-image {
