@@ -1,70 +1,54 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <!-- 保持原有 head 部分不变 -->
-    <style>
-        /* 新增表格颜色样式 */
-        .music-container table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            background-color: #f8f9fa; /* 表格背景色 */
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 音樂作品 | 最新專輯、MV 收藏與幕後花絮</title>
+    <meta name="description" content="SunnyYummy 官方音樂專區｜完整收藏最新發行專輯、熱門單曲與獨家 MV 幕後花絮，立即線上聆聽！">
+    
+    <!-- Open Graph 標籤 -->
+    <meta property="og:title" content="SunnyYummy 音樂作品 | 專輯與 MV 收藏">
+    <meta property="og:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲與獨家幕後花絮！">
 
-        .music-container th {
-            background-color: #2c3e50; /* 表头背景色 */
-            color: #ecf0f1; /* 表头文字色 */
-            padding: 12px;
-            text-align: left;
-        }
-
-        .music-container td {
-            padding: 12px;
-            border-bottom: 1px solid #bdc3c7; /* 表格分隔线颜色 */
-            color: #2c3e50; /* 表格文字颜色 */
-        }
-
-        .music-container tr:hover {
-            background-color: #e8f4f8; /* 鼠标悬停背景色 */
-        }
-
-        /* 保持轮播图原有尺寸 */
-        #banner-carousel .swiper-slide {
-            height: 400px !important; /* 保持第一个轮播图高度 */
-        }
-
-        #random-banner-carousel .swiper-slide {
-            height: 400px !important; /* 第二个轮播图相同高度 */
-        }
-
-        .banner-image {
-            height: 100%;
-            width: 100%;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-    </style>
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/music.html">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    
+    <!-- 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+     
+     
+    
 </head>
 <body>
     <header>
-        <!-- 第一个轮播图 (保持原有结构) -->
-        <div id="banner-carousel" class="swiper banner-swiper">
-            <div class="swiper-wrapper" id="banner-wrapper"></div>
-            <div class="swiper-pagination"></div>
-            <div class="swiper-button-prev"></div>
-            <div class="swiper-button-next"></div>
-        </div>
+     <!-- 第一个轮播图 (保持原有结构) -->
+     <div id="banner-carousel" class="swiper banner-swiper">
+        <div class="swiper-wrapper" id="banner-wrapper"></div>
+        <div class="swiper-pagination"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+    </div>
 
-        <!-- 第二个随机轮播图 -->
-        <div id="random-banner-carousel" class="swiper random-banner-swiper" 
-             style="margin-top: 30px; background: #f8f9fa; padding: 15px 0;">
-            <h2 style="text-align: center; margin-bottom: 15px; color: #2c3e50;">
-                <i class="fas fa-random"></i> 隨機推薦
-            </h2>
-            <div class="swiper-wrapper" id="random-banner-wrapper"></div>
-            <div class="swiper-pagination"></div>
-        </div>
+    <!-- 第二个随机轮播图 -->
+    <div id="random-banner-carousel" class="swiper random-banner-swiper" 
+         style="margin-top: 30px; background: #f8f9fa; padding: 15px 0;">
+        <h2 style="text-align: center; margin-bottom: 15px; color: #2c3e50;">
+            <i class="fas fa-random"></i> 隨機推薦
+        </h2>
+        <div class="swiper-wrapper" id="random-banner-wrapper"></div>
+        <div class="swiper-pagination"></div>
+    </div>
+</div>
+
+
     </header>
 
     <main>
