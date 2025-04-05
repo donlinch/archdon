@@ -1259,7 +1259,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     padding: 0 20px;
     background-color: #FFB74D;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    
 }
 
 .random-banner-swiper .swiper-slide img {
