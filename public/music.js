@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const response = await fetch('/api/banners?page=home'); /* 選擇 home 或 music 或 news */
-            console.log("[Music] Banner API response status:", response.status);
+            console.log("[home] Banner API response status:", response.status);/* 選擇 home 或 music 或 news */
 
             if (!response.ok) {
                 throw new Error(`獲取輪播圖失敗 (HTTP ${response.status})`);
