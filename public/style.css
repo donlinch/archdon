@@ -1565,6 +1565,13 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     line-height: 1.6;
     text-decoration: none; /* 移除連結下劃線 */
     transition: color 0.2s ease;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 限制顯示 3 行 */
+    -webkit-box-orient: vertical;
+    /* 對於不支持的瀏覽器的後備，效果不完美 */
+    max-height: calc(1.6em * 3); /* line-height * 行數 */
+    line-height: 1.6em; /* 需要明確的行高 */
 }
 .message-list-item .content-preview:hover {
     color: #E57373; /* 連結懸停用珊瑚紅 */
@@ -1828,4 +1835,173 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 #reply-emoji-trigger:hover,
 #admin-reply-emoji-trigger:hover {
     background-color: #e9ecef;
+}
+
+
+/* --- 詳情 Modal 內部 --- */
+.modal-content { /* 可以稍微增大 Modal 寬度 */
+    max-width: 750px;
+    background-color: #fdfdfd; /* Modal 背景稍淺 */
+}
+#modal-message-detail-main .message-content { /* Modal 內主留言內容 */
+     background-color: transparent; /* 移除後台的淺灰背景 */
+     padding: 15px 0;
+}
+#modal-reply-list-container {
+     max-height: 50vh; /* 限制回覆列表最大高度，出現滾動條 */
+     overflow-y: auto;
+     padding-right: 10px; /* 留出滾動條空間 */
+     margin-top: 1rem;
+     border-top: 1px solid #eee;
+     padding-top: 1rem;
+}
+.reply-item {
+    padding: 0.8rem; /* 增加內邊距 */
+    margin-bottom: 0.8rem;
+    border-left: 3px solid #ECEFF1; /* 淺灰邊框 */
+    background-color: #fff; /* 回覆背景用白色 */
+    border-radius: 4px; /* 輕微圓角 */
+}
+.reply-item.nested { /* 嵌套縮排 */
+    margin-left: 30px; /* 加大縮排 */
+    border-left-color: #CFD8DC; /* 嵌套邊框稍深 */
+    background-color: #fbfcfe; /* 嵌套背景極淺藍 */
+}
+.admin-reply { /* 管理員回覆 */
+    background-color: #FFF8E1 !important; /* 覆蓋嵌套背景 */
+    border-left: 3px solid #FFB74D !important;
+}
+
+
+/* --- 前台留言列表項 --- */
+.message-list-item {
+    padding: 1rem 0;
+    /* border-bottom 由 hr 處理 */
+}
+.message-list-item .author { /* 與 news-card 類似 */
+    font-weight: 700;
+    color: #424242;
+}
+.message-list-item .timestamp { /* 與 news-card 類似 */
+    font-size: 0.8em;
+    color: #757575;
+    margin-left: 0.5rem;
+}
+.message-list-item .content-preview {
+    display: block;
+    margin: 0.6rem 0;
+    color: #555;
+    line-height: 1.6;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    /* CSS 限制行數 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 限制 3 行 */
+    -webkit-box-orient: vertical;
+    /* 兼容性後備 */
+    max-height: calc(1.6em * 3); /* line-height * 行數 */
+}
+.message-list-item .content-preview:hover { color: #E57373; }
+.message-list-item .meta {
+    font-size: 0.85em;
+    color: #888;
+    margin-right: 1rem;
+    vertical-align: middle; /* 與按鈕對齊 */
+}
+.message-list-item .meta.view-detail-modal-btn { /* 可點擊的回覆數 */
+    cursor: pointer;
+    color: #007bff;
+    text-decoration: underline;
+}
+.message-list-item .meta.view-detail-modal-btn:hover { color: #0056b3; }
+.message-list-item .view-detail-modal-btn { /* [查看詳情] 按鈕 */
+    font-size: 0.85em;
+    color: #6c757d; /* 次要顏色 */
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+    border: 1px solid #ced4da; /* 淺灰色邊框 */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+    border-color: #FFB74D; /* 聚焦時用主題橙色 */
+    box-shadow: 0 0 0 0.2rem rgba(255, 183, 77, 0.25); /* 聚焦光暈 */
+    outline: none;
+}
+/* --- 提交按鈕樣式 (參考 .btn-primary 或 .btn-success) --- */
+#submit-message-btn,
+#modal-submit-reply-btn, /* Modal 內的回覆按鈕 */
+#save-identity-btn, /* 身份儲存按鈕 */
+#admin-reply-form button[type="submit"] /* 管理員回覆按鈕 */
+{
+    background-color: #E57373; /* 珊瑚紅 */
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-weight: 500;
+}
+#submit-message-btn:hover,
+#modal-submit-reply-btn:hover,
+#save-identity-btn:hover,
+#admin-reply-form button[type="submit"]:hover {
+    background-color: #d32f2f; /* 懸停加深 */
+}
+/* --- 取消/關閉按鈕 (參考 .btn-secondary) --- */
+.close-modal-btn, #cancel-edit-btn {
+     background-color: #6c757d;
+     color: white;
+     border: none;
+     padding: 10px 18px; /* 與提交按鈕一致 */
+}
+.close-modal-btn:hover, #cancel-edit-btn:hover {
+    background-color: #5a6268;
+}
+/* --- 狀態訊息 --- */
+.status-message {
+    font-size: 0.9em;
+    margin-top: 10px;
+    min-height: 1.2em;
+    font-weight: 500;
+}
+
+
+
+/* --- 區塊標題 (H2) - 統一樣式 --- */
+/* 可以覆蓋 .container h2 的預設居中 */
+.guestbook-container h2,
+.message-detail-container h2,
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    font-size: 1.5rem; /* 稍微大一點 */
+    color: #424242;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid #FFB74D; /* 主題橙色下邊框 */
+    font-weight: 700;
+    text-align: left; /* 標題靠左 */
+}
+.guestbook-header { /* 用於放置標題和發表按鈕的容器 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid #FFB74D;
+}
+.guestbook-header h2 {
+    margin-bottom: 0; /* 移除標題自身的下邊距和邊框 */
+    padding-bottom: 0;
+    border-bottom: none;
 }
