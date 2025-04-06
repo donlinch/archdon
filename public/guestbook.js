@@ -1,5 +1,9 @@
 // public/guestbook.js
 
+
+import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@latest/dist/index.umd.js'; // 或其他正確的 CDN 路徑
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const guestbookList = document.getElementById('guestbook-list');
     const paginationControls = document.getElementById('pagination-controls');
@@ -316,8 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const emojiTrigger = replyFormContainer.querySelector('.reply-emoji-trigger');
             const replyInput = replyFormContainer.querySelector('.reply-content-input');
             if (emojiTrigger && replyInput) {
-                const replyPicker = new EmojiButton.EmojiButton({ position: 'bottom-start' });
-                replyPicker.on('emoji', selection => {
+                const replyPicker = new EmojiButton({ position: 'bottom-start' });
+              replyPicker.on('emoji', selection => {
                     insertTextAtCursor(replyInput, selection.emoji);
                 });
                 emojiTrigger.addEventListener('click', () => replyPicker.togglePicker(emojiTrigger));
