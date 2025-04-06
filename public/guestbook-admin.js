@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-     }
+     } 
 
     // --- 移除全局函數 (改用事件委派) ---
     // window.toggleVisibility = ...
