@@ -1780,7 +1780,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     margin-bottom: 1.5rem;
     padding-bottom: 0.5rem; /* 可選，給下方留點空間 */
     text-align: right; /* 按鈕靠右 */
-    font-size: 0.9em;
+  /*   font-size: 0.9em;    */
     color: #555;
 }
 
@@ -1792,7 +1792,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     cursor: pointer;
     color: #007bff; /* 用藍色表示可點擊 */
     text-decoration: underline;
-    font-size: 1em; /* 繼承父元素字體大小 */
+    font-size: 0.7em; /* 繼承父元素字體大小 */
     border-radius: 4px;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
