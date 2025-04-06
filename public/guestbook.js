@@ -6,16 +6,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const postStatus = document.getElementById('post-status');
     const submitMessageBtn = document.getElementById('submit-message-btn');
 
-
-
-
-    
     let currentPage = 1;
     let isPostingCooldown = false; // 發文冷卻狀態
 
     // --- 函數：獲取並顯示留言列表 ---
     async function fetchGuestbookList(page = 1) {
-        if (!messageListContainer || !paginationContainer) return;
+        if (!messageListContainer || !paginationContainer) {
+            console.error("列表或分頁容器未找到！");
+            return;
+        }
         messageListContainer.innerHTML = '<p>正在載入留言...</p>'; // 顯示載入中
         paginationContainer.innerHTML = ''; // 清空分頁
 
@@ -36,74 +35,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 函數：渲染留言列表 ---
+    // --- 函數：渲染留言列表 (使用 textContent 和 DOM 操作) ---
     function renderMessageList(messages) {
         if (!messageListContainer) return;
+        messageListContainer.innerHTML = ''; // 清空舊內容
+
         if (!messages || messages.length === 0) {
-            messageListContainer.innerHTML = '<p>目前沒有留言。</p>';
+            const p = document.createElement('p');
+            p.textContent = '目前沒有留言。';
+            messageListContainer.appendChild(p);
             return;
         }
 
-        let html = '';
         messages.forEach(msg => {
-            // 格式化時間 (可選，或用更專業的庫如 date-fns, moment)
-            const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW', {
-                 year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            }); // 或顯示相對時間
+            const messageItemDiv = document.createElement('div');
+            messageItemDiv.className = 'message-list-item';
+            messageItemDiv.id = `message-row-${msg.id}`;
 
-            html += `
-                <div class="message-list-item">
-                    <span class="author">${escapeHtml(msg.author_name || '匿名')}</span>
-                    <span class="timestamp">(${activityDate})</span>
-                    <a href="/message-detail.html?id=${msg.id}" class="content-preview">
-                        ${escapeHtml(msg.content_preview || '(無內容預覽)')}
-                    </a>
-                    <span class="meta">回覆(${msg.reply_count || 0})</span>
-                    <a href="/message-detail.html?id=${msg.id}" class="view-detail-btn">[查看詳情]</a>
-                </div>
-                <hr>
-            `;
+            const authorSpan = document.createElement('span');
+            authorSpan.className = 'author';
+            authorSpan.textContent = msg.author_name || '匿名'; // 使用 textContent
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.className = 'timestamp';
+            const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            timestampSpan.textContent = `(${activityDate})`;
+
+            const previewLink = document.createElement('a');
+            previewLink.className = 'content-preview';
+            previewLink.href = `/message-detail.html?id=${msg.id}`;
+            previewLink.textContent = msg.content_preview || '(無內容預覽)'; // 使用 textContent
+            // 處理預覽內容的換行需要 CSS: .content-preview { white-space: pre-wrap; word-wrap: break-word; }
+
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'meta';
+            metaSpan.textContent = `回覆(${msg.reply_count || 0})`;
+
+            const detailLink = document.createElement('a');
+            detailLink.className = 'view-detail-btn';
+            detailLink.href = `/message-detail.html?id=${msg.id}`;
+            detailLink.textContent = '[查看詳情]';
+
+            // 按順序添加到 messageItemDiv
+            messageItemDiv.appendChild(authorSpan);
+            messageItemDiv.appendChild(document.createTextNode(' ')); // 添加空格
+            messageItemDiv.appendChild(timestampSpan);
+            messageItemDiv.appendChild(previewLink);
+            messageItemDiv.appendChild(metaSpan);
+            messageItemDiv.appendChild(document.createTextNode(' ')); // 添加空格
+            messageItemDiv.appendChild(detailLink);
+
+            messageListContainer.appendChild(messageItemDiv);
+
+            // 添加分隔線
+            const hr = document.createElement('hr');
+            messageListContainer.appendChild(hr);
         });
-        messageListContainer.innerHTML = html;
     }
 
-    // --- 函數：渲染分頁控制 ---
+    // --- 函數：渲染分頁控制 (使用 DOM 操作) ---
     function renderPagination(totalPages, currentPage) {
         if (!paginationContainer || totalPages <= 1) {
-             paginationContainer.innerHTML = ''; // 只有一頁或沒有則不顯示分頁
+             paginationContainer.innerHTML = '';
             return;
         };
-
-        let paginationHtml = '';
+        paginationContainer.innerHTML = ''; // 清空
 
         // 上一頁按鈕
-        paginationHtml += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}><< 上一頁</button>`;
+        const prevButton = document.createElement('button');
+        prevButton.className = 'page-btn';
+        prevButton.dataset.page = currentPage - 1;
+        prevButton.disabled = (currentPage === 1);
+        prevButton.innerHTML = '<< 上一頁';
+        paginationContainer.appendChild(prevButton);
 
-        // 頁碼按鈕 (可做更複雜的省略號邏輯)
-        const maxPagesToShow = 5; // 最多顯示幾個頁碼按鈕
-        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-         if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-
-
-        if (startPage > 1) paginationHtml += `<span>...</span>`;
+        // 頁碼按鈕
+        const maxPagesToShow = 5; let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2)); let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1); if (endPage - startPage + 1 < maxPagesToShow) startPage = Math.max(1, endPage - maxPagesToShow + 1);
+        if (startPage > 1) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
         for (let i = startPage; i <= endPage; i++) {
-            paginationHtml += `<button class="page-btn" data-page="${i}" ${i === currentPage ? 'disabled style="font-weight:bold;"' : ''}>${i}</button>`;
+            const pageButton = document.createElement('button');
+            pageButton.className = 'page-btn';
+            pageButton.dataset.page = i;
+            pageButton.disabled = (i === currentPage);
+            if (i === currentPage) {
+                pageButton.style.fontWeight = 'bold';
+                // 可以添加一個 .current-page class 來應用 CSS 樣式
+                pageButton.classList.add('current-page');
+            }
+            pageButton.textContent = i;
+            paginationContainer.appendChild(pageButton);
         }
-        if (endPage < totalPages) paginationHtml += `<span>...</span>`;
+        if (endPage < totalPages) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
 
         // 下一頁按鈕
-        paginationHtml += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>下一頁 >></button>`;
-
-        paginationContainer.innerHTML = paginationHtml;
+        const nextButton = document.createElement('button');
+        nextButton.className = 'page-btn';
+        nextButton.dataset.page = currentPage + 1;
+        nextButton.disabled = (currentPage === totalPages);
+        nextButton.innerHTML = '下一頁 >>';
+        paginationContainer.appendChild(nextButton);
     }
 
     // --- 事件監聽：提交新留言 ---
     if (postForm && submitMessageBtn && postStatus) {
         postForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止表單默認提交
+            e.preventDefault();
 
             if (isPostingCooldown) {
                 postStatus.textContent = '留言過於頻繁，請稍候...';
@@ -111,12 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            submitMessageBtn.disabled = true; // 禁用按鈕
+            submitMessageBtn.disabled = true;
             postStatus.textContent = '正在送出...';
             postStatus.style.color = 'blue';
 
             const formData = new FormData(postForm);
-            const authorName = formData.get('author_name')?.trim() || '匿名'; // 處理匿名
+            // 【★ 移除標題獲取 ★】
+            const authorName = formData.get('author_name')?.trim() || '匿名';
             const content = formData.get('content')?.trim();
 
             if (!content) {
@@ -130,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/guestbook', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    // 【★ 移除標題發送 ★】
                     body: JSON.stringify({ author_name: authorName, content: content }),
                 });
 
@@ -140,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 postStatus.textContent = '留言成功！';
                 postStatus.style.color = 'green';
-                postForm.reset(); // 清空表單
+                postForm.reset();
                 fetchGuestbookList(1); // 刷新到第一頁
 
                 // 啟動冷卻
@@ -150,14 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     isPostingCooldown = false;
                     submitMessageBtn.disabled = false;
                     submitMessageBtn.textContent = '送出留言';
-                    postStatus.textContent = ''; // 清除狀態訊息
-                }, 15000); // 15 秒冷卻
+                    postStatus.textContent = '';
+                }, 15000);
 
             } catch (error) {
                 console.error('留言失敗:', error);
                 postStatus.textContent = `留言失敗：${error.message}`;
                 postStatus.style.color = 'red';
-                submitMessageBtn.disabled = false; // 失敗時恢復按鈕
+                submitMessageBtn.disabled = false;
                 submitMessageBtn.textContent = '送出留言';
             }
         });
@@ -172,35 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchGuestbookList(page);
                 }
             }
-        }); 
+        });
     }
 
-    // --- 輔助函數：HTML 特殊字符轉義 ---
-    function escapeHtml(unsafe) {
-        if (!unsafe) return '';
-        return unsafe
-        function escapeHtml(unsafe) {
-            if (!unsafe) return '';
-            return unsafe
-                // & 轉成 & a m p ;
-                .replace(/&/g, '&amp;')
-        
-                // < 轉成 & l t ;
-                .replace(/</g, '&lt;')
-        
-                // > 轉成 & g t ;
-                .replace(/>/g, '&gt;')
-        
-                // " 轉成 & q u o t ;
-                .replace(/"/g, '&quot;')
-        
-                // ' 轉成 & # 3 9 ;  (數字實體)
-                .replace(/'/g, '&#39;');
-        
-                // 或者 ' 轉成 & a p o s ; (命名實體，較少用於單引號)
-                // .replace(/'/g, '& a p o s ;');
-        }
-    }
+    // --- 移除 escapeHtml 函數 ---
+    // function escapeHtml(unsafe) { ... }
 
     // --- 初始載入 ---
     fetchGuestbookList(1);
