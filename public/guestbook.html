@@ -3,77 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - [SunnyYummy]</title>
-    <link rel="stylesheet" href="style.css"> <!-- 引入你的 CSS -->
-    <!-- 其他 meta 標籤, favicon 等 -->
+    <title>留言板 - [你的網站名稱]</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <header> 
-        <!-- 你的網站標頭和導覽列 -->
-        <h1 class="page-title"> 留言板 </h1> <!-- 添加 class -->
-        
+    <header>
+        <h1><a href="/"><img id="header-logo" src="/images/SunnyYummy.png" alt="SunnyYummy Logo" style="height: 60px; width: auto;"></a></h1>
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html">樂譜與舞蹈</a>
+            <a href="/guestbook.html" class="active">留言板</a>
+            <a href="/admin.html">管理後台</a>
+        </nav>
     </header>
 
-    <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html">最新消息</a>
-        <a href="/scores.html"  >樂譜與舞蹈</a>
-    
-        <a href="/guestbook.html" class="active">留言板</a>
-    </nav>
+    <main class="guestbook-container">
+        <div class="guestbook-header">
+            <h2>訪客留言板</h2>
+            <button id="new-post-btn" class="btn btn-primary">發表新留言</button> <!-- 【★ 修改 ★】按鈕 -->
+        </div>
 
-
-
-    <main class="guestbook-container"> <!-- 給主內容區加個 class 方便 CSS 定位 -->
-        <section class="post-message-section">
-            <h2>留下您的足跡</h2>
-            <form id="post-message-form">
-                <div class="form-group">
-                    <label for="author-name">您的名稱 (選填，預設為匿名):</label>
-                    <input type="text" id="author-name" name="author_name" maxlength="100">
-                </div>
-                <div class="form-group">
-                    <label for="message-content">留言內容 (必填):</label>
-                    <textarea id="message-content" name="content" rows="4" required></textarea>
-                </div>
-                <button type="submit" id="submit-message-btn">送出留言</button>
-                <p id="post-status" class="status-message"></p> <!-- 顯示狀態訊息 -->
-            </form>
-        </section>
+        <!-- 排序按鈕 -->
+        <div class="sort-controls" style="margin-bottom: 1rem; text-align: right;">
+            排序：
+            <button class="sort-btn active" data-sort="latest">最新活動</button>
+            <button class="sort-btn" data-sort="popular">熱門討論</button>
+            <button class="sort-btn" data-sort="most_replies">最多回覆</button>
+        </div>
 
         <hr>
 
         <section class="message-list-section">
-            <h2>最新活動留言</h2>
-            <!-- 排序按鈕 (目前只有預設，可先
-             
-            【★ 新增排序按鈕 ★】 -->
-            <div class="sort-controls" style="margin-bottom: 1rem; text-align: right;">
-                排序：
-                <button class="sort-btn active" data-sort="latest">最新活動</button>
-                <button class="sort-btn" data-sort="popular">熱門討論</button>
-                <button class="sort-btn" data-sort="most_replies">最多回覆</button>
-            </div>
-            
-            <!-- <div class="sort-options">排序：<span class="active">最新活動</span></div> -->
-
+            <h3>最新留言</h3>
             <div id="message-list-container">
-                <!-- 留言列表將由 JavaScript 動態載入 -->
                 <p>正在載入留言...</p>
             </div>
-
-            <div id="pagination-container">
-                <!-- 分頁控制將由 JavaScript 動態載入 -->
-            </div>
+            <div id="pagination-container" class="pagination-controls"></div>
         </section>
+
+        <!-- 【★ 新增 ★】發表新留言的 Modal 視窗 -->
+        <div id="post-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" id="close-post-modal-btn">×</span> <!-- 關閉按鈕 -->
+                <h2>發表新留言</h2>
+                <form id="post-message-form"> <!-- ID 不變 -->
+                    <div class="form-group">
+                        <label for="modal-author-name">您的名稱 (選填，預設為匿名):</label>
+                        <input type="text" id="modal-author-name" name="author_name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-message-content">留言內容 (必填):</label>
+                        <textarea id="modal-message-content" name="content" rows="5" required></textarea>
+                    </div>
+                    <!-- 【★ 新增 Emoji 觸發按鈕位置 (稍後實現) ★】 -->
+                    <div style="margin-bottom: 10px;">
+                         <button type="button" id="post-emoji-trigger" class="btn btn-sm btn-secondary">😊 表情</button>
+                    </div>
+                    <div class="form-actions">
+                        <p id="post-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                        <button type="submit" id="submit-message-btn" class="btn btn-success">送出留言</button>
+                        <button type="button" class="btn btn-secondary close-modal-btn">取消</button> <!-- 用於關閉 Modal -->
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 【★ 新增 ★】查看詳情 Modal 的 HTML 骨架 -->
+        <div id="message-detail-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" id="close-detail-modal-btn">×</span>
+                <h2>留言詳情</h2>
+                <div id="modal-message-detail-main">
+                    <!-- 主留言詳情將載入這裡 -->
+                    <p>載入中...</p>
+                </div>
+                <hr>
+                <h3>回覆</h3>
+                <div id="modal-reply-list-container">
+                    <!-- 回覆列表將載入這裡 -->
+                    <p>載入中...</p>
+                </div>
+                <hr>
+                <h3>我要回覆</h3>
+                <form id="modal-reply-form"> <!-- Modal 內的回覆表單 -->
+                     <input type="hidden" id="modal-reply-parent-id" name="parent_reply_id">
+                    <div class="form-group">
+                        <label for="modal-reply-author-name">您的名稱 (選填):</label>
+                        <input type="text" id="modal-reply-author-name" name="reply_author_name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-reply-content" id="modal-reply-form-label">回覆內容 (必填):</label>
+                        <textarea id="modal-reply-content" name="reply_content" rows="3" required></textarea>
+                    </div>
+                     <!-- 【★ 新增 Emoji 觸發按鈕位置 (稍後實現) ★】 -->
+                    <div style="margin-bottom: 10px;">
+                         <button type="button" id="reply-emoji-trigger" class="btn btn-sm btn-secondary">😊 表情</button>
+                    </div>
+                    <div class="form-actions">
+                         <p id="modal-reply-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                        <button type="submit" id="modal-submit-reply-btn" class="btn btn-primary">送出回覆</button>
+                         <button type="button" class="btn btn-secondary close-modal-btn">關閉</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </main>
 
     <footer>
-        <!-- 你的網站頁腳 -->
-        <p>© 2023 [你的網站名稱]</p>
+        <!-- ... footer ... -->
     </footer>
 
-    <script src="guestbook.js"></script> <!-- 引入對應的 JS -->
+    <!-- 【★ 修改 ★】 引入 utils.js (如果創建了) 和 guestbook.js -->
+    <!-- <script src="utils.js"></script> -->
+    <script src="guestbook.js"></script>
 </body>
 </html>
