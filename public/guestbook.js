@@ -474,27 +474,39 @@ if (postModal && postModalCancelBtns) {
             });
         }
     
-        // --- 事件委派：處理按讚、回覆、引用按鈕 ---
-        document.body.addEventListener('click', async (event) => {
-            const target = event.target;
-            let id = null; let apiUrl = null; let countSpanSelector = null;
-        
-            // 【★ 修改 ★】只處理回覆的按讚
-            if (target.matches('.reply-like-btn')) {
-                id = target.dataset.id; apiUrl = `/api/guestbook/replies/${id}/like`; countSpanSelector = `#reply-like-count-${id}`;
-            }
-            if (likeApiUrl && likeId && likeCountSpanSelector) {
-                target.disabled = true; target.style.opacity = '0.5';
-                try {
-                    const response = await fetch(likeApiUrl, { method: 'POST' });
-                    if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
-                    const data = await response.json();
-                    const countSpan = document.querySelector(likeCountSpanSelector);
-                    if (countSpan) countSpan.textContent = ` ${data.like_count}`;
-                    setTimeout(() => { target.disabled = false; target.style.opacity = '1'; }, 1000);
-                } catch (error) { console.error('按讚失敗:', error); alert(`按讚失敗：${error.message}`); target.disabled = false; target.style.opacity = '1'; }
-                return; // 處理完按讚
-            }
+      // --- 事件委派：處理按讚、回覆、引用按鈕 ---
+document.body.addEventListener('click', async (event) => {
+    const target = event.target;
+
+    // --- 處理按讚 ---
+    let likeId = null;       // 【★ 檢查點 ★】變數名是 likeId
+    let likeApiUrl = null;   // 【★ 檢查點 ★】變數名是 likeApiUrl
+    let countSpanSelector = null;
+
+    if (target.matches('.message-like-btn')) {
+        likeId = target.dataset.id;
+        likeApiUrl = `/api/guestbook/message/${likeId}/like`; // 【★ 檢查點 ★】賦值給 likeApiUrl
+        countSpanSelector = `#message-like-count-${likeId}`;
+    } else if (target.matches('.reply-like-btn')) {
+        likeId = target.dataset.id;
+        likeApiUrl = `/api/guestbook/replies/${likeId}/like`; // 【★ 檢查點 ★】賦值給 likeApiUrl
+        countSpanSelector = `#reply-like-count-${likeId}`;
+    }
+
+    // 【★ 關鍵修正 ★】確保這裡使用的變數名與上面定義和賦值的一致
+    if (likeApiUrl && likeId && countSpanSelector) { // 使用 likeApiUrl 和 likeId
+        target.disabled = true; target.style.opacity = '0.5';
+        try {
+            // 【★ 關鍵修正 ★】fetch 時也使用 likeApiUrl
+            const response = await fetch(likeApiUrl, { method: 'POST' });
+            if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
+            const data = await response.json();
+            const countSpan = document.querySelector(countSpanSelector);
+            if (countSpan) countSpan.textContent = ` ${data.like_count}`;
+            setTimeout(() => { target.disabled = false; target.style.opacity = '1'; }, 1000);
+        } catch (error) { console.error('按讚失敗:', error); alert(`按讚失敗：${error.message}`); target.disabled = false; target.style.opacity = '1'; }
+        return; // 處理完按讚
+    }
     
             // --- 處理詳情 Modal 內的 "回覆" 和 "引用" 按鈕 ---
             // 【★ 修改 ★】確保事件目標是在 detailModal 內部
