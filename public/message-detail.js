@@ -165,12 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
         .replace(/&/g, "&")
             .replace(/</g, "<")
             .replace(/>/g, ">")
-            .replace(/"/g, "&#34;")
-            .replace(/'/g, "&#39;");
+            .replace(/"/g, "&quot;")
+           .replace(/'/g,"&#39;")
 
 
-            replace(/"/g, "&#34;")
-             .replace(/'/g, "&#39;");
      }
 
 
