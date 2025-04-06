@@ -36,6 +36,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Helper 函數 ---
 
+
+    async function fetchGuestbookList(page = 1, sort = 'latest') {
+        try {
+            const response = await fetch(`/api/guestbook?page=${page}&limit=10&sort=${sort}`);
+            const data = await response.json();
+            console.log('List data received:', data);
+            // 渲染留言和分頁等...
+        } catch (error) {
+            console.error('無法載入留言列表：', error);
+        }
+    }
+    
+
+
+
+
+
+
+
     /**
      * 格式化日期時間 (簡易版)
      * @param {string | Date} dateInput - 日期字串或 Date 物件
@@ -126,35 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-
-// 處理留言板 API 路徑
-app.get('/api/guestbook', async (req, res) => {
-    const { page = 1, limit = 10, sort = 'latest' } = req.query;
-    
-    try {
-        const offset = (page - 1) * limit;
-        let queryText = 'SELECT * FROM guestbook ORDER BY created_at DESC LIMIT $1 OFFSET $2';
-        const queryParams = [limit, offset];
-
-        if (sort === 'popular') {
-            queryText = 'SELECT * FROM guestbook ORDER BY reply_count DESC LIMIT $1 OFFSET $2';
-        }
-
-        const result = await pool.query(queryText, queryParams);
-        const messages = result.rows;
-
-        // 回傳留言資料
-        res.json({
-            currentPage: page,
-            totalPages: Math.ceil(messages.length / limit),
-            currentSort: sort,
-            messages: messages
-        });
-    } catch (err) {
-        console.error('獲取留言板資料時出錯:', err);
-        res.status(500).json({ error: '伺服器錯誤' });
-    }
-});
 
 
 
