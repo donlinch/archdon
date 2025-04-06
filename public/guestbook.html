@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - [你的網站名稱]</title>
+    <title>留言板 - [SunnyYummy]</title>
     <link rel="stylesheet" href="style.css"> <!-- 引入你的 CSS -->
     <!-- 其他 meta 標籤, favicon 等 -->
 </head>
 <body>
     <header> 
         <!-- 你的網站標頭和導覽列 -->
-        <h1>網站標題</h1>
-        <nav>
-            <a href="/">首頁</a>
-            <a href="/guestbook.html" class="active">留言板</a>
-            <!-- 其他導覽連結 -->
-             <a href="/admin.html">管理後台</a> <!-- 如果方便測試可以加上 -->
-        </nav>
+        <h1 class="page-title"> 留言板 </h1> <!-- 添加 class -->
+        
     </header>
+
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html"  >樂譜與舞蹈</a>
+    
+        <a href="/guestbook.html" class="active">留言板</a>
+    </nav>
+
+
 
     <main class="guestbook-container"> <!-- 給主內容區加個 class 方便 CSS 定位 -->
         <section class="post-message-section">

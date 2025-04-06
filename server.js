@@ -1496,7 +1496,14 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 });
 
 
-
+// 輔助函數：清理 Banner 排序欄位
+function sanitizeSortField(field) {
+    const allowedFields = ['display_order', 'created_at', 'name', 'page_location', 'id', 'random']; // 根據你的需求調整允許的欄位
+    if (allowedFields.includes(field)) {
+        return field;
+    }
+    return 'display_order'; // 預設
+}
 
 
 
