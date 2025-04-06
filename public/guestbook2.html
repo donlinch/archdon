@@ -1,222 +1,85 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>留言板</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
+    <header>
         <h1>留言板</h1>
+    </header>
 
-        <!-- 發表留言按鈕 -->
-        <button @click="openModal">發表留言</button>
+    <main>
+        <!-- 發表新留言 -->
+        <button id="post-message-btn">發表新留言</button>
+        
+        <!-- 排序選擇 -->
+        <div class="sort-controls">
+            <button class="sort-link active" data-sort="latest">最新活動</button>
+            <button class="sort-link" data-sort="popular">熱門討論</button>
+            <button class="sort-link" data-sort="most_replies">最多回覆</button>
+        </div>
 
         <!-- 留言列表 -->
-        <div v-if="messages.length > 0">
-            <h2>所有留言</h2>
-            <div v-for="message in messages" :key="message.id" class="message-item">
-                <div class="message-title" @click="showMessageDetail(message.id)">
-                    <strong>{{ message.title }}</strong> - {{ message.author_name }} ({{ message.created_at }})
+        <div id="guestbook-list"></div>
+
+        <!-- 分頁 -->
+        <div id="pagination-controls"></div>
+    </main>
+
+    <!-- 發表新留言 Modal -->
+    <div id="post-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>發表新留言</h2>
+            <form id="post-form">
+                <div class="form-group">
+                    <label for="author-name">你的名稱 (選填):</label>
+                    <input type="text" id="author-name" placeholder="匿名">
                 </div>
-            </div>
+                <div class="form-group">
+                    <label for="message-title">留言標題:</label>
+                    <input type="text" id="message-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="message-content">留言內容:</label>
+                    <textarea id="message-content" required></textarea>
+                </div>
+                <button type="submit">送出留言</button>
+                <p id="post-status-msg"></p>
+            </form>
         </div>
-
-        <!-- 顯示留言詳情 -->
-        <div v-if="currentMessage" class="message-detail">
-            <h3>{{ currentMessage.title }}</h3>
-            <p>{{ currentMessage.content }}</p>
-            <p>作者：{{ currentMessage.author_name }}</p>
-            <p>時間：{{ currentMessage.created_at }}</p>
-            <button @click="openReplyModal(currentMessage.id)">回覆留言</button>
-        </div>
-
-        <!-- 發表留言模態框 -->
-        <div v-if="showModal" class="modal">
-            <div class="modal-content">
-                <h2>發表新留言</h2>
-                <label for="author_name">你的名稱：</label>
-                <input type="text" id="author_name" v-model="newMessage.author_name" placeholder="請輸入你的名稱">
-
-                <label for="message_title">留言標題：</label>
-                <input type="text" id="message_title" v-model="newMessage.title" placeholder="請輸入標題">
-
-                <label for="message_content">留言內容：</label>
-                <textarea id="message_content" v-model="newMessage.content" placeholder="請輸入留言內容"></textarea>
-
-                <button @click="submitMessage">提交留言</button>
-                <button @click="closeModal">取消</button>
-            </div>
-        </div>
-
-        <!-- 回覆留言模態框 -->
-        <div v-if="showReplyModal" class="modal">
-            <div class="modal-content">
-                <h2>回覆留言</h2>
-                <label for="reply_content">回覆內容：</label>
-                <textarea id="reply_content" v-model="newReply.content" placeholder="請輸入回覆內容"></textarea>
-
-                <button @click="submitReply">提交回覆</button>
-                <button @click="closeReplyModal">取消</button>
-            </div>
-        </div>
-
     </div>
 
+    <!-- 查看詳情 Modal -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>留言詳情</h2>
+            <div id="message-detail"></div>
+            <div id="replies-container"></div>
+        </div>
+    </div>
+
+    <script src="guestbook.js"></script>
+    <script src="app.js"></script>
+
     <script>
-        new Vue({
-            el: '#app',
-            data: {
-                messages: [],
-                newMessage: {
-                    author_name: '',
-                    title: '',
-                    content: ''
-                },
-                currentMessage: null,
-                newReply: {
-                    content: ''
-                },
-                showModal: false,
-                showReplyModal: false,
-                messageIdForReply: null,
-            },
-            mounted() {
-                this.fetchMessages();
-            },
-            methods: {
-                fetchMessages() {
-                    axios.get('/api/guestbook', { 
-                        params: { 
-                            page: 1, 
-                            limit: 10, 
-                            sort: 'latest' 
-                        } 
-                    })
-                        .then(response => {
-                            this.messages = response.data.messages;
-                        })
-                        .catch(error => {
-                            console.error("獲取留言時出錯:", error);
-                        });
-                },
-                openModal() {
-                    this.showModal = true;
-                },
-                closeModal() {
-                    this.showModal = false;
-                    this.newMessage = { author_name: '', title: '', content: '' };
-                },
-                submitMessage() {
-                    if (!this.newMessage.author_name || !this.newMessage.title || !this.newMessage.content) {
-                        alert('所有欄位都必須填寫');
-                        return;
-                    }
-
-                    axios.post('/api/guestbook', this.newMessage)
-                        .then(response => {
-                            this.messages.push(response.data);
-                            this.closeModal();
-                        })
-                        .catch(error => {
-                            console.error("發表留言時出錯:", error);
-                        });
-                },
-                showMessageDetail(id) {
-                    axios.get(`/api/guestbook/message/${id}`)
-                        .then(response => {
-                            this.currentMessage = response.data.message;
-                        })
-                        .catch(error => {
-                            console.error("獲取留言詳情時出錯:", error);
-                        });
-                },
-                openReplyModal(messageId) {
-                    this.messageIdForReply = messageId;
-                    this.showReplyModal = true;
-                },
-                closeReplyModal() {
-                    this.showReplyModal = false;
-                    this.newReply = { content: '' };
-                },
-                submitReply() {
-                    if (!this.newReply.content) {
-                        alert('回覆內容不能為空');
-                        return;
-                    }
-
-                    axios.post('/api/guestbook/replies', {
-                        message_id: this.messageIdForReply,
-                        content: this.newReply.content
-                    })
-                    .then(response => {
-                        this.currentMessage.replies.push(response.data);
-                        this.closeReplyModal();
-                    })
-                    .catch(error => {
-                        console.error("發表回覆時出錯:", error);
-                    });
-                }
-            }
+        // Handling modal display logic and interactions
+        document.getElementById('post-message-btn').addEventListener('click', function() {
+            document.getElementById('post-modal').style.display = 'flex';
         });
+
+        document.querySelectorAll('.close-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                document.getElementById('post-modal').style.display = 'none';
+                document.getElementById('detail-modal').style.display = 'none';
+            });
+        });
+
+        // Add more JavaScript for fetchGuestbookList and pagination handling
     </script>
-
-    <style>
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            width: 400px;
-        }
-
-        .modal-content input,
-        .modal-content textarea {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        .modal-content button {
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .modal-content button:hover {
-            background-color: #0056b3;
-        }
-
-        .message-item {
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-
-        .message-detail {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-    </style>
 </body>
 </html>
