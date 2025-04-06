@@ -1471,3 +1471,280 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 }
 
 
+/* public/style.css (追加或整合以下樣式) */
+
+/* --- 留言板通用容器 --- */
+.guestbook-container,
+.message-detail-container,
+.guestbook-admin-container, /* 後台列表 */
+.admin-identities-container, /* 後台身份管理 */
+.admin-message-detail-container /* 後台詳情 */
+{
+    max-width: 900px; /* 比商品頁稍窄，更適合閱讀 */
+    margin: 1.5rem auto;
+    padding: 1.5rem;
+    background-color: #fff; /* 使用白色背景增加對比 */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* 比商品卡片稍明顯的陰影 */
+}
+
+/* --- 區塊標題 (例如 "留下您的足跡", "最新活動留言") --- */
+.guestbook-container h2,
+.message-detail-container h2,
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    font-size: 1.3rem;
+    color: #424242;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #FFB74D; /* 使用主題橙色作為下邊框 */
+    font-weight: 700;
+}
+
+/* --- 表單樣式 (沿用並微調 Modal 樣式) --- */
+.post-message-section form,
+.reply-form-section form, /* 詳情頁回覆表單 */
+#identity-form, /* 身份管理表單 */
+#admin-reply-form /* 管理員回覆表單 */
+{
+    margin-bottom: 1.5rem;
+}
+
+/* 繼承 .form-group, label, input, textarea, button 的現有樣式 */
+/* 可以針對留言板的表單按鈕做微調 */
+#submit-message-btn,
+#submit-reply-btn, /* 詳情頁回覆按鈕 */
+#admin-reply-form button[type="submit"] {
+    background-color: #E57373; /* 使用珊瑚紅作為提交按鈕顏色 */
+    color: white;
+    border: none;
+    padding: 10px 18px; /* 稍微大一點的按鈕 */
+}
+#submit-message-btn:hover,
+#submit-reply-btn:hover,
+#admin-reply-form button[type="submit"]:hover {
+    background-color: #d32f2f; /* 懸停加深 */
+}
+
+/* 狀態訊息 */
+.status-message,
+#post-status,
+#reply-status,
+#identity-form .form-status,
+#admin-reply-form .reply-status {
+    font-size: 0.9em;
+    margin-top: 10px;
+    min-height: 1.2em; /* 佔位，避免佈局跳動 */
+    font-weight: 500;
+}
+
+/* --- 前台列表頁 (`guestbook.html`) --- */
+.message-list-item {
+    padding: 1rem 0;
+    /* border-bottom: 1px solid #eee; */ /* 用 hr 代替 */
+}
+.message-list-item:last-child {
+    border-bottom: none;
+}
+.message-list-item .author {
+    font-weight: 700;
+    color: #424242;
+    margin-right: 0.5rem;
+}
+.message-list-item .timestamp {
+    font-size: 0.8em;
+    color: #757575;
+    margin-left: 0.5rem;
+}
+.message-list-item .content-preview {
+    display: block; /* 獨佔一行 */
+    margin: 0.5rem 0;
+    color: #555;
+    line-height: 1.6;
+    text-decoration: none; /* 移除連結下劃線 */
+    transition: color 0.2s ease;
+}
+.message-list-item .content-preview:hover {
+    color: #E57373; /* 連結懸停用珊瑚紅 */
+}
+.message-list-item .meta {
+    font-size: 0.85em;
+    color: #888;
+    margin-right: 1rem;
+}
+.message-list-item .view-detail-btn {
+    font-size: 0.85em;
+    color: #E57373;
+    text-decoration: none;
+    font-weight: 500;
+}
+.message-list-item .view-detail-btn:hover {
+    text-decoration: underline;
+}
+
+/* 分頁樣式 (沿用 news.html 的 #pagination-controls) */
+/* 如果 guestbook.html 的分頁容器 ID 不同，需要修改選擇器 */
+#pagination-container { /* 確保 ID 匹配 */
+     text-align: center;
+     margin-top: 2rem;
+}
+/* 繼承 #pagination-controls 的樣式 */
+#pagination-container button,
+#pagination-container span {
+     padding: 8px 12px; margin: 0 3px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease;
+}
+#pagination-container button:hover { background-color: #eee; }
+#pagination-container button:disabled { opacity: 0.6; cursor: not-allowed; background-color: #FFB74D; color: white; border-color: #FFB74D; font-weight: bold; }
+#pagination-container span { padding: 8px 5px; }
+
+
+/* --- 前台詳情頁 (`message-detail.html`) --- */
+.message-detail-main {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+.message-detail-main .author { font-weight: 700; font-size: 1.1rem; }
+.message-detail-main .timestamp { font-size: 0.85em; color: #757575; margin-left: 0.5rem; }
+.message-content { /* 主留言內文 */
+    margin-top: 1rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #424242;
+    white-space: pre-wrap; /* 處理換行 */
+    word-wrap: break-word;
+}
+
+.reply-list {
+    margin-top: 1.5rem;
+}
+.reply-item {
+    padding: 0.8rem 0.8rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid #eee; /* 預設左邊框 */
+    background-color: #fdfdfd; /* 非常淺的背景 */
+}
+.reply-item .author {
+    font-weight: 600; /* 回覆者名稱稍細 */
+    color: #555;
+    margin-right: 0.5rem;
+}
+.reply-item .timestamp {
+    font-size: 0.8em;
+    color: #888;
+}
+.reply-content {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #555;
+    white-space: pre-wrap; /* 處理換行 */
+    word-wrap: break-word;
+}
+
+/* 管理員回覆樣式 */
+.admin-reply {
+    background-color: #FFF8E1; /* 淡黃色背景 */
+    border-left: 3px solid #FFB74D; /* 主題橙色邊框 */
+}
+.admin-reply .author {
+    color: #FF8F00; /* 橙色字體 */
+    font-weight: 700; /* 加粗 */
+}
+
+/* --- 後台頁面通用 (沿用現有 admin 樣式) --- */
+/* .admin-nav ... (沿用) */
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    text-align: left; /* 後台標題靠左 */
+    border-bottom-color: #ccc; /* 後台下邊框用灰色 */
+}
+
+.admin-table { /* 後台表格樣式 */
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+.admin-table th, .admin-table td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+.admin-table th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+}
+.admin-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.admin-table tbody tr:hover {
+    background-color: #f0f0f0;
+}
+.admin-table .content-preview { /* 限制預覽寬度 */
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block; /* 讓 ellipsis 生效 */
+}
+.admin-table .actions button,
+.admin-table .actions a {
+    margin-right: 5px;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+.admin-table .actions a {
+     display: inline-block;
+     background-color: #6c757d; color: white; border-radius: 3px; text-decoration: none;
+}
+.admin-table .actions a:hover { background-color: #5a6268; }
+
+/* 狀態標示 */
+.status-visible { color: green; font-weight: bold; }
+.status-hidden { color: red; font-style: italic; }
+
+/* --- 後台身份管理頁 (`admin-identities.html`) --- */
+#identity-form {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+
+/* --- 後台詳情頁 (`admin-message-detail.html`) --- */
+.admin-message-detail-container .message-detail-main,
+.admin-message-detail-container .reply-list {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+.admin-message-detail-container .reply-item {
+    border-left-color: #ccc; /* 後台邊框用灰色 */
+    padding-left: 10px;
+}
+.admin-message-detail-container .admin-reply {
+    border-left-color: #FFB74D;
+    background-color: #fffaf0; /* 後台管理員回覆背景色 */
+}
+.admin-message-detail-container .reply-actions button {
+    margin-left: 10px;
+    padding: 2px 5px;
+    font-size: 0.75em;
+}
+#admin-reply-form {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+#admin-identity-select {
+    margin-bottom: 1rem;
+    display: block; /* 下拉選單獨佔一行 */
+    max-width: 250px; /* 限制寬度 */
+} 
