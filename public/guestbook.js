@@ -7,25 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 發表 Modal 元素
     const newPostBtn = document.getElementById('new-post-btn');
     const postModal = document.getElementById('post-modal');
-    // 使用更精確的選擇器獲取 Modal 內的元素
-    const closePostModalBtn = postModal?.querySelector('#close-post-modal-btn'); // 假設右上角關閉按鈕 ID
+    const closePostModalBtn = postModal?.querySelector('#close-post-modal-btn'); // 使用 ID 或特定 class
     const postModalForm = postModal?.querySelector('#post-message-form');
     const postModalStatus = postModal?.querySelector('#post-status');
     const postModalSubmitBtn = postModal?.querySelector('#submit-message-btn');
-    const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn'); // 假設底部也有 .close-modal-btn
-
-
-  // 【★ 新增 ★】獲取 Emoji 按鈕和對應輸入框
-  const postEmojiTrigger = document.getElementById('post-emoji-trigger');
-  const postModalContentInput = document.getElementById('modal-message-content');
-  const replyEmojiTrigger = document.getElementById('reply-emoji-trigger'); // 詳情 Modal 內的回覆 Emoji 按鈕
-  const modalReplyContentInput = document.getElementById('modal-reply-content'); // 詳情 Modal 內的回覆輸入框
-
-
+    const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn'); // 所有關閉發表 Modal 的按鈕
+    const postEmojiTrigger = document.getElementById('post-emoji-trigger');
+    const postModalContentInput = document.getElementById('modal-message-content');
 
     // 詳情 Modal 元素
     const detailModal = document.getElementById('message-detail-modal');
-    const closeDetailModalBtn = detailModal?.querySelector('#close-detail-modal-btn');
+    const closeDetailModalBtn = detailModal?.querySelector('#close-detail-modal-btn'); // 右上角關閉按鈕 ID
     const detailModalMain = document.getElementById('modal-message-detail-main');
     const detailModalReplyList = document.getElementById('modal-reply-list-container');
     const detailModalReplyForm = document.getElementById('modal-reply-form');
@@ -34,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalReplyFormAuthor = document.getElementById('modal-reply-author-name');
     const modalReplyStatus = document.getElementById('modal-reply-status');
     const modalSubmitReplyBtn = document.getElementById('modal-submit-reply-btn');
-    const detailModalCancelBtns = detailModal?.querySelectorAll('.close-modal-btn'); // 詳情 Modal 內的關閉按鈕
+    const detailModalCancelBtns = detailModal?.querySelectorAll('.close-modal-btn'); // 詳情 Modal 內所有關閉按鈕 (可能包含底部的)
+    const replyEmojiTrigger = document.getElementById('reply-emoji-trigger'); // 詳情 Modal 內回覆的 Emoji 按鈕
 
     // --- 狀態變數 ---
     let currentPage = 1;
@@ -44,26 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDetailMessageId = null;
     let currentParentReplyId = null;
 
-    // --- 函數：打開 Modal ---
-    function openModal(modalElement) {
-        if (modalElement) modalElement.style.display = 'flex';
-    }
-
-    // --- 函數：關閉 Modal ---
-    function closeModal(modalElement) {
-        if (modalElement) modalElement.style.display = 'none';
-    }
-
-    // --- 函數：更新排序按鈕狀態 ---
+    // --- 輔助函數 ---
+    function openModal(modalElement) { if (modalElement) modalElement.style.display = 'flex'; }
+    function closeModal(modalElement) { if (modalElement) modalElement.style.display = 'none'; }
     function updateSortButtonsActiveState(activeSort) {
         if (!sortControls) return;
-        const buttons = sortControls.querySelectorAll('.sort-btn');
-        buttons.forEach(button => {
+        sortControls.querySelectorAll('.sort-btn').forEach(button => {
             button.classList.toggle('active', button.dataset.sort === activeSort);
         });
     }
+    function insertTextAtCursor(textarea, text) {
+        if (!textarea) return; const start = textarea.selectionStart; const end = textarea.selectionEnd; const value = textarea.value;
+        textarea.value = value.substring(0, start) + text + value.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + text.length; textarea.focus();
+    }
 
-    // --- 函數：獲取並顯示留言列表 ---
+    // --- 數據獲取與渲染 ---
     async function fetchGuestbookList(page = 1, sort = 'latest') {
         if (!messageListContainer || !paginationContainer) return;
         messageListContainer.innerHTML = '<p>正在載入留言...</p>'; paginationContainer.innerHTML = '';
@@ -74,44 +63,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             updateSortButtonsActiveState(data.sort || 'latest');
             renderMessageList(data.messages);
-            renderPagination(data.totalPages, data.currentPage); // 【★ 修正 ★】調用修正後的 renderPagination
+            renderPagination(data.totalPages, data.currentPage);
         } catch (error) { console.error('獲取留言列表失敗:', error); messageListContainer.innerHTML = `<p style="color: red;">無法載入留言列表：${error.message}</p>`; }
     }
 
-    // --- 函數：渲染留言列表 (觸發 Modal) ---
     function renderMessageList(messages) {
         if (!messageListContainer) return;
         messageListContainer.innerHTML = '';
         if (!messages || messages.length === 0) { const p = document.createElement('p'); p.textContent = '目前沒有留言。'; messageListContainer.appendChild(p); return; }
-
         messages.forEach(msg => {
             const messageItemDiv = document.createElement('div'); messageItemDiv.className = 'message-list-item';
             const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = msg.author_name || '匿名';
-            const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = `(${activityDate})`;
+            const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${activityDate})`;
             const previewDiv = document.createElement('div'); previewDiv.className = 'content-preview view-detail-modal-btn'; previewDiv.dataset.messageId = msg.id; previewDiv.textContent = msg.content_preview || '(無內容預覽)'; previewDiv.style.cursor = 'pointer'; previewDiv.style.display = 'block'; previewDiv.style.margin = '0.5rem 0'; previewDiv.style.color = '#555'; previewDiv.style.lineHeight = '1.6';
-            // CSS 限制行數: .content-preview { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
             const metaSpan = document.createElement('span'); metaSpan.className = 'meta view-detail-modal-btn'; metaSpan.dataset.messageId = msg.id; metaSpan.textContent = `回覆(${msg.reply_count || 0})`; metaSpan.style.cursor = 'pointer'; metaSpan.style.color = '#007bff'; metaSpan.style.textDecoration = 'underline';
             const viewSpan = document.createElement('span'); viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
             const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
-           // const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
-           messageItemDiv.appendChild(authorSpan); messageItemDiv.appendChild(document.createTextNode(' ')); messageItemDiv.appendChild(timestampSpan);
-           messageItemDiv.appendChild(previewDiv);
-           messageItemDiv.appendChild(metaSpan); messageItemDiv.appendChild(viewSpan); messageItemDiv.appendChild(likeSpan);
-           // 【★ 移除 ★】移除添加 detailButton 的操作
-           // messageItemDiv.appendChild(document.createTextNode(' '));
-           // messageItemDiv.appendChild(detailButton);
-
-           messageListContainer.appendChild(messageItemDiv);
-           const hr = document.createElement('hr'); messageListContainer.appendChild(hr);
-      
+            const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
+            messageItemDiv.appendChild(authorSpan); messageItemDiv.appendChild(document.createTextNode(' ')); messageItemDiv.appendChild(timestampSpan); messageItemDiv.appendChild(previewDiv); messageItemDiv.appendChild(metaSpan); messageItemDiv.appendChild(viewSpan); messageItemDiv.appendChild(likeSpan); messageItemDiv.appendChild(detailButton);
+            messageListContainer.appendChild(messageItemDiv); const hr = document.createElement('hr'); messageListContainer.appendChild(hr);
         });
     }
 
-    // --- 【★ 修正 ★】函數：渲染分頁控制 (只有一個定義) ---
     function renderPagination(totalPages, currentPage) {
-        if (!paginationContainer || totalPages <= 1) { paginationContainer.innerHTML = ''; return; };
-        paginationContainer.innerHTML = '';
-
+        if (!paginationContainer || totalPages <= 1) { paginationContainer.innerHTML = ''; return; }; paginationContainer.innerHTML = '';
         const prevButton = document.createElement('button'); prevButton.className = 'page-btn'; prevButton.dataset.page = currentPage - 1; prevButton.disabled = (currentPage === 1); prevButton.innerHTML = '<< 上一頁'; paginationContainer.appendChild(prevButton);
         const maxPagesToShow = 5; let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2)); let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1); if (endPage - startPage + 1 < maxPagesToShow) startPage = Math.max(1, endPage - maxPagesToShow + 1);
         if (startPage > 1) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
@@ -120,249 +95,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextButton = document.createElement('button'); nextButton.className = 'page-btn'; nextButton.dataset.page = currentPage + 1; nextButton.disabled = (currentPage === totalPages); nextButton.innerHTML = '下一頁 >>'; paginationContainer.appendChild(nextButton);
     }
 
-
-
-
-
-
-
-
-
-    
-        // --- 【★★★ 詳情 Modal 相關函數 ★★★】 ---
-    
-        // --- 函數：獲取並渲染詳情 Modal 內容 ---
-        async function fetchAndRenderDetailModal(messageId) {
-            if (!detailModal || !detailModalMain || !detailModalReplyList) {
-                 console.error("錯誤：詳情 Modal 或其內部容器未找到！");
-                 return; // 確保元素存在
-            }
-            currentDetailMessageId = messageId; // 記錄當前查看的 ID
-    
-            // 顯示載入中狀態
-            detailModalMain.innerHTML = '<p>正在載入留言內容...</p>';
-            detailModalReplyList.innerHTML = '<p>正在載入回覆...</p>';
-            // 重置回覆表單狀態
-            if (detailModalReplyForm) detailModalReplyForm.reset();
-            if (modalReplyStatus) modalReplyStatus.textContent = '';
-            if (modalReplyFormLabel) modalReplyFormLabel.textContent = '回覆內容 (必填):'; // 恢復 Label
-            currentParentReplyId = null; // 清除之前的回覆目標
-    
-            openModal(detailModal); // 打開 Modal
-    
-            // 發送 view 請求 (增加瀏覽數)
-            fetch(`/api/guestbook/message/${messageId}/view`, { method: 'POST' })
-                .catch(err => console.warn('記錄瀏覽數時網路錯誤:', err));
-    
-            // 獲取詳情數據
-            try {
-                const response = await fetch(`/api/guestbook/message/${messageId}`); // API 路徑
-                if (!response.ok) {
-                    if (response.status === 404) throw new Error('找不到指定的留言。');
-                    let errorMsg = `HTTP 錯誤 ${response.status}`; try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch {}
-                    throw new Error(`無法獲取留言詳情 (${errorMsg})`);
-                }
-                const data = await response.json();
-                if (!data || !data.message) throw new Error('API 返回的資料格式不正確。');
-    
-                renderModalMessageDetail(data.message); // 渲染 Modal 主留言
-                renderModalNestedReplyList(data.replies || []); // 渲染 Modal 嵌套回覆
-    
-            } catch (error) {
-                console.error('載入詳情 Modal 失敗:', error);
-                detailModalMain.innerHTML = `<p style="color: red;">無法載入詳情：${error.message}</p>`;
-                detailModalReplyList.innerHTML = '';
-            }
-        }
-    
-        // --- 函數：渲染 Modal 中的主留言詳情 ---
-        function renderModalMessageDetail(message) {
-            if (!detailModalMain || !message) return;
-            detailModalMain.innerHTML = ''; // 清空
-    
-            const titleH2 = document.createElement('h2');
-            titleH2.textContent = `留言 #${message.id}`; // 顯示 ID 作為標題
-            titleH2.style.marginTop = '0'; // 移除預設 H2 margin
-    
-            const authorP = document.createElement('p');
-            const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = message.author_name || '匿名';
-            const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const createDate = new Date(message.created_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${createDate})`;
-            authorP.appendChild(authorSpan); authorP.appendChild(timestampSpan);
-    
-            const hr = document.createElement('hr');
-    
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = message.content || '';
-            contentDiv.style.whiteSpace = 'pre-wrap';
-            contentDiv.style.wordWrap = 'break-word';
-            contentDiv.style.padding = '10px 0'; // 上下留白
-    
-            const metaP = document.createElement('p');
-            metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px';
-            metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0}`));    
-            const likeButton = document.createElement('button');
-            likeButton.className = 'like-btn message-like-btn';
-            likeButton.dataset.id = message.id;
-            likeButton.innerHTML = '❤️';
-    
-            const likeCountSpan = document.createElement('span');
-            likeCountSpan.id = `message-like-count-${message.id}`;
-            likeCountSpan.textContent = ` ${message.like_count || 0}`;
-            likeCountSpan.style.marginLeft = '5px';
-    
-            metaP.appendChild(likeButton);
-            metaP.appendChild(likeCountSpan);
-    
-            // 按順序添加到容器
-            detailModalMain.appendChild(titleH2);
-            detailModalMain.appendChild(authorP);
-            detailModalMain.appendChild(hr);
-            detailModalMain.appendChild(contentDiv);
-            detailModalMain.appendChild(metaP);
-        }
-    
-        // --- 函數：渲染 Modal 中的嵌套回覆列表 ---
-        function renderModalNestedReplyList(replies) {
-            if (!detailModalReplyList) { console.error("錯誤：找不到 Modal 內的回覆列表容器 #modal-reply-list-container"); return; }
-            detailModalReplyList.innerHTML = '';
-            if (!replies || replies.length === 0) { const p = document.createElement('p'); p.textContent = '目前沒有回覆。'; detailModalReplyList.appendChild(p); return; }
-    
-            const repliesByParentId = new Map();
-            replies.forEach(reply => { const parentId = reply.parent_reply_id === null ? 'root' : reply.parent_reply_id; if (!repliesByParentId.has(parentId)) repliesByParentId.set(parentId, []); repliesByParentId.get(parentId).push(reply); });
-            const floorMap = new Map();
-            const rootReplies = repliesByParentId.get('root') || [];
-            rootReplies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            rootReplies.forEach((reply, index) => { floorMap.set(reply.id, `B${index + 1}`); });
-    
-            function renderRepliesRecursive(parentId, level = 0) {
-                const children = repliesByParentId.get(parentId === 'root' ? 'root' : parentId) || [];
-                children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                if (children.length === 0) return;
-    
-                children.forEach((reply) => {
-                    let floorNumber = '';
-                    if (level === 0) { floorNumber = floorMap.get(reply.id); }
-                    else { const parentFloor = floorMap.get(parentId); if (parentFloor) { const siblings = repliesByParentId.get(parentId) || []; const replyIndex = siblings.findIndex(r => r.id === reply.id); floorNumber = `${parentFloor}-${replyIndex + 1}`; floorMap.set(reply.id, floorNumber); } else { floorNumber = '?'; console.warn(`找不到父級 ${parentId} 的樓層號`); } }
-                    if (!floorNumber) floorNumber = "?";
-    
-                    const replyDiv = document.createElement('div');
-                    replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item';
-                    if (level > 0) { replyDiv.classList.add('nested'); replyDiv.style.marginLeft = `${level * 25}px`; }
-                    replyDiv.dataset.replyId = reply.id; replyDiv.dataset.floor = floorNumber;
-    
-                    const metaP = document.createElement('p'); metaP.style.marginBottom = '5px';
-                    const floorSpan = document.createElement('span'); floorSpan.className = 'reply-floor'; floorSpan.textContent = floorNumber;
-                    const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = reply.is_admin_reply ? `[${reply.admin_identity_name || '管理員'}]` : (reply.author_name || '匿名');
-                    const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; timestampSpan.textContent = ` (${new Date(reply.created_at).toLocaleString('zh-TW')})`;
-                    metaP.appendChild(floorSpan); metaP.appendChild(authorSpan); metaP.appendChild(timestampSpan);
-    
-                    const contentDiv = document.createElement('div'); contentDiv.className = 'reply-content'; contentDiv.textContent = reply.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.marginBottom = '5px';
-    
-                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions';
-                    const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber;
-                    const quoteButton = document.createElement('button'); quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; quoteButton.textContent = '引用'; quoteButton.dataset.targetId = reply.id; quoteButton.dataset.targetFloor = floorNumber; quoteButton.dataset.targetContent = reply.content || ''; quoteButton.style.marginLeft = '10px';
-                    const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px';
-                    const likeButton = document.createElement('button'); likeButton.className = 'like-btn reply-like-btn'; likeButton.dataset.id = reply.id; likeButton.innerHTML = '❤️';
-                    const likeCountSpan = document.createElement('span'); likeCountSpan.id = `reply-like-count-${reply.id}`; likeCountSpan.textContent = ` ${reply.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px';
-                    likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan);
-                    actionsDiv.appendChild(replyButton); actionsDiv.appendChild(quoteButton); actionsDiv.appendChild(likeContainer);
-    
-                    replyDiv.appendChild(metaP); replyDiv.appendChild(contentDiv); replyDiv.appendChild(actionsDiv);
-                    detailModalReplyList.appendChild(replyDiv);
-                    const hr = document.createElement('hr'); hr.style.borderTop = '1px dashed #eee'; hr.style.margin = '10px 0';
-                    detailModalReplyList.appendChild(hr);
-    
-                    renderRepliesRecursive(reply.id, level + 1); // 遞迴
-                });
-            }
-            renderRepliesRecursive('root', 0); // 開始渲染
-        }
-    
-
-
-
-
-
-
-    // --- 【★ 新增 ★】初始化發表 Modal 的 Emoji Picker ---
-    if (postEmojiTrigger && postModalContentInput && window.EmojiButton) {
-        const picker = new EmojiButton.EmojiButton({
-            position: 'bottom-start', // 控制彈出位置
-            autoHide: true, // 選擇後自動隱藏
-            // theme: 'auto', // 可選主題: light, dark, auto
-            // categories: [...] // 可選：限制顯示的分類
-        });
-
-        picker.on('emoji', selection => {
-            insertTextAtCursor(postModalContentInput, selection.emoji);
-        });
-
-        postEmojiTrigger.addEventListener('click', () => {
-            picker.togglePicker(postEmojiTrigger);
-        });
-    } else {
-        console.warn("未找到發表 Modal 的 Emoji 按鈕或輸入框，或 EmojiButton 庫未載入。");
+    // --- 詳情 Modal 相關函數 ---
+    async function fetchAndRenderDetailModal(messageId) {
+        if (!detailModal || !detailModalMain || !detailModalReplyList) { console.error("錯誤：詳情 Modal 或其內部容器未找到！"); return; }
+        currentDetailMessageId = messageId;
+        detailModalMain.innerHTML = '<p>正在載入留言內容...</p>'; detailModalReplyList.innerHTML = '<p>正在載入回覆...</p>';
+        if (detailModalReplyForm) detailModalReplyForm.reset(); if (modalReplyStatus) modalReplyStatus.textContent = ''; if (modalReplyFormLabel) modalReplyFormLabel.textContent = '回覆內容 (必填):'; currentParentReplyId = null;
+        openModal(detailModal);
+        fetch(`/api/guestbook/message/${messageId}/view`, { method: 'POST' }).catch(err => console.warn('記錄瀏覽數錯誤:', err));
+        try {
+            const response = await fetch(`/api/guestbook/message/${messageId}`);
+            if (!response.ok) { if (response.status === 404) throw new Error('找不到指定的留言。'); let errorMsg = `HTTP 錯誤 ${response.status}`; try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch {} throw new Error(`無法獲取留言詳情 (${errorMsg})`); }
+            const data = await response.json(); if (!data || !data.message) throw new Error('API 返回的資料格式不正確。');
+            renderModalMessageDetail(data.message); renderModalNestedReplyList(data.replies || []);
+        } catch (error) { console.error('載入詳情 Modal 失敗:', error); detailModalMain.innerHTML = `<p style="color: red;">無法載入詳情：${error.message}</p>`; detailModalReplyList.innerHTML = ''; }
     }
 
-     // --- 【★ 新增 ★】初始化詳情 Modal 回覆框的 Emoji Picker ---
-     if (replyEmojiTrigger && modalReplyContentInput && window.EmojiButton) {
-        const replyPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true }); // 位置改為向上彈出
-
-        replyPicker.on('emoji', selection => {
-            insertTextAtCursor(modalReplyContentInput, selection.emoji);
-        });
-
-        replyEmojiTrigger.addEventListener('click', () => {
-            replyPicker.togglePicker(replyEmojiTrigger);
-        });
-    } else {
-        console.warn("未找到詳情 Modal 的 Emoji 按鈕或輸入框，或 EmojiButton 庫未載入。");
+    function renderModalMessageDetail(message) {
+        if (!detailModalMain || !message) return; detailModalMain.innerHTML = '';
+        const titleH2 = document.createElement('h2'); titleH2.textContent = `留言 #${message.id}`; titleH2.style.marginTop = '0';
+        const authorP = document.createElement('p'); const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = message.author_name || '匿名'; const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const createDate = new Date(message.created_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${createDate})`; authorP.appendChild(authorSpan); authorP.appendChild(timestampSpan);
+        const hr = document.createElement('hr');
+        const contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.textContent = message.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.padding = '10px 0';
+        const metaP = document.createElement('p'); metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px'; metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0}`)); // 【★ 修正 ★】移除按讚按鈕
+        // const likeButton = ... (移除)
+        // const likeCountSpan = ... (移除)
+        // metaP.appendChild(likeButton); (移除)
+        // metaP.appendChild(likeCountSpan); (移除)
+        detailModalMain.appendChild(titleH2); detailModalMain.appendChild(authorP); detailModalMain.appendChild(hr); detailModalMain.appendChild(contentDiv); detailModalMain.appendChild(metaP);
     }
 
-
-
-
-    
-        // --- 事件監聽：打開新留言 Modal ---
-        if (newPostBtn && postModal && postModalForm && postModalStatus && postModalSubmitBtn) {
-            newPostBtn.addEventListener('click', () => {
-                postModalForm.reset();
-                postModalStatus.textContent = '';
-                postModalSubmitBtn.disabled = false;
-                postModalSubmitBtn.textContent = '送出留言';
-                isPostingCooldown = false; // 重置冷卻
-                openModal(postModal);
+    function renderModalNestedReplyList(replies) {
+        if (!detailModalReplyList) { console.error("錯誤：找不到 Modal 內的回覆列表容器 #modal-reply-list-container"); return; }
+        detailModalReplyList.innerHTML = '';
+        if (!replies || replies.length === 0) { const p = document.createElement('p'); p.textContent = '目前沒有回覆。'; detailModalReplyList.appendChild(p); return; }
+        const repliesByParentId = new Map(); replies.forEach(reply => { const parentId = reply.parent_reply_id === null ? 'root' : reply.parent_reply_id; if (!repliesByParentId.has(parentId)) repliesByParentId.set(parentId, []); repliesByParentId.get(parentId).push(reply); });
+        const floorMap = new Map(); const rootReplies = repliesByParentId.get('root') || []; rootReplies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); rootReplies.forEach((reply, index) => { floorMap.set(reply.id, `B${index + 1}`); });
+        function renderRepliesRecursive(parentId, level = 0) {
+            const children = repliesByParentId.get(parentId === 'root' ? 'root' : parentId) || []; children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); if (children.length === 0) return;
+            children.forEach((reply) => {
+                let floorNumber = ''; if (level === 0) { floorNumber = floorMap.get(reply.id); } else { const parentFloor = floorMap.get(parentId); if (parentFloor) { const siblings = repliesByParentId.get(parentId) || []; const replyIndex = siblings.findIndex(r => r.id === reply.id); floorNumber = `${parentFloor}-${replyIndex + 1}`; floorMap.set(reply.id, floorNumber); } else { floorNumber = '?'; console.warn(`找不到父級 ${parentId} 的樓層號`); } } if (!floorNumber) floorNumber = "?";
+                const replyDiv = document.createElement('div'); replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item'; if (level > 0) { replyDiv.classList.add('nested'); replyDiv.style.marginLeft = `${level * 25}px`; } replyDiv.dataset.replyId = reply.id; replyDiv.dataset.floor = floorNumber;
+                const metaP = document.createElement('p'); metaP.style.marginBottom = '5px'; const floorSpan = document.createElement('span'); floorSpan.className = 'reply-floor'; floorSpan.textContent = floorNumber; const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = reply.is_admin_reply ? `[${reply.admin_identity_name || '管理員'}]` : (reply.author_name || '匿名'); const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; timestampSpan.textContent = ` (${new Date(reply.created_at).toLocaleString('zh-TW')})`; metaP.appendChild(floorSpan); metaP.appendChild(authorSpan); metaP.appendChild(timestampSpan);
+                const contentDiv = document.createElement('div'); contentDiv.className = 'reply-content'; contentDiv.textContent = reply.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.marginBottom = '5px';
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions'; const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber; const quoteButton = document.createElement('button'); quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; quoteButton.textContent = '引用'; quoteButton.dataset.targetId = reply.id; quoteButton.dataset.targetFloor = floorNumber; quoteButton.dataset.targetContent = reply.content || ''; quoteButton.style.marginLeft = '10px'; const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px'; const likeButton = document.createElement('button'); likeButton.className = 'like-btn reply-like-btn'; likeButton.dataset.id = reply.id; likeButton.innerHTML = '❤️'; const likeCountSpan = document.createElement('span'); likeCountSpan.id = `reply-like-count-${reply.id}`; likeCountSpan.textContent = ` ${reply.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px'; likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan); actionsDiv.appendChild(replyButton); actionsDiv.appendChild(quoteButton); actionsDiv.appendChild(likeContainer);
+                replyDiv.appendChild(metaP); replyDiv.appendChild(contentDiv); replyDiv.appendChild(actionsDiv);
+                detailModalReplyList.appendChild(replyDiv); const hr = document.createElement('hr'); hr.style.borderTop = '1px dashed #eee'; hr.style.margin = '10px 0'; detailModalReplyList.appendChild(hr);
+                renderRepliesRecursive(reply.id, level + 1);
             });
-        } else { console.error("錯誤：發表新留言相關的 Modal 元素未完全找到！"); }
-    
-
-
-
-
-
-// --- 事件監聽：打開新留言 Modal ---
-if (newPostBtn && postModal) { // 簡化檢查
-    newPostBtn.addEventListener('click', () => {
-        if(postModalForm) postModalForm.reset();
-        if(postModalStatus) postModalStatus.textContent = '';
-        if(postModalSubmitBtn) {
-            postModalSubmitBtn.disabled = false;
-            postModalSubmitBtn.textContent = '送出留言';
         }
-        isPostingCooldown = false;
-        openModal(postModal);
+        renderRepliesRecursive('root', 0);
+    }
+
+    // --- Emoji Picker 初始化 ---
+    if (postEmojiTrigger && postModalContentInput && window.EmojiButton) {
+        const picker = new EmojiButton.EmojiButton({ position: 'bottom-start', autoHide: true });
+        picker.on('emoji', selection => insertTextAtCursor(postModalContentInput, selection.emoji));
+        postEmojiTrigger.addEventListener('click', () => picker.togglePicker(postEmojiTrigger));
+    } else { console.warn("發表 Modal Emoji Picker 未初始化。"); }
+
+    if (replyEmojiTrigger && modalReplyContentInput && window.EmojiButton) {
+        const replyPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true });
+        replyPicker.on('emoji', selection => insertTextAtCursor(modalReplyContentInput, selection.emoji));
+        replyEmojiTrigger.addEventListener('click', () => replyPicker.togglePicker(replyEmojiTrigger));
+    } else { console.warn("詳情 Modal Emoji Picker 未初始化。"); }
+
+    // --- 事件監聽：打開新留言 Modal ---
+    if (newPostBtn && postModal) {
+        newPostBtn.addEventListener('click', () => {
+            if(postModalForm) postModalForm.reset(); if(postModalStatus) postModalStatus.textContent = ''; if(postModalSubmitBtn) { postModalSubmitBtn.disabled = false; postModalSubmitBtn.textContent = '送出留言'; } isPostingCooldown = false;
+            openModal(postModal);
+        });
+    } else { console.error("錯誤：發表新留言按鈕或 Modal 未找到！"); }
+
+    // --- 事件監聽：關閉 Modal ---
+    [postModal, detailModal].forEach(modal => {
+        if (modal) {
+            const closeBtns = modal.querySelectorAll('.close-modal-btn'); // 所有帶 class 的關閉按鈕
+            closeBtns.forEach(btn => btn.addEventListener('click', () => closeModal(modal)));
+            const specificCloseBtn = modal.querySelector('#close-' + modal.id + '-btn'); // 右上角 ID 按鈕
+            if (specificCloseBtn && !specificCloseBtn.classList.contains('close-modal-btn')) { // 避免重複綁定
+                specificCloseBtn.addEventListener('click', () => closeModal(modal));
+            }
+            window.addEventListener('click', (event) => { if (event.target == modal) closeModal(modal); });
+        }
     });
-} else { console.error("錯誤：發表新留言按鈕或 Modal 未找到！"); }
 
-// --- 事件監聽：關閉新留言 Modal ---
-if (postModal && postModalCancelBtns) {
-     postModalCancelBtns.forEach(btn => btn.addEventListener('click', () => closeModal(postModal)));
-     // 使用者也可能點擊右上角的 X
-     if (closePostModalBtn) closePostModalBtn.addEventListener('click', () => closeModal(postModal));
-     window.addEventListener('click', (event) => { if (event.target == postModal) closeModal(postModal); });
-}
-
+    
         // --- 事件監聽：提交新留言 (Modal 表單) ---
         if (postModalForm && postModalSubmitBtn && postModalStatus) {
             postModalForm.addEventListener('submit', async (e) => {
