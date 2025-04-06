@@ -97,18 +97,32 @@
             text-decoration: none;
         }
 
-        /* 回覆區塊 */
-        .reply-item {
-            margin-left: 20px;
-            padding: 10px 0;
-            border-left: 2px dashed #ccc;
+        /* 排序控制區 */
+        .sort-controls {
+            margin: 20px 0;
+            text-align: center;
         }
-
+        .sort-link {
+            margin: 0 10px;
+            padding: 5px 10px;
+            color: #757575;
+            text-decoration: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
 
     <h1>留言板</h1>
+
+    <!-- 排序控制項 -->
+    <div class="sort-controls">
+        <button class="sort-link" onclick="sortMessages('latest')">最新留言</button>
+        <button class="sort-link" onclick="sortMessages('popular')">熱門留言</button>
+        <button class="sort-link" onclick="sortMessages('most_replies')">最多回覆</button>
+    </div>
 
     <!-- 留言列表 -->
     <div id="guestbook-list">
@@ -158,9 +172,9 @@
 
     <script>
         // 模擬留言資料
-        const mockMessages = [
-            { id: 1, author_name: "小明", title: "你好！", content: "這是一個測試留言", created_at: "2024-04-06 10:00", replies: [] },
-            { id: 2, author_name: "小紅", title: "留言板", content: "測試留言板功能", created_at: "2024-04-06 11:30", replies: [] }
+        let mockMessages = [
+            { id: 1, author_name: "小明", title: "你好！", content: "這是一個測試留言", created_at: "2024-04-06 10:00", replies: [], view_count: 0 },
+            { id: 2, author_name: "小紅", title: "留言板", content: "測試留言板功能", created_at: "2024-04-06 11:30", replies: [], view_count: 5 }
         ];
 
         // 渲染留言列表
@@ -259,6 +273,18 @@
                 `;
                 repliesContainer.appendChild(replyItem);
             });
+        }
+
+        // 排序留言列表
+        function sortMessages(sortType) {
+            if (sortType === 'latest') {
+                mockMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            } else if (sortType === 'popular') {
+                mockMessages.sort((a, b) => b.view_count - a.view_count);
+            } else if (sortType === 'most_replies') {
+                mockMessages.sort((a, b) => b.replies.length - a.replies.length);
+            }
+            renderGuestbookList(mockMessages);
         }
 
         // 模擬獲取留言列表 (通常會用 fetch 請求)
