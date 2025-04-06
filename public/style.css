@@ -1457,7 +1457,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     letter-spacing: 0.5px;
     line-height: 1.3;
     /* text-transform: uppercase; */ /* 可選：轉換為大寫 */
-}
+} 
 
 /* 響應式調整 */
 @media (max-width: 600px) {
