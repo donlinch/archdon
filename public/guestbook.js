@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const metaSpan = document.createElement('span'); metaSpan.className = 'meta view-detail-modal-btn'; metaSpan.dataset.messageId = msg.id; metaSpan.textContent = `回覆(${msg.reply_count || 0})`; metaSpan.style.cursor = 'pointer'; metaSpan.style.color = '#007bff'; metaSpan.style.textDecoration = 'underline';
             const viewSpan = document.createElement('span'); viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
             const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
+            const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = ''; detailButton.style.marginLeft = '1rem';
 
             messageItemDiv.appendChild(authorSpan); messageItemDiv.appendChild(document.createTextNode(' ')); messageItemDiv.appendChild(timestampSpan);
             messageItemDiv.appendChild(previewDiv); messageItemDiv.appendChild(metaSpan); messageItemDiv.appendChild(viewSpan); messageItemDiv.appendChild(likeSpan);
@@ -511,3 +512,4 @@ if (detailModal) {
     });
 
 
+    
