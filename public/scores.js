@@ -149,11 +149,16 @@ function renderSongList(songs) {
                 <div class="song-list-info">
                      <span class="song-title">${song.title || '未知標題'}</span>
                      <span class="song-artist">${song.artist || '未知歌手'}</span>
-                 </div>
-                 <div class="song-list-scores">
+                   
+                   
+                     <div class="song-list-scores">
                      ${scoreButtonsHTML}
                  </div>
-                 <hr>
+                 
+                 
+                     </div>
+                  
+                 
             </li>
         `;
     }).join('');
