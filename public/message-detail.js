@@ -1,25 +1,20 @@
 // public/message-detail.js
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM 元素獲取 ---
-    const messageContainer = document.getElementById('message-detail-main'); // 主留言容器 ID
-    const replyListContainer = document.getElementById('reply-list-container'); // 回覆列表容器 ID
-    const replyForm = document.getElementById('reply-form'); // 回覆表單 ID
-    const replyStatus = document.getElementById('reply-status'); // 回覆狀態訊息元素 ID
-    const submitReplyBtn = document.getElementById('submit-reply-btn'); // 回覆提交按鈕 ID
-
-    const replyFormParentIdInput = document.getElementById('reply-parent-id'); // 【★ 新增 ★】假設 HTML 中有隱藏欄位存 parentId
-    const replyFormContent = document.getElementById('reply-content'); // 獲取回覆內容輸入框
-    const replyFormAuthor = document.getElementById('reply-author-name'); // 獲取回覆者名稱輸入框
-    const replyFormLabel = document.querySelector('#reply-form label[for="reply-content"]'); // 獲取回覆內容的 label
-
-
-
+    const messageContainer = document.getElementById('message-detail-main');
+    const replyListContainer = document.getElementById('reply-list-container');
+    const replyForm = document.getElementById('reply-form');
+    const replyStatus = document.getElementById('reply-status');
+    const submitReplyBtn = document.getElementById('submit-reply-btn');
+    const replyFormParentIdInput = document.getElementById('reply-parent-id'); // 可選
+    const replyFormContent = document.getElementById('reply-content');
+    const replyFormAuthor = document.getElementById('reply-author-name');
+    const replyFormLabel = document.querySelector('#reply-form label[for="reply-content"]');
 
     // --- 狀態變數 ---
     let currentMessageId = null;
     let isReplyingCooldown = false;
-    let currentParentReplyId = null; // 【★ 新增 ★】記錄當前回覆的目標
-
+    let currentParentReplyId = null; // 記錄當前回覆的目標
 
     // --- 函數：從 URL 獲取 message ID ---
     function getMessageIdFromUrl() {
@@ -29,10 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 函數：獲取並顯示留言詳情和回覆 ---
     async function fetchMessageDetail(messageId) {
-        if (!messageContainer || !replyListContainer) {
-            console.error("錯誤：找不到詳情或回覆列表容器。");
-            return;
-        }
+        if (!messageContainer || !replyListContainer) { console.error("錯誤：找不到詳情或回覆列表容器。"); return; }
         messageContainer.innerHTML = '<p>正在載入留言內容...</p>';
         replyListContainer.innerHTML = '<p>正在載入回覆...</p>';
 
@@ -51,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data || !data.message) throw new Error('從 API 獲取的資料格式不正確。');
 
             renderMessageDetail(data.message);
-            renderNestedReplyList(data.replies || []); // 【★ 在這裡調用 ★】
+            renderNestedReplyList(data.replies || []); // 調用嵌套渲染函數
 
         } catch (error) {
             console.error('獲取詳情失敗:', error);
@@ -62,55 +54,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 函數：渲染主留言詳情 (包含 Like 按鈕) ---
     function renderMessageDetail(message) {
-         if (!messageContainer || !message) return;
-         messageContainer.innerHTML = ''; // 清空
+        if (!messageContainer || !message) return;
+        messageContainer.innerHTML = ''; // 清空
 
-         const authorSpan = document.createElement('span');
-         authorSpan.className = 'author';
-         authorSpan.textContent = message.author_name || '匿名';
+        const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = message.author_name || '匿名';
+        const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const createDate = new Date(message.created_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${createDate})`;
+        const hr = document.createElement('hr');
+        const contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.textContent = message.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word';
+        const metaP = document.createElement('p'); metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px';
+        metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0} | `));
+        const likeButton = document.createElement('button'); likeButton.className = 'like-btn message-like-btn'; likeButton.dataset.id = message.id; likeButton.innerHTML = '❤️';
+        const likeCountSpan = document.createElement('span'); likeCountSpan.id = `message-like-count-${message.id}`; likeCountSpan.textContent = ` ${message.like_count || 0}`; likeCountSpan.style.marginLeft = '5px';
+        metaP.appendChild(likeButton); metaP.appendChild(likeCountSpan);
 
-         const timestampSpan = document.createElement('span');
-         timestampSpan.className = 'timestamp';
-         const createDate = new Date(message.created_at).toLocaleString('zh-TW');
-         timestampSpan.textContent = ` (${createDate})`;
-
-         const hr = document.createElement('hr');
-
-         const contentDiv = document.createElement('div');
-         contentDiv.className = 'message-content';
-         contentDiv.textContent = message.content || '';
-         contentDiv.style.whiteSpace = 'pre-wrap';
-         contentDiv.style.wordWrap = 'break-word';
-
-         const metaP = document.createElement('p');
-         metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px';
-         metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0} | `));
-
-         // 添加 Like 按鈕和計數
-         const likeButton = document.createElement('button');
-         likeButton.className = 'like-btn message-like-btn';
-         likeButton.dataset.id = message.id;
-         likeButton.innerHTML = '❤️';
-
-         const likeCountSpan = document.createElement('span');
-         likeCountSpan.id = `message-like-count-${message.id}`;
-         likeCountSpan.textContent = ` ${message.like_count || 0}`;
-         likeCountSpan.style.marginLeft = '5px';
-
-         metaP.appendChild(likeButton);
-         metaP.appendChild(likeCountSpan);
-
-         // 按順序添加到容器
-         messageContainer.appendChild(authorSpan);
-         messageContainer.appendChild(timestampSpan);
-         messageContainer.appendChild(hr);
-         messageContainer.appendChild(contentDiv);
-         messageContainer.appendChild(metaP);
+        messageContainer.appendChild(authorSpan); messageContainer.appendChild(timestampSpan); messageContainer.appendChild(hr); messageContainer.appendChild(contentDiv); messageContainer.appendChild(metaP);
     }
 
-
-
-    // --- 【★ 新增/重構 ★】渲染嵌套回覆列表 ---
+    // --- 【★ 渲染嵌套回覆列表 ★】 ---
     function renderNestedReplyList(replies) {
         if (!replyListContainer) return;
         replyListContainer.innerHTML = ''; // 清空
@@ -121,57 +81,48 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 1. 將扁平列表轉換為按 parent_id 分組的 Map
         const repliesByParentId = new Map();
         replies.forEach(reply => {
             const parentId = reply.parent_reply_id === null ? 'root' : reply.parent_reply_id;
-            if (!repliesByParentId.has(parentId)) {
-                repliesByParentId.set(parentId, []);
-            }
+            if (!repliesByParentId.has(parentId)) repliesByParentId.set(parentId, []);
             repliesByParentId.get(parentId).push(reply);
         });
 
-        // 2. 計算第一層樓層編號 (B1, B2...)
+        const floorMap = new Map();
         const rootReplies = repliesByParentId.get('root') || [];
-        const floorMap = new Map(); // 存儲 reply.id -> 'Bx-y'
+        rootReplies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // 確保第一層按時間排序
         rootReplies.forEach((reply, index) => {
             floorMap.set(reply.id, `B${index + 1}`);
         });
 
-        // 3. 定義遞迴渲染函數
         function renderRepliesRecursive(parentId, level = 0) {
             const children = repliesByParentId.get(parentId === 'root' ? 'root' : parentId) || [];
-            if (children.length === 0) return;
+             children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // 確保嵌套層也按時間排序
+            if (children.length === 0 && level === 0 && parentId === 'root') return; // 如果根節點就沒回覆，這裡不需要返回(上面已處理)
+            if (children.length === 0) return; // 遞迴終止條件
 
-            children.forEach((reply, index) => {
+            children.forEach((reply) => {
                 let floorNumber = '';
-                if (level === 0) { // 第一層
-                    floorNumber = floorMap.get(reply.id); // 應該已經計算好
-                } else { // 嵌套層
+                if (level === 0) {
+                    floorNumber = floorMap.get(reply.id);
+                } else {
                     const parentFloor = floorMap.get(parentId);
                     if (parentFloor) {
-                        // 計算 Bx-y 中的 y
                         const siblings = repliesByParentId.get(parentId) || [];
                         const replyIndex = siblings.findIndex(r => r.id === reply.id);
                         floorNumber = `${parentFloor}-${replyIndex + 1}`;
-                        floorMap.set(reply.id, floorNumber); // 存儲計算好的嵌套樓層
-                    } else {
-                        floorNumber = '?'; // 預防父樓層未找到
-                    }
+                        floorMap.set(reply.id, floorNumber);
+                    } else { floorNumber = '?'; }
                 }
 
                 const replyDiv = document.createElement('div');
                 replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item';
-                if (level > 0) {
-                    replyDiv.classList.add('nested');
-                    replyDiv.style.marginLeft = `${level * 20}px`; // 簡單縮排
-                }
+                if (level > 0) { replyDiv.classList.add('nested'); replyDiv.style.marginLeft = `${level * 25}px`; } // 增加縮排
                 replyDiv.dataset.replyId = reply.id;
-                replyDiv.dataset.floor = floorNumber; // 存儲樓層
+                replyDiv.dataset.floor = floorNumber;
 
-                // --- 創建回覆內容元素 (與之前類似，但加入樓層和回覆按鈕) ---
                 const metaP = document.createElement('p'); metaP.style.marginBottom = '5px';
-                const floorSpan = document.createElement('span'); floorSpan.className = 'reply-floor'; floorSpan.textContent = floorNumber; floorSpan.style.fontWeight = 'bold'; floorSpan.style.marginRight = '8px';
+                const floorSpan = document.createElement('span'); floorSpan.className = 'reply-floor'; floorSpan.textContent = floorNumber;
                 const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = reply.is_admin_reply ? `[${reply.admin_identity_name || '管理員'}]` : (reply.author_name || '匿名');
                 const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; timestampSpan.textContent = ` (${new Date(reply.created_at).toLocaleString('zh-TW')})`;
                 metaP.appendChild(floorSpan); metaP.appendChild(authorSpan); metaP.appendChild(timestampSpan);
@@ -180,29 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions';
                 const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber;
-
- // 【★ 新增引用按鈕 ★】
- const quoteButton = document.createElement('button');
- quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; // 新 class
- quoteButton.textContent = '引用';
- quoteButton.dataset.targetId = reply.id;
- quoteButton.dataset.targetFloor = floorNumber;
- // 將原始內容也存儲起來，方便引用 (需要先處理換行和轉義)
- quoteButton.dataset.targetContent = reply.content || ''; // 直接存原始內容
- quoteButton.style.marginLeft = '10px'; // 和回覆按鈕間隔
-
-
-
+                const quoteButton = document.createElement('button'); quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; quoteButton.textContent = '引用'; quoteButton.dataset.targetId = reply.id; quoteButton.dataset.targetFloor = floorNumber; quoteButton.dataset.targetContent = reply.content || ''; quoteButton.style.marginLeft = '10px';
                 const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px';
                 const likeButton = document.createElement('button'); likeButton.className = 'like-btn reply-like-btn'; likeButton.dataset.id = reply.id; likeButton.innerHTML = '❤️';
                 const likeCountSpan = document.createElement('span'); likeCountSpan.id = `reply-like-count-${reply.id}`; likeCountSpan.textContent = ` ${reply.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px';
                 likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan);
-               
-               
-               
-               
-                actionsDiv.appendChild(replyButton);            actionsDiv.appendChild(quoteButton); // 加入引用按鈕
-                actionsDiv.appendChild(likeContainer);
+                actionsDiv.appendChild(replyButton); actionsDiv.appendChild(quoteButton); actionsDiv.appendChild(likeContainer);
 
                 replyDiv.appendChild(metaP);
                 replyDiv.appendChild(contentDiv);
@@ -212,49 +146,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hr = document.createElement('hr'); hr.style.borderTop = '1px dashed #eee'; hr.style.margin = '10px 0';
                 replyListContainer.appendChild(hr);
 
-                // 遞迴渲染子回覆
-                renderRepliesRecursive(reply.id, level + 1);
+                renderRepliesRecursive(reply.id, level + 1); // 遞迴
             });
         }
-
-        // 4. 開始從根節點 ('root') 渲染
-        renderRepliesRecursive('root', 0);
+        renderRepliesRecursive('root', 0); // 開始渲染
     }
 
-    // --- 事件監聽：提交回覆 ---
+
+    // --- 事件監聽：提交回覆 (加入 parent_reply_id) ---
     if (replyForm && submitReplyBtn && replyStatus) {
         replyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!currentMessageId) { replyStatus.textContent = '錯誤：找不到留言 ID。'; replyStatus.style.color = 'red'; return; }
+            if (isReplyingCooldown) { replyStatus.textContent = '回覆過於頻繁...'; replyStatus.style.color = 'orange'; return; }
 
-            if (!currentMessageId) {
-                replyStatus.textContent = '錯誤：找不到留言 ID。';
-                replyStatus.style.color = 'red';
-                return;
-            }
-            if (isReplyingCooldown) {
-                 replyStatus.textContent = '回覆過於頻繁，請稍候...';
-                 replyStatus.style.color = 'orange';
-                return;
-            }
-
-            submitReplyBtn.disabled = true;
-            replyStatus.textContent = '正在送出...';
-            replyStatus.style.color = 'blue';
-            isReplyingCooldown = true; // 開始冷卻
+            submitReplyBtn.disabled = true; replyStatus.textContent = '正在送出...'; replyStatus.style.color = 'blue'; isReplyingCooldown = true;
 
             const formData = new FormData(replyForm);
             const authorName = formData.get('reply_author_name')?.trim() || '匿名';
             const content = formData.get('reply_content')?.trim();
+            const parentId = currentParentReplyId; // 使用全局變數記錄的目標 ID
 
             if (!content) {
-                // 【★ 實際的錯誤處理程式碼 ★】
-                replyStatus.textContent = '錯誤：回覆內容不能為空！'; // 在狀態區顯示錯誤訊息
-                replyStatus.style.color = 'red'; // 將訊息設為紅色
-                submitReplyBtn.disabled = false; // 恢復提交按鈕的可用狀態
-                isReplyingCooldown = false; // 如果因為錯誤而中斷，解除冷卻狀態
-                return; // 終止函數執行，不再繼續發送 API 請求
+                replyStatus.textContent = '錯誤：回覆內容不能為空！'; replyStatus.style.color = 'red'; submitReplyBtn.disabled = false; isReplyingCooldown = false; return;
             }
-
 
             try {
                 const response = await fetch('/api/guestbook/replies', {
@@ -262,40 +177,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message_id: currentMessageId,
-                        parent_reply_id: null, // 保持簡單，直接回覆主留言
+                        parent_reply_id: parentId, // 【★ 發送 parentId ★】
                         author_name: authorName,
                         content: content
                     }),
                 });
+                 if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP 錯誤 ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
 
-                 if (!response.ok) {
-                     const errorData = await response.json().catch(() => ({ error: `HTTP 錯誤 ${response.status}` }));
-                    throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`);
-                }
+                 replyStatus.textContent = '回覆成功！'; replyStatus.style.color = 'green';
+                 replyForm.reset(); // 清空表單
+                 currentParentReplyId = null; // 重置回覆目標
+                 if (replyFormLabel) replyFormLabel.textContent = '回覆內容 (必填):'; // 恢復 Label
 
-                 replyStatus.textContent = '回覆成功！';
-                 replyStatus.style.color = 'green';
-                 replyForm.reset();
+                 fetchMessageDetail(currentMessageId); // 刷新
 
-                 // 重新載入詳情以顯示新回覆
-                 fetchMessageDetail(currentMessageId);
-
-                 // 啟動冷卻計時器
                  submitReplyBtn.textContent = '請稍候 (15s)';
-                 setTimeout(() => {
-                     isReplyingCooldown = false;
-                     submitReplyBtn.disabled = false;
-                     submitReplyBtn.textContent = '送出回覆';
-                     replyStatus.textContent = '';
-                 }, 15000);
+                 setTimeout(() => { isReplyingCooldown = false; submitReplyBtn.disabled = false; submitReplyBtn.textContent = '送出回覆'; replyStatus.textContent = ''; }, 15000);
 
             } catch (error) {
-                 console.error('回覆失敗:', error);
-                 replyStatus.textContent = `回覆失敗：${error.message}`;
-                 replyStatus.style.color = 'red';
-                 submitReplyBtn.disabled = false;
-                 submitReplyBtn.textContent = '送出回覆';
-                 isReplyingCooldown = false; // 出錯也要解除冷卻
+                 console.error('回覆失敗:', error); replyStatus.textContent = `回覆失敗：${error.message}`; replyStatus.style.color = 'red'; submitReplyBtn.disabled = false; submitReplyBtn.textContent = '送出回覆'; isReplyingCooldown = false;
             }
         });
     }
@@ -303,116 +203,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 事件委派：處理按讚按鈕點擊 ---
     document.body.addEventListener('click', async (event) => {
         const target = event.target;
-        let id = null;
-        let apiUrl = null;
-        let countSpanSelector = null; // 改用選擇器
+        let id = null; let apiUrl = null; let countSpanSelector = null;
 
         if (target.matches('.message-like-btn')) {
-            id = target.dataset.id;
-            apiUrl = `/api/guestbook/message/${id}/like`;
-            countSpanSelector = `#message-like-count-${id}`; // 使用 ID 選擇器
+            id = target.dataset.id; apiUrl = `/api/guestbook/message/${id}/like`; countSpanSelector = `#message-like-count-${id}`;
         } else if (target.matches('.reply-like-btn')) {
-            id = target.dataset.id;
-            apiUrl = `/api/guestbook/replies/${id}/like`;
-            countSpanSelector = `#reply-like-count-${id}`; // 使用 ID 選擇器
+            id = target.dataset.id; apiUrl = `/api/guestbook/replies/${id}/like`; countSpanSelector = `#reply-like-count-${id}`;
         }
 
         if (apiUrl && id && countSpanSelector) {
-            target.disabled = true;
-            target.style.opacity = '0.5';
-
+            target.disabled = true; target.style.opacity = '0.5';
             try {
                 const response = await fetch(apiUrl, { method: 'POST' });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-                    throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`);
-                }
+                if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
                 const data = await response.json();
-
-                // 更新對應的讚數顯示
                 const countSpan = document.querySelector(countSpanSelector);
-                if (countSpan) {
-                    countSpan.textContent = ` ${data.like_count}`;
+                if (countSpan) countSpan.textContent = ` ${data.like_count}`;
+                setTimeout(() => { target.disabled = false; target.style.opacity = '1'; }, 1000);
+            } catch (error) { console.error('按讚失敗:', error); alert(`按讚失敗：${error.message}`); target.disabled = false; target.style.opacity = '1'; }
+        }
+    });
+
+    // --- 事件委派：處理回覆列表中的 "回覆" 和 "引用" 按鈕點擊 ---
+    if (replyListContainer) {
+        replyListContainer.addEventListener('click', (event) => {
+            const target = event.target;
+            let targetId = null;
+            let targetFloor = null;
+            let isQuote = false;
+
+            if (target.matches('.reply-action-btn')) {
+                targetId = target.dataset.targetId;
+                targetFloor = target.dataset.targetFloor;
+            } else if (target.matches('.quote-action-btn')) {
+                targetId = target.dataset.targetId;
+                targetFloor = target.dataset.targetFloor;
+                isQuote = true;
+            }
+
+            if (targetId && targetFloor) {
+                currentParentReplyId = targetId; // 記錄父 ID
+
+                let prefix = `回覆 ${targetFloor}：\n`;
+                if (isQuote) {
+                    const targetContent = target.dataset.targetContent || '';
+                    const quoteSnippet = targetContent.substring(0, 30) + (targetContent.length > 30 ? '...' : '');
+                    prefix = `引用 ${targetFloor}：\n> ${quoteSnippet.replace(/\n/g, '\n> ')}\n---\n`;
                 }
-                 // 成功後可以永久禁用或短暫禁用
-                 // 這裡選擇短暫禁用
-                 setTimeout(() => {
-                     target.disabled = false;
-                     target.style.opacity = '1';
-                 }, 1000); // 1秒後恢復
 
-            } catch (error) {
-                console.error('按讚失敗:', error);
-                alert(`按讚失敗：${error.message}`);
-                target.disabled = false;
-                target.style.opacity = '1';
+                if (replyFormLabel) replyFormLabel.textContent = isQuote ? `引用 ${targetFloor} 並回覆:` : `回覆 ${targetFloor} 的內容:`;
+                if (replyFormContent) {
+                    replyFormContent.value = prefix;
+                    replyFormContent.focus();
+                    replyFormContent.setSelectionRange(replyFormContent.value.length, replyFormContent.value.length);
+                }
+                replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        }
-    });
-
-
-// --- 【★ 新增 ★】事件委派：處理回覆列表中的 "回覆" 按鈕點擊 ---
-if (replyListContainer) {
-    replyListContainer.addEventListener('click', (event) => {
-        if (event.target.matches('.reply-action-btn')) {
-            const targetId = event.target.dataset.targetId;
-            const targetFloor = event.target.dataset.targetFloor;
-
-            currentParentReplyId = targetId; // 記錄要回覆的 ID
-
-            // 更新回覆框標籤並預填內容
-            if (replyFormLabel) {
-                 replyFormLabel.textContent = `回覆 ${targetFloor} 的內容:`;
-            }
-            if (replyFormContent) {
-                 replyFormContent.value = `回覆 ${targetFloor}：\n`; // 預填引用和換行
-                 replyFormContent.focus(); // 將焦點移到輸入框
-                 // 將光標移到末尾 (可選)
-                 replyFormContent.setSelectionRange(replyFormContent.value.length, replyFormContent.value.length);
-            }
-             // 滾動到回覆框
-             replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-
-
-
-
-
-        }
-
-
-// --- 【★ 新增 ★】處理 "引用" 按鈕 ---
-else if (target.matches('.quote-action-btn')) {
-    const targetId = target.dataset.targetId;
-    const targetFloor = target.dataset.targetFloor;
-    const targetContent = target.dataset.targetContent; // 獲取存儲的原始內容
-
-    currentParentReplyId = targetId; // 引用也視為對該回覆的回應，記錄 parentId
-
-    // 生成引用文字片段 (例如取前 30 字)
-    const quoteSnippet = targetContent.substring(0, 30) + (targetContent.length > 30 ? '...' : '');
-
-    // 構建引用格式
-    const quoteText = `引用 ${targetFloor}：\n> ${quoteSnippet.replace(/\n/g, '\n> ')}\n---\n`; // 將內容中的換行也加上 '>'
-
-    if (replyFormLabel) {
-         replyFormLabel.textContent = `引用 ${targetFloor} 並回覆:`; // 更新 Label
-    }
-    if (replyFormContent) {
-         replyFormContent.value = quoteText; // 預填引用文字
-         replyFormContent.focus();
-         // 將光標移到末尾
-         replyFormContent.setSelectionRange(replyFormContent.value.length, replyFormContent.value.length);
-    }
-    replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-
-
-    });
- }
-
-
+        });
+     }
 
     // --- 頁面初始載入 ---
     currentMessageId = getMessageIdFromUrl();
@@ -420,8 +268,6 @@ else if (target.matches('.quote-action-btn')) {
         fetchMessageDetail(currentMessageId);
     } else {
         if (messageContainer) messageContainer.innerHTML = '<p style="color:red;">錯誤：URL 中缺少有效的留言 ID。</p>';
-         if (replyListContainer) replyListContainer.innerHTML = '';
+        if (replyListContainer) replyListContainer.innerHTML = '';
     }
-
-    // --- 移除 escapeHtml 函數 ---
 });
