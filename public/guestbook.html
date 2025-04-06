@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="在 SunnyYummy 留言板留下你的足跡、分享你的想法，或與其他粉絲交流！">
+    <title>SunnyYummy 粉絲留言板</title>
+
+    <!-- Canonical URL (根據你的實際部署調整) -->
+    <link rel="canonical" href="https://sunnyyummy.onrender.com/guestbook.html" />
+
+    <!-- Open Graph 社群標籤 -->
+    <meta property="og:title" content="SunnyYummy 粉絲留言板">
+    <meta property="og:description" content="留下你的足跡、分享你的想法，或與其他粉絲交流！">
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/guestbook.html">
+    <meta property="og:type" content="website">
+    <!-- <meta property="og:image" content="[你的預覽圖片網址]"> -->
+
+    <!-- 主要 CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- 字體 (如果需要) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon (與 index.html 保持一致) -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- <link rel="manifest" href="/manifest.json"> -->
+    <meta name="theme-color" content="#FFB74D">
+
+    <!-- 稍後加入 Emoji Picker 的 CSS (如果需要) -->
+
+    <style>
+        /* 可以在這裡加入 guestbook.html 特定的簡單樣式 */
+        .guestbook-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #new-message-form, .message-item, .reply-item {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        #new-message-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        #new-message-form input[type="text"],
+        #new-message-form textarea {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #new-message-form textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .emoji-trigger { /* Emoji 觸發按鈕的基本樣式 */
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 0 5px;
+            vertical-align: middle; /* 讓它跟輸入框旁的文字對齊 */
+        }
+        .message-header, .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-size: 0.9em;
+        }
+        .author-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .admin-reply .author-name { /* 管理員身份的特殊樣式 */
+            color: #007bff; /* 例如藍色 */
+        }
+        .message-content, .reply-content {
+            margin-bottom: 0.8rem;
+            white-space: pre-wrap; /* 處理換行 */
+            word-wrap: break-word; /* 處理長單字 */
+            line-height: 1.6;
+        }
+        .message-actions, .reply-actions {
+            font-size: 0.9em;
+        }
+        .reply-button, .like-button {
+            cursor: pointer;
+            color: #007bff;
+            background: none;
+            border: none;
+            padding: 0;
+            margin-right: 15px;
+        }
+        .like-button {
+            color: #dc3545; /* 例如紅色 */
+        }
+        .like-button .count {
+            margin-left: 3px;
+            color: #666;
+        }
+        .replies-container {
+            margin-left: 2rem; /* 回覆的縮排 */
+            border-left: 2px solid #eee;
+            padding-left: 1rem;
+            margin-top: 1rem;
+        }
+        .reply-form { /* 簡易回覆框 */
+            margin-top: 1rem;
+            padding: 0.8rem;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: none; /* 預設隱藏 */
+        }
+        .reply-form label, .reply-form input, .reply-form textarea {
+             display: block;
+             width: 100%;
+             margin-bottom: 0.5rem;
+             box-sizing: border-box;
+        }
+        .reply-form textarea { min-height: 50px; }
+        .pagination-controls {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        .pagination-controls button, .pagination-controls span {
+            padding: 5px 10px;
+            margin: 0 2px;
+            border: 1px solid #ccc;
+            background-color: #eee;
+            cursor: pointer;
+        }
+        .pagination-controls .current-page {
+            font-weight: bold;
+            background-color: #ddd;
+            cursor: default;
+        }
+        .pagination-controls button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .loading-message, .error-message {
+             text-align: center;
+             padding: 1rem;
+             color: #888;
+        }
+        .error-message { color: red; }
+    </style>
+
+</head>
+<body>
+
+    <header>
+        <!-- 沿用你現有的 header 或簡化版 -->
+        <h1><a href="/">SunnyYummy</a></h1>
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html">樂譜與舞蹈</a>
+            <a href="/guestbook.html" class="active">粉絲留言板</a> <!-- 新增連結 -->
+        </nav>
+    </header>
+
+    <main>
+        <div class="guestbook-container">
+            <h2>留下您的足跡</h2>
+
+            <!-- 新增留言表單 -->
+            <form id="new-message-form">
+                <div>
+                    <label for="author-name">您的名稱：</label>
+                    <input type="text" id="author-name" name="author_name" required maxlength="100">
+                </div>
+                <div>
+                    <label for="message-content">留言內容：</label>
+                    <textarea id="message-content" name="content" required maxlength="2000"></textarea>
+                    <button type="button" class="emoji-trigger" id="main-emoji-trigger" title="選擇表情符號">😊</button>
+                </div>
+                <button type="submit">送出留言</button>
+                <p class="form-status" style="margin-top: 0.5em; color: green;"></p> <!-- 用於顯示成功或錯誤訊息 -->
+            </form>
+
+            <hr style="margin: 2rem 0;">
+
+            <h2>最新留言</h2>
+
+            <!-- 留言列表容器 -->
+            <div id="guestbook-list">
+                <p class="loading-message">正在載入留言...</p>
+                <!-- 留言和回覆將由 JavaScript 動態填入這裡 -->
+            </div>
+
+            <!-- 分頁控制容器 -->
+            <div id="pagination-controls">
+                <!-- 分頁按鈕將由 JavaScript 動態填入這裡 -->
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <!-- 沿用你現有的 footer -->
+        <div class="footer-container">
+            <nav class="footer-nav">
+                 <a href="/">週邊商品</a>
+                 <a href="/music.html">音樂專輯</a>
+                 <a href="/news.html">最新消息</a>
+                 <a href="/scores.html">樂譜與舞蹈</a>
+                 <a href="/guestbook.html">粉絲留言板</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2023 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Emoji Picker Library (選擇一個並引入) -->
+    <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@latest/dist/index.min.js"></script>
+  
+    <!-- 留言板的 JavaScript -->
+    <script src="guestbook.js"></script>
+</body>
+</html>
