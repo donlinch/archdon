@@ -71,6 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
             metaSpan.className = 'meta';
             metaSpan.textContent = `回覆(${msg.reply_count || 0})`;
 
+// 【★ 新增 Like 數顯示 ★】
+const likeSpan = document.createElement('span');
+likeSpan.className = 'meta';
+likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; // 直接用 Emoji
+likeSpan.style.marginLeft = '1rem';
+
+
+
+
 
             const viewSpan = document.createElement('span');
 viewSpan.className = 'meta'; // 可以共用 meta 樣式或新建
@@ -89,6 +98,7 @@ messageItemDiv.appendChild(timestampSpan);
 messageItemDiv.appendChild(previewLink);
 messageItemDiv.appendChild(metaSpan); // 回覆數
 messageItemDiv.appendChild(viewSpan); // 瀏覽數
+messageItemDiv.appendChild(likeSpan);      // 按讚數
 messageItemDiv.appendChild(document.createTextNode(' '));
 messageItemDiv.appendChild(detailLink);
 
