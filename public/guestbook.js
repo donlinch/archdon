@@ -5,46 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const postForm = document.getElementById('post-message-form');
     const postStatus = document.getElementById('post-status');
     const submitMessageBtn = document.getElementById('submit-message-btn');
-    const newPostBtn = document.getElementById('new-post-btn');
-    const postModal = document.getElementById('post-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const modalAuthorName = document.getElementById('modal-author-name');
-    const modalMessageContent = document.getElementById('modal-message-content');
-    const modalPostForm = document.getElementById('post-message-form'); // 表單改用 Modal 內的
-    const modalSubmitBtn = document.getElementById('submit-message-btn'); // 提交按鈕改用 Modal 內的
-    const modalPostStatus = document.getElementById('post-status'); // 狀態訊息改用 Modal 內的
-    const cancelModalBtns = document.querySelectorAll('.close-modal-btn'); // 所有關閉按鈕
 
 
-if (newPostBtn && postModal) {
-    newPostBtn.addEventListener('click', () => {
-        modalPostForm.reset(); // 清空表單
-        modalPostStatus.textContent = ''; // 清除狀態
-        modalSubmitBtn.disabled = false; // 恢復按鈕
-         modalSubmitBtn.textContent = '送出留言';
-        postModal.style.display = 'flex'; // 顯示 Modal
-    });
-}
-function closeModal() {
-    if (postModal) {
-       postModal.style.display = 'none';
-    }
-}
 
-// 點擊右上角 X
-if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', closeModal);
-}
-// 點擊取消按鈕
-cancelModalBtns.forEach(btn => btn.addEventListener('click', closeModal));
 
-// 點擊 Modal 外部區域關閉 (可選)
-window.addEventListener('click', (event) => {
-   if (event.target == postModal) {
-       closeModal();
-   }
-});
-
+    
     let currentPage = 1;
     let isPostingCooldown = false; // 發文冷卻狀態
 

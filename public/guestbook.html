@@ -3,95 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - [你的網站名稱]</title> <!-- 替換成你的網站名稱 -->
-    <link rel="stylesheet" href="style.css">
-    <!-- 引入其他必要的 head 內容，例如字體、favicon -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <title>留言板 - [你的網站名稱]</title>
+    <link rel="stylesheet" href="style.css"> <!-- 引入你的 CSS -->
+    <!-- 其他 meta 標籤, favicon 等 -->
 </head>
 <body>
-    <header>
+    <header> 
         <!-- 你的網站標頭和導覽列 -->
-        <h1><a href="/"><img id="header-logo" src="/images/SunnyYummy.png" alt="SunnyYummy Logo" style="height: 60px; width: auto;"></a></h1>
-        <nav class="category-nav">
-            <a href="/">週邊商品</a>
-            <a href="/music.html">音樂專輯</a>
-            <a href="/news.html">最新消息</a>
-            <a href="/scores.html">樂譜與舞蹈</a>
+        <h1>網站標題</h1>
+        <nav>
+            <a href="/">首頁</a>
             <a href="/guestbook.html" class="active">留言板</a>
-            <a href="/admin.html">管理後台</a> <!-- 方便測試 -->
+            <!-- 其他導覽連結 -->
+             <a href="/admin.html">管理後台</a> <!-- 如果方便測試可以加上 -->
         </nav>
     </header>
 
-    <main class="guestbook-container"> <!-- 主容器 -->
-        <div class="guestbook-header"> <!-- 頁面標題和操作按鈕區 -->
-            <h2>訪客留言板</h2>
-            <button id="new-post-btn" class="btn btn-primary">發表新留言</button> <!-- 發表按鈕 -->
-        </div>
+    <main class="guestbook-container"> <!-- 給主內容區加個 class 方便 CSS 定位 -->
+        <section class="post-message-section">
+            <h2>留下您的足跡</h2>
+            <form id="post-message-form">
+                <div class="form-group">
+                    <label for="author-name">您的名稱 (選填，預設為匿名):</label>
+                    <input type="text" id="author-name" name="author_name" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="message-content">留言內容 (必填):</label>
+                    <textarea id="message-content" name="content" rows="4" required></textarea>
+                </div>
+                <button type="submit" id="submit-message-btn">送出留言</button>
+                <p id="post-status" class="status-message"></p> <!-- 顯示狀態訊息 -->
+            </form>
+        </section>
 
-        <!-- 排序按鈕區域 (已移除) -->
-        <!--
-        <div class="sort-controls">
-            <button class="sort-btn active" data-sort="latest">最新活動</button>
-        </div>
-        -->
-
-        <hr> <!-- 分隔線 -->
+        <hr>
 
         <section class="message-list-section">
-            <h3>最新留言</h3> <!-- 小標題 -->
+            <h2>最新活動留言</h2>
+            <!-- 排序按鈕 (目前只有預設，可先不放) -->
+            <!-- <div class="sort-options">排序：<span class="active">最新活動</span></div> -->
+
             <div id="message-list-container">
                 <!-- 留言列表將由 JavaScript 動態載入 -->
                 <p>正在載入留言...</p>
             </div>
 
-            <div id="pagination-container" class="pagination-controls"> <!-- 分頁容器 -->
+            <div id="pagination-container">
                 <!-- 分頁控制將由 JavaScript 動態載入 -->
             </div>
         </section>
     </main>
 
-    <!-- ★★★ 發表新留言的 Modal 視窗 ★★★ -->
-    <div id="post-modal" class="modal" style="display: none;"> <!-- 初始隱藏 -->
-        <div class="modal-content">
-            <span class="close-btn" id="close-modal-btn">×</span> <!-- 關閉按鈕 -->
-            <h2>發表新留言</h2>
-            <form id="post-message-form"> <!-- 表單 ID 確認 -->
-                <div class="form-group">
-                    <label for="modal-author-name">您的名稱 (選填，預設為匿名):</label>
-                    <input type="text" id="modal-author-name" name="author_name" maxlength="100">
-                </div>
-                <!-- 標題已移除 -->
-                <div class="form-group">
-                    <label for="modal-message-content">留言內容 (必填):</label>
-                    <textarea id="modal-message-content" name="content" rows="5" required></textarea> <!-- 增加行數 -->
-                </div>
-                <div class="form-actions"> <!-- 將按鈕和狀態放在 actions 區 -->
-                    <p id="post-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p> <!-- 狀態訊息靠左 -->
-                    <button type="submit" id="submit-message-btn" class="btn btn-success">送出留言</button>
-                     <button type="button" class="btn btn-secondary close-modal-btn">取消</button> <!-- 新增取消按鈕 -->
-                </div>
-            </form>
-        </div>
-    </div>
-
     <footer>
         <!-- 你的網站頁腳 -->
-         <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-social"></div>
-            <div class="footer-copyright">
-                <p>© 2023 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
+        <p>© 2023 [你的網站名稱]</p>
     </footer>
 
     <script src="guestbook.js"></script> <!-- 引入對應的 JS -->
