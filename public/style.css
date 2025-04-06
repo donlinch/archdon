@@ -1452,7 +1452,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     color: #424242;
     margin: 0;
     font-family: 'Poppins', 'Noto Sans TC', sans-serif; /* 使用 Poppins 字體 */
-    font-size: 2rem;
+    font-size: 1rem;
     font-weight: 600; /* Semi-bold */
     letter-spacing: 0.5px;
     line-height: 1.3;
