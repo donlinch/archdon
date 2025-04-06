@@ -71,6 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
             metaSpan.className = 'meta';
             metaSpan.textContent = `回覆(${msg.reply_count || 0})`;
 
+
+            const viewSpan = document.createElement('span');
+viewSpan.className = 'meta'; // 可以共用 meta 樣式或新建
+viewSpan.textContent = `瀏覽(${msg.view_count || 0})`;
+viewSpan.style.marginLeft = '1rem'; // 和回覆數分開一點
+
             const detailLink = document.createElement('a');
             detailLink.className = 'view-detail-btn';
             detailLink.href = `/message-detail.html?id=${msg.id}`;
@@ -78,15 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 按順序添加到 messageItemDiv
             messageItemDiv.appendChild(authorSpan);
-            messageItemDiv.appendChild(document.createTextNode(' ')); // 添加空格
-            messageItemDiv.appendChild(timestampSpan);
-            messageItemDiv.appendChild(previewLink);
-            messageItemDiv.appendChild(metaSpan);
-            messageItemDiv.appendChild(document.createTextNode(' ')); // 添加空格
-            messageItemDiv.appendChild(detailLink);
+messageItemDiv.appendChild(document.createTextNode(' '));
+messageItemDiv.appendChild(timestampSpan);
+messageItemDiv.appendChild(previewLink);
+messageItemDiv.appendChild(metaSpan); // 回覆數
+messageItemDiv.appendChild(viewSpan); // 瀏覽數
+messageItemDiv.appendChild(document.createTextNode(' '));
+messageItemDiv.appendChild(detailLink);
 
-            messageListContainer.appendChild(messageItemDiv);
-
+messageListContainer.appendChild(messageItemDiv);
             // 添加分隔線
             const hr = document.createElement('hr');
             messageListContainer.appendChild(hr);
