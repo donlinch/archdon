@@ -18,87 +18,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemsPerPage = 10;
 
     // --- 函數定義 ---
+/**
+ * 獲取並顯示隨機的 News 類型輪播圖
+ */
+async function fetchAndDisplayBanners() {
+    console.log("[News] Fetching banners for news page");
 
-    /**
-     * 獲取並顯示新聞頁專用輪播圖
-     */
-    async function fetchAndDisplayBanners() {
-        console.log("[News] Fetching banners for news page");
-        if (!bannerWrapper) {
-            console.warn("Banner wrapper element not found");
-            const carouselElement = document.getElementById('banner-carousel');
-            if (carouselElement) carouselElement.style.display = 'none';
-            return;
+    if (!bannerWrapper) {
+        console.warn("Banner wrapper element not found");
+        const carouselElement = document.getElementById('banner-carousel');
+        if (carouselElement) carouselElement.style.display = 'none';
+        return;
+    }
+
+    bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
+
+    try {
+        // 確保 API 請求指定的是 news 頁面的資料
+        const response = await fetch('/api/banners?page=news'); 
+        console.log("[News] Banner API response status:", response.status);
+
+        if (!response.ok) {
+            let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
+            try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
+            throw new Error(errorText);
         }
 
-        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
+        const banners = await response.json();
+        console.log(`[News] Received ${banners.length} banners for news page`);
 
-        try {
-            const response = await fetch('/api/banners?page=news'); // 確保是 ?page=news
-            console.log("[News] Banner API response status:", response.status);
+        bannerWrapper.innerHTML = '';
 
-            if (!response.ok) {
-                let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
-                try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
-                throw new Error(errorText);
-            }
+        if (banners.length === 0) {
+            console.log("[News] No banners for news page, showing default");
+            const defaultSlide = document.createElement('div');
+            defaultSlide.className = 'swiper-slide';
+            defaultSlide.innerHTML = '<img src="/images/news-default-banner.jpg" alt="最新消息" style="width:100%; height:100%; object-fit:cover;">';
+            bannerWrapper.appendChild(defaultSlide);
+        } else {
+            banners.forEach(banner => {
+                const slide = document.createElement('div');
+                slide.className = 'swiper-slide';
+                if (banner.link_url) {
+                    const link = document.createElement('a');
+                    link.href = banner.link_url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
+                    slide.appendChild(link);
+                } else {
+                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
+                }
+                bannerWrapper.appendChild(slide);
+            });
+        }
 
-            const banners = await response.json();
-            console.log(`[News] Received ${banners.length} banners for news page`);
+        // 初始化 Swiper
+        if (bannerSwiper) {
+            bannerSwiper.destroy(true, true);
+            bannerSwiper = null;
+        }
 
-            bannerWrapper.innerHTML = '';
-
-            if (banners.length === 0) {
-                console.log("[News] No banners for news page, showing default");
-                const defaultSlide = document.createElement('div');
-                defaultSlide.className = 'swiper-slide';
-                defaultSlide.innerHTML = '<img src="/images/news-default-banner.jpg" alt="最新消息" style="width:100%; height:100%; object-fit:cover;">';
-                bannerWrapper.appendChild(defaultSlide);
-            } else {
-                banners.forEach(banner => {
-                    const slide = document.createElement('div');
-                    slide.className = 'swiper-slide';
-                    if (banner.link_url) {
-                        const link = document.createElement('a');
-                        link.href = banner.link_url;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                        slide.appendChild(link);
-                    } else {
-                        slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                    }
-                    bannerWrapper.appendChild(slide);
-                });
-            }
-
-            if (bannerSwiper) {
-                bannerSwiper.destroy(true, true);
-                bannerSwiper = null;
-            }
-
-            if (bannerWrapper.children.length > 0) {
-                bannerSwiper = new Swiper('#banner-carousel', {
-                    loop: banners.length > 1,
-                    autoplay: { delay: 8000, disableOnInteraction: false, pauseOnMouseEnter: true },
-                    pagination: { el: '.swiper-pagination', clickable: true },
-                    navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                    slidesPerView: 1,
-                    spaceBetween: 0,
-                    effect: 'fade',
-                    fadeEffect: { crossFade: true }
-                });
-            }
-        } catch (error) {
-            console.error("[News] Banner error:", error);
-            bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
-            const carouselElement = document.getElementById('banner-carousel');
-            if (carouselElement) {
-                const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
-                navElements.forEach(el => el.style.display = 'none');
-            }
+        if (bannerWrapper.children.length > 0) {
+            bannerSwiper = new Swiper('#banner-carousel', {
+                loop: banners.length > 1,
+                autoplay: { delay: 8000, disableOnInteraction: false, pauseOnMouseEnter: true },
+                pagination: { el: '.swiper-pagination', clickable: true },
+                navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                slidesPerView: 1,
+                spaceBetween: 0,
+                effect: 'fade',
+                fadeEffect: { crossFade: true }
+            });
+        }
+    } catch (error) {
+        console.error("[News] Banner error:", error);
+        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
+        const carouselElement = document.getElementById('banner-carousel');
+        if (carouselElement) {
+            const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
+            navElements.forEach(el => el.style.display = 'none');
         }
     }
+}
 
     /**
      * 獲取並顯示指定頁數的消息
@@ -300,13 +302,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.onclick = function(event) { if (event.target === detailModal) { closeNewsDetailModal(); } };
 
     // --- 頁面初始化 ---
-    async function initializePage() {
-        console.log("[News] Initializing page");
-        try {
-            await Promise.all([ fetchAndDisplayBanners(), fetchNews(1) ]);
-            console.log("[News] Page initialized");
-        } catch (error) { console.error("[News] Initialization error:", error); }
+// 頁面初始化
+async function initializePage() {
+    console.log("[News] Initializing page");
+    try {
+        await Promise.all([ fetchAndDisplayBanners(), fetchNews(1) ]);  // 同時初始化輪播圖與新聞
+        console.log("[News] Page initialized");
+    } catch (error) { 
+        console.error("[News] Initialization error:", error); 
     }
+}
 
-    initializePage();
+initializePage();
+
 });
