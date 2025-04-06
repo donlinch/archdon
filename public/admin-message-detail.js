@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitAdminReplyBtn = document.getElementById('submit-admin-reply-btn');
     const messageIdDisplay = document.getElementById('message-id-display');
     const backToListLink = document.querySelector('a[href="/guestbook-admin.html"]'); // 返回列表連結
+    const adminReplyEmojiTrigger = document.getElementById('admin-reply-emoji-trigger');
 
+
+    
     // --- 狀態變數 ---
     let currentMessageId = null;
     let isReplyingCooldown = false; // 管理員回覆冷卻
@@ -221,6 +224,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+
+ // --- 【★ 新增 ★】初始化管理員回覆框的 Emoji Picker ---
+ if (adminReplyEmojiTrigger && adminReplyContent && window.EmojiButton) {
+    const adminPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true });
+
+    adminPicker.on('emoji', selection => {
+        insertTextAtCursor(adminReplyContent, selection.emoji);
+    });
+
+    adminReplyEmojiTrigger.addEventListener('click', () => {
+        adminPicker.togglePicker(adminReplyEmojiTrigger);
+    });
+} else {
+    console.warn("未找到管理員回覆 Modal 的 Emoji 按鈕或輸入框，或 EmojiButton 庫未載入。");
+}
+
+
+
     // --- 事件監聽：提交管理員回覆 ---
     if (adminReplyForm && submitAdminReplyBtn && adminReplyStatus && identitySelect) {
         adminReplyForm.addEventListener('submit', async (e) => {
@@ -361,6 +383,23 @@ document.addEventListener('DOMContentLoaded', () => {
         parentElement.appendChild(document.createTextNode(' '));
         parentElement.appendChild(span);
     }
+
+
+
+ // --- 【★ 新增 ★】輔助函數：在光標處插入文本 ---
+ function insertTextAtCursor(textarea, text) {
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    // 插入文本並更新 value
+    textarea.value = value.substring(0, start) + text + value.substring(end);
+    // 將光標移動到插入文本之後
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus(); // 重新聚焦到輸入框
+}
+
+
 
 
     // --- 頁面初始載入 ---

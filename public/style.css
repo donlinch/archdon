@@ -1809,3 +1809,23 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     background-color: #FFB74D; /* 使用主題橙色背景 */
     cursor: default; /* 不可再點擊 */
 }
+
+
+/* --- Emoji 觸發按鈕樣式 --- */
+#post-emoji-trigger,
+#reply-emoji-trigger,
+#admin-reply-emoji-trigger {
+    padding: 3px 8px;
+    font-size: 1.2em; /* 讓 Emoji 大一點 */
+    line-height: 1;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    vertical-align: middle; /* 與旁邊文字對齊 */
+}
+#post-emoji-trigger:hover,
+#reply-emoji-trigger:hover,
+#admin-reply-emoji-trigger:hover {
+    background-color: #e9ecef;
+}

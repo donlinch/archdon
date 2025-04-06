@@ -14,6 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const postModalSubmitBtn = postModal?.querySelector('#submit-message-btn');
     const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn'); // 假設底部也有 .close-modal-btn
 
+
+  // 【★ 新增 ★】獲取 Emoji 按鈕和對應輸入框
+  const postEmojiTrigger = document.getElementById('post-emoji-trigger');
+  const postModalContentInput = document.getElementById('modal-message-content');
+  const replyEmojiTrigger = document.getElementById('reply-emoji-trigger'); // 詳情 Modal 內的回覆 Emoji 按鈕
+  const modalReplyContentInput = document.getElementById('modal-reply-content'); // 詳情 Modal 內的回覆輸入框
+
+
+
     // 詳情 Modal 元素
     const detailModal = document.getElementById('message-detail-modal');
     const closeDetailModalBtn = detailModal?.querySelector('#close-detail-modal-btn');
@@ -270,6 +279,50 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRepliesRecursive('root', 0); // 開始渲染
         }
     
+
+
+
+
+
+
+    // --- 【★ 新增 ★】初始化發表 Modal 的 Emoji Picker ---
+    if (postEmojiTrigger && postModalContentInput && window.EmojiButton) {
+        const picker = new EmojiButton.EmojiButton({
+            position: 'bottom-start', // 控制彈出位置
+            autoHide: true, // 選擇後自動隱藏
+            // theme: 'auto', // 可選主題: light, dark, auto
+            // categories: [...] // 可選：限制顯示的分類
+        });
+
+        picker.on('emoji', selection => {
+            insertTextAtCursor(postModalContentInput, selection.emoji);
+        });
+
+        postEmojiTrigger.addEventListener('click', () => {
+            picker.togglePicker(postEmojiTrigger);
+        });
+    } else {
+        console.warn("未找到發表 Modal 的 Emoji 按鈕或輸入框，或 EmojiButton 庫未載入。");
+    }
+
+     // --- 【★ 新增 ★】初始化詳情 Modal 回覆框的 Emoji Picker ---
+     if (replyEmojiTrigger && modalReplyContentInput && window.EmojiButton) {
+        const replyPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true }); // 位置改為向上彈出
+
+        replyPicker.on('emoji', selection => {
+            insertTextAtCursor(modalReplyContentInput, selection.emoji);
+        });
+
+        replyEmojiTrigger.addEventListener('click', () => {
+            replyPicker.togglePicker(replyEmojiTrigger);
+        });
+    } else {
+        console.warn("未找到詳情 Modal 的 Emoji 按鈕或輸入框，或 EmojiButton 庫未載入。");
+    }
+
+
+
+
     
         // --- 事件監聽：打開新留言 Modal ---
         if (newPostBtn && postModal && postModalForm && postModalStatus && postModalSubmitBtn) {
@@ -511,6 +564,23 @@ if (detailModal) {
         window.addEventListener('click', (event) => { if (event.target == detailModal) closeModal(detailModal); });
     }
     
+
+ // --- 【★ 新增 ★】輔助函數：在光標處插入文本 ---
+ function insertTextAtCursor(textarea, text) {
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    // 插入文本並更新 value
+    textarea.value = value.substring(0, start) + text + value.substring(end);
+    // 將光標移動到插入文本之後
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus(); // 重新聚焦到輸入框
+}
+
+
+
+
         // --- 初始載入 ---
         fetchGuestbookList(1, currentSort);
     });

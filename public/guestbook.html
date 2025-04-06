@@ -61,7 +61,11 @@
                         <label for="modal-message-content">留言內容 (必填):</label>
                         <textarea id="modal-message-content" name="content" rows="5" required></textarea>
                     </div>
-                    <!-- 【★ 新增 Emoji 觸發按鈕位置 (稍後實現) ★】 -->
+
+
+                    <button type="button" id="post-emoji-trigger" class="btn btn-sm btn-outline-secondary" style="margin-top: 5px;">😊</button>
+
+
                     <div style="margin-bottom: 10px;">
                          <button type="button" id="post-emoji-trigger" class="btn btn-sm btn-secondary">😊 表情</button>
                     </div>
@@ -101,7 +105,11 @@
                         <label for="modal-reply-content" id="modal-reply-form-label">回覆內容 (必填):</label>
                         <textarea id="modal-reply-content" name="reply_content" rows="3" required></textarea>
                     </div>
-                     <!-- 【★ 新增 Emoji 觸發按鈕位置 (稍後實現) ★】 -->
+
+
+                    <button type="button" id="reply-emoji-trigger" class="btn btn-sm btn-outline-secondary" style="margin-top: 5px;">😊</button>
+
+
                     <div style="margin-bottom: 10px;">
                          <button type="button" id="reply-emoji-trigger" class="btn btn-sm btn-secondary">😊 表情</button>
                     </div>
@@ -120,8 +128,7 @@
         <!-- ... footer ... -->
     </footer>
 
-    <!-- 【★ 修改 ★】 引入 utils.js (如果創建了) 和 guestbook.js -->
-    <!-- <script src="utils.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@latest/dist/index.min.js"></script>    <!-- <script src="utils.js"></script> -->
     <script src="guestbook.js"></script>
 </body>
 </html>
