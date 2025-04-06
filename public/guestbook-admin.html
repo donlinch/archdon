@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言板管理 - 管理後台</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入其他必要的 head 內容 -->
+</head>
+<body>
+    <header>
+        <!-- 你的後台標頭或共用導覽列 -->
+        <h1>管理後台</h1>
+        <nav class="admin-nav">
+            <a href="/admin.html">商品管理</a>
+            <a href="/music-admin.html">音樂管理</a>
+            <a href="/news-admin.html">消息管理</a>
+            <a href="/banner-admin.html">輪播圖管理</a>
+            <a href="/figures-admin.html">庫存管理</a>
+            <a href="/sales-report.html">銷售報告</a>
+            <a href="/guestbook-admin.html" class="active">留言板管理</a> <!-- 當前頁面 active -->
+            <a href="/admin-identities.html">身份管理</a>
+        </nav>
+    </header>
+ 
+    <main class="guestbook-admin-container">
+        <h2>留言板管理</h2>
+
+        <div class="admin-controls"> <!-- 篩選與搜尋區 -->
+            <div class="filter-group">
+                <label for="filter-status">狀態:</label>
+                <select id="filter-status">
+                    <option value="all">全部</option>
+                    <option value="visible">顯示中</option>
+                    <option value="hidden">已隱藏</option>
+                </select>
+            </div>
+            <div class="search-group">
+                <label for="search-term">搜尋:</label>
+                <input type="text" id="search-term" placeholder="輸入作者或內容關鍵字">
+                <button id="search-button">搜尋</button>
+            </div>
+            <!-- <a href="/admin-identities.html" class="btn btn-secondary">管理回覆身份</a> --> <!-- 改由導覽列進入 -->
+        </div>
+
+        <div class="table-container"> <!-- 表格容器 -->
+            <table class="admin-table" id="guestbook-admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>類型</th>
+                        <th>作者/身份</th>
+                        <th>內容預覽</th>
+                        <th>回覆數</th>
+                        <th>最後活動</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="guestbook-admin-list">
+                    <!-- 列表內容由 JS 載入 -->
+                    <tr><td colspan="8">正在載入資料...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="admin-pagination-container" class="pagination-controls">
+            <!-- 分頁控制由 JS 載入 -->
+        </div>
+
+    </main>
+
+    <footer>
+        <!-- 後台頁腳 (如果需要) -->
+    </footer>
+
+    <script src="guestbook-admin.js"></script>
+</body>
+</html>
