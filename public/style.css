@@ -395,7 +395,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     /* 換行 */
    /* white-space: nowrap; */
     /* 縮小 */
-    flex-shrink: 0;
+    flex-shrink: 1; /* 0 不縮小 */
     /* 彈性容器 */
     display: flex;
 
