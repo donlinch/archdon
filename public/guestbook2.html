@@ -25,6 +25,15 @@
             </div>
         </div>
 
+        <!-- 顯示留言詳情 -->
+        <div v-if="currentMessage" class="message-detail">
+            <h3>{{ currentMessage.title }}</h3>
+            <p>{{ currentMessage.content }}</p>
+            <p>作者：{{ currentMessage.author_name }}</p>
+            <p>時間：{{ currentMessage.created_at }}</p>
+            <button @click="openReplyModal(currentMessage.id)">回覆留言</button>
+        </div>
+
         <!-- 發表留言模態框 -->
         <div v-if="showModal" class="modal">
             <div class="modal-content">
@@ -43,6 +52,18 @@
             </div>
         </div>
 
+        <!-- 回覆留言模態框 -->
+        <div v-if="showReplyModal" class="modal">
+            <div class="modal-content">
+                <h2>回覆留言</h2>
+                <label for="reply_content">回覆內容：</label>
+                <textarea id="reply_content" v-model="newReply.content" placeholder="請輸入回覆內容"></textarea>
+
+                <button @click="submitReply">提交回覆</button>
+                <button @click="closeReplyModal">取消</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -55,7 +76,13 @@
                     title: '',
                     content: ''
                 },
+                currentMessage: null,
+                newReply: {
+                    content: ''
+                },
                 showModal: false,
+                showReplyModal: false,
+                messageIdForReply: null,
             },
             mounted() {
                 this.fetchMessages();
@@ -102,11 +129,36 @@
                     axios.get(`/api/guestbook/message/${id}`)
                         .then(response => {
                             this.currentMessage = response.data.message;
-                            this.showModal = true;
                         })
                         .catch(error => {
                             console.error("獲取留言詳情時出錯:", error);
                         });
+                },
+                openReplyModal(messageId) {
+                    this.messageIdForReply = messageId;
+                    this.showReplyModal = true;
+                },
+                closeReplyModal() {
+                    this.showReplyModal = false;
+                    this.newReply = { content: '' };
+                },
+                submitReply() {
+                    if (!this.newReply.content) {
+                        alert('回覆內容不能為空');
+                        return;
+                    }
+
+                    axios.post('/api/guestbook/replies', {
+                        message_id: this.messageIdForReply,
+                        content: this.newReply.content
+                    })
+                    .then(response => {
+                        this.currentMessage.replies.push(response.data);
+                        this.closeReplyModal();
+                    })
+                    .catch(error => {
+                        console.error("發表回覆時出錯:", error);
+                    });
                 }
             }
         });
@@ -152,6 +204,18 @@
 
         .modal-content button:hover {
             background-color: #0056b3;
+        }
+
+        .message-item {
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .message-detail {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
     </style>
 </body>
