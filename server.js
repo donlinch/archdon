@@ -105,8 +105,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
 app.get('/api/guestbook', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10; // 每頁顯示數量
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const sort = req.query.sort || 'latest'; // 預設最新活動
+
+    let orderByClause = 'ORDER BY m.last_activity_at DESC'; // 預設
+    if (sort === 'popular') {
+        orderByClause = 'ORDER BY m.view_count DESC, m.last_activity_at DESC';
+    } else if (sort === 'most_replies') {
+        orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
+    }
 
     try {
         // 1. 獲取總留言數
@@ -114,17 +122,19 @@ app.get('/api/guestbook', async (req, res) => {
         const totalItems = parseInt(totalResult.rows[0].count, 10);
         const totalPages = Math.ceil(totalItems / limit);
 
-        // 2. 獲取當前頁面的留言 (只取必要欄位和預覽)
+        // 2. 獲取當前頁面的留言 (加入 like_count, view_count, 限制 content preview)
         const messagesResult = await pool.query(
             `SELECT
-                id,
-                author_name,
-                substring(content for 50) || (CASE WHEN length(content) > 50 THEN '...' ELSE '' END) AS content_preview, -- 內容預覽
-                reply_count,
-                last_activity_at
-             FROM guestbook_messages
-             WHERE is_visible = TRUE
-             ORDER BY last_activity_at DESC
+                m.id,
+                m.author_name,
+                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview, -- 內容預覽 (約 2-3 行)
+                m.reply_count,
+                m.view_count, -- 新增
+                m.like_count, -- 新增
+                m.last_activity_at
+             FROM guestbook_messages m -- 給表加個別名 m
+             WHERE m.is_visible = TRUE
+             ${orderByClause} -- 使用動態排序
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
@@ -134,7 +144,8 @@ app.get('/api/guestbook', async (req, res) => {
             currentPage: page,
             totalPages: totalPages,
             totalItems: totalItems,
-            limit: limit
+            limit: limit,
+            sort: sort // 將當前排序方式也回傳給前端
         });
     } catch (err) {
         console.error('[API GET /guestbook] Error:', err);
@@ -143,34 +154,28 @@ app.get('/api/guestbook', async (req, res) => {
 });
 
 // GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
+// GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
 app.get('/api/guestbook/message/:id', async (req, res) => {
     const { id } = req.params;
     const messageId = parseInt(id, 10);
-
-    if (isNaN(messageId)) {
-        return res.status(400).json({ error: '無效的留言 ID' });
-    }
+    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
 
     const client = await pool.connect();
     try {
-        // 1. 獲取主留言 (必須是可見的)
+        // 1. 獲取主留言 (加入 view_count, like_count)
         const messageResult = await client.query(
-            // 移除 is_visible 欄位，因為上面已篩選
-            'SELECT id, author_name, content, reply_count, created_at, last_activity_at FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            'SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
             [messageId]
         );
-
-        if (messageResult.rowCount === 0) {
-            return res.status(404).json({ error: '找不到或無法查看此留言' });
-        }
+        if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到或無法查看此留言' });
         const message = messageResult.rows[0];
 
-        // 2. 獲取該留言下所有可見的回覆，並加入管理員身份名稱
+        // 2. 獲取回覆 (加入 like_count, parent_reply_id)
         const repliesResult = await client.query(
             `SELECT
-                r.id, r.message_id,
+                r.id, r.message_id, r.parent_reply_id, -- 需要 parent_reply_id 用於前端嵌套
                 r.author_name, r.content, r.created_at,
-                r.is_admin_reply,
+                r.is_admin_reply, r.like_count, -- 加入 like_count
                 ai.name AS admin_identity_name
              FROM guestbook_replies r
              LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
@@ -183,98 +188,68 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
             message: message,
             replies: repliesResult.rows
         });
-
-    } catch (err) {
-        console.error(`[API GET /guestbook/message/${id}] Error:`, err);
-        res.status(500).json({ error: '無法獲取留言詳情' });
-    } finally {
-        client.release();
-    }
+    } catch (err) { console.error(`[API GET /guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
 });
 
 // POST /api/guestbook - 新增主留言
+// POST /api/guestbook - 新增主留言 (移除 title)
 app.post('/api/guestbook', async (req, res) => {
+    // 【★ 移除 title ★】
     const { author_name, content } = req.body;
 
-    // 處理匿名
     let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') {
-        authorNameToSave = author_name.trim().substring(0, 100); // 限制長度
-    }
-
-    if (!content || content.trim() === '') {
-        return res.status(400).json({ error: '留言內容不能為空' });
-    }
+    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
+    if (!content || content.trim() === '') return res.status(400).json({ error: '留言內容不能為空' });
     const trimmedContent = content.trim();
-
-    // 【★ 簡易冷卻機制概念 ★】 - 需要額外實現邏輯來追蹤用戶發文時間
-    // if (isUserInCooldown(req)) {
-    //     return res.status(429).json({ error: '留言過於頻繁，請稍候再試' });
-    // }
-
+    // 冷卻機制 placeholder
     try {
-        // 插入時設定 is_visible=TRUE (如果需要審核則改為 FALSE)
         const result = await pool.query(
-            `INSERT INTO guestbook_messages (author_name, content, last_activity_at, is_visible)
-             VALUES ($1, $2, NOW(), TRUE)
-             RETURNING id, author_name, substring(content for 50) || (CASE WHEN length(content) > 50 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at`,
+            // 【★ 移除 title, 加入 like_count, view_count ★】
+            `INSERT INTO guestbook_messages (author_name, content, last_activity_at, is_visible, like_count, view_count)
+             VALUES ($1, $2, NOW(), TRUE, 0, 0)
+             RETURNING id, author_name, substring(content for 80) || (CASE WHEN length(content) > 80 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at, like_count, view_count`, // 返回新欄位
             [authorNameToSave, trimmedContent]
         );
-        // recordUserPostTime(req); // 記錄發文時間
         res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[API POST /guestbook] Error:', err);
-        res.status(500).json({ error: '無法新增留言' });
-    }
+    } catch (err) { console.error('[API POST /guestbook] Error:', err); res.status(500).json({ error: '無法新增留言' }); }
 });
 
-// POST /api/guestbook/replies - 新增公開回覆
+// POST /api/guestbook/replies - 新增公開回覆 (加入 parent_reply_id)
 app.post('/api/guestbook/replies', async (req, res) => {
-    const { message_id, author_name, content } = req.body;
+    // 【★ 加入 parent_reply_id ★】
+    const { message_id, parent_reply_id, author_name, content } = req.body;
     const messageIdInt = parseInt(message_id, 10);
+    // 【★ 處理 parent_reply_id ★】
+    const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
 
-    if (isNaN(messageIdInt)) {
-        return res.status(400).json({ error: '無效的留言 ID' });
-    }
+    if (isNaN(messageIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言或父回覆 ID' });
 
-    // 處理匿名
     let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') {
-        authorNameToSave = author_name.trim().substring(0, 100);
-    }
-
-    if (!content || content.trim() === '') {
-        return res.status(400).json({ error: '回覆內容不能為空' });
-    }
+    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
+    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
     const trimmedContent = content.trim();
-
-    // 【★ 簡易冷卻機制概念 ★】
-    // if (isUserInCooldown(req)) { return res.status(429).json(...); }
+    // 冷卻機制 placeholder
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN'); // 開始交易
-
-        // 1. 插入回覆 (預設 is_visible=TRUE)
+        await client.query('BEGIN');
+        // 【★ 加入 parent_reply_id, like_count ★】
         const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, author_name, content, is_admin_reply, admin_identity_id, is_visible)
-             VALUES ($1, $2, $3, FALSE, NULL, TRUE)
-             RETURNING id, message_id, author_name, content, created_at, is_admin_reply`,
-            [messageIdInt, authorNameToSave, trimmedContent]
+            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
+             VALUES ($1, $2, $3, $4, FALSE, NULL, TRUE, 0)
+             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count`, // 返回新欄位
+            [messageIdInt, parentIdInt, authorNameToSave, trimmedContent]
         );
-
-        // 2. 更新主留言 (如果觸發器未處理)
-        // 觸發器已設定好處理 last_activity_at 和 reply_count
-
-        await client.query('COMMIT'); // 提交交易
-        // recordUserPostTime(req); // 記錄回覆時間
+        // 觸發器處理主留言更新
+        await client.query('COMMIT');
         res.status(201).json(replyResult.rows[0]);
     } catch (err) {
-        await client.query('ROLLBACK'); // 出錯時回滾
+        await client.query('ROLLBACK');
         console.error('[API POST /guestbook/replies] Error:', err);
-        if (err.code === '23503') {
-             return res.status(404).json({ error: '找不到要回覆的留言。' });
-        }
+         // 檢查外鍵錯誤 (可能是 message_id 或 parent_reply_id 無效)
+         if (err.code === '23503') {
+             return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
+         }
         res.status(500).json({ error: '無法新增回覆' });
     } finally {
         client.release();
@@ -282,12 +257,65 @@ app.post('/api/guestbook/replies', async (req, res) => {
 });
 
 
+// POST /api/guestbook/message/:id/view - 增加瀏覽數
+app.post('/api/guestbook/message/:id/view', async (req, res) => {
+    const { id } = req.params;
+    const messageId = parseInt(id, 10);
+    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
+
+    try {
+        // 只增加計數，不需要返回什麼
+        await pool.query(
+            'UPDATE guestbook_messages SET view_count = view_count + 1 WHERE id = $1',
+            [messageId]
+        );
+        res.status(204).send(); // No Content
+    } catch (err) {
+        console.error(`[API POST /guestbook/message/${id}/view] Error:`, err);
+        // 即使出錯也靜默處理或返回簡單成功，避免影響前端主要流程
+        res.status(204).send();
+    }
+});
 
 
+// POST /api/guestbook/message/:id/like - 增加主留言讚數
+app.post('/api/guestbook/message/:id/like', async (req, res) => {
+    const { id } = req.params;
+    const messageId = parseInt(id, 10);
+    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
+
+    try {
+        const result = await pool.query(
+            'UPDATE guestbook_messages SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count',
+            [messageId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要按讚的留言' });
+        res.status(200).json({ like_count: result.rows[0].like_count });
+    } catch (err) {
+        console.error(`[API POST /guestbook/message/${id}/like] Error:`, err);
+        res.status(500).json({ error: '按讚失敗' });
+    }
+});
 
 
+// POST /api/guestbook/replies/:id/like - 增加回覆讚數
+app.post('/api/guestbook/replies/:id/like', async (req, res) => {
+    const { id } = req.params;
+    const replyId = parseInt(id, 10);
+    if (isNaN(replyId)) return res.status(400).json({ error: '無效的回覆 ID' });
 
-
+    try {
+        const result = await pool.query(
+            'UPDATE guestbook_replies SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count',
+            [replyId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要按讚的回覆' });
+        res.status(200).json({ like_count: result.rows[0].like_count });
+    } catch (err) {
+        console.error(`[API POST /guestbook/replies/${id}/like] Error:`, err);
+        res.status(500).json({ error: '按讚失敗' });
+    }
+});
 
 // --- 樂譜 API ---
 // GET /api/scores/artists - 取得擁有樂譜的獨立歌手列表
@@ -701,57 +729,97 @@ adminRouter.delete('/identities/:id', async (req, res) => { /* ...身份刪除�
     } catch (err) { console.error(`[API DELETE /admin/identities/${id}] Error:`, err); res.status(500).json({ error: '無法刪除身份' }); }
 });
 
+
+
 // --- 留言板管理 (Guestbook Management) ---
-adminRouter.get('/guestbook', async (req, res) => { /* ...獲取管理列表邏輯... */
-    const page = parseInt(req.query.page) || 1; const limit = parseInt(req.query.limit) || 15; const offset = (page - 1) * limit; const filter = req.query.filter || 'all'; const search = req.query.search || '';
-    let whereClauses = []; let queryParams = [limit, offset]; let paramIndex = 3;
-    if (filter === 'visible') whereClauses.push('m.is_visible = TRUE'); else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
+adminRouter.get('/guestbook', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const offset = (page - 1) * limit;
+    const filter = req.query.filter || 'all';
+    const search = req.query.search || '';
+    const sort = req.query.sort || 'latest'; // 新增 sort
+
+    let orderByClause = 'ORDER BY m.last_activity_at DESC'; // 預設
+    if (sort === 'popular') orderByClause = 'ORDER BY m.view_count DESC, m.last_activity_at DESC';
+    else if (sort === 'most_replies') orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
+
+    let whereClauses = [];
+    let queryParams = [limit, offset];
+    let paramIndex = 3;
+    if (filter === 'visible') whereClauses.push('m.is_visible = TRUE');
+    else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
     if (search) { whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`); queryParams.push(`%${search}%`); paramIndex++; }
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
     try {
         const totalResult = await pool.query(`SELECT COUNT(*) FROM guestbook_messages m ${whereSql}`, queryParams.slice(2));
-        const totalItems = parseInt(totalResult.rows[0].count, 10); const totalPages = Math.ceil(totalItems / limit);
-        const messagesResult = await pool.query(`SELECT m.id, m.author_name, substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview, m.reply_count, m.last_activity_at, m.created_at, m.is_visible FROM guestbook_messages m ${whereSql} ORDER BY m.last_activity_at DESC LIMIT $1 OFFSET $2`, queryParams);
-        res.json({ messages: messagesResult.rows, currentPage: page, totalPages: totalPages, totalItems: totalItems, limit: limit });
+        const totalItems = parseInt(totalResult.rows[0].count, 10);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // 加入 view_count, like_count
+        const messagesResult = await pool.query(
+            `SELECT m.id, m.author_name,
+                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
+                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible
+             FROM guestbook_messages m
+             ${whereSql} ${orderByClause} LIMIT $1 OFFSET $2`,
+            queryParams
+        );
+        res.json({ messages: messagesResult.rows, currentPage: page, totalPages: totalPages, totalItems: totalItems, limit: limit, sort: sort });
     } catch (err) { console.error('[API GET /admin/guestbook] Error:', err); res.status(500).json({ error: '無法獲取管理留言列表' }); }
 });
-adminRouter.get('/guestbook/message/:id', async (req, res) => { /* ...獲取管理詳情邏輯... */
+
+adminRouter.get('/guestbook/message/:id', async (req, res) => {
     const { id } = req.params; const messageId = parseInt(id, 10); if (isNaN(messageId)) return res.status(400).json({ error: '無效的 ID' });
     const client = await pool.connect();
     try {
-        const messageResult = await client.query('SELECT * FROM guestbook_messages WHERE id = $1', [messageId]); if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到留言' });
-        const repliesResult = await client.query(`SELECT r.*, ai.name AS admin_identity_name FROM guestbook_replies r LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id WHERE r.message_id = $1 ORDER BY r.created_at ASC`, [messageId]);
+        // message 加入 like_count, view_count
+        const messageResult = await client.query('SELECT *, like_count, view_count FROM guestbook_messages WHERE id = $1', [messageId]);
+        if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到留言' });
+
+        // replies 加入 like_count, parent_reply_id
+        const repliesResult = await client.query(
+            `SELECT r.*, r.like_count, r.parent_reply_id, ai.name AS admin_identity_name
+             FROM guestbook_replies r
+             LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
+             WHERE r.message_id = $1 ORDER BY r.created_at ASC`,
+            [messageId]
+        );
         res.json({ message: messageResult.rows[0], replies: repliesResult.rows });
     } catch (err) { console.error(`[API GET /admin/guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
 });
-adminRouter.put('/guestbook/messages/:id/visibility', async (req, res) => { /* ...更新留言可見度邏輯... */
-    const { id } = req.params; const messageId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(messageId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try { const result = await pool.query('UPDATE guestbook_messages SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言' }); res.json(result.rows[0]);
-    } catch (err) { console.error(`[API PUT /admin/.../${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新留言狀態' }); }
-});
-adminRouter.put('/guestbook/replies/:id/visibility', async (req, res) => { /* ...更新回覆可見度邏輯... */
-    const { id } = req.params; const replyId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(replyId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try { const result = await pool.query('UPDATE guestbook_replies SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, replyId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到回覆' }); res.json(result.rows[0]);
-    } catch (err) { console.error(`[API PUT /admin/.../${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新回覆狀態' }); }
-});
-adminRouter.delete('/guestbook/messages/:id', async (req, res) => { /* ...刪除留言邏輯... */
-    const { id } = req.params; const messageId = parseInt(id, 10); if (isNaN(messageId)) return res.status(400).json({ error: '無效的 ID' });
-    try { const result = await pool.query('DELETE FROM guestbook_messages WHERE id = $1', [messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的留言' }); res.status(204).send();
-    } catch (err) { console.error(`[API DELETE /admin/guestbook/messages/${id}] Error:`, err); res.status(500).json({ error: '無法刪除留言' }); }
-});
-adminRouter.delete('/guestbook/replies/:id', async (req, res) => { /* ...刪除回覆邏輯... */
-    const { id } = req.params; const replyId = parseInt(id, 10); if (isNaN(replyId)) return res.status(400).json({ error: '無效的 ID' });
-    const client = await pool.connect(); try { await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
-    } catch (err) { await client.query('ROLLBACK'); console.error(`[API DELETE /admin/guestbook/replies/${id}] Error:`, err); res.status(500).json({ error: '無法刪除回覆' }); } finally { client.release(); }
-});
-adminRouter.post('/guestbook/replies', async (req, res) => { /* ...新增管理員回覆邏輯... */
-    const { message_id, content, admin_identity_id } = req.body; const messageIdInt = parseInt(message_id, 10); const identityIdInt = parseInt(admin_identity_id, 10); if (isNaN(messageIdInt) || isNaN(identityIdInt)) return res.status(400).json({ error: '無效的留言 ID 或身份 ID' }); if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
-    const client = await pool.connect(); try { await client.query('BEGIN'); const identityCheck = await client.query('SELECT 1 FROM admin_identities WHERE id = $1', [identityIdInt]); if (identityCheck.rowCount === 0) { await client.query('ROLLBACK'); return res.status(400).json({ error: '無效的管理員身份' }); }
-        const replyResult = await client.query(`INSERT INTO guestbook_replies (message_id, author_name, content, is_admin_reply, admin_identity_id) VALUES ($1, '匿名', $2, TRUE, $3) RETURNING *, (SELECT name FROM admin_identities WHERE id = $3) AS admin_identity_name`, [messageIdInt, content.trim(), identityIdInt]);
-        // 觸發器會處理 reply_count 和 last_activity_at
+
+adminRouter.post('/guestbook/replies', async (req, res) => {
+    // 【★ 加入 parent_reply_id ★】
+    const { message_id, parent_reply_id, content, admin_identity_id } = req.body;
+    const messageIdInt = parseInt(message_id, 10);
+    const identityIdInt = parseInt(admin_identity_id, 10);
+    // 【★ 處理 parent_reply_id ★】
+    const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
+
+    if (isNaN(messageIdInt) || isNaN(identityIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言/父回覆/身份 ID' });
+    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
+
+    const client = await pool.connect(); try { await client.query('BEGIN');
+        const identityCheck = await client.query('SELECT 1 FROM admin_identities WHERE id = $1', [identityIdInt]);
+        if (identityCheck.rowCount === 0) { await client.query('ROLLBACK'); return res.status(400).json({ error: '無效的管理員身份' }); }
+
+        // 【★ 加入 parent_reply_id, like_count ★】
+        const replyResult = await client.query(
+            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
+             VALUES ($1, $2, '匿名', $3, TRUE, $4, TRUE, 0)
+             RETURNING *, (SELECT name FROM admin_identities WHERE id = $4) AS admin_identity_name`,
+            [messageIdInt, parentIdInt, content.trim(), identityIdInt]
+        );
+        // Trigger handles updates
         await client.query('COMMIT'); res.status(201).json(replyResult.rows[0]);
-    } catch (err) { await client.query('ROLLBACK'); console.error('[API POST /admin/guestbook/replies] Error:', err); if (err.code === '23503') return res.status(404).json({ error: '找不到要回覆的留言。' }); res.status(500).json({ error: '無法新增管理員回覆' }); } finally { client.release(); }
+    } catch (err) { await client.query('ROLLBACK'); console.error('[API POST /admin/guestbook/replies] Error:', err); if (err.code === '23503') return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' }); res.status(500).json({ error: '無法新增管理員回覆' }); } finally { client.release(); }
 });
+
+
+
+
 
 app.use('/api/admin', adminRouter);
 
