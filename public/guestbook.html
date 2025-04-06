@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>留言板 - SunnyYummy</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 导航栏部分（同其他页面） -->
+    
+    <main class="container">
+        <div class="guestbook-header">
+            <h1>訪客留言板</h1>
+            <button id="new-post-btn">發表新留言</button>
+        </div>
+
+        <div class="sort-controls">
+            <button class="sort-btn active" data-sort="latest">最新留言</button>
+            <button class="sort-btn" data-sort="popular">熱門討論</button>
+            <button class="sort-btn" data-sort="most_replies">最多回覆</button>
+        </div>
+
+        <div id="messages-container">
+            <!-- 动态加载留言列表 -->
+        </div>
+
+        <div class="pagination">
+            <!-- 分页控件 -->
+        </div>
+    </main>
+
+    <!-- 模态框 -->
+    <div id="post-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>發表新留言</h2>
+            <form id="post-form">
+                <input type="text" placeholder="您的名字（可选）" id="author-name">
+                <input type="text" placeholder="留言标题" required id="post-title">
+                <textarea placeholder="留言内容" required id="post-content"></textarea>
+                <button type="submit">發送留言</button>
+                <p id="post-status"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="guestbook.js"></script>
+</body>
+</html>
