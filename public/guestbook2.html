@@ -3,300 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - SunnyYummy</title>
-    <style>
-        /* 簡單的樣式 */
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        #guestbook-list {
-            margin-bottom: 20px;
-        }
-        .message-item {
-            border-bottom: 1px solid #ddd;
-            padding: 10px 0;
-        }
-        .message-title {
-            font-weight: bold;
-            color: #E57373;
-            cursor: pointer;
-        }
-        .message-meta {
-            font-size: 0.85em;
-            color: #757575;
-        }
-        #post-status-msg {
-            font-size: 0.9em;
-            color: green;
-            text-align: center;
-        }
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            padding: 10px 15px;
-            background-color: #FFB74D;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* Modal 基本樣式 */
-        .modal {
-            display: none; /* 預設隱藏 */
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            padding-top: 60px;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 700px;
-            border-radius: 8px;
-            position: relative;
-            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
-        }
-        .close-btn {
-            color: #aaa;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-btn:hover,
-        .close-btn:focus {
-            color: black;
-            text-decoration: none;
-        }
-
-        /* 排序控制區 */
-        .sort-controls {
-            margin: 20px 0;
-            text-align: center;
-        }
-        .sort-link {
-            margin: 0 10px;
-            padding: 5px 10px;
-            color: #757575;
-            text-decoration: none;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 1rem;
-        }
-    </style>
+    <title>留言板</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
+    <div id="app">
+        <h1>留言板</h1>
 
-    <h1>留言板</h1>
+        <!-- 留言表單 -->
+        <div>
+            <label for="author_name">你的名稱：</label>
+            <input type="text" id="author_name" v-model="newMessage.author_name" placeholder="請輸入你的名稱">
+            
+            <label for="message_title">留言標題：</label>
+            <input type="text" id="message_title" v-model="newMessage.title" placeholder="請輸入標題">
+            
+            <label for="message_content">留言內容：</label>
+            <textarea id="message_content" v-model="newMessage.content" placeholder="請輸入留言內容"></textarea>
+            
+            <button @click="submitMessage">提交留言</button>
+        </div>
 
-    <!-- 排序控制項 -->
-    <div class="sort-controls">
-        <button class="sort-link" onclick="sortMessages('latest')">最新留言</button>
-        <button class="sort-link" onclick="sortMessages('popular')">熱門留言</button>
-        <button class="sort-link" onclick="sortMessages('most_replies')">最多回覆</button>
-    </div>
-
-    <!-- 留言列表 -->
-    <div id="guestbook-list">
-        <p>正在載入留言...</p>
-    </div>
-
-    <!-- 發表新留言表單 -->
-    <div>
-        <h3>發表新留言</h3>
-        <form id="post-message-form">
-            <div class="form-group">
-                <label for="post-author-name">你的名稱:</label>
-                <input type="text" id="post-author-name" maxlength="100" placeholder="匿名">
+        <!-- 留言列表 -->
+        <div v-if="messages.length > 0">
+            <h2>所有留言</h2>
+            <div v-for="message in messages" :key="message.id" class="message-item">
+                <div class="message-title" @click="showMessageDetail(message.id)">
+                    <strong>{{ message.title }}</strong> - {{ message.author_name }} ({{ message.created_at }})
+                </div>
+                <div v-if="message.showReplies" class="message-replies">
+                    <div v-for="reply in message.replies" :key="reply.id" class="message-reply">
+                        <p><strong>{{ reply.author_name }}:</strong> {{ reply.content }}</p>
+                    </div>
+                    <textarea v-model="newReply.content" placeholder="回覆留言"></textarea>
+                    <button @click="replyMessage(message.id)">回覆留言</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="post-title">留言標題:</label>
-                <input type="text" id="post-title" required maxlength="255">
-            </div>
-            <div class="form-group">
-                <label for="post-content">留言內容:</label>
-                <textarea id="post-content" rows="5" required></textarea>
-            </div>
-            <button type="submit">送出留言</button>
-        </form>
-        <p id="post-status-msg"></p>
-    </div>
+        </div>
 
-    <!-- 留言詳情 Modal -->
-    <div id="detail-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">×</span>
-            <h3 id="detail-title"></h3>
-            <div id="detail-meta" style="font-size: 0.9em; color: #757575;"></div>
-            <p id="detail-content"></p>
-            <button onclick="showReplyForm()">回覆留言</button>
-            <div id="reply-form-container" style="display:none;">
-                <h4>留下回覆：</h4>
-                <textarea id="reply-content" rows="3"></textarea><br>
-                <button onclick="submitReply()">送出回覆</button>
-            </div>
-            <hr>
-            <div id="replies-container">
-                <!-- 回覆顯示區 -->
+        <!-- 留言詳情模態 -->
+        <div v-if="showModal" class="modal">
+            <div class="modal-content">
+                <h2>{{ currentMessage.title }}</h2>
+                <p><strong>作者：</strong>{{ currentMessage.author_name }}</p>
+                <p><strong>時間：</strong>{{ currentMessage.created_at }}</p>
+                <p>{{ currentMessage.content }}</p>
+                <button @click="toggleReplies">{{ showRepliesText }}</button>
+                <button @click="closeModal">關閉</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 模擬留言資料
-        let mockMessages = [
-            { id: 1, author_name: "小明", title: "你好！", content: "這是一個測試留言", created_at: "2024-04-06 10:00", replies: [], view_count: 0 },
-            { id: 2, author_name: "小紅", title: "留言板", content: "測試留言板功能", created_at: "2024-04-06 11:30", replies: [], view_count: 5 }
-        ];
+        new Vue({
+            el: '#app',
+            data: {
+                messages: [],
+                newMessage: {
+                    author_name: '',
+                    title: '',
+                    content: ''
+                },
+                newReply: {
+                    content: ''
+                },
+                showModal: false,
+                currentMessage: {},
+                showRepliesText: '查看回覆'
+            },
+            mounted() {
+                this.fetchMessages();
+            },
+            methods: {
+                fetchMessages() {
+                    axios.get('/api/guestbook', { params: { page: 1, limit: 10, sort: 'latest' } })
+                        .then(response => {
+                            this.messages = response.data.messages;
+                            this.messages.forEach(message => {
+                                message.showReplies = false;
+                                message.replies = [];
+                            });
+                        })
+                        .catch(error => {
+                            console.error("獲取留言時出錯:", error);
+                        });
+                },
+                submitMessage() {
+                    if (!this.newMessage.author_name || !this.newMessage.title || !this.newMessage.content) {
+                        alert('所有欄位都必須填寫');
+                        return;
+                    }
 
-        // 渲染留言列表
-        function renderGuestbookList(messages) {
-            const guestbookList = document.getElementById('guestbook-list');
-            guestbookList.innerHTML = ''; // 清空現有留言
+                    axios.post('/api/guestbook', this.newMessage)
+                        .then(response => {
+                            this.messages.push(response.data);
+                            this.newMessage = { author_name: '', title: '', content: '' };
+                        })
+                        .catch(error => {
+                            console.error("發表留言時出錯:", error);
+                        });
+                },
+                showMessageDetail(id) {
+                    axios.get(`/api/guestbook/message/${id}`)
+                        .then(response => {
+                            this.currentMessage = response.data.message;
+                            this.currentMessage.replies = response.data.replies;
+                            this.showModal = true;
+                        })
+                        .catch(error => {
+                            console.error("獲取留言詳情時出錯:", error);
+                        });
+                },
+                toggleReplies() {
+                    this.currentMessage.showReplies = !this.currentMessage.showReplies;
+                    this.showRepliesText = this.currentMessage.showReplies ? '隱藏回覆' : '查看回覆';
+                },
+                closeModal() {
+                    this.showModal = false;
+                    this.currentMessage = {};
+                },
+                replyMessage(messageId) {
+                    if (!this.newReply.content) {
+                        alert('回覆內容不能為空');
+                        return;
+                    }
 
-            if (!messages || messages.length === 0) {
-                guestbookList.innerHTML = '<p>目前沒有留言。</p>';
-                return;
+                    axios.post('/api/guestbook/replies', {
+                        message_id: messageId,
+                        content: this.newReply.content,
+                        author_name: '管理員'  // 此處可以設置為當前登入用戶的名稱
+                    })
+                    .then(response => {
+                        this.messages.forEach(msg => {
+                            if (msg.id === messageId) {
+                                msg.replies.push(response.data);
+                            }
+                        });
+                        this.newReply.content = '';
+                    })
+                    .catch(error => {
+                        console.error("回覆留言時出錯:", error);
+                    });
+                }
             }
-
-            messages.forEach(msg => {
-                const item = document.createElement('div');
-                item.className = 'message-item';
-                item.innerHTML = `
-                    <div class="message-title" onclick="showMessageDetail(${msg.id})">${msg.title}</div>
-                    <div class="message-meta">作者：${msg.author_name} - 發表時間：${msg.created_at}</div>
-                    <div class="message-content">${msg.content}</div>
-                `;
-                guestbookList.appendChild(item);
-            });
-        }
-
-        // 顯示留言詳情
-        function showMessageDetail(messageId) {
-            const message = mockMessages.find(msg => msg.id === messageId);
-            if (message) {
-                document.getElementById('detail-title').textContent = message.title;
-                document.getElementById('detail-meta').textContent = `作者：${message.author_name} - 發表時間：${message.created_at}`;
-                document.getElementById('detail-content').textContent = message.content;
-                showModal('detail-modal');
-                displayReplies(message.replies);
-            }
-        }
-
-        // 顯示 Modal
-        function showModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'flex'; // 使用 flex 實現居中
-            }
-        }
-
-        // 關閉 Modal
-        function closeModal() {
-            const modal = document.getElementById('detail-modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        // 顯示回覆表單
-        function showReplyForm() {
-            document.getElementById('reply-form-container').style.display = 'block';
-        }
-
-        // 提交回覆
-        function submitReply() {
-            const replyContent = document.getElementById('reply-content').value;
-            if (!replyContent.trim()) {
-                alert('回覆內容不能為空');
-                return;
-            }
-
-            const messageId = mockMessages.find(msg => msg.title === document.getElementById('detail-title').textContent).id;
-            const reply = {
-                author_name: "匿名", // 默認為匿名
-                content: replyContent,
-                created_at: new Date().toLocaleString()
-            };
-            const message = mockMessages.find(msg => msg.id === messageId);
-            message.replies.push(reply);
-
-            displayReplies(message.replies); // 更新回覆顯示
-            document.getElementById('reply-content').value = ''; // 清空回覆框
-        }
-
-        // 顯示回覆列表
-        function displayReplies(replies) {
-            const repliesContainer = document.getElementById('replies-container');
-            repliesContainer.innerHTML = ''; // 清空現有回覆
-
-            if (replies.length === 0) {
-                repliesContainer.innerHTML = '<p>目前沒有回覆。</p>';
-                return;
-            }
-
-            replies.forEach(reply => {
-                const replyItem = document.createElement('div');
-                replyItem.className = 'reply-item';
-                replyItem.innerHTML = `
-                    <div class="reply-author">${reply.author_name}</div>
-                    <div class="reply-timestamp">${reply.created_at}</div>
-                    <div class="reply-content">${reply.content}</div>
-                `;
-                repliesContainer.appendChild(replyItem);
-            });
-        }
-
-        // 排序留言列表
-        function sortMessages(sortType) {
-            if (sortType === 'latest') {
-                mockMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            } else if (sortType === 'popular') {
-                mockMessages.sort((a, b) => b.view_count - a.view_count);
-            } else if (sortType === 'most_replies') {
-                mockMessages.sort((a, b) => b.replies.length - a.replies.length);
-            }
-            renderGuestbookList(mockMessages);
-        }
-
-        // 模擬獲取留言列表 (通常會用 fetch 請求)
-        function fetchGuestbookList() {
-            setTimeout(() => {
-                renderGuestbookList(mockMessages);
-            }, 1000); // 模擬延遲
-        }
-
-        // 頁面載入時獲取留言列表
-        window.onload = fetchGuestbookList;
+        });
     </script>
-
 </body>
 </html>
