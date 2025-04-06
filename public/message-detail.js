@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data || !data.message) throw new Error('從 API 獲取的資料格式不正確。');
 
             renderMessageDetail(data.message);
-            renderReplyList(data.replies || []); // 確保是陣列
+            renderNestedReplyList(data.replies || []); // 【★ 在這裡調用 ★】
 
         } catch (error) {
             console.error('獲取詳情失敗:', error);
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return; // 終止函數執行，不再繼續發送 API 請求
             }
 
-            
+
             try {
                 const response = await fetch('/api/guestbook/replies', {
                     method: 'POST',
