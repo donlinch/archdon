@@ -43,6 +43,13 @@
             </div>
         </div>
 
+        <!-- 分頁功能 -->
+        <div class="pagination">
+            <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">上一頁</button>
+            <span>第 {{ currentPage }} 頁 / 共 {{ totalPages }} 頁</span>
+            <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">下一頁</button>
+        </div>
+
         <!-- 留言詳情模態 -->
         <div v-if="showModal" class="modal">
             <div class="modal-content">
@@ -71,16 +78,25 @@
                 },
                 showModal: false,
                 currentMessage: {},
-                showRepliesText: '查看回覆'
+                showRepliesText: '查看回覆',
+                currentPage: 1,
+                totalPages: 1
             },
             mounted() {
                 this.fetchMessages();
             },
             methods: {
                 fetchMessages() {
-                    axios.get('/api/guestbook', { params: { page: 1, limit: 10, sort: 'latest' } })
+                    axios.get('/api/guestbook', { 
+                        params: { 
+                            page: this.currentPage, 
+                            limit: 10, 
+                            sort: 'latest' 
+                        } 
+                    })
                         .then(response => {
                             this.messages = response.data.messages;
+                            this.totalPages = response.data.totalPages;
                             this.messages.forEach(message => {
                                 message.showReplies = false;
                                 message.replies = [];
@@ -146,6 +162,11 @@
                     .catch(error => {
                         console.error("回覆留言時出錯:", error);
                     });
+                },
+                changePage(page) {
+                    if (page < 1 || page > this.totalPages) return;
+                    this.currentPage = page;
+                    this.fetchMessages();
                 }
             }
         });
