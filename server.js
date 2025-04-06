@@ -453,6 +453,15 @@ app.get('/api/scores/proxy', (req, res) => {
 
 
 
+// 輔助函數：清理 Banner 排序欄位
+function sanitizeSortField(field) {
+    const allowedFields = ['display_order', 'created_at', 'name', 'page_location', 'id', 'random']; // 根據你的需求調整允許的欄位
+    if (allowedFields.includes(field)) {
+        return field;
+    }
+    return 'display_order'; // 預設
+}
+
 
 
 
@@ -747,7 +756,7 @@ adminRouter.post('/guestbook/replies', async (req, res) => { /* ...新增管理�
 
 
 
-
+app.use('/api/admin', adminRouter);
 
 
 
@@ -1171,7 +1180,7 @@ app.get('/api/admin/figures', async (req, res) => {
                     (SELECT json_agg(
                         json_build_object(
                             'id', v.id,
-                            'name', v.name,
+                            'name', v.name, 
                             'quantity', v.quantity
                         ) ORDER BY v.name ASC -- 確保規格按名稱排序
                     )
@@ -1496,14 +1505,6 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 });
 
 
-// 輔助函數：清理 Banner 排序欄位
-function sanitizeSortField(field) {
-    const allowedFields = ['display_order', 'created_at', 'name', 'page_location', 'id', 'random']; // 根據你的需求調整允許的欄位
-    if (allowedFields.includes(field)) {
-        return field;
-    }
-    return 'display_order'; // 預設
-}
 
 
 
