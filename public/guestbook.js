@@ -7,24 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitMessageBtn = document.getElementById('submit-message-btn');
 
     let currentPage = 1;
-    let isPostingCooldown = false; // 發文冷卻狀態
+    let currentSort = 'latest'; // 【★ 新增 ★】記錄當前排序方式，預設 'latest'
+    let isPostingCooldown = false;
 
-    // --- 函數：獲取並顯示留言列表 ---
-    async function fetchGuestbookList(page = 1) {
-        if (!messageListContainer || !paginationContainer) {
-            console.error("列表或分頁容器未找到！");
-            return;
-        }
-        messageListContainer.innerHTML = '<p>正在載入留言...</p>'; // 顯示載入中
-        paginationContainer.innerHTML = ''; // 清空分頁
+
+    // --- 函數：獲取並顯示留言列表 (修改：加入 sort 參數) ---
+    async function fetchGuestbookList(page = 1, sort = 'latest') { // 【★ 修改 ★】接收 sort 參數
+        if (!messageListContainer || !paginationContainer) return;
+        messageListContainer.innerHTML = '<p>正在載入留言...</p>';
+        paginationContainer.innerHTML = '';
+
+        currentPage = page; // 更新當前頁碼
+        currentSort = sort; // 更新當前排序
 
         try {
-            const response = await fetch(`/api/guestbook?page=${page}&limit=10`); // 每頁 10 筆
-            if (!response.ok) {
-                throw new Error(`無法獲取留言列表 (HTTP ${response.status})`);
-            }
+            // 【★ 修改 ★】將 sort 參數加入 API 請求
+            const response = await fetch(`/api/guestbook?page=${page}&limit=10&sort=${sort}`);
+            if (!response.ok) throw new Error(`無法獲取留言列表 (HTTP ${response.status})`);
             const data = await response.json();
-            currentPage = data.currentPage; // 更新當前頁碼
+
+            // 更新按鈕 active 狀態 (確保刷新後也正確)
+            updateSortButtonsActiveState(data.sort || 'latest');
 
             renderMessageList(data.messages);
             renderPagination(data.totalPages, data.currentPage);
@@ -152,6 +155,22 @@ messageListContainer.appendChild(messageItemDiv);
         paginationContainer.appendChild(nextButton);
     }
 
+
+ // --- 【★ 新增 ★】函數：更新排序按鈕的 active 狀態 ---
+ function updateSortButtonsActiveState(activeSort) {
+    if (sortControls) {
+        const buttons = sortControls.querySelectorAll('.sort-btn');
+        buttons.forEach(button => {
+            if (button.dataset.sort === activeSort) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+}
+
+
     // --- 事件監聽：提交新留言 ---
     if (postForm && submitMessageBtn && postStatus) {
         postForm.addEventListener('submit', async (e) => {
@@ -217,13 +236,30 @@ messageListContainer.appendChild(messageItemDiv);
         });
     }
 
+
+     // --- 【★ 新增 ★】事件監聽：點擊排序按鈕 ---
+     if (sortControls) {
+        sortControls.addEventListener('click', (e) => {
+            if (e.target.matches('.sort-btn') && !e.target.classList.contains('active')) {
+                const newSort = e.target.dataset.sort;
+                if (newSort) {
+                    // 更新按鈕狀態（立即反饋）
+                    updateSortButtonsActiveState(newSort);
+                    // 使用新的排序方式獲取第一頁數據
+                    fetchGuestbookList(1, newSort);
+                }
+            }
+        });
+     }
+
+
     // --- 事件監聽：點擊分頁按鈕 ---
     if (paginationContainer) {
         paginationContainer.addEventListener('click', (e) => {
             if (e.target.matches('.page-btn') && !e.target.disabled) {
                 const page = parseInt(e.target.dataset.page, 10);
                 if (!isNaN(page)) {
-                    fetchGuestbookList(page);
+                    fetchGuestbookList(page, currentSort);
                 }
             }
         });

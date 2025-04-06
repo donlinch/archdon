@@ -46,7 +46,16 @@
 
         <section class="message-list-section">
             <h2>最新活動留言</h2>
-            <!-- 排序按鈕 (目前只有預設，可先不放) -->
+            <!-- 排序按鈕 (目前只有預設，可先
+             
+            【★ 新增排序按鈕 ★】 -->
+            <div class="sort-controls" style="margin-bottom: 1rem; text-align: right;">
+                排序：
+                <button class="sort-btn active" data-sort="latest">最新活動</button>
+                <button class="sort-btn" data-sort="popular">熱門討論</button>
+                <button class="sort-btn" data-sort="most_replies">最多回覆</button>
+            </div>
+            
             <!-- <div class="sort-options">排序：<span class="active">最新活動</span></div> -->
 
             <div id="message-list-container">
