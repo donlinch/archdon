@@ -340,6 +340,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     overflow-y: auto;
     flex-grow: 1;
 }
+/* --- 歌曲列表 --- */
 #song-list li {
     display: flex;
     justify-content: space-between;
@@ -357,6 +358,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     color: #424242;
     font-weight: normal;
 }
+/* --- 歌曲資訊 --- */
 .song-list-info {
     flex-grow: 1;
     min-width: 150px;
@@ -366,13 +368,20 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     flex-direction: column; justify-content: center;
     white-space: nowrap;
 }
+/* --- 歌曲名稱 --- */
 #song-list .song-title {
-     font-weight: 500;
-     display: block; /* Ensure it takes block space */
+
+     font-weight: 500; /* 粗體 */
+     /* 確保它佔用塊空間 */
+     display: block; 
+     /* 隱藏溢出 */
      overflow: hidden;
+     /* 省略號 */
      text-overflow: ellipsis;
+     /* 不換行 */       
      white-space: nowrap;
 }
+/* --- 歌手名稱 --- */
 #song-list .song-artist {
     font-size: 0.85em;
     color: #757575;
@@ -381,10 +390,15 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* --- 樂譜按鈕 --- */
 .song-list-scores {
+    /* 換行 */
+   /* white-space: nowrap; */
+    /* 縮小 */
     flex-shrink: 0;
+    /* 彈性容器 */
     display: flex;
-    
+
     flex-wrap: wrap;
     gap: 5px;
     justify-content: flex-end;
@@ -392,6 +406,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     align-items: center;
 }
 /* Score buttons within the list */
+/* --- 樂譜按鈕 --- */
 .list-score-btn {
     padding: 3px 8px;
     font-size: 0.8em;
@@ -402,10 +417,12 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
     border-radius: 3px;
     transition: all 0.2s ease;
 }
+/* --- 樂譜按鈕 hover --- */
 .list-score-btn:hover {
     background-color: #e0e0e0;
     border-color: #bbb;
 }
+/* --- 樂譜按鈕 active --- */
 .list-score-btn.active {
     background-color: #E57373;
     color: white;
@@ -420,7 +437,7 @@ p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-heigh
 }
 #song-list-container #song-list-error { color: red; }
 
-/* Song detail container (scores.html) */
+/* --- 歌曲詳情 --- */
 #song-detail-container {
     flex: 2 1 600px;
     display: flex;
