@@ -4,16 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageListContainer = document.getElementById('message-list-container');
     const paginationContainer = document.getElementById('pagination-container');
     const sortControls = document.querySelector('.sort-controls');
+    // 發表 Modal 元素
     const newPostBtn = document.getElementById('new-post-btn');
     const postModal = document.getElementById('post-modal');
-    const closePostModalBtn = postModal?.querySelector('#close-post-modal-btn'); // 使用 ID
-    const postModalForm = document.getElementById('post-message-form');
-    const postModalStatus = document.getElementById('post-status');
-    const postModalSubmitBtn = document.getElementById('submit-message-btn');
-    const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn');
+    // 使用更精確的選擇器獲取 Modal 內的元素
+    const closePostModalBtn = postModal?.querySelector('#close-post-modal-btn'); // 假設右上角關閉按鈕 ID
+    const postModalForm = postModal?.querySelector('#post-message-form');
+    const postModalStatus = postModal?.querySelector('#post-status');
+    const postModalSubmitBtn = postModal?.querySelector('#submit-message-btn');
+    const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn'); // 假設底部也有 .close-modal-btn
 
+    // 詳情 Modal 元素
     const detailModal = document.getElementById('message-detail-modal');
-    const closeDetailModalBtn = detailModal?.querySelector('#close-detail-modal-btn'); // 使用 ID
+    const closeDetailModalBtn = detailModal?.querySelector('#close-detail-modal-btn');
     const detailModalMain = document.getElementById('modal-message-detail-main');
     const detailModalReplyList = document.getElementById('modal-reply-list-container');
     const detailModalReplyForm = document.getElementById('modal-reply-form');
@@ -22,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalReplyFormAuthor = document.getElementById('modal-reply-author-name');
     const modalReplyStatus = document.getElementById('modal-reply-status');
     const modalSubmitReplyBtn = document.getElementById('modal-submit-reply-btn');
-    const modalReplyCancelBtns = detailModal?.querySelectorAll('.close-modal-btn'); // 詳細 Modal 內的關閉按鈕
+    const detailModalCancelBtns = detailModal?.querySelectorAll('.close-modal-btn'); // 詳情 Modal 內的關閉按鈕
 
     // --- 狀態變數 ---
     let currentPage = 1;
@@ -62,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             updateSortButtonsActiveState(data.sort || 'latest');
             renderMessageList(data.messages);
-            renderPagination(data.totalPages, data.currentPage);
+            renderPagination(data.totalPages, data.currentPage); // 【★ 修正 ★】調用修正後的 renderPagination
         } catch (error) { console.error('獲取留言列表失敗:', error); messageListContainer.innerHTML = `<p style="color: red;">無法載入留言列表：${error.message}</p>`; }
     }
 
@@ -77,10 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = msg.author_name || '匿名';
             const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = `(${activityDate})`;
             const previewDiv = document.createElement('div'); previewDiv.className = 'content-preview view-detail-modal-btn'; previewDiv.dataset.messageId = msg.id; previewDiv.textContent = msg.content_preview || '(無內容預覽)'; previewDiv.style.cursor = 'pointer'; previewDiv.style.display = 'block'; previewDiv.style.margin = '0.5rem 0'; previewDiv.style.color = '#555'; previewDiv.style.lineHeight = '1.6';
-            // CSS 限制行數 (建議在 style.css 中設定 .content-preview)
-            // previewDiv.style.overflow = 'hidden'; previewDiv.style.display = '-webkit-box'; previewDiv.style.webkitLineClamp = '3'; previewDiv.style.webkitBoxOrient = 'vertical';
-
-            const metaSpan = document.createElement('span'); metaSpan.className = 'meta'; metaSpan.textContent = `回覆(${msg.reply_count || 0})`;
+            // CSS 限制行數: .content-preview { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+            const metaSpan = document.createElement('span'); metaSpan.className = 'meta view-detail-modal-btn'; metaSpan.dataset.messageId = msg.id; metaSpan.textContent = `回覆(${msg.reply_count || 0})`; metaSpan.style.cursor = 'pointer'; metaSpan.style.color = '#007bff'; metaSpan.style.textDecoration = 'underline';
             const viewSpan = document.createElement('span'); viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
             const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
             const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
@@ -93,10 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 函數：渲染分頁控制 ---
+    // --- 【★ 修正 ★】函數：渲染分頁控制 (只有一個定義) ---
     function renderPagination(totalPages, currentPage) {
-        // ... (這部分程式碼不變，保持之前的版本) ...
-        if (!paginationContainer || totalPages <= 1) { paginationContainer.innerHTML = ''; return; }; paginationContainer.innerHTML = '';
+        if (!paginationContainer || totalPages <= 1) { paginationContainer.innerHTML = ''; return; };
+        paginationContainer.innerHTML = '';
+
         const prevButton = document.createElement('button'); prevButton.className = 'page-btn'; prevButton.dataset.page = currentPage - 1; prevButton.disabled = (currentPage === 1); prevButton.innerHTML = '<< 上一頁'; paginationContainer.appendChild(prevButton);
         const maxPagesToShow = 5; let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2)); let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1); if (endPage - startPage + 1 < maxPagesToShow) startPage = Math.max(1, endPage - maxPagesToShow + 1);
         if (startPage > 1) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
@@ -105,48 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextButton = document.createElement('button'); nextButton.className = 'page-btn'; nextButton.dataset.page = currentPage + 1; nextButton.disabled = (currentPage === totalPages); nextButton.innerHTML = '下一頁 >>'; paginationContainer.appendChild(nextButton);
     }
 
-        // --- 函數：渲染分頁控制 (使用 DOM 操作) ---
-        function renderPagination(totalPages, currentPage) {
-            if (!paginationContainer || totalPages <= 1) {
-                 paginationContainer.innerHTML = '';
-                return;
-            };
-            paginationContainer.innerHTML = ''; // 清空
-    
-            // 上一頁按鈕
-            const prevButton = document.createElement('button');
-            prevButton.className = 'page-btn';
-            prevButton.dataset.page = currentPage - 1;
-            prevButton.disabled = (currentPage === 1);
-            prevButton.innerHTML = '<< 上一頁'; // 使用 HTML 實體
-            paginationContainer.appendChild(prevButton);
-    
-            // 頁碼按鈕
-            const maxPagesToShow = 5; let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2)); let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1); if (endPage - startPage + 1 < maxPagesToShow) startPage = Math.max(1, endPage - maxPagesToShow + 1);
-            if (startPage > 1) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
-            for (let i = startPage; i <= endPage; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.className = 'page-btn';
-                pageButton.dataset.page = i;
-                pageButton.disabled = (i === currentPage);
-                if (i === currentPage) {
-                    pageButton.classList.add('current-page'); // 使用 class
-                    pageButton.style.fontWeight = 'bold'; // 也可以保留 style
-                }
-                pageButton.textContent = i;
-                paginationContainer.appendChild(pageButton);
-            }
-            if (endPage < totalPages) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
-    
-            // 下一頁按鈕
-            const nextButton = document.createElement('button');
-            nextButton.className = 'page-btn';
-            nextButton.dataset.page = currentPage + 1;
-            nextButton.disabled = (currentPage === totalPages);
-            nextButton.innerHTML = '下一頁 >>'; // 使用 HTML 實體
-            paginationContainer.appendChild(nextButton);
-        }
-    
+
+
+
+
+
+
+
+
     
         // --- 【★★★ 詳情 Modal 相關函數 ★★★】 ---
     
@@ -219,8 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
             const metaP = document.createElement('p');
             metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px';
-            metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0} | `));
-    
+            metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0}`));    
             const likeButton = document.createElement('button');
             likeButton.className = 'like-btn message-like-btn';
             likeButton.dataset.id = message.id;
@@ -312,13 +279,33 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else { console.error("錯誤：發表新留言相關的 Modal 元素未完全找到！"); }
     
-        // --- 事件監聽：關閉新留言 Modal ---
-        if (postModal && postModalCancelBtns) { // 檢查 postModalCancelBtns
-             postModalCancelBtns.forEach(btn => btn.addEventListener('click', () => closeModal(postModal)));
-             // 點擊 Modal 外部區域關閉
-             window.addEventListener('click', (event) => { if (event.target == postModal) closeModal(postModal); });
+
+
+
+
+
+// --- 事件監聽：打開新留言 Modal ---
+if (newPostBtn && postModal) { // 簡化檢查
+    newPostBtn.addEventListener('click', () => {
+        if(postModalForm) postModalForm.reset();
+        if(postModalStatus) postModalStatus.textContent = '';
+        if(postModalSubmitBtn) {
+            postModalSubmitBtn.disabled = false;
+            postModalSubmitBtn.textContent = '送出留言';
         }
-    
+        isPostingCooldown = false;
+        openModal(postModal);
+    });
+} else { console.error("錯誤：發表新留言按鈕或 Modal 未找到！"); }
+
+// --- 事件監聽：關閉新留言 Modal ---
+if (postModal && postModalCancelBtns) {
+     postModalCancelBtns.forEach(btn => btn.addEventListener('click', () => closeModal(postModal)));
+     // 使用者也可能點擊右上角的 X
+     if (closePostModalBtn) closePostModalBtn.addEventListener('click', () => closeModal(postModal));
+     window.addEventListener('click', (event) => { if (event.target == postModal) closeModal(postModal); });
+}
+
         // --- 事件監聽：提交新留言 (Modal 表單) ---
         if (postModalForm && postModalSubmitBtn && postModalStatus) {
             postModalForm.addEventListener('submit', async (e) => {
@@ -433,13 +420,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 事件委派：處理按讚、回覆、引用按鈕 ---
         document.body.addEventListener('click', async (event) => {
             const target = event.target;
-    
-            // --- 處理按讚 ---
-            let likeId = null, likeApiUrl = null, likeCountSpanSelector = null;
-            if (target.matches('.message-like-btn')) {
-                likeId = target.dataset.id; likeApiUrl = `/api/guestbook/message/${likeId}/like`; likeCountSpanSelector = `#message-like-count-${likeId}`;
-            } else if (target.matches('.reply-like-btn')) {
-                likeId = target.dataset.id; likeApiUrl = `/api/guestbook/replies/${likeId}/like`; likeCountSpanSelector = `#reply-like-count-${likeId}`;
+            let id = null; let apiUrl = null; let countSpanSelector = null;
+        
+            // 【★ 修改 ★】只處理回覆的按讚
+            if (target.matches('.reply-like-btn')) {
+                id = target.dataset.id; apiUrl = `/api/guestbook/replies/${id}/like`; countSpanSelector = `#reply-like-count-${id}`;
             }
             if (likeApiUrl && likeId && likeCountSpanSelector) {
                 target.disabled = true; target.style.opacity = '0.5';
@@ -487,13 +472,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-    
-        // --- 事件監聽：關閉詳情 Modal ---
-        if (detailModal) {
-             const closeBtns = detailModal.querySelectorAll('.close-modal-btn'); // 獲取 Modal 內所有關閉按鈕
-             closeBtns.forEach(btn => btn.addEventListener('click', () => closeModal(detailModal)));
-             window.addEventListener('click', (event) => { if (event.target == detailModal) closeModal(detailModal); });
+
+
+// --- 【★ 新增 ★】事件監聽：關閉詳情 Modal ---
+if (detailModal) {
+    // 【★ 修改 ★】確保能選到所有關閉按鈕，包括右上角的和底部的
+    const closeBtns = detailModal.querySelectorAll('.close-modal-btn, #close-detail-modal-btn'); // 同時選取 class 和 ID
+    closeBtns.forEach(btn => {
+        if (btn) { // 確保按鈕存在
+           btn.removeEventListener('click', () => closeModal(detailModal)); // 先移除舊監聽器(以防萬一重複添加)
+           btn.addEventListener('click', () => closeModal(detailModal)); // 再添加
         }
+    });
+    // 點擊 Modal 外部區域關閉 (保持不變)
+    window.addEventListener('click', (event) => { if (event.target == detailModal) closeModal(detailModal); });
+}
+
+    
+      // --- 事件監聽：關閉詳情 Modal ---
+    if (detailModal) {
+        // 【★ 修正 ★】使用修正後的關閉邏輯
+        const specificCloseBtn = detailModal.querySelector('#close-detail-modal-btn');
+        if (specificCloseBtn) {
+            specificCloseBtn.removeEventListener('click', () => closeModal(detailModal)); // 移除舊的
+            specificCloseBtn.addEventListener('click', () => closeModal(detailModal));
+        } else { console.warn("警告：未找到詳情 Modal 的右上角關閉按鈕 #close-detail-modal-btn"); }
+        // 處理底部的關閉按鈕 (如果有)
+        const bottomCloseBtns = detailModal.querySelectorAll('.close-modal-btn');
+        bottomCloseBtns.forEach(btn => {
+             btn.removeEventListener('click', () => closeModal(detailModal));
+             btn.addEventListener('click', () => closeModal(detailModal));
+        });
+        // 點擊外部關閉
+        window.addEventListener('click', (event) => { if (event.target == detailModal) closeModal(detailModal); });
+    }
     
         // --- 初始載入 ---
         fetchGuestbookList(1, currentSort);
