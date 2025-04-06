@@ -187,8 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
              .replace(/&/g, "&")
              .replace(/</g, "<")
              .replace(/>/g, ">")
-             .replace(/"/g, """)
-             .replace(/'/g, "'");
+             .replace(/"/g, "&#34;")
+             .replace(/'/g, "&#39;");
     }
 
      // --- 輔助函數：JS 字串轉義 (用於 onclick 參數) ---
