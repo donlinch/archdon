@@ -270,8 +270,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
      };
 
-    // --- 輔助函數：HTML 特殊字符轉義 ---
-     function escapeHtml(unsafe) { /* ... 同 guestbook.js ... */ }
+     function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                // & 轉成 & a m p ;
+                .replace(/&/g, '&amp;')
+        
+                // < 轉成 & l t ;
+                .replace(/</g, '&lt;')
+        
+                // > 轉成 & g t ;
+                .replace(/>/g, '&gt;')
+        
+                // " 轉成 & q u o t ;
+                .replace(/"/g, '&quot;')
+        
+                // ' 轉成 & # 3 9 ;  (數字實體)
+                .replace(/'/g, '&#39;');
+        
+                // 或者 ' 轉成 & a p o s ; (命名實體，較少用於單引號)
+                // .replace(/'/g, '& a p o s ;');
+        }
+    }
 
 
     // --- 頁面初始載入 ---

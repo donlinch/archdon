@@ -162,11 +162,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 輔助函數：HTML 特殊字符轉義 ---
      function escapeHtml(unsafe) { /* ... 同 guestbook.js ... */
         if (!unsafe) return ''; return unsafe
-        .replace(/&/g, "&")
-            .replace(/</g, "<")
-            .replace(/>/g, ">")
-            .replace(/"/g, "&quot;")
-           .replace(/'/g,"&#39;")
+        .replace(/&/g, '&amp;')
+        
+                // < 轉成 & l t ;
+                .replace(/</g, '&lt;')
+        
+                // > 轉成 & g t ;
+                .replace(/>/g, '&gt;')
+        
+                // " 轉成 & q u o t ;
+                .replace(/"/g, '&quot;')
+        
+                // ' 轉成 & # 3 9 ;  (數字實體)
+                .replace(/'/g, '&#39;');
 
 
      }

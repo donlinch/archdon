@@ -184,11 +184,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function escapeHtml(unsafe) {
         if (!unsafe) return '';
         return unsafe
-             .replace(/&/g, "&")
-             .replace(/</g, "<")
-             .replace(/>/g, ">")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&#39;");
+        .replace(/&/g, '&amp;')
+        
+        // < 轉成 & l t ;
+        .replace(/</g, '&lt;')
+
+        // > 轉成 & g t ;
+        .replace(/>/g, '&gt;')
+
+        // " 轉成 & q u o t ;
+        .replace(/"/g, '&quot;')
+
+        // ' 轉成 & # 3 9 ;  (數字實體)
+        .replace(/'/g, '&#39;');
     }
 
      // --- 輔助函數：JS 字串轉義 (用於 onclick 參數) ---
