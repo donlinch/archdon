@@ -666,8 +666,7 @@ app.post('/api/news/:id/like', async (req, res) => {
 });
 
  
-app.use('/api/admin', adminRouter);
-
+ 
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
 const adminRouter = express.Router();
@@ -754,10 +753,9 @@ adminRouter.post('/guestbook/replies', async (req, res) => { /* ...新增管理�
     } catch (err) { await client.query('ROLLBACK'); console.error('[API POST /admin/guestbook/replies] Error:', err); if (err.code === '23503') return res.status(404).json({ error: '找不到要回覆的留言。' }); res.status(500).json({ error: '無法新增管理員回覆' }); } finally { client.release(); }
 });
 
-
-
 app.use('/api/admin', adminRouter);
 
+ 
 
 
 // --- 受保護的管理頁面和 API Routes ---
@@ -768,7 +766,7 @@ app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 
-app.use('/api/admin', adminRouter);
+
 
 
 // --- 流量分析 API ---
