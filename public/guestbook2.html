@@ -96,6 +96,14 @@
             color: black;
             text-decoration: none;
         }
+
+        /* 回覆區塊 */
+        .reply-item {
+            margin-left: 20px;
+            padding: 10px 0;
+            border-left: 2px dashed #ccc;
+        }
+
     </style>
 </head>
 <body>
@@ -135,14 +143,24 @@
             <h3 id="detail-title"></h3>
             <div id="detail-meta" style="font-size: 0.9em; color: #757575;"></div>
             <p id="detail-content"></p>
+            <button onclick="showReplyForm()">回覆留言</button>
+            <div id="reply-form-container" style="display:none;">
+                <h4>留下回覆：</h4>
+                <textarea id="reply-content" rows="3"></textarea><br>
+                <button onclick="submitReply()">送出回覆</button>
+            </div>
+            <hr>
+            <div id="replies-container">
+                <!-- 回覆顯示區 -->
+            </div>
         </div>
     </div>
 
     <script>
         // 模擬留言資料
         const mockMessages = [
-            { id: 1, author_name: "小明", title: "你好！", content: "這是一個測試留言", created_at: "2024-04-06 10:00" },
-            { id: 2, author_name: "小紅", title: "留言板", content: "測試留言板功能", created_at: "2024-04-06 11:30" }
+            { id: 1, author_name: "小明", title: "你好！", content: "這是一個測試留言", created_at: "2024-04-06 10:00", replies: [] },
+            { id: 2, author_name: "小紅", title: "留言板", content: "測試留言板功能", created_at: "2024-04-06 11:30", replies: [] }
         ];
 
         // 渲染留言列表
@@ -167,13 +185,6 @@
             });
         }
 
-        // 模擬獲取留言列表 (通常會用 fetch 請求)
-        function fetchGuestbookList() {
-            setTimeout(() => {
-                renderGuestbookList(mockMessages);
-            }, 1000); // 模擬延遲
-        }
-
         // 顯示留言詳情
         function showMessageDetail(messageId) {
             const message = mockMessages.find(msg => msg.id === messageId);
@@ -182,6 +193,7 @@
                 document.getElementById('detail-meta').textContent = `作者：${message.author_name} - 發表時間：${message.created_at}`;
                 document.getElementById('detail-content').textContent = message.content;
                 showModal('detail-modal');
+                displayReplies(message.replies);
             }
         }
 
@@ -201,32 +213,60 @@
             }
         }
 
-        // 發表新留言
-        const postForm = document.getElementById('post-message-form');
-        postForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const author = document.getElementById('post-author-name').value || '匿名';
-            const title = document.getElementById('post-title').value.trim();
-            const content = document.getElementById('post-content').value.trim();
+        // 顯示回覆表單
+        function showReplyForm() {
+            document.getElementById('reply-form-container').style.display = 'block';
+        }
 
-            if (!title || !content) {
-                alert('標題和內容為必填項');
+        // 提交回覆
+        function submitReply() {
+            const replyContent = document.getElementById('reply-content').value;
+            if (!replyContent.trim()) {
+                alert('回覆內容不能為空');
                 return;
             }
 
-            // 更新狀態
-            document.getElementById('post-status-msg').textContent = '留言發表中...';
+            const messageId = mockMessages.find(msg => msg.title === document.getElementById('detail-title').textContent).id;
+            const reply = {
+                author_name: "匿名", // 默認為匿名
+                content: replyContent,
+                created_at: new Date().toLocaleString()
+            };
+            const message = mockMessages.find(msg => msg.id === messageId);
+            message.replies.push(reply);
 
-            // 模擬發送留言並刷新列表
+            displayReplies(message.replies); // 更新回覆顯示
+            document.getElementById('reply-content').value = ''; // 清空回覆框
+        }
+
+        // 顯示回覆列表
+        function displayReplies(replies) {
+            const repliesContainer = document.getElementById('replies-container');
+            repliesContainer.innerHTML = ''; // 清空現有回覆
+
+            if (replies.length === 0) {
+                repliesContainer.innerHTML = '<p>目前沒有回覆。</p>';
+                return;
+            }
+
+            replies.forEach(reply => {
+                const replyItem = document.createElement('div');
+                replyItem.className = 'reply-item';
+                replyItem.innerHTML = `
+                    <div class="reply-author">${reply.author_name}</div>
+                    <div class="reply-timestamp">${reply.created_at}</div>
+                    <div class="reply-content">${reply.content}</div>
+                `;
+                repliesContainer.appendChild(replyItem);
+            });
+        }
+
+        // 模擬獲取留言列表 (通常會用 fetch 請求)
+        function fetchGuestbookList() {
             setTimeout(() => {
-                const newMessage = { id: mockMessages.length + 1, author_name: author, title, content, created_at: new Date().toLocaleString() };
-                mockMessages.push(newMessage); // 添加新留言
-                renderGuestbookList(mockMessages); // 重新渲染留言列表
-                document.getElementById('post-status-msg').textContent = '留言發表成功！';
-                postForm.reset(); // 清空表單
-            }, 1000);
-        });
+                renderGuestbookList(mockMessages);
+            }, 1000); // 模擬延遲
+        }
 
         // 頁面載入時獲取留言列表
         window.onload = fetchGuestbookList;
