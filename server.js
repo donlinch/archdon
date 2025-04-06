@@ -666,7 +666,7 @@ app.post('/api/news/:id/like', async (req, res) => {
 });
 
  
- 
+app.use('/api/admin', adminRouter);
 
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
@@ -768,7 +768,7 @@ app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 
-
+app.use('/api/admin', adminRouter);
 
 
 // --- 流量分析 API ---
