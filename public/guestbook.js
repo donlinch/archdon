@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const postModalStatus = postModal?.querySelector('#post-status');
     const postModalSubmitBtn = postModal?.querySelector('#submit-message-btn');
     const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn'); // 所有關閉發表 Modal 的按鈕
-    const postEmojiTrigger = document.getElementById('post-emoji-trigger');
-    const postModalContentInput = document.getElementById('modal-message-content');
+   // const postEmojiTrigger = document.getElementById('post-emoji-trigger');
+   const postModalContentInput = document.getElementById('modal-message-content');
 
     // 詳情 Modal 元素
     const detailModal = document.getElementById('message-detail-modal');
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalReplyStatus = document.getElementById('modal-reply-status');
     const modalSubmitReplyBtn = document.getElementById('modal-submit-reply-btn');
     const detailModalCancelBtns = detailModal?.querySelectorAll('.close-modal-btn'); // 詳情 Modal 內所有關閉按鈕 (可能包含底部的)
-    const replyEmojiTrigger = document.getElementById('reply-emoji-trigger'); // 詳情 Modal 內回覆的 Emoji 按鈕
+    //const replyEmojiTrigger = document.getElementById('reply-emoji-trigger'); // 詳情 Modal 內回覆的 Emoji 按鈕
 
     // --- 狀態變數 ---
     let currentPage = 1;
