@@ -1,7 +1,6 @@
 // public/guestbook.js
 
 
-import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@latest/dist/index.umd.js'; // 或其他正確的 CDN 路徑
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const limit = 10; // 每頁顯示多少則主留言 (應與後端預設或期望值一致)
 
     // --- Emoji Picker 初始化 ---
-    const mainPicker = new EmojiButton.EmojiButton({
+    const mainPicker = new EmojiButton({
         position: 'bottom-start', // 彈出位置
         theme: 'auto' // 跟隨系統亮暗模式
     });
