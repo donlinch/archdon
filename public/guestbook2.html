@@ -12,19 +12,8 @@
     <div id="app">
         <h1>留言板</h1>
 
-        <!-- 留言表單 -->
-        <div>
-            <label for="author_name">你的名稱：</label>
-            <input type="text" id="author_name" v-model="newMessage.author_name" placeholder="請輸入你的名稱">
-            
-            <label for="message_title">留言標題：</label>
-            <input type="text" id="message_title" v-model="newMessage.title" placeholder="請輸入標題">
-            
-            <label for="message_content">留言內容：</label>
-            <textarea id="message_content" v-model="newMessage.content" placeholder="請輸入留言內容"></textarea>
-            
-            <button @click="submitMessage">提交留言</button>
-        </div>
+        <!-- 發表留言按鈕 -->
+        <button @click="openModal">發表留言</button>
 
         <!-- 留言列表 -->
         <div v-if="messages.length > 0">
@@ -33,34 +22,27 @@
                 <div class="message-title" @click="showMessageDetail(message.id)">
                     <strong>{{ message.title }}</strong> - {{ message.author_name }} ({{ message.created_at }})
                 </div>
-                <div v-if="message.showReplies" class="message-replies">
-                    <div v-for="reply in message.replies" :key="reply.id" class="message-reply">
-                        <p><strong>{{ reply.author_name }}:</strong> {{ reply.content }}</p>
-                    </div>
-                    <textarea v-model="newReply.content" placeholder="回覆留言"></textarea>
-                    <button @click="replyMessage(message.id)">回覆留言</button>
-                </div>
             </div>
         </div>
 
-        <!-- 分頁功能 -->
-        <div class="pagination">
-            <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">上一頁</button>
-            <span>第 {{ currentPage }} 頁 / 共 {{ totalPages }} 頁</span>
-            <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">下一頁</button>
-        </div>
-
-        <!-- 留言詳情模態 -->
+        <!-- 發表留言模態框 -->
         <div v-if="showModal" class="modal">
             <div class="modal-content">
-                <h2>{{ currentMessage.title }}</h2>
-                <p><strong>作者：</strong>{{ currentMessage.author_name }}</p>
-                <p><strong>時間：</strong>{{ currentMessage.created_at }}</p>
-                <p>{{ currentMessage.content }}</p>
-                <button @click="toggleReplies">{{ showRepliesText }}</button>
-                <button @click="closeModal">關閉</button>
+                <h2>發表新留言</h2>
+                <label for="author_name">你的名稱：</label>
+                <input type="text" id="author_name" v-model="newMessage.author_name" placeholder="請輸入你的名稱">
+
+                <label for="message_title">留言標題：</label>
+                <input type="text" id="message_title" v-model="newMessage.title" placeholder="請輸入標題">
+
+                <label for="message_content">留言內容：</label>
+                <textarea id="message_content" v-model="newMessage.content" placeholder="請輸入留言內容"></textarea>
+
+                <button @click="submitMessage">提交留言</button>
+                <button @click="closeModal">取消</button>
             </div>
         </div>
+
     </div>
 
     <script>
@@ -73,14 +55,7 @@
                     title: '',
                     content: ''
                 },
-                newReply: {
-                    content: ''
-                },
                 showModal: false,
-                currentMessage: {},
-                showRepliesText: '查看回覆',
-                currentPage: 1,
-                totalPages: 1
             },
             mounted() {
                 this.fetchMessages();
@@ -89,22 +64,24 @@
                 fetchMessages() {
                     axios.get('/api/guestbook', { 
                         params: { 
-                            page: this.currentPage, 
+                            page: 1, 
                             limit: 10, 
                             sort: 'latest' 
                         } 
                     })
                         .then(response => {
                             this.messages = response.data.messages;
-                            this.totalPages = response.data.totalPages;
-                            this.messages.forEach(message => {
-                                message.showReplies = false;
-                                message.replies = [];
-                            });
                         })
                         .catch(error => {
                             console.error("獲取留言時出錯:", error);
                         });
+                },
+                openModal() {
+                    this.showModal = true;
+                },
+                closeModal() {
+                    this.showModal = false;
+                    this.newMessage = { author_name: '', title: '', content: '' };
                 },
                 submitMessage() {
                     if (!this.newMessage.author_name || !this.newMessage.title || !this.newMessage.content) {
@@ -115,7 +92,7 @@
                     axios.post('/api/guestbook', this.newMessage)
                         .then(response => {
                             this.messages.push(response.data);
-                            this.newMessage = { author_name: '', title: '', content: '' };
+                            this.closeModal();
                         })
                         .catch(error => {
                             console.error("發表留言時出錯:", error);
@@ -125,51 +102,57 @@
                     axios.get(`/api/guestbook/message/${id}`)
                         .then(response => {
                             this.currentMessage = response.data.message;
-                            this.currentMessage.replies = response.data.replies;
                             this.showModal = true;
                         })
                         .catch(error => {
                             console.error("獲取留言詳情時出錯:", error);
                         });
-                },
-                toggleReplies() {
-                    this.currentMessage.showReplies = !this.currentMessage.showReplies;
-                    this.showRepliesText = this.currentMessage.showReplies ? '隱藏回覆' : '查看回覆';
-                },
-                closeModal() {
-                    this.showModal = false;
-                    this.currentMessage = {};
-                },
-                replyMessage(messageId) {
-                    if (!this.newReply.content) {
-                        alert('回覆內容不能為空');
-                        return;
-                    }
-
-                    axios.post('/api/guestbook/replies', {
-                        message_id: messageId,
-                        content: this.newReply.content,
-                        author_name: '管理員'  // 此處可以設置為當前登入用戶的名稱
-                    })
-                    .then(response => {
-                        this.messages.forEach(msg => {
-                            if (msg.id === messageId) {
-                                msg.replies.push(response.data);
-                            }
-                        });
-                        this.newReply.content = '';
-                    })
-                    .catch(error => {
-                        console.error("回覆留言時出錯:", error);
-                    });
-                },
-                changePage(page) {
-                    if (page < 1 || page > this.totalPages) return;
-                    this.currentPage = page;
-                    this.fetchMessages();
                 }
             }
         });
     </script>
+
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 400px;
+        }
+
+        .modal-content input,
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .modal-content button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-content button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </body>
 </html>
