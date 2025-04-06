@@ -479,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
              .replace(/"/g, "&quot;")
              .replace(/'/g, "&#039;");
     }
-
+ 
 
     // --- 頁面初始載入 ---
     fetchAndRenderGuestbook(1); // 載入第一頁
