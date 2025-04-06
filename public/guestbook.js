@@ -147,18 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderRepliesRecursive('root', 0);
     }
 
-    // --- Emoji Picker 初始化 ---
-    if (postEmojiTrigger && postModalContentInput && window.EmojiButton) {
-        const picker = new EmojiButton.EmojiButton({ position: 'bottom-start', autoHide: true });
-        picker.on('emoji', selection => insertTextAtCursor(postModalContentInput, selection.emoji));
-        postEmojiTrigger.addEventListener('click', () => picker.togglePicker(postEmojiTrigger));
-    } else { console.warn("發表 Modal Emoji Picker 未初始化。"); }
-
-    if (replyEmojiTrigger && modalReplyContentInput && window.EmojiButton) {
-        const replyPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true });
-        replyPicker.on('emoji', selection => insertTextAtCursor(modalReplyContentInput, selection.emoji));
-        replyEmojiTrigger.addEventListener('click', () => replyPicker.togglePicker(replyEmojiTrigger));
-    } else { console.warn("詳情 Modal Emoji Picker 未初始化。"); }
+   
 
     // --- 事件監聽：打開新留言 Modal ---
     if (newPostBtn && postModal) {
