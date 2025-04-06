@@ -180,11 +180,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions';
                 const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber;
+
+ // 【★ 新增引用按鈕 ★】
+ const quoteButton = document.createElement('button');
+ quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; // 新 class
+ quoteButton.textContent = '引用';
+ quoteButton.dataset.targetId = reply.id;
+ quoteButton.dataset.targetFloor = floorNumber;
+ // 將原始內容也存儲起來，方便引用 (需要先處理換行和轉義)
+ quoteButton.dataset.targetContent = reply.content || ''; // 直接存原始內容
+ quoteButton.style.marginLeft = '10px'; // 和回覆按鈕間隔
+
+
+
                 const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px';
                 const likeButton = document.createElement('button'); likeButton.className = 'like-btn reply-like-btn'; likeButton.dataset.id = reply.id; likeButton.innerHTML = '❤️';
                 const likeCountSpan = document.createElement('span'); likeCountSpan.id = `reply-like-count-${reply.id}`; likeCountSpan.textContent = ` ${reply.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px';
                 likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan);
-                actionsDiv.appendChild(replyButton); actionsDiv.appendChild(likeContainer);
+               
+               
+               
+               
+                actionsDiv.appendChild(replyButton);            actionsDiv.appendChild(quoteButton); // 加入引用按鈕
+                actionsDiv.appendChild(likeContainer);
 
                 replyDiv.appendChild(metaP);
                 replyDiv.appendChild(contentDiv);
@@ -354,7 +372,43 @@ if (replyListContainer) {
             }
              // 滾動到回覆框
              replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+
+
+
+
+
         }
+
+
+// --- 【★ 新增 ★】處理 "引用" 按鈕 ---
+else if (target.matches('.quote-action-btn')) {
+    const targetId = target.dataset.targetId;
+    const targetFloor = target.dataset.targetFloor;
+    const targetContent = target.dataset.targetContent; // 獲取存儲的原始內容
+
+    currentParentReplyId = targetId; // 引用也視為對該回覆的回應，記錄 parentId
+
+    // 生成引用文字片段 (例如取前 30 字)
+    const quoteSnippet = targetContent.substring(0, 30) + (targetContent.length > 30 ? '...' : '');
+
+    // 構建引用格式
+    const quoteText = `引用 ${targetFloor}：\n> ${quoteSnippet.replace(/\n/g, '\n> ')}\n---\n`; // 將內容中的換行也加上 '>'
+
+    if (replyFormLabel) {
+         replyFormLabel.textContent = `引用 ${targetFloor} 並回覆:`; // 更新 Label
+    }
+    if (replyFormContent) {
+         replyFormContent.value = quoteText; // 預填引用文字
+         replyFormContent.focus();
+         // 將光標移到末尾
+         replyFormContent.setSelectionRange(replyFormContent.value.length, replyFormContent.value.length);
+    }
+    replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+
+
     });
  }
 
