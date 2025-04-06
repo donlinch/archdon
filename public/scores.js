@@ -153,6 +153,7 @@ function renderSongList(songs) {
                  <div class="song-list-scores">
                      ${scoreButtonsHTML}
                  </div>
+                 <hr>
             </li>
         `;
     }).join('');
