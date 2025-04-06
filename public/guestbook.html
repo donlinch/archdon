@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>留言板 - [你的網站名稱]</title>
+    <title>SunnyYummy 留言板 </title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,8 +11,14 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <header>
 
+    <header class="page-title-header"> <!-- 添加 class -->
+        <h1 class="page-title">SunnyYummy 留言板</h1> <!-- 添加 class -->
+    </header>
+
+
+    
+    <main class="guestbook-container">
          
         <nav class="category-nav">
             <a href="/">週邊商品</a>
@@ -22,9 +28,9 @@
             <a href="/guestbook.html" class="active">留言板</a>
             
         </nav>
-    </header>
+    
 
-    <main class="guestbook-container">
+   
         <div class="guestbook-header">
             <h2>訪客留言板</h2>
             <button id="new-post-btn" class="btn btn-primary">發表新留言</button> <!-- 【★ 修改 ★】按鈕 -->
@@ -120,7 +126,22 @@
     </main>
 
     <footer>
-        <!-- ... footer ... -->
+      
+     
+         <div class="footer-container">
+            <nav class="footer-nav">
+               <a href="/">週邊商品</a>
+               <a href="/music.html">音樂專輯</a>
+               <a href="/news.html">最新消息</a>
+               <a href="/scores.html"  >樂譜中心</a>
+               <a href="/guestbook.html" class="active">留言板</a>
+            </nav>
+           <div class="footer-copyright">
+               <p>© 2024 SunnyYummy. All rights reserved.</p>
+           </div>
+       </div> 
+        
+    
     </footer>
 
    
