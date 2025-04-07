@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     metaP.appendChild(likeCountSpan);
     // --- 按讚部分結束 ---
         // 【★ 修正 ★】移除按讚按鈕
-
+ 
 
   // --- 【★ 關鍵修正：調整 appendChild 的順序！ ★】 ---
   detailModalMain.appendChild(authorP);    // 1. 先添加作者和時間
