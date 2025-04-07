@@ -2168,26 +2168,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 /* public/style.css (追加或修改樣式) */
 
 /* --- 詳情 Modal：重設 回覆/引用 按鈕樣式，覆蓋通用按鈕樣式 --- */
-#message-detail-modal .reply-item-actions .reply-action-btn,
-#message-detail-modal .reply-item-actions .quote-action-btn {
-    /* --- 徹底重設按鈕外觀 --- */
-   // background-color: transparent !important; /* 強制透明背景，覆蓋綠色 */
-    border: none !important;                 /* 移除邊框 */
-    color: #6c757d !important;              /* 設置為灰色文字 */
-    padding: 2px 4px !important;             /* 使用更小的內邊距 */
-    font-size: 0.8em !important;             /* 縮小字體 */
-    text-decoration: none !important;        /* 移除下劃線 */
-    font-weight: normal !important;          /* 確保不是粗體 */
-    border-radius: 3px;                      /* 可選：保持一點圓角 */
-    margin-left: 8px;                        /* 保持按鈕間距 */
-    vertical-align: middle;                  /* 保持垂直對齊 */
-    cursor: pointer;
-    transition: color 0.2s ease;
-    /* 移除或覆蓋其他可能繼承的樣式，例如 box-shadow, text-transform 等 */
-    box-shadow: none !important;
-    text-transform: none !important;
-    line-height: normal; /* 確保行高正常 */
-}
+ 
 
 /* --- 詳情 Modal：回覆/引用 按鈕 Hover 效果 --- */
 #message-detail-modal .reply-item-actions .reply-action-btn:hover,
