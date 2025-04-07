@@ -2005,3 +2005,43 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     padding-bottom: 0;
     border-bottom: none;
 }
+
+
+/* public/style.css (追加) */
+
+/* 後台詳情頁回覆操作按鈕 */
+.admin-message-detail-container .reply-actions button {
+    margin-right: 8px; /* 統一右邊距 */
+    margin-bottom: 5px; /* 小屏幕換行時的下邊距 */
+    vertical-align: middle;
+}
+
+/* 引用按鈕樣式 (使用 link 樣式) */
+.admin-message-detail-container .admin-quote-action-btn {
+    background: none;
+    border: none;
+    color: #6c757d; /* 次要顏色 */
+    padding: 4px 0; /* 調整 padding */
+    font-size: 0.8em;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.admin-message-detail-container .admin-quote-action-btn:hover {
+    color: #5a6268;
+}
+
+/* 樓層號樣式 */
+.reply-floor {
+    display: inline-block;
+    min-width: 30px; /* 給樓層號留出基本寬度 */
+    text-align: right; /* 樓層號靠右對齊 */
+    color: #888;
+    font-size: 0.9em;
+}
+
+/* 嵌套回覆的邊距 */
+.admin-message-detail-container .reply-item.nested {
+    margin-left: 30px; /* 增加嵌套縮排 */
+    border-left: 2px solid #CFD8DC; /* 嵌套邊框顏色 */
+    padding-left: 10px; /* 增加左內邊距 */
+}
