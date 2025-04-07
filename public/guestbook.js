@@ -61,6 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/guestbook?page=${page}&limit=10&sort=${sort}`);
             if (!response.ok) throw new Error(`無法獲取留言列表 (HTTP ${response.status})`);
             const data = await response.json();
+
+
             updateSortButtonsActiveState(data.sort || 'latest');
             renderMessageList(data.messages);
             renderPagination(data.totalPages, data.currentPage);
@@ -417,40 +419,39 @@ document.body.addEventListener('click', async (event) => {
     let containerElement = null; // 【★ 新增 ★】用於限定搜尋範圍
 
 
-    if (target.matches('.message-like-btn')) {
-        likeId = target.dataset.id;
-        likeApiUrl = `/api/guestbook/message/${likeId}/like`; // 【★ 檢查點 ★】賦值給 likeApiUrl
-        countSpanSelector = `#message-like-count-${likeId}`;
-        containerElement = document.querySelector('.message-list-container'); // 【★ 新增 ★】限定搜尋範圍
-    } else if (target.matches('.reply-like-btn')) {
-        likeId = target.dataset.id;
-        likeApiUrl = `/api/guestbook/replies/${likeId}/like`; // 【★ 檢查點 ★】賦值給 likeApiUrl
-        countSpanSelector = `#reply-like-count-${likeId}`;
-        containerElement = detailModal; // 直接限定在 detailModal
+        if (target.matches('.message-like-btn')) {
+            likeId = target.dataset.id;
+            likeApiUrl = `/api/guestbook/message/${likeId}/like`;
+            countSpanSelector = `#message-like-count-${likeId}`;
+            // **關鍵修正**：判斷是在 Modal 內還是列表內
+            containerElement = target.closest('#message-detail-modal') || document;
+        } else if (target.matches('.reply-like-btn')) {
+            likeId = target.dataset.id;
+            likeApiUrl = `/api/guestbook/replies/${likeId}/like`;
+            countSpanSelector = `#reply-like-count-${likeId}`;
+            // 回覆按鈕一定在 Modal 內
+            containerElement = detailModal;
+        }
 
-    }
+        if (likeApiUrl && likeId && countSpanSelector && containerElement) {
+            target.disabled = true; target.style.opacity = '0.5';
+            try {
+                const response = await fetch(likeApiUrl, { method: 'POST' });
+                if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
+                const data = await response.json();
+                // **關鍵修正**：在正確的範圍內尋找 countSpan
+                const countSpan = containerElement.querySelector(countSpanSelector);
+                if (countSpan) {
+                    countSpan.textContent = ` ${data.like_count}`;
+                    console.log(`Like count for ${countSpanSelector} updated to ${data.like_count} within`, containerElement);
+                } else {
+                     console.warn(`Count span '${countSpanSelector}' not found within`, containerElement);
+                }
+                setTimeout(() => { target.disabled = false; target.style.opacity = '1'; }, 1000);
+            } catch (error) { console.error('按讚失敗:', error); alert(`按讚失敗：${error.message}`); target.disabled = false; target.style.opacity = '1'; }
+            return; // 處理完按讚，結束本次點擊處理
+        }
 
-    // 【★ 關鍵修正 ★】確保這裡使用的變數名與上面定義和賦值的一致
-    if (likeApiUrl && likeId && countSpanSelector  && containerElement) { // 使用 likeApiUrl 和 likeId
-        target.disabled = true; target.style.opacity = '0.5';
-        try {
-            // 【★ 關鍵修正 ★】fetch 時也使用 likeApiUrl
-            const response = await fetch(likeApiUrl, { method: 'POST' });
-            if (!response.ok) { const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(errorData.error || `HTTP 錯誤 ${response.status}`); }
-            const data = await response.json();
-
-
-            const countSpan = containerElement.querySelector(countSpanSelector);
-            if (countSpan) {
-                countSpan.textContent = ` ${data.like_count}`;
-                console.log(`Like count for ${countSpanSelector} updated to ${data.like_count} within`, containerElement); // 除錯信息
-            } else {
-                 console.warn(`Count span '${countSpanSelector}' not found within`, containerElement); // 警告信息
-            }
-            setTimeout(() => { target.disabled = false; target.style.opacity = '1'; }, 1000);
-        } catch (error) { console.error('按讚失敗:', error); alert(`按讚失敗：${error.message}`); target.disabled = false; target.style.opacity = '1'; }
-        return; // 處理完按讚
-    }
     
             // --- 處理詳情 Modal 內的 "回覆" 和 "引用" 按鈕 ---
             // 【★ 修改 ★】確保事件目標是在 detailModal 內部
@@ -466,11 +467,12 @@ document.body.addEventListener('click', async (event) => {
               
                  // --- 處理點擊列表項打開 Modal (如果在這處理的話) ---
                  const triggerElement = target.closest('.view-detail-modal-btn');
-                 if (triggerElement && messageListContainer.contains(triggerElement)) { // 確保點擊的是列表項
-                     const messageId = triggerElement.dataset.messageId;
-                     if (messageId) {
-                         fetchAndRenderDetailModal(messageId);
-                     }
+        if (triggerElement && messageListContainer && messageListContainer.contains(triggerElement)) {
+            const messageId = triggerElement.dataset.messageId;
+            if (messageId) {
+                fetchAndRenderDetailModal(messageId);
+                // 不需要 return，因為打開 Modal 不應阻止其他可能的冒泡事件
+            }
                  }
 
                 
