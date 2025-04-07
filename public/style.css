@@ -1333,7 +1333,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     /* --- 修改開始 --- */
     width: auto;   /* 讓寬度自動調整，以保持比例 */
     height: auto;  /* 讓高度自動調整，以保持比例 */
-    max-width: 510px; /* ★ 你期望的最大寬度 */
+    max-width: 500px; /* ★ 你期望的最大寬度 */
     max-height: 370px; /* ★ 限制最大高度 (例如等於輪播容器高度) */
     object-fit: contain; /* ★ 確保圖片完整顯示並保持比例，而不是裁剪 */
     margin: auto; /* ★ 讓圖片在 slide 容器中水平和垂直居中 */

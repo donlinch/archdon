@@ -223,6 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 spaceBetween: 0, // Slide 之間的間距
                 grabCursor: true, // 顯示抓取手勢
 
+
+
+                 // --- ★★★ 加入這兩行 ★★★ ---
+                 effect: 'fade', // 設定效果為淡入淡出
+                 fadeEffect: {   // 淡入淡出效果的選項
+                   crossFade: true // 啟用交叉淡入淡出
+                 },
+
                 // If we need pagination
                 pagination: {
                     el: '#banner-carousel .swiper-pagination',
