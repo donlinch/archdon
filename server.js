@@ -89,6 +89,22 @@ app.use(async (req, res, next) => {
 
 
 
+// --- 受保護的管理頁面和 API Routes ---
+
+app.use([
+    '/admin.html',
+    '/music-admin.html',
+    '/news-admin.html',
+    '/banner-admin.html',
+    '/sales-report.html', // <-- 修正：移除了結尾的空格
+    '/figures-admin.html',
+    '/guestbook-admin.html', // <-- 如果需要保護，也加進來
+    '/admin-identities.html',// <-- 如果需要保護，也加進來
+    '/admin-message-detail.html',// <-- 如果需要保護，也加進來
+    '/inventory-admin.html' // <-- 如果需要保護，也加進來
+], basicAuthMiddleware);
+// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 
 
@@ -696,6 +712,12 @@ app.post('/api/news/:id/like', async (req, res) => {
  
  
 
+
+    
+
+
+
+
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
 const adminRouter = express.Router();
 
@@ -895,6 +917,8 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
 
 
 
+
+
 // GET /api/admin/news - 獲取所有消息列表 (給後台表格使用)
 adminRouter.get('/news', async (req, res) => {
     console.log("[受保護 API] GET /api/admin/news 請求");
@@ -1043,19 +1067,14 @@ adminRouter.delete('/news/:id', async (req, res) => {
 
 
 
-
-
 app.use('/api/admin', adminRouter);
 
  
 
 
-// --- 受保護的管理頁面和 API Routes ---
 
-// 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html ','figures-admin.html'], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+
+
 
 
 
