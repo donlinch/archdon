@@ -2099,3 +2099,25 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     word-wrap: break-word;
 }
 */
+
+
+
+/* public/style.css (追加樣式) */
+
+/* --- 隱藏詳情 Modal 頂部的靜態 H2 ("留言詳情") --- */
+/* 選擇 #message-detail-modal 下的 .modal-content 中的第一個直接子元素 h2 */
+#message-detail-modal > .modal-content > h2 {
+    display: none;
+}
+
+/* --- 詳情 Modal：加粗作者名稱 --- */
+#modal-message-detail-main .author {
+    font-weight: bold; /* 加粗 */
+    font-size: 1.1em;  /* 可選：稍微放大一點字體 */
+    color: #333;      /* 可選：使用更深的顏色 */
+}
+
+/* --- 詳情 Modal：調整作者和時間戳行的樣式 --- */
+#modal-message-detail-main p:first-of-type { /* 選中包含作者和時間戳的段落 */
+    margin-bottom: 0.8rem; /* 調整與下方 hr 的間距 */
+}

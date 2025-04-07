@@ -173,7 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderModalMessageDetail(message) {
         if (!detailModalMain || !message) return; detailModalMain.innerHTML = '';
-        const titleH2 = document.createElement('h2'); titleH2.textContent = `留言 #${message.id}`; titleH2.style.marginTop = '0';
+        
+       // const titleH2 = document.createElement('h2'); 
+        // titleH2.textContent = `留言 #${message.id}`; 
+        // titleH2.style.marginTop = '0';
+
+
         const authorP = document.createElement('p'); const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = message.author_name || '匿名'; const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const createDate = new Date(message.created_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${createDate})`; authorP.appendChild(authorSpan); authorP.appendChild(timestampSpan);
         const hr = document.createElement('hr');
         const contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.textContent = message.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.padding = '10px 0';
@@ -204,7 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // const likeCountSpan = ... (移除)
         // metaP.appendChild(likeButton); (移除)
         // metaP.appendChild(likeCountSpan); (移除)
-        detailModalMain.appendChild(titleH2); detailModalMain.appendChild(authorP); detailModalMain.appendChild(hr); detailModalMain.appendChild(contentDiv); detailModalMain.appendChild(metaP);
+       // detailModalMain.appendChild(titleH2); detailModalMain.appendChild(authorP); detailModalMain.appendChild(hr); detailModalMain.appendChild(contentDiv); detailModalMain.appendChild(metaP);
+       detailModalMain.appendChild(authorP); // 直接添加作者行
+
+    
+    
     }
 
     function renderModalNestedReplyList(replies) {
