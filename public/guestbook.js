@@ -92,6 +92,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+ // --- 【★ 關鍵修正：重新加入這一段 ★】 ---
+ const likeContainer = document.createElement('span'); // 創建包裹容器
+ likeContainer.className = 'meta';
+ likeContainer.style.marginLeft = '1rem';
+
+ const likeButton = document.createElement('button'); // 創建按鈕
+ likeButton.className = 'like-btn message-like-btn';
+ likeButton.dataset.id = msg.id;
+ likeButton.innerHTML = '❤️'; // 使用 Emoji 或圖標
+
+ const likeCountSpan = document.createElement('span'); // 創建計數 span
+ likeCountSpan.id = `message-like-count-${msg.id}`; // ID 用於更新計數
+ likeCountSpan.textContent = ` ${msg.like_count || 0}`;
+ likeCountSpan.style.fontSize = '0.9em'; // 數字樣式
+ likeCountSpan.style.color = '#555';
+ likeCountSpan.style.marginLeft = '3px';
+
+ likeContainer.appendChild(likeButton); // 將按鈕加入容器
+ likeContainer.appendChild(likeCountSpan); // 將計數加入容器
+ // --- 【★ 修正結束 ★】 ---
+
+
+
             const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
            // const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
          
