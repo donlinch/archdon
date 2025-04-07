@@ -33,55 +33,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Function to Fetch and Display ALL News in the Table ---
     async function fetchAndDisplayNews() { // *** 修改函數名 ***
-        if (!newsListBody || !newsListContainer || !newsTable) { /* ... 錯誤處理 ... */ return; }
-        try {
-            if (loadingMessage) loadingMessage.style.display = 'block';
-            if (newsTable) newsTable.style.display = 'none';
+        if (!newsListBody || !newsListContainer || !newsTable || !loadingMessage) {
+            console.error("獲取新聞列表所需的 DOM 元素不完整。");
+            if(loadingMessage) loadingMessage.textContent = '頁面結構錯誤，無法載入列表。';
+            return;
+       }         try {
+        loadingMessage.style.display = 'block';
+        loadingMessage.textContent = '正在載入消息...'; // 更新提示文字
+        newsTable.style.display = 'none';
+        newsListBody.innerHTML = ''; // 清空舊內容
 
-            const response = await fetch('/api/news?limit=999'); // *** 修改 API URL (暫不分頁，獲取全部) ***
-            if (!response.ok) throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
-            const data = await response.json(); // API 返回 { news: [...] } 結構
-            const newsList = data.news; // *** 提取 news 陣列 ***
+       // 使用後台 API 端點
+       const response = await fetch('/api/admin/news');
 
-            if (loadingMessage) loadingMessage.style.display = 'none';
-            if (newsTable) newsTable.style.display = 'table';
-            newsListBody.innerHTML = '';
-
-            if (newsList.length === 0) {
-                newsListBody.innerHTML = '<tr><td colspan="6">目前沒有消息。</td></tr>'; // *** 修改 Colspan ***
-                return;
+       if (!response.ok) {
+           let errorMsg = `HTTP 錯誤！狀態: ${response.status}`;
+            if (response.status === 401 || response.status === 403) {
+                errorMsg += ` - 請確認您已登入且有權限訪問此資源。`;
+                alert('請先登入管理後台才能查看此內容。'); // 直接提示用戶
+            } else {
+               try { const errData = await response.json(); errorMsg += `: ${errData.error || '未知錯誤'}`; } catch (e) {}
             }
+           throw new Error(errorMsg);
+       }
 
-            newsList.forEach(newsItem => { // *** 修改變數名 ***
+            // --- 【★ 關鍵修正：直接使用回應的陣列 ★】 ---
+            const newsList = await response.json();
+            // 不再需要 const newsList = data.news;
+            // --- 修正結束 ---
+
+            loadingMessage.style.display = 'none';
+            newsTable.style.display = 'table';
+
+            if (!Array.isArray(newsList)) { // 添加一個檢查，確保收到的是陣列
+                throw new Error("API 返回的數據不是預期的陣列格式。");
+           }
+
+           if (newsList.length === 0) {
+               newsListBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">目前沒有消息。</td></tr>';
+               return;
+           }
+
+
+            // 渲染表格行 (forEach 邏輯不變)
+            newsList.forEach(newsItem => {
                 const row = document.createElement('tr');
-                row.dataset.newsId = newsItem.id; // *** 修改 dataset ***
-                // *** 修改 row.innerHTML 以匹配消息欄位 ***
+                row.dataset.newsId = newsItem.id;
+                // 格式化日期和時間
+                const eventDateStr = newsItem.event_date ? new Date(newsItem.event_date).toLocaleDateString('zh-TW') : 'N/A';
+                const updatedDateStr = newsItem.updated_at ? new Date(newsItem.updated_at).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short', hour12: false }) : 'N/A';
+
                 row.innerHTML = `
                     <td>${newsItem.id}</td>
-                    <td>${newsItem.title || ''}</td>
-                    <td>${newsItem.event_date ? new Date(newsItem.event_date).toLocaleDateString() : 'N/A'}</td>
-                    <td><img src="${newsItem.thumbnail_url || '/images/placeholder.png'}" alt="${newsItem.title || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                    <td>${newsItem.updated_at ? new Date(newsItem.updated_at).toLocaleString() : 'N/A'}</td> <!-- 顯示更新時間 -->
+                    <td title="${newsItem.title || ''}">${newsItem.title || ''}</td>
+                    <td>${eventDateStr}</td>
+                    <td><img src="${newsItem.thumbnail_url || '/images/placeholder.png'}" alt="${newsItem.title || ''}" style="width: 50px; height: auto; border: 1px solid #eee; object-fit: contain; vertical-align: middle;"></td>
+                    <td>${updatedDateStr}</td>
                     <td>
-                        <button class="action-btn edit-btn" onclick="editNews(${newsItem.id})">編輯</button> <!-- *** 修改 onclick *** -->
-                        <button class="action-btn delete-btn" onclick="deleteNews(${newsItem.id})">刪除</button> <!-- *** 修改 onclick *** -->
+                        <button class="action-btn edit-btn" onclick="editNews(${newsItem.id})">編輯</button>
+                        <button class="action-btn delete-btn" onclick="deleteNews(${newsItem.id})">刪除</button>
                     </td>
                 `;
                 newsListBody.appendChild(row);
             });
-        } catch (error) { console.error("獲取管理消息列表失敗:", error); /* ... 錯誤處理 ... */ }
+        } catch (error) {
+            console.error("獲取管理消息列表失敗:", error);
+            if(loadingMessage) loadingMessage.textContent = `無法載入消息列表：${error.message}`;
+            if(newsTable) newsTable.style.display = 'none';
+        }
     }
-
-    // --- Function to Open and Populate the Edit News Modal ---
-    async function openEditNewsModal(id) { // *** 修改函數名 ***
-        const requiredEditElements = [editModal, editForm, editNewsId, editNewsTitle, editNewsEventDate, editNewsSummary, editNewsContent, editNewsThumbnailUrl, editNewsThumbnailPreview, editNewsImageUrl, editFormError]; // *** 更新檢查列表 ***
+     // --- Function to Open and Populate the Edit News Modal (保持不變) ---
+     async function openEditNewsModal(id) {
+        const requiredEditElements = [editModal, editForm, editNewsId, editNewsTitle, editNewsEventDate, editNewsSummary, editNewsContent, editNewsThumbnailUrl, editNewsThumbnailPreview, editNewsImageUrl, editFormError];
         if (requiredEditElements.some(el => !el)) { /* ... 報錯 ... */ return; }
-        editFormError.textContent = ''; editForm.reset(); editNewsThumbnailPreview.style.display = 'none'; editNewsThumbnailPreview.src = ''; // *** 修改預覽 ID ***
+        editFormError.textContent = ''; editForm.reset(); editNewsThumbnailPreview.style.display = 'none'; editNewsThumbnailPreview.src = '';
 
         try {
-            const response = await fetch(`/api/news/${id}`); // *** 修改 API URL ***
-            if (!response.ok) { if (response.status === 404) throw new Error('找不到該消息。'); throw new Error(`無法獲取消息資料 (HTTP ${response.status})`); }
-            const newsItem = await response.json(); // *** 修改變數名 ***
+            // 注意：編輯時仍然請求公開的 /api/news/:id，因為保護的是修改操作，不是讀取
+            const response = await fetch(`/api/news/${id}`);
+            if (!response.ok) { /* ... 錯誤處理 ... */ }
+            const newsItem = await response.json();
+
+
 
             // *** 填充消息表單欄位 ***
             editNewsId.value = newsItem.id;
@@ -116,6 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     await fetchAndDisplayNews(); // *** 修改調用函數 ***
                 } else {
                     let errorMsg = `刪除失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { errorMsg = `${errorMsg}: ${response.statusText}`; } throw new Error(errorMsg);
+
+
+
+
                 }
             } catch (error) { alert(`刪除時發生錯誤：${error.message}`); }
         }
@@ -123,9 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddNewsForm = function() { // *** 修改函數名 ***
-        const requiredAddElements = [addModal, addForm, addNewsTitle, addNewsEventDate, addNewsSummary, addNewsContent, addNewsThumbnailUrl, addNewsImageUrl, addFormError]; // *** 更新檢查列表 ***
+       const requiredAddElements = [addModal, addForm, addNewsTitle, addNewsEventDate, addNewsSummary, addNewsContent, addNewsThumbnailUrl, addNewsImageUrl, addFormError, addNewsThumbnailPreview]; // 補上 addNewsThumbnailPreview
         if (requiredAddElements.some(el => !el)) { alert("新增視窗元件錯誤，無法開啟。"); return; }
-        addFormError.textContent = ''; addForm.reset(); addModal.style.display = 'flex';
+        addFormError.textContent = ''; addForm.reset();
+        if(addNewsThumbnailPreview) { addNewsThumbnailPreview.src=''; addNewsThumbnailPreview.style.display='none'; } // 清空預覽
+        addModal.style.display = 'flex';
     }
 
     // --- Close Modals if User Clicks Outside ---
@@ -150,7 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try { // *** 發送 PUT 請求到 /api/news/:id ***
                 const response = await fetch(`/api/news/${newsId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) });
-                if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+                if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; 
+                try { const errorData = await response.json(); 
+                    errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+
                 closeEditNewsModal(); // *** 修改調用函數 ***
                 await fetchAndDisplayNews(); // *** 修改調用函數 ***
             } catch (error) { editFormError.textContent = `儲存錯誤：${error.message}`; }

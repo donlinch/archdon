@@ -895,6 +895,39 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
 
 
 
+// --- 為 adminRouter 添加獲取新聞列表的路由 ---
+adminRouter.get('/news', async (req, res) => {
+    console.log("[Admin API] GET /api/admin/news requested"); // 添加日誌
+    try {
+        // 後台通常需要看到所有消息，所以不分頁，並可能包含所有欄位
+        // 保持與 news-admin.js 的請求一致，也按 event_date 排序
+        const queryText = `
+            SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, created_at, updated_at
+            FROM news
+            ORDER BY event_date DESC, id DESC
+        `;
+        // 注意：這裡沒有 WHERE is_visible = TRUE，後台可能需要看到所有狀態的消息
+        // 如果後台只需要看可見消息，可以加上 WHERE is_visible = TRUE
+
+        const result = await pool.query(queryText);
+        console.log(`[Admin API] Found ${result.rowCount} news items for admin.`); // 添加日誌
+
+        // 直接返回新聞陣列，而不是像公開 API 那樣包含分頁信息
+        res.status(200).json(result.rows);
+
+    } catch (err) {
+        console.error('[Admin API Error] 獲取管理消息列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取管理消息列表時發生伺服器內部錯誤' });
+    }
+});
+
+
+
+
+
+
+
+
 
 app.use('/api/admin', adminRouter);
 
