@@ -912,6 +912,154 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 
 
+
+
+// GET /api/admin/news - 獲取所有消息列表 (給後台表格使用)
+adminRouter.get('/news', async (req, res) => {
+    console.log("[受保護 API] GET /api/admin/news 請求");
+    try {
+        // 後台需要看到所有消息，包含所有欄位，以便編輯
+        // 按更新時間排序，最新的在前面
+        const result = await pool.query(
+            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, created_at, updated_at
+             FROM news
+             ORDER BY updated_at DESC, id DESC`
+        );
+        console.log(`[受保護 API] 查詢到 ${result.rowCount} 筆消息`);
+        res.status(200).json(result.rows); // 直接返回所有消息的陣列
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 獲取管理消息列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息列表' });
+    }
+});
+
+// GET /api/admin/news/:id - 獲取單一消息詳情 (給編輯表單填充資料)
+adminRouter.get('/news/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[受保護 API] GET /api/admin/news/${id} 請求`);
+    const newsId = parseInt(id);
+    if (isNaN(newsId)) {
+        return res.status(400).json({ error: '無效的消息 ID 格式。' });
+    }
+    try {
+        // 獲取該 ID 的所有欄位
+        const result = await pool.query(
+            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, created_at, updated_at
+             FROM news WHERE id = $1`,
+            [newsId]
+        );
+        if (result.rows.length === 0) {
+            console.warn(`[受保護 API] 找不到消息 ID ${id}`);
+            return res.status(404).json({ error: '找不到該消息。' });
+        }
+        console.log(`[受保護 API] 找到消息 ID ${id}:`, result.rows[0]);
+        res.status(200).json(result.rows[0]); // 返回單個消息對象
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 獲取管理消息 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息詳情' });
+    }
+});
+
+// POST /api/admin/news - 新增消息
+adminRouter.post('/news', async (req, res) => {
+    console.log("[受保護 API] POST /api/admin/news 請求，內容:", req.body);
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // 基本驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '消息標題為必填項。' });
+    }
+    try {
+        // like_count 由資料庫預設或觸發器處理，不需要在這裡插入
+        const result = await pool.query(
+            `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+             RETURNING *`, // 返回插入的完整記錄
+            [
+                title.trim(),
+                event_date || null,
+                summary ? summary.trim() : null,
+                content ? content.trim() : null,
+                thumbnail_url ? thumbnail_url.trim() : null,
+                image_url ? image_url.trim() : null
+            ]
+        );
+        console.log("[受保護 API] 消息已新增:", result.rows[0]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 新增消息時出錯:', err.stack || err);
+        res.status(500).json({ error: '新增消息過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// PUT /api/admin/news/:id - 更新消息
+adminRouter.put('/news/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
+    const newsId = parseInt(id);
+    if (isNaN(newsId)) {
+        return res.status(400).json({ error: '無效的消息 ID 格式。' });
+    }
+    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
+    // 基本驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '消息標題為必填項。' });
+    }
+    try {
+        const result = await pool.query(
+            `UPDATE news
+             SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW()
+             WHERE id = $7
+             RETURNING *`, // 返回更新後的完整記錄
+            [
+                title.trim(),
+                event_date || null,
+                summary ? summary.trim() : null,
+                content ? content.trim() : null,
+                thumbnail_url ? thumbnail_url.trim() : null,
+                image_url ? image_url.trim() : null,
+                newsId
+            ]
+        );
+        if (result.rowCount === 0) {
+            console.warn(`[受保護 API] 更新消息失敗，找不到 ID ${id}`);
+            return res.status(404).json({ error: '找不到要更新的消息。' });
+        }
+        console.log(`[受保護 API] 消息 ID ${id} 已更新:`, result.rows[0]);
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '更新消息過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// DELETE /api/admin/news/:id - 刪除消息
+adminRouter.delete('/news/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`[受保護 API] DELETE /api/admin/news/${id} 請求`);
+    const newsId = parseInt(id);
+    if (isNaN(newsId)) {
+        return res.status(400).json({ error: '無效的消息 ID 格式。' });
+    }
+    try {
+        const result = await pool.query('DELETE FROM news WHERE id = $1', [newsId]);
+        if (result.rowCount === 0) {
+            console.warn(`[受保護 API] 刪除消息失敗，找不到 ID ${id}`);
+            return res.status(404).json({ error: '找不到要刪除的消息。' });
+        }
+        console.log(`[受保護 API] 消息 ID ${id} 已刪除.`);
+        res.status(204).send(); // 成功，無內容返回
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 刪除消息 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '刪除消息過程中發生伺服器內部錯誤。' });
+    }
+});
+
+
+
+
+
+
+
 // --- 流量分析 API ---
 // GET /api/analytics/traffic
 app.get('/api/analytics/traffic', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
