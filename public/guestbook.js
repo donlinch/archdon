@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // metaP.appendChild(likeButton); (移除)
         // metaP.appendChild(likeCountSpan); (移除)
        // detailModalMain.appendChild(titleH2); detailModalMain.appendChild(authorP); detailModalMain.appendChild(hr); detailModalMain.appendChild(contentDiv); detailModalMain.appendChild(metaP);
-       detailModalMain.appendChild(authorP); // 直接添加作者行
+      // detailModalMain.appendChild(authorP); // 直接添加作者行
 
     
     
