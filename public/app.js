@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  fadeEffect: {   // 淡入淡出效果的選項
                    crossFade: true // 啟用交叉淡入淡出
                  },
-
+ 
                 // If we need pagination
                 pagination: {
                     el: '#banner-carousel .swiper-pagination',
