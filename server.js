@@ -895,25 +895,6 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
 
 
 
-
-app.use('/api/admin', adminRouter);
-
- 
-
-
-// --- 受保護的管理頁面和 API Routes ---
-
-// 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html ','figures-admin.html'], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
-
-
-
-
-
-
-
 // GET /api/admin/news - 獲取所有消息列表 (給後台表格使用)
 adminRouter.get('/news', async (req, res) => {
     console.log("[受保護 API] GET /api/admin/news 請求");
@@ -1053,6 +1034,31 @@ adminRouter.delete('/news/:id', async (req, res) => {
         res.status(500).json({ error: '刪除消息過程中發生伺服器內部錯誤。' });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+app.use('/api/admin', adminRouter);
+
+ 
+
+
+// --- 受保護的管理頁面和 API Routes ---
+
+// 保護管理 HTML 頁面
+app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html ','figures-admin.html'], basicAuthMiddleware);
+// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+
+
+
 
 
 
