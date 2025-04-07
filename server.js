@@ -899,13 +899,26 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
 app.use('/api/admin', adminRouter);
 
  
-
+ 
 
 // --- 受保護的管理頁面和 API Routes ---
 
 // 保護管理 HTML 頁面
-app.use(['/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html','/sales-report.html ','figures-admin.html'], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use([
+    '/admin.html',              // 商品管理
+    '/music-admin.html',        // 音樂管理
+    '/news-admin.html',         // 消息管理 (確保在這裡)
+    '/banner-admin.html',       // 輪播圖管理
+    '/figures-admin.html',      // 庫存管理
+    '/sales-report.html',       // 銷售報告 (注意移除 ' ' 空格)
+    '/guestbook-admin.html',    // 留言板管理列表
+    '/admin-message-detail.html',// 管理留言詳情
+    '/admin-identities.html'    // 身份管理
+
+], basicAuthMiddleware);
+
+
+    // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 
