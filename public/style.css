@@ -1090,7 +1090,7 @@ select, input[type="date"] {
 
 button {
     padding: 8px 15px;
-    background-color: #4CAF50;
+    background-color: #99e19b;
     color: white;
     border: none;
     border-radius: 4px;
@@ -2171,7 +2171,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 #message-detail-modal .reply-item-actions .reply-action-btn,
 #message-detail-modal .reply-item-actions .quote-action-btn {
     /* --- 徹底重設按鈕外觀 --- */
-    background-color: transparent !important; /* 強制透明背景，覆蓋綠色 */
+   // background-color: transparent !important; /* 強制透明背景，覆蓋綠色 */
     border: none !important;                 /* 移除邊框 */
     color: #6c757d !important;              /* 設置為灰色文字 */
     padding: 2px 4px !important;             /* 使用更小的內邊距 */
