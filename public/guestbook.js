@@ -207,12 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 【★ 修正 ★】移除按讚按鈕
 
 
- // --- 【★ 關鍵修正：把 contentDiv 加回去！ ★】 ---
- detailModalMain.appendChild(authorP);    // 添加作者行
- detailModalMain.appendChild(hr);         // 添加分隔線
- detailModalMain.appendChild(contentDiv); // 添加留言內容 Div
- detailModalMain.appendChild(metaP);      // 添加 Meta 行
- // --- 【★ 修正結束 ★】 ---
+  // --- 【★ 關鍵修正：調整 appendChild 的順序！ ★】 ---
+  detailModalMain.appendChild(authorP);    // 1. 先添加作者和時間
+  detailModalMain.appendChild(hr);         // 2. 再添加分隔線
+  detailModalMain.appendChild(contentDiv); // 3. 然後添加留言內容
+  detailModalMain.appendChild(metaP);      // 4. 最後添加 Meta 信息 (回覆/瀏覽/按讚)
+  // --- 【★ 修正結束 ★】 ---
 
 
 
