@@ -2045,3 +2045,57 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     border-left: 2px solid #CFD8DC; /* 嵌套邊框顏色 */
     padding-left: 10px; /* 增加左內邊距 */
 }
+
+/* public/style.css (追加樣式) */
+
+/* --- 留言板列表頁：普通留言預覽背景色 --- */
+.message-list-item .content-preview {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.6rem 0.8rem;             /* 增加一點內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 0.8rem;                 /* 調整與上方元素的間距 */
+    margin-bottom: 0.8rem;              /* 調整與下方元素的間距 */
+    /* 保留原有的行數限制樣式 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-height: 1.6;
+    max-height: calc(1.6em * 3);
+}
+
+/* --- 詳情 Modal：主留言內容背景色 --- */
+#modal-message-detail-main .message-content {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.8rem 1rem;             /* 增加內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 1rem;                   /* 調整上方間距 */
+    /* 保留原有的 white-space 和 word-wrap */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* --- 詳情 Modal：普通用戶回覆內容背景色 --- */
+#modal-reply-list-container .reply-item:not(.admin-reply) .reply-content {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.6rem 0.8rem;             /* 內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 0.6rem;                 /* 調整上方間距 */
+    /* 保留原有的 white-space 和 word-wrap */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+
+/* --- 留言板 詳情 Modal：管理員回覆內容樣式 (保持或調整) --- */
+/* 你可以保持 .admin-reply 的樣式，或者如果想讓管理員回覆內容也有特定樣式 */
+/*
+#modal-reply-list-container .reply-item.admin-reply .reply-content {
+    background-color: #fffaf0; /* 例如，用更淺的黃色
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    margin-top: 0.6rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+*/
