@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-            const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
+           // const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
            // const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
          
          
@@ -205,6 +205,17 @@ document.addEventListener('DOMContentLoaded', () => {
     metaP.appendChild(likeCountSpan);
     // --- 按讚部分結束 ---
         // 【★ 修正 ★】移除按讚按鈕
+
+
+ // --- 【★ 關鍵修正：把 contentDiv 加回去！ ★】 ---
+ detailModalMain.appendChild(authorP);    // 添加作者行
+ detailModalMain.appendChild(hr);         // 添加分隔線
+ detailModalMain.appendChild(contentDiv); // 添加留言內容 Div
+ detailModalMain.appendChild(metaP);      // 添加 Meta 行
+ // --- 【★ 修正結束 ★】 ---
+
+
+
         // const likeButton = ... (移除)
         // const likeCountSpan = ... (移除)
         // metaP.appendChild(likeButton); (移除)

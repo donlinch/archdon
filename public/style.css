@@ -2128,7 +2128,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 /* --- 詳情 Modal：回覆項目的操作按鈕區域 --- */
 #message-detail-modal .reply-item-actions {
     margin-top: 0.5rem; /* 按鈕與回覆內容的間距 */
-    text-align: right; /* 讓按鈕靠右 (可選) */
+    text-align: left; /* 讓按鈕靠右 (可選) */
 }
 
 /* --- 詳情 Modal：「回覆」和「引用」按鈕樣式 --- */
@@ -2148,7 +2148,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     color: #5a6268;      /* 懸停時加深顏色 */
     background-color: #f8f9fa; /* 懸停時淺灰色背景 */
     text-decoration: underline; /* 懸停時顯示下劃線 */
-    border-color: #eee; /* 懸停時顯示淺邊框 */
+    border-color: #c3c1c1; /* 懸停時顯示淺邊框 */
 }
 
 /* --- 詳情 Modal：回覆項目中的按讚按鈕和計數調整 --- */
