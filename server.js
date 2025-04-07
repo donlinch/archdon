@@ -394,7 +394,7 @@ app.get('/api/scores/songs', async (req, res) => {
         `;
         // *** SQL 查詢修改結束 ***
 
-        console.log("Executing query:", queryText.replace(/\s+/g, ' '), "with params:", queryParams); // 打印查詢語句和參數
+     //   console.log("Executing query:", queryText.replace(/\s+/g, ' '), "with params:", queryParams); // 打印查詢語句和參數
 
         const result = await pool.query(queryText, queryParams);
         res.json(result.rows); // 返回包含 scores 陣列的歌曲列表
