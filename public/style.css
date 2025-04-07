@@ -2163,3 +2163,60 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     vertical-align: middle;
     color: #888; /* 計數顏色稍淺 */
 }
+
+
+/* public/style.css (追加或修改樣式) */
+
+/* --- 詳情 Modal：重設 回覆/引用 按鈕樣式，覆蓋通用按鈕樣式 --- */
+#message-detail-modal .reply-item-actions .reply-action-btn,
+#message-detail-modal .reply-item-actions .quote-action-btn {
+    /* --- 徹底重設按鈕外觀 --- */
+    background-color: transparent !important; /* 強制透明背景，覆蓋綠色 */
+    border: none !important;                 /* 移除邊框 */
+    color: #6c757d !important;              /* 設置為灰色文字 */
+    padding: 2px 4px !important;             /* 使用更小的內邊距 */
+    font-size: 0.8em !important;             /* 縮小字體 */
+    text-decoration: none !important;        /* 移除下劃線 */
+    font-weight: normal !important;          /* 確保不是粗體 */
+    border-radius: 3px;                      /* 可選：保持一點圓角 */
+    margin-left: 8px;                        /* 保持按鈕間距 */
+    vertical-align: middle;                  /* 保持垂直對齊 */
+    cursor: pointer;
+    transition: color 0.2s ease;
+    /* 移除或覆蓋其他可能繼承的樣式，例如 box-shadow, text-transform 等 */
+    box-shadow: none !important;
+    text-transform: none !important;
+    line-height: normal; /* 確保行高正常 */
+}
+
+/* --- 詳情 Modal：回覆/引用 按鈕 Hover 效果 --- */
+#message-detail-modal .reply-item-actions .reply-action-btn:hover,
+#message-detail-modal .reply-item-actions .quote-action-btn:hover {
+    color: #5a6268 !important;             /* 懸停顏色加深 */
+    text-decoration: underline !important; /* 懸停加下劃線 */
+    background-color: transparent !important; /* 確保懸停時背景仍然透明 */
+}
+
+/* --- 可選：微調 Modal 內 Like 按鈕和計數的對齊 --- */
+/* (如果因為上面按鈕變小導致對不齊) */
+#message-detail-modal .reply-item-actions .like-btn {
+    vertical-align: middle;
+    padding-bottom: 1px; /* 可能需要微調 */
+}
+#message-detail-modal .reply-item-actions .like-count {
+    vertical-align: middle;
+}
+
+/* --- 確保之前的按鈕樣式選擇器更具體，避免衝突 --- */
+/* 例如，如果之前有 .btn-link 全局樣式，現在需要確保它不會影響 modal 內的 */
+/* 檢查並調整你 style.css 中其他的 .btn, .btn-link, .btn-sm 等樣式， */
+/* 確保它們的選擇器不會過於寬泛地應用到 modal 內的按鈕上， */
+/* 或者使用更具體的選擇器如下面的例子 */
+
+/* 比如之前的全局樣式是這樣: */
+/* .btn-link { color: blue; ... } */
+
+/* 可以改成只應用於特定區域，例如: */
+/* .some-other-container .btn-link { color: blue; ... } */
+
+/* 或者確保 Modal 內的樣式優先級更高 (如此處使用的 ID 選擇器) */
