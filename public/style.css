@@ -2145,8 +2145,8 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 }
 
 #message-detail-modal .reply-item-actions .btn-link:hover {
-    color: #5a6268;      /* 懸停時加深顏色 */
-    background-color: #f8f9fa; /* 懸停時淺灰色背景 */
+    color: #e8e8e8;      /* 懸停時加深顏色 */
+    background-color: #f799ba; /* 懸停時淺灰色背景 */
     text-decoration: underline; /* 懸停時顯示下劃線 */
     border-color: #c3c1c1; /* 懸停時顯示淺邊框 */
 }
