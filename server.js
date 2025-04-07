@@ -744,30 +744,69 @@ adminRouter.get('/guestbook', async (req, res) => {
     if (sort === 'popular') orderByClause = 'ORDER BY m.view_count DESC, m.last_activity_at DESC';
     else if (sort === 'most_replies') orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
 
-    let whereClauses = [];
-    let queryParams = []; // 參數陣列，用於 SQL 查詢
-    let paramIndex = 1;
+   let whereClauses = [];
+    let countParams = []; // 【★ 修改 ★】參數分開給 COUNT query
+    let mainParams = [];  // 【★ 修改 ★】參數分開給主要 SELECT query
+    let paramIndex = 1; // 索引從 1 開始
+
     if (filter === 'visible') whereClauses.push('m.is_visible = TRUE');
     else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
-    if (search) { whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`); queryParams.push(`%${search}%`); paramIndex++; }
+   
+   
+    if (search) {
+        // 搜尋條件在兩個查詢中都是第一個參數 ($1)
+        whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`);
+        const searchParam = `%${search}%`;
+        countParams.push(searchParam); // 加入 COUNT 參數
+        mainParams.push(searchParam);  // 加入主要查詢參數
+        paramIndex++; // 索引遞增
+    }
+
+
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
+
+    const limitParamIndex = paramIndex++;  // LIMIT 的索引是 $1 (無搜尋) 或 $2 (有搜尋)
+    const offsetParamIndex = paramIndex++; // OFFSET 的索引是 $2 (無搜尋) 或 $3 (有搜尋)
+    mainParams.push(limit);
+    mainParams.push(offset);
+
+
     try {
-        const totalResult = await pool.query(`SELECT COUNT(*) FROM guestbook_messages m ${whereSql}`, queryParams.slice(2));
+        // --- 修正後的 COUNT 查詢 ---
+        const countSql = `SELECT COUNT(*) FROM guestbook_messages m ${whereSql}`;
+        console.log("[Admin Guestbook] Count SQL:", countSql.replace(/\s+/g, ' '), "Params:", countParams); // Debugging
+        const totalResult = await pool.query(countSql, countParams); // 只傳遞 countParams
         const totalItems = parseInt(totalResult.rows[0].count, 10);
         const totalPages = Math.ceil(totalItems / limit);
 
-        // 加入 view_count, like_count
-        const messagesResult = await pool.query(
-            `SELECT m.id, m.author_name,
-                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
-                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible
-             FROM guestbook_messages m
-             ${whereSql} ${orderByClause} LIMIT $1 OFFSET $2`,
-            queryParams
-        );
-        res.json({ messages: messagesResult.rows, currentPage: page, totalPages: totalPages, totalItems: totalItems, limit: limit, sort: sort });
-    } catch (err) { console.error('[API GET /admin/guestbook] Error:', err); res.status(500).json({ error: '無法獲取管理留言列表' }); }
+        // --- 修正後的主要 SELECT 查詢 ---
+        const mainSql = `
+            SELECT m.id, m.author_name,
+                   substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
+                   m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible
+            FROM guestbook_messages m
+            ${whereSql} ${orderByClause}
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`; // 使用動態索引
+        console.log("[Admin Guestbook] Main SQL:", mainSql.replace(/\s+/g, ' '), "Params:", mainParams); // Debugging
+        const messagesResult = await pool.query(mainSql, mainParams); // 傳遞包含所有參數的 mainParams
+
+
+        res.json({
+            messages: messagesResult.rows,
+            currentPage: page,
+            totalPages: totalPages,
+            totalItems: totalItems,
+            limit: limit,
+            sort: sort // 返回當前排序方式
+        });
+    }
+    
+    
+
+    
+    
+    catch (err) { console.error('[API GET /admin/guestbook] Error:', err); res.status(500).json({ error: '無法獲取管理留言列表' }); }
 });
 
 adminRouter.get('/guestbook/message/:id', async (req, res) => {
