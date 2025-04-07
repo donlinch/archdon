@@ -27,9 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const banners = await response.json();
     
             bannerWrapper.innerHTML = '';
+
             if (banners.length === 0) {
+            
                 bannerWrapper.innerHTML = '<div class="swiper-slide">無圖片可顯示</div>';
+            
             } else {
+            
                 banners.forEach(banner => {
                     const slide = document.createElement('div');
                     slide.classList.add('swiper-slide');
@@ -38,10 +42,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
     
+            
             new Swiper('#music-banner-carousel', {
-                loop: true,
-                autoplay: { delay: 8000 },
-                pagination: { el: '.swiper-pagination' },
+            
+                direction: 'horizontal', // 水平輪播
+                loop: banners.length > 1, // 只有一張以上圖片時才循環
+                autoplay: {
+                    delay: 12000, // 自動播放間隔 (毫秒)
+                    disableOnInteraction: false, // 用戶操作後是否停止自動播放 (false=不停止)
+                },
+                slidesPerView: 1, // 每次顯示一張
+                spaceBetween: 0, // Slide 之間的間距
+                grabCursor: true, // 顯示抓取手勢
+
+
+
+                 // --- ★★★ 加入這兩行 ★★★ ---
+                 effect: 'fade', // 設定效果為淡入淡出
+                 fadeEffect: {   // 淡入淡出效果的選項
+                   crossFade: true // 啟用交叉淡入淡出
+                 },
+ 
+                // If we need pagination
+                pagination: {
+                    el: '#banner-carousel .swiper-pagination',
+                    clickable: true, // 分頁點可點擊
+                },
+
+                // Navigation arrows
+                navigation: {
+                    nextEl: '#banner-carousel .swiper-button-next',
+                    prevEl: '#banner-carousel .swiper-button-prev',
+                },
+
+                // And if we need scrollbar (可選)
+                // scrollbar: {
+                //   el: '.swiper-scrollbar',
+                // },
+
+                // Enable swiping on touch devices (預設啟用)
+                touchEventsTarget: 'container', // 在容器上觸發滑動
+            
             });
         } catch (error) {
             console.error('載入輪播圖時出錯:', error);
