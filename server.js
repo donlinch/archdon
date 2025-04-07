@@ -737,7 +737,7 @@ adminRouter.get('/guestbook', async (req, res) => {
     const limit = parseInt(req.query.limit) || 15;
     const offset = (page - 1) * limit;
     const filter = req.query.filter || 'all';
-    const search = req.query.search || '';
+    const search = req.query.search?.trim() || ''; // 使用可選鏈 ?. 和 trim()
     const sort = req.query.sort || 'latest'; // 新增 sort
 
     let orderByClause = 'ORDER BY m.last_activity_at DESC'; // 預設
@@ -745,8 +745,8 @@ adminRouter.get('/guestbook', async (req, res) => {
     else if (sort === 'most_replies') orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
 
     let whereClauses = [];
-    let queryParams = [limit, offset];
-    let paramIndex = 3;
+    let queryParams = []; // 參數陣列，用於 SQL 查詢
+    let paramIndex = 1;
     if (filter === 'visible') whereClauses.push('m.is_visible = TRUE');
     else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
     if (search) { whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`); queryParams.push(`%${search}%`); paramIndex++; }

@@ -76,21 +76,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = msg.author_name || '匿名';
             const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${activityDate})`;
             const previewDiv = document.createElement('div'); previewDiv.className = 'content-preview view-detail-modal-btn'; previewDiv.dataset.messageId = msg.id; previewDiv.textContent = msg.content_preview || '(無內容預覽)'; previewDiv.style.cursor = 'pointer'; previewDiv.style.display = 'block'; previewDiv.style.margin = '0.5rem 0'; previewDiv.style.color = '#555'; previewDiv.style.lineHeight = '1.6';
-            const metaSpan = document.createElement('span'); metaSpan.className = 'meta view-detail-modal-btn'; metaSpan.dataset.messageId = msg.id; metaSpan.textContent = `回覆(${msg.reply_count || 0})`; metaSpan.style.cursor = 'pointer'; metaSpan.style.color = '#007bff'; metaSpan.style.textDecoration = 'underline';
+            const metaSpan = document.createElement('span'); 
+            metaSpan.className = 'meta view-detail-modal-btn'; 
+            metaSpan.dataset.messageId = msg.id; 
+            metaSpan.textContent = `回覆(${msg.reply_count || 0})`; 
+            metaSpan.style.cursor = 'pointer'; 
+            metaSpan.style.color = '#007bff'; 
+            metaSpan.style.textDecoration = 'underline';
+
+
+
+            
+
             const viewSpan = document.createElement('span'); viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
+
+
+
             const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
            // const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
          
-           messageItemDiv.appendChild(authorSpan);
-           messageItemDiv.appendChild(document.createTextNode(' '));
-           messageItemDiv.appendChild(timestampSpan);
-           messageItemDiv.appendChild(previewDiv);
-           messageItemDiv.appendChild(metaSpan);
-           messageItemDiv.appendChild(viewSpan);
-           messageItemDiv.appendChild(likeSpan);
+         
+           
+
+
+ // --- 組合元素 ---
+ messageItemDiv.appendChild(authorSpan);
+ messageItemDiv.appendChild(document.createTextNode(' '));
+ messageItemDiv.appendChild(timestampSpan);
+ messageItemDiv.appendChild(previewDiv);
+ messageItemDiv.appendChild(metaSpan);      // 回覆數
+ messageItemDiv.appendChild(viewSpan);      // 瀏覽數
+ messageItemDiv.appendChild(likeContainer); // 添加 likeContainer
+
+
+
        
            messageListContainer.appendChild(messageItemDiv);
-           const hr = document.createElement('hr'); messageListContainer.appendChild(hr);
+           const hr = document.createElement('hr'); 
+           messageListContainer.appendChild(hr);
 
 
         });
@@ -128,7 +151,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const authorP = document.createElement('p'); const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = message.author_name || '匿名'; const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const createDate = new Date(message.created_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${createDate})`; authorP.appendChild(authorSpan); authorP.appendChild(timestampSpan);
         const hr = document.createElement('hr');
         const contentDiv = document.createElement('div'); contentDiv.className = 'message-content'; contentDiv.textContent = message.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.padding = '10px 0';
-        const metaP = document.createElement('p'); metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px'; metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0}`)); // 【★ 修正 ★】移除按讚按鈕
+        const metaP = document.createElement('p'); metaP.style.fontSize = '0.9em'; metaP.style.color = '#777'; metaP.style.marginTop = '15px'; 
+        metaP.appendChild(document.createTextNode(`回覆: ${message.reply_count || 0} | 瀏覽: ${message.view_count || 0}`));
+        
+
+
+
+         // --- 【★ 重新加入 ★】按讚按鈕和計數 ---
+    metaP.appendChild(document.createTextNode(' | ')); // 分隔符
+
+    const likeButton = document.createElement('button');
+    likeButton.className = 'like-btn message-like-btn'; // 使用正確 class
+    likeButton.dataset.id = message.id;
+    likeButton.innerHTML = '❤️';
+
+    const likeCountSpan = document.createElement('span');
+    likeCountSpan.id = `message-like-count-${message.id}`; // ID 用於更新
+    likeCountSpan.textContent = ` ${message.like_count || 0}`;
+    likeCountSpan.style.marginLeft = '5px'; // 與按鈕間隔
+
+    metaP.appendChild(likeButton);
+    metaP.appendChild(likeCountSpan);
+    // --- 按讚部分結束 ---
+        // 【★ 修正 ★】移除按讚按鈕
         // const likeButton = ... (移除)
         // const likeCountSpan = ... (移除)
         // metaP.appendChild(likeButton); (移除)
@@ -143,14 +188,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const repliesByParentId = new Map(); replies.forEach(reply => { const parentId = reply.parent_reply_id === null ? 'root' : reply.parent_reply_id; if (!repliesByParentId.has(parentId)) repliesByParentId.set(parentId, []); repliesByParentId.get(parentId).push(reply); });
         const floorMap = new Map(); const rootReplies = repliesByParentId.get('root') || []; rootReplies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); rootReplies.forEach((reply, index) => { floorMap.set(reply.id, `B${index + 1}`); });
         function renderRepliesRecursive(parentId, level = 0) {
-            const children = repliesByParentId.get(parentId === 'root' ? 'root' : parentId) || []; children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); if (children.length === 0) return;
-            children.forEach((reply) => {
+            const children = repliesByParentId.get(parentId === 'root' ? 'root' : parentId) || []; children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); 
+            if (children.length === 0) return;
+
+
+
+
+
+
+            children.forEach((reply) => { 
                 let floorNumber = ''; if (level === 0) { floorNumber = floorMap.get(reply.id); } else { const parentFloor = floorMap.get(parentId); if (parentFloor) { const siblings = repliesByParentId.get(parentId) || []; const replyIndex = siblings.findIndex(r => r.id === reply.id); floorNumber = `${parentFloor}-${replyIndex + 1}`; floorMap.set(reply.id, floorNumber); } else { floorNumber = '?'; console.warn(`找不到父級 ${parentId} 的樓層號`); } } if (!floorNumber) floorNumber = "?";
                 const replyDiv = document.createElement('div'); replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item'; if (level > 0) { replyDiv.classList.add('nested'); replyDiv.style.marginLeft = `${level * 25}px`; } replyDiv.dataset.replyId = reply.id; replyDiv.dataset.floor = floorNumber;
                 const metaP = document.createElement('p'); metaP.style.marginBottom = '5px'; const floorSpan = document.createElement('span'); floorSpan.className = 'reply-floor'; floorSpan.textContent = floorNumber; const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = reply.is_admin_reply ? `[${reply.admin_identity_name || '管理員'}]` : (reply.author_name || '匿名'); const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; timestampSpan.textContent = ` (${new Date(reply.created_at).toLocaleString('zh-TW')})`; metaP.appendChild(floorSpan); metaP.appendChild(authorSpan); metaP.appendChild(timestampSpan);
                 const contentDiv = document.createElement('div'); contentDiv.className = 'reply-content'; contentDiv.textContent = reply.content || ''; contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word'; contentDiv.style.marginBottom = '5px';
-                const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions'; const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber; const quoteButton = document.createElement('button'); quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; quoteButton.textContent = '引用'; quoteButton.dataset.targetId = reply.id; quoteButton.dataset.targetFloor = floorNumber; quoteButton.dataset.targetContent = reply.content || ''; quoteButton.style.marginLeft = '10px'; const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px'; const likeButton = document.createElement('button'); likeButton.className = 'like-btn reply-like-btn'; likeButton.dataset.id = reply.id; likeButton.innerHTML = '❤️'; const likeCountSpan = document.createElement('span'); likeCountSpan.id = `reply-like-count-${reply.id}`; likeCountSpan.textContent = ` ${reply.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px'; likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan); actionsDiv.appendChild(replyButton); actionsDiv.appendChild(quoteButton); actionsDiv.appendChild(likeContainer);
-                replyDiv.appendChild(metaP); replyDiv.appendChild(contentDiv); replyDiv.appendChild(actionsDiv);
+               
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'reply-item-actions';
+              
+                
+                const replyButton = document.createElement('button'); replyButton.className = 'btn btn-link btn-sm reply-action-btn'; replyButton.textContent = '回覆'; replyButton.dataset.targetId = reply.id; replyButton.dataset.targetFloor = floorNumber;
+
+                
+                const quoteButton = document.createElement('button'); quoteButton.className = 'btn btn-link btn-sm quote-action-btn'; quoteButton.textContent = '引用'; quoteButton.dataset.targetId = reply.id; quoteButton.dataset.targetFloor = floorNumber; quoteButton.dataset.targetContent = reply.content || ''; quoteButton.style.marginLeft = '10px';
+
+
+                  
+
+             
+                
+
+  // --- 【★ 修正點 2 ★】按讚按鈕使用 reply 變數 ---
+  const likeContainer = document.createElement('span'); likeContainer.style.marginLeft = '10px';
+  const likeButton = document.createElement('button');
+  likeButton.className = 'like-btn reply-like-btn'; // class 正確
+  likeButton.dataset.id = reply.id; // 使用 reply.id
+  likeButton.innerHTML = '❤️';
+  const likeCountSpan = document.createElement('span');
+  likeCountSpan.id = `reply-like-count-${reply.id}`; // 使用 reply.id
+  likeCountSpan.textContent = ` ${reply.like_count || 0}`; // 使用 reply.like_count
+  likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft='3px';
+  likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan);
+  // --- 修正結束 ---
+
+
+
+
+                actionsDiv.appendChild(replyButton); 
+                actionsDiv.appendChild(quoteButton); 
+                actionsDiv.appendChild(likeContainer);
+                replyDiv.appendChild(metaP); 
+                replyDiv.appendChild(contentDiv); 
+                replyDiv.appendChild(actionsDiv);
+
+
                 detailModalReplyList.appendChild(replyDiv); const hr = document.createElement('hr'); hr.style.borderTop = '1px dashed #eee'; hr.style.margin = '10px 0'; detailModalReplyList.appendChild(hr);
                 renderRepliesRecursive(reply.id, level + 1);
             });

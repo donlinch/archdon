@@ -11,18 +11,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageIdDisplay = document.getElementById('message-id-display');
     const backToListLink = document.querySelector('a[href="/guestbook-admin.html"]'); // 返回列表連結
     const adminReplyEmojiTrigger = document.getElementById('admin-reply-emoji-trigger');
-
+    const adminReplyFormLabel = document.querySelector('#admin-reply-form label[for="admin-reply-content"]');
+    const cancelAdminReplyTargetBtn = document.getElementById('cancel-admin-reply-target-btn');
 
     
     // --- 狀態變數 ---
     let currentMessageId = null;
     let isReplyingCooldown = false; // 管理員回覆冷卻
+    let currentAdminParentReplyId = null; // 記錄管理員回覆的目標 ID
+
 
     // --- 函數：從 URL 獲取 message ID ---
     function getMessageIdFromUrl() {
         const params = new URLSearchParams(window.location.search);
         return params.get('id');
     }
+
+
+
+ // --- 函數：更新回覆表單提示 ---
+ function updateAdminReplyFormLabel() {
+    if (!adminReplyFormLabel) return;
+    if (currentAdminParentReplyId) {
+        // 嘗試從 DOM 獲取樓層號
+        const targetReplyDiv = document.querySelector(`.reply-item[data-reply-id="${currentAdminParentReplyId}"]`);
+        const floor = targetReplyDiv ? targetReplyDiv.dataset.floor : `ID ${currentAdminParentReplyId}`;
+        adminReplyFormLabel.innerHTML = `回覆 <span style="font-weight:bold; color:#007bff;">${floor}</span> 的內容 (必填):`;
+        if (cancelAdminReplyTargetBtn) cancelAdminReplyTargetBtn.style.display = 'inline-block';
+    } else {
+        adminReplyFormLabel.textContent = '回覆內容 (必填):'; // 恢復預設
+        if (cancelAdminReplyTargetBtn) cancelAdminReplyTargetBtn.style.display = 'none';
+    }
+}
+
+
+// --- 事件監聽：點擊「回覆此樓層」按鈕 (使用事件委派) ---
+if (replyListContainer) {
+    replyListContainer.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.matches('.admin-reply-action-btn')) {
+            currentAdminParentReplyId = target.dataset.targetId;
+            console.log("Admin replying to reply ID:", currentAdminParentReplyId);
+            updateAdminReplyFormLabel();
+            // 將頁面滾動到回覆表單
+            adminReplyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            adminReplyContent.focus(); // 聚焦輸入框
+        }
+    });
+}
+
+// --- 事件監聽：點擊「取消指定回覆」按鈕 ---
+if (cancelAdminReplyTargetBtn) {
+    cancelAdminReplyTargetBtn.addEventListener('click', () => {
+        currentAdminParentReplyId = null;
+        updateAdminReplyFormLabel();
+    });
+}
+
+
 
     // --- 函數：獲取並顯示留言詳情和所有回覆 ---
     async function fetchAdminMessageDetail(messageId) {
@@ -176,6 +222,22 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.dataset.type = 'reply';
             deleteBtn.dataset.name = `回覆 #${reply.id}`; // 用於確認訊息
 
+
+
+ // --- 【★ 新增 ★】回覆此樓層按鈕 ---
+ const replyToBtn = document.createElement('button');
+ replyToBtn.className = 'btn btn-secondary btn-sm admin-reply-action-btn'; // 新增 class
+ replyToBtn.textContent = '回覆';
+ replyToBtn.dataset.targetId = reply.id; // 儲存目標回覆 ID
+ replyToBtn.dataset.targetFloor = replyDiv.dataset.floor || `ID ${reply.id}`; // 儲存樓層號或 ID
+
+ // --- 按鈕添加到 actionsDiv ---
+ actionsDiv.appendChild(toggleBtn);
+ actionsDiv.appendChild(deleteBtn);
+ actionsDiv.appendChild(replyToBtn); // 添加新按鈕
+
+
+
             actionsDiv.appendChild(toggleBtn);
             actionsDiv.appendChild(deleteBtn);
 
@@ -267,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message_id: currentMessageId,
-                        parent_reply_id: null, // 管理員回覆總是直接回覆主留言
+                        parent_reply_id: currentAdminParentReplyId, // 【★ 修改 ★】傳遞目標 ID
                         content: content,
                         admin_identity_id: selectedIdentityId
                     }),
@@ -279,6 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 adminReplyStatus.style.color = 'green';
                 adminReplyForm.reset();
                 identitySelect.value = "";
+                currentAdminParentReplyId = null; // 重置目標 ID
+                updateAdminReplyFormLabel(); // 更新表單提示
                 fetchAdminMessageDetail(currentMessageId); // 刷新
 
                 setTimeout(() => { adminReplyStatus.textContent = ''; }, 3000);
@@ -407,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentMessageId) {
         fetchAdminMessageDetail(currentMessageId);
         fetchAndPopulateIdentities(); // 同時加載身份下拉選單
+        updateAdminReplyFormLabel(); // 初始化回覆表單提示
     } else {
         showError("錯誤：URL 中缺少有效的留言 ID。");
     }
