@@ -463,7 +463,15 @@ document.body.addEventListener('click', async (event) => {
                 }
     
 
-
+              
+                 // --- 處理點擊列表項打開 Modal (如果在這處理的話) ---
+                 const triggerElement = target.closest('.view-detail-modal-btn');
+                 if (triggerElement && messageListContainer.contains(triggerElement)) { // 確保點擊的是列表項
+                     const messageId = triggerElement.dataset.messageId;
+                     if (messageId) {
+                         fetchAndRenderDetailModal(messageId);
+                     }
+                 }
 
                 
                 if (targetId && targetFloor) {
