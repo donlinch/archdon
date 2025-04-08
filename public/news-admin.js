@@ -215,7 +215,7 @@ function handleBackgroundClick(event) {
             });
 
              addTableButtonListeners(); // 添加事件監聽器
-
+ 
         } catch (error) {
             console.error("獲取管理消息列表失敗:", error);
             if (loadingMessage) loadingMessage.textContent = `無法載入消息列表: ${error.message}`;
