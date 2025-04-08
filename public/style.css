@@ -2207,3 +2207,275 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 /* .some-other-container .btn-link { color: blue; ... } */
 
 /* 或者確保 Modal 內的樣式優先級更高 (如此處使用的 ID 選擇器) */
+
+
+
+
+
+ 
+/*   行事歷的日期樣子         */
+
+
+/* =================================== */
+/* News Page Calendar Styles           */
+/* =================================== */
+
+#calendar-section {
+    margin-bottom: 2rem;
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+#calendar-month-year {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    flex-grow: 1; /* 讓標題佔據中間空間 */
+}
+
+/* 月份切換按鈕 */
+#prev-month-btn,
+#next-month-btn {
+    padding: 6px 12px; /* 調整按鈕大小 */
+    font-size: 0.9em;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+#prev-month-btn:hover,
+#next-month-btn:hover {
+    background-color: #e9ecef;
+}
+
+/* 星期標頭 */
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0.5rem;
+    font-size: 0.85em; /* 稍小字體 */
+    color: #6c757d;   /* 灰色 */
+}
+.calendar-weekdays span {
+    padding: 5px 0;
+}
+
+
+/* 日期格子容器 */
+#calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px; /* 格子間距 */
+}
+
+/* 日期格子基本樣式 */
+.calendar-day {
+    border: 1px solid #eee;
+    padding: 8px;
+    min-height: 80px; /* 給格子一個最小高度 */
+    text-align: right; /* 日期數字靠右上 */
+    font-size: 0.9em;
+    position: relative; /* 為了定位事件標記 */
+    cursor: default; /* 預設滑鼠樣式 */
+    display: flex;
+    flex-direction: column; /* 讓日期數字和標記垂直排列 */
+    transition: background-color 0.2s ease;
+}
+
+/* 非本月的日期格子 */
+.calendar-day.empty {
+    background-color: #f9f9f9;
+    color: #ccc;
+}
+
+/* 今天的日期格子 */
+.calendar-day.today .day-number { /* 只針對數字部分 */
+    background-color: #FFB74D; /* SunnyYummy 主題色 */
+    color: white;
+    border-radius: 50%;
+    width: 24px; /* 固定寬高使其變圓 */
+    height: 24px;
+    display: inline-flex; /* 使用 flex 垂直居中 */
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin-left: auto; /* 將圓圈推到右上角 */
+    font-weight: bold;
+}
+
+/* 日期數字本身的樣式 */
+.calendar-day .day-number {
+    display: block;
+    margin-bottom: 4px; /* 與下方標記的間距 */
+    margin-left: auto; /* 靠右 */
+    padding: 2px;
+}
+
+/* 有事件的日期格子 - 基礎標記 (小圓點) */
+.calendar-day.has-event {
+    cursor: pointer; /* 有事件的日期才顯示可點擊 */
+    background-color: #eef; /* 淡淡的藍色背景提示 */
+}
+.calendar-day.has-event:hover {
+    background-color: #dde; /* 滑鼠懸停時加深 */
+}
+
+/* 事件標記容器 (放在日期數字下方) */
+.event-markers {
+    margin-top: auto; /* 將標記推到底部 */
+    display: flex;
+    flex-wrap: wrap; /* 如果標記多可以換行 */
+    gap: 3px; /* 標記之間的間距 */
+    padding: 4px 0 0 4px; /* 標記區域的內邊距 */
+    justify-content: flex-start; /* 標記靠左 */
+    min-height: 15px; /* 給標記留點空間 */
+}
+
+/* 單個事件標記 (小圓點樣式 - 預設顏色) */
+.event-marker {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #007bff; /* 預設藍色 */
+    display: inline-block;
+}
+
+/* --- 不同分類事件的標記顏色 (範例) --- */
+/* 您需要根據實際的分類名稱調整 class 名稱 */
+.event-marker.category-演唱會 { background-color: #dc3545; } /* 紅色 */
+.event-marker.category-專輯發行 { background-color: #28a745; } /* 綠色 */
+.event-marker.category-直播預告 { background-color: #ffc107; } /* 黃色 */
+.event-marker.category-Vlog { background-color: #17a2b8; }    /* 青色 */
+.event-marker.category-公告 { background-color: #6c757d; }    /* 灰色 */
+/* 添加更多您需要的分類顏色 */
+
+
+/* 日曆載入中提示 */
+.calendar-loading {
+    grid-column: 1 / -1; /* 佔滿整行 */
+    text-align: center;
+    padding: 2rem;
+    color: #888;
+    font-style: italic;
+}
+
+
+/* =================================== */
+/* Event Detail Modal Styles           */
+/* =================================== */
+
+/* Modal 基本樣式 (複用之前的) */
+.modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
+.modal[style*="display: flex"] { display: flex !important; }
+.modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 85vh; /* 限制最大高度 */ display: flex; flex-direction: column; } /* 改為 flex column */
+.close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+.close-btn:hover { color: #333; }
+#event-modal-title { margin-bottom: 1.5rem; font-size: 1.3em; color: #333; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+
+/* Modal Body (可滾動區域) */
+#event-modal-body {
+    overflow-y: auto; /* 允許垂直滾動 */
+    padding: 0 15px 15px 0; /* 增加右側 padding 給滾動條 */
+    flex-grow: 1; /* 佔據剩餘空間 */
+}
+
+/* Modal 內單個事件項 */
+.modal-event-item {
+    display: flex;
+    margin-bottom: 1.2rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px dashed #eee; /* 事件間分隔線 */
+    gap: 1rem; /* 圖片和文字的間距 */
+}
+.modal-event-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none; /* 最後一項不需要分隔線 */
+}
+
+/* Modal 內事件縮圖 */
+.modal-event-thumbnail {
+    width: 80px; /* 固定寬度 */
+    height: 80px; /* 固定高度 */
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0; /* 防止圖片被壓縮 */
+    border: 1px solid #f0f0f0;
+}
+
+/* Modal 內事件文字區域 */
+.modal-event-text {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modal 內事件分類標籤 */
+.modal-event-category {
+    font-size: 0.8em;
+    color: #6c757d;
+    background-color: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block; /* 讓 padding 生效 */
+    margin-bottom: 0.5rem;
+    align-self: flex-start; /* 靠左對齊 */
+}
+
+/* Modal 內事件標題 */
+.modal-event-title {
+    font-size: 1.05em;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 0.3rem 0; /* 調整間距 */
+}
+
+/* Modal 內事件摘要 */
+.modal-event-summary {
+    font-size: 0.9em;
+    color: #555;
+    line-height: 1.5;
+    margin: 0 0 0.8rem 0; /* 摘要和按鈕間距 */
+    /* 可選：限制摘要行數 */
+    /* display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis; */
+}
+
+/* Modal 內操作按鈕區域 */
+.modal-event-actions {
+    margin-top: auto; /* 將按鈕推到底部 */
+    text-align: right; /* 按鈕靠右 */
+}
+.modal-event-actions .btn {
+    font-size: 0.9em; /* 縮小按鈕 */
+    padding: 5px 10px;
+}
+
+/* Modal Footer (關閉按鈕) */
+#event-detail-modal .form-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    text-align: right; /* 確保按鈕靠右 */
+    flex-shrink: 0; /* 防止被壓縮 */
+}
