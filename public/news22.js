@@ -1,6 +1,7 @@
-// public/news.js
+// public/news.js (整合新聞列表和行事曆功能)
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM 元素引用 ---
+    // 新聞列表相關
     const newsListContainer = document.getElementById('news-list');
     const paginationControls = document.getElementById('pagination-controls');
     const detailModal = document.getElementById('news-detail-modal');
@@ -9,102 +10,129 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailMeta = document.getElementById('detail-meta');
     const detailBody = document.getElementById('detail-body');
 
-    // --- Banner 相關元素 ---
+    // Banner 相關元素
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
     let bannerSwiper = null;
 
-    // --- 分頁變數 ---
+    // 行事曆相關元素
+    const calendarSection = document.getElementById('calendar-section');
+    const prevMonthBtn = document.getElementById('prev-month-btn');
+    const nextMonthBtn = document.getElementById('next-month-btn');
+    const calendarMonthYear = document.getElementById('calendar-month-year');
+    const calendarGrid = document.getElementById('calendar-grid');
+    const calendarLoading = calendarGrid ? calendarGrid.querySelector('.calendar-loading') : null;
+    const calendarLegend = document.getElementById('calendar-legend');
+    const eventDetailModal = document.getElementById('event-detail-modal');
+    const eventModalTitle = document.getElementById('event-modal-title');
+    const eventModalBody = document.getElementById('event-modal-body');
+
+    // --- 狀態變數 ---
     let currentPage = 1;
     const itemsPerPage = 10;
+    let currentCalendarDate = new Date();
+    let calendarEventsCache = new Map();
+    let categoryColors = {};
 
-    // --- 函數定義 ---
-/**
- * 獲取並顯示隨機的 News 類型輪播圖
- */
-async function fetchAndDisplayBanners() {
-    console.log("[News] Fetching banners for news page");
+    // --- 工具函數 ---
+    const escapeHtml = (unsafe) => {
+        if (unsafe === null || unsafe === undefined) return '';
+        return unsafe.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
 
-    if (!bannerWrapper) {
-        console.warn("Banner wrapper element not found");
-        const carouselElement = document.getElementById('banner-carousel');
-        if (carouselElement) carouselElement.style.display = 'none';
-        return;
+    function formatDateYYYYMMDD(date) {
+        const y = date.getFullYear();
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const d = date.getDate().toString().padStart(2, '0');
+        return `${y}-${m}-${d}`;
     }
 
-    bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
+    // --- Banner 相關函數 ---
+    async function fetchAndDisplayBanners() {
+        console.log("[News] Fetching banners for news page");
 
-    try {
-        // 確保 API 請求指定的是 news 頁面的資料
-        const response = await fetch('/api/banners?page=news'); 
-        console.log("[News] Banner API response status:", response.status);
-
-        if (!response.ok) {
-            let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
-            try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
-            throw new Error(errorText);
+        if (!bannerWrapper) {
+            console.warn("Banner wrapper element not found");
+            const carouselElement = document.getElementById('banner-carousel');
+            if (carouselElement) carouselElement.style.display = 'none';
+            return;
         }
 
-        const banners = await response.json();
-        console.log(`[News] Received ${banners.length} banners for news page`);
+        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
 
-        bannerWrapper.innerHTML = '';
+        try {
+            const response = await fetch('/api/banners?page=news'); 
+            console.log("[News] Banner API response status:", response.status);
 
-        if (banners.length === 0) {
-            console.log("[News] No banners for news page, showing default");
-            const defaultSlide = document.createElement('div');
-            defaultSlide.className = 'swiper-slide';
-            defaultSlide.innerHTML = '<img src="/images/news-default-banner.jpg" alt="最新消息" style="width:100%; height:100%; object-fit:cover;">';
-            bannerWrapper.appendChild(defaultSlide);
-        } else {
-            banners.forEach(banner => {
-                const slide = document.createElement('div');
-                slide.className = 'swiper-slide';
-                if (banner.link_url) {
-                    const link = document.createElement('a');
-                    link.href = banner.link_url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
-                    link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                    slide.appendChild(link);
-                } else {
-                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
-                }
-                bannerWrapper.appendChild(slide);
-            });
-        }
+            if (!response.ok) {
+                let errorText = `獲取輪播圖失敗 (HTTP ${response.status})`;
+                try { const data = await response.json(); errorText += `: ${data.error || response.statusText}`; } catch (e) {}
+                throw new Error(errorText);
+            }
 
-        // 初始化 Swiper
-        if (bannerSwiper) {
-            bannerSwiper.destroy(true, true);
-            bannerSwiper = null;
-        }
+            const banners = await response.json();
+            console.log(`[News] Received ${banners.length} banners for news page`);
 
-        if (bannerWrapper.children.length > 0) {
-            bannerSwiper = new Swiper('#banner-carousel', {
-                loop: banners.length > 1,
-                autoplay: { delay: 8000, disableOnInteraction: false, pauseOnMouseEnter: true },
-                pagination: { el: '.swiper-pagination', clickable: true },
-                navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                slidesPerView: 1,
-                spaceBetween: 0,
-                effect: 'fade',
-                fadeEffect: { crossFade: true }
-            });
-        }
-    } catch (error) {
-        console.error("[News] Banner error:", error);
-        bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
-        const carouselElement = document.getElementById('banner-carousel');
-        if (carouselElement) {
-            const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
-            navElements.forEach(el => el.style.display = 'none');
+            bannerWrapper.innerHTML = '';
+
+            if (banners.length === 0) {
+                console.log("[News] No banners for news page, showing default");
+                const defaultSlide = document.createElement('div');
+                defaultSlide.className = 'swiper-slide';
+                defaultSlide.innerHTML = '<img src="/images/news-default-banner.jpg" alt="最新消息" style="width:100%; height:100%; object-fit:cover;">';
+                bannerWrapper.appendChild(defaultSlide);
+            } else {
+                banners.forEach(banner => {
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+                    if (banner.link_url) {
+                        const link = document.createElement('a');
+                        link.href = banner.link_url;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
+                        slide.appendChild(link);
+                    } else {
+                        slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || '最新消息輪播圖'}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    bannerWrapper.appendChild(slide);
+                });
+            }
+
+            // 初始化 Swiper
+            if (bannerSwiper) {
+                bannerSwiper.destroy(true, true);
+                bannerSwiper = null;
+            }
+
+            if (bannerWrapper.children.length > 0) {
+                bannerSwiper = new Swiper('#banner-carousel', {
+                    loop: banners.length > 1,
+                    autoplay: { delay: 8000, disableOnInteraction: false, pauseOnMouseEnter: true },
+                    pagination: { el: '.swiper-pagination', clickable: true },
+                    navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                    slidesPerView: 1,
+                    spaceBetween: 0,
+                    effect: 'fade',
+                    fadeEffect: { crossFade: true }
+                });
+            }
+        } catch (error) {
+            console.error("[News] Banner error:", error);
+            bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
+            const carouselElement = document.getElementById('banner-carousel');
+            if (carouselElement) {
+                const navElements = carouselElement.querySelectorAll('.swiper-button-next, .swiper-button-prev, .swiper-pagination');
+                navElements.forEach(el => el.style.display = 'none');
+            }
         }
     }
-}
 
-    /**
-     * 獲取並顯示指定頁數的消息
-     */
+    // --- 新聞列表相關函數 ---
     async function fetchNews(page = 1) {
         console.log(`[News] Fetching news page ${page}`);
         if (!newsListContainer || !paginationControls) { console.error("Missing required elements"); return; }
@@ -128,9 +156,6 @@ async function fetchAndDisplayBanners() {
         }
     }
 
-    /**
-     * 渲染消息列表
-     */
     function displayNews(newsList) {
         if (!newsListContainer) return;
         newsListContainer.innerHTML = '';
@@ -186,9 +211,6 @@ async function fetchAndDisplayBanners() {
         });
     }
 
-    /**
-     * 渲染分頁控制按鈕
-     */
     function renderPagination(totalPages, currentPage) {
         if (!paginationControls || totalPages <= 1) return;
         paginationControls.innerHTML = '';
@@ -209,9 +231,6 @@ async function fetchAndDisplayBanners() {
         paginationControls.appendChild(createButton(currentPage + 1, '下一頁', false, currentPage === totalPages));
     }
 
-    /**
-     * 打開並填充消息詳情 Modal
-     */
     async function openNewsDetailModal(newsId) {
         if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) { 
             console.error("Missing modal elements"); 
@@ -248,18 +267,12 @@ async function fetchAndDisplayBanners() {
             metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString('zh-TW')}`;
             detailMeta.textContent = metaText;
     
-            // --- 修改這裡：處理內文中的網址轉換為連結 ---
             if (newsItem.content) {
-                // 1. 先將換行符 (\n) 替換成 <br>
                 let formattedContent = newsItem.content.replace(/\n/g, '<br>');
-                
-                // 2. 使用正則表達式將網址轉換為 <a> 標籤
                 formattedContent = formattedContent.replace(
                     /(https?:\/\/[^\s]+)/g, 
                     '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
                 );
-                
-                // 3. 使用 innerHTML 安全地插入處理後的內容
                 detailBody.innerHTML = formattedContent;
             } else {
                 detailBody.textContent = '沒有詳細內容。';
@@ -271,9 +284,7 @@ async function fetchAndDisplayBanners() {
             detailBody.textContent = error.message;
         }
     }
-    /**
-     * 處理按讚請求
-     */
+
     async function likeNews(newsId, likeButtonElement, countElement) {
         const isLiked = likeButtonElement.classList.contains('liked');
         const currentCount = parseInt(countElement.textContent) || 0;
@@ -297,27 +308,227 @@ async function fetchAndDisplayBanners() {
         }
     }
 
+    // --- 行事曆相關函數 ---
+    function updateCalendarDisplay(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        if(calendarMonthYear) calendarMonthYear.textContent = `${year} 年 ${month + 1} 月`;
+        generateCalendarGrid(year, month);
+        fetchAndMarkCalendarEvents(year, month + 1);
+    }
+
+    function generateCalendarGrid(year, month) {
+        if (!calendarGrid) return;
+        calendarGrid.innerHTML = '';
+
+        const firstDayOfMonth = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const startingDayOfWeek = firstDayOfMonth.getDay();
+
+        const today = new Date();
+        const todayString = formatDateYYYYMMDD(today);
+
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'calendar-day empty';
+            calendarGrid.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayCell = document.createElement('div');
+            dayCell.className = 'calendar-day';
+            const currentDate = new Date(year, month, day);
+            const dateString = formatDateYYYYMMDD(currentDate);
+            dayCell.dataset.date = dateString;
+
+            const dayNumberSpan = document.createElement('span');
+            dayNumberSpan.className = 'day-number';
+            dayNumberSpan.textContent = day;
+            dayCell.appendChild(dayNumberSpan);
+
+            if (dateString === todayString) {
+                dayCell.classList.add('today');
+            }
+
+            const markersContainer = document.createElement('div');
+            markersContainer.className = 'event-markers';
+            dayCell.appendChild(markersContainer);
+
+            calendarGrid.appendChild(dayCell);
+        }
+
+        const totalCells = startingDayOfWeek + daysInMonth;
+        const remainingCells = (7 - (totalCells % 7)) % 7;
+        for (let i = 0; i < remainingCells; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'calendar-day empty';
+            calendarGrid.appendChild(emptyCell);
+        }
+    }
+
+    async function fetchAndMarkCalendarEvents(year, month) {
+        const cacheKey = `${year}-${month.toString().padStart(2, '0')}`;
+        console.log(`[Calendar] Fetching events for ${cacheKey}`);
+
+        if (calendarEventsCache.has(cacheKey)) {
+            console.log(`[Calendar] Using cached events for ${cacheKey}`);
+            markCalendarDates(calendarEventsCache.get(cacheKey));
+            return;
+        }
+
+        if(calendarLoading) calendarLoading.style.display = 'block';
+
+        try {
+            const response = await fetch(`/api/news/calendar?year=${year}&month=${month}`);
+            if (!response.ok) throw new Error(`獲取行事曆事件失敗 (HTTP ${response.status})`);
+            const events = await response.json();
+            console.log(`[Calendar] Fetched ${events.length} events for ${cacheKey}`);
+            calendarEventsCache.set(cacheKey, events);
+            markCalendarDates(events);
+        } catch (error) {
+            console.error("[Calendar] Fetch events error:", error);
+        } finally {
+            if(calendarLoading) calendarLoading.style.display = 'none';
+        }
+    }
+
+    function markCalendarDates(events) {
+        if (!calendarGrid || !events) return;
+
+        calendarGrid.querySelectorAll('.calendar-day.has-event').forEach(cell => {
+            cell.classList.remove('has-event');
+            const markers = cell.querySelector('.event-markers');
+            if (markers) markers.innerHTML = '';
+            cell.onclick = null;
+        });
+
+        const eventsByDate = {};
+        events.forEach(event => {
+            if (!eventsByDate[event.date]) {
+                eventsByDate[event.date] = [];
+            }
+            eventsByDate[event.date].push(event);
+        });
+
+        for (const dateString in eventsByDate) {
+            const dayCell = calendarGrid.querySelector(`.calendar-day[data-date="${dateString}"]`);
+            if (dayCell) {
+                dayCell.classList.add('has-event');
+                const markersContainer = dayCell.querySelector('.event-markers');
+                if (markersContainer) {
+                    eventsByDate[dateString].forEach(event => {
+                        const marker = document.createElement('span');
+                        marker.className = 'event-marker';
+                        if (event.category) {
+                            const categoryClass = `category-${event.category.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`;
+                            marker.classList.add(categoryClass);
+                            marker.title = event.category;
+                        }
+                        markersContainer.appendChild(marker);
+                    });
+                }
+                dayCell.onclick = () => openEventModal(dateString, eventsByDate[dateString]);
+            }
+        }
+        renderCalendarLegend(events);
+    }
+
+    function renderCalendarLegend(events) {
+        if (!calendarLegend) return;
+        const uniqueCategories = [...new Set(events.map(e => e.category).filter(Boolean))];
+        if (uniqueCategories.length === 0) {
+            calendarLegend.innerHTML = '';
+            return;
+        }
+        let legendHTML = '圖例: ';
+        uniqueCategories.forEach(category => {
+             const categoryClass = `category-${category.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')}`;
+             legendHTML += `<span style="display: inline-flex; align-items: center; margin-right: 10px;"><span class="event-marker ${categoryClass}" style="margin-right: 4px;"></span>${escapeHtml(category)}</span>`;
+        });
+        calendarLegend.innerHTML = legendHTML;
+    }
+
+    function openEventModal(dateString, events) {
+        if (!eventDetailModal || !eventModalTitle || !eventModalBody) return;
+
+        const dateObj = new Date(dateString + 'T00:00:00');
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        eventModalTitle.textContent = `${dateObj.toLocaleDateString('zh-TW', options)} 活動`;
+
+        eventModalBody.innerHTML = '';
+
+        if (!events || events.length === 0) {
+            eventModalBody.innerHTML = '<p>這天沒有特別活動。</p>';
+        } else {
+            events.forEach(event => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'modal-event-item';
+                itemDiv.innerHTML = `
+                    <div class="modal-event-content">
+                        <img src="${event.thumbnail_url || '/images/placeholder.png'}" alt="${escapeHtml(event.title || '事件縮圖')}" class="modal-event-thumbnail">
+                        <div class="modal-event-text">
+                            ${event.category ? `<span class="modal-event-category">[${escapeHtml(event.category)}]</span>` : ''}
+                            <h4 class="modal-event-title">${escapeHtml(event.title || '無標題')}</h4>
+                            <p class="modal-event-summary">${escapeHtml(event.summary || '')}</p>
+                        </div>
+                    </div>
+                    <div class="modal-event-actions">
+                        <button class="btn btn-primary btn-sm" onclick="window.location.href='/news/${event.id}'">查看詳情</button>
+                    </div>
+                `;
+                eventModalBody.appendChild(itemDiv);
+            });
+        }
+        eventDetailModal.style.display = 'flex';
+    }
+
+    function handleBackgroundClick(event) {
+        if (event.target === eventDetailModal || event.target === detailModal) {
+            closeModal(event.target);
+        }
+    }
+
+    function closeModal(modalElement) {
+        if (modalElement) modalElement.style.display = 'none';
+    }
+
+    // --- 事件監聽器 ---
+    if (prevMonthBtn) {
+        prevMonthBtn.addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            updateCalendarDisplay(currentCalendarDate);
+        });
+    }
+    if (nextMonthBtn) {
+        nextMonthBtn.addEventListener('click', () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            updateCalendarDisplay(currentCalendarDate);
+        });
+    }
+
+    if(eventDetailModal) {
+        const allCloseBtns = eventDetailModal.querySelectorAll('.close-btn, .close-modal-btn');
+        allCloseBtns.forEach(btn => {
+             btn.addEventListener('click', () => closeModal(eventDetailModal));
+        });
+         eventDetailModal.addEventListener('click', handleBackgroundClick);
+    }
+
     // --- 全局函數 ---
-    window.closeNewsDetailModal = function() { if (detailModal) { detailModal.style.display = 'none'; } };
-    window.onclick = function(event) { if (event.target === detailModal) { closeNewsDetailModal(); } };
+    window.closeNewsDetailModal = function() { closeModal(detailModal); };
+    window.onclick = function(event) { handleBackgroundClick(event); };
 
     // --- 頁面初始化 ---
-// 頁面初始化
-
-
-
-
-
-async function initializePage() {
-    console.log("[News] Initializing page");
-    try {
-        await Promise.all([ fetchAndDisplayBanners(), fetchNews(1) ]);  // 同時初始化輪播圖與新聞
-        console.log("[News] Page initialized");
-    } catch (error) { 
-        console.error("[News] Initialization error:", error); 
+    async function initializePage() {
+        console.log("[News] Initializing page");
+        try {
+            await Promise.all([fetchAndDisplayBanners(), fetchNews(1)]);
+            updateCalendarDisplay(currentCalendarDate);
+            console.log("[News] Page initialized");
+        } catch (error) { 
+            console.error("[News] Initialization error:", error); 
+        }
     }
-}
 
-initializePage();
-
+    initializePage();
 });
