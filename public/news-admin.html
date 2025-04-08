@@ -13,28 +13,12 @@
         #news-list-table th, #news-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* 修改 ID */
         #news-list-table th { background-color: #e9ecef; } /* 修改 ID */
         /* 列寬調整 */
-       /* --- 調整後的 12 欄寬度建議 (總和 100%) --- */
-#news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 4%; }    /* ID (減少 1%) */
-#news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 18%; }   /* 標題 */
-#news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 9%; }    /* 活動日期 (減少 1%) */
-#news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 11%; }   /* 摘要 (減少 1%) */
-#news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 7%; text-align: center; }    /* 縮圖 (減少 1%) */
-#news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 7%; text-align: center; }    /* 主圖 (減少 1%) */
-#news-list-table th:nth-child(7), #news-list-table td:nth-child(7) { width: 5%; text-align: center; }    /* 讚數 (減少 1%) */
-#news-list-table th:nth-child(8), #news-list-table td:nth-child(8) { width: 8%; }    /* 分類 */
-#news-list-table th:nth-child(9), #news-list-table td:nth-child(9) { width: 7%; text-align: center; }    /* 顯示於行事曆 */
- 
-#news-list-table th:nth-child(10), #news-list-table td:nth-child(10) { width: 18%; text-align: center; } /* 操作 (減少 4%) */
-
-/* 可選：如果標題或摘要內容較長，確保換行和省略號生效 */
-#news-list-table td { 
-    white-space: nowrap; /* 保持不換行 */
-    overflow: hidden;    /* 隱藏溢出內容 */
-    text-overflow: ellipsis; /* 顯示省略號 */
-    vertical-align: middle; /* 垂直居中 (可選) */
-}
-/* 對於需要顯示完整內容的欄位(如果有的話)，可以單獨覆蓋 white-space */
-/* 例如: #news-list-table td:nth-child(4) { white-space: normal; } */
+        #news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 8%; }  /* ID */
+        #news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 30%; } /* 標題 */
+        #news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 15%; } /* 活動日期 */
+        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 12%; text-align: center;} /* 縮圖 */
+        #news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 15%; } /* 更新時間 */
+        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
 
         .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;}
         .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
@@ -75,7 +59,7 @@
     <div class="admin-container">
         <h1>消息管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button id="add-news-btn" class="add-news-btn">新增消息</button>
+        <button class="add-news-btn" onclick="showAddNewsForm()">新增消息</button>
         <!-- ... rest of the content ... -->
     </div>
     <small>若要連結到特定消息，請使用格式： /news/[消息ID] (例如: /news/4)。請到「消息管理」頁面查看 ID。</small>
@@ -88,13 +72,8 @@
                         <th>ID</th>
                         <th>標題</th>
                         <th>活動日期</th>
-                        <th>摘要</th>
-                        <th>縮圖</th>
-                        <th>主要圖片</th>
-                        <th>讚數</th>
-                        <th>分類</th>           <!-- <<< 新增 -->
-                        <th>行事曆</th> <!-- <<< 新增 -->
-                         
+                        <th>縮圖預覽</th>
+                        <th>更新時間</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -111,26 +90,6 @@
             <span class="close-btn" onclick="closeAddNewsModal()">×</span> <!-- 修改 onclick -->
             <h2>新增消息</h2> <!-- 修改標題 -->
             <form id="add-news-form"> <!-- 修改 ID -->
-                <div class="form-group">
-                    <label for="add-news-category">分類 (例如: 演唱會, Vlog, 公告):</label>
-                    <input type="text" id="add-news-category" name="category" list="add-category-suggestions" placeholder="輸入或點擊下方標籤選擇分類">
-                    <datalist id="add-category-suggestions">
-                        <!-- 選項會由 JS 動態載入 -->
-                    </datalist>
-                    <div id="add-common-categories" style="margin-top: 8px;">
-                        <span style="font-size: 0.9em; color: #555;">常用分類: </span>
-                        <span id="add-category-tags-loading" style="font-style: italic; color: #888;">載入中...</span>
-                        <!-- 分類標籤將由 JS 動態插入這裡 -->
-                    </div>
-                    <small>留空表示不分類。</small>
-                </div>
-                <!-- 新增顯示於行事曆勾選框 (Add Modal) -->
-<div class="form-group">
-    <input type="checkbox" id="add-news-show-in-calendar" name="show_in_calendar" value="true" style="width: auto; margin-right: 5px;">
-    <label for="add-news-show-in-calendar" style="display: inline; font-weight: normal;">在最新消息頁的行事曆上顯示此項目</label>
-    <small style="display: block;">(需要設定有效的「活動日期」才會實際顯示)</small>
-</div>
-                
                 <div class="form-group"> <label for="add-news-title">標題:</label> <input type="text" id="add-news-title" name="title" required> </div>
                 <div class="form-group"> <label for="add-news-event-date">活動日期 (可選):</label> <input type="date" id="add-news-event-date" name="event_date"> </div>
                 <div class="form-group"> <label for="add-news-summary">簡述 (列表顯示):</label> <textarea id="add-news-summary" name="summary" rows="3"></textarea> </div>
@@ -139,18 +98,10 @@
                 <div class="form-group"> <label for="add-news-image-url">大圖路徑 (彈窗用):</label> <input type="text" id="add-news-image-url" name="image_url" placeholder="例如: /images/news_large.jpg"> </div>
                 <!-- Like Count 由後端管理，不在這裡新增 -->
                 <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddNewsModal()">取消</button> </div>
-                
-                
                 <p id="add-news-form-error"></p> <!-- 修改 ID -->
             </form>
         </div>
     </div>
-
-    <div id="news-debug-info" style="margin-top: 20px; padding: 15px; background-color: #eee; border: 1px solid #ccc; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
-        <h3>原始數據檢查 (列表下方):</h3>
-        <p>這裡將顯示從 API 獲取的每條新聞的 ID、分類和行事曆顯示狀態...</p>
-    </div>
-
 
     <!-- Edit News Modal -->
     <div id="edit-news-modal" class="modal"> <!-- 修改 ID -->
@@ -159,27 +110,6 @@
             <h2>編輯消息</h2> <!-- 修改標題 -->
             <form id="edit-news-form"> <!-- 修改 ID -->
                 <input type="hidden" id="edit-news-id">
-                <!-- 新增分類欄位 (Edit Modal) -->
-<div class="form-group">
-    <label for="edit-news-category">分類 (例如: 演唱會, Vlog, 公告):</label>
-    <input type="text" id="edit-news-category" name="category" list="edit-category-suggestions" placeholder="輸入或點擊下方標籤選擇分類">
-    <datalist id="edit-category-suggestions">
-        <!-- 選項會由 JS 動態載入 -->
-    </datalist>
-    <div id="edit-common-categories" style="margin-top: 8px;">
-        <span style="font-size: 0.9em; color: #555;">常用分類: </span>
-        <span id="edit-category-tags-loading" style="font-style: italic; color: #888;">載入中...</span>
-        <!-- 分類標籤將由 JS 動態插入這裡 -->
-    </div>
-    <small>留空表示不分類。</small>
-</div> 
-
-<!-- 新增顯示於行事曆勾選框 (Edit Modal) -->
-<div class="form-group">
-    <input type="checkbox" id="edit-news-show-in-calendar" name="show_in_calendar" value="true" style="width: auto; margin-right: 5px;">
-    <label for="edit-news-show-in-calendar" style="display: inline; font-weight: normal;">在最新消息頁的行事曆上顯示此項目</label>
-    <small style="display: block;">(需要設定有效的「活動日期」才會實際顯示)</small>
-</div>
                 <div class="form-group"> <label for="edit-news-title">標題:</label> <input type="text" id="edit-news-title" name="title" required> </div>
                 <div class="form-group"> <label for="edit-news-event-date">活動日期 (可選):</label> <input type="date" id="edit-news-event-date" name="event_date"> </div>
                 <div class="form-group"> <label for="edit-news-summary">簡述 (列表顯示):</label> <textarea id="edit-news-summary" name="summary" rows="3"></textarea> </div>
@@ -192,7 +122,6 @@
             </form>
         </div>
     </div>
-
 
     <script src="news-admin.js"></script> <!-- 修改 JS 文件名 -->
 </body>

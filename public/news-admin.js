@@ -186,4 +186,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Load ---
     fetchAndDisplayNews(); // *** 修改調用函數 ***
 
-}); // End of DOMContentLoaded
+}); // End of DOMContentLoaded 
