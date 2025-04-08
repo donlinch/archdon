@@ -138,19 +138,34 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
             newsList.forEach(newsItem => {
                 const row = document.createElement('tr');
                 row.dataset.newsId = newsItem.id;
-                // *** 使用 textContent 或輔助函數防止 XSS ***
+                // 使用輔助函數防止 XSS
                 const escapeHtml = (unsafe) => {
                      if (unsafe === null || unsafe === undefined) return '';
-                     return unsafe.toString().replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, '"').replace(/'/g, "'");
+                     // 修正：確保替換順序正確，先替換 &
+                     return unsafe.toString()
+                     .replace(/&/g, '&amp;')
+        
+                     // < 轉成 & l t ;
+                     .replace(/</g, '&lt;')
+             
+                     // > 轉成 & g t ;
+                     .replace(/>/g, '&gt;')
+             
+                     // " 轉成 & q u o t ;
+                     .replace(/"/g, '&quot;')
+             
+                     // ' 轉成 & # 3 9 ;  (數字實體)
+                     .replace(/'/g, '&#39;');
                 };
 
+                // 確保所有 12 個欄位都正確生成
                 row.innerHTML = `
                     <td>${newsItem.id}</td>
                     <td>${escapeHtml(newsItem.title || '')}</td>
-                    <td>${newsItem.event_date ? new Date(newsItem.event_date).toLocaleDateString() : '-'}</td>
-                    <td>${escapeHtml(newsItem.summary ? newsItem.summary.substring(0, 30) + (newsItem.summary.length > 30 ? '...' : '') : '')}</td>
-                    <td><img src="${newsItem.thumbnail_url || '/images/placeholder.png'}" alt="縮圖" style="width: 50px; height: auto; border: 1px solid #eee; object-fit: contain;"></td>
-                    <td><img src="${newsItem.image_url || '/images/placeholder.png'}" alt="主圖" style="width: 50px; height: auto; border: 1px solid #eee; object-fit: contain;"></td>
+                    <td>${newsItem.event_date ? new Date(newsItem.event_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</td>
+                    <td>${escapeHtml(newsItem.summary ? newsItem.summary.substring(0, 20) + (newsItem.summary.length > 20 ? '...' : '') : '')}</td>
+                    <td><img src="${newsItem.thumbnail_url || '/images/placeholder.png'}" alt="縮圖" style="width: 50px; height: auto; border: 1px solid #eee; object-fit: contain; vertical-align: middle;"></td>
+                    <td><img src="${newsItem.image_url || '/images/placeholder.png'}" alt="主圖" style="width: 50px; height: auto; border: 1px solid #eee; object-fit: contain; vertical-align: middle;"></td>
                     <td>${newsItem.like_count || 0}</td>
                     <td>${escapeHtml(newsItem.category || '-')}</td>
                     <td>${newsItem.show_in_calendar ? '是' : '否'}</td>
@@ -164,8 +179,13 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
                 newsListBody.appendChild(row);
             });
 
+            // (如果沒有新聞) 更新 Colspan
+            if (!newsList || newsList.length === 0) {
+                newsListBody.innerHTML = `<tr><td colspan="12">目前沒有消息。</td></tr>`; // <<< Colspan 應為 12
+            }
+
              // 在渲染完表格後，為按鈕添加事件監聽器 (使用事件委派)
-             addTableButtonListeners();
+             addTableButtonListeners(); // 確保這行在 forEach 之後
 
         } catch (error) {
             console.error("獲取管理消息列表失敗:", error);
