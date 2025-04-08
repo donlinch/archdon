@@ -204,9 +204,7 @@ function handleBackgroundClick(event) {
                     <td>${newsItem.like_count || 0}</td>
                     <td>${escapeHtml(newsItem.category || '-')}</td>
                     <td>${newsItem.show_in_calendar ? '是' : '否'}</td>
-                    <td>${newsItem.created_at ? new Date(newsItem.created_at).toLocaleString('zh-TW', { hour12: false }) : '-'}</td>
-                    <td>${newsItem.updated_at ? new Date(newsItem.updated_at).toLocaleString('zh-TW', { hour12: false }) : '-'}</td>
-                    <td class="actions">
+                     <td class="actions">
                         <button class="btn btn-warning btn-sm edit-news-btn" data-id="${newsItem.id}">編輯</button>
                         <button class="btn btn-danger btn-sm delete-news-btn" data-id="${newsItem.id}">刪除</button>
                     </td>
@@ -278,8 +276,9 @@ function handleBackgroundClick(event) {
         editNewsContent.value = newsItem.content || '';
         editNewsThumbnailUrl.value = newsItem.thumbnail_url || '';
         editNewsImageUrl.value = newsItem.image_url || '';
+        console.log('分類預設值：', newsItem.category);
         editNewsCategoryInput.value = newsItem.category || '';
-        editNewsShowInCalendar.checked = newsItem.show_in_calendar || false;
+                editNewsShowInCalendar.checked = (newsItem.show_in_calendar === true || newsItem.show_in_calendar === 'true');
 
         // 處理預覽圖
         if (editNewsThumbnailPreview) {
