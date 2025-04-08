@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 創建新的 Swiper 實例
             bannerSwiper = new Swiper('#banner-carousel', {
                 // Optional parameters
-              //  direction: 'horizontal', // 水平輪播
+               direction: 'horizontal', // 水平輪播
                 loop: banners.length > 1, // 只有一張以上圖片時才循環
                 autoplay: {
                     delay: 12000, // 自動播放間隔 (毫秒)

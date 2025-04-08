@@ -116,6 +116,89 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- 公開 API Routes ---
 
 
+
+
+
+
+// GET /api/news/categories - 獲取所有新聞分類 (公開)
+app.get('/api/news/categories', async (req, res) => {
+    console.log("[Public API] GET /api/news/categories requested");
+    try {
+        const result = await pool.query(
+            `SELECT DISTINCT category
+             FROM news
+             WHERE category IS NOT NULL AND category <> ''
+             ORDER BY category ASC`
+        );
+        const categories = result.rows.map(row => row.category);
+        console.log(`[Public API] Found categories:`, categories);
+        res.status(200).json(categories); // 返回分類名稱的陣列
+    } catch (err) {
+        console.error('[Public API Error] 獲取新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
+    }
+});
+
+
+
+
+// GET /api/news/calendar - 獲取行事曆事件 (修改後，公開)
+app.get('/api/news/calendar', async (req, res) => {
+    const year = parseInt(req.query.year);
+    const month = parseInt(req.query.month);
+
+    console.log(`[Public API] GET /api/news/calendar requested for ${year}-${month}`);
+
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+        return res.status(400).json({ error: '請提供有效的年份和月份。' });
+    }
+
+    try {
+        // 修改 SQL 查詢以包含 show_in_calendar=TRUE 並選擇需要的欄位
+        const queryText = `
+            SELECT
+                id,
+                title,
+                event_date,
+                category,
+                summary,
+                thumbnail_url
+            FROM news
+            WHERE
+                EXTRACT(YEAR FROM event_date) = $1 AND
+                EXTRACT(MONTH FROM event_date) = $2 AND
+                event_date IS NOT NULL AND
+                show_in_calendar = TRUE -- 關鍵過濾條件
+            ORDER BY event_date ASC, id ASC;
+        `;
+        const result = await pool.query(queryText, [year, month]);
+
+        // 將 event_date 格式化為 YYYY-MM-DD
+        const events = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            date: row.event_date.toISOString().split('T')[0], // 只取日期部分
+            category: row.category,
+            summary: row.summary,
+            thumbnail_url: row.thumbnail_url
+        }));
+
+        console.log(`[Public API] Found ${events.length} calendar events for ${year}-${month}`);
+        res.status(200).json(events); // 返回事件陣列
+
+    } catch (err) {
+        console.error(`[Public API Error] 獲取 ${year}-${month} 行事曆事件時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取行事曆事件' });
+    }
+});
+
+
+
+
+
+
+
+
 // --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
 
 // GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
@@ -965,19 +1048,20 @@ adminRouter.get('/news/:id', async (req, res) => {
     }
 });
 
+
+
+
+
+
 // POST /api/admin/news - 新增消息
 adminRouter.post('/news', async (req, res) => {
-    console.log("[受保護 API] POST /api/admin/news 請求，內容:", req.body);
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    // 基本驗證
-    if (!title || title.trim() === '') {
-        return res.status(400).json({ error: '消息標題為必填項。' });
-    }
+    const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
+    const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
+
     try {
-        // like_count 由資料庫預設或觸發器處理，不需要在這裡插入
         const result = await pool.query(
-            `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
              RETURNING *`, // 返回插入的完整記錄
             [
                 title.trim(),
@@ -985,11 +1069,13 @@ adminRouter.post('/news', async (req, res) => {
                 summary ? summary.trim() : null,
                 content ? content.trim() : null,
                 thumbnail_url ? thumbnail_url.trim() : null,
-                image_url ? image_url.trim() : null
+                image_url ? image_url.trim() : null,
+                category ? category.trim() : null, // 如果 category 為空字串，存 null
+                showInCalendarValue                 // 存儲處理後的布林值
             ]
         );
         console.log("[受保護 API] 消息已新增:", result.rows[0]);
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(result.rows[0]); // 返回的數據會包含新欄位
     } catch (err) {
         console.error('[受保護 API 錯誤] 新增消息時出錯:', err.stack || err);
         res.status(500).json({ error: '新增消息過程中發生伺服器內部錯誤。' });
@@ -998,43 +1084,45 @@ adminRouter.post('/news', async (req, res) => {
 
 // PUT /api/admin/news/:id - 更新消息
 adminRouter.put('/news/:id', async (req, res) => {
+
     const { id } = req.params;
-    console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
     const newsId = parseInt(id);
-    if (isNaN(newsId)) {
-        return res.status(400).json({ error: '無效的消息 ID 格式。' });
+    const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
+    console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
+
+   // 處理布林值
+   const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
+
+   try {
+       const result = await pool.query(
+           // --- *** 這裡使用 UPDATE 語句 *** ---
+           `UPDATE news
+           SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, category = $7, show_in_calendar = $8, updated_at = NOW()
+           WHERE id = $9
+           RETURNING *`, // 返回更新後的完整記錄
+          // --- *** 參數列表保持一致 *** ---
+           [
+               title.trim(),
+               event_date || null,
+               summary ? summary.trim() : null,
+               content ? content.trim() : null,
+               thumbnail_url ? thumbnail_url.trim() : null,
+               image_url ? image_url.trim() : null,
+               category ? category.trim() : null,
+               showInCalendarValue,
+               newsId
+           ]
+       );
+       if (result.rowCount === 0) {
+        console.warn(`[受保護 API] 更新消息失敗，找不到 ID ${id}`);
+        return res.status(404).json({ error: '找不到要更新的消息。' });
     }
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    // 基本驗證
-    if (!title || title.trim() === '') {
-        return res.status(400).json({ error: '消息標題為必填項。' });
-    }
-    try {
-        const result = await pool.query(
-            `UPDATE news
-             SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW()
-             WHERE id = $7
-             RETURNING *`, // 返回更新後的完整記錄
-            [
-                title.trim(),
-                event_date || null,
-                summary ? summary.trim() : null,
-                content ? content.trim() : null,
-                thumbnail_url ? thumbnail_url.trim() : null,
-                image_url ? image_url.trim() : null,
-                newsId
-            ]
-        );
-        if (result.rowCount === 0) {
-            console.warn(`[受保護 API] 更新消息失敗，找不到 ID ${id}`);
-            return res.status(404).json({ error: '找不到要更新的消息。' });
-        }
-        console.log(`[受保護 API] 消息 ID ${id} 已更新:`, result.rows[0]);
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '更新消息過程中發生伺服器內部錯誤。' });
-    }
+    console.log(`[受保護 API] 消息 ID ${id} 已更新:`, result.rows[0]);
+    res.status(200).json(result.rows[0]); // 返回的數據會包含新欄位
+} catch (err) {
+    console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
+    res.status(500).json({ error: '更新消息過程中發生伺服器內部錯誤。' });
+}
 });
 
 // DELETE /api/admin/news/:id - 刪除消息
