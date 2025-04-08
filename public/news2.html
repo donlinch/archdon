@@ -309,6 +309,40 @@
             <a href="/guestbook.html" >留言板</a>
 </nav>
 
+
+
+
+
+        <!-- <<< 在分類導覽下方新增 >>> -->
+        <section id="calendar-section" style="margin-bottom: 2rem; background-color: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <button id="prev-month-btn" class="btn btn-outline-secondary btn-sm">< 上個月</button>
+                <h2 id="calendar-month-year" style="margin: 0; font-size: 1.4em;"></h2>
+                <button id="next-month-btn" class="btn btn-outline-secondary btn-sm">下個月 ></button>
+            </div>
+            <div class="calendar-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; margin-bottom: 0.5rem; font-size: 0.9em; color: #555;">
+                <span>日</span>
+                <span>一</span>
+                <span>二</span>
+                <span>三</span>
+                <span>四</span>
+                <span>五</span>
+                <span>六</span>
+            </div>
+            <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+                <!-- 日期格子將由 JS 生成 -->
+                <div class="calendar-loading" style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #888;">正在載入行事曆...</div>
+            </div>
+             <!-- (可選) 圖例說明 -->
+             <div id="calendar-legend" style="margin-top: 1rem; font-size: 0.8em; text-align: center; color: #666;">
+                 <!-- 圖例內容可由 JS 生成 -->
+             </div>
+        </section>
+        <!-- <<< 新增結束 >>> -->
+
+
+
+
 <div class="news-list" id="news-list">
     <p>正在加載最新消息...</p>
 </div>
@@ -351,32 +385,6 @@
 
 
 
-        <!-- <<< 在分類導覽下方新增 >>> -->
-        <section id="calendar-section" style="margin-bottom: 2rem; background-color: #fff; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <button id="prev-month-btn" class="btn btn-outline-secondary btn-sm">< 上個月</button>
-                <h2 id="calendar-month-year" style="margin: 0; font-size: 1.4em;"></h2>
-                <button id="next-month-btn" class="btn btn-outline-secondary btn-sm">下個月 ></button>
-            </div>
-            <div class="calendar-weekdays" style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; margin-bottom: 0.5rem; font-size: 0.9em; color: #555;">
-                <span>日</span>
-                <span>一</span>
-                <span>二</span>
-                <span>三</span>
-                <span>四</span>
-                <span>五</span>
-                <span>六</span>
-            </div>
-            <div id="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
-                <!-- 日期格子將由 JS 生成 -->
-                <div class="calendar-loading" style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #888;">正在載入行事曆...</div>
-            </div>
-             <!-- (可選) 圖例說明 -->
-             <div id="calendar-legend" style="margin-top: 1rem; font-size: 0.8em; text-align: center; color: #666;">
-                 <!-- 圖例內容可由 JS 生成 -->
-             </div>
-        </section>
-        <!-- <<< 新增結束 >>> -->
 
         <!-- 原有的新聞列表容器 -->
         <div class="news-list" id="news-list">
