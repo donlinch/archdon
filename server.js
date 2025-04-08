@@ -1009,8 +1009,8 @@ adminRouter.get('/news', async (req, res) => {
         // 後台需要看到所有消息，包含所有欄位，以便編輯
         // 按更新時間排序，最新的在前面
         const result = await pool.query(
-            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, created_at, updated_at
-             FROM news
+            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url,  like_count, created_at, updated_at, category, show_in_calendar
+     FROM news
              ORDER BY updated_at DESC, id DESC`
         );
         console.log(`[受保護 API] 查詢到 ${result.rowCount} 筆消息`);
@@ -1056,7 +1056,7 @@ adminRouter.get('/news/:id', async (req, res) => {
 // POST /api/admin/news - 新增消息
 adminRouter.post('/news', async (req, res) => {
     const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-    const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
+        const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
 
     try {
         const result = await pool.query(
@@ -1090,7 +1090,7 @@ adminRouter.put('/news/:id', async (req, res) => {
     console.log(`[API PUT /news/${id}] 收到的 req.body:`, req.body); // <-- 添加檢查
 
     const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-    console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
+        console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
 
    // 處理布林值
 
