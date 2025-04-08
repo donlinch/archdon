@@ -59,7 +59,7 @@
     <div class="admin-container">
         <h1>消息管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button class="add-news-btn" onclick="showAddNewsForm()">新增消息</button>
+        <button id="add-news-btn" class="add-news-btn">新增消息</button>
         <!-- ... rest of the content ... -->
     </div>
     <small>若要連結到特定消息，請使用格式： /news/[消息ID] (例如: /news/4)。請到「消息管理」頁面查看 ID。</small>
@@ -151,7 +151,7 @@
         <!-- 分類標籤將由 JS 動態插入這裡 -->
     </div>
     <small>留空表示不分類。</small>
-</div>
+</div> 
 
 <!-- 新增顯示於行事曆勾選框 (Edit Modal) -->
 <div class="form-group">

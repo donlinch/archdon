@@ -1,5 +1,5 @@
-// public/news-admin.js (整合後完整版)
-document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化移至 DOMContentLoaded
+// public/news-admin.js (整合後完整版 v2 - 匹配最新 HTML)
+document.addEventListener('DOMContentLoaded', async () => {
     // --- DOM Element References ---
     const newsListBody = document.querySelector('#news-list-table tbody');
     const newsListContainer = document.getElementById('news-list-container');
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
     // --- Edit Modal elements ---
     const editModal = document.getElementById('edit-news-modal');
     const editForm = document.getElementById('edit-news-form');
-    const editNewsIdInput = document.getElementById('edit-news-id'); // 假設 Edit Modal 儲存 ID 的隱藏 input
+    const editNewsIdInput = document.getElementById('edit-news-id');
     const editNewsTitle = document.getElementById('edit-news-title');
     const editNewsEventDate = document.getElementById('edit-news-event-date');
     const editNewsSummary = document.getElementById('edit-news-summary');
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
     const addNewsSummary = document.getElementById('add-news-summary');
     const addNewsContent = document.getElementById('add-news-content');
     const addNewsThumbnailUrl = document.getElementById('add-news-thumbnail-url');
-    const addNewsThumbnailPreview = document.getElementById('add-news-thumbnail-preview'); // HTML 中應有此 ID
+    const addNewsThumbnailPreview = document.getElementById('add-news-thumbnail-preview');
     const addNewsImageUrl = document.getElementById('add-news-image-url');
     const addFormError = document.getElementById('add-news-form-error');
     // 新增: Add Modal 的新元素
@@ -45,9 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
     const addNewsShowInCalendar = document.getElementById('add-news-show-in-calendar');
 
     // --- 檢查核心元素 ---
-    const coreElements = [newsListBody, newsListContainer, newsTable, addModal, editModal, addForm, editForm];
+    const coreElements = [newsListBody, newsListContainer, newsTable, addModal, editModal, addForm, editForm, addNewsBtn]; // 加入 addNewsBtn 檢查
     if (coreElements.some(el => !el)) {
-        console.error("頁面初始化失敗：缺少必要的 HTML 元素 (表格、Modal 或表單)。請檢查 ID。");
+        console.error("頁面初始化失敗：缺少必要的 HTML 元素 (表格、Modal、表單或新增按鈕)。請檢查 ID。");
         if(loadingMessage) loadingMessage.textContent = "頁面載入錯誤，請聯繫管理員。";
         return; // 停止執行
     }
@@ -59,13 +59,14 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         const suggestionsList = modalType === 'edit' ? editCategorySuggestions : addCategorySuggestions;
         const targetInput = modalType === 'edit' ? editNewsCategoryInput : addNewsCategoryInput;
 
+        // 確保元素存在才繼續
         if (!container || !loadingSpan || !targetInput) {
-            console.warn(`無法為 ${modalType} modal 找到分類標籤容器、載入提示或輸入框。`);
+            console.warn(`分類標籤相關元素未找到 (modalType: ${modalType})。`);
             return;
         }
 
-        loadingSpan.textContent = '載入中...'; // 重置載入提示文字
-        loadingSpan.style.color = '#888';    // 重置顏色
+        loadingSpan.textContent = '載入中...';
+        loadingSpan.style.color = '#888';
         loadingSpan.style.display = 'inline';
 
         // 清空舊標籤
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         if (suggestionsList) suggestionsList.innerHTML = '';
 
         try {
-            const response = await fetch('/api/news/categories');
+            const response = await fetch('/api/news/categories'); // 使用公開 API 獲取分類
             if (!response.ok) throw new Error(`獲取分類失敗 (${response.status})`);
             const categories = await response.json();
 
@@ -89,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
                     tagButton.style.margin = '3px';
                     tagButton.style.cursor = 'pointer';
                     tagButton.addEventListener('click', () => {
-                        targetInput.value = category;
+                        targetInput.value = category; // 點擊填入輸入框
                     });
                     container.appendChild(tagButton);
 
@@ -115,50 +116,44 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         try {
             if (loadingMessage) loadingMessage.style.display = 'block';
             if (newsTable) newsTable.style.display = 'none';
-            newsListBody.innerHTML = ''; // 清空
+            newsListBody.innerHTML = '';
 
-            // 後台獲取所有新聞，不需要分頁 limit=999 是一個 workaround，更好的方式是後端提供不分頁的選項
-            const response = await fetch('/api/admin/news'); // *** 使用受保護的管理 API ***
+            const response = await fetch('/api/admin/news'); // 使用管理 API
             if (!response.ok) {
                  let errorMsg = `HTTP 錯誤！狀態: ${response.status}`;
                  try { const errData = await response.json(); errorMsg = errData.error || errorMsg; } catch {}
                  if (response.status === 401) throw new Error('您需要登入才能查看管理列表。');
                 throw new Error(errorMsg);
             }
-            const newsList = await response.json(); // *** 管理 API 直接返回陣列 ***
+            const newsList = await response.json();
 
             if (loadingMessage) loadingMessage.style.display = 'none';
             if (newsTable) newsTable.style.display = 'table';
 
+            // 使用輔助函數防止 XSS
+            const escapeHtml = (unsafe) => {
+                 if (unsafe === null || unsafe === undefined) return '';
+                 return unsafe.toString()
+                             .replace(/&/g, "&")
+                             .replace(/</g, "<")
+                             .replace(/>/g, ">")
+                                   // " 轉成 & q u o t ;
+                .replace(/"/g, '&quot;')
+        
+                // ' 轉成 & # 3 9 ;  (數字實體)
+                .replace(/'/g, '&#39;');
+            };
+
             if (!newsList || newsList.length === 0) {
-                newsListBody.innerHTML = `<tr><td colspan="12">目前沒有消息。</td></tr>`; // *** 更新 Colspan ***
+                newsListBody.innerHTML = `<tr><td colspan="12">目前沒有消息。</td></tr>`; // Colspan 應為 12
                 return;
             }
 
             newsList.forEach(newsItem => {
                 const row = document.createElement('tr');
                 row.dataset.newsId = newsItem.id;
-                // 使用輔助函數防止 XSS
-                const escapeHtml = (unsafe) => {
-                     if (unsafe === null || unsafe === undefined) return '';
-                     // 修正：確保替換順序正確，先替換 &
-                     return unsafe.toString()
-                     .replace(/&/g, '&amp;')
-        
-                     // < 轉成 & l t ;
-                     .replace(/</g, '&lt;')
-             
-                     // > 轉成 & g t ;
-                     .replace(/>/g, '&gt;')
-             
-                     // " 轉成 & q u o t ;
-                     .replace(/"/g, '&quot;')
-             
-                     // ' 轉成 & # 3 9 ;  (數字實體)
-                     .replace(/'/g, '&#39;');
-                };
 
-                // 確保所有 12 個欄位都正確生成
+                // 生成表格行內容 (確保 12 個 <td>)
                 row.innerHTML = `
                     <td>${newsItem.id}</td>
                     <td>${escapeHtml(newsItem.title || '')}</td>
@@ -169,8 +164,8 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
                     <td>${newsItem.like_count || 0}</td>
                     <td>${escapeHtml(newsItem.category || '-')}</td>
                     <td>${newsItem.show_in_calendar ? '是' : '否'}</td>
-                    <td>${newsItem.created_at ? new Date(newsItem.created_at).toLocaleString('zh-TW') : '-'}</td>
-                    <td>${newsItem.updated_at ? new Date(newsItem.updated_at).toLocaleString('zh-TW') : '-'}</td>
+                    <td>${newsItem.created_at ? new Date(newsItem.created_at).toLocaleString('zh-TW', { hour12: false }) : '-'}</td>
+                    <td>${newsItem.updated_at ? new Date(newsItem.updated_at).toLocaleString('zh-TW', { hour12: false }) : '-'}</td>
                     <td class="actions">
                         <button class="btn btn-warning btn-sm edit-news-btn" data-id="${newsItem.id}">編輯</button>
                         <button class="btn btn-danger btn-sm delete-news-btn" data-id="${newsItem.id}">刪除</button>
@@ -179,13 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
                 newsListBody.appendChild(row);
             });
 
-            // (如果沒有新聞) 更新 Colspan
-            if (!newsList || newsList.length === 0) {
-                newsListBody.innerHTML = `<tr><td colspan="12">目前沒有消息。</td></tr>`; // <<< Colspan 應為 12
-            }
-
-             // 在渲染完表格後，為按鈕添加事件監聽器 (使用事件委派)
-             addTableButtonListeners(); // 確保這行在 forEach 之後
+             addTableButtonListeners(); // 添加事件監聽器
 
         } catch (error) {
             console.error("獲取管理消息列表失敗:", error);
@@ -193,16 +182,14 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
             if (newsTable) newsTable.style.display = 'none';
              if (error.message.includes('登入')) {
                 alert('請先登入管理後台！');
-                // window.location.href = '/login.html'; // 或導向登入頁
-            }
+             }
         }
     }
 
      // --- 為表格按鈕添加事件監聽 (事件委派) ---
      function addTableButtonListeners() {
         if (!newsListBody) return;
-
-        newsListBody.removeEventListener('click', handleTableButtonClick); // 先移除舊監聽器
+        newsListBody.removeEventListener('click', handleTableButtonClick); // 移除舊監聽器
         newsListBody.addEventListener('click', handleTableButtonClick);
      }
 
@@ -212,12 +199,11 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         if (target.matches('.edit-news-btn')) {
             const newsId = target.dataset.id;
             if (newsId) {
-                // 獲取完整的 newsItem 數據來填充表單
                  try {
-                    const response = await fetch(`/api/admin/news/${newsId}`);
-                    if (!response.ok) throw new Error('無法獲取編輯數據');
+                    const response = await fetch(`/api/admin/news/${newsId}`); // 使用管理 API
+                    if (!response.ok) throw new Error(`無法獲取編輯數據 (HTTP ${response.status})`);
                     const newsItem = await response.json();
-                    openEditNewsModal(newsItem); // 傳遞完整數據
+                    openEditNewsModal(newsItem);
                  } catch (error) {
                     console.error("獲取編輯數據失敗:", error);
                     alert("無法載入編輯數據，請重試。");
@@ -226,7 +212,9 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         } else if (target.matches('.delete-news-btn')) {
             const newsId = target.dataset.id;
             if (newsId) {
-                deleteNews(newsId);
+                // 獲取標題用於確認對話框 (可選)
+                const title = target.closest('tr')?.querySelector('td:nth-child(2)')?.textContent || `ID: ${newsId}`;
+                deleteNews(newsId, title);
             }
         }
      }
@@ -234,22 +222,24 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
 
     // --- Function to Open and Populate the Edit News Modal ---
     function openEditNewsModal(newsItem) {
-        const requiredElements = [editModal, editForm, editNewsIdInput, editNewsTitle, editNewsEventDate, editNewsSummary, editNewsContent, editNewsThumbnailUrl, editNewsThumbnailPreview, editNewsImageUrl, editFormError, editNewsCategoryInput, editNewsShowInCalendar];
-        if (requiredElements.some(el => !el)) { console.error("編輯 Modal 元件缺失。"); alert("編輯視窗元件錯誤。"); return; }
+        // 檢查必要的編輯 Modal 元素是否存在
+        const requiredEditElements = [editModal, editForm, editNewsIdInput, editNewsTitle, editNewsEventDate, editNewsSummary, editNewsContent, editNewsThumbnailUrl, editNewsThumbnailPreview, editNewsImageUrl, editFormError, editNewsCategoryInput, editNewsShowInCalendar];
+        if (requiredEditElements.some(el => !el)) { console.error("編輯 Modal 元件缺失。"); alert("編輯視窗元件錯誤。"); return; }
 
         editFormError.textContent = '';
-        editForm.reset(); // 先重置表單
+        editForm.reset();
 
         // 填充表單欄位
         editNewsIdInput.value = newsItem.id;
         editNewsTitle.value = newsItem.title || '';
+        // 將 ISO 日期格式化為 YYYY-MM-DD 給 date input
         editNewsEventDate.value = newsItem.event_date ? newsItem.event_date.split('T')[0] : '';
         editNewsSummary.value = newsItem.summary || '';
         editNewsContent.value = newsItem.content || '';
         editNewsThumbnailUrl.value = newsItem.thumbnail_url || '';
         editNewsImageUrl.value = newsItem.image_url || '';
-        editNewsCategoryInput.value = newsItem.category || ''; // 填充分類
-        editNewsShowInCalendar.checked = newsItem.show_in_calendar || false; // 填充 Checkbox
+        editNewsCategoryInput.value = newsItem.category || '';
+        editNewsShowInCalendar.checked = newsItem.show_in_calendar || false;
 
         // 處理預覽圖
         if (editNewsThumbnailPreview) {
@@ -268,14 +258,14 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
 
     // --- Function to Open Add News Modal ---
     function openAddNewsModal() {
-        const requiredElements = [addModal, addForm, addNewsTitle, addNewsEventDate, addNewsSummary, addNewsContent, addNewsThumbnailUrl, addNewsThumbnailPreview, addNewsImageUrl, addFormError, addNewsCategoryInput, addNewsShowInCalendar];
-        if (requiredElements.some(el => !el)) { console.error("新增 Modal 元件缺失。"); alert("新增視窗元件錯誤。"); return; }
+        // 檢查必要的新增 Modal 元素是否存在
+        const requiredAddElements = [addModal, addForm, addNewsTitle, addNewsEventDate, addNewsSummary, addNewsContent, addNewsThumbnailUrl, addNewsThumbnailPreview, addNewsImageUrl, addFormError, addNewsCategoryInput, addNewsShowInCalendar];
+        if (requiredAddElements.some(el => !el)) { console.error("新增 Modal 元件缺失。"); alert("新增視窗元件錯誤。"); return; }
 
         addFormError.textContent = '';
-        addForm.reset(); // 重置表單
-        if(addNewsShowInCalendar) addNewsShowInCalendar.checked = false; // 預設不勾選
-        // 處理縮圖預覽
-        if (addNewsThumbnailPreview) {
+        addForm.reset();
+        addNewsShowInCalendar.checked = false; // 新增時預設不勾選
+        if (addNewsThumbnailPreview) { // 重置縮圖預覽
              addNewsThumbnailPreview.src = '';
              addNewsThumbnailPreview.style.display = 'none';
         }
@@ -291,8 +281,8 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
     }
 
     // --- Function to Delete News Item ---
-    async function deleteNews(id) {
-        if (confirm(`確定要刪除消息 ID: ${id} 嗎？`)) {
+    async function deleteNews(id, title) { // 加入 title 參數用於確認
+        if (confirm(`確定要刪除消息 "${title || 'ID: '+id}" 嗎？`)) {
             try {
                 const response = await fetch(`/api/admin/news/${id}`, { method: 'DELETE' });
                 if (response.status === 204 || response.ok) {
@@ -308,18 +298,31 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
      // --- 處理縮圖預覽更新 ---
      function setupImagePreview(urlInput, previewElement) {
          if (urlInput && previewElement) {
-             urlInput.addEventListener('input', () => {
-                 const url = urlInput.value.trim();
-                 if (url) {
-                     previewElement.src = url;
-                     previewElement.style.display = 'block';
-                 } else {
-                     previewElement.src = '';
-                     previewElement.style.display = 'none';
-                 }
-             });
+            // 先移除舊的監聽器，防止重複綁定
+            urlInput.removeEventListener('input', handlePreviewUpdate);
+            // 添加新的監聽器
+            urlInput.addEventListener('input', handlePreviewUpdate);
          }
      }
+     // 將預覽更新邏輯提取成獨立函數
+     function handlePreviewUpdate(event) {
+        const urlInput = event.target;
+        // 根據 input ID 找到對應的 preview 元素
+        const previewId = urlInput.id.replace('-url', '-preview');
+        const previewElement = document.getElementById(previewId);
+        if (!previewElement) return;
+
+        const url = urlInput.value.trim();
+        if (url) {
+            previewElement.src = url;
+            previewElement.style.display = 'block';
+        } else {
+            previewElement.src = '';
+            previewElement.style.display = 'none';
+        }
+     }
+
+     // 為兩個 Modal 的縮圖輸入框設置預覽
      setupImagePreview(addNewsThumbnailUrl, addNewsThumbnailPreview);
      setupImagePreview(editNewsThumbnailUrl, editNewsThumbnailPreview);
 
@@ -334,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
 
         formErrorElement.textContent = ''; // 清除舊錯誤
 
-        // 獲取表單數據
+        // --- ** 統一從 ID 獲取元素，確保獲取的是當前操作 Modal 的元素 ** ---
         const titleInput = document.getElementById(isEditMode ? 'edit-news-title' : 'add-news-title');
         const eventDateInput = document.getElementById(isEditMode ? 'edit-news-event-date' : 'add-news-event-date');
         const summaryInput = document.getElementById(isEditMode ? 'edit-news-summary' : 'add-news-summary');
@@ -344,17 +347,18 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
         const categoryInput = document.getElementById(isEditMode ? 'edit-news-category' : 'add-news-category');
         const showInCalendarCheckbox = document.getElementById(isEditMode ? 'edit-news-show-in-calendar' : 'add-news-show-in-calendar');
 
-        // 檢查元素是否存在
+        // 再次檢查，確保元素都獲取到了
         const inputs = [titleInput, eventDateInput, summaryInput, contentInput, thumbnailUrlInput, imageUrlInput, categoryInput, showInCalendarCheckbox];
         if (inputs.some(el => !el)) {
-            formErrorElement.textContent = '表單元件查找失敗，請檢查 HTML ID。';
-            console.error("表單元素缺失", inputs);
+            const missingIds = inputs.map((el, i) => !el ? (isEditMode ? ['edit-news-title', 'edit-news-event-date', /*...*/ 'edit-news-category', 'edit-news-show-in-calendar'] : ['add-news-title', 'add-news-event-date', /*...*/ 'add-news-category', 'add-news-show-in-calendar'])[i] : null).filter(Boolean);
+            formErrorElement.textContent = `表單元件查找失敗，請檢查 HTML ID: ${missingIds.join(', ')}。`;
+            console.error("表單元素缺失", missingIds);
             return;
         }
 
-
+        // 獲取表單數據
         const title = titleInput.value.trim();
-        const event_date = eventDateInput.value; // YYYY-MM-DD 或空字串
+        const event_date = eventDateInput.value;
         const summary = summaryInput.value.trim();
         const content = contentInput.value.trim();
         const thumbnail_url = thumbnailUrlInput.value.trim();
@@ -367,7 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
 
         const newsData = {
             title: title,
-            event_date: event_date || null, // 後端會處理空字串
+            event_date: event_date || null,
             summary: summary || null,
             content: content || null,
             thumbnail_url: thumbnail_url || null,
@@ -408,33 +412,39 @@ document.addEventListener('DOMContentLoaded', async () => { // <-- 將初始化�
     }
 
 
-    // --- Event Listeners ---
-    if (addNewsBtn) { // 綁定新增按鈕
+    // --- Event Listeners Setup ---
+    if (addNewsBtn) {
         addNewsBtn.addEventListener('click', openAddNewsModal);
-    } else {
-        console.warn("警告：未找到新增按鈕 #add-news-btn");
     }
-
     // 綁定表單提交事件
     if (addForm) addForm.addEventListener('submit', handleFormSubmit);
     if (editForm) editForm.addEventListener('submit', handleFormSubmit);
 
-    // 綁定 Modal 關閉事件
-    [addModal, editModal].forEach(modal => {
-         if (modal) {
-             const closeBtn = modal.querySelector('.close-btn');
-             if (closeBtn) closeBtn.addEventListener('click', () => closeModal(modal));
-             // 點擊背景關閉 (可選)
-             // modal.addEventListener('click', (event) => { if(event.target === modal) closeModal(modal); });
-         }
+    // 綁定 Modal 關閉按鈕事件 (使用事件委派)
+    document.addEventListener('click', (event) => {
+        if (event.target.matches('.close-btn')) {
+            const modal = event.target.closest('.modal');
+            if (modal) {
+                closeModal(modal);
+            }
+        }
+         // 點擊背景關閉 (可選)
+         // if (event.target.matches('.modal')) {
+         //     closeModal(event.target);
+         // }
     });
 
 
     // --- Initial Load ---
-    await fetchAndDisplayNews(); // 使用 await 確保列表先載入
-    fetchAndRenderCategoryTags('add');   // 預載 Add Modal 的分類
-    fetchAndRenderCategoryTags('edit');  // 預載 Edit Modal 的分類
-
-    console.log("News Admin JS Initialized.");
+    try {
+        await fetchAndDisplayNews(); // 載入新聞列表
+        // 同時異步預載分類，不需要 await，讓頁面更快顯示列表
+        fetchAndRenderCategoryTags('add');
+        fetchAndRenderCategoryTags('edit');
+        console.log("News Admin JS Initialized.");
+    } catch (initError) {
+         console.error("頁面初始化載入新聞列表失敗:", initError);
+         // 可以在頁面顯示一個更明顯的全局錯誤提示
+    }
 
 }); // End of DOMContentLoaded
