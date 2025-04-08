@@ -1,2199 +1,2209 @@
-// server.js
-require('dotenv').config(); // 從 .env 載入環境變數
-const https = require('https'); // <--- 確保引入 https
-const express = require('express');
-const path = require('path');
-const { Pool } = require('pg'); // PostgreSQL 客戶端
-
-const app = express();
-const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
-
-
-
-
-// --- 資料庫連接池設定 ---
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
-});
-
-// --- 基本認證中間件函數定義 ---
-const basicAuthMiddleware = (req, res, next) => {
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('需要認證才能訪問管理區域。');
-    }
-
-    try {
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-
-        if (user === adminUser && pass === adminPass) {
-            next(); // 認證成功，繼續下一個中間件或路由處理
-        } else {
-            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
-            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-            return res.status(401).send('認證失敗。');
-        }
-    } catch (error) {
-        console.error("認證標頭解析錯誤:", error);
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('認證失敗 (格式錯誤)。');
-    }
-};
-
-// --- JSON 請求體解析中間件 ---
-// 必須放在所有需要讀取 req.body 的路由之前
-app.use(express.json());
-
-// --- 記錄 Page View 中間件 ---
-app.use(async (req, res, next) => {
-    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/guestbook.html', '/message-detail.html']; // 添加 scores.html
-    // 確保只記錄 'GET' 請求且路徑在列表中
-    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
-    if (shouldLog) {
-        const pagePath = req.path;
-       //  console.log(`[PV Mid] Logging view for: ${pagePath}`);
-        try {
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date)
-                DO UPDATE SET view_count = page_views.view_count + 1;
-                -- 移除 RETURNING * 除非確實需要回傳值
-            `;
-            const params = [pagePath];
-            await pool.query(sql, params);
-            // console.log(`[PV Mid] Page view recorded/updated for: ${pagePath}`); // 僅在需要時啟用詳細日誌
-        } catch (err) {
-            // 處理可能的並發衝突 (ON CONFLICT 應該能處理大部分情況)
-            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
-            } else {
-                console.error('[PV Mid] Error logging page view:', err.stack || err);
-            }
-        }
-    }
-    next(); // 確保總是調用 next()
-});
-
-
-
-
-
-
-
-// --- 受保護的管理頁面和 API Routes ---
-
-app.use([
-    '/admin.html',
-    '/music-admin.html',
-    '/news-admin.html',
-    '/banner-admin.html',
-    '/sales-report.html', // <-- 修正：移除了結尾的空格
-    '/figures-admin.html',
-    '/guestbook-admin.html', // <-- 如果需要保護，也加進來
-    '/admin-identities.html',// <-- 如果需要保護，也加進來
-    '/admin-message-detail.html',// <-- 如果需要保護，也加進來
-    '/inventory-admin.html' // <-- 如果需要保護，也加進來
-], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
-
-
-
-
-
-// --- 靜態文件服務 ---
-app.use(express.static(path.join(__dirname, 'public')));
-
-// --- 公開 API Routes ---
-
-
-
-
-
-
-// GET /api/news/categories - 獲取所有新聞分類 (公開)
-app.get('/api/news/categories', async (req, res) => {
-    console.log("[Public API] GET /api/news/categories requested");
-    try {
-        const result = await pool.query(
-            `SELECT DISTINCT category
-             FROM news
-             WHERE category IS NOT NULL AND category <> ''
-             ORDER BY category ASC`
-        );
-        const categories = result.rows.map(row => row.category);
-        console.log(`[Public API] Found categories:`, categories);
-        res.status(200).json(categories); // 返回分類名稱的陣列
-    } catch (err) {
-        console.error('[Public API Error] 獲取新聞分類時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
-    }
-});
-
-
-
-
-// GET /api/news/calendar - 獲取行事曆事件 (修改後，公開)
-app.get('/api/news/calendar', async (req, res) => {
-    const year = parseInt(req.query.year);
-    const month = parseInt(req.query.month);
-
-    console.log(`[Public API] GET /api/news/calendar requested for ${year}-${month}`);
-
-    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-        return res.status(400).json({ error: '請提供有效的年份和月份。' });
-    }
-
-    try {
-        // 修改 SQL 查詢以包含 show_in_calendar=TRUE 並選擇需要的欄位
-        const queryText = `
-            SELECT
-                id,
-                title,
-                event_date,
-                category,
-                summary,
-                thumbnail_url
-            FROM news
-            WHERE
-                EXTRACT(YEAR FROM event_date) = $1 AND
-                EXTRACT(MONTH FROM event_date) = $2 AND
-                event_date IS NOT NULL AND
-                show_in_calendar = TRUE -- 關鍵過濾條件
-            ORDER BY event_date ASC, id ASC;
-        `;
-        const result = await pool.query(queryText, [year, month]);
-
-        // 將 event_date 格式化為 YYYY-MM-DD
-        const events = result.rows.map(row => ({
-            id: row.id,
-            title: row.title,
-            date: row.event_date.toISOString().split('T')[0], // 只取日期部分
-            category: row.category,
-            summary: row.summary,
-            thumbnail_url: row.thumbnail_url
-        }));
-
-        console.log(`[Public API] Found ${events.length} calendar events for ${year}-${month}`);
-        res.status(200).json(events); // 返回事件陣列
-
-    } catch (err) {
-        console.error(`[Public API Error] 獲取 ${year}-${month} 行事曆事件時出錯:`, err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取行事曆事件' });
-    }
-});
-
-
-
-
-
-
-
-
-// --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
-
-// GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
-app.get('/api/guestbook', async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const sort = req.query.sort || 'latest'; // 預設最新活動
-
-    let orderByClause = 'ORDER BY m.last_activity_at DESC'; // 預設
-    if (sort === 'popular') {
-        orderByClause = 'ORDER BY m.view_count DESC, m.last_activity_at DESC';
-    } else if (sort === 'most_replies') {
-        orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
-    }
-
-    try {
-        // 1. 獲取總留言數
-        const totalResult = await pool.query('SELECT COUNT(*) FROM guestbook_messages WHERE is_visible = TRUE');
-        const totalItems = parseInt(totalResult.rows[0].count, 10);
-        const totalPages = Math.ceil(totalItems / limit);
-
-        // 2. 獲取當前頁面的留言 (加入 like_count, view_count, 限制 content preview)
-        const messagesResult = await pool.query(
-            `SELECT
-                m.id,
-                m.author_name,
-                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview, -- 內容預覽 (約 2-3 行)
-                m.reply_count,
-                m.view_count, -- 新增
-                m.like_count, -- 新增
-                m.last_activity_at
-             FROM guestbook_messages m -- 給表加個別名 m
-             WHERE m.is_visible = TRUE
-             ${orderByClause} -- 使用動態排序
-             LIMIT $1 OFFSET $2`,
-            [limit, offset]
-        );
-
-        res.json({
-            messages: messagesResult.rows,
-            currentPage: page,
-            totalPages: totalPages,
-            totalItems: totalItems,
-            limit: limit,
-            sort: sort // 將當前排序方式也回傳給前端
-        });
-    } catch (err) {
-        console.error('[API GET /guestbook] Error:', err);
-        res.status(500).json({ error: '無法獲取留言列表' });
-    }
-});
-
-// GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
-// GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
-app.get('/api/guestbook/message/:id', async (req, res) => {
-    const { id } = req.params;
-    const messageId = parseInt(id, 10);
-    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
-
-    const client = await pool.connect();
-    try {
-        // 1. 獲取主留言 (加入 view_count, like_count)
-        const messageResult = await client.query(
-            'SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
-            [messageId]
-        );
-        if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到或無法查看此留言' });
-        const message = messageResult.rows[0];
-
-        // 2. 獲取回覆 (加入 like_count, parent_reply_id)
-        const repliesResult = await client.query(
-            `SELECT
-                r.id, r.message_id, r.parent_reply_id, -- 需要 parent_reply_id 用於前端嵌套
-                r.author_name, r.content, r.created_at,
-                r.is_admin_reply, r.like_count, -- 加入 like_count
-                ai.name AS admin_identity_name
-             FROM guestbook_replies r
-             LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
-             WHERE r.message_id = $1 AND r.is_visible = TRUE
-             ORDER BY r.created_at ASC`,
-            [messageId]
-        );
-
-        res.json({
-            message: message,
-            replies: repliesResult.rows
-        });
-    } catch (err) { console.error(`[API GET /guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
-});
-
-// POST /api/guestbook - 新增主留言
-// POST /api/guestbook - 新增主留言 (移除 title)
-app.post('/api/guestbook', async (req, res) => {
-    // 【★ 移除 title ★】
-    const { author_name, content } = req.body;
-
-    let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
-    if (!content || content.trim() === '') return res.status(400).json({ error: '留言內容不能為空' });
-    const trimmedContent = content.trim();
-    // 冷卻機制 placeholder
-    try {
-        const result = await pool.query(
-            // 【★ 移除 title, 加入 like_count, view_count ★】
-            `INSERT INTO guestbook_messages (author_name, content, last_activity_at, is_visible, like_count, view_count)
-             VALUES ($1, $2, NOW(), TRUE, 0, 0)
-             RETURNING id, author_name, substring(content for 80) || (CASE WHEN length(content) > 80 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at, like_count, view_count`, // 返回新欄位
-            [authorNameToSave, trimmedContent]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[API POST /guestbook] Error:', err); res.status(500).json({ error: '無法新增留言' }); }
-});
-
-// POST /api/guestbook/replies - 新增公開回覆 (加入 parent_reply_id)
-app.post('/api/guestbook/replies', async (req, res) => {
-    // 【★ 加入 parent_reply_id ★】
-    const { message_id, parent_reply_id, author_name, content } = req.body;
-    const messageIdInt = parseInt(message_id, 10);
-    // 【★ 處理 parent_reply_id ★】
-    const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
-
-    if (isNaN(messageIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言或父回覆 ID' });
-
-    let authorNameToSave = '匿名';
-    if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
-    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
-    const trimmedContent = content.trim();
-    // 冷卻機制 placeholder
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        // 【★ 加入 parent_reply_id, like_count ★】
-        const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
-             VALUES ($1, $2, $3, $4, FALSE, NULL, TRUE, 0)
-             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count`, // 返回新欄位
-            [messageIdInt, parentIdInt, authorNameToSave, trimmedContent]
-        );
-        // 觸發器處理主留言更新
-        await client.query('COMMIT');
-        res.status(201).json(replyResult.rows[0]);
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('[API POST /guestbook/replies] Error:', err);
-         // 檢查外鍵錯誤 (可能是 message_id 或 parent_reply_id 無效)
-         if (err.code === '23503') {
-             return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
-         }
-        res.status(500).json({ error: '無法新增回覆' });
-    } finally {
-        client.release();
-    }
-});
-
-
-// POST /api/guestbook/message/:id/view - 增加瀏覽數
-app.post('/api/guestbook/message/:id/view', async (req, res) => {
-    const { id } = req.params;
-    const messageId = parseInt(id, 10);
-    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
-
-    try {
-        // 只增加計數，不需要返回什麼
-        await pool.query(
-            'UPDATE guestbook_messages SET view_count = view_count + 1 WHERE id = $1',
-            [messageId]
-        );
-        res.status(204).send(); // No Content
-    } catch (err) {
-        console.error(`[API POST /guestbook/message/${id}/view] Error:`, err);
-        // 即使出錯也靜默處理或返回簡單成功，避免影響前端主要流程
-        res.status(204).send();
-    }
-});
-
-
-// POST /api/guestbook/message/:id/like - 增加主留言讚數
-app.post('/api/guestbook/message/:id/like', async (req, res) => {
-    const { id } = req.params;
-    const messageId = parseInt(id, 10);
-    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
-
-    try {
-        const result = await pool.query(
-            'UPDATE guestbook_messages SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count',
-            [messageId]
-        );
-        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要按讚的留言' });
-        res.status(200).json({ like_count: result.rows[0].like_count });
-    } catch (err) {
-        console.error(`[API POST /guestbook/message/${id}/like] Error:`, err);
-        res.status(500).json({ error: '按讚失敗' });
-    }
-});
-
-
-// POST /api/guestbook/replies/:id/like - 增加回覆讚數
-app.post('/api/guestbook/replies/:id/like', async (req, res) => {
-    const { id } = req.params;
-    const replyId = parseInt(id, 10);
-    if (isNaN(replyId)) return res.status(400).json({ error: '無效的回覆 ID' });
-
-    try {
-        const result = await pool.query(
-            'UPDATE guestbook_replies SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count',
-            [replyId]
-        );
-        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要按讚的回覆' });
-        res.status(200).json({ like_count: result.rows[0].like_count });
-    } catch (err) {
-        console.error(`[API POST /guestbook/replies/${id}/like] Error:`, err);
-        res.status(500).json({ error: '按讚失敗' });
-    }
-});
-
-// --- 樂譜 API ---
-// GET /api/scores/artists - 取得擁有樂譜的獨立歌手列表
-app.get('/api/scores/artists', async (req, res) => {
-    try {
-        const queryText = `
-            SELECT DISTINCT m.artist
-            FROM music m
-            JOIN scores s ON m.id = s.music_id
-            WHERE m.artist IS NOT NULL AND m.artist <> ''
-            ORDER BY m.artist ASC
-        `;
-        const result = await pool.query(queryText);
-        const artists = result.rows.map(row => row.artist);
-        res.json(artists);
-    } catch (err) {
-        console.error('獲取帶有樂譜的歌手時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取歌手列表時發生內部伺服器錯誤' });
-    }
-});
-
-// GET /api/scores/songs?artist=... - 取得包含樂譜的歌曲列表，可選依歌手過濾
-app.get('/api/scores/songs', async (req, res) => {
-    const { artist } = req.query;
-    try {
-        // *** 修改後的 SQL 查詢 ***
-        let queryText = `
-            SELECT
-                m.id,
-                m.title,
-                m.artist,
-                m.cover_art_url,
-                m.release_date,
-                m.youtube_video_id,
-                s_agg.scores
-            FROM (
-                -- 先選出符合條件且有樂譜的獨立歌曲 ID
-                SELECT DISTINCT m_inner.id
-                FROM music m_inner
-                INNER JOIN scores s_inner ON m_inner.id = s_inner.music_id
-        `;
-        const queryParams = [];
-        let paramIndex = 1; // 用於參數化查詢
-
-        if (artist && artist !== 'All') {
-            queryText += ` WHERE m_inner.artist = $${paramIndex++}`;
-            queryParams.push(decodeURIComponent(artist));
-        }
-
-        // 將子查詢的 DISTINCT 結果與 music 和聚合後的 scores JOIN
-        queryText += `
-            ) AS distinct_music
-            JOIN music m ON m.id = distinct_music.id
-            LEFT JOIN LATERAL ( -- 使用 LATERAL JOIN 和子查詢來聚合 scores
-                SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC) AS scores
-                FROM scores s
-                WHERE s.music_id = m.id
-            ) s_agg ON true
-            ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC;
-        `;
-        // *** SQL 查詢修改結束 ***
-
-     //   console.log("Executing query:", queryText.replace(/\s+/g, ' '), "with params:", queryParams); // 打印查詢語句和參數
-
-        const result = await pool.query(queryText, queryParams);
-        res.json(result.rows); // 返回包含 scores 陣列的歌曲列表
-
-    } catch (err) {
-        console.error('獲取帶有樂譜的歌曲列表時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
-    }
-});
-
-// GET /api/scores/proxy?url=ENCODED_PDF_URL - PDF 代理
-app.get('/api/scores/proxy', (req, res) => {
-    const pdfUrl = req.query.url;
-
-    if (!pdfUrl || typeof pdfUrl !== 'string') {
-        console.warn('代理請求被拒：缺少或無效的 URL 參數。');
-        return res.status(400).send('缺少或無效的 PDF URL。');
-    }
-
-    let decodedUrl;
-    try {
-        decodedUrl = decodeURIComponent(pdfUrl);
-        const allowedDomains = ['raw.githubusercontent.com'];
-        const urlObject = new URL(decodedUrl);
-
-        if (!allowedDomains.includes(urlObject.hostname)) {
-           console.warn(`代理請求被阻止，不允許的網域：${urlObject.hostname} (URL: ${decodedUrl})`);
-           return res.status(403).send('不允許從此網域進行代理。');
-        }
-
-    } catch (e) {
-        console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
-        return res.status(400).send('無效的 URL 格式或編碼。');
-    }
-
-    console.log(`正在代理 PDF 請求：${decodedUrl}`);
-
-    const pdfRequest = https.get(decodedUrl, (pdfRes) => {
-        // 處理重定向
-        if (pdfRes.statusCode >= 300 && pdfRes.statusCode < 400 && pdfRes.headers.location) {
-            console.log(`正在跟隨從 ${decodedUrl} 到 ${pdfRes.headers.location} 的重定向`);
-            try {
-                const redirectUrlObject = new URL(pdfRes.headers.location, decodedUrl);
-                const allowedDomains = ['raw.githubusercontent.com'];
-                 if (!allowedDomains.includes(redirectUrlObject.hostname)) {
-                   console.warn(`代理重定向被阻止，不允許的網域：${redirectUrlObject.hostname}`);
-                   return res.status(403).send('重定向目標網域不被允許。');
-                }
-                const redirectedRequest = https.get(redirectUrlObject.href, (redirectedRes) => {
-                     if (redirectedRes.statusCode !== 200) {
-                        console.error(`獲取重定向 PDF 時出錯：狀態碼：${redirectedRes.statusCode}，URL：${redirectUrlObject.href}`);
-                        const statusCodeToSend = redirectedRes.statusCode >= 400 ? redirectedRes.statusCode : 502;
-                        return res.status(statusCodeToSend).send(`無法獲取重定向的 PDF：${redirectedRes.statusMessage}`);
-                    }
-                     res.setHeader('Content-Type', redirectedRes.headers['content-type'] || 'application/pdf');
-                     redirectedRes.pipe(res);
-                }).on('error', (err) => {
-                     console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時發生錯誤：`, err.message);
-                     if (!res.headersSent) res.status(500).send('透過代理獲取重定向 PDF 時出錯。');
-                });
-                redirectedRequest.setTimeout(15000, () => {
-                    console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時超時`);
-                    redirectedRequest.destroy();
-                    if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
-                });
-                return;
-             } catch (e) {
-                console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
-                return res.status(500).send('從來源收到無效的重定向位置。');
-             }
-        }
-
-        if (pdfRes.statusCode !== 200) {
-            console.error(`獲取 PDF 時出錯：狀態碼：${pdfRes.statusCode}，URL：${decodedUrl}`);
-            const statusCodeToSend = pdfRes.statusCode >= 400 ? pdfRes.statusCode : 502;
-             return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
-        }
-
-        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
-        res.setHeader('Content-Type', 'application/pdf');
-
-        pdfRes.pipe(res);
-
-    }).on('error', (err) => {
-        console.error(`向 ${decodedUrl} 發起 PDF 請求期間發生網路或連線錯誤：`, err.message);
-         if (!res.headersSent) {
-             res.status(502).send('錯誤的網關：連接 PDF 來源時出錯。');
-         } else {
-             res.end();
-         }
-    });
-     pdfRequest.setTimeout(15000, () => {
-         console.error(`向 ${decodedUrl} 發起初始 PDF 請求時超時`);
-         pdfRequest.destroy();
-         if (!res.headersSent) {
-             res.status(504).send('網關超時：連接 PDF 來源時超時。');
-         }
-     });
-});
-
-
-
-// 輔助函數：清理 Banner 排序欄位
-function sanitizeSortField(field) {
-    const allowedFields = ['display_order', 'created_at', 'name', 'page_location', 'id', 'random']; // 根據你的需求調整允許的欄位
-    if (allowedFields.includes(field)) {
-        return field;
-    }
-    return 'display_order'; // 預設
+/* public/style.css */
+
+/*
+    Color Palette:
+    Warm Orange (Header): #FFB74D
+    Coral Red   (Accent 1): #E57373
+    Blue Grey   (Accent 2): #B0BEC5
+    Light Grey BG:          #FAFAFA
+    Dark Text:              #424242
+    Medium Text:            #757575
+*/
+
+/* Basic Reset & Body Style */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Noto Sans TC', sans-serif; line-height: 1.5; color: #424242; background-color: #FAFAFA; padding-bottom: 80px;  /*80px  */ }
+
+/* Header Styles */
+header { background-color: #FFB74D; color: #424242; padding: 0.1rem 0.1rem; /* 0.5rem 1rem; */text-align: center; margin-bottom: 1px; /*  2rem   */ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); line-height: 1; }
+#header-logo { height: 200px; width: auto; vertical-align: middle; display: inline-block; } /* (注意：這個 ID 在你的 HTML 中似乎沒有使用) */
+
+header h1 { margin: 0; line-height: inherit; }
+
+/* Main Content Area */
+main { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+
+/* Category Navigation Styles */
+.category-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.8rem 1.2rem; margin-bottom: 2rem; padding-bottom: 0.8rem; border-bottom: 2px solid #ECEFF1; }
+.category-nav a { color: #757575; text-decoration: none; font-size: 1rem; font-weight: 500; padding: 0.4rem 0; border-bottom: 3px solid transparent; transition: color 0.2s ease, border-color 0.2s ease; }
+.category-nav a.active { color: #E57373; font-weight: 700; border-bottom-color: #FFB74D; }
+.category-nav a:not(.active):hover { color: #424242; border-bottom-color: #B0BEC5; }
+
+
+/* 添加在全局按鈕樣式之後 */
+button.artist-filter-btn {
+    all: unset; /* 重置所有繼承的樣式 */
 }
 
-
-
-
-
-// GET /api/banners?page=... (已更新過濾邏輯)
-app.get('/api/banners', async (req, res) => {
-    const pageLocation = req.query.page || 'all'; // 默認為 'all'，如果是首頁則用 'home'
-    let queryText = 'SELECT id, image_url, link_url, alt_text FROM banners';
-    const queryParams = [];
-    
-    if (pageLocation !== 'all') {
-        queryText += ' WHERE page_location = $1';
-        queryParams.push(pageLocation);
-    }
-
-    queryText += ' ORDER BY RANDOM() LIMIT 5';  // 隨機選擇 5 張圖片
-    try {
-        const result = await pool.query(queryText, queryParams);
-        res.json(result.rows); // 返回隨機圖片資料
-    } catch (err) {
-        console.error('獲取 Banner 時出錯:', err);
-        res.status(500).json({ error: '伺服器錯誤' });
-    }
-});
-
-
-
-
-
-
-
-
-// GET /api/products?sort=...
-app.get('/api/products', async (req, res) => {
-    const sortBy = req.query.sort || 'latest';
-    let orderByClause = 'ORDER BY created_at DESC, id DESC'; // 添加 id 排序確保穩定
-    if (sortBy === 'popular') {
-        orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC'; // 添加 id 排序確保穩定
-    }
-    try {
-        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products ${orderByClause}`;
-        const result = await pool.query(queryText);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取商品列表時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/products/:id
-app.get('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
-    try {
-        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/products/:id/click
-app.post('/api/products/:id/click', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
-    try {
-        await pool.query('UPDATE products SET click_count = click_count + 1 WHERE id = $1', [id]);
-        res.status(204).send();
-    } catch (err) {
-        console.error(`記錄商品 ID ${id} 點擊時出錯:`, err);
-        res.status(204).send(); // 出錯也靜默處理
-    }
-});
-
-// GET /api/artists
-app.get('/api/artists', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL AND artist <> \'\' ORDER BY artist ASC');
-        const artists = result.rows.map(row => row.artist);
-        res.json(artists);
-    } catch (err) {
-        console.error('獲取歌手列表時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/music?artist=...
-app.get('/api/music', async (req, res) => {
-    const artistFilter = req.query.artist || null;
-    let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
-    const queryParams = [];
-    if (artistFilter && artistFilter !== 'All') { // 修改: 不等於 'All' 才加入條件
-         queryText += ' WHERE artist = $1';
-         queryParams.push(decodeURIComponent(artistFilter)); // 解碼
-    }
-    queryText += ' ORDER BY release_date DESC NULLS LAST, title ASC'; // 處理可能的 null 日期，並添加標題排序
-    try {
-        const result = await pool.query(queryText, queryParams);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取音樂列表時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/music/:id (已更新包含 scores 和 youtube_video_id)
-app.get('/api/music/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id, 10))) {
-         return res.status(400).json({ error: '無效的音樂 ID' });
-    }
-    try {
-        const queryText = `
-            SELECT
-                m.*,
-                COALESCE(
-                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
-                     FROM scores s
-                     WHERE s.music_id = m.id),
-                    '[]'::json
-                ) AS scores
-            FROM music m
-            WHERE m.id = $1;
-        `;
-        const result = await pool.query(queryText, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到音樂' });
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取 ID 為 ${id} 的音樂時出錯：`, err.stack || err);
-        res.status(500).json({ error: '獲取音樂詳情時發生內部伺服器錯誤' });
-    }
-});
-
-
-
-// 獲取新聞列表 API
-app.get('/api/news', async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    if (page <= 0 || limit <= 0) { return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); }
-    const offset = (page - 1) * limit;
-    try {
-        const countResult = await pool.query('SELECT COUNT(*) FROM news');
-        const totalItems = parseInt(countResult.rows[0].count);
-
-        // 修改排序條件：根據 event_date 排序
-        const newsResult = await pool.query(`
-            SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at
-            FROM news
-            ORDER BY event_date DESC, id DESC
-            LIMIT $1 OFFSET $2
-        `, [limit, offset]);
-
-        const totalPages = Math.ceil(totalItems / limit);
-        res.status(200).json({
-            totalItems,
-            totalPages,
-            currentPage: page,
-            limit,
-            news: newsResult.rows
-        });
-    } catch (err) {
-        console.error('獲取最新消息列表時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-
-
-
-// GET /api/news/:id (單一新聞)
-app.get('/api/news/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
-    try {
-        const result = await pool.query('SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, updated_at FROM news WHERE id = $1', [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該消息。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取消息 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/news/:id/like
-app.post('/api/news/:id/like', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
-    try {
-        const result = await pool.query('UPDATE news SET like_count = like_count + 1 WHERE id = $1 RETURNING like_count', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要按讚的消息。' }); }
-        res.status(200).json({ like_count: result.rows[0].like_count });
-    } catch (err) {
-        console.error(`處理消息 ID ${id} 按讚時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
- 
- 
-
-
-    
-
-
-
-
-// --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
-const adminRouter = express.Router();
-
-// --- 身份管理 (Identities Management) ---
-adminRouter.get('/identities', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, name, description FROM admin_identities ORDER BY name ASC');
-        res.json(result.rows);
-    } catch (err) { console.error('[API GET /admin/identities] Error:', err); res.status(500).json({ error: '無法獲取身份列表' }); }
-});
-adminRouter.post('/identities', async (req, res) => { /* ...身份新增邏輯... */
-    const { name, description } = req.body;
-    if (!name || name.trim() === '') return res.status(400).json({ error: '身份名稱為必填項。' });
-    try {
-        const result = await pool.query('INSERT INTO admin_identities (name, description) VALUES ($1, $2) RETURNING *', [name.trim(), description ? description.trim() : null]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { if (err.code === '23505') return res.status(409).json({ error: '身份名稱已存在' }); console.error('[API POST /admin/identities] Error:', err); res.status(500).json({ error: '無法新增身份' }); }
-});
-adminRouter.put('/identities/:id', async (req, res) => { /* ...身份更新邏輯... */
-    const { id } = req.params; const identityId = parseInt(id, 10); const { name, description } = req.body; if (isNaN(identityId)) return res.status(400).json({ error: '無效的 ID' }); if (!name || name.trim() === '') return res.status(400).json({ error: '身份名稱為必填項。' });
-    try {
-        const result = await pool.query('UPDATE admin_identities SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *', [name.trim(), description ? description.trim() : null, identityId]);
-        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要更新的身份' }); res.json(result.rows[0]);
-    } catch (err) { if (err.code === '23505') return res.status(409).json({ error: '身份名稱已存在' }); console.error(`[API PUT /admin/identities/${id}] Error:`, err); res.status(500).json({ error: '無法更新身份' }); }
-});
-adminRouter.delete('/identities/:id', async (req, res) => { /* ...身份刪除邏輯... */
-    const { id } = req.params; const identityId = parseInt(id, 10); if (isNaN(identityId)) return res.status(400).json({ error: '無效的 ID' });
-    try {
-        const result = await pool.query('DELETE FROM admin_identities WHERE id = $1', [identityId]);
-        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的身份' }); res.status(204).send();
-    } catch (err) { console.error(`[API DELETE /admin/identities/${id}] Error:`, err); res.status(500).json({ error: '無法刪除身份' }); }
-});
-
-
-
-// --- 留言板管理 (Guestbook Management) ---
-adminRouter.get('/guestbook', async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 15;
-    const offset = (page - 1) * limit;
-    const filter = req.query.filter || 'all';
-    const search = req.query.search?.trim() || ''; // 使用可選鏈 ?. 和 trim()
-    const sort = req.query.sort || 'latest'; // 新增 sort
-
-    let orderByClause = 'ORDER BY m.last_activity_at DESC'; // 預設
-    if (sort === 'popular') orderByClause = 'ORDER BY m.view_count DESC, m.last_activity_at DESC';
-    else if (sort === 'most_replies') orderByClause = 'ORDER BY m.reply_count DESC, m.last_activity_at DESC';
-
-   let whereClauses = [];
-    let countParams = []; // 【★ 修改 ★】參數分開給 COUNT query
-    let mainParams = [];  // 【★ 修改 ★】參數分開給主要 SELECT query
-    let paramIndex = 1; // 索引從 1 開始
-
-    if (filter === 'visible') whereClauses.push('m.is_visible = TRUE');
-    else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
-   
-   
-    if (search) {
-        // 搜尋條件在兩個查詢中都是第一個參數 ($1)
-        whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`);
-        const searchParam = `%${search}%`;
-        countParams.push(searchParam); // 加入 COUNT 參數
-        mainParams.push(searchParam);  // 加入主要查詢參數
-        paramIndex++; // 索引遞增
-    }
-
-
-    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-
-    const limitParamIndex = paramIndex++;  // LIMIT 的索引是 $1 (無搜尋) 或 $2 (有搜尋)
-    const offsetParamIndex = paramIndex++; // OFFSET 的索引是 $2 (無搜尋) 或 $3 (有搜尋)
-    mainParams.push(limit);
-    mainParams.push(offset);
-
-
-    try {
-        // --- 修正後的 COUNT 查詢 ---
-        const countSql = `SELECT COUNT(*) FROM guestbook_messages m ${whereSql}`;
-        console.log("[Admin Guestbook] Count SQL:", countSql.replace(/\s+/g, ' '), "Params:", countParams); // Debugging
-        const totalResult = await pool.query(countSql, countParams); // 只傳遞 countParams
-        const totalItems = parseInt(totalResult.rows[0].count, 10);
-        const totalPages = Math.ceil(totalItems / limit);
-
-        // --- 修正後的主要 SELECT 查詢 ---
-        const mainSql = `
-            SELECT m.id, m.author_name,
-                   substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
-                   m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible
-            FROM guestbook_messages m
-            ${whereSql} ${orderByClause}
-            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`; // 使用動態索引
-        console.log("[Admin Guestbook] Main SQL:", mainSql.replace(/\s+/g, ' '), "Params:", mainParams); // Debugging
-        const messagesResult = await pool.query(mainSql, mainParams); // 傳遞包含所有參數的 mainParams
-
-
-        res.json({
-            messages: messagesResult.rows,
-            currentPage: page,
-            totalPages: totalPages,
-            totalItems: totalItems,
-            limit: limit,
-            sort: sort // 返回當前排序方式
-        });
-    }
-    
-    
-
-    
-    
-    catch (err) { console.error('[API GET /admin/guestbook] Error:', err); res.status(500).json({ error: '無法獲取管理留言列表' }); }
-});
-
-adminRouter.get('/guestbook/message/:id', async (req, res) => {
-    const { id } = req.params; const messageId = parseInt(id, 10); if (isNaN(messageId)) return res.status(400).json({ error: '無效的 ID' });
-    const client = await pool.connect();
-    try {
-        // message 加入 like_count, view_count
-        const messageResult = await client.query('SELECT *, like_count, view_count FROM guestbook_messages WHERE id = $1', [messageId]);
-        if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到留言' });
-
-        // replies 加入 like_count, parent_reply_id
-        const repliesResult = await client.query(
-            `SELECT r.*, r.like_count, r.parent_reply_id, ai.name AS admin_identity_name
-             FROM guestbook_replies r
-             LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
-             WHERE r.message_id = $1 ORDER BY r.created_at ASC`,
-            [messageId]
-        );
-        res.json({ message: messageResult.rows[0], replies: repliesResult.rows });
-    } catch (err) { console.error(`[API GET /admin/guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
-});
-
-adminRouter.post('/guestbook/replies', async (req, res) => {
-    // 【★ 加入 parent_reply_id ★】
-    const { message_id, parent_reply_id, content, admin_identity_id } = req.body;
-    const messageIdInt = parseInt(message_id, 10);
-    const identityIdInt = parseInt(admin_identity_id, 10);
-    // 【★ 處理 parent_reply_id ★】
-    const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
-
-    if (isNaN(messageIdInt) || isNaN(identityIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言/父回覆/身份 ID' });
-    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
-
-    const client = await pool.connect(); try { await client.query('BEGIN');
-        const identityCheck = await client.query('SELECT 1 FROM admin_identities WHERE id = $1', [identityIdInt]);
-        if (identityCheck.rowCount === 0) { await client.query('ROLLBACK'); return res.status(400).json({ error: '無效的管理員身份' }); }
-
-        // 【★ 加入 parent_reply_id, like_count ★】
-        const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
-             VALUES ($1, $2, '匿名', $3, TRUE, $4, TRUE, 0)
-             RETURNING *, (SELECT name FROM admin_identities WHERE id = $4) AS admin_identity_name`,
-            [messageIdInt, parentIdInt, content.trim(), identityIdInt]
-        );
-        // Trigger handles updates
-        await client.query('COMMIT'); res.status(201).json(replyResult.rows[0]);
-    } catch (err) { await client.query('ROLLBACK'); console.error('[API POST /admin/guestbook/replies] Error:', err); if (err.code === '23503') return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' }); res.status(500).json({ error: '無法新增管理員回覆' }); } finally { client.release(); }
-});
-
-
-
-
-
-// PUT 更新留言可見度
-adminRouter.put('/guestbook/messages/:id/visibility', async (req, res) => {
-    const { id } = req.params; const messageId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(messageId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try { const result = await pool.query('UPDATE guestbook_messages SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言' }); res.json(result.rows[0]);
-    } catch (err) { console.error(`[API PUT /admin/guestbook/messages/${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新留言狀態' }); }
-});
-
-// PUT 更新回覆可見度
-adminRouter.put('/guestbook/replies/:id/visibility', async (req, res) => {
-    const { id } = req.params; const replyId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(replyId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
-    try { const result = await pool.query('UPDATE guestbook_replies SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, replyId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到回覆' }); res.json(result.rows[0]);
-    } catch (err) { console.error(`[API PUT /admin/guestbook/replies/${id}/visibility] Error:`, err); res.status(500).json({ error: '無法更新回覆狀態' }); }
-});
-
-// DELETE 刪除主留言
-adminRouter.delete('/guestbook/messages/:id', async (req, res) => {
-    const { id } = req.params; const messageId = parseInt(id, 10); if (isNaN(messageId)) return res.status(400).json({ error: '無效的 ID' });
-    try { const result = await pool.query('DELETE FROM guestbook_messages WHERE id = $1', [messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的留言' }); res.status(204).send();
-    } catch (err) { console.error(`[API DELETE /admin/guestbook/messages/${id}] Error:`, err); res.status(500).json({ error: '無法刪除留言' }); }
-});
-
-// DELETE 刪除回覆
-adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
-    const { id } = req.params; const replyId = parseInt(id, 10); if (isNaN(replyId)) return res.status(400).json({ error: '無效的 ID' });
-    const client = await pool.connect(); try { await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
-    } catch (err) { await client.query('ROLLBACK'); console.error(`[API DELETE /admin/guestbook/replies/${id}] Error:`, err); res.status(500).json({ error: '無法刪除回覆' }); } finally { client.release(); }
-});
-
-
-
-
-
-
-
-
-
-
-// GET /api/admin/news - 獲取所有消息列表 (給後台表格使用)
-adminRouter.get('/news', async (req, res) => {
-    console.log("[受保護 API] GET /api/admin/news 請求");
-    try {
-        // 後台需要看到所有消息，包含所有欄位，以便編輯
-        // 按更新時間排序，最新的在前面
-        const result = await pool.query(
-            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, 
-                    like_count, created_at, updated_at, category, show_in_calendar
-             FROM news
-             ORDER BY updated_at DESC, id DESC`
-        );
-        console.log(`[受保護 API] 查詢到 ${result.rowCount} 筆消息`);
-        res.status(200).json(result.rows); // 直接返回所有消息的陣列
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 獲取管理消息列表時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息列表' });
-    }
-});
-
-// GET /api/admin/news/:id - 獲取單一消息詳情 (給編輯表單填充資料)
-adminRouter.get('/news/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[受保護 API] GET /api/admin/news/${id} 請求`);
-    const newsId = parseInt(id);
-    if (isNaN(newsId)) {
-        return res.status(400).json({ error: '無效的消息 ID 格式。' });
-    }
-    try {
-        // 獲取該 ID 的所有欄位
-        const result = await pool.query(
-            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, created_at, updated_at
-             FROM news WHERE id = $1`,
-            [newsId]
-        );
-        if (result.rows.length === 0) {
-            console.warn(`[受保護 API] 找不到消息 ID ${id}`);
-            return res.status(404).json({ error: '找不到該消息。' });
-        }
-        console.log(`[受保護 API] 找到消息 ID ${id}:`, result.rows[0]);
-        res.status(200).json(result.rows[0]); // 返回單個消息對象
-    } catch (err) {
-        console.error(`[受保護 API 錯誤] 獲取管理消息 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息詳情' });
-    }
-});
-
-
-
-
-
-
-// POST /api/admin/news - 新增消息
-adminRouter.post('/news', async (req, res) => {
-    const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-            const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
-
-    try {
-        const result = await pool.query(
-            `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-             RETURNING *`, // 返回插入的完整記錄
-            [
-                title.trim(),
-                event_date || null,
-                summary ? summary.trim() : null,
-                content ? content.trim() : null,
-                thumbnail_url ? thumbnail_url.trim() : null,
-                image_url ? image_url.trim() : null,
-                category ? category.trim() : null, // 如果 category 為空字串，存 null
-                showInCalendarValue                 // 存儲處理後的布林值
-            ]
-        );
-        console.log("[受保護 API] 消息已新增:", result.rows[0]);
-        res.status(201).json(result.rows[0]); // 返回的數據會包含新欄位
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 新增消息時出錯:', err.stack || err);
-        res.status(500).json({ error: '新增消息過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// PUT /api/admin/news/:id - 更新消息
-adminRouter.put('/news/:id', async (req, res) => {
-
-    const { id } = req.params;
-    const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-
-   // 處理布林值
-
-
-
-   
-
-   try {
-       const result = await pool.query(
-           // --- *** 這裡使用 UPDATE 語句 *** ---
-           `UPDATE news
-           SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, category = $7, show_in_calendar = $8, updated_at = NOW()
-           WHERE id = $9
-           RETURNING *`, // 返回更新後的完整記錄
-          // --- *** 參數列表保持一致 *** ---
-           [
-               title.trim(),
-               event_date || null,
-               summary ? summary.trim() : null,
-               content ? content.trim() : null,
-               thumbnail_url ? thumbnail_url.trim() : null,
-               image_url ? image_url.trim() : null,
-               category ? category.trim() : null,
-               showInCalendarValue,
-               newsId
-           ]
-       );
-       if (result.rowCount === 0) {
-        console.warn(`[受保護 API] 更新消息失敗，找不到 ID ${id}`);
-        return res.status(404).json({ error: '找不到要更新的消息。' });
-    }
-    console.log(`[受保護 API] 消息 ID ${id} 已更新:`, result.rows[0]);
-    res.status(200).json(result.rows[0]); // 返回的數據會包含新欄位
-} catch (err) {
-    console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
-    res.status(500).json({ error: '更新消息過程中發生伺服器內部錯誤。' });
+nav#artist-filter.artist-filter-nav button.artist-filter-btn {
+    /* 然後重新應用我們的樣式 */
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #B0BEC5;
+    border-radius: 15px;
+    /* 其他樣式保持不變 */
 }
-});
 
-// DELETE /api/admin/news/:id - 刪除消息
-adminRouter.delete('/news/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[受保護 API] DELETE /api/admin/news/${id} 請求`);
-    const newsId = parseInt(id);
-    if (isNaN(newsId)) {
-        return res.status(400).json({ error: '無效的消息 ID 格式。' });
-    }
-    try {
-        const result = await pool.query('DELETE FROM news WHERE id = $1', [newsId]);
-        if (result.rowCount === 0) {
-            console.warn(`[受保護 API] 刪除消息失敗，找不到 ID ${id}`);
-            return res.status(404).json({ error: '找不到要刪除的消息。' });
-        }
-        console.log(`[受保護 API] 消息 ID ${id} 已刪除.`);
-        res.status(204).send(); // 成功，無內容返回
-    } catch (err) {
-        console.error(`[受保護 API 錯誤] 刪除消息 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '刪除消息過程中發生伺服器內部錯誤。' });
-    }
-});
+/* --- Product Grid Layout (For index.html) --- */
+.product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+@media (min-width: 600px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
+@media (min-width: 900px) { .product-grid { grid-template-columns: repeat(4, 1fr); gap: 1.2rem; } }
+@media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; } }
 
+/* Individual Product Card Styles (For index.html) */
+.product-card, .product-card:link, .product-card:visited { background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 100%; /*100% */ text-align: center; text-decoration: none; color: inherit; position: relative; }
+.product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
+.product-card .image-container { width: 100%; height: 100px; /*160px*/ overflow: hidden; margin-bottom: 0.4rem; padding: 0.4rem 0.4rem 0 0.4rem; }
+.product-card img { display: block; width: 100%; height: 100%; object-fit: contain; margin: 0 auto; }
+.product-card .card-content { padding: 0 0.8rem 0.8rem 0.8rem; flex-grow: 1; display: flex; flex-direction: column; }
+.product-card h3 { font-size: 0.9rem; margin-bottom: 0.2rem; color: #424242; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
+.product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
 
+/* --- Music Page Styles (music.html & scores.html) --- */
+/* 歌手篩選樣式 */
+/* *** 提高容器選擇器特異性 (可選，但更明確) *** */
+nav#artist-filter.artist-filter-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin: 2rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee; /* *** 確保這個邊框存在 *** */
+}
 
+/* *** 修改這裡：移除 !important 和 border-bottom: none *** */
+nav#artist-filter.artist-filter-nav button.artist-filter-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #B0BEC5;
+    border-radius: 15px;
+    background-color: transparent;
+    color: #757575;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    /* border-bottom: none !important; */ /* *** 移除這一行 *** */
+    line-height: 1.5;
+    display: inline-block;
+    margin: 0;
+    font-family: inherit;
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+/* *** 提高 hover 樣式的特異性 *** */
+nav#artist-filter.artist-filter-nav button.artist-filter-btn:hover {
+    background-color: #ECEFF1;
+    border-color: #78909C;
+    color: #424242;
+}
+nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
+    background-color: #E57373;
+    color: white;
+    border-color: #E57373;
+    font-weight: bold;
+}
 
+.music-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+/* 專輯網格佈局 (music.html) */
 
-
-
-
-
-app.use('/api/admin', adminRouter);
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --- 流量分析 API ---
-// GET /api/analytics/traffic
-app.get('/api/analytics/traffic', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-  console.log("接收到 /api/analytics/traffic 請求");
-  const daysToFetch = 30; const startDate = new Date(); startDate.setDate(startDate.getDate() - daysToFetch); const startDateString = startDate.toISOString().split('T')[0]; console.log(`計算起始日期: ${startDateString}`);
-  try {
-      const queryText = `SELECT view_date, SUM(view_count)::bigint AS count FROM page_views WHERE view_date >= $1 GROUP BY view_date ORDER BY view_date ASC`;
-      const result = await pool.query(queryText, [startDateString]);
-      const trafficData = result.rows.map(row => ({ date: new Date(row.view_date).toISOString().split('T')[0], count: parseInt(row.count) }));
-      res.status(200).json(trafficData);
-  } catch (err) { console.error('獲取流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); }
-});
-
-// GET /api/analytics/monthly-traffic
-app.get('/api/analytics/monthly-traffic', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-  console.log("接收到 /api/analytics/monthly-traffic 請求");
-  const targetYear = req.query.year ? parseInt(req.query.year) : null;
-  let queryText = `SELECT to_char(date_trunc('month', view_date), 'YYYY-MM') AS view_month, SUM(view_count)::bigint AS count FROM page_views`;
-  const queryParams = [];
-  if (targetYear && !isNaN(targetYear)) { // 驗證年份
-      queryText += ` WHERE date_part('year', view_date) = $1`;
-      queryParams.push(targetYear);
+.album-grid {
+    display: grid;
+    /* 預設 (手機) 2 欄 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
   }
-  queryText += ` GROUP BY view_month ORDER BY view_month ASC`;
-  try {
-      const result = await pool.query(queryText, queryParams);
-      const monthlyTrafficData = result.rows.map(row => ({ month: row.view_month, count: parseInt(row.count) }));
-      res.status(200).json(monthlyTrafficData);
-  } catch (err) { console.error('獲取月度流量數據時發生嚴重錯誤:', err); res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); }
-});
-
-
-
-// --- 保護的管理頁面和 API Routes ---
-
-
-
-
-// --- 新增: 銷售報告 API (受保護) ---
-app.get('/api/analytics/sales-report', async (req, res) => {
-    const { startDate, endDate } = req.query; // 從查詢參數獲取日期範圍
-
-    // 基本日期驗證 (範例，可以做得更完善)
-    let queryStartDate = startDate ? new Date(startDate) : null;
-    let queryEndDate = endDate ? new Date(endDate) : null;
-
-    // 設置預設日期範圍 (例如：過去 30 天)
-    if (!queryStartDate || !queryEndDate || isNaN(queryStartDate) || isNaN(queryEndDate)) {
-        queryEndDate = new Date(); // 今天結束
-        queryStartDate = new Date();
-        queryStartDate.setDate(queryEndDate.getDate() - 30); // 30 天前開始
-    } else {
-        // 確保結束日期包含當天結束時間
-         queryEndDate.setHours(23, 59, 59, 999);
+  
+  /* 使用與 product-grid 相同的響應式斷點 */
+  @media (min-width: 600px) {
+    .album-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
     }
-
-    // 將日期轉換為 ISO 格式給 SQL 使用
-    const startDateISO = queryStartDate.toISOString();
-    const endDateISO = queryEndDate.toISOString();
-
-    console.log(`[Sales Report API] Fetching data from ${startDateISO} to ${endDateISO}`);
-
-    const client = await pool.connect();
-    try {
-        // 1. 總銷售件數
-        const totalItemsResult = await client.query(
-            `SELECT COALESCE(SUM(quantity_sold), 0)::integer AS total_items
-             FROM sales_log
-             WHERE sale_timestamp BETWEEN $1 AND $2`,
-            [startDateISO, endDateISO]
-        );
-        const totalItemsSold = totalItemsResult.rows[0].total_items;
-
-        // 2. 銷售趨勢 (按日)
-        const trendResult = await client.query(
-            `SELECT DATE(sale_timestamp AT TIME ZONE 'Asia/Taipei') AS sale_date, -- 按台北時間分組日期
-                    SUM(quantity_sold)::integer AS daily_quantity
-             FROM sales_log
-             WHERE sale_timestamp BETWEEN $1 AND $2
-             GROUP BY sale_date
-             ORDER BY sale_date ASC`,
-            [startDateISO, endDateISO]
-        );
-        const salesTrend = trendResult.rows.map(row => ({
-            date: row.sale_date.toISOString().split('T')[0], // 格式化為 YYYY-MM-DD
-            quantity: row.daily_quantity
-        }));
-
-        // 3. 熱銷商品排行 (依數量, 包含公仔和規格名稱)
-        const topProductsResult = await client.query(
-            `SELECT
-                f.name AS figure_name,
-                fv.name AS variation_name,
-                SUM(sl.quantity_sold)::integer AS total_quantity
-             FROM sales_log sl
-             JOIN figure_variations fv ON sl.figure_variation_id = fv.id
-             JOIN figures f ON fv.figure_id = f.id
-             WHERE sl.sale_timestamp BETWEEN $1 AND $2
-             GROUP BY f.name, fv.name
-             ORDER BY total_quantity DESC
-             LIMIT 10`, // 例如限制前 10 名
-            [startDateISO, endDateISO]
-        );
-        const topSellingProducts = topProductsResult.rows;
-
-        // 4. 詳細銷售紀錄
-        const detailedLogResult = await client.query(
-            `SELECT
-                sl.sale_timestamp,
-                f.name AS figure_name,
-                fv.name AS variation_name,
-                sl.quantity_sold
-             FROM sales_log sl
-             JOIN figure_variations fv ON sl.figure_variation_id = fv.id
-             JOIN figures f ON fv.figure_id = f.id
-             WHERE sl.sale_timestamp BETWEEN $1 AND $2
-             ORDER BY sl.sale_timestamp DESC`,
-            [startDateISO, endDateISO]
-        );
-        // 格式化時間戳
-        const detailedLog = detailedLogResult.rows.map(row => ({
-             timestamp: row.sale_timestamp, // 前端可以再格式化
-             figureName: row.figure_name,
-             variationName: row.variation_name,
-             quantity: row.quantity_sold
-         }));
-
-        res.status(200).json({
-            summary: {
-                totalItemsSold: totalItemsSold,
-                startDate: startDateISO.split('T')[0], // 回傳實際使用的日期範圍
-                endDate: endDateISO.split('T')[0]
-            },
-            trend: salesTrend,
-            topProducts: topSellingProducts,
-            details: detailedLog
-        });
-
-    } catch (err) {
-        console.error('[Sales Report API Error] 獲取銷售報告數據時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售報告數據時發生伺服器內部錯誤' });
-    } finally {
-        client.release();
+  }
+  @media (min-width: 900px) {
+    .album-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
     }
-});
-
-
-
-
-
-// GET /api/admin/sales - 獲取銷售紀錄 (可篩選)
-app.get('/api/admin/sales', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/sales requested with query:", req.query);
-    const { startDate, endDate, productName } = req.query;
-    let queryText = `
-        SELECT id, product_name, quantity_sold, sale_timestamp
-        FROM sales_log
-    `;
-    const queryParams = [];
-    const conditions = [];
-    let paramIndex = 1;
-
-    if (startDate) {
-        conditions.push(`sale_timestamp >= $${paramIndex++}`);
-        queryParams.push(startDate);
+  }
+  @media (min-width: 1200px) {
+    .album-grid {
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.8rem;
     }
-    if (endDate) {
-        // 包含 endDate 當天，所以用 < 第二天的 00:00
-        const nextDay = new Date(endDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        conditions.push(`sale_timestamp < $${paramIndex++}`);
-        queryParams.push(nextDay.toISOString().split('T')[0]);
+  }
+
+
+
+/* 專輯卡片樣式 (music.html) */
+.album-card { display: block; text-decoration: none; color: inherit; background-color: transparent; border-radius: 6px; overflow: visible; box-shadow: none; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; }
+.album-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
+.album-card .cover-image { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 6px; margin-bottom: 0.8rem; background-color: #eee; position: relative; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); }
+.album-card .cover-image img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.album-card:hover .cover-image img { transform: scale(1.05); }
+.album-card .cover-image::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.5); font-size: 2rem; color: rgba(255, 255, 255, 0.8); background-color: rgba(0, 0, 0, 0.4); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; line-height: 1; }
+.album-card:hover .cover-image::after { opacity: 1; }
+.album-card .album-info { padding: 0 0.2rem; text-align: left; }
+.album-card .album-info h3 { font-size: 0.9rem; font-weight: 600; color: #333; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.album-card .album-info .artist { font-size: 0.8rem; color: #666; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.album-card .album-info .release-date { font-size: 0.75rem; color: #999; }
+
+/* --- News List Styles (news.html) --- */
+.news-list { margin-top: 1.5rem; }
+.news-card { display: flex; align-items: stretch; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; transition: box-shadow 0.2s ease; }
+.news-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.news-card .date-tag { flex-shrink: 0; background-color: #E57373; color: white; padding: 1.5rem 1rem; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 70px; }
+.news-card .date-tag .month { font-size: 0.8rem; display: block; margin-bottom: 0.2rem; text-transform: uppercase; }
+.news-card .date-tag .day { font-size: 1.8rem; font-weight: bold; line-height: 1; display: block; }
+.news-card .date-tag .weekday { font-size: 0.7rem; display: block; margin-top: 0.2rem; }
+.news-card .thumbnail { flex-shrink: 0; width: 120px; height: 100px; overflow: hidden; }
+@media (max-width: 600px) { .news-card .thumbnail { width: 90px; height: 75px; } }
+.news-card .thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.news-card .content-wrapper { flex-grow: 1; padding: 0.8rem 1rem; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; cursor: pointer; }
+.news-card .news-title { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 0.4rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; max-height: calc(1.1rem * 1.4 * 2); }
+.news-card .news-summary { font-size: 0.85rem; color: #666; line-height: 1.5; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.85rem * 1.5 * 2); }
+.news-card .actions { flex-shrink: 0; width: 60px; padding: 0.5rem 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem; border-left: 1px solid #eee; }
+.news-card .like-button { background: none; border: none; cursor: pointer; padding: 2px 5px; display: inline-flex; align-items: center; color: #aaa; font-size: 0.9rem; line-height: 1; margin: 0; }
+.news-card .like-button.liked { color: #E57373; font-weight: bold; }
+.news-card .like-button .heart-icon { font-size: 1.3em; transition: transform 0.2s ease; line-height: 1; }
+.news-card .like-button:hover .heart-icon { transform: scale(1.2); }
+.news-card .like-count { font-size: 0.8rem; color: #aaa; text-align: center; line-height: 1; }
+
+/* --- News Pagination --- */
+#pagination-controls { text-align: center; margin-top: 2rem; }
+#pagination-controls button { padding: 8px 12px; margin: 0 3px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease; }
+#pagination-controls button:hover { background-color: #eee; }
+#pagination-controls button.active { background-color: #FFB74D; color: white; border-color: #FFB74D; font-weight: bold; cursor: default; }
+#pagination-controls button:disabled { opacity: 0.6; cursor: not-allowed; }
+#pagination-controls span { padding: 8px 5px; }
+
+/* --- News Detail Modal (news.html) --- */
+#news-detail-modal .modal-content { max-width: 700px; padding: 0; overflow: hidden; }
+#news-detail-modal .detail-image { width: 100%; max-height: 400px; object-fit: cover; display: block; }
+#news-detail-modal .detail-content { padding: 1.5rem 2rem 2rem 2rem; }
+#news-detail-modal .detail-title { font-size: 1.6rem; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
+#news-detail-modal .detail-meta { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
+#news-detail-modal .detail-body { font-size: 1rem; line-height: 1.7; color: #555; white-space: pre-wrap; /* Use pre-wrap to preserve line breaks */ }
+#news-detail-modal .close-btn { top: 15px; right: 15px; background-color: rgba(0,0,0,0.3); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; line-height: 1; padding: 0; text-align: center; }
+#news-detail-modal .close-btn:hover { background-color: rgba(0,0,0,0.6); }
+
+/* --- News Detail Page Styles (news-detail.html) --- */
+.news-detail-container { max-width: 800px; margin: 2rem auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+.news-detail-container #news-detail-image { display: block; width: 100%; object-fit: cover; max-height: 450px; }
+.news-detail-text-content { padding: 1.5rem 2rem 2rem 2rem; }
+.news-detail-container #news-detail-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.8rem; line-height: 1.3; color: #333; }
+.news-detail-container #news-detail-meta { border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+.news-detail-container #news-detail-body { font-size: 1rem; color: #555; line-height: 1.8; white-space: pre-wrap; }
+.news-detail-container #news-detail-body p { margin-bottom: 1.5rem; }
+.news-detail-container #news-detail-body img { max-width: 100%; height: auto; margin: 1.5rem auto; display: block; border-radius: 6px; }
+.news-detail-container #news-detail-body h2,
+.news-detail-container #news-detail-body h3,
+.news-detail-container #news-detail-body h4 { margin: 2rem 0 1rem; color: #333; font-weight: 700; }
+.news-detail-container #news-detail-body h2 { font-size: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+.news-detail-container #news-detail-body h3 { font-size: 1.3rem; }
+.news-detail-container #news-detail-body h4 { font-size: 1.1rem; }
+.news-detail-container #news-detail-body ul,
+.news-detail-container #news-detail-body ol { margin: 1.5rem 0; padding-left: 2rem; }
+.news-detail-container #news-detail-body li { margin-bottom: 0.5rem; }
+.news-detail-container #news-detail-body blockquote { border-left: 4px solid #FFB74D; padding-left: 1.5rem; margin: 1.5rem 0; color: #666; font-style: italic; }
+
+/* News Detail Share Section */
+.news-share { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+.copy-link-button { background-color: #6c757d; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.9em; margin-left: 10px; font-weight: bold; }
+.copy-link-button:hover { background-color: #5a6268; }
+
+/* News Detail Responsive */
+@media (max-width: 900px) {
+    .news-detail-container { max-width: 95%; margin: 1.5rem auto; }
+    .news-detail-text-content { padding: 1.2rem 1.5rem 1.5rem 1.5rem; }
+    .news-detail-container #news-detail-title { font-size: 1.5rem; }
+}
+@media (max-width: 600px) {
+    .news-detail-container { margin: 1rem auto; border-radius: 4px; }
+    .news-detail-text-content { padding: 1rem; }
+    .news-detail-container #news-detail-title { font-size: 1.3rem; }
+    .news-detail-container #news-detail-meta { font-size: 0.85em; }
+    .news-detail-container #news-detail-body { font-size: 0.95rem; line-height: 1.7; }
+}
+
+/* --- Footer Styles --- */
+footer { background-color: #424242; color: #FAFAFA; padding: 2.5rem 1rem 1.5rem 1rem; margin-top: 4rem; text-align: center; }
+.footer-container { max-width: 1100px; margin: 0 auto; }
+.footer-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #616161; }
+.footer-nav a { color: #eeeeee; text-decoration: none; font-size: 0.95rem; transition: color 0.2s ease; }
+.footer-nav a:hover, .footer-nav a.admin-link:hover { color: #FFB74D; }
+.footer-social { margin-bottom: 1.5rem; }
+.footer-copyright p { font-size: 0.85rem; color: #bdbdbd; line-height: 1.5; }
+
+/* --- Modal Styles (General - for Admin pages) --- */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding-top: 50px; }
+.modal[style*="display: flex"] { display: flex !important; }
+.modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+.close-btn:hover { color: #333; }
+.modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+.form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+.form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer; }
+.form-actions .save-btn { background-color: #f2f2f2; border-color: #f2f2f2; /*#28a745; border-color: #28a745; */ color: white; }
+.form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+.form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; }
+#edit-image-preview, #add-image-preview,
+#edit-cover-preview, #add-cover-preview,
+#edit-news-thumbnail-preview, #add-news-thumbnail-preview,
+#edit-banner-preview, #add-banner-preview {
+    max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain;
+}
+#edit-image-preview[src], #add-image-preview[src],
+#edit-cover-preview[src], #add-cover-preview[src],
+#edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src],
+#edit-banner-preview[src], #add-banner-preview[src] {
+    display: block;
+}
+p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
+
+/* --- Admin Navigation Styles --- */
+.admin-nav { background-color: #f8f9fa; padding: 1rem 0; text-align: center; border-bottom: 1px solid #dee2e6; margin-bottom: 1rem; }
+.admin-nav a { color: #495057; text-decoration: none; padding: 0.6rem 1.2rem; margin: 0 0.5rem; border-radius: 5px; font-weight: 500; transition: background-color 0.2s ease, color 0.2s ease; }
+.admin-nav a:hover { background-color: #e9ecef; color: #212529; }
+.admin-nav a.active { background-color: #007bff; color: white; font-weight: bold; }
+
+/* --- Admin Chart Styles --- */
+.chart-container { position: relative; height:300px; width:80%; margin: 2rem auto; }
+.chart-controls { text-align: center; margin-bottom: 1rem; }
+.chart-controls button.chart-toggle-btn { padding: 6px 12px; margin: 0 5px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; font-size: 0.9em; }
+.chart-controls button.chart-toggle-btn:hover { background-color: #eee; border-color: #bbb; }
+.chart-controls button.chart-toggle-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; cursor: default; }
+
+/* --- Banner Swiper Styles (All Pages) --- */
+.banner-swiper { width: 100%; height: 370px; background-color: #FFB74D; margin-bottom: 0rem; /*2rem*/ }
+.banner-swiper .swiper-slide { text-align: center; font-size: 18px; background: #ffb74d; display: flex; justify-content: center; align-items: center; }
+.banner-swiper .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.banner-swiper .swiper-button-prev,
+.banner-swiper .swiper-button-next { color: rgba(255, 255, 255, 0.7); --swiper-navigation-size: 30px; }
+.banner-swiper .swiper-button-prev:hover,
+.banner-swiper .swiper-button-next:hover { color: rgba(255, 255, 255, 1); }
+.banner-swiper .swiper-pagination-bullet { background: rgba(0, 0, 0, 0.3); opacity: 0.8; }
+.banner-swiper .swiper-pagination-bullet-active { background: #fff; opacity: 1; }
+
+/* --- Banner Admin Table Styles --- */
+#banner-list-table tr.banner-group-header td { background-color: #FFB74D; font-weight: bold; font-size: 1.1em; color: #495057; padding: 12px 10px !important; border-top: 2px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#banner-list-table tr.banner-group-header:not(:first-child) td { border-top-width: 4px; }
+#banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
+
+/* --- Scores Page Specific Styles (scores.html) --- */
+.content-container { /* Container for song list and details */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    align-items: flex-start;
+}
+
+/* Song list container */
+#song-list-container {
+    flex: 1 1 300px;
+    min-width: 250px;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    max-height: 75vh;
+    display: flex;
+    flex-direction: column;
+}
+#song-list-container h2 {
+     margin-top: 0;
+     margin-bottom: 1rem;
+     font-size: 1.2rem;
+     color: #555;
+     border-bottom: 1px solid #eee;
+     padding-bottom: 0.5rem;
+}
+#song-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+/* --- 歌曲列表 --- */
+#song-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.8rem 1rem;
+    gap: 5px 10px;
+    cursor: default;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+#song-list li:last-child { border-bottom: none; }
+#song-list li.active {
+    background-color: #FFF9C4;
+    color: #424242;
+    font-weight: normal;
+}
+/* --- 歌曲資訊 --- */
+.song-list-info {
+    flex-grow: 1;
+    min-width: 150px;
+    margin-right: 1rem;
+    overflow: hidden; /* Prevent long text from breaking layout */
+    text-overflow: ellipsis;
+    flex-direction: column; justify-content: center;
+    white-space: nowrap;
+}
+/* --- 歌曲名稱 --- */
+#song-list .song-title {
+
+     font-weight: 500; /* 粗體 */
+     /* 確保它佔用塊空間 */
+     display: block; 
+     /* 隱藏溢出 */
+     overflow: hidden;
+     /* 省略號 */
+     text-overflow: ellipsis;
+     /* 不換行 */       
+     white-space: nowrap;
+}
+/* --- 歌手名稱 --- */
+#song-list .song-artist {
+    font-size: 0.85em;
+    color: #757575;
+    display: block; /* Ensure it takes block space */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* --- 樂譜按鈕 --- */
+.song-list-scores {
+    /* 換行 */
+    white-space: nowrap; 
+    /* 縮小 */
+    flex-shrink: 0; /* 0 不縮小 
+    /* 彈性容器 */
+    display: flex; 
+
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: flex-end;
+    /* flex-shrink: 0; */
+    align-items: center;
+}
+/* Score buttons within the list */
+/* --- 樂譜按鈕 --- */
+.list-score-btn {
+    padding: 3px 8px;
+    font-size: 0.8em;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    color: #555;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+/* --- 樂譜按鈕 hover --- */
+.list-score-btn:hover {
+    background-color: #e0e0e0;
+    border-color: #bbb;
+}
+/* --- 樂譜按鈕 active --- */
+.list-score-btn.active {
+    background-color: #E57373;
+    color: white;
+    border-color: #E57373;
+    font-weight: bold;
+}
+#song-list-container #song-list-loading, /* Loading/Error inside list container */
+#song-list-container #song-list-error {
+     padding: 1rem;
+     text-align: center;
+     color: #888;
+}
+#song-list-container #song-list-error { color: red; }
+
+/* --- 歌曲詳情 --- */
+#song-detail-container {
+    flex: 2 1 600px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    min-height: 600px; /* 保持最小高度 */
+    display: none; /* 初始隱藏，由 JS 控制 */
+    overflow: visible; /* *** 確保內容不會被意外截斷 *** */
+}
+
+#song-info {
+     margin-top: 0;
+     margin-bottom: 1.5rem;
+     font-size: 1.5rem;
+     font-weight: 700;
+     color: #333;
+     padding-bottom: 1rem;
+     border-bottom: 1px solid #eee;
+     flex-shrink: 0; /* Prevent shrinking */
+}
+#youtube-player {
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
+}
+#youtube-player iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 4px;
+}
+#score-selector { /* Container for score buttons inside details */
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+#score-selector h3 {
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
+    color: #555;
+}
+#score-selector button.score-type-btn { /* Score buttons inside details */
+     padding: 6px 12px;
+     margin-right: 8px;
+     margin-bottom: 8px;
+     cursor: pointer;
+     border: 1px solid #B0BEC5;
+     background-color: #fff;
+     color: #555;
+     border-radius: 4px;
+     transition: all 0.2s ease;
+     font-size: 0.9rem;
+}
+#score-selector button.score-type-btn:hover {
+    background-color: #ECEFF1;
+    border-color: #78909C;
+}
+#score-selector button.score-type-btn.active {
+     background-color: #E57373;
+     color: white;
+     border-color: #E57373;
+     font-weight: bold;
+}
+
+/* PDF viewer container (scores.html) */
+#pdf-viewer-container {
+    border: 1px solid #ddd;
+    /* max-height: 80vh; */ /* 移除 max-height */
+    overflow: auto;
+    background-color: #e8e8e8;
+    position: relative;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 400px;
+    z-index: 1;
+}
+#pdf-viewer-container canvas {
+     display: block;
+     margin: 1rem auto;
+     max-width: 95%;
+     height: auto;
+     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+     background-color: white;
+     /* border: 1px dashed blue; */ /* 移除臨時邊框 */
+     position: relative;
+     z-index: 2;
+}
+#pdf-loading, #pdf-error {
+     position: absolute;
+     top: 50%; left: 50%;
+     transform: translate(-50%, -50%);
+     text-align: center;
+     color: #666;
+     font-size: 1.1rem;
+     padding: 1rem;
+     background-color: rgba(255, 255, 255, 0.95);
+     border-radius: 4px;
+     z-index: 10;
+     display: none;
+     /* border: 1px solid orange; */ /* 移除臨時邊框 */
+     min-width: 150px;
+}
+#pdf-error { color: red; font-weight: bold;}
+
+/* PDF Pagination (scores.html) */
+#pdf-pagination {
+    text-align: center;
+    padding: 0.8rem 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+}
+#pdf-pagination button {
+     padding: 5px 10px; margin: 0; cursor: pointer;
+     border: 1px solid #ccc; background-color: #fff; border-radius: 3px;
+}
+#pdf-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+#pdf-pagination span { margin: 0 5px; color: #555; font-size: 0.9em;}
+
+/* --- score-viewer.html specific styles --- */
+main.score-viewer-main { max-width: 100%; padding: 0; margin: 0; }
+.viewer-header {
+    background-color: #FFB74D;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.viewer-header a { color: #424242; text-decoration: none; font-weight: 500; }
+.viewer-header h1 { font-size: 0.5rem; /*1.2rem */ color: #424242; margin: 0; text-align: center; flex-grow: 1; }
+.viewer-header button {
+    padding: 5px 10px;
+    border: 1px solid #424242;
+    background: white;
+    color: #424242;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.viewer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 0.5rem; /* 上下保留 padding，左右減小 */
+    gap: 1.5rem;
+}
+#youtube-player-viewer {
+    width: 100%;
+    max-width: 800px;
+    flex-shrink: 0;
+}
+#youtube-player-viewer iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 4px;
+}
+#pdf-viewer-container-viewer {
+    width: 100%;
+    /* max-width: 95%; */ /* 移除 max-width */
+    border: 1px solid #ccc;
+    background-color: #e8e8e8;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 60vh;
+}
+#pdf-viewer-container-viewer canvas {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%; /* 確保 Canvas 不超出容器 */
+    height: auto;
+    background-color: white;
+}
+#pdf-pagination-viewer {
+    padding: 0.8rem 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+#pdf-loading-viewer, #pdf-error-viewer {
+     position: absolute; top: 40%; left: 50%;
+     transform: translate(-50%, -50%); z-index: 10;
+     padding: 1rem; background-color: rgba(255,255,255,0.95);
+     border-radius: 5px; text-align: center; color: #666;
+     display: none;
+     min-width: 150px;
+     /* border: 1px solid orange; */ /* 移除臨時邊框 */
+}
+#pdf-error-viewer { color: red; font-weight: bold;}
+
+/* Print styles for score-viewer.html */
+@media print {
+    body { background-color: white; }
+    .viewer-header, #youtube-player-viewer, #pdf-pagination-viewer, footer { display: none !important; }
+    main.score-viewer-main { padding: 0; margin: 0;}
+    .viewer-content { padding: 0; }
+    #pdf-viewer-container-viewer {
+        border: none;
+        box-shadow: none;
+        width: 100%;
+        max-width: 100%;
+        min-height: auto;
+        overflow: visible;
     }
-    if (productName) {
-        conditions.push(`product_name ILIKE $${paramIndex++}`); // ILIKE 不區分大小寫
-        queryParams.push(`%${productName}%`); // 模糊匹配
+    #pdf-viewer-container-viewer canvas {
+         max-width: 100%;
+         box-shadow: none;
+         margin: 0;
     }
-
-    if (conditions.length > 0) {
-        queryText += ' WHERE ' + conditions.join(' AND ');
+    #pdf-viewer-container-viewer canvas {
+        page-break-inside: avoid;
+        page-break-before: auto;
+        page-break-after: auto;
     }
-
-    queryText += ' ORDER BY sale_timestamp DESC, id DESC'; // 預設按銷售時間降序排列
-
-    try {
-        const result = await pool.query(queryText, queryParams);
-        console.log(`[Admin API] Found ${result.rowCount} sales records.`);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' });
-    }
-});
-
-// GET /api/admin/sales/summary - 獲取銷售彙總數據 (可篩選)
-app.get('/api/admin/sales/summary', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/sales/summary requested with query:", req.query);
-    const { startDate, endDate } = req.query;
-
-    // 基本 WHERE 條件子句生成
-    let whereClause = '';
-    const queryParams = [];
-    let paramIndex = 1;
-    if (startDate) {
-        whereClause += `WHERE sale_timestamp >= $${paramIndex++} `;
-        queryParams.push(startDate);
-    }
-    if (endDate) {
-        const nextDay = new Date(endDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `;
-        queryParams.push(nextDay.toISOString().split('T')[0]);
-    }
-
-    try {
-        // 1. 總銷售件數
-        const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
-        const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
-        const totalItems = totalItemsResult.rows[0].total_items;
-
-        // 2. 熱銷商品 Top 5
-        const topProductsQuery = `
-            SELECT product_name, SUM(quantity_sold)::integer as total_sold
-            FROM sales_log
-            ${whereClause}
-            GROUP BY product_name
-            ORDER BY total_sold DESC
-            LIMIT 5;
-        `;
-        const topProductsResult = await pool.query(topProductsQuery, queryParams);
-        const topProducts = topProductsResult.rows;
-
-        // 3. 每日銷售趨勢 (按日期分組)
-        const salesTrendQuery = `
-            SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total
-            FROM sales_log
-            ${whereClause}
-            GROUP BY sale_date
-            ORDER BY sale_date ASC;
-        `;
-        const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
-        // 格式化日期為 YYYY-MM-DD
-        const salesTrend = salesTrendResult.rows.map(row => ({
-            date: new Date(row.sale_date).toISOString().split('T')[0],
-            quantity: row.daily_total
-        }));
-
-
-        res.status(200).json({
-            totalItems,
-            topProducts,
-            salesTrend
-        });
-
-    } catch (err) {
-        console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
-    }
-});
-
-
-// POST /api/admin/sales - 新增銷售紀錄
-app.post('/api/admin/sales', async (req, res) => {
-    const { product_name, quantity_sold, sale_timestamp } = req.body;
-    console.log("[Admin API] POST /api/admin/sales received:", req.body);
-
-    if (!product_name || !quantity_sold) {
-        return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' });
-    }
-    const quantity = parseInt(quantity_sold);
-    if (isNaN(quantity) || quantity <= 0) {
-        return res.status(400).json({ error: '銷售數量必須是正整數。' });
-    }
-    // 驗證 sale_timestamp 格式 (如果提供的話)
-    let timestampToInsert = sale_timestamp ? new Date(sale_timestamp) : new Date();
-    if (isNaN(timestampToInsert.getTime())) {
-        console.warn("無效的銷售時間格式，將使用目前時間:", sale_timestamp);
-        timestampToInsert = new Date(); // 無效則使用現在時間
-    }
-
-
-    try {
-        const queryText = `
-            INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp)
-            VALUES ($1, $2, $3)
-            RETURNING id, product_name, quantity_sold, sale_timestamp;
-        `;
-        const result = await pool.query(queryText, [
-            product_name.trim(),
-            quantity,
-            timestampToInsert
-        ]);
-        console.log("[Admin API] Sales record added:", result.rows[0]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[Admin API Error] 新增銷售紀錄時出錯:', err.stack || err);
-        res.status(500).json({ error: '新增銷售紀錄過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// PUT /api/admin/sales/:id - 更新銷售紀錄
-app.put('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params;
-    const { product_name, quantity_sold, sale_timestamp } = req.body;
-    console.log(`[Admin API] PUT /api/admin/sales/${id} received:`, req.body);
-
-    const recordId = parseInt(id);
-    if (isNaN(recordId)) {
-        return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' });
-    }
-    if (!product_name || !quantity_sold) {
-        return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' });
-    }
-    const quantity = parseInt(quantity_sold);
-    if (isNaN(quantity) || quantity <= 0) {
-        return res.status(400).json({ error: '銷售數量必須是正整數。' });
-    }
-     // 驗證 sale_timestamp 格式
-    let timestampToUpdate = new Date(sale_timestamp);
-    if (isNaN(timestampToUpdate.getTime())) {
-        console.warn(`無效的銷售時間格式 (ID: ${id})，將保持原時間或更新為現在? 這裡選擇更新為現在:`, sale_timestamp);
-        // 或者你可以決定不更新時間欄位如果格式錯誤
-        // timestampToUpdate = undefined; // 如果不想更新時間
-        return res.status(400).json({ error: '無效的銷售時間格式。' }); // 更嚴格，要求有效時間
-    }
-
-
-    try {
-        const queryText = `
-            UPDATE sales_log
-            SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW()
-            WHERE id = $4
-            RETURNING id, product_name, quantity_sold, sale_timestamp;
-        `;
-        const result = await pool.query(queryText, [
-            product_name.trim(),
-            quantity,
-            timestampToUpdate, // 使用驗證過的 Date 物件
-            recordId
-        ]);
-
-        if (result.rowCount === 0) {
-            console.warn(`[Admin API] Sales record ID ${id} not found for update.`);
-            return res.status(404).json({ error: '找不到要更新的銷售紀錄。' });
-        }
-
-        console.log(`[Admin API] Sales record ID ${id} updated:`, result.rows[0]);
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 更新銷售紀錄 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '更新銷售紀錄過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// DELETE /api/admin/sales/:id - 刪除銷售紀錄
-app.delete('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] DELETE /api/admin/sales/${id} requested`);
-
-    const recordId = parseInt(id);
-    if (isNaN(recordId)) {
-        return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' });
-    }
-
-    try {
-        const queryText = 'DELETE FROM sales_log WHERE id = $1';
-        const result = await pool.query(queryText, [recordId]);
-
-        if (result.rowCount === 0) {
-            console.warn(`[Admin API] Sales record ID ${id} not found for deletion.`);
-            return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' });
-        }
-
-        console.log(`[Admin API] Deleted sales record ID: ${id}`);
-        res.status(204).send(); // 成功刪除，回傳 204 No Content
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除銷售紀錄 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '刪除銷售紀錄過程中發生伺服器內部錯誤。' });
-    }
-});
-
-
-
-
-
-
-
-
-
-
-// GET /api/admin/figures - 獲取所有公仔列表 (包含規格)
-app.get('/api/admin/figures', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/figures requested");
-    try {
-        // 使用 LEFT JOIN 和 JSON_AGG 來聚合每個公仔的規格資訊
-        const queryText = `
-            SELECT
-                f.id,
-                f.name,
-                f.image_url,
-                f.purchase_price,
-                f.selling_price,
-                f.ordering_method,
-                f.created_at,
-                f.updated_at,
-                COALESCE(
-                    (SELECT json_agg(
-                        json_build_object(
-                            'id', v.id,
-                            'name', v.name, 
-                            'quantity', v.quantity
-                        ) ORDER BY v.name ASC -- 確保規格按名稱排序
-                    )
-                     FROM figure_variations v
-                     WHERE v.figure_id = f.id),
-                    '[]'::json -- 如果沒有規格，返回空 JSON 陣列
-                ) AS variations
-            FROM figures f
-            ORDER BY f.created_at DESC; -- 按創建時間降序排列
-        `;
-        const result = await pool.query(queryText);
-        console.log(`[Admin API] Found ${result.rowCount} figures.`);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' });
-    }
-});
-
-// POST /api/admin/figures - 新增公仔及其規格
-app.post('/api/admin/figures', async (req, res) => {
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    console.log("[Admin API] POST /api/admin/figures received:", req.body);
-
-    // 基本驗證
-    if (!name) {
-        return res.status(400).json({ error: '公仔名稱為必填項。' });
-    }
-    if (variations && !Array.isArray(variations)) {
-        return res.status(400).json({ error: '規格資料格式必須是陣列。' });
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN'); // 開始交易
-
-        // 1. 插入公仔基本資料
-        const figureInsertQuery = `
-            INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *; -- 返回插入的整筆資料
-        `;
-        const figureResult = await client.query(figureInsertQuery, [
-            name,
-            image_url || null,
-            purchase_price || 0,
-            selling_price || 0,
-            ordering_method || null
-        ]);
-        const newFigure = figureResult.rows[0];
-        const newFigureId = newFigure.id;
-        console.log(`[Admin API] Inserted figure with ID: ${newFigureId}`);
-
-        // 2. 插入公仔規格資料 (如果有的話)
-        let insertedVariations = [];
-        if (variations && variations.length > 0) {
-            const variationInsertQuery = `
-                INSERT INTO figure_variations (figure_id, name, quantity)
-                VALUES ($1, $2, $3)
-                RETURNING *; -- 返回插入的規格資料
-            `;
-            for (const variation of variations) {
-                if (!variation.name || variation.quantity === undefined || variation.quantity === null) {
-                    throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`);
-                }
-                const quantity = parseInt(variation.quantity);
-                if (isNaN(quantity) || quantity < 0) {
-                    throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`);
-                }
-                // 檢查規格名稱是否重複 (在同一個公仔下) - 可選，因為有 UNIQUE 約束
-                console.log(`[Admin API] Inserting variation for figure ${newFigureId}: Name=${variation.name}, Quantity=${quantity}`);
-                const variationResult = await client.query(variationInsertQuery, [
-                    newFigureId, variation.name.trim(), quantity
-                ]);
-                insertedVariations.push(variationResult.rows[0]);
-            }
-        }
-
-        await client.query('COMMIT'); // 提交交易
-        console.log(`[Admin API] Transaction committed for new figure ID: ${newFigureId}`);
-
-        newFigure.variations = insertedVariations; // 將新增的規格附加到回傳的公仔物件
-        res.status(201).json(newFigure); // 回傳 201 Created 和新增的公仔資料
-
-    } catch (err) {
-        await client.query('ROLLBACK'); // 出錯時回滾交易
-        console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
-        // 檢查是否是唯一性約束錯誤 (重複的規格名稱)
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') {
-             res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` });
-        } else {
-            res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` });
-        }
-    } finally {
-        client.release(); // 釋放客戶端連接回連接池
-    }
-});
-
-// PUT /api/admin/figures/:id - 更新公仔及其規格
-app.put('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    console.log(`[Admin API] PUT /api/admin/figures/${id} received:`, req.body);
-
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
-    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // 1. 更新公仔基本資料
-        const figureUpdateQuery = `
-            UPDATE figures
-            SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW()
-            WHERE id = $6
-            RETURNING *;
-        `;
-        const figureResult = await client.query(figureUpdateQuery, [
-            name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id
-        ]);
-
-        if (figureResult.rowCount === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: '找不到要更新的公仔。' });
-        }
-        const updatedFigure = figureResult.rows[0];
-        console.log(`[Admin API] Updated figure basics for ID: ${id}`);
-
-        // 2. 處理規格 (更新、新增、刪除)
-        const variationsToProcess = variations || [];
-        const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
-
-        // 獲取目前資料庫中的規格 ID
-        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]);
-        const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
-        console.log(`[Admin API] Figure ${id}: Existing variation IDs:`, [...existingVariationIds]);
-        console.log(`[Admin API] Figure ${id}: Incoming variation IDs:`, [...incomingVariationIds]);
-
-        // 找出需要刪除的規格 (存在於 DB 但不在請求中)
-        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
-        if (variationIdsToDelete.length > 0) {
-            const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`;
-            console.log(`[Admin API] Figure ${id}: Deleting variation IDs:`, variationIdsToDelete);
-            await client.query(deleteQuery, [variationIdsToDelete]);
-        }
-
-        // 遍歷請求中的規格進行更新或新增
-        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
-        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
-        let finalVariations = []; // 用於收集最終的規格資料
-
-        for (const variation of variationsToProcess) {
-            // 驗證規格資料
-            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
-            const quantity = parseInt(variation.quantity);
-            if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
-            const variationId = variation.id ? parseInt(variation.id) : null;
-
-            if (variationId && existingVariationIds.has(variationId)) {
-                // 更新現有規格
-                console.log(`[Admin API] Figure ${id}: Updating variation ID ${variationId} with Name=${variation.name}, Quantity=${quantity}`);
-                await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]);
-                // 從 DB 重新獲取更新後的數據，或者直接構造（這裡選擇後者）
-                 finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity });
-            } else {
-                // 新增規格 (可能是前端新加的，或 ID 無效/不匹配)
-                console.log(`[Admin API] Figure ${id}: Inserting new variation with Name=${variation.name}, Quantity=${quantity}`);
-                const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]);
-                 finalVariations.push(insertResult.rows[0]); // 使用插入後返回的資料
-            }
-        }
-
-        await client.query('COMMIT');
-        console.log(`[Admin API] Transaction committed for updating figure ID: ${id}`);
-
-        // 整理返回的數據
-        updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); // 按名稱排序
-        res.status(200).json(updatedFigure);
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
-         // 檢查是否是唯一性約束錯誤 (重複的規格名稱)
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') {
-             res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` });
-        } else {
-            res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` });
-        }
-    } finally {
-        client.release();
-    }
-});
-
-
-// DELETE /api/admin/figures/:id - 刪除公仔 (及其規格，因為 ON DELETE CASCADE)
-app.delete('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] DELETE /api/admin/figures/${id} requested`);
-
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-
-    try {
-        // 因為設定了 ON DELETE CASCADE，只需要刪除 figures 表中的記錄
-        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的公仔。' });
-        }
-
-        console.log(`[Admin API] Deleted figure ID: ${id} and its variations (due to CASCADE)`);
-        res.status(204).send(); // 成功刪除，回傳 204 No Content
-
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err);
-        res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' });
-    }
-});
-
-
-
-
-// --- Banner 管理 API ---
-// GET /api/admin/banners
-app.get('/api/admin/banners', async (req, res) => {
-    console.log("[Admin API] GET /api/admin/banners request received");
-    try {
-        const result = await pool.query(
-            `SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at
-             FROM banners ORDER BY display_order ASC, id ASC`
-        );
-        console.log(`[Admin API] Found ${result.rowCount} banners for admin list.`);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/admin/banners/:id
-app.get('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] GET /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query(
-            `SELECT id, image_url, link_url, display_order, alt_text, page_location
-             FROM banners WHERE id = $1`,
-            [id]
-        );
-        if (result.rows.length === 0) {
-            console.warn(`[Admin API] Banner with ID ${id} not found.`);
-            return res.status(404).json({ error: '找不到指定的 Banner。' });
-        }
-        console.log(`[Admin API] Found banner for ID ${id}:`, result.rows[0]);
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/admin/banners
-app.post('/api/admin/banners', async (req, res) => {
-    console.log("[Admin API] POST /api/admin/banners request received");
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
-    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; // 處理 0
-    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(
-            `INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`,
-            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[Admin API Error] 新增 Banner 時出錯:', err);
-        res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// PUT /api/admin/banners/:id
-app.put('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] PUT /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'});
-    if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0;
-    if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(
-            `UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW()
-             WHERE id = $6 RETURNING *`,
-            [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]
-        );
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// DELETE /api/admin/banners/:id
-app.delete('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log(`[Admin API] DELETE /api/admin/banners/${id} request received`);
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-    }
-});
-
-
-
-
-
-
-// 在 server.js 的 /api/banners 路由中增加排序參數
-app.get('/api/banners', async (req, res) => {
-    const pageLocation = req.query.page;
-    const sort = req.query.sort || 'display_order'; // 新增排序參數
+}
+
+
+/* 一般表格樣式 */
+#figure-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    margin-top: 20px;
+}
+
+/* 表格標題欄 */
+#figure-table th {
+    background-color: #4CAF50; /* 綠色背景 */
+    color: rgb(142, 73, 73);
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 1.1em;
+}
+
+/* 表格內容 */
+#figure-table td {
+    padding: 10px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #5837ab; /* 淺灰色背景 */
+}
+
+/* 鼠標懸停行顏色 */
+#figure-table tr:hover {
+    background-color: #ddd; /* 深灰色背景 */
+}
+
+/* 調整按鈕樣式 */
+button {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+}
+
+/* 編輯和刪除按鈕 */
+button.edit-btn {
+    background-color: #99ed9c; /* 綠色 */
+    color: white;
+}
+
+button.delete-btn {
+    background-color: #f44336; /* 紅色 */
+    color: white;
+}
+
+button.edit-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
+
+button.delete-btn:hover {
+    background-color: #e53935; /* 紅色加深 */
+}
+
+/* 售出按鈕樣式 */
+.sell-btn {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    margin-left: 8px;
+    cursor: pointer;
+    background-color: #4CAF50; /* 綠色 */
+    color: white;
+    border: none;
+    border-radius: 3px;
+}
+
+.sell-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
+
+/* 表單欄位和標籤 */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+/* Modal 視窗 */
+.modal-content {
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #ebebeb;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal 按鈕 */
+button.cancel-btn {
+    background-color: #f44336; /* 紅色 */
+    color: white;
+}
+
+button.cancel-btn:hover {
+    background-color: #e53935; /* 紅色加深 */
+}
+
+button#save-figure-btn, button#submit-sale-btn {
+    background-color: #4CAF50; /* 綠色 */
+    color: white;
+}
+
+button#save-figure-btn:hover, button#submit-sale-btn:hover {
+    background-color: #45a049; /* 綠色加深 */
+}
+
+
+/* 調整規格與數量區域 */
+.variations-list {
+    padding-left: 0;
+    list-style: none;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.variations-list li {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    border: 1px solid #28a3bb;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* 規格名稱與數量分開顯示 */
+.variations-list li span {
+    font-weight: bold;
+}
+
+.variations-list li .variation-quantity {
+    font-weight: normal;
+    color: #757575;
+}
+
+.form-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.form-group-inline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* 調整規格與數量的視覺間距 */
+#figure-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 表格的交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* 操作按鈕與規格間的間隔 */
+#figure-table .actions button {
+    margin-right: 8px;
+}
+
+/* Hover效果 */
+#figure-table tr:hover {
+    background-color: #e9e9e9;
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f8ff;
+    border-radius: 5px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+label {
+    font-weight: bold;
+}
+
+select, input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.summary-cards {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+.card {
+    flex: 1;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #555;
+}
+
+.card p {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0;
+}
+
+.chart-container {
+    margin-bottom: 30px;
+    height: 400px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* 美化圖表容器 */
+.chart-container {
+    width: 80%;
+    margin: 0 auto;
+    margin-bottom: 30px;
+}
+
+/* 使表格更具可讀性 */
+#figure-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    margin-top: 20px;
+}
+
+/* 表格標題欄 */
+#figure-table th {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 1.1em;
+}
+
+/* 表格內容 */
+#figure-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* 交替行顏色 */
+#figure-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* 鼠標懸停行顏色 */
+#figure-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* 編輯和刪除按鈕 */
+button {
+    padding: 8px 12px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+}
+
+button.edit-btn {
+    background-color: #4CAF50; 
+    color: white;
+}
+
+button.delete-btn {
+    background-color: #f44336; 
+    color: white;
+}
+
+button.edit-btn:hover {
+    background-color: #45a049; 
+}
+
+button.delete-btn:hover {
+    background-color: #e53935; 
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f8ff;
+    border-radius: 5px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+label {
+    font-weight: bold;
+}
+
+select, input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 15px;
+    background-color: #99e19b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.summary-cards {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+.card {
+    flex: 1;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #555;
+}
+
+.card p {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0;
+}
+
+.chart-container {
+    margin-bottom: 30px;
+    height: 400px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+
+
+/* 銷售報告頁面特定樣式 */
+.report-container { max-width: 1200px; margin: 20px auto; padding: 15px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.filter-controls { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.filter-controls label { margin-right: 5px; font-weight: bold;}
+.filter-controls input[type="date"], .filter-controls button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; } /* 統一字體大小 */
+.filter-controls button { background-color: #f0f0f0; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease; }
+.filter-controls button:hover { background-color: #e0e0e0; }
+.filter-controls button.active { background-color: #FFB74D; color: #424242; font-weight: bold; border-color: #FFB74D;}
+.summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.card { background-color: #f9f9f9; padding: 15px; border-radius: 5px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card h3 { margin-top: 0; margin-bottom: 8px; font-size: 0.9rem; color: #555; }
+.card p { font-size: 1.8rem; font-weight: bold; color: #E57373; margin: 0; }
+.chart-section, .table-section { margin-bottom: 30px; }
+.chart-section h2, .table-section h2 { font-size: 1.3rem; margin-bottom: 15px; color: #444; border-bottom: 2px solid #FFB74D; padding-bottom: 5px;}
+.chart-container { position: relative; height: 350px; /*350px */  width: 100%; } /* 圖表容器高度 */
+.table-container { max-height: 500px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; } /* 表格容器樣式 */
+.report-container table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } /* 特定於報告頁的表格 */
+.report-container th, .report-container td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #ddd; white-space: nowrap; } /* 防止內容換行 */
+.report-container th { background-color: #f2f2f2; font-weight: bold; position: sticky; top: 0; z-index: 1; } /* 表頭固定 */
+.report-container tbody tr:nth-child(even) { background-color: #fafafa; } /* 偶數行背景色 */
+.report-container tbody tr:hover { background-color: #f0f0f0; }
+#loading-indicator, #error-message { text-align: center; padding: 20px; font-size: 1.1rem; display: none; border-radius: 4px; }
+#loading-indicator { background-color: #e0f7fa; color: #00796b; }
+#error-message { color: #d32f2f; background-color: #ffebee; border: 1px solid #ef9a9a; }
+
+/* 微調管理導航 */
+.admin-nav a { margin: 0 0.3rem; padding: 0.5rem 0.8rem; } /* 稍微減少間距和內邊距 */
+
+/* public/style.css (在檔案末尾追加或整合) */
+
+/* --- Sales Report Page Specific Styles --- */
+.sales-report-container { /* 如果你在 html 中用了這個 class */
+    max-width: 1400px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.sales-report-container h1, /* 如果用了 container class */
+.container h1, /* 如果直接用 main.container */
+.sales-report-container h2,
+.container h2 {
+     text-align: center; color: #333; margin-bottom: 20px;
+}
+.section-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+.form-section { flex: 1 1 400px; background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; min-width: 300px; }
+.filter-section { flex: 1 1 400px; background-color: #f0f8ff; padding: 20px; border-radius: 8px; border: 1px solid #d1e7fd; min-width: 300px; }
+.summary-section { width: 100%; margin-bottom: 20px; }
+.summary-cards { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; margin-bottom: 20px; }
+.card { background-color: #fff; padding: 15px 20px; border-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-align: center; flex: 1; min-width: 180px; }
+.card h3 { margin-top: 0; color: #555; font-size: 1rem; margin-bottom: 5px; }
+.card p { font-size: 1.5rem; font-weight: bold; color: #E57373; margin-bottom: 0; }
+.chart-section { width: 100%; display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+/* Chart.js canvas 的直接父容器需要設定 position: relative 和大小 */
+.chart-container {
+    flex: 1 1 500px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    min-height: 350px;
+    position: relative; /* 必須 */
+    min-width: 300px; /* 確保小屏幕下也能顯示 */
+}
+.table-section { width: 100%; overflow-x: auto; }
+#sales-report-table { /* 給 table 一個 ID 可能更好 */
+    width: 100%; border-collapse: collapse; margin-top: 10px;
+}
+#sales-report-table th,
+#sales-report-table td {
+     padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle;
+}
+#sales-report-table th { background-color: #FFB74D; color: #424242; white-space: nowrap; }
+#sales-report-table tbody tr:hover { background-color: #f1f1f1; }
+#sales-report-table td.actions { white-space: nowrap; }
+#sales-report-table td.actions button { margin-right: 5px; margin-bottom: 5px;} /* RWD 時按鈕可能換行 */
+
+/* Form Styles (繼承或覆蓋) */
+.form-section .form-group, .filter-section .form-group { margin-bottom: 15px; }
+.form-section label, .filter-section label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+.form-section input, .filter-section input, .form-section select, .filter-section select {
+    width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem;
+}
+.form-section .form-actions, .filter-section .form-actions { margin-top: 20px; text-align: right; }
+.form-section .form-actions button, .filter-section .form-actions button { margin-left: 10px; }
+
+/* Button Styles (確保與 style.css 一致或覆蓋) */
+button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; font-size: 0.9rem; transition: background-color 0.2s ease; }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-primary:hover { background-color: #0056b3; }
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #5a6268; }
+.btn-success { background-color: #28a745; color: white; }
+.btn-success:hover { background-color: #218838; }
+.btn-warning { background-color: #ffc107; color: #212529; }
+.btn-warning:hover { background-color: #e0a800; }
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-danger:hover { background-color: #c82333; }
+
+.error-message { color: red; font-size: 0.9em; margin-top: 5px; min-height: 1.2em; }
+#loading-indicator { text-align: center; padding: 20px; font-style: italic; color: #777; display: none; }
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .chart-container { flex-basis: 100%; } /* 中等屏幕圖表各佔一行 */
+}
+@media (max-width: 768px) {
+    .section-container { flex-direction: column; }
+    .summary-cards { flex-direction: column; }
+    .card { flex-basis: auto; }
+    .form-section, .filter-section { flex-basis: auto; }
+}
+@media (max-width: 576px) {
+     .card p { font-size: 1.3rem; }
+     button { font-size: 0.85rem; padding: 6px 10px;}
+     #sales-report-table th, #sales-report-table td { padding: 8px 6px; font-size: 0.9rem; }
+}
+
+
+/* 隨機輪播圖樣式 */
+#random-banner-carousel {
+    max-width: 500px; /* 500px */
+    height: 400px; /* 400px 刪除這一行 */
+    margin: 0 auto;
+    padding: 0 0px;    /*     0px;      */
+    background-color: #FFB74D;
+    border-radius: 8px; /* 8px */
     
-    try {
-        let query = 'SELECT * FROM banners';
-        const params = [];
-        
-        if (pageLocation) {
-            query += ' WHERE page_location = $1';
-            params.push(pageLocation);
-        }
-        
-        // 根據排序參數調整
-        query += ` ORDER BY ${sanitizeSortField(sort)} ASC, id ASC`;
-        
-        const result = await pool.query(query, params);
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error' });
+}
+
+.random-banner-swiper .swiper-slide img {
+    width: 100%;
+    height: 370px; /* 調整為您喜歡的高度   */
+    object-fit: cover;
+    border-radius: 0%;
+}
+
+.random-banner-swiper .swiper-pagination {
+    position: relative;
+    margin-top: 20px; /* 0px */
+}
+
+/* 確保兩個輪播圖圖片顯示一致
+.banner-image {
+    width: 100%;
+    height: 400px; /* 主要輪播圖高度 
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+*/
+ 
+
+/* 确保两个页面的轮播图共用相同样式 */
+.banner-swiper {
+    width: 100%;
+    height: 370px; /* 统一高度 */
+    background-color: #FFB74D; /* 统一背景色 */
+    margin-bottom: 0rem; /* 2rem */
+}
+
+.banner-swiper .swiper-slide {
+    text-align: center;
+    font-size: 18px;
+    background: #ffb74d; /* 与容器背景一致 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.banner-swiper .swiper-slide img {
+    display: block; /* 保持 block */
+
+    /* --- 修改開始 --- */
+    width: auto;   /* 讓寬度自動調整，以保持比例 */
+    height: auto;  /* 讓高度自動調整，以保持比例 */
+    max-width: 500px; /* ★ 你期望的最大寬度 */
+    max-height: 370px; /* ★ 限制最大高度 (例如等於輪播容器高度) */
+    object-fit: contain; /* ★ 確保圖片完整顯示並保持比例，而不是裁剪 */
+    margin: auto; /* ★ 讓圖片在 slide 容器中水平和垂直居中 */
+    /* --- 修改結束 --- */
+}
+
+/* 导航按钮样式统一 */
+.banner-swiper .swiper-button-prev,
+.banner-swiper .swiper-button-next {
+    color: rgba(255, 255, 255, 0.7);
+    --swiper-navigation-size: 30px;
+}
+
+.banner-swiper .swiper-button-prev:hover,
+.banner-swiper .swiper-button-next:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* 分页点样式统一 */
+.banner-swiper .swiper-pagination-bullet {
+    background: rgba(0, 0, 0, 0.3);
+    opacity: 0.8;
+}
+
+.banner-swiper .swiper-pagination-bullet-active {
+    background: #fff;
+    opacity: 1;
+}
+
+/* 移除 music.html 中特定的随机轮播图样式
+     #random-banner-carousel {
+    max-width: 100% !important; /* 覆盖原有 max-width 
+    height: 400px;
+    margin: 0 auto; /* 居中  
+    padding: 0; /* 移除内边距  
+    border-radius: 0; /* 移除圆角  
+}
+*/ 
+
+
+
+
+
+
+/* 集中樣式到隨機輪播圖
+#random-banner-carousel {
+    max-width: 500px;
+    margin: 1rem auto;
+    padding: 0 20px;
+} */
+
+.random-banner-swiper .swiper-slide {
+    height: 400px; /* 適當調整高度 */
+}
+
+
+/*
+.banner-image {
+    width: 500px;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s;
+}
+*/
+.banner-image:hover {
+    transform: scale(1.02);
+}
+
+/* --- Contribution Info Box Style --- */
+.contribution-info {
+    background-color: #fffaf0; /* 淡黃色背景，溫和提示 */
+    border: 1px solid #ffeccc;  /* 淺橙色邊框 */
+    border-left: 5px solid #FFB74D; /* 左側用主題橙色加強提示 */
+    padding: 1rem 1.5rem;      /* 內邊距 */
+    margin: 1.5rem auto;       /* 上下邊距，並水平居中 (如果父容器允許) */
+    border-radius: 6px;        /* 圓角 */
+    text-align: center;        /* 文字居中 */
+    font-size: 0.95rem;        /* 合適的字體大小 */
+    color: #5f4c3a;            /* 略深的暖色文字 */
+    line-height: 1.7;          /* 增加行高，提高可讀性 */
+    max-width: 800px;          /* 限制最大寬度，避免過寬 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* 細微陰影 */
+}
+
+.contribution-info a {
+    color: #E57373;            /* 使用珊瑚紅作為連結顏色 */
+    font-weight: 500;          /* 字體加粗一點 */
+    text-decoration: none;     /* 移除預設下劃線 */
+    transition: color 0.2s ease;
+}
+
+.contribution-info a:hover {
+    color: #d32f2f;            /* 滑鼠懸停時顏色加深 */
+    text-decoration: underline;/* 滑鼠懸停時顯示下劃線 */
+}
+
+/* 如果希望在小屏幕上調整樣式 */
+@media (max-width: 600px) {
+    .contribution-info {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+        text-align: left; /* 小屏幕改回左對齊可能更好讀 */
     }
-});
+}
 
 
-// --- 商品管理 API (受保護) ---
-// POST /api/products
-app.post('/api/products', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query(`INSERT INTO products (name, description, price, image_url, seven_eleven_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null ]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('新增商品時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
-});
-// PUT /api/products/:id
-app.put('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query(`UPDATE products SET name = $1, description = $2, price = $3, image_url = $4, seven_eleven_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [ name, description || null, price, image_url || null, seven_eleven_url || null, id ]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`更新商品 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
-});
-// DELETE /api/products/:id
-app.delete('/api/products/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到商品，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`刪除商品 ID ${id} 時出錯:`, err); /* ... 其他錯誤處理 ... */ res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
 
 
-// --- 音樂管理 API (受保護 - POST/PUT/DELETE) ---
-// POST /api/music (已更新包含 scores 和 youtube_video_id)
-app.post('/api/music', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    // 可以在此處添加更多驗證
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const musicInsertQuery = `INSERT INTO music (title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;`;
-        const musicResult = await client.query(musicInsertQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null]);
-        const newMusic = musicResult.rows[0];
-        if (scores && Array.isArray(scores) && scores.length > 0) {
-            const scoreInsertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-            for (const score of scores) { if (score.type && score.pdf_url) await client.query(scoreInsertQuery, [newMusic.id, score.type, score.pdf_url, score.display_order || 0]); }
-        }
-        await client.query('COMMIT');
-        newMusic.scores = scores || [];
-        res.status(201).json(newMusic);
-    } catch (err) { await client.query('ROLLBACK'); console.error('新增音樂時出錯:', err.stack || err); res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
-    } finally { client.release(); }
-});
+/* public/style.css (追加) */
 
-// PUT /api/music/:id (已更新包含 scores 和 youtube_video_id，並包含詳細日誌)
-app.put('/api/music/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    if (isNaN(parseInt(id, 10))) { return res.status(400).json({ error: '無效的音樂 ID' }); }
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    console.log(`[DEBUG PUT /api/music/${id}] Received data:`, JSON.stringify(req.body, null, 2)); // Log 1
+/* --- 頁面標題 Header 樣式 (現代) --- */
+.page-title-header {
+    background-color: #FFB74D;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid rgba(0, 0, 0, 0.05); /* 用底部邊框代替陰影 */
+}
 
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
+.page-title {
+    color: #424242;
+    margin: 0;
+    font-family: 'Poppins', 'Noto Sans TC', sans-serif; /* 使用 Poppins 字體 */
+    font-size: 1.5rem;
+    font-weight: 600; /* Semi-bold */
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    /* text-transform: uppercase; */ /* 可選：轉換為大寫 */
+} 
 
-    const client = await pool.connect();
-    try {
-        console.log(`[DEBUG PUT /api/music/${id}] Starting transaction...`); // Log 2
-        await client.query('BEGIN');
-        const musicUpdateQuery = `UPDATE music SET title = $1, artist = $2, release_date = $3, description = $4, cover_art_url = $5, platform_url = $6, youtube_video_id = $7, updated_at = NOW() WHERE id = $8 RETURNING *;`;
-        const musicParams = [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null, id];
-        console.log(`[DEBUG PUT /api/music/${id}] Executing music update query with params:`, musicParams); // Log 3
-        const musicResult = await client.query(musicUpdateQuery, musicParams);
-
-        if (musicResult.rowCount === 0) {
-             console.warn(`[DEBUG PUT /api/music/${id}] Music not found, rolling back.`); // Log 4
-             await client.query('ROLLBACK');
-             return res.status(404).json({ error: '找不到音樂' });
-         }
-        const updatedMusic = musicResult.rows[0];
-        console.log(`[DEBUG PUT /api/music/${id}] Music table updated successfully.`); // Log 5
-
-        const incomingScoreIds = new Set();
-        const scoresToUpdate = [];
-        const scoresToInsert = [];
-        if (scores && Array.isArray(scores)) {
-             console.log(`[DEBUG PUT /api/music/${id}] Processing ${scores.length} incoming scores.`); // Log 6
-             scores.forEach(score => {
-                 if (score.type && score.pdf_url) {
-                     if (score.id) {
-                         const scoreIdInt = parseInt(score.id, 10);
-                         if (!isNaN(scoreIdInt)) { incomingScoreIds.add(scoreIdInt); scoresToUpdate.push(score); }
-                         else { console.warn(`[DEBUG PUT /api/music/${id}] Invalid score ID received: ${score.id}, treating as new.`); scoresToInsert.push(score); }
-                     } else { scoresToInsert.push(score); }
-                 } else { console.warn(`[DEBUG PUT /api/music/${id}] Skipping incomplete score data:`, score); }
-             });
-         } else { console.log(`[DEBUG PUT /api/music/${id}] No valid scores array received or array is empty.`); } // Log 7
-
-         const existingScoresResult = await client.query('SELECT id FROM scores WHERE music_id = $1', [id]);
-         const existingScoreIds = new Set(existingScoresResult.rows.map(r => r.id));
-         console.log(`[DEBUG PUT /api/music/${id}] Existing score IDs in DB:`, [...existingScoreIds]); // Log 8
-         console.log(`[DEBUG PUT /api/music/${id}] Incoming score IDs from request:`, [...incomingScoreIds]); // Log 9
-
-         const scoreIdsToDelete = [...existingScoreIds].filter(existingId => !incomingScoreIds.has(existingId));
-         if (scoreIdsToDelete.length > 0) {
-             const deleteQuery = `DELETE FROM scores WHERE id = ANY($1::int[])`;
-             console.log(`[DEBUG PUT /api/music/${id}] Deleting score IDs:`, scoreIdsToDelete); // Log 10
-             await client.query(deleteQuery, [scoreIdsToDelete]);
-         }
-         if (scoresToUpdate.length > 0) {
-             const updateQuery = `UPDATE scores SET type = $1, pdf_url = $2, display_order = $3, updated_at = NOW() WHERE id = $4 AND music_id = $5;`;
-             console.log(`[DEBUG PUT /api/music/${id}] Updating ${scoresToUpdate.length} scores.`); // Log 11
-             for (const score of scoresToUpdate) {
-                 if (existingScoreIds.has(parseInt(score.id, 10))) {
-                     console.log(`[DEBUG PUT /api/music/${id}] Updating score ID ${score.id} with data:`, score); // Log 12
-                     await client.query(updateQuery, [score.type, score.pdf_url, score.display_order || 0, score.id, id]);
-                 } else { console.warn(`[DEBUG PUT /api/music/${id}] Attempted to update score ID ${score.id} which does not belong to music ID ${id} or was marked for deletion. Skipping.`); } // Log 13
-             }
-         }
-         if (scoresToInsert.length > 0) {
-             const insertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-              console.log(`[DEBUG PUT /api/music/${id}] Inserting ${scoresToInsert.length} new scores.`); // Log 14
-             for (const score of scoresToInsert) {
-                  console.log(`[DEBUG PUT /api/music/${id}] Inserting new score with data:`, score); // Log 15
-                 await client.query(insertQuery, [id, score.type, score.pdf_url, score.display_order || 0]);
-             }
-         }
-        console.log(`[DEBUG PUT /api/music/${id}] Attempting to COMMIT transaction.`); // Log 16
-        await client.query('COMMIT');
-        console.log(`[DEBUG PUT /api/music/${id}] Transaction COMMITTED successfully.`); // Log 17
-         const finalScoresResult = await pool.query('SELECT id, type, pdf_url, display_order FROM scores WHERE music_id = $1 ORDER BY display_order ASC, type ASC', [id]);
-         updatedMusic.scores = finalScoresResult.rows;
-        res.json(updatedMusic);
-    } catch (err) {
-        console.error(`[DEBUG PUT /api/music/${id}] Error occurred, rolling back transaction. Error:`, err.stack || err); // Log 18
-         if (!res.headersSent) {
-            await client.query('ROLLBACK');
-            res.status(500).json({ error: '更新音樂時發生內部伺服器錯誤' });
-        }
-    } finally {
-         console.log(`[DEBUG PUT /api/music/${id}] Releasing client.`); // Log 19
-        client.release();
+/* 響應式調整 */
+@media (max-width: 600px) {
+    .page-title-header {
+        padding: 1rem;
+        margin-bottom: 1rem;
     }
-});
-
-// DELETE /api/music/:id
-app.delete('/api/music/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query('DELETE FROM music WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`刪除音樂 ID ${id} 時出錯：`, err.stack || err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
-
-// --- 消息管理 API (受保護) ---
-// POST /api/news
-app.post('/api/news', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query(`INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *`, [ title, event_date || null, summary || null, content || null, thumbnail_url || null, image_url || null ]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('新增消息時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
-});
-// PUT /api/news/:id
-app.put('/api/news/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query(`UPDATE news SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW() WHERE id = $7 RETURNING *`, [ title, event_date || null, summary || null, content || null, thumbnail_url || null, image_url || null, id ]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`更新消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
-});
-// DELETE /api/news/:id
-app.delete('/api/news/:id', async (req, res) => { // basicAuthMiddleware 已在上面 app.use 中應用
-    const { id } = req.params;
-    // 驗證邏輯 ... (省略以保持簡潔)
-    try {
-        const result = await pool.query('DELETE FROM news WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到消息，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`刪除消息 ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
-
-
-// --- 新聞詳情頁面路由 ---
-app.get('/news/:id(\\d+)', (req, res, next) => {
-    // 可以在這裡先檢查 ID 是否存在，如果不存在可以提前返回 404
-    // 但目前讓 news-detail.js 去處理 API 請求的 404 也可以
-    res.sendFile(path.join(__dirname, 'public', 'news-detail.html'));
-});
-
-// --- 樂譜中心頁面路由 ---
-app.get('/scores', (req, res) => {
-     res.sendFile(path.join(__dirname, 'public', 'scores.html'));
-});
-
-
-
-// --- ★★★ 新增留言板相關頁面路由 ★★★ ---
-app.get('/guestbook', (req, res) => res.sendFile(path.join(__dirname, 'public', 'guestbook.html')));
-app.get('/message-detail.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'message-detail.html')));
-
-
-
-
-// --- 404 處理 ---
-// 這個應該是最後的路由處理
-app.use((req, res, next) => {
-    // 檢查請求是否是針對已知的前端路由
-    const knownFrontendRoutes = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/admin.html', '/music-admin.html', '/news-admin.html', '/banner-admin.html'];
-    if (knownFrontendRoutes.includes(req.path) || req.path.match(/^\/news\/\d+$/)) {
-        // 如果是已知前端路由但前面沒有匹配到（例如直接訪問 /music），
-        // 並且請求 accept html，則返回對應的 html 文件
-        // 這裡的邏輯可能需要根據你的具體需求調整，目前是假設靜態服務會處理 .html 結尾的
-         if (req.accepts('html')) {
-             // 嘗試找到對應的 html 文件，如果找不到，則最終還是 404
-             const filePath = path.join(__dirname, 'public', req.path === '/' ? 'index.html' : req.path);
-             // 注意：這裡不直接 sendFile，讓 express.static 處理或最終落到下面的 404
-             return next();
-         }
+    .page-title {
+        font-size: 1.5rem;
     }
-
-    // 對於 API 或其他未匹配的請求，返回 404
-    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
-    res.status(404).send('抱歉，找不到您要訪問的頁面。');
-});
+}
 
 
-// --- 全局錯誤處理 ---
-app.use((err, req, res, next) => {
-    console.error("全局錯誤處理:", err.stack || err);
-    // 避免在已經發送標頭後再次發送
-    if (res.headersSent) {
-        return next(err); // 交給 Express 預設處理
-    }
-    res.status(err.status || 500).send(process.env.NODE_ENV === 'production' ? '伺服器發生了一些問題！' : `伺服器錯誤: ${err.message}`);
-});
+/* public/style.css (追加或整合以下樣式) */
 
-// --- 啟動伺服器 ---
-app.listen(PORT, () => {
-    console.log(`伺服器正在監聽 port ${PORT}`);
-    pool.query('SELECT NOW()')
-        .then(result => {
-            if (result && result.rows.length > 0) {
-                console.log('資料庫連接成功於', result.rows[0].now);
-            } else {
-                 console.log('資料庫已連接，但無法獲取時間。');
-            }
-        })
-        .catch(err => {
-             console.error('資料庫連接錯誤:', err.stack || err);
-        });
-});
+/* --- 留言板通用容器 --- */
+.guestbook-container,
+.message-detail-container,
+.guestbook-admin-container, /* 後台列表 */
+.admin-identities-container, /* 後台身份管理 */
+.admin-message-detail-container /* 後台詳情 */
+{
+    max-width: 900px; /* 比商品頁稍窄，更適合閱讀 */
+    margin: 1.5rem auto;
+    padding: 1.5rem;
+    background-color: #fff; /* 使用白色背景增加對比 */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* 比商品卡片稍明顯的陰影 */
+}
+
+/* --- 區塊標題 (例如 "留下您的足跡", "最新活動留言") --- */
+.guestbook-container h2,
+.message-detail-container h2,
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    font-size: 1.3rem;
+    color: #424242;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #FFB74D; /* 使用主題橙色作為下邊框 */
+    font-weight: 700;
+}
+
+/* --- 表單樣式 (沿用並微調 Modal 樣式) --- */
+.post-message-section form,
+.reply-form-section form, /* 詳情頁回覆表單 */
+#identity-form, /* 身份管理表單 */
+#admin-reply-form /* 管理員回覆表單 */
+{
+    margin-bottom: 1.5rem;
+}
+
+/* 繼承 .form-group, label, input, textarea, button 的現有樣式 */
+/* 可以針對留言板的表單按鈕做微調 */
+#submit-message-btn,
+#submit-reply-btn, /* 詳情頁回覆按鈕 */
+#admin-reply-form button[type="submit"] {
+    background-color: #E57373; /* 使用珊瑚紅作為提交按鈕顏色 */
+    color: white;
+    border: none;
+    padding: 10px 18px; /* 稍微大一點的按鈕 */
+}
+#submit-message-btn:hover,
+#submit-reply-btn:hover,
+#admin-reply-form button[type="submit"]:hover {
+    background-color: #d32f2f; /* 懸停加深 */
+}
+
+/* 狀態訊息 */
+.status-message,
+#post-status,
+#reply-status,
+#identity-form .form-status,
+#admin-reply-form .reply-status {
+    font-size: 0.9em;
+    margin-top: 10px;
+    min-height: 1.2em; /* 佔位，避免佈局跳動 */
+    font-weight: 500;
+}
+
+/* --- 前台列表頁 (`guestbook.html`) --- */
+.message-list-item {
+    padding: 1rem 0;
+    /* border-bottom: 1px solid #eee; */ /* 用 hr 代替 */
+}
+.message-list-item:last-child {
+    border-bottom: none;
+}
+.message-list-item .author {
+    font-weight: 700;
+    color: #424242;
+    margin-right: 0.5rem;
+}
+.message-list-item .timestamp {
+    font-size: 0.8em;
+    color: #757575;
+    margin-left: 0.5rem;
+}
+.message-list-item .content-preview {
+    display: block; /* 獨佔一行 */
+    margin: 0.5rem 0;
+    color: #555;
+    line-height: 1.6;
+    text-decoration: none; /* 移除連結下劃線 */
+    transition: color 0.2s ease;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 限制顯示 3 行 */
+    -webkit-box-orient: vertical;
+    /* 對於不支持的瀏覽器的後備，效果不完美 */
+    max-height: calc(1.6em * 3); /* line-height * 行數 */
+    line-height: 1.6em; /* 需要明確的行高 */
+}
+.message-list-item .content-preview:hover {
+    color: #E57373; /* 連結懸停用珊瑚紅 */
+}
+.message-list-item .meta {
+    font-size: 0.85em;
+    color: #888;
+    margin-right: 1rem;
+}
+.message-list-item .view-detail-btn {
+    font-size: 0.85em;
+    color: #E57373;
+    text-decoration: none;
+    font-weight: 500;
+}
+.message-list-item .view-detail-btn:hover {
+    text-decoration: underline;
+}
+
+/* 分頁樣式 (沿用 news.html 的 #pagination-controls) */
+/* 如果 guestbook.html 的分頁容器 ID 不同，需要修改選擇器 */
+#pagination-container { /* 確保 ID 匹配 */
+     text-align: center;
+     margin-top: 2rem;
+}
+/* 繼承 #pagination-controls 的樣式 */
+#pagination-container button,
+#pagination-container span {
+     padding: 8px 12px; margin: 0 3px; border: 1px solid #ccc; background-color: #fff; color: #555; cursor: pointer; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease;
+}
+#pagination-container button:hover { background-color: #eee; }
+#pagination-container button:disabled { opacity: 0.6; cursor: not-allowed; background-color: #FFB74D; color: white; border-color: #FFB74D; font-weight: bold; }
+#pagination-container span { padding: 8px 5px; }
+
+
+/* --- 前台詳情頁 (`message-detail.html`) --- */
+.message-detail-main {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+.message-detail-main .author { font-weight: 700; font-size: 1.1rem; }
+.message-detail-main .timestamp { font-size: 0.85em; color: #757575; margin-left: 0.5rem; }
+.message-content { /* 主留言內文 */
+    margin-top: 1rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #424242;
+    white-space: pre-wrap; /* 處理換行 */
+    word-wrap: break-word;
+}
+
+.reply-list {
+    margin-top: 1.5rem;
+}
+.reply-item {
+    padding: 0.8rem 0.8rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid #eee; /* 預設左邊框 */
+    background-color: #fdfdfd; /* 非常淺的背景 */
+}
+.reply-item .author {
+    font-weight: 600; /* 回覆者名稱稍細 */
+    color: #555;
+    margin-right: 0.5rem;
+}
+.reply-item .timestamp {
+    font-size: 0.8em;
+    color: #888;
+}
+.reply-content {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #555;
+    white-space: pre-wrap; /* 處理換行 */
+    word-wrap: break-word;
+}
+
+/* 管理員回覆樣式 */
+.admin-reply {
+    background-color: #FFF8E1; /* 淡黃色背景 */
+    border-left: 3px solid #FFB74D; /* 主題橙色邊框 */
+}
+.admin-reply .author {
+    color: #FF8F00; /* 橙色字體 */
+    font-weight: 700; /* 加粗 */
+}
+
+/* --- 後台頁面通用 (沿用現有 admin 樣式) --- */
+/* .admin-nav ... (沿用) */
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    text-align: left; /* 後台標題靠左 */
+    border-bottom-color: #ccc; /* 後台下邊框用灰色 */
+}
+
+.admin-table { /* 後台表格樣式 */
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+.admin-table th, .admin-table td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+.admin-table th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+}
+.admin-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.admin-table tbody tr:hover {
+    background-color: #f0f0f0;
+}
+.admin-table .content-preview { /* 限制預覽寬度 */
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block; /* 讓 ellipsis 生效 */
+}
+.admin-table .actions button,
+.admin-table .actions a {
+    margin-right: 5px;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+.admin-table .actions a {
+     display: inline-block;
+     background-color: #6c757d; color: white; border-radius: 3px; text-decoration: none;
+}
+.admin-table .actions a:hover { background-color: #5a6268; }
+
+/* 狀態標示 */
+.status-visible { color: green; font-weight: bold; }
+.status-hidden { color: red; font-style: italic; }
+
+/* --- 後台身份管理頁 (`admin-identities.html`) --- */
+#identity-form {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+}
+
+/* --- 後台詳情頁 (`admin-message-detail.html`) --- */
+.admin-message-detail-container .message-detail-main,
+.admin-message-detail-container .reply-list {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+.admin-message-detail-container .reply-item {
+    border-left-color: #ccc; /* 後台邊框用灰色 */
+    padding-left: 10px;
+}
+.admin-message-detail-container .admin-reply {
+    border-left-color: #FFB74D;
+    background-color: #fffaf0; /* 後台管理員回覆背景色 */
+}
+.admin-message-detail-container .reply-actions button {
+    margin-left: 10px;
+    padding: 2px 5px;
+    font-size: 0.75em;
+}
+#admin-reply-form {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+#admin-identity-select {
+    margin-bottom: 1rem;
+    display: block; /* 下拉選單獨佔一行 */
+    max-width: 250px; /* 限制寬度 */
+} 
+
+/* --- 按讚按鈕樣式 --- */
+.like-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    font-size: 1.1em; /* 稍微放大 Emoji/圖標 */
+    line-height: 1;
+    color: #cccccc; /* 預設灰色 */
+    transition: color 0.2s ease, transform 0.1s ease;
+    vertical-align: middle; /* 對齊旁邊的文字 */
+}
+
+.like-btn:hover {
+    color: #f48fb1; /* 懸停變粉色 */
+    transform: scale(1.2);
+}
+
+.like-btn:disabled { /* 點擊後的禁用樣式 */
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+
+
+/* --- 排序按鈕區域樣式 --- */
+.sort-controls {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem; /* 可選，給下方留點空間 */
+    text-align: right; /* 按鈕靠右 */
+  /*   font-size: 0.9em;    */
+    color: #555;
+}
+
+.sort-btn {
+    background: none;
+    border: none;
+    padding: 5px 8px;
+    margin-left: 8px;
+    cursor: pointer;
+    color: #007bff; /* 用藍色表示可點擊 */
+    text-decoration: underline;
+    font-size: 0.7em; /* 繼承父元素字體大小 */
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sort-btn:hover {
+    color: #0056b3;
+    background-color: #e9ecef; /* 淺灰色背景 */
+}
+
+.sort-btn.active {
+    color: #424242; /* 使用深灰色表示當前選中 */
+    font-weight: bold;
+    text-decoration: none; /* 移除下劃線 */
+    background-color: #FFB74D; /* 使用主題橙色背景 */
+    cursor: default; /* 不可再點擊 */
+}
+
+
+/* --- Emoji 觸發按鈕樣式 --- */
+#post-emoji-trigger,
+#reply-emoji-trigger,
+#admin-reply-emoji-trigger {
+    padding: 3px 8px;
+    font-size: 1.2em; /* 讓 Emoji 大一點 */
+    line-height: 1;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    vertical-align: middle; /* 與旁邊文字對齊 */
+}
+#post-emoji-trigger:hover,
+#reply-emoji-trigger:hover,
+#admin-reply-emoji-trigger:hover {
+    background-color: #e9ecef;
+}
+
+
+/* --- 詳情 Modal 內部 --- */
+.modal-content { /* 可以稍微增大 Modal 寬度 */
+    max-width: 750px;
+    background-color: #fdfdfd; /* Modal 背景稍淺 */
+}
+#modal-message-detail-main .message-content { /* Modal 內主留言內容 */
+     background-color: transparent; /* 移除後台的淺灰背景 */
+     padding: 15px 0;
+}
+#modal-reply-list-container {
+     max-height: 50vh; /* 限制回覆列表最大高度，出現滾動條 */
+     overflow-y: auto;
+     padding-right: 10px; /* 留出滾動條空間 */
+     margin-top: 1rem;
+     border-top: 1px solid #eee;
+     padding-top: 1rem;
+}
+.reply-item {
+    padding: 0.8rem; /* 增加內邊距 */
+    margin-bottom: 0.8rem;
+    border-left: 3px solid #ECEFF1; /* 淺灰邊框 */
+    background-color: #fff; /* 回覆背景用白色 */
+    border-radius: 4px; /* 輕微圓角 */
+}
+.reply-item.nested { /* 嵌套縮排 */
+    margin-left: 30px; /* 加大縮排 */
+    border-left-color: #CFD8DC; /* 嵌套邊框稍深 */
+    background-color: #fbfcfe; /* 嵌套背景極淺藍 */
+}
+.admin-reply { /* 管理員回覆 */
+    background-color: #FFF8E1 !important; /* 覆蓋嵌套背景 */
+    border-left: 3px solid #FFB74D !important;
+}
+
+
+/* --- 前台留言列表項 --- */
+.message-list-item {
+    padding: 1rem 0;
+    /* border-bottom 由 hr 處理 */
+}
+.message-list-item .author { /* 與 news-card 類似 */
+    font-weight: 700;
+    color: #424242;
+}
+.message-list-item .timestamp { /* 與 news-card 類似 */
+    font-size: 0.8em;
+    color: #757575;
+    margin-left: 0.5rem;
+}
+.message-list-item .content-preview {
+    display: block;
+    margin: 0.6rem 0;
+    color: #555;
+    line-height: 1.6;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    /* CSS 限制行數 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 限制 3 行 */
+    -webkit-box-orient: vertical;
+    /* 兼容性後備 */
+    max-height: calc(1.6em * 3); /* line-height * 行數 */
+}
+.message-list-item .content-preview:hover { color: #E57373; }
+.message-list-item .meta {
+    font-size: 0.85em;
+    color: #888;
+    margin-right: 1rem;
+    vertical-align: middle; /* 與按鈕對齊 */
+}
+.message-list-item .meta.view-detail-modal-btn { /* 可點擊的回覆數 */
+    cursor: pointer;
+    color: #007bff;
+    text-decoration: underline;
+}
+.message-list-item .meta.view-detail-modal-btn:hover { color: #0056b3; }
+.message-list-item .view-detail-modal-btn { /* [查看詳情] 按鈕 */
+    font-size: 0.85em;
+    color: #6c757d; /* 次要顏色 */
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+    border: 1px solid #ced4da; /* 淺灰色邊框 */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+    border-color: #FFB74D; /* 聚焦時用主題橙色 */
+    box-shadow: 0 0 0 0.2rem rgba(255, 183, 77, 0.25); /* 聚焦光暈 */
+    outline: none;
+}
+/* --- 提交按鈕樣式 (參考 .btn-primary 或 .btn-success) --- */
+#submit-message-btn,
+#modal-submit-reply-btn, /* Modal 內的回覆按鈕 */
+#save-identity-btn, /* 身份儲存按鈕 */
+#admin-reply-form button[type="submit"] /* 管理員回覆按鈕 */
+{
+    background-color: #E57373; /* 珊瑚紅 */
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-weight: 500;
+}
+#submit-message-btn:hover,
+#modal-submit-reply-btn:hover,
+#save-identity-btn:hover,
+#admin-reply-form button[type="submit"]:hover {
+    background-color: #d32f2f; /* 懸停加深 */
+}
+/* --- 取消/關閉按鈕 (參考 .btn-secondary) --- */
+.close-modal-btn, #cancel-edit-btn {
+     background-color: #6c757d;
+     color: white;
+     border: none;
+     padding: 10px 18px; /* 與提交按鈕一致 */
+}
+.close-modal-btn:hover, #cancel-edit-btn:hover {
+    background-color: #5a6268;
+}
+/* --- 狀態訊息 --- */
+.status-message {
+    font-size: 0.9em;
+    margin-top: 10px;
+    min-height: 1.2em;
+    font-weight: 500;
+}
+
+
+
+/* --- 區塊標題 (H2) - 統一樣式 --- */
+/* 可以覆蓋 .container h2 的預設居中 */
+.guestbook-container h2,
+.message-detail-container h2,
+.guestbook-admin-container h2,
+.admin-identities-container h2,
+.admin-message-detail-container h2 {
+    font-size: 1.5rem; /* 稍微大一點 */
+    color: #424242;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid #FFB74D; /* 主題橙色下邊框 */
+    font-weight: 700;
+    text-align: left; /* 標題靠左 */
+}
+.guestbook-header { /* 用於放置標題和發表按鈕的容器 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid #FFB74D;
+}
+.guestbook-header h2 {
+    margin-bottom: 0; /* 移除標題自身的下邊距和邊框 */
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+
+/* public/style.css (追加) */
+
+/* 後台詳情頁回覆操作按鈕 */
+.admin-message-detail-container .reply-actions button {
+    margin-right: 8px; /* 統一右邊距 */
+    margin-bottom: 5px; /* 小屏幕換行時的下邊距 */
+    vertical-align: middle;
+}
+
+/* 引用按鈕樣式 (使用 link 樣式) */
+.admin-message-detail-container .admin-quote-action-btn {
+    background: none;
+    border: none;
+    color: #6c757d; /* 次要顏色 */
+    padding: 4px 0; /* 調整 padding */
+    font-size: 0.8em;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.admin-message-detail-container .admin-quote-action-btn:hover {
+    color: #5a6268;
+}
+
+/* 樓層號樣式 */
+.reply-floor {
+    display: inline-block;
+    min-width: 30px; /* 給樓層號留出基本寬度 */
+    text-align: right; /* 樓層號靠右對齊 */
+    color: #888;
+    font-size: 0.9em;
+}
+
+/* 嵌套回覆的邊距 */
+.admin-message-detail-container .reply-item.nested {
+    margin-left: 30px; /* 增加嵌套縮排 */
+    border-left: 2px solid #CFD8DC; /* 嵌套邊框顏色 */
+    padding-left: 10px; /* 增加左內邊距 */
+}
+
+/* public/style.css (追加樣式) */
+
+/* --- 留言板列表頁：普通留言預覽背景色 --- */
+.message-list-item .content-preview {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.6rem 0.8rem;             /* 增加一點內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 0.8rem;                 /* 調整與上方元素的間距 */
+    margin-bottom: 0.8rem;              /* 調整與下方元素的間距 */
+    /* 保留原有的行數限制樣式 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-height: 1.6;
+    max-height: calc(1.6em * 3);
+}
+
+/* --- 詳情 Modal：主留言內容背景色 --- */
+#modal-message-detail-main .message-content {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.8rem 1rem;             /* 增加內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 1rem;                   /* 調整上方間距 */
+    /* 保留原有的 white-space 和 word-wrap */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* --- 詳情 Modal：普通用戶回覆內容背景色 --- */
+#modal-reply-list-container .reply-item:not(.admin-reply) .reply-content {
+    background-color: rgb(248, 249, 250); /* 淺灰色背景 */
+    padding: 0.6rem 0.8rem;             /* 內邊距 */
+    border-radius: 4px;                 /* 輕微圓角 */
+    margin-top: 0.6rem;                 /* 調整上方間距 */
+    /* 保留原有的 white-space 和 word-wrap */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+
+/* --- 留言板 詳情 Modal：管理員回覆內容樣式 (保持或調整) --- */
+/* 你可以保持 .admin-reply 的樣式，或者如果想讓管理員回覆內容也有特定樣式 */
+/*
+#modal-reply-list-container .reply-item.admin-reply .reply-content {
+    background-color: #fffaf0; /* 例如，用更淺的黃色
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    margin-top: 0.6rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+*/
+
+
+
+/* public/style.css (追加樣式) */
+
+/* --- 隱藏詳情 Modal 頂部的靜態 H2 ("留言詳情") --- */
+/* 選擇 #message-detail-modal 下的 .modal-content 中的第一個直接子元素 h2 */
+#message-detail-modal > .modal-content > h2 {
+    display: none;
+}
+
+/* --- 詳情 Modal：加粗作者名稱 --- */
+#modal-message-detail-main .author {
+    font-weight: bold; /* 加粗 */
+    font-size: 1.1em;  /* 可選：稍微放大一點字體 */
+    color: #333;      /* 可選：使用更深的顏色 */
+}
+
+/* --- 詳情 Modal：調整作者和時間戳行的樣式 --- */
+#modal-message-detail-main p:first-of-type { /* 選中包含作者和時間戳的段落 */
+    margin-bottom: 0.8rem; /* 調整與下方 hr 的間距 */
+}
+
+
+/* public/style.css (追加樣式) */
+
+/* --- 詳情 Modal：回覆項目的操作按鈕區域 --- */
+#message-detail-modal .reply-item-actions {
+    margin-top: 0.5rem; /* 按鈕與回覆內容的間距 */
+    text-align: left; /* 讓按鈕靠右 (可選) */
+}
+
+/* --- 詳情 Modal：「回覆」和「引用」按鈕樣式 --- */
+#message-detail-modal .reply-item-actions .btn-link {
+    font-size: 0.8em;      /* 縮小字體大小 */
+    padding: 2px 6px;      /* 調整內邊距，讓按鈕更緊湊 */
+    color: #6c757d;      /* 使用次要顏色 (灰色) */
+    text-decoration: none; /* 移除預設下劃線 */
+    border: 1px solid transparent; /* 添加透明邊框佔位，避免 hover 時跳動 */
+    border-radius: 3px;
+    margin-left: 8px;      /* 按鈕之間的間距 */
+    vertical-align: middle; /* 與旁邊的愛心對齊 */
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+#message-detail-modal .reply-item-actions .btn-link:hover {
+    color: #e8e8e8;      /* 懸停時加深顏色 */
+    background-color: #f799ba; /* 懸停時淺灰色背景 */
+    text-decoration: underline; /* 懸停時顯示下劃線 */
+    border-color: #c3c1c1; /* 懸停時顯示淺邊框 */
+}
+
+/* --- 詳情 Modal：回覆項目中的按讚按鈕和計數調整 --- */
+#message-detail-modal .reply-item-actions .like-btn {
+    font-size: 1em;        /* 愛心圖標大小 (相對於 .btn-link 稍大) */
+    padding: 2px 4px;      /* 微調 padding */
+    vertical-align: middle;
+}
+
+#message-detail-modal .reply-item-actions .like-count {
+    font-size: 0.8em;      /* 計數數字大小與回覆/引用一致 */
+    vertical-align: middle;
+    color: #888; /* 計數顏色稍淺 */
+}
+
+
+/* public/style.css (追加或修改樣式) */
+
+/* --- 詳情 Modal：重設 回覆/引用 按鈕樣式，覆蓋通用按鈕樣式 --- */
+ 
+
+/* --- 詳情 Modal：回覆/引用 按鈕 Hover 效果 --- */
+#message-detail-modal .reply-item-actions .reply-action-btn:hover,
+#message-detail-modal .reply-item-actions .quote-action-btn:hover {
+    color: #5a6268 !important;             /* 懸停顏色加深 */
+    text-decoration: underline !important; /* 懸停加下劃線 */
+    background-color: transparent !important; /* 確保懸停時背景仍然透明 */
+}
+
+/* --- 可選：微調 Modal 內 Like 按鈕和計數的對齊 --- */
+/* (如果因為上面按鈕變小導致對不齊) */
+#message-detail-modal .reply-item-actions .like-btn {
+    vertical-align: middle;
+    padding-bottom: 1px; /* 可能需要微調 */
+}
+#message-detail-modal .reply-item-actions .like-count {
+    vertical-align: middle;
+}
+
+/* --- 確保之前的按鈕樣式選擇器更具體，避免衝突 --- */
+/* 例如，如果之前有 .btn-link 全局樣式，現在需要確保它不會影響 modal 內的 */
+/* 檢查並調整你 style.css 中其他的 .btn, .btn-link, .btn-sm 等樣式， */
+/* 確保它們的選擇器不會過於寬泛地應用到 modal 內的按鈕上， */
+/* 或者使用更具體的選擇器如下面的例子 */
+
+/* 比如之前的全局樣式是這樣: */
+/* .btn-link { color: blue; ... } */
+
+/* 可以改成只應用於特定區域，例如: */
+/* .some-other-container .btn-link { color: blue; ... } */
+
+/* 或者確保 Modal 內的樣式優先級更高 (如此處使用的 ID 選擇器) */
