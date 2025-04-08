@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingMessage = newsListContainer ? newsListContainer.querySelector('p') : null;
     const addNewsBtn = document.getElementById('add-news-btn');
     // <<< 新增: Debug 區域 >>>
- 
+    const debugInfoContainer = document.getElementById('news-debug-info');
+
     // --- Edit Modal elements ---
     const editModal = document.getElementById('edit-news-modal');
     const editForm = document.getElementById('edit-news-form');
