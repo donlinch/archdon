@@ -1009,12 +1009,9 @@ adminRouter.get('/news', async (req, res) => {
         // 後台需要看到所有消息，包含所有欄位，以便編輯
         // 按更新時間排序，最新的在前面
         const result = await pool.query(
-           `SELECT
-                id, title, event_date, summary, content, thumbnail_url,
-                image_url, like_count, category, show_in_calendar,
-                created_at, updated_at -- 如果前端 JS 確實不再需要，這裡也可以移除
-             FROM news
-             ORDER BY id DESC` 
+            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url,  like_count, created_at, updated_at, category, show_in_calendar
+     FROM news
+             ORDER BY updated_at DESC, id DESC`
         );
         console.log(`[受保護 API] 查詢到 ${result.rowCount} 筆消息`);
         res.status(200).json(result.rows); // 直接返回所有消息的陣列
@@ -1059,7 +1056,7 @@ adminRouter.get('/news/:id', async (req, res) => {
 // POST /api/admin/news - 新增消息
 adminRouter.post('/news', async (req, res) => {
     const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-        const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
+            const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
 
     try {
         const result = await pool.query(
@@ -1089,18 +1086,13 @@ adminRouter.post('/news', async (req, res) => {
 adminRouter.put('/news/:id', async (req, res) => {
 
     const { id } = req.params;
-    const newsId = parseInt(id);
-    console.log(`[API PUT /news/${id}] 收到的 req.body:`, req.body); // <-- 添加檢查
-
     const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
-        console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
 
    // 處理布林值
 
 
 
    
-   const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
 
    try {
        const result = await pool.query(
