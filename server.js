@@ -1087,10 +1087,16 @@ adminRouter.put('/news/:id', async (req, res) => {
 
     const { id } = req.params;
     const newsId = parseInt(id);
+    console.log(`[API PUT /news/${id}] 收到的 req.body:`, req.body); // <-- 添加檢查
+
     const { title, event_date, summary, content, thumbnail_url, image_url, category, show_in_calendar } = req.body;
     console.log(`[受保護 API] PUT /api/admin/news/${id} 請求，內容:`, req.body);
 
    // 處理布林值
+
+
+
+   
    const showInCalendarValue = show_in_calendar === true || show_in_calendar === 'true';
 
    try {

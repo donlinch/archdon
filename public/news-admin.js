@@ -403,8 +403,14 @@ function handleBackgroundClick(event) {
         const content = contentInput.value.trim();
         const thumbnail_url = thumbnailUrlInput.value.trim();
         const image_url = imageUrlInput.value.trim();
-        const category = categoryInput.value.trim();
-        const show_in_calendar = showInCalendarCheckbox.checked;
+  
+
+        const category = categoryInput ? categoryInput.value.trim() : '';
+        const show_in_calendar = showInCalendarCheckbox ? showInCalendarCheckbox.checked : false;
+        console.log('讀取的分類:', category); // <-- 添加檢查
+        console.log('讀取的行事曆顯示狀態:', show_in_calendar); // <-- 添加檢查
+
+
 
         // 驗證
         if (!title) { formErrorElement.textContent = '消息標題為必填項！'; return; }
@@ -419,6 +425,7 @@ function handleBackgroundClick(event) {
             category: category || null,
             show_in_calendar: show_in_calendar
         };
+        console.log('準備發送的 newsData:', newsData); // <-- 添加檢查
 
         const method = isEditMode ? 'PUT' : 'POST';
         const url = isEditMode ? `/api/admin/news/${newsId}` : '/api/admin/news';
