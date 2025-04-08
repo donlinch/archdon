@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             newsListBody.innerHTML = '';
 
             const response = await fetch('/api/admin/news');
-            if (!response.ok) { /* ... error handling ... */ throw new Error('...'); }
+            if (!response.ok) throw new Error(`獲取分類失敗 (${response.status})`);
             const newsList = await response.json();
 
             if (loadingMessage) loadingMessage.style.display = 'none';
@@ -209,7 +209,85 @@ document.addEventListener('DOMContentLoaded', async () => {
      setupImagePreview(editNewsThumbnailUrl, editNewsThumbnailPreview);
 
     // --- handleFormSubmit (保持不變) ---
-    async function handleFormSubmit(event) { /* ... 保持不變 ... */ }
+    async function handleFormSubmit(event) { event.preventDefault();
+        const form = event.target;
+        const isEditMode = form.id === 'edit-news-form';
+        const newsId = isEditMode ? editNewsIdInput.value : null;
+        const formErrorElement = isEditMode ? editFormError : addFormError;
+
+        formErrorElement.textContent = '';
+
+        const titleInput = document.getElementById(isEditMode ? 'edit-news-title' : 'add-news-title');
+        const eventDateInput = document.getElementById(isEditMode ? 'edit-news-event-date' : 'add-news-event-date');
+        const summaryInput = document.getElementById(isEditMode ? 'edit-news-summary' : 'add-news-summary');
+        const contentInput = document.getElementById(isEditMode ? 'edit-news-content' : 'add-news-content');
+        const thumbnailUrlInput = document.getElementById(isEditMode ? 'edit-news-thumbnail-url' : 'add-news-thumbnail-url');
+        const imageUrlInput = document.getElementById(isEditMode ? 'edit-news-image-url' : 'add-news-image-url');
+        const categoryInput = document.getElementById(isEditMode ? 'edit-news-category' : 'add-news-category');
+        const showInCalendarCheckbox = document.getElementById(isEditMode ? 'edit-news-show-in-calendar' : 'add-news-show-in-calendar');
+
+        const inputs = [titleInput, eventDateInput, summaryInput, contentInput, thumbnailUrlInput, imageUrlInput, categoryInput, showInCalendarCheckbox];
+        if (inputs.some(el => !el)) {
+            const missingIds = inputs.map((el, i) => !el ? (isEditMode ? ['edit-news-title', /*...*/ 'edit-news-category', 'edit-news-show-in-calendar'] : ['add-news-title', /*...*/ 'add-news-category', 'add-news-show-in-calendar'])[i] : null).filter(Boolean);
+            formErrorElement.textContent = `表單元件查找失敗: ${missingIds.join(', ')}。`;
+            console.error("表單元素缺失", missingIds);
+            return;
+        }
+
+        const title = titleInput.value.trim();
+        const event_date = eventDateInput.value;
+        const summary = summaryInput.value.trim();
+        const content = contentInput.value.trim();
+        const thumbnail_url = thumbnailUrlInput.value.trim();
+        const image_url = imageUrlInput.value.trim();
+        const category = categoryInput.value.trim();
+        const show_in_calendar = showInCalendarCheckbox.checked;
+        console.log('讀取的分類 (提交前):', category);
+        console.log('讀取的行事曆顯示狀態 (提交前):', show_in_calendar);
+
+        if (!title) { formErrorElement.textContent = '消息標題為必填項！'; return; }
+
+        const newsData = {
+            title: title,
+            event_date: event_date || null,
+            summary: summary || null,
+            content: content || null,
+            thumbnail_url: thumbnail_url || null,
+            image_url: image_url || null,
+            category: category || null,
+            show_in_calendar: show_in_calendar
+        };
+        console.log('準備發送的 newsData:', newsData);
+
+        const method = isEditMode ? 'PUT' : 'POST';
+        const url = isEditMode ? `/api/admin/news/${newsId}` : '/api/admin/news';
+
+        const saveButton = form.querySelector('button[type="submit"]');
+        if (saveButton) saveButton.disabled = true;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newsData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(errorData.error || `操作失敗: ${response.statusText}`);
+            }
+
+            closeModal(isEditMode ? editModal : addModal);
+            await fetchAndDisplayNews();
+            alert(`消息已成功${isEditMode ? '更新' : '新增'}！`);
+
+        } catch (error) {
+            console.error('儲存消息失敗:', error);
+            formErrorElement.textContent = `儲存失敗: ${error.message}`;
+            alert(`儲存失敗: ${error.message}`);
+        } finally {
+            if (saveButton) saveButton.disabled = false;
+        } }
 
     // --- Event Listeners Setup ---
     if (addNewsBtn) { addNewsBtn.addEventListener('click', openAddNewsModal); }
