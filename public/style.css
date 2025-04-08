@@ -2350,8 +2350,8 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
 
 /* 單個事件標記 (小圓點樣式 - 預設顏色) */
 .event-marker {
-    width: 0.2rem;
-    height: 0.2rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
     background-color: #007bff; /* 預設藍色 */
     display: inline-block;
