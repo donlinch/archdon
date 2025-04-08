@@ -110,6 +110,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+
+
+// --- **修改/新增 Modal 關閉事件處理** ---
+[addModal, editModal].forEach(modal => {
+    if (modal) {
+        // 處理右上角 X 按鈕
+        const closeBtn = modal.querySelector('.close-btn');
+        if (closeBtn) {
+            // 使用 removeEventListener 確保只綁定一次
+            closeBtn.removeEventListener('click', () => closeModal(modal));
+            closeBtn.addEventListener('click', () => closeModal(modal));
+        } else {
+            console.warn(`未找到 Modal (ID: ${modal.id}) 的右上角關閉按鈕 (.close-btn)`);
+        }
+
+        // --- *** 新增: 處理底部的取消按鈕 *** ---
+        const cancelBtn = modal.querySelector('.action-btn.cancel-btn'); // 查找 class 為 action-btn cancel-btn 的按鈕
+        if (cancelBtn) {
+            cancelBtn.removeEventListener('click', () => closeModal(modal));
+            cancelBtn.addEventListener('click', () => closeModal(modal));
+        } else {
+            console.warn(`未找到 Modal (ID: ${modal.id}) 的底部取消按鈕 (.action-btn.cancel-btn)`);
+        }
+
+        // 點擊背景關閉 (可選)
+        modal.removeEventListener('click', handleBackgroundClick); // 移除舊的
+        modal.addEventListener('click', handleBackgroundClick); // 添加新的
+    }
+});
+
+// 提取背景點擊處理函數
+function handleBackgroundClick(event) {
+    if (event.target === this) { // this 指的是被點擊的 modal 元素
+        closeModal(this);
+    }
+}
+// --- Modal 關閉事件處理結束 ---
+
+
+
     // --- Function to Fetch and Display ALL News in the Table ---
     async function fetchAndDisplayNews() {
         if (!newsListBody || !newsListContainer || !newsTable) { return; }

@@ -13,12 +13,29 @@
         #news-list-table th, #news-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* 修改 ID */
         #news-list-table th { background-color: #e9ecef; } /* 修改 ID */
         /* 列寬調整 */
-        #news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 8%; }  /* ID */
-        #news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 30%; } /* 標題 */
-        #news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 15%; } /* 活動日期 */
-        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 12%; text-align: center;} /* 縮圖 */
-        #news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 15%; } /* 更新時間 */
-        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
+       /* --- 調整後的 12 欄寬度建議 (總和 100%) --- */
+#news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 4%; }    /* ID (減少 1%) */
+#news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 18%; }   /* 標題 */
+#news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 9%; }    /* 活動日期 (減少 1%) */
+#news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 11%; }   /* 摘要 (減少 1%) */
+#news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 7%; text-align: center; }    /* 縮圖 (減少 1%) */
+#news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 7%; text-align: center; }    /* 主圖 (減少 1%) */
+#news-list-table th:nth-child(7), #news-list-table td:nth-child(7) { width: 5%; text-align: center; }    /* 讚數 (減少 1%) */
+#news-list-table th:nth-child(8), #news-list-table td:nth-child(8) { width: 8%; }    /* 分類 */
+#news-list-table th:nth-child(9), #news-list-table td:nth-child(9) { width: 7%; text-align: center; }    /* 顯示於行事曆 */
+#news-list-table th:nth-child(10), #news-list-table td:nth-child(10) { width: 9%; } /* 建立時間 (減少 1%) */
+#news-list-table th:nth-child(11), #news-list-table td:nth-child(11) { width: 9%; } /* 更新時間 (減少 1%) */
+#news-list-table th:nth-child(12), #news-list-table td:nth-child(12) { width: 6%; text-align: center; } /* 操作 (減少 4%) */
+
+/* 可選：如果標題或摘要內容較長，確保換行和省略號生效 */
+#news-list-table td {
+    white-space: nowrap; /* 保持不換行 */
+    overflow: hidden;    /* 隱藏溢出內容 */
+    text-overflow: ellipsis; /* 顯示省略號 */
+    vertical-align: middle; /* 垂直居中 (可選) */
+}
+/* 對於需要顯示完整內容的欄位(如果有的話)，可以單獨覆蓋 white-space */
+/* 例如: #news-list-table td:nth-child(4) { white-space: normal; } */
 
         .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;}
         .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
