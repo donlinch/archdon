@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- 檢查核心元素 ---
     // <<< 修改: 加入 debugInfoContainer 檢查 >>>
-    const coreElements = [newsListBody, newsListContainer, newsTable, addModal, editModal, addForm, editForm, addNewsBtn,  ];
+    const coreElements = [newsListBody, newsListContainer, newsTable, addModal, editModal, addForm, editForm, addNewsBtn, debugInfoContainer];
     if (coreElements.some(el => !el)) {
         console.error("頁面初始化失敗：缺少必要的 HTML 元素 (表格、Modal、表單、新增按鈕或 Debug 區)。請檢查 ID。");
         if(loadingMessage) loadingMessage.textContent = "頁面載入錯誤，請聯繫管理員。";
@@ -176,10 +176,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             // <<< 初始化 Debug 文本 >>>
- 
+            let debugTextContent = '<h3>原始數據檢查 (列表下方):</h3>\n';
+
             if (!newsList || newsList.length === 0) {
                 newsListBody.innerHTML = `<tr><td colspan="10">目前沒有消息。</td></tr>`; // <<< Colspan 變為 10 >>>
-             } else {
+                debugTextContent += 'API 返回了空的新聞列表。\n'; // <<< 更新 Debug 區 >>>
+            } else {
                 newsList.forEach(newsItem => {
                     const row = document.createElement('tr');
                     row.dataset.newsId = newsItem.id;
@@ -203,18 +205,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // --- <<< 修改結束 >>> ---
                     newsListBody.appendChild(row);
 
-                   
+                    // --- <<< 累積 Debug 文本 >>> ---
+                    const categoryValue = newsItem.category;
+                    const calendarValue = newsItem.show_in_calendar;
+                    debugTextContent += `ID (${newsItem.id})  分類：'${categoryValue}' (類型: ${typeof categoryValue})  顯示：'${calendarValue}' (類型: ${typeof calendarValue})\n`;
+                    // --- <<< 累積結束 >>> ---
                 });
             }
 
-           
+            // <<< 更新 Debug 顯示區域 >>>
+            if (debugInfoContainer) {
+                 debugInfoContainer.textContent = debugTextContent;
+            }
+
             addTableButtonListeners(); // 添加事件監聽器
 
         } catch (error) {
             console.error("獲取管理消息列表失敗:", error);
             if (loadingMessage) loadingMessage.textContent = `無法載入消息列表: ${error.message}`;
             if (newsTable) newsTable.style.display = 'none';
-            
+            if (debugInfoContainer) { // 錯誤時也更新 Debug 區
+                debugInfoContainer.innerHTML = `<h3>原始數據檢查 (列表下方):</h3><p style="color:red;">獲取數據時發生錯誤: ${error.message}</p>`;
+            }
              if (error.message.includes('登入')) {
                 alert('請先登入管理後台！');
              }
