@@ -1009,8 +1009,9 @@ adminRouter.get('/news', async (req, res) => {
         // 後台需要看到所有消息，包含所有欄位，以便編輯
         // 按更新時間排序，最新的在前面
         const result = await pool.query(
-            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url,  like_count, created_at, updated_at, category, show_in_calendar
-     FROM news
+            `SELECT id, title, event_date, summary, content, thumbnail_url, image_url, 
+                    like_count, created_at, updated_at, category, show_in_calendar
+             FROM news
              ORDER BY updated_at DESC, id DESC`
         );
         console.log(`[受保護 API] 查詢到 ${result.rowCount} 筆消息`);
