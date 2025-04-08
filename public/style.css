@@ -2311,7 +2311,7 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     color: white;
     border-radius: 50%;
     width: 2rem; /* 固定寬高使其變圓    width: 24px; height: 24px;*/
-    height: 2rem;
+    height: 0.5rem;
     display: inline-flex; /* 使用 flex 垂直居中 */
     justify-content: center;
     align-items: center;
