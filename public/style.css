@@ -1430,13 +1430,12 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
  
 /* --- 前台留言列表項：管理員作者名稱樣式 --- */
 .message-list-item .author.admin-author {
-    color: #C07000; /* 深橙色/棕色 (或其他你選擇的顏色) */
+    color: #C07000; /* 深橙色/棕色 */
     font-weight: bold; /* 加粗 */
-    /* 可選：添加一個小圖標或背景 */
-    background: url('/images/favicon-32x32.png') no-repeat right center; 
-    padding-right: 18px; 
+    /* --- 移除以下兩行 --- */
+    /* background: url('/images/favicon-32x32.png') no-repeat right center; */
+    /* padding-right: 18px; */
 }
-
 /* --- 留言 Meta 信息容器樣式 --- */
 .message-meta-container {
     margin-top: 0.5rem; /* 與預覽內容的間距 */
