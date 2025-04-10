@@ -182,7 +182,7 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
         /* height: 100px; */ /* 移除固定高度，讓其自適應 */
         aspect-ratio: 4 / 3; /* 新增：設定縮圖比例 (例如 4:3)，可調整 */
         overflow: hidden;
-        margin-bottom: 0.4rem; /* 縮圖和日期之間的間距 */
+        margin-bottom: 0.2rem; /* 縮圖和日期之間的間距 */
         border-radius: 4px; /* 給縮圖加點圓角 */
     }@media (max-width: 600px) {
     .news-card-left {
@@ -202,12 +202,12 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn.active {
     
     /* 新日期樣式 */
 .news-card-date {
-    font-size: 0.9rem;  /* 增加字體大小 (例如從 0.8rem 增大) */
+    font-size: 2rem;  /* 增加字體大小 (例如從 0.8rem 增大) */
     color: #c64343;      /* 可以稍微加深顏色 (例如從 #777 改為 #555) */
-    font-weight: 500;  /* 可以稍微加粗字體 (normal 是 400) */
+    font-weight: 1000;  /* 可以稍微加粗字體 (normal 是 400) */
     text-align: center;
     line-height: 1.4;  /* 調整行高 */
-    margin-top: 0.5rem; /* 增加與上方圖片的間距 */
+    margin-top: 0.2rem; /* 增加與上方圖片的間距 */
     display: block;    /* 確保它佔用整行寬度以便居中 */
 }
     
