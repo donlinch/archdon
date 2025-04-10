@@ -89,6 +89,11 @@ app.use(async (req, res, next) => {
 
 
 
+
+
+
+
+
 // --- 受保護的管理頁面和 API Routes ---
 
 app.use([
@@ -114,6 +119,71 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 公開 API Routes ---
+
+
+
+
+
+
+
+// --- ★ 新增: 管理員發表新留言 API ---
+adminRouter.post('/guestbook/messages', async (req, res) => {
+    const { admin_identity_id, content } = req.body;
+    const identityIdInt = parseInt(admin_identity_id, 10);
+
+    // 驗證輸入
+    if (isNaN(identityIdInt)) {
+        return res.status(400).json({ error: '無效的管理員身份 ID。' });
+    }
+    if (!content || content.trim() === '') {
+        return res.status(400).json({ error: '留言內容不能為空。' });
+    }
+    const trimmedContent = content.trim();
+
+    const client = await pool.connect();
+    try {
+        // 1. 驗證身份 ID 並獲取身份名稱
+        const identityResult = await client.query(
+            'SELECT name FROM admin_identities WHERE id = $1',
+            [identityIdInt]
+        );
+        if (identityResult.rowCount === 0) {
+            return res.status(400).json({ error: '找不到指定的管理員身份。' });
+        }
+        const adminIdentityName = identityResult.rows[0].name;
+
+        // 2. 插入新留言到 guestbook_messages
+        const insertQuery = `
+            INSERT INTO guestbook_messages (
+                author_name, content, is_admin_post, admin_identity_id,
+                last_activity_at, created_at, is_visible,
+                reply_count, view_count, like_count
+            )
+            VALUES ($1, $2, TRUE, $3, NOW(), NOW(), TRUE, 0, 0, 0)
+            RETURNING id, author_name, content, is_admin_post, admin_identity_id, created_at, last_activity_at, reply_count, view_count, like_count, is_visible;
+        `;
+        const insertParams = [adminIdentityName, trimmedContent, identityIdInt];
+        const newMessageResult = await client.query(insertQuery, insertParams);
+
+        console.log('[API POST /admin/guestbook/messages] 管理員留言已新增:', newMessageResult.rows[0]);
+        res.status(201).json(newMessageResult.rows[0]); // 返回新增的留言數據
+
+    } catch (err) {
+        console.error('[API POST /admin/guestbook/messages] Error:', err.stack || err);
+        // 檢查是否是外鍵錯誤 (不太可能，因為前面驗證了)
+        if (err.code === '23503') {
+             return res.status(400).json({ error: '內部錯誤：關聯的管理員身份無效。' });
+         }
+        res.status(500).json({ error: '無法新增管理員留言' });
+    } finally {
+        client.release();
+    }
+});
+
+
+
+
+
 
 
 // --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
