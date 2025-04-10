@@ -1433,8 +1433,8 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     color: #C07000; /* 深橙色/棕色 (或其他你選擇的顏色) */
     font-weight: bold; /* 加粗 */
     /* 可選：添加一個小圖標或背景 */
-    /* background: url('/images/admin-badge.png') no-repeat right center; */
-    /* padding-right: 18px; */
+    background: url('/images/favicon-32x32.png') no-repeat right center; 
+    padding-right: 18px; 
 }
 
 /* --- 留言 Meta 信息容器樣式 --- */
@@ -1982,17 +1982,24 @@ button { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: none; f
     max-height: calc(1.6em * 3); /* line-height * 行數 */
 }
 .message-list-item .content-preview:hover { color: #E57373; }
-.message-list-item .meta {
-    font-size: 0.85em;
-    color: #888;
-    margin-right: 1rem;
-    vertical-align: middle; /* 與按鈕對齊 */
+.message-meta-container {
+    margin-top: 0.5rem; /* 與預覽內容的間距 */
+    display: flex;      /* 使用 Flexbox 佈局 */
+    align-items: center; /* 垂直居中對齊 */
+    flex-wrap: wrap;    /* 允許換行 */
+    gap: 0.5rem 1rem;   /* 項目之間的間距 (垂直 0.5rem, 水平 1rem) */
 }
 .message-list-item .meta.view-detail-modal-btn { /* 可點擊的回覆數 */
     cursor: pointer;
     color: #007bff;
     text-decoration: underline;
 }
+
+.message-list-item .meta {
+    margin-right: 0; /* 移除之前的右邊距 */
+    margin-left: 0;  /* 移除之前的左邊距 */
+}
+
 .message-list-item .meta.view-detail-modal-btn:hover { color: #0056b3; }
 .message-list-item .view-detail-modal-btn { /* [查看詳情] 按鈕 */
     font-size: 0.85em;
