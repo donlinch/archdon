@@ -86,11 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (msg.is_admin_post === true) {
                 authorSpan.classList.add('admin-author'); // 添加 'admin-author' class
                 // 可選：在名字後加標記
-                // const badge = document.createElement('span');
-                // badge.textContent = ' [管理員]';
-                // badge.style.fontSize = '0.8em';
-                // badge.style.color = '#C07000'; // 或其他顏色
-                // authorSpan.appendChild(badge);
+                 const badge = document.createElement('span');
+                 badge.textContent = ' [管理員]';
+                 badge.style.fontSize = '0.8em';
+                 badge.style.color = '#C07000'; // 或其他顏色
+                 authorSpan.appendChild(badge);
             }
             // --- ★★★ 修改結束 ★★★ ---
     
