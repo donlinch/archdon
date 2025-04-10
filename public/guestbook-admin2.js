@@ -428,4 +428,4 @@ if (adminPostForm && submitAdminPostBtn && adminPostStatus && adminPostIdentityS
     // --- 初始載入 ---
     fetchAdminGuestbookList(1, 'all', '', 'latest'); // 載入第一頁，所有狀態，無搜尋，最新活動排序
 
-}); 
+});  
