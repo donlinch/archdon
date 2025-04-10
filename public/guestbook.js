@@ -72,78 +72,72 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMessageList(messages) {
         if (!messageListContainer) return;
         messageListContainer.innerHTML = '';
-        if (!messages || messages.length === 0) { const p = document.createElement('p'); p.textContent = '目前沒有留言。'; messageListContainer.appendChild(p); return; }
+        if (!messages || messages.length === 0) { /* ...無留言處理不變... */ return; }
+    
         messages.forEach(msg => {
-            const messageItemDiv = document.createElement('div'); messageItemDiv.className = 'message-list-item';
-            const authorSpan = document.createElement('span'); authorSpan.className = 'author'; authorSpan.textContent = msg.author_name || '匿名';
-            const timestampSpan = document.createElement('span'); timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${activityDate})`;
-            const previewDiv = document.createElement('div'); previewDiv.className = 'content-preview view-detail-modal-btn'; previewDiv.dataset.messageId = msg.id; previewDiv.textContent = msg.content_preview || '(無內容預覽)'; previewDiv.style.cursor = 'pointer'; previewDiv.style.display = 'block'; previewDiv.style.margin = '0.5rem 0'; previewDiv.style.color = '#555'; previewDiv.style.lineHeight = '1.6';
-            const metaSpan = document.createElement('span'); 
-            metaSpan.className = 'meta view-detail-modal-btn'; 
-            metaSpan.dataset.messageId = msg.id; 
-            metaSpan.textContent = `回覆(${msg.reply_count || 0})`; 
-            metaSpan.style.cursor = 'pointer'; 
-            metaSpan.style.color = '#007bff'; 
-            metaSpan.style.textDecoration = 'underline';
-
-
-
-            
-
-            const viewSpan = document.createElement('span'); viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
-
-
-
-
- // --- 【★ 關鍵修正：重新加入這一段 ★】 ---
- const likeContainer = document.createElement('span'); // 創建包裹容器
- likeContainer.className = 'meta';
- likeContainer.style.marginLeft = '1rem';
-
- const likeButton = document.createElement('button'); // 創建按鈕
- likeButton.className = 'like-btn message-like-btn';
- likeButton.dataset.id = msg.id;
- likeButton.innerHTML = '❤️'; // 使用 Emoji 或圖標
-
- const likeCountSpan = document.createElement('span'); // 創建計數 span
- likeCountSpan.id = `message-like-count-${msg.id}`; // ID 用於更新計數
- likeCountSpan.textContent = ` ${msg.like_count || 0}`;
- likeCountSpan.style.fontSize = '0.9em'; // 數字樣式
- likeCountSpan.style.color = '#555';
- likeCountSpan.style.marginLeft = '3px';
-
- likeContainer.appendChild(likeButton); // 將按鈕加入容器
- likeContainer.appendChild(likeCountSpan); // 將計數加入容器
- // --- 【★ 修正結束 ★】 ---
-
-
-
-           // const likeSpan = document.createElement('span'); likeSpan.className = 'meta'; likeSpan.innerHTML = ` ❤️ ${msg.like_count || 0}`; likeSpan.style.marginLeft = '1rem';
-           // const detailButton = document.createElement('button'); detailButton.className = 'btn btn-link btn-sm view-detail-modal-btn'; detailButton.dataset.messageId = msg.id; detailButton.textContent = '[查看詳情]'; detailButton.style.marginLeft = '1rem';
-         
-         
-           
-
-
- // --- 組合元素 ---
- messageItemDiv.appendChild(authorSpan);
- messageItemDiv.appendChild(document.createTextNode(' '));
- messageItemDiv.appendChild(timestampSpan);
- messageItemDiv.appendChild(previewDiv);
- messageItemDiv.appendChild(metaSpan);      // 回覆數
- messageItemDiv.appendChild(viewSpan);      // 瀏覽數
- messageItemDiv.appendChild(likeContainer); // 添加 likeContainer
-
-
-
-       
-           messageListContainer.appendChild(messageItemDiv);
-           const hr = document.createElement('hr'); 
-           messageListContainer.appendChild(hr);
-
-
+            const messageItemDiv = document.createElement('div');
+            messageItemDiv.className = 'message-list-item';
+    
+            const authorSpan = document.createElement('span');
+            authorSpan.className = 'author';
+            authorSpan.textContent = msg.author_name || '匿名';
+    
+            // --- ★★★ 新增：根據 is_admin_post 添加 class ★★★ ---
+            if (msg.is_admin_post === true) {
+                authorSpan.classList.add('admin-author'); // 添加 'admin-author' class
+                // 可選：在名字後加標記
+                // const badge = document.createElement('span');
+                // badge.textContent = ' [管理員]';
+                // badge.style.fontSize = '0.8em';
+                // badge.style.color = '#C07000'; // 或其他顏色
+                // authorSpan.appendChild(badge);
+            }
+            // --- ★★★ 修改結束 ★★★ ---
+    
+            const timestampSpan = document.createElement('span'); /* ... 時間戳代碼不變 ... */
+            timestampSpan.className = 'timestamp'; const activityDate = new Date(msg.last_activity_at).toLocaleString('zh-TW'); timestampSpan.textContent = ` (${activityDate})`;
+    
+            const previewDiv = document.createElement('div'); /* ... 預覽代碼不變 ... */
+            previewDiv.className = 'content-preview view-detail-modal-btn'; previewDiv.dataset.messageId = msg.id; previewDiv.textContent = msg.content_preview || '(無內容預覽)'; previewDiv.style.cursor = 'pointer'; previewDiv.style.display = 'block'; previewDiv.style.margin = '0.5rem 0'; previewDiv.style.color = '#555'; previewDiv.style.lineHeight = '1.6';
+    
+            const metaContainer = document.createElement('div'); // ★ 新增一個容器放 meta 信息
+            metaContainer.className = 'message-meta-container';
+    
+            const metaSpan = document.createElement('span'); /* ... 回覆數代碼不變 ... */
+            metaSpan.className = 'meta view-detail-modal-btn'; metaSpan.dataset.messageId = msg.id; metaSpan.textContent = `回覆(${msg.reply_count || 0})`; metaSpan.style.cursor = 'pointer'; metaSpan.style.color = '#007bff'; metaSpan.style.textDecoration = 'underline';
+    
+            const viewSpan = document.createElement('span'); /* ... 瀏覽數代碼不變 ... */
+            viewSpan.className = 'meta'; viewSpan.textContent = `瀏覽(${msg.view_count || 0})`; viewSpan.style.marginLeft = '1rem';
+    
+            const likeContainer = document.createElement('span'); /* ... 按讚代碼不變 ... */
+            likeContainer.className = 'meta'; likeContainer.style.marginLeft = '1rem';
+            const likeButton = document.createElement('button'); likeButton.className = 'like-btn message-like-btn'; likeButton.dataset.id = msg.id; likeButton.innerHTML = '❤️';
+            const likeCountSpan = document.createElement('span'); likeCountSpan.id = `message-like-count-${msg.id}`; likeCountSpan.textContent = ` ${msg.like_count || 0}`; likeCountSpan.style.fontSize = '0.9em'; likeCountSpan.style.color = '#555'; likeCountSpan.style.marginLeft = '3px';
+            likeContainer.appendChild(likeButton); likeContainer.appendChild(likeCountSpan);
+    
+            // ★ 將 meta 信息放入容器 ★
+            metaContainer.appendChild(metaSpan);
+            metaContainer.appendChild(viewSpan);
+            metaContainer.appendChild(likeContainer);
+    
+            // --- 組合元素 ---
+            messageItemDiv.appendChild(authorSpan);
+            messageItemDiv.appendChild(document.createTextNode(' ')); // 作者和時間戳之間的空格
+            messageItemDiv.appendChild(timestampSpan);
+            messageItemDiv.appendChild(previewDiv);
+            messageItemDiv.appendChild(metaContainer); // ★ 添加 meta 容器 ★
+    
+            messageListContainer.appendChild(messageItemDiv);
+            const hr = document.createElement('hr');
+            hr.style.border = 'none'; // 移除默認邊框
+            hr.style.borderTop = '1px solid #eee'; // 添加淺色上邊框
+            hr.style.margin = '1rem 0'; // 增加上下間距
+            messageListContainer.appendChild(hr);
         });
     }
+
+
+
 
     function renderPagination(totalPages, currentPage) {
         if (!paginationContainer || totalPages <= 1) { paginationContainer.innerHTML = ''; return; }; paginationContainer.innerHTML = '';

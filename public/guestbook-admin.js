@@ -1,43 +1,116 @@
-// public/guestbook-admin.js
+// public/guestbook-admin2.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM 元素獲取 ---
-    const guestbookAdminList = document.getElementById('guestbook-admin-list'); // 表格 tbody
+    // --- DOM 元素獲取 (原有) ---
+    const guestbookAdminList = document.getElementById('guestbook-admin-list');
     const paginationContainer = document.getElementById('admin-pagination-container');
     const filterStatus = document.getElementById('filter-status');
     const searchTermInput = document.getElementById('search-term');
     const searchButton = document.getElementById('search-button');
-    // 注意：後台詳情頁和身份管理頁的按鈕不在此文件中處理
 
-    // --- 狀態變數 ---
+    // --- ★ 新增: Modal 相關 DOM 元素 ★ ---
+    const adminPostNewMessageBtn = document.getElementById('admin-post-new-message-btn');
+    const adminPostModal = document.getElementById('admin-post-modal');
+    const closeAdminPostModalBtn = document.getElementById('close-admin-post-modal-btn');
+    const adminPostForm = document.getElementById('admin-post-form');
+    const adminPostIdentitySelect = document.getElementById('admin-post-identity-select');
+    const adminPostContent = document.getElementById('admin-post-content');
+    const adminPostStatus = document.getElementById('admin-post-status');
+    const submitAdminPostBtn = document.getElementById('submit-admin-post-btn');
+    const adminPostCancelBtns = adminPostModal ? adminPostModal.querySelectorAll('.close-modal-btn') : []; // 獲取所有關閉按鈕
+
+    // --- 狀態變數 (原有) ---
     let currentPage = 1;
     let currentFilter = 'all';
     let currentSearch = '';
-    let currentSort = 'latest'; // 雖然 API 支持，但前端目前未做排序切換按鈕
+    let currentSort = 'latest';
 
-    // --- 函數：獲取並顯示管理列表 ---
+    // --- 輔助函數 ---
+    function closeModal(modalElement) {
+        if (modalElement) modalElement.style.display = 'none';
+    }
+    function openModal(modalElement) {
+        if (modalElement) modalElement.style.display = 'flex';
+    }
+
+    // --- ★ 新增: 獲取並填充管理員身份下拉選單 (用於新 Modal) ★ ---
+    async function fetchAndPopulateAdminIdentities(selectElement) {
+        if (!selectElement) return;
+        selectElement.disabled = true;
+        selectElement.innerHTML = '<option value="">載入身份中...</option>';
+        try {
+            const response = await fetch('/api/admin/identities'); // API 路徑正確
+            if (!response.ok) throw new Error('無法獲取身份列表');
+            const identities = await response.json();
+
+            if (identities && identities.length > 0) {
+                selectElement.innerHTML = ''; // 清空
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- 請選擇身份 --';
+                selectElement.appendChild(defaultOption);
+
+                identities.forEach(identity => {
+                    const option = document.createElement('option');
+                    option.value = identity.id;
+                    option.textContent = identity.name; // 使用 textContent
+                    selectElement.appendChild(option);
+                });
+                selectElement.disabled = false;
+            } else {
+                selectElement.innerHTML = '<option value="">沒有可用的身份</option>';
+            }
+        } catch (error) {
+            console.error('獲取身份失敗:', error);
+            selectElement.innerHTML = '<option value="">獲取身份失敗</option>';
+            if (adminPostStatus) { adminPostStatus.textContent = '錯誤：無法載入發表身份。'; adminPostStatus.style.color = 'red'; }
+        }
+    }
+
+    // --- ★ 新增: 打開管理員發表新留言 Modal 的函數 ★ ---
+    async function openAdminPostModal() {
+        if (!adminPostModal || !adminPostForm || !adminPostStatus || !adminPostIdentitySelect) {
+            console.error("無法打開 Modal：缺少必要的 Modal 元素。");
+            alert("打開視窗時出錯，請檢查頁面元件。");
+            return;
+        }
+        adminPostForm.reset(); // 清空表單
+        adminPostStatus.textContent = ''; // 清空狀態
+        submitAdminPostBtn.disabled = false; // 確保按鈕可用
+        submitAdminPostBtn.textContent = '確認發表';
+
+        // 異步加載身份列表
+        await fetchAndPopulateAdminIdentities(adminPostIdentitySelect);
+
+        openModal(adminPostModal); // 顯示 Modal
+        adminPostIdentitySelect.focus(); // 聚焦到身份選擇
+    }
+
+    // --- ★ 新增: 關閉管理員發表新留言 Modal 的函數 ★ ---
+    function closeAdminPostModal() {
+        closeModal(adminPostModal);
+    }
+
+
+    // --- 函數：獲取並顯示管理列表 (原有，但可能需要更新渲染邏輯) ---
     async function fetchAdminGuestbookList(page = 1, filter = 'all', search = '', sort = 'latest') {
+        // ... (函數開頭的檢查和參數更新保持不變) ...
         if (!guestbookAdminList || !paginationContainer) {
-             console.error('錯誤：找不到列表或分頁容器。');
-             return;
+            console.error('錯誤：找不到列表或分頁容器。');
+            return;
         }
         guestbookAdminList.innerHTML = '<tr><td colspan="8">正在載入資料...</td></tr>';
         paginationContainer.innerHTML = '';
 
-        // 更新當前狀態
         currentPage = page;
         currentFilter = filter;
         currentSearch = search;
-        currentSort = sort; // 保存當前排序狀態
+        currentSort = sort;
 
-        // 構建 API URL
         const params = new URLSearchParams({
-            page: currentPage,
-            limit: 15, // 管理頁面每頁顯示 15 筆
-            filter: currentFilter,
-            search: currentSearch,
-            sort: currentSort // 將排序參數傳給後端
+            page: currentPage, limit: 15, filter: currentFilter,
+            search: currentSearch, sort: currentSort
         });
-        const apiUrl = `/api/admin/guestbook?${params.toString()}`; //【API 路徑】
+        const apiUrl = `/api/admin/guestbook?${params.toString()}`;
 
         try {
             const response = await fetch(apiUrl);
@@ -50,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
-            renderAdminList(data.messages); // 後端 API 回傳 messages 陣列
+            renderAdminList(data.messages); // <--- 調用修改後的 renderAdminList
             renderAdminPagination(data.totalPages, data.currentPage);
 
         } catch (error) {
@@ -62,11 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 函數：渲染管理列表 (使用 DOM 操作) ---
-    function renderAdminList(messages) {
-         if (!guestbookAdminList) return;
-         guestbookAdminList.innerHTML = ''; // 清空
-
+     // --- 函數：渲染管理列表 (★ 可能需要微調以顯示管理員標記 ★) ---
+     function renderAdminList(messages) {
+        if (!guestbookAdminList) return;
+        guestbookAdminList.innerHTML = '';
         if (!messages || messages.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
@@ -81,14 +153,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.id = `message-row-${msg.id}`;
 
+            // ★ 可選：根據 is_admin_post 改變行的樣式
+            if (msg.is_admin_post) {
+                 tr.style.backgroundColor = "#fffaf0"; // 淡黃色背景
+            }
+
             const tdId = document.createElement('td'); tdId.textContent = msg.id;
-            const tdType = document.createElement('td'); tdType.textContent = '留言'; // 目前只有留言
-            const tdAuthor = document.createElement('td'); tdAuthor.textContent = msg.author_name || '匿名';
-            const tdPreview = document.createElement('td'); tdPreview.className = 'content-preview'; // 可以用 CSS 限制寬度
-                const previewLink = document.createElement('a'); // 讓預覽也可點擊
+            const tdType = document.createElement('td'); tdType.textContent = '留言';
+            const tdAuthor = document.createElement('td');
+                // ★ 顯示作者，如果是管理員發的，加個標記
+                tdAuthor.textContent = msg.author_name || '匿名';
+                if (msg.is_admin_post) {
+                    const adminBadge = document.createElement('span');
+                    adminBadge.textContent = ' (管理員)';
+                    adminBadge.style.color = '#FF8F00'; // 橙色
+                    adminBadge.style.fontSize = '0.8em';
+                    tdAuthor.appendChild(adminBadge);
+                }
+            const tdPreview = document.createElement('td'); tdPreview.className = 'content-preview';
+                const previewLink = document.createElement('a');
                 previewLink.href = `/admin-message-detail.html?id=${msg.id}`;
                 previewLink.textContent = msg.content_preview || '';
-                previewLink.style.whiteSpace = 'pre-wrap'; // CSS 或 JS 處理換行
+                previewLink.style.whiteSpace = 'pre-wrap';
                 previewLink.style.wordWrap = 'break-word';
             tdPreview.appendChild(previewLink);
             const tdReplyCount = document.createElement('td'); tdReplyCount.textContent = msg.reply_count || 0;
@@ -101,28 +187,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tdActions = document.createElement('td');
             tdActions.className = 'actions';
+                const toggleBtn = document.createElement('button'); /* ... 顯隱按鈕代碼不變 ... */
+                toggleBtn.className = 'btn btn-warning btn-sm toggle-visibility-btn';
+                toggleBtn.textContent = msg.is_visible ? '隱藏' : '顯示';
+                toggleBtn.dataset.id = msg.id;
+                toggleBtn.dataset.type = 'message';
+                toggleBtn.dataset.targetVisibility = !msg.is_visible;
 
-            // 顯隱按鈕
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'btn btn-warning btn-sm toggle-visibility-btn';
-            toggleBtn.textContent = msg.is_visible ? '隱藏' : '顯示';
-            toggleBtn.dataset.id = msg.id;
-            toggleBtn.dataset.type = 'message';
-            toggleBtn.dataset.targetVisibility = !msg.is_visible; // Boolean 值直接存儲
+                const deleteBtn = document.createElement('button'); /* ... 刪除按鈕代碼不變 ... */
+                deleteBtn.className = 'btn btn-danger btn-sm delete-item-btn';
+                deleteBtn.textContent = '刪除';
+                deleteBtn.dataset.id = msg.id;
+                deleteBtn.dataset.type = 'message';
+                deleteBtn.dataset.name = `留言 #${msg.id}`;
 
-            // 刪除按鈕
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn btn-danger btn-sm delete-item-btn';
-            deleteBtn.textContent = '刪除';
-            deleteBtn.dataset.id = msg.id;
-            deleteBtn.dataset.type = 'message';
-            deleteBtn.dataset.name = `留言 #${msg.id}`; // 用於確認訊息
-
-            // 詳情/回覆連結
-            const detailLink = document.createElement('a');
-            detailLink.className = 'btn btn-info btn-sm';
-            detailLink.href = `/admin-message-detail.html?id=${msg.id}`;
-            detailLink.textContent = '詳情/回覆';
+                const detailLink = document.createElement('a'); /* ... 詳情連結代碼不變 ... */
+                detailLink.className = 'btn btn-info btn-sm';
+                detailLink.href = `/admin-message-detail.html?id=${msg.id}`;
+                detailLink.textContent = '詳情/回覆';
 
             tdActions.appendChild(toggleBtn);
             tdActions.appendChild(deleteBtn);
@@ -138,48 +220,38 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.appendChild(tdActions);
 
             guestbookAdminList.appendChild(tr);
-
-            // 【待辦】如果 API 返回回覆，需要在此處遞迴或疊代渲染回覆行
         });
     }
 
-     // --- 函數：渲染管理分頁控制 (使用 DOM 操作) ---
+     // --- 函數：渲染管理分頁控制 (原有) ---
      function renderAdminPagination(totalPages, currentPage) {
-         if (!paginationContainer || totalPages <= 1) {
-             paginationContainer.innerHTML = '';
-             return;
+        // ... (函數內容保持不變) ...
+        if (!paginationContainer || totalPages <= 1) {
+            if(paginationContainer) paginationContainer.innerHTML = '';
+            return;
         }
-        paginationContainer.innerHTML = ''; // 清空
-
-        // 上一頁按鈕
-        const prevButton = document.createElement('button');
-        prevButton.className = 'page-btn';
-        prevButton.dataset.page = currentPage - 1;
-        prevButton.disabled = (currentPage === 1);
-        prevButton.innerHTML = '<< 上一頁';
-        paginationContainer.appendChild(prevButton);
-
-        // 頁碼按鈕
-        const maxPagesToShow = 5; let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2)); let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1); if (endPage - startPage + 1 < maxPagesToShow) startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        if (startPage > 1) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
-        for (let i = startPage; i <= endPage; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.className = 'page-btn';
-            pageButton.dataset.page = i;
-            pageButton.disabled = (i === currentPage);
-            if (i === currentPage) pageButton.classList.add('current-page'); // 用 class
-            pageButton.textContent = i;
-            paginationContainer.appendChild(pageButton);
-        }
-        if (endPage < totalPages) { const span = document.createElement('span'); span.textContent = '...'; paginationContainer.appendChild(span); }
-
-        // 下一頁按鈕
-        const nextButton = document.createElement('button');
-        nextButton.className = 'page-btn';
-        nextButton.dataset.page = currentPage + 1;
-        nextButton.disabled = (currentPage === totalPages);
-        nextButton.innerHTML = '下一頁 >>';
-        paginationContainer.appendChild(nextButton);
+        paginationContainer.innerHTML = ''; // Clear previous pagination
+        const createPageButton = (pageNumber, text, isDisabled = false, isActive = false) => {
+            const button = document.createElement('button');
+            button.dataset.page = pageNumber;
+            button.textContent = text;
+            button.disabled = isDisabled;
+            button.className = 'page-btn';
+            if (isActive) button.classList.add('current-page');
+            return button;
+        };
+        // Prev button
+        paginationContainer.appendChild(createPageButton(currentPage - 1, '<< 上一頁', currentPage === 1));
+        // Page numbers
+        const maxPagesToShow = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+        if (endPage - startPage + 1 < maxPagesToShow) { startPage = Math.max(1, endPage - maxPagesToShow + 1); }
+        if (startPage > 1) { const first = createPageButton(1, '1'); paginationContainer.appendChild(first); if (startPage > 2) { const ellipsis = document.createElement('span'); ellipsis.textContent = '...'; paginationContainer.appendChild(ellipsis); } }
+        for (let i = startPage; i <= endPage; i++) { paginationContainer.appendChild(createPageButton(i, i, false, i === currentPage)); }
+        if (endPage < totalPages) { if (endPage < totalPages - 1) { const ellipsis = document.createElement('span'); ellipsis.textContent = '...'; paginationContainer.appendChild(ellipsis); } const last = createPageButton(totalPages, totalPages); paginationContainer.appendChild(last); }
+        // Next button
+        paginationContainer.appendChild(createPageButton(currentPage + 1, '下一頁 >>', currentPage === totalPages));
      }
 
      // --- 事件監聽：篩選、搜尋、分頁 ---
@@ -270,11 +342,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
      } 
 
-    // --- 移除全局函數 (改用事件委派) ---
-    // window.toggleVisibility = ...
-    // window.deleteItem = ...
+   // --- ★ 新增: 事件監聽 - 打開/關閉管理員發表 Modal ★ ---
+   if (adminPostNewMessageBtn) {
+    adminPostNewMessageBtn.addEventListener('click', openAdminPostModal);
+}
+if (closeAdminPostModalBtn) {
+    closeAdminPostModalBtn.addEventListener('click', closeAdminPostModal);
+}
+adminPostCancelBtns.forEach(btn => { // 處理所有 class="close-modal-btn" 的取消按鈕
+    btn.addEventListener('click', closeAdminPostModal);
+});
+// 點擊 Modal 外部關閉
+if (adminPostModal) {
+    adminPostModal.addEventListener('click', (event) => {
+        if (event.target === adminPostModal) { // 確保點擊的是背景，而不是內容
+            closeAdminPostModal();
+        }
+    });
+}
+
+// --- ★ 新增: 事件監聽 - 提交管理員發表表單 ★ ---
+if (adminPostForm && submitAdminPostBtn && adminPostStatus && adminPostIdentitySelect && adminPostContent) {
+    adminPostForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); // 阻止表單預設提交
+
+        const selectedIdentityId = adminPostIdentitySelect.value;
+        const content = adminPostContent.value.trim();
+
+        // 基本驗證
+        if (!selectedIdentityId) {
+            adminPostStatus.textContent = '請選擇一個發表身份！';
+            adminPostStatus.style.color = 'orange';
+            return;
+        }
+        if (!content) {
+            adminPostStatus.textContent = '留言內容不能為空！';
+            adminPostStatus.style.color = 'orange';
+            return;
+        }
+
+        submitAdminPostBtn.disabled = true;
+        adminPostStatus.textContent = '正在發表...';
+        adminPostStatus.style.color = 'blue';
+
+        try {
+            const response = await fetch('/api/admin/guestbook/messages', { // 調用新的 API
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    admin_identity_id: selectedIdentityId,
+                    content: content
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(errorData.error || `發表失敗 (${response.status})`);
+            }
+
+            adminPostStatus.textContent = '管理員留言發表成功！';
+            adminPostStatus.style.color = 'green';
+            adminPostForm.reset(); // 清空表單
+
+            // 成功後刷新列表並關閉 Modal
+            fetchAdminGuestbookList(1, 'all', '', 'latest'); // 跳回第一頁看最新留言
+            setTimeout(closeAdminPostModal, 1500); // 延遲關閉
+
+        } catch (error) {
+             console.error('管理員發表留言失敗:', error);
+             adminPostStatus.textContent = `發表失敗：${error.message}`;
+             adminPostStatus.style.color = 'red';
+             submitAdminPostBtn.disabled = false; // 允許重試
+             submitAdminPostBtn.textContent = '確認發表';
+        } finally {
+             // 在 finally 中確保按鈕狀態恢復 (如果上面沒有延遲關閉)
+             // submitAdminPostBtn.disabled = false;
+             // submitAdminPostBtn.textContent = '確認發表';
+             // 但因為有延遲關閉，按鈕狀態會在下次打開時重置
+        }
+    });
+} else {
+    console.error("錯誤：管理員發表 Modal 的相關表單元素未完全找到。");
+}
 
     // --- 初始載入 ---
     fetchAdminGuestbookList(1, 'all', '', 'latest'); // 載入第一頁，所有狀態，無搜尋，最新活動排序
 
-});
+});  
