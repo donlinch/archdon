@@ -176,7 +176,7 @@ adminRouter.post('/guestbook/messages', async (req, res) => {
          }
         res.status(500).json({ error: '無法新增管理員留言' });
     } finally {
-        client.release();
+        client.release(); 
     }
 });
 
