@@ -86,11 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (msg.is_admin_post === true) {
                 authorSpan.classList.add('admin-author'); // 添加 'admin-author' class
                 // 可選：在名字後加標記
+
                  const badge = document.createElement('span');
                  badge.textContent = ' [管理員]';
                  badge.style.fontSize = '0.8em';
                  badge.style.color = '#C07000'; // 或其他顏色
                  authorSpan.appendChild(badge);
+
+
+                 console.log('條件成立，正在為作者添加 admin-author class:', msg.author_name); // <--- 加上這行
+                 
+
+
+
             }
             // --- ★★★ 修改結束 ★★★ ---
     
