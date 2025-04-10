@@ -137,62 +137,54 @@ async function fetchAndDisplayBanners() {
         if (!newsList || newsList.length === 0) { newsListContainer.innerHTML = '<p>目前沒有最新消息。</p>'; return; }
         newsList.forEach(newsItem => {
             const card = document.createElement('div');
-            // 1. 創建左側容器 (包含縮圖和日期)
-        const leftColumn = document.createElement('div');
-        leftColumn.className = 'news-card-left'; // 新 class 用於佈局
-
-        // 2. 縮圖 (基本不變，放入左側容器)
-        const thumbnailDiv = document.createElement('div');
-        thumbnailDiv.className = 'thumbnail';
-        const thumbnailImg = document.createElement('img');
-        thumbnailImg.src = newsItem.thumbnail_url || '/images/placeholder.png';
-        thumbnailImg.alt = newsItem.title || '縮圖';
-        thumbnailDiv.appendChild(thumbnailImg);
-        leftColumn.appendChild(thumbnailDiv); // 將縮圖放入左欄
-
-        // 3. 創建並格式化新日期元素
-        const dateSpan = document.createElement('span');
-        dateSpan.className = 'news-card-date'; // 新 class 用於樣式
-        const displayDate = newsItem.event_date ? new Date(newsItem.event_date) : new Date(newsItem.updated_at);
-        const month = displayDate.getMonth() + 1;
-        const day = displayDate.getDate();
-        const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-        const weekDay = dayNames[displayDate.getDay()];
-        dateSpan.textContent = `${month}/${day} (${weekDay})`;
-        leftColumn.appendChild(dateSpan); // 將日期放入左欄，在縮圖下方
-
-        // 4. 創建右側內容容器 (基本不變)
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'content-wrapper';
-        contentWrapper.onclick = () => openNewsDetailModal(newsItem.id); // 保留點擊打開 Modal
-        contentWrapper.style.cursor = 'pointer';
-
-        const titleH3 = document.createElement('h3');
-        titleH3.className = 'news-title';
-        titleH3.textContent = newsItem.title || '無標題';
-
-        const summaryP = document.createElement('p');
-        summaryP.className = 'news-summary';
-        summaryP.textContent = newsItem.summary || ''; // 如果沒有摘要，顯示空
-
-        contentWrapper.appendChild(titleH3);
-        contentWrapper.appendChild(summaryP);
-
-        // 5. 移除舊的 dateTag 和 actionsDiv 的創建
-        // const dateTag = ... (移除)
-        // const actionsDiv = ... (移除)
-        // const likeButton = ... (移除)
-        // const likeCountSpan = ... (移除)
-
-        // 6. 將新的左右欄添加到卡片中
-        card.appendChild(leftColumn);   // 添加左欄
-        card.appendChild(contentWrapper); // 添加右欄 (內容區)
-
-        // --- 修改結束 ---
-
-        newsListContainer.appendChild(card);
-    });
-}
+            card.className = 'news-card';
+            const dateTag = document.createElement('div');
+            dateTag.className = 'date-tag';
+            if (newsItem.event_date) {
+                const eventDate = new Date(newsItem.event_date);
+                const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+                const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+                dateTag.innerHTML = `<span class="month">${monthNames[eventDate.getMonth()]}</span><span class="day">${eventDate.getDate()}</span><span class="weekday">${dayNames[eventDate.getDay()]}</span>`;
+            } else {
+                const updatedDate = new Date(newsItem.updated_at);
+                dateTag.innerHTML = `<span class="month">${updatedDate.getMonth() + 1}月</span><span class="day">${updatedDate.getDate()}</span><span class="weekday">更新</span>`;
+            }
+            const thumbnailDiv = document.createElement('div');
+            thumbnailDiv.className = 'thumbnail';
+            const thumbnailImg = document.createElement('img');
+            thumbnailImg.src = newsItem.thumbnail_url || '/images/placeholder.png';
+            thumbnailImg.alt = newsItem.title || '縮圖';
+            thumbnailDiv.appendChild(thumbnailImg);
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'content-wrapper';
+            contentWrapper.onclick = () => openNewsDetailModal(newsItem.id);
+            contentWrapper.style.cursor = 'pointer';
+            const titleH3 = document.createElement('h3');
+            titleH3.className = 'news-title';
+            titleH3.textContent = newsItem.title || '無標題';
+            const summaryP = document.createElement('p');
+            summaryP.className = 'news-summary';
+            summaryP.textContent = newsItem.summary || '';
+            contentWrapper.appendChild(titleH3);
+            contentWrapper.appendChild(summaryP);
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'actions';
+            const likeButton = document.createElement('button');
+            likeButton.className = 'like-button';
+            likeButton.innerHTML = '<span class="heart-icon">♡</span>';
+            const likeCountSpan = document.createElement('span');
+            likeCountSpan.className = 'like-count';
+            likeCountSpan.textContent = newsItem.like_count || 0;
+            likeButton.onclick = async (event) => { event.stopPropagation(); await likeNews(newsItem.id, likeButton, likeCountSpan); };
+            actionsDiv.appendChild(likeButton);
+            actionsDiv.appendChild(likeCountSpan);
+            card.appendChild(dateTag);
+            card.appendChild(thumbnailDiv);
+            card.appendChild(contentWrapper);
+            card.appendChild(actionsDiv);
+            newsListContainer.appendChild(card);
+        });
+    }
 
     /**
      * 渲染分頁控制按鈕
