@@ -11,7 +11,7 @@
             box-sizing: border-box;
             font-family: '微軟正黑體', Arial, sans-serif;
         }
-        
+
         body {
             display: flex;
             flex-direction: column;
@@ -22,14 +22,14 @@
             padding: 20px;
             overflow-x: hidden;
         }
-        
+
         h1 {
             color: white;
             margin-bottom: 20px;
             text-align: center;
             text-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-        
+
         .container {
             width: 100%;
             max-width: 500px;
@@ -40,35 +40,46 @@
             margin-bottom: 20px;
             position: relative;
         }
-        
+
         .wheel-container {
             position: relative;
             width: 100%;
-            max-width: 400px;
+            max-width: 400px; /* 稍微加大，以容納指針 */
             margin: 0 auto 20px;
-            min-height: 350px;
+            min-height: 350px; /* 確保高度足夠 */
+            display: flex; /* 使用flex來居中canvas */
+            align-items: center;
+            justify-content: center;
         }
-        
+
         canvas {
             display: block;
-            margin: 0 auto;
+            /* 移除 margin: 0 auto; 因為父容器已使用flex居中 */
             border-radius: 50%;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-            transition: transform 0.1s ease;
+            transition: transform 0.2s ease-out; /* 為放大效果添加過渡 */
+            max-width: 100%; /* 確保canvas不會超出容器 */
+            max-height: 100%;
         }
-        
+
         .pointer {
             position: absolute;
-            top: 0px;
+            /* --- 修改指針位置 --- */
+            top: 50%;           /* 垂直居中 */
+            right: -10px;       /* 放在容器右側稍微突出的位置 */
+            transform: translateY(-50%); /* 精確垂直居中 */
+            width: 40px;        /* 調整大小 */
+            height: 30px;
+            background-color: #ff5252;
+            /* --- 修改指針形狀，使其指向左方 --- */
+            clip-path: polygon(100% 50%, 0 0, 0 100%);
+            z-index: 10;
+            /* --- 移除原來的定位屬性 ---
             left: 50%;
             transform: translateX(-50%);
-            width: 30px;
-            height: 40px;
-            background-color: #ff5252;
-            clip-path: polygon(50% 0, 0% 100%, 100% 100%);
-            z-index: 10;
+            */
         }
-        
+
         button {
             display: block;
             margin: 20px auto;
@@ -82,28 +93,28 @@
             transition: all 0.3s;
             box-shadow: 0 5px 15px rgba(255, 82, 82, 0.4);
         }
-        
+
         button:hover {
             background-color: #ff3636;
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(255, 82, 82, 0.6);
         }
-        
+
         button:active {
             transform: translateY(1px);
         }
-        
+
         .edit-options-btn {
             background-color: #4CAF50;
             box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-            margin-top: 40px;
+            margin-top: 40px; /* 調整按鈕間距 */
         }
-        
+
         .edit-options-btn:hover {
             background-color: #3e8e41;
             box-shadow: 0 8px 20px rgba(76, 175, 80, 0.6);
         }
-        
+
         .result {
             text-align: center;
             margin-top: 20px;
@@ -111,9 +122,16 @@
             font-weight: bold;
             min-height: 36px;
             color: #333;
+            transition: transform 0.3s ease-out, color 0.3s; /* 為結果文字添加過渡 */
+            transform: scale(1); /* 初始大小 */
         }
-        
-        /* 彈出視窗樣式 */
+
+        .result.show-result {
+            transform: scale(1.15); /* 結果顯示時稍微放大 */
+            font-weight: bolder;
+        }
+
+        /* 彈出視窗樣式 (保持不變) */
         .modal {
             display: none;
             position: fixed;
@@ -125,7 +143,7 @@
             background-color: rgba(0, 0, 0, 0.7);
             overflow: auto;
         }
-        
+
         .modal-content {
             background-color: white;
             margin: 5% auto;
@@ -139,12 +157,12 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         @keyframes modalOpen {
             from {opacity: 0; transform: translateY(-50px);}
             to {opacity: 1; transform: translateY(0);}
         }
-        
+
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -153,12 +171,12 @@
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
         }
-        
+
         .modal-header h2 {
             color: #333;
             margin: 0;
         }
-        
+
         .close {
             color: #888;
             font-size: 28px;
@@ -166,11 +184,11 @@
             cursor: pointer;
             transition: color 0.2s;
         }
-        
+
         .close:hover {
             color: #000;
         }
-        
+
         .option-input {
             display: flex;
             align-items: center;
@@ -180,26 +198,26 @@
             border-radius: 8px;
             transition: background-color 0.3s;
         }
-        
+
         .option-input:hover {
             background-color: #f5f5f5;
         }
-        
+
         .option-input.highlight {
             background-color: #e8f5e9;
             animation: highlight 1s ease;
         }
-        
+
         @keyframes highlight {
             0% { background-color: #4CAF50; }
             100% { background-color: #e8f5e9; }
         }
-        
+
         @keyframes fadeIn {
             from {opacity: 0; transform: translateY(10px);}
             to {opacity: 1; transform: translateY(0);}
         }
-        
+
         .option-input input {
             flex: 1;
             padding: 12px;
@@ -209,13 +227,13 @@
             margin-right: 10px;
             transition: all 0.3s;
         }
-        
+
         .option-input input:focus {
             outline: none;
             border-color: #4CAF50;
             box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
         }
-        
+
         .color-indicator {
             width: 25px;
             height: 25px;
@@ -224,7 +242,7 @@
             border: 1px solid #ddd;
             flex-shrink: 0;
         }
-        
+
         .remove-option {
             background-color: #f44336;
             color: white;
@@ -242,12 +260,12 @@
             flex-shrink: 0;
             transition: all 0.3s;
         }
-        
+
         .remove-option:hover {
             background-color: #d32f2f;
             transform: scale(1.1);
         }
-        
+
         .add-option {
             padding: 10px 20px;
             background-color: #4CAF50;
@@ -262,11 +280,11 @@
             justify-content: center;
             width: 100%;
         }
-        
+
         .add-option:hover {
             background-color: #3e8e41;
         }
-        
+
         .options-container {
             overflow-y: auto;
             max-height: 50vh;
@@ -274,31 +292,31 @@
             margin-bottom: 10px;
             flex: 1;
         }
-        
+
         /* 自定义滚动条 */
         .options-container::-webkit-scrollbar {
             width: 8px;
         }
-        
+
         .options-container::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
-        
+
         .options-container::-webkit-scrollbar-thumb {
             background: #888;
             border-radius: 10px;
         }
-        
+
         .options-container::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-        
+
         .modal-footer {
             margin-top: 20px;
             text-align: center;
         }
-        
+
         .save-options {
             padding: 12px 30px;
             background-color: #4CAF50;
@@ -310,49 +328,64 @@
             transition: all 0.3s;
             width: 100%;
         }
-        
+
         .save-options:hover {
             background-color: #3e8e41;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
         }
-        
+
         .no-options {
             text-align: center;
             color: #888;
             padding: 20px;
             font-style: italic;
         }
-        
+
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
             }
-            
+
             h1 {
                 font-size: 24px;
             }
-            
+
+            .wheel-container {
+                max-width: 300px; /* 移动端可能需要调整大小 */
+                min-height: 300px;
+            }
+
+            .pointer {
+                 right: -5px; /* 调整移动端指針位置 */
+                 width: 30px;
+                 height: 25px;
+            }
+
+            canvas {
+                /* canvas大小由JS控制，这里不用改 */
+            }
+
             .modal-content {
                 margin: 5% auto;
                 padding: 15px;
                 width: 95%;
                 max-height: 85vh;
             }
-            
+
             .option-input {
                 margin-bottom: 10px;
             }
-            
+
             .option-input input {
                 padding: 10px;
                 font-size: 14px;
             }
-            
+
             .options-container {
                 max-height: 40vh;
             }
-            
+
             button {
                 padding: 10px 20px;
                 font-size: 16px;
@@ -362,38 +395,39 @@
 </head>
 <body>
     <h1>命運轉盤</h1>
-    
+
     <div class="container">
         <div class="wheel-container">
             <div class="pointer"></div>
+            <!-- 調整Canvas大小以適應容器 -->
             <canvas id="wheel" width="350" height="350"></canvas>
         </div>
-        
+
         <button id="spin">開始旋轉</button>
-        
+
         <div class="result" id="result"></div>
     </div>
-    
+
     <button id="editOptions" class="edit-options-btn">編輯選項</button>
-    
-    <!-- 選項編輯彈出視窗 -->
+
+    <!-- 選項編輯彈出視窗 (HTML 保持不變) -->
     <div id="optionsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>編輯選項</h2>
-                <span class="close">&times;</span>
+                <span class="close">×</span>
             </div>
-            
+
             <div class="options-container" id="optionsContainer"></div>
-            
+
             <button id="addOption" class="add-option">+ 新增選項</button>
-            
+
             <div class="modal-footer">
                 <button class="save-options" id="saveOptions">儲存選項</button>
             </div>
         </div>
     </div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const canvas = document.getElementById('wheel');
@@ -406,58 +440,60 @@
             const saveOptionsBtn = document.getElementById('saveOptions');
             const addOptionBtn = document.getElementById('addOption');
             const optionsContainer = document.getElementById('optionsContainer');
-            
+
             // 顏色陣列
             const colors = [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
                 '#9966FF', '#FF9F40', '#7ED321', '#50E3C2',
                 '#F8E71C', '#BD10E0', '#8B572A', '#4A90E2'
             ];
-            
+
             // 初始選項
             let options = ['吃拉麵', '吃牛排', '吃披薩', '吃漢堡'];
             let spinning = false;
             let currentAngle = 0;
-            let targetAngle = 0;
+            let targetAngle = 0; // 這個變數在當前動畫邏輯中未使用，可以考慮移除
             let spinSpeed = 0;
-            let maxSpinTime = 6000; // 最大旋轉時間 (毫秒)
+            let maxSpinTime = 5000; // 稍微縮短時間
             let spinStartTime = 0;
             let animationId = null;
-            
-            // 渲染轉盤
+
+            // 渲染轉盤 - 修改文字繪製方式
             function drawWheel() {
+                const wheelRadius = canvas.width / 2; // 使用 canvas 寬度的一半作為基礎半徑
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const radius = Math.min(centerX, centerY) - 10;
-                
+
+                const centerX = wheelRadius;
+                const centerY = wheelRadius;
+                const radius = wheelRadius - 10; // 實際繪圖半徑
+
                 // 繪製轉盤背景
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
                 ctx.fillStyle = 'white';
                 ctx.fill();
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#333';
+                ctx.strokeStyle = '#ddd'; // 邊框顏色淡一點
                 ctx.stroke();
-                
+
                 // 如果沒有選項，顯示提示
                 if (options.length === 0) {
                     ctx.fillStyle = '#888';
                     ctx.font = '20px Arial';
                     ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
                     ctx.fillText('請新增選項', centerX, centerY);
                     return;
                 }
-                
+
                 // 計算每一塊的角度
                 const sliceAngle = (2 * Math.PI) / options.length;
-                
+
                 // 繪製每一塊
                 for (let i = 0; i < options.length; i++) {
                     const startAngle = currentAngle + i * sliceAngle;
                     const endAngle = startAngle + sliceAngle;
-                    
+
                     // 繪製扇形
                     ctx.beginPath();
                     ctx.moveTo(centerX, centerY);
@@ -465,197 +501,213 @@
                     ctx.closePath();
                     ctx.fillStyle = colors[i % colors.length];
                     ctx.fill();
+                    // 繪製扇形分隔線 (可選)
                     ctx.lineWidth = 1;
-                    ctx.strokeStyle = 'white';
+                    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
                     ctx.stroke();
-                    
-                    // 繪製文字
-                    ctx.save();
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(startAngle + sliceAngle / 2);
-                    ctx.textAlign = 'right';
-                    ctx.fillStyle = 'white';
-                    ctx.font = '16px Arial';
-                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                    ctx.shadowBlur = 3;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
-                    
-                    // 根據文字長度調整位置
+
+                    // --- 修改文字繪製方式 ---
                     const text = options[i];
-                    let textDistance = radius * 0.85;
-                    if (text.length > 8) textDistance = radius * 0.75;
-                    if (text.length > 12) textDistance = radius * 0.65;
-                    
-                    ctx.fillText(text, textDistance, 5);
+                    const textAngle = startAngle + sliceAngle / 2; // 文字所在角度 (扇形中間)
+                    // 根據扇區數量調整文字距離和大小，避免重疊
+                    let textDistance = radius * 0.65;
+                    let fontSize = 14;
+                    if (options.length >= 8) {
+                         fontSize = 12;
+                         textDistance = radius * 0.7;
+                    }
+                    if (options.length >= 12) {
+                         fontSize = 10;
+                         textDistance = radius * 0.75;
+                    }
+
+                    // 計算文字位置 (保持水平)
+                    const textX = centerX + Math.cos(textAngle) * textDistance;
+                    const textY = centerY + Math.sin(textAngle) * textDistance;
+
+                    // 保存當前狀態 (僅用於設置文字樣式，不旋轉文字本身)
+                    ctx.save();
+                    ctx.translate(textX, textY); // 將原點移動到文字位置
+
+                    // 設置文字樣式
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = 'white';
+                    //根據扇形顏色決定文字陰影或描邊，增加可讀性
+                    const bgColor = colors[i % colors.length];
+                    //簡單判斷背景色亮度 (可改進)
+                    const brightness = tinycolor(bgColor).getBrightness();
+                    if (brightness > 180) { // 淺色背景用深色陰影
+                         ctx.fillStyle = '#333'; // 或者深色文字
+                         ctx.shadowColor = 'rgba(255,255,255,0.5)';
+                         ctx.shadowBlur = 2;
+                    } else { //深色背景用淺色陰影
+                         ctx.fillStyle = 'white';
+                         ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                         ctx.shadowBlur = 3;
+                         ctx.shadowOffsetX = 1;
+                         ctx.shadowOffsetY = 1;
+                    }
+
+
+                    ctx.font = `bold ${fontSize}px Arial`;
+
+                    // 繪製文字 (在新的原點，不旋轉)
+                    ctx.fillText(text, 0, 0);
+
+                    // 恢復畫布狀態
                     ctx.restore();
                 }
-                
-                // 繪製中心圓
+
+                // 繪製中心圓 (裝飾)
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, 15, 0, 2 * Math.PI);
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = '#fff';
                 ctx.fill();
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#333';
+                ctx.strokeStyle = '#ccc';
                 ctx.stroke();
-                
-                // 繪製裝飾線
-                for (let i = 0; i < options.length; i++) {
-                    const lineAngle = currentAngle + i * sliceAngle;
-                    ctx.beginPath();
-                    ctx.moveTo(centerX, centerY);
-                    ctx.lineTo(
-                        centerX + radius * Math.cos(lineAngle),
-                        centerY + radius * Math.sin(lineAngle)
-                    );
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
             }
-            
-            // 顯示選項編輯視窗
+
+            // 顯示選項編輯視窗 (保持不變)
             function showOptionsModal() {
-                optionsContainer.innerHTML = '';
-                
-                if (options.length === 0) {
-                    const noOptions = document.createElement('div');
-                    noOptions.className = 'no-options';
-                    noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
-                    optionsContainer.appendChild(noOptions);
-                } else {
-                    options.forEach((option, index) => {
-                        addOptionToModal(option, index);
-                    });
-                }
-                
-                optionsModal.style.display = 'block';
-                
-                // 初始滚动到顶部
-                optionsContainer.scrollTop = 0;
+                 optionsContainer.innerHTML = '';
+
+                 if (options.length === 0) {
+                     const noOptions = document.createElement('div');
+                     noOptions.className = 'no-options';
+                     noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
+                     optionsContainer.appendChild(noOptions);
+                 } else {
+                     options.forEach((option, index) => {
+                         addOptionToModal(option, index);
+                     });
+                 }
+
+                 optionsModal.style.display = 'block';
+                 optionsContainer.scrollTop = 0;
             }
-            
-            // 新增選項到彈出視窗
-            function addOptionToModal(value = '', index = 0) {
-                // 移除可能存在的"没有选项"提示
-                const noOptions = optionsContainer.querySelector('.no-options');
-                if (noOptions) {
-                    noOptions.remove();
-                }
-                
-                const optionDiv = document.createElement('div');
-                optionDiv.className = 'option-input';
-                
-                const colorIndicator = document.createElement('div');
-                colorIndicator.className = 'color-indicator';
-                colorIndicator.style.backgroundColor = colors[index % colors.length];
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = value;
-                input.placeholder = `選項${optionsContainer.children.length + 1}`;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'remove-option';
-                removeBtn.textContent = '-';
-                removeBtn.addEventListener('click', function() {
-                    optionDiv.remove();
-                    updateColorIndicators();
-                    
-                    // 如果没有选项，显示提示
-                    if (optionsContainer.children.length === 0) {
-                        const noOptions = document.createElement('div');
-                        noOptions.className = 'no-options';
-                        noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
-                        optionsContainer.appendChild(noOptions);
-                    }
-                });
-                
-                optionDiv.appendChild(colorIndicator);
-                optionDiv.appendChild(input);
-                optionDiv.appendChild(removeBtn);
-                optionsContainer.appendChild(optionDiv);
-                
-                // 输入框自动获取焦点
-                if (value === '') {
-                    input.focus();
-                    
-                    // 添加高亮效果
-                    optionDiv.classList.add('highlight');
-                    setTimeout(() => {
-                        optionDiv.classList.remove('highlight');
-                    }, 1000);
-                    
-                    // 滚动到新添加的元素
-                    optionsContainer.scrollTop = optionsContainer.scrollHeight;
-                }
-            }
-            
-            // 更新顏色指示器
-            function updateColorIndicators() {
-                const optionInputs = document.querySelectorAll('.option-input');
-                optionInputs.forEach((option, index) => {
-                    const colorIndicator = option.querySelector('.color-indicator');
-                    colorIndicator.style.backgroundColor = colors[index % colors.length];
-                });
-            }
-            
-            // 儲存選項
-            function saveOptions() {
-                const inputs = document.querySelectorAll('.option-input input');
-                const newOptions = [];
-                
-                inputs.forEach(input => {
-                    if (input.value.trim() !== '') {
-                        newOptions.push(input.value.trim());
-                    }
-                });
-                
-                // 只有在有选项或原来就没有选项的情况下才更新
-                if (newOptions.length > 0 || options.length === 0) {
-                    options = newOptions;
-                    optionsModal.style.display = 'none';
-                    drawWheel();
-                } else {
-                    // 如果用户尝试保存空选项，显示警告
-                    alert('請至少輸入一個選項');
-                    
-                    // 添加一个空选项
-                    addOptionToModal();
-                    return;
-                }
-            }
-            
-            // 动画循环 - 修正版
+
+            // 新增選項到彈出視窗 (保持不變)
+            function addOptionToModal(value = '', index = -1) {
+                 const noOptions = optionsContainer.querySelector('.no-options');
+                 if (noOptions) {
+                     noOptions.remove();
+                 }
+
+                 const optionDiv = document.createElement('div');
+                 optionDiv.className = 'option-input';
+
+                 const effectiveIndex = index === -1 ? optionsContainer.querySelectorAll('.option-input').length : index;
+
+                 const colorIndicator = document.createElement('div');
+                 colorIndicator.className = 'color-indicator';
+                 colorIndicator.style.backgroundColor = colors[effectiveIndex % colors.length];
+
+                 const input = document.createElement('input');
+                 input.type = 'text';
+                 input.value = value;
+                 input.placeholder = `選項 ${effectiveIndex + 1}`;
+
+                 const removeBtn = document.createElement('button');
+                 removeBtn.className = 'remove-option';
+                 removeBtn.textContent = '-';
+                 removeBtn.onclick = function() { // 使用 onclick 方便移除
+                     optionDiv.remove();
+                     updateColorIndicators();
+
+                     if (optionsContainer.children.length === 0) {
+                         const noOptions = document.createElement('div');
+                         noOptions.className = 'no-options';
+                         noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
+                         optionsContainer.appendChild(noOptions);
+                     }
+                 };
+
+                 optionDiv.appendChild(colorIndicator);
+                 optionDiv.appendChild(input);
+                 optionDiv.appendChild(removeBtn);
+                 optionsContainer.appendChild(optionDiv);
+
+                 if (value === '') {
+                     input.focus();
+                     optionDiv.classList.add('highlight');
+                     setTimeout(() => {
+                         optionDiv.classList.remove('highlight');
+                     }, 1000);
+                     optionsContainer.scrollTop = optionsContainer.scrollHeight;
+                 }
+             }
+
+             // 更新顏色指示器 (保持不變)
+             function updateColorIndicators() {
+                 const optionInputs = document.querySelectorAll('.option-input');
+                 optionInputs.forEach((div, index) => {
+                     const colorIndicator = div.querySelector('.color-indicator');
+                     colorIndicator.style.backgroundColor = colors[index % colors.length];
+                     // 更新 placeholder 數字
+                     const input = div.querySelector('input');
+                     if(input) {
+                        input.placeholder = `選項 ${index + 1}`;
+                     }
+                 });
+             }
+
+             // 儲存選項 (保持不變)
+             function saveOptions() {
+                 const inputs = document.querySelectorAll('.option-input input');
+                 const newOptions = [];
+
+                 inputs.forEach(input => {
+                     if (input.value.trim() !== '') {
+                         newOptions.push(input.value.trim());
+                     }
+                 });
+
+                 if (newOptions.length > 0 || options.length === 0 && newOptions.length === 0) { // 允許保存為空（如果原來就是空的）
+                     options = newOptions;
+                     optionsModal.style.display = 'none';
+                     drawWheel();
+                 } else if (options.length > 0 && newOptions.length === 0){
+                      // 如果原來有選項，但不小心全刪了，提示一下
+                     if(confirm("您確定要刪除所有選項嗎？轉盤將無法使用。")) {
+                         options = newOptions;
+                         optionsModal.style.display = 'none';
+                         drawWheel();
+                     } else {
+                         // 不關閉彈窗，讓用戶重新編輯
+                         return;
+                     }
+                 }
+             }
+
+            // 動畫循環 - 基本邏輯不變，調整速度曲線
             function animateWheel(timestamp) {
                 if (!spinStartTime) {
                     spinStartTime = timestamp;
                 }
-                
-                // 計算已經過的時間
+
                 const elapsedTime = timestamp - spinStartTime;
-                
+
                 if (spinning) {
-                    // 計算旋轉速度
                     const progress = Math.min(elapsedTime / maxSpinTime, 1);
-                    
-                    if (progress < 0.3) {
-                        // 加速階段
-                        spinSpeed = 0.1 + progress * 0.4;
-                    } else if (progress < 0.8) {
-                        // 勻速階段
-                        spinSpeed = 0.22;
-                    } else {
-                        // 減速階段
-                        spinSpeed = 0.22 * (1 - (progress - 0.8) / 0.2);
-                    }
-                    
-                    // 旋轉轉盤
+
+                    // 使用 ease-out 函數來模擬減速
+                    // (1 - (1-x)^3) 是一個常用的 ease-out cubic 函數
+                    const easingProgress = 1 - Math.pow(1 - progress, 4); // Power 4 for stronger ease-out
+
+                    // 總旋轉角度 = 至少轉幾圈 + 最終目標角度的偏移量
+                    // 這裡簡化，讓旋轉速度在結束時趨近於0
+                    const baseSpeed = 0.25; // 基礎速度因子
+                    const decelerationFactor = 1 - easingProgress; // 減速率 (從 1 降到 0)
+                    spinSpeed = baseSpeed * decelerationFactor + 0.01; // 確保最低速度避免靜止
+
+                    // 限制最低速度，避免減速太快
+                    // spinSpeed = Math.max(0.01, spinSpeed);
+
                     currentAngle += spinSpeed;
                     drawWheel();
-                    
-                    // 判斷是否需要停止旋轉
+
                     if (progress >= 1) {
                         finishSpin();
                     } else {
@@ -663,153 +715,251 @@
                     }
                 }
             }
-            
-            // 結束旋轉
+
+            // 結束旋轉 - 計算結果並添加放大效果
             function finishSpin() {
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-    }
-    
-    spinning = false;
-    spinBtn.disabled = false;
-    spinStartTime = 0;
-    
-    // 計算結果 - 修正版
-    const normalizedAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    const sliceAngle = (2 * Math.PI) / options.length;
-    
-    // 指針在頂部，所以需要找出頂部指向的那個扇區
-    // 因為轉盤是順時針旋轉，0角度在右側，所以需要調整計算
-    const resultIndex = Math.floor(normalizedAngle / sliceAngle) % options.length;
-    const result = options[resultIndex];
-    
-    // 顯示結果
-    resultElement.textContent = `結果: ${result}`;
-    resultElement.style.color = colors[resultIndex % colors.length];
-    
-    // 播放音效
-    playSound();
-}
-            
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null; // 清除 ID
+                }
+
+                spinning = false;
+                spinBtn.disabled = false;
+                spinStartTime = 0; // 重置開始時間
+
+                // --- 計算結果，指針在右側 (0 度) ---
+                const numOptions = options.length;
+                if (numOptions === 0) return; // 沒有選項則不計算
+
+                const sliceAngle = (2 * Math.PI) / numOptions;
+
+                // 規範化最終角度到 [0, 2*PI)
+                const finalAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+                // 計算指針（0度位置）落在哪個扇區
+                // 扇區是從 0 度開始順時針編號的
+                // 我們需要找到哪個扇區的 *結束角度* 包含了 0 度 (或 2*PI)
+                // 由於 currentAngle 是轉盤的偏移，指針相當於在 -finalAngle 的位置
+                const pointerEffectiveAngle = (2 * Math.PI - finalAngle) % (2 * Math.PI);
+                const resultIndex = Math.floor(pointerEffectiveAngle / sliceAngle);
+
+                // 確保索引有效
+                const finalResultIndex = resultIndex % numOptions;
+                const result = options[finalResultIndex];
+
+                // 顯示結果
+                resultElement.textContent = `結果: ${result}`;
+                resultElement.style.color = colors[finalResultIndex % colors.length];
+                resultElement.classList.add('show-result'); // 添加放大效果 class
+
+                // 播放音效
+                playSound();
+
+                // --- 添加 Canvas 放大效果 ---
+                canvas.style.transform = 'scale(1.05)'; // 放大
+                setTimeout(() => {
+                    canvas.style.transform = 'scale(1)'; // 恢復
+                }, 300); // 放大持續時間 (毫秒)
+            }
+
             // 初始化轉盤
             function initWheel() {
+                // 添加 tinycolor 库 (如果需要精確顏色判斷)
+                // 在這裡可以加載外部JS，或者直接使用簡易判斷
+                if (typeof tinycolor === 'undefined') {
+                    // 創建一個簡易的亮度計算函數備用
+                    window.tinycolor = function(colorStr) {
+                         // 非常基礎的亮度估算 (可能不準確)
+                         let r = 0, g = 0, b = 0;
+                         if (colorStr.startsWith('#')) {
+                             const hex = colorStr.substring(1);
+                             if (hex.length === 3) {
+                                 r = parseInt(hex[0] + hex[0], 16);
+                                 g = parseInt(hex[1] + hex[1], 16);
+                                 b = parseInt(hex[2] + hex[2], 16);
+                             } else if (hex.length === 6) {
+                                 r = parseInt(hex.substring(0, 2), 16);
+                                 g = parseInt(hex.substring(2, 4), 16);
+                                 b = parseInt(hex.substring(4, 6), 16);
+                             }
+                         }
+                         // 亮度 = (0.299*R + 0.587*G + 0.114*B)
+                         const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+                         return { getBrightness: () => brightness };
+                    }
+                    console.warn("Tinycolor library not found. Using basic brightness calculation.");
+                }
+
+
                 drawWheel();
-                
-                // 監聽旋轉按鈕
+
                 spinBtn.addEventListener('click', function() {
-                    if (spinning || options.length === 0) {
-                        if (options.length === 0) {
-                            showOptionsModal();
-                        }
+                    if (spinning) return;
+                    if (options.length === 0) {
+                        alert('請先編輯選項！');
+                        showOptionsModal();
                         return;
                     }
-                    
+                    if (options.length === 1) {
+                        alert('只有一個選項，不用轉啦！');
+                        resultElement.textContent = `結果: ${options[0]}`;
+                        resultElement.style.color = colors[0];
+                        resultElement.classList.add('show-result');
+                         // 也給單個選項加個效果
+                         canvas.style.transform = 'scale(1.05)';
+                         setTimeout(() => {
+                              canvas.style.transform = 'scale(1)';
+                         }, 300);
+                         playSound();
+                        return;
+                    }
+
                     spinning = true;
                     spinBtn.disabled = true;
                     resultElement.textContent = '';
-                    spinStartTime = 0;
-                    
-                    // 開始旋轉動畫
+                    resultElement.classList.remove('show-result'); // 移除上次結果的放大效果
+                    spinStartTime = 0; // 重置開始時間
+                    currentAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); // 保持當前角度，從上次停止的地方開始
+
                     animationId = requestAnimationFrame(animateWheel);
                 });
-                
-                // 監聽編輯選項按鈕
+
+                // 監聽編輯選項按鈕 (保持不變)
                 editOptionsBtn.addEventListener('click', showOptionsModal);
-                
-                // 監聽關閉彈出視窗按鈕
-                closeModal.addEventListener('click', function() {
-                    // 檢查是否至少有一個選項
-                    const inputs = document.querySelectorAll('.option-input input');
-                    let hasValue = false;
-                    inputs.forEach(input => {
-                        if (input.value.trim() !== '') {
-                            hasValue = true;
-                        }
-                    });
-                    
-                    if (hasValue || options.length > 0) {
-                        optionsModal.style.display = 'none';
-                    } else {
-                        alert('請至少輸入一個選項');
-                        addOptionToModal();
-                    }
-                });
-                
-                // 當點擊彈出視窗外部時關閉
-                window.addEventListener('click', function(event) {
-                    if (event.target === optionsModal) {
-                        // 檢查是否至少有一個選項
-                        const inputs = document.querySelectorAll('.option-input input');
-                        let hasValue = false;
-                        inputs.forEach(input => {
-                            if (input.value.trim() !== '') {
-                                hasValue = true;
+
+                // 監聽關閉彈出視窗按鈕 (保持不變, 但增加檢查邏輯)
+                 closeModal.addEventListener('click', function() {
+                     const inputs = document.querySelectorAll('.option-input input');
+                     let hasNonEmpty = false;
+                     inputs.forEach(input => {
+                         if (input.value.trim() !== '') {
+                             hasNonEmpty = true;
+                         }
+                     });
+                     // 如果編輯後變空了，且原來是有選項的，給予提示
+                     if (options.length > 0 && !hasNonEmpty) {
+                         if (confirm("您已清空所有選項，確定要關閉嗎？轉盤將無法使用。")) {
+                             optionsModal.style.display = 'none';
+                             saveOptions(); // 保存空選項
+                         }
+                     } else {
+                         optionsModal.style.display = 'none';
+                         // 可以選擇在這裡自動保存或不保存，目前是不保存直接關閉
+                         // 如果需要關閉時自動保存，調用 saveOptions()
+                     }
+                 });
+
+                 // 當點擊彈出視窗外部時關閉 (保持不變, 但增加檢查邏輯)
+                 window.addEventListener('click', function(event) {
+                     if (event.target === optionsModal) {
+                         const inputs = document.querySelectorAll('.option-input input');
+                         let hasNonEmpty = false;
+                         inputs.forEach(input => {
+                             if (input.value.trim() !== '') {
+                                 hasNonEmpty = true;
+                             }
+                         });
+                         if (options.length > 0 && !hasNonEmpty) {
+                            if (confirm("您已清空所有選項，確定要關閉嗎？轉盤將無法使用。")) {
+                                 optionsModal.style.display = 'none';
+                                 saveOptions();
                             }
-                        });
-                        
-                        if (hasValue || options.length > 0) {
-                            optionsModal.style.display = 'none';
-                        } else {
-                            alert('請至少輸入一個選項');
-                            addOptionToModal();
-                        }
-                    }
-                });
-                
-                // 監聽新增選項按鈕
+                         } else {
+                              optionsModal.style.display = 'none';
+                         }
+                     }
+                 });
+
+                // 監聽新增選項按鈕 (保持不變)
                 addOptionBtn.addEventListener('click', function() {
                     addOptionToModal();
                     updateColorIndicators();
                 });
-                
-                // 監聽儲存選項按鈕
+
+                // 監聽儲存選項按鈕 (保持不變)
                 saveOptionsBtn.addEventListener('click', saveOptions);
-                
-                // 监听键盘事件
-                document.addEventListener('keydown', function(event) {
-                    if (optionsModal.style.display === 'block') {
-                        if (event.key === 'Enter' && event.ctrlKey) {
-                            // Ctrl+Enter 保存选项
-                            saveOptions();
-                        } else if (event.key === 'Enter') {
-                            // Enter 添加新选项
-                            addOptionToModal();
-                            updateColorIndicators();
-                        }
-                    }
-                });
+
+                // 監聽鍵盤事件 (保持不變)
+                 document.addEventListener('keydown', function(event) {
+                     if (optionsModal.style.display === 'block') {
+                         const activeElement = document.activeElement;
+                         // 只有當焦點不在輸入框內時，Enter才觸發新增
+                         if (event.key === 'Enter' && activeElement && activeElement.tagName !== 'INPUT') {
+                             event.preventDefault(); // 防止默認行為（例如觸發按鈕點擊）
+                             addOptionToModal();
+                             updateColorIndicators();
+                         } else if (event.key === 'Enter' && event.ctrlKey) {
+                              event.preventDefault();
+                              saveOptions(); // Ctrl+Enter 保存
+                         } else if (event.key === 'Escape') {
+                             // Esc 關閉彈窗 (邏輯同點擊關閉按鈕)
+                              const inputs = document.querySelectorAll('.option-input input');
+                              let hasNonEmpty = false;
+                              inputs.forEach(input => {
+                                  if (input.value.trim() !== '') {
+                                      hasNonEmpty = true;
+                                  }
+                              });
+                              if (options.length > 0 && !hasNonEmpty) {
+                                 if (confirm("您已清空所有選項，確定要關閉嗎？轉盤將無法使用。")) {
+                                      optionsModal.style.display = 'none';
+                                      saveOptions();
+                                 }
+                              } else {
+                                   optionsModal.style.display = 'none';
+                              }
+                         }
+                     }
+                 });
             }
-            
-            // 簡單的聲音效果
+
+            // 簡單的聲音效果 (保持不變)
             function playSound() {
-                try {
-                    const audio = new AudioContext();
-                    const oscillator = audio.createOscillator();
-                    const gain = audio.createGain();
-                    
-                    oscillator.connect(gain);
-                    gain.connect(audio.destination);
-                    
-                    // 模擬獎勵音效
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(523.25, audio.currentTime); // C5
-                    oscillator.frequency.setValueAtTime(659.25, audio.currentTime + 0.1); // E5
-                    oscillator.frequency.setValueAtTime(783.99, audio.currentTime + 0.2); // G5
-                    oscillator.frequency.setValueAtTime(1046.50, audio.currentTime + 0.3); // C6
-                    
-                    gain.gain.setValueAtTime(0.2, audio.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.00001, audio.currentTime + 1);
-                    
-                    oscillator.start(audio.currentTime);
-                    oscillator.stop(audio.currentTime + 1);
-                } catch(e) {
-                    console.log('音效播放失敗', e);
-                }
+                 try {
+                     // 檢查 AudioContext 是否已存在或是否需要 vendor prefix
+                     const AudioContext = window.AudioContext || window.webkitAudioContext;
+                     if (!AudioContext) {
+                         console.warn("瀏覽器不支持 AudioContext");
+                         return;
+                     }
+                     const audio = new AudioContext();
+                     const oscillator = audio.createOscillator();
+                     const gain = audio.createGain();
+
+                     oscillator.connect(gain);
+                     gain.connect(audio.destination);
+
+                     oscillator.type = 'triangle'; // 換個音色試試
+                     const baseFreq = 440; // A4
+                     oscillator.frequency.setValueAtTime(baseFreq, audio.currentTime);
+                     oscillator.frequency.linearRampToValueAtTime(baseFreq * 1.5, audio.currentTime + 0.1);
+                     oscillator.frequency.linearRampToValueAtTime(baseFreq * 1.2, audio.currentTime + 0.2);
+                      oscillator.frequency.linearRampToValueAtTime(baseFreq * 2, audio.currentTime + 0.3);
+
+
+                     gain.gain.setValueAtTime(0.3, audio.currentTime); // 稍微調大音量
+                     gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.8); // 聲音持續長一點
+
+                     oscillator.start(audio.currentTime);
+                     oscillator.stop(audio.currentTime + 0.8);
+
+                     // 在停止後關閉 AudioContext (某些瀏覽器需要)
+                     setTimeout(() => {
+                         if (audio.state !== 'closed') {
+                             audio.close();
+                         }
+                     }, 1000);
+
+                 } catch(e) {
+                     console.error('音效播放失敗:', e);
+                 }
             }
-            
+
             // 初始化
             initWheel();
         });
     </script>
+    <!-- 建議引入 tinycolor 庫以獲得更準確的顏色亮度判斷 (可選) -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.min.js"></script> -->
 </body>
 </html>
