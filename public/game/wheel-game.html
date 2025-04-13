@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>命運轉盤</title>
-    <style>
+    <title>SunnyYummy 命運輪盤遊戲</title>
+    <meta name="description" content="SunnyYummy 命運輪盤遊戲遊戲，顏色也可自定義內容互動體驗。">
+    <!-- 絕對路徑 CSS -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- Favicon and PWA icons (使用絕對路徑) -->
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+     <style>
         * {
             margin: 0;
             padding: 0;
@@ -408,7 +418,27 @@
     </style>
 </head>
 <body>
-    <h1>命運轉盤</h1>
+    <header class="page-title-header">
+        <h1 class="page-title">SunnyYummy 洞洞樂遊戲</h1>
+    </header>
+    
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html" class="active">互動遊戲</a>
+        <a href="/guestbook.html">留言板</a>
+    </nav>
+    
+    <!-- 新增：遊戲導覽 -->
+    <nav class="games-nav">
+
+        <a href="/game/card-game.html ">洞洞樂</a>
+        <a href="   ">拼圖遊戲</a>
+        <a href="   ">音樂問答</a>
+        <a href="   ">配對記憶</a>
+    </nav>
 
     <div class="container">
         <div class="wheel-container">
@@ -437,6 +467,27 @@
             </div>
         </div>
     </div>
+
+
+    <div class="contribution-info">
+        這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
+    </div>
+
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html">音樂專輯</a>
+                <a href="/news.html">最新消息</a>
+                <a href="/scores.html">樂譜與舞蹈</a>
+                <a href="/games.html" class="active">互動遊戲</a>
+                <a href="/guestbook.html">留言板</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2024 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
