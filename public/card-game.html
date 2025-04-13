@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洞洞樂遊戲</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f7fa;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 30px;
+            perspective: 1000px;
+            position: relative;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 10px;
+            margin-bottom: 20px;
+        }
+        .hole {
+            position: relative;
+            height: 80px;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .hole-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .hole-front {
+            background-color: #3498db;
+            color: transparent;
+            transform: rotateY(0deg);
+        }
+        .hole-back {
+            background-color: #2ecc71;
+            color: white;
+            transform: rotateY(180deg);
+            overflow: hidden;
+            text-align: center;
+            padding: 5px;
+        }
+        .hole.revealed {
+            transform: rotateY(180deg);
+        }
+        .hole-front::before {
+            content: "?";
+            font-size: 32px;
+            color: white;
+            opacity: 0.8;
+        }
+        .hole-front::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%);
+            border-radius: 8px;
+        }
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            margin: 0 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .reset-btn {
+            background-color: #e74c3c;
+        }
+        .reset-btn:hover {
+            background-color: #c0392b;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+        }
+        
+        /* 彈窗樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #f5f7fa;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto; 
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #000;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-gap: 15px;
+            margin-top: 20px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+        .input-group label {
+            width: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+            text-align: right;
+        }
+        .input-group input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        /* 居中顯示卡片的樣式 - 粉紅色系美化 */
+        .centered-card {
+            display: none;
+            position: fixed;
+            z-index: 90;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .centered-card-content {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+            color: #d5548b;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(255, 105, 180, 0.4), 
+                        inset 0 0 15px rgba(255, 255, 255, 0.5);
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            min-width: 300px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleUp 0.5s ease;
+            position: relative;
+            border: 5px solid #ffd1dc;
+            letter-spacing: 1px;
+        }
+        .card-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #d5548b;
+            font-size: 28px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: all 0.2s ease;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-close:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+            0% { transform: scale(0.5); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes scaleDown {
+            0% { transform: scale(1); }
+            100% { transform: scale(0.5); opacity: 0; }
+        }
+        .centered-card.closing {
+            animation: fadeOut 0.5s ease forwards;
+        }
+        .centered-card.closing .centered-card-content {
+            animation: scaleDown 0.5s ease forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* 卡片內容美化 */
+        .card-inner {
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>5x4 洞洞樂遊戲</h1>
+    
+    <div class="game-container">
+        <div class="board" id="gameBoard">
+            <!-- 洞洞格子由JS動態生成 -->
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button id="configBtn">自定義內容</button>
+        <button id="resetBtn" class="reset-btn">重置遊戲</button>
+    </div>
+    
+    <div class="footer">
+        點擊格子查看內容 - 自定義您的洞洞樂遊戲
+    </div>
+    
+    <!-- 自定義內容彈窗 -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>自定義洞洞樂內容</h2>
+            <p>請為每個格子填寫內容：</p>
+            
+            <div class="input-grid" id="inputGrid">
+                <!-- 輸入框由JS動態生成 -->
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="saveConfigBtn">保存設置</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 居中顯示卡片 -->
+    <div id="centeredCard" class="centered-card">
+        <div class="centered-card-content" id="cardContent">
+            <!-- 內容將動態插入 -->
+            <span class="card-close">&times;</span>
+            <div class="card-inner" id="cardInner"></div>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲狀態和默認內容
+        const gameState = {
+            boardSize: {rows: 4, cols: 5},
+            contents: Array(20).fill('').map((_, i) => `內容 ${i+1}`),
+            revealed: Array(20).fill(false),
+            contentPositions: Array(20).fill(0).map((_, i) => i), // 內容位置映射
+            cardTimerId: null // 新增計時器ID追蹤變數
+        };
+        
+        // DOM 元素
+        const configModal = document.getElementById('configModal');
+        const configBtn = document.getElementById('configBtn');
+        const closeBtn = document.querySelector('.close');
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const inputGrid = document.getElementById('inputGrid');
+        const centeredCard = document.getElementById('centeredCard');
+        const cardInner = document.getElementById('cardInner');
+        const cardCloseBtn = document.querySelector('.card-close');
+        
+        // 洗牌函數 (Fisher-Yates 算法)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // 初始化遊戲板
+        function initializeBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            
+            for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
+                const hole = document.createElement('div');
+                hole.className = 'hole';
+                hole.dataset.index = i;
+                
+                const front = document.createElement('div');
+                front.className = 'hole-face hole-front';
+                
+                const back = document.createElement('div');
+                back.className = 'hole-face hole-back';
+                // 使用位置映射獲取內容
+                const contentIndex = gameState.contentPositions[i];
+                back.textContent = gameState.contents[contentIndex];
+                
+                hole.appendChild(front);
+                hole.appendChild(back);
+                board.appendChild(hole);
+                
+                if (gameState.revealed[i]) {
+                    hole.classList.add('revealed');
+                }
+                
+                hole.addEventListener('click', revealHole);
+            }
+        }
+        
+        // 初始化輸入框
+        function initializeInputs() {
+            inputGrid.innerHTML = '';
+            
+            for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                
+                const label = document.createElement('label');
+                label.textContent = i + 1;
+                label.setAttribute('for', `content-${i}`);
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `content-${i}`;
+                input.value = gameState.contents[i];
+                input.placeholder = `格子 ${i+1} 內容`;
+                
+                inputGroup.appendChild(label);
+                inputGroup.appendChild(input);
+                inputGrid.appendChild(inputGroup);
+            }
+        }
+        
+        // 點擊揭示內容
+        function revealHole(event) {
+            const hole = event.currentTarget;
+            const index = parseInt(hole.dataset.index);
+            
+            if (!gameState.revealed[index]) {
+                // 添加翻轉動畫
+                hole.classList.add('revealed');
+                
+                // 獲取位置映射的內容索引
+                const contentIndex = gameState.contentPositions[index];
+                
+                // 顯示中央卡片
+                showCenteredCard(gameState.contents[contentIndex], index);
+                
+                gameState.revealed[index] = true;
+            }
+        }
+        
+        // 顯示居中卡片
+        function showCenteredCard(content, index) {
+            // 清除之前的計時器，如果存在的話
+            if (gameState.cardTimerId !== null) {
+                clearTimeout(gameState.cardTimerId);
+                gameState.cardTimerId = null;
+            }
+            
+            cardInner.textContent = content;
+            centeredCard.style.display = 'flex';
+            
+            // 更新關閉按鈕引用並添加事件監聽
+            const newCloseBtn = document.querySelector('.card-close');
+            newCloseBtn.addEventListener('click', closeCenteredCard);
+            
+            // 10秒後關閉，並保存計時器ID
+            gameState.cardTimerId = setTimeout(() => {
+                if (centeredCard.style.display === 'flex') {
+                    closeCenteredCard();
+                }
+            }, 10000);
+        }
+        
+        // 關閉居中卡片
+        function closeCenteredCard() {
+            // 清除計時器
+            if (gameState.cardTimerId !== null) {
+                clearTimeout(gameState.cardTimerId);
+                gameState.cardTimerId = null;
+            }
+            
+            centeredCard.classList.add('closing');
+            setTimeout(() => {
+                centeredCard.style.display = 'none';
+                centeredCard.classList.remove('closing');
+            }, 500);
+        }
+        
+        // 保存配置
+        function saveConfig() {
+            for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
+                const input = document.getElementById(`content-${i}`);
+                gameState.contents[i] = input.value || `內容 ${i+1}`;
+            }
+            
+            // 更新遊戲板上顯示的內容
+            updateBoardContent();
+            
+            configModal.style.display = 'none';
+        }
+        
+        // 更新遊戲板內容
+        function updateBoardContent() {
+            const holes = document.querySelectorAll('.hole');
+            holes.forEach((hole, i) => {
+                const back = hole.querySelector('.hole-back');
+                const contentIndex = gameState.contentPositions[i];
+                back.textContent = gameState.contents[contentIndex];
+            });
+        }
+        
+        // 重置遊戲
+        function resetGame() {
+            gameState.revealed = Array(20).fill(false);
+            
+            // 隨機打亂內容位置
+            gameState.contentPositions = Array(20).fill(0).map((_, i) => i);
+            shuffleArray(gameState.contentPositions);
+            
+            initializeBoard();
+        }
+        
+        // 設置示例內容
+        function setExampleContent() {
+            const exampleContent = [
+                '恭喜獲得100元', '再接再厲', '謝謝參與', '恭喜獲得50元',
+                '幸運獎', '謝謝參與', '恭喜獲得20元', '再接再厲',
+                '謝謝參與', '恭喜獲得10元', '加油', '謝謝參與',
+                '恭喜獲得5元', '不要灰心', '謝謝參與', '恭喜獲得2元',
+                '繼續努力', '謝謝參與', '恭喜獲得1元', '期待下次'
+            ];
+            
+            gameState.contents = exampleContent;
+        }
+        
+        // 事件監聽
+        configBtn.addEventListener('click', () => {
+            initializeInputs();
+            configModal.style.display = 'block';
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            configModal.style.display = 'none';
+        });
+        
+        saveConfigBtn.addEventListener('click', saveConfig);
+        
+        resetBtn.addEventListener('click', resetGame);
+        
+        // 點擊彈窗外區域關閉彈窗
+        window.addEventListener('click', (event) => {
+            if (event.target === configModal) {
+                configModal.style.display = 'none';
+            }
+        });
+        
+        // 初始化遊戲
+        window.addEventListener('DOMContentLoaded', () => {
+            setExampleContent();
+            // 初始隨機排列內容
+            shuffleArray(gameState.contentPositions);
+            initializeBoard();
+        });
+    </script>
+</body>
+</html>
