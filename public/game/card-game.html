@@ -305,58 +305,139 @@
         
         .modal-content {
             background-color: #f5f7fa;
-            margin: 5% auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow-y: auto;
+    margin: 0 auto;  /* 從 5% auto 改為 0 auto */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;  /* 從 80vh 增加到 85vh */
+    overflow-y: auto;
+    position: relative;  /* 添加相對定位 */
+    top: 50%;  /* 將模態窗口置於屏幕中央 */
+    transform: translateY(-50%);  /* 垂直居中 */
         }
         
         .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
+            color: #ff6b6b;  /* 更改顏色以提高可見度 */
+    position: absolute;  /* 使用絕對定位 */
+    top: 15px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    background-color: rgba(255, 255, 255, 0.8);  /* 添加背景色 */
+    border-radius: 50%;  /* 圓形按鈕 */
+    z-index: 2;  /* 確保按鈕在頂層 */
         }
         
         .close:hover {
-            color: #000;
+            color: #ff0000;
+    background-color: rgba(255, 255, 255, 1);
         }
+
+        /* 標題樣式優化 */
+.modal-content h2 {
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding-right: 30px;  /* 避免與關閉按鈕重疊 */
+}
         
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .input-group {
-            display: flex;
-            align-items: center;
-        }
-        
-        .input-group label {
-            width: 30px;
-            font-weight: bold;
-            margin-right: 10px;
-            text-align: right;
-        }
-        
-        .input-group input {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .modal-buttons {
-            margin-top: 20px;
-            text-align: right;
-        }
+
+
+
+/* 改進輸入格子的佈局 */
+.input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));  /* 改用自適應欄 */
+    grid-gap: 12px;
+    margin-top: 15px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;  /* 添加背景色以增強視覺區分 */
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.input-group label {
+    width: 24px;  /* 縮小標籤寬度 */
+    font-weight: bold;
+    margin-right: 8px;
+    text-align: center;
+    color: #666;
+}
+
+.input-group input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;  /* 增大字體大小，有助於手機輸入 */
+}
+
+/* 按鈕容器樣式 */
+.modal-buttons {
+    margin-top: 20px;
+    text-align: center;  /* 改為居中對齊 */
+    position: sticky;  /* 使按鈕容器固定在底部 */
+    bottom: 0;
+    background-color: #f5f7fa;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+
+
+#saveConfigBtn {
+    background-color: #4CAF50;  /* 綠色按鈕更醒目 */
+    padding: 12px 25px;  /* 增大按鈕點擊區域 */
+    font-size: 16px;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#saveConfigBtn:hover {
+    background-color: #45a049;
+}
+
+/* 移動設備特定樣式 */
+@media (max-width: 480px) {
+    .modal-content {
+        width: 95%;  /* 在更小的屏幕上增加寬度 */
+        padding: 15px;  /* 減少內邊距 */
+        margin: 0 auto;
+    }
+    
+    .input-group {
+        padding: 6px;
+    }
+    
+    .input-group input {
+        padding: 10px 6px;  /* 調整輸入框大小 */
+    }
+    
+    /* 在更小的屏幕上使用單欄佈局 */
+    .input-grid {
+        grid-template-columns: 1fr;
+        grid-gap: 10px;
+    }
+    
+    /* 增大保存按鈕 */
+    #saveConfigBtn {
+        width: 100%;  /* 全寬按鈕 */
+        padding: 14px 0;
+    }
+}
+
+
         
         /* 居中顯示卡片的樣式 */
         .centered-card {
