@@ -159,31 +159,32 @@ app.get('/api/guestbook', async (req, res) => {
             `SELECT
                 m.id,
                 m.author_name,
-                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview, -- 內容預覽 (約 2-3 行)
+                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview,
                 m.reply_count,
-                m.view_count, -- 新增
-                m.like_count, -- 新增
-                m.last_activity_at
-             FROM guestbook_messages m -- 給表加個別名 m
+                m.view_count,
+                m.like_count,
+                m.last_activity_at,
+                m.is_admin_post  -- ★★★ 新增此行 ★★★
+             FROM guestbook_messages m
              WHERE m.is_visible = TRUE
-             ${orderByClause} -- 使用動態排序
+             ${orderByClause}
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
 
         res.json({
-            messages: messagesResult.rows,
+            messages: messagesResult.rows, // 現在 messages 陣列中的每個物件會多一個 is_admin_post 屬性
             currentPage: page,
             totalPages: totalPages,
             totalItems: totalItems,
             limit: limit,
-            sort: sort // 將當前排序方式也回傳給前端
+            sort: sort 
         });
     } catch (err) {
         console.error('[API GET /guestbook] Error:', err);
         res.status(500).json({ error: '無法獲取留言列表' });
     }
-});
+}); 
 
 // GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
 // GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
