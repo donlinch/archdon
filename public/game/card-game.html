@@ -566,21 +566,118 @@
             }
         }
         
-        @media (min-width: 768px) {
-            .hole {
-                height: 100px;
-            }
-        }
+        /* 中等螢幕（平板）響應式調整 */
+@media (min-width: 768px) {
+    .hole {
+        height: 120px; /* 增加格子高度 */
+    }
+    
+    .hole-front::before {
+        font-size: 40px; /* 增加問號大小 */
+    }
+    
+    .hole-back {
+        font-size: 20px; /* 增加背面文字大小 */
+        padding: 10px; /* 增加內邊距 */
+    }
+    
+    .board {
+        grid-gap: 15px; /* 增加格子間距 */
+        max-width: 700px; /* 控制遊戲板最大寬度 */
+        margin: 0 auto 30px;
+    }
+    
+    .game-container {
+        max-width: 700px; /* 調整遊戲容器最大寬度 */
+
+
+        .centered-card-content {
+        font-size: 42px; /* 增加卡片文字大小 */
+        padding: 50px; /* 增加卡片內邊距 */
+    }
+    
+    .card-inner {
+        padding: 30px 40px; /* 增加卡片內部內邊距 */
+    }
+    
+    .card-hint {
+        font-size: 18px; /* 增加提示文字大小 */
+    }
+
+    .controls {
+        max-width: 700px; /* 控制按鈕區域最大寬度 */
+        padding: 25px; /* 增加內邊距 */
+    }
+    
+    .controls button {
+        padding: 12px 20px; /* 增加按鈕大小 */
+        font-size: 16px; /* 增加按鈕字體大小 */
+        margin: 0 15px; /* 增加按鈕間距 */
+    }
+
+
+
+
+    }
+}
         
-        @media (min-width: 1200px) {
-            .content-container {
-                max-width: 1000px;
-            }
-            
-            .game-container {
-                max-width: 800px;
-            }
-        }
+       /* 大螢幕（桌面）響應式調整 */
+@media (min-width: 1200px) {
+    .hole {
+        height: 150px; /* 進一步增加格子高度 */
+    }
+    
+    .hole-front::before {
+        font-size: 48px; /* 進一步增加問號大小 */
+    }
+    
+    .hole-back {
+        font-size: 24px; /* 進一步增加背面文字大小 */
+        padding: 15px; /* 增加內邊距 */
+    }
+    
+    .board {
+        grid-gap: 20px; /* 增加格子間距 */
+        max-width: 900px; /* 進一步控制遊戲板最大寬度 */
+    }
+    
+    .game-container {
+        max-width: 900px; /* 調整遊戲容器最大寬度 */
+    }
+    
+    .controls button {
+        padding: 12px 25px; /* 增加按鈕大小 */
+        font-size: 18px; /* 增加按鈕字體大小 */
+    }
+}
+
+
+
+@media (min-width: 1600px) {
+    .hole {
+        height: 180px; /* 進一步增加格子高度 */
+    }
+    
+    .content-container {
+        max-width: 1200px; /* 增加內容容器最大寬度 */
+    }
+    
+    .game-container {
+        max-width: 1100px; /* 增加遊戲容器最大寬度 */
+    }
+    
+    .centered-card-content {
+        font-size: 48px; /* 增加卡片文字大小 */
+        min-width: 400px; /* 增加卡片最小寬度 */
+        min-height: 300px; /* 增加卡片最小高度 */
+        padding: 60px; /* 增加卡片內邊距 */
+    }
+}
+
+ 
+
+
+
     </style>
 
 
