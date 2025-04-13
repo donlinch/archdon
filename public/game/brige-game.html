@@ -35,7 +35,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            transition: transform 1s ease; /* 添加過渡效果 */
+            transition: transform 0.8s ease; /* 添加平滑過渡效果 */
         }
         .bridge-row {
             display: flex;
@@ -367,7 +367,7 @@
         ];
         const playerColors = ['pink', 'yellow-pink', 'green-pink'];
         let lastFailPosition = 0;
-        let viewShifted = false; // 新增一個標記來追踪視角是否已經移動
+        let currentViewStage = 0; // 當前視圖的階段（0-3，每4步調整一次）
         
         // 元素
         const bridge = document.getElementById('bridge');
@@ -418,8 +418,8 @@
             // 重置橋的位置
             resetBridgePosition();
             
-            // 重置視角標記
-            viewShifted = false;
+            // 重置視角階段
+            currentViewStage = 0;
             
             // 啟動計時器
             startTimer();
@@ -573,6 +573,9 @@
                 positionCharacter(lastFailPosition);
                 message.innerText = `${players[currentPlayerIndex].name}開始接力！從第${lastFailPosition}步開始`;
                 
+                // 根據失敗位置調整視圖
+                adjustBridgeViewByPosition(lastFailPosition);
+                
                 // 恢復按鈕
                 setTimeout(() => {
                     isMoving = false;
@@ -599,22 +602,26 @@
             return null;
         }
         
-        // 調整視圖以顯示前面的玻璃板（第1～8層）
-        function adjustBridgeView() {
-            if (!viewShifted) {
-                // 計算移動的距離（根據橋的總高度和移動的比例來決定）
+        // 根據當前位置調整橋的視圖
+        function adjustBridgeViewByPosition(position) {
+            // 每4步進行一次調整
+            const targetStage = Math.floor(position / 4);
+            
+            // 如果需要移動到新階段
+            if (targetStage !== currentViewStage) {
+                currentViewStage = targetStage;
+                
+                // 計算需要移動的距離
                 const bridgeHeight = bridge.getBoundingClientRect().height;
-                const shiftDistance = bridgeHeight * 0.4; // 移動大約40%的高度，這個比例可以調整
+                // 根據當前階段計算不同的移動距離
+                const stageShift = bridgeHeight * 0.25 * targetStage; // 每個階段移動25%高度
                 
-                // 平滑地移動橋的位置
-                bridge.style.transform = `translateY(-${shiftDistance}px)`;
+                // 向下移動橋（正值表示向下移動）
+                bridge.style.transform = `translateY(${stageShift}px)`;
                 
-                // 更新視角標記
-                viewShifted = true;
-                
-                // 放置小人在新的位置
+                // 重新定位角色
                 setTimeout(() => {
-                    positionCharacter(Math.max(currentStep, lastFailPosition));
+                    positionCharacter(position);
                 }, 500);
             }
         }
@@ -683,10 +690,8 @@
                     updateProgress();
                     message.innerText = `${players[currentPlayerIndex].name} 安全! 繼續前進`;
                     
-                    // 如果跳到第9步或更高，調整視圖以顯示前面的玻璃板
-                    if (currentStep >= 9 && !viewShifted) {
-                        adjustBridgeView();
-                    }
+                    // 根據當前位置調整視圖
+                    adjustBridgeViewByPosition(currentStep);
                     
                     // 按鈕恢復
                     setTimeout(() => {
@@ -714,11 +719,6 @@
                     
                     // 記錄當前失敗位置（用於接力）
                     lastFailPosition = Math.max(currentStep, lastFailPosition);
-                    
-                    // 如果失敗位置在第9步或更高，且視圖還沒調整，那麼調整視圖
-                    if (lastFailPosition >= 9 && !viewShifted) {
-                        adjustBridgeView();
-                    }
                     
                     setTimeout(() => {
                         // 切換到下一個玩家
