@@ -666,28 +666,30 @@
             
             // 結束旋轉
             function finishSpin() {
-                if (animationId) {
-                    cancelAnimationFrame(animationId);
-                }
-                
-                spinning = false;
-                spinBtn.disabled = false;
-                spinStartTime = 0;
-                
-                // 計算結果
-                const normalizedAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-                const sliceAngle = (2 * Math.PI) / options.length;
-                const winIndex = options.length - Math.floor(normalizedAngle / sliceAngle) - 1;
-                const resultIndex = (winIndex % options.length + options.length) % options.length;
-                const result = options[resultIndex];
-                
-                // 顯示結果
-                resultElement.textContent = `結果: ${result}`;
-                resultElement.style.color = colors[resultIndex % colors.length];
-                
-                // 播放音效
-                playSound();
-            }
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    
+    spinning = false;
+    spinBtn.disabled = false;
+    spinStartTime = 0;
+    
+    // 計算結果 - 修正版
+    const normalizedAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const sliceAngle = (2 * Math.PI) / options.length;
+    
+    // 指針在頂部，所以需要找出頂部指向的那個扇區
+    // 因為轉盤是順時針旋轉，0角度在右側，所以需要調整計算
+    const resultIndex = Math.floor(normalizedAngle / sliceAngle) % options.length;
+    const result = options[resultIndex];
+    
+    // 顯示結果
+    resultElement.textContent = `結果: ${result}`;
+    resultElement.style.color = colors[resultIndex % colors.length];
+    
+    // 播放音效
+    playSound();
+}
             
             // 初始化轉盤
             function initWheel() {
