@@ -3,44 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>命運轉盤</title>
+    <title>SunnyYummy 命運轉盤遊戲</title>
+    <meta name="description" content="SunnyYummy 趣味命運轉盤遊戲，自定義內容互動體驗。">
+    <!-- 絕對路徑 CSS -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- Favicon and PWA icons (使用絕對路徑) -->
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: '微軟正黑體', Arial, sans-serif;
-        }
-
         body {
+            font-family: 'Noto Sans TC', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            background-color: #f5f7fa;
+            padding: 0;
+            margin: 0;
             min-height: 100vh;
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            padding: 20px;
-            overflow-x: hidden;
-        }
-
-        h1 {
-            color: white;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-
-        .container {
             width: 100%;
-            max-width: 500px;
-            background-color: rgba(255, 255, 255, 0.9);
+            box-sizing: border-box;
+        }
+        
+        /* 頁面標題樣式 */
+        .page-title-header {
+            background-color: #FFB74D;
+            padding: 1rem;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+        }
+        
+        /* 分類導覽 */
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #f0f0f0;
+            width: 100%;
+        }
+        
+        .category-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+        
+        .category-nav a.active {
+            background-color: #FFB74D;
+            color: white;
+        }
+        
+        .category-nav a:hover:not(.active) {
+            background-color: #e0e0e0;
+        }
+        
+        /* 遊戲導覽樣式 */
+        .games-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #fff5e6;
+            width: 100%;
+            border-bottom: 1px solid #ffe0b2;
+            margin-bottom: 2rem;
+        }
+        
+        .games-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1.5rem;
             border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
-            position: relative;
+            background-color: #ffecb3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .games-nav a.active {
+            background-color: #FF9800;
+            color: white;
+            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .games-nav a:hover:not(.active) {
+            background-color: #ffe082;
+            transform: translateY(-2px);
+        }
+        
+        /* 主要內容區 */
+        .content-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        
+        /* 頁腳樣式 */
+        footer {
+            background-color: #333;
+            color: white;
+            width: 100%;
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+        
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-nav a {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer-nav a.active {
+            color: #FFB74D;
+        }
+        
+        .footer-copyright {
+            text-align: center;
+            font-size: 0.9rem;
         }
 
+        /* 貢獻資訊樣式 */
+        .contribution-info {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px auto 0;
+            max-width: 600px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #555;
+            box-sizing: border-box;
+        }
+        
+        .contribution-info a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .contribution-info a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 命運轉盤特有樣式 */
         .wheel-container {
             position: relative;
             width: 100%;
@@ -133,8 +262,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
         }
 
         .modal-content {
@@ -327,24 +455,24 @@
         .modal-footer {
             margin-top: 20px;
             text-align: center;
+            position: sticky;
+            bottom: 0;
+            background-color: #f5f7fa;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
         }
 
-        .save-options {
-            padding: 12px 30px;
+        #saveOptionsBtn {
             background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.3s;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             width: 100%;
         }
 
-        .save-options:hover {
-            background-color: #3e8e41;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        #saveOptionsBtn:hover {
+            background-color: #45a049;
         }
 
         .no-options {
@@ -354,13 +482,10 @@
             font-style: italic;
         }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 15px;
-            }
-            
-            h1 {
-                font-size: 24px;
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .category-nav, .games-nav {
+                flex-wrap: wrap;
             }
             
             .wheel-container {
@@ -405,12 +530,66 @@
                 font-size: 16px;
             }
         }
+        
+        /* 中等螢幕（平板）響應式調整 */
+        @media (min-width: 768px) {
+            .wheel-container {
+                max-width: 500px;
+                min-height: 500px;
+            }
+            
+            .content-container {
+                max-width: 700px;
+            }
+            
+            button {
+                padding: 12px 25px;
+                font-size: 16px;
+            }
+        }
+        
+        /* 大螢幕（桌面）響應式調整 */
+        @media (min-width: 1200px) {
+            .wheel-container {
+                max-width: 600px;
+                min-height: 600px;
+            }
+            
+            .content-container {
+                max-width: 900px;
+            }
+            
+            button {
+                padding: 12px 30px;
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>命運轉盤</h1>
-
-    <div class="container">
+    <header class="page-title-header">
+        <h1 class="page-title">SunnyYummy 命運轉盤遊戲</h1>
+    </header>
+    
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html" class="active">互動遊戲</a>
+        <a href="/guestbook.html">留言板</a>
+    </nav>
+    
+    <!-- 遊戲導覽 -->
+    <nav class="games-nav">
+        <a href="/game/card-game.html">洞洞樂</a>
+        <a href="/game/wheel-game.html" class="active">命運轉盤</a>
+        <a href="">拼圖遊戲</a>
+        <a href="">音樂問答</a>
+        <a href="">配對記憶</a>
+    </nav>
+    
+    <div class="content-container">
         <div class="wheel-container">
             <div class="pointer"></div>
             <canvas id="wheel" width="350" height="350"></canvas>
@@ -419,10 +598,16 @@
         <button id="spin">開始旋轉</button>
 
         <div class="result" id="result"></div>
+        
+        <div class="controls">
+            <button id="editOptions" class="edit-options-btn">自定義選項</button>
+        </div>
+        
+        <div class="contribution-info">
+            這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
+        </div>
     </div>
-
-    <button id="editOptions" class="edit-options-btn">編輯選項</button>
-
+    
     <!-- 選項編輯彈出視窗 -->
     <div id="optionsModal" class="modal">
         <div class="modal-content">
@@ -433,10 +618,26 @@
             <div class="options-container" id="optionsContainer"></div>
             <button id="addOption" class="add-option">+ 新增選項</button>
             <div class="modal-footer">
-                <button class="save-options" id="saveOptions">儲存選項</button>
+                <button class="save-options" id="saveOptionsBtn">儲存選項</button>
             </div>
         </div>
     </div>
+
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html">音樂專輯</a>
+                <a href="/news.html">最新消息</a>
+                <a href="/scores.html">樂譜與舞蹈</a>
+                <a href="/games.html" class="active">互動遊戲</a>
+                <a href="/guestbook.html">留言板</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2024 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
