@@ -25,6 +25,11 @@
             margin: 0;
             min-height: 100vh;
         }
+
+
+
+
+        
         
         /* 頁面標題樣式 - 從 scores.html 整合 */
         .page-title-header {
@@ -436,6 +441,121 @@
         .contribution-info a:hover {
             text-decoration: underline;
         }
+
+
+/* 针对内容容器的更新样式 */
+.content-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto; /* 使用 auto 实现水平居中 */
+    padding: 0 20px;
+    box-sizing: border-box; /* 确保 padding 不会增加宽度 */
+}
+
+/* 游戏容器居中显示 */
+.game-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto 30px; /* 使用 auto 实现水平居中 */
+    perspective: 1000px;
+    position: relative;
+}
+
+/* 确保洞洞板也是响应式的 */
+.board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-gap: 10px;
+    margin-bottom: 20px;
+    width: 100%; /* 确保宽度是 100% */
+}
+
+/* 适应不同屏幕宽度的洞洞 */
+@media (min-width: 768px) {
+    .hole {
+        height: 100px; /* 在更大的屏幕上让洞洞更大一些 */
+    }
+}
+
+@media (min-width: 1200px) {
+    .content-container {
+        max-width: 1000px; /* 在特大屏幕上增加最大宽度 */
+    }
+    
+    .game-container {
+        max-width: 800px; /* 在特大屏幕上增加游戏容器宽度 */
+    }
+}
+
+/* 确保控制按钮也居中 */
+.controls {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px; /* 限制最大宽度 */
+    margin: 0 auto 20px; /* 居中显示 */
+    display: flex;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+/* 修复居中卡片在大屏幕上的显示 */
+.centered-card-content {
+    background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+    color: #d5548b;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 15px 35px rgba(255, 105, 180, 0.4), 
+                inset 0 0 15px rgba(255, 255, 255, 0.5);
+    text-align: center;
+    font-size: 36px;
+    font-weight: bold;
+    min-width: 300px;
+    min-height: 200px;
+    max-width: 80vw; /* 限制最大宽度为视口宽度的 80% */
+    max-height: 80vh; /* 限制最大高度为视口高度的 80% */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: scaleUp 0.5s ease;
+    position: relative;
+    border: 5px solid #ffd1dc;
+    letter-spacing: 1px;
+}
+
+/* 贡献信息区域居中 */
+.contribution-info {
+    background-color: #f0f0f0;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px auto 0; /* 上右下左，设置 auto 实现水平居中 */
+    max-width: 600px; /* 限制最大宽度 */
+    text-align: center;
+    font-size: 0.9rem;
+    color: #555;
+    box-sizing: border-box;
+}
+
+/* 确保整体布局居中 */
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 垂直方向居中 */
+    background-color: #f5f7fa;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+    width: 100%; /* 确保宽度是 100% */
+    box-sizing: border-box;
+}
+
+
+
+
     </style>
 </head>
 <body>
