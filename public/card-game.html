@@ -192,6 +192,7 @@
             align-items: center;
             justify-content: center;
             animation: fadeIn 0.3s ease;
+            cursor: pointer; /* 添加手型游標，表示可點擊 */
         }
         .centered-card-content {
             background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
@@ -272,6 +273,16 @@
             align-items: center;
             justify-content: center;
         }
+        
+        /* 添加點擊提示 */
+        .card-hint {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            color: rgba(213, 84, 139, 0.7);
+        }
     </style>
 </head>
 <body>
@@ -315,6 +326,7 @@
             <!-- 內容將動態插入 -->
             <span class="card-close">&times;</span>
             <div class="card-inner" id="cardInner"></div>
+            <div class="card-hint">點擊任意位置關閉</div>
         </div>
     </div>
 
@@ -325,7 +337,7 @@
             contents: Array(20).fill('').map((_, i) => `內容 ${i+1}`),
             revealed: Array(20).fill(false),
             contentPositions: Array(20).fill(0).map((_, i) => i), // 內容位置映射
-            cardTimerId: null // 新增計時器ID追蹤變數
+            cardTimerId: null // 計時器ID追蹤變數
         };
         
         // DOM 元素
@@ -534,6 +546,20 @@
             // 初始隨機排列內容
             shuffleArray(gameState.contentPositions);
             initializeBoard();
+            
+            // 新增：點擊整個卡片區域關閉
+            centeredCard.addEventListener('click', (e) => {
+                // 點擊卡片任何位置都會關閉
+                closeCenteredCard();
+            });
+            
+            // 防止點擊卡片內容區域時事件冒泡到外層
+            document.querySelector('.centered-card-content').addEventListener('click', (e) => {
+                // 取消事件冒泡，讓點擊內容區域時不會關閉卡片
+                // e.stopPropagation(); 
+                
+                // 如果想讓點擊任何位置都關閉，請移除這個事件監聽器或註釋掉 stopPropagation
+            });
         });
     </script>
 </body>
