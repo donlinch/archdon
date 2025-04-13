@@ -293,6 +293,58 @@
             margin-left: 8px;
             font-size: 22px;
         }
+
+        .player-count-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0;
+            background-color: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .player-count-select {
+            padding: 8px 15px;
+            font-size: 18px;
+            background-color: #1a1a2e;
+            color: white;
+            border: 2px solid #e94560;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .blue-pink {
+            background-color: #4392f1;
+        }
+        .blue-pink .character-head, .blue-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .purple-pink {
+            background-color: #8d7cba;
+        }
+        .purple-pink .character-head, .purple-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .orange-pink {
+            background-color: #ff9a3c;
+        }
+        .orange-pink .character-head, .orange-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .cyan-pink {
+            background-color: #4ec2c2;
+        }
+        .cyan-pink .character-head, .cyan-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .brown-pink {
+            background-color: #a06235;
+        }
+        .brown-pink .character-head, .brown-pink .player-head {
+            background-color: #ff6b81;
+        }
     </style>
 </head>
 <body>
@@ -316,30 +368,7 @@
     </div>
     
     <div class="players-container" id="players">
-        <div class="player" id="player1">
-            <div class="player-figure">
-                <div class="player-body pink">
-                    <div class="player-head"></div>
-                </div>
-            </div>
-            <div class="player-label">小紅 <span class="current-player-indicator">▶</span></div>
-        </div>
-        <div class="player" id="player2">
-            <div class="player-figure">
-                <div class="player-body yellow-pink">
-                    <div class="player-head"></div>
-                </div>
-            </div>
-            <div class="player-label">小黃 <span class="current-player-indicator"></span></div>
-        </div>
-        <div class="player" id="player3">
-            <div class="player-figure">
-                <div class="player-body green-pink">
-                    <div class="player-head"></div>
-                </div>
-            </div>
-            <div class="player-label">小綠 <span class="current-player-indicator"></span></div>
-        </div>
+        <!-- 玩家列表將由JavaScript動態生成 -->
     </div>
     
     <div class="controls">
@@ -351,6 +380,18 @@
         <p id="message">接力挑戰！小紅、小黃、小綠輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！</p>
     </div>
 
+    <div class="player-count-container">
+        <label for="playerCount">遊戲人數：</label>
+        <select id="playerCount" class="player-count-select">
+            <option value="3" selected>3人</option>
+            <option value="4">4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+            <option value="7">7人</option>
+            <option value="8">8人</option>
+        </select>
+    </div>
+
     <script>
         // 遊戲變數
         let currentStep = 0;
@@ -360,12 +401,11 @@
         let safePattern = [];
         let isMoving = false;
         let currentPlayerIndex = 0;
-        let players = [
-            { name: "小紅", color: "pink", active: true, lastFailPosition: 0 },
-            { name: "小黃", color: "yellow-pink", active: false, lastFailPosition: 0 },
-            { name: "小綠", color: "green-pink", active: false, lastFailPosition: 0 }
-        ];
-        const playerColors = ['pink', 'yellow-pink', 'green-pink'];
+        let players = [];
+        let playerCount = 3; 
+        const playerColors = ['pink', 'yellow-pink', 'green-pink', 'blue-pink', 'purple-pink', 'orange-pink', 'cyan-pink', 'brown-pink'];
+        const playerNames = ['小紅', '小黃', '小綠', '小藍', '小紫', '小橙', '小青', '小棕'];
+        const playerCountSelect = document.getElementById('playerCount');
         let lastFailPosition = 0;
         let currentViewStage = 0; // 當前視圖的階段（0-3，每4步調整一次）
         
@@ -381,6 +421,60 @@
         const character = document.getElementById('character');
         const characterBody = document.getElementById('characterBody');
         const playersContainer = document.getElementById('players');
+
+        // 玩家數量選擇事件
+        playerCountSelect.addEventListener('change', function() {
+            playerCount = parseInt(this.value);
+            restartGame();
+        });
+
+        // 初始化玩家列表
+        function initPlayers() {
+            players = [];
+            for (let i = 0; i < playerCount; i++) {
+                players.push({
+                    name: playerNames[i],
+                    color: playerColors[i],
+                    active: i === 0,
+                    lastFailPosition: 0
+                });
+            }
+        }
+
+        // 更新玩家UI
+        function updatePlayersUI() {
+            playersContainer.innerHTML = '';
+            players.forEach((player, index) => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player';
+                playerElement.id = `player${index+1}`;
+                
+                const playerFigure = document.createElement('div');
+                playerFigure.className = 'player-figure';
+                
+                const playerBody = document.createElement('div');
+                playerBody.className = `player-body ${player.color}`;
+                
+                const playerHead = document.createElement('div');
+                playerHead.className = 'player-head';
+                
+                playerBody.appendChild(playerHead);
+                playerFigure.appendChild(playerBody);
+                
+                const playerLabel = document.createElement('div');
+                playerLabel.className = 'player-label';
+                playerLabel.innerHTML = `${player.name} <span class="current-player-indicator">${player.active ? '▶' : ''}</span>`;
+                
+                playerElement.appendChild(playerFigure);
+                playerElement.appendChild(playerLabel);
+                
+                if (!player.active && index <= currentPlayerIndex) {
+                    playerElement.style.opacity = '0.5';
+                }
+                
+                playersContainer.appendChild(playerElement);
+            });
+        }
         
         // 初始化遊戲
         function initGame() {
@@ -393,15 +487,11 @@
             // 創建橋面板
             createBridge();
             
-            // 重置玩家狀態
-            players = [
-                { name: "小紅", color: "pink", active: true, lastFailPosition: 0 },
-                { name: "小黃", color: "yellow-pink", active: false, lastFailPosition: 0 },
-                { name: "小綠", color: "green-pink", active: false, lastFailPosition: 0 }
-            ];
+            // 初始化玩家
+            initPlayers();
             currentPlayerIndex = 0;
             lastFailPosition = 0;
-            updatePlayersDisplay();
+            updatePlayersUI();
             
             // 放置小人在起點
             positionCharacter(0);
@@ -413,7 +503,7 @@
             updateProgress();
             
             // 重置遊戲提示訊息
-            message.innerText = "接力挑戰！小紅、小黃、小綠輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！";
+            message.innerText = `接力挑戰！${playerCount}位玩家輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！`;
             
             // 重置橋的位置
             resetBridgePosition();
@@ -460,31 +550,6 @@
                 row.appendChild(rightPanel);
                 bridge.appendChild(row);
             }
-        }
-        
-        // 更新玩家顯示
-        function updatePlayersDisplay() {
-            players.forEach((player, index) => {
-                const playerElement = document.getElementById(`player${index+1}`);
-                if (!playerElement) return;
-                
-                const indicator = playerElement.querySelector('.current-player-indicator');
-                if (!indicator) return;
-                
-                if (player.active) {
-                    indicator.style.display = 'inline';
-                    indicator.textContent = '▶';
-                } else {
-                    indicator.style.display = 'none';
-                }
-                
-                // 如果玩家已經用完，顯示為半透明
-                if (!player.active && index <= currentPlayerIndex) {
-                    playerElement.style.opacity = '0.5';
-                } else {
-                    playerElement.style.opacity = '1';
-                }
-            });
         }
         
         // 放置小人在指定位置
@@ -567,7 +632,7 @@
             }
             
             if (foundNextPlayer) {
-                updatePlayersDisplay();
+                updatePlayersUI();
                 updateCharacterColor();
                 // 從上一個玩家失敗的位置開始
                 positionCharacter(lastFailPosition);
@@ -745,15 +810,15 @@
         
         // 重新開始遊戲
         function restartGame() {
-            currentStep = 0;
-            lastFailPosition = 0;
-            time = 120;
-            gameActive = true;
-            isMoving = false;
-            currentPlayerIndex = 0;
             gameOverElement.style.display = 'none';
             leftBtn.disabled = false;
             rightBtn.disabled = false;
+            time = 120;
+            gameActive = true;
+            isMoving = false;
+            currentStep = 0;
+            lastFailPosition = 0;
+            currentPlayerIndex = 0;
             updateProgress();
             initGame();
         }
