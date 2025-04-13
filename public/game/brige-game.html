@@ -605,7 +605,7 @@
         // 根據當前位置調整橋的視圖
         function adjustBridgeViewByPosition(position) {
             // 每4步進行一次調整
-            const targetStage = Math.floor(position / 4);
+            const targetStage = Math.floor(position / 3);
             
             // 如果需要移動到新階段
             if (targetStage !== currentViewStage) {
@@ -614,7 +614,7 @@
                 // 計算需要移動的距離
                 const bridgeHeight = bridge.getBoundingClientRect().height;
                 // 根據當前階段計算不同的移動距離
-                const stageShift = bridgeHeight * 0.25 * targetStage; // 每個階段移動25%高度
+                const stageShift = bridgeHeight * 0.4 * targetStage; // 每個階段移動25%高度
                 
                 // 向下移動橋（正值表示向下移動）
                 bridge.style.transform = `translateY(${stageShift}px)`;
