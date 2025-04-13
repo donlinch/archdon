@@ -3,173 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 命運轉盤遊戲</title>
-    <meta name="description" content="SunnyYummy 趣味命運轉盤遊戲，自定義內容互動體驗。">
-    <!-- 絕對路徑 CSS -->
-    <link rel="stylesheet" href="/style.css">
-    <!-- Favicon and PWA icons (使用絕對路徑) -->
-    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>命運轉盤</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: '微軟正黑體', Arial, sans-serif;
+        }
+
         body {
-            font-family: 'Noto Sans TC', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f5f7fa;
-            padding: 0;
-            margin: 0;
+            justify-content: center;
             min-height: 100vh;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        /* 頁面標題樣式 */
-        .page-title-header {
-            background-color: #FFB74D;
-            padding: 1rem;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .page-title {
-            color: #424242;
-            margin: 0;
-        }
-        
-        /* 分類導覽 */
-        .category-nav {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            padding: 1rem 0;
-            background-color: #f0f0f0;
-            width: 100%;
-        }
-        
-        .category-nav a {
-            text-decoration: none;
-            color: #333;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-        }
-        
-        .category-nav a.active {
-            background-color: #FFB74D;
-            color: white;
-        }
-        
-        .category-nav a:hover:not(.active) {
-            background-color: #e0e0e0;
-        }
-        
-        /* 遊戲導覽樣式 */
-        .games-nav {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-            padding: 1rem 0;
-            background-color: #fff5e6;
-            width: 100%;
-            border-bottom: 1px solid #ffe0b2;
-            margin-bottom: 2rem;
-        }
-        
-        .games-nav a {
-            text-decoration: none;
-            color: #333;
-            padding: 0.5rem 1.5rem;
-            border-radius: 20px;
-            background-color: #ffecb3;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .games-nav a.active {
-            background-color: #FF9800;
-            color: white;
-            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
-            transform: translateY(-2px);
-        }
-        
-        .games-nav a:hover:not(.active) {
-            background-color: #ffe082;
-            transform: translateY(-2px);
-        }
-        
-        /* 主要內容區 */
-        .content-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
-        
-        /* 頁腳樣式 */
-        footer {
-            background-color: #333;
-            color: white;
-            width: 100%;
-            padding: 2rem 0;
-            margin-top: auto;
-        }
-        
-        .footer-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        .footer-nav {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .footer-nav a {
-            color: white;
-            text-decoration: none;
-        }
-        
-        .footer-nav a.active {
-            color: #FFB74D;
-        }
-        
-        .footer-copyright {
-            text-align: center;
-            font-size: 0.9rem;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 20px;
+            overflow-x: hidden;
         }
 
-        /* 貢獻資訊樣式 */
-        .contribution-info {
-            background-color: #f0f0f0;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px auto 0;
-            max-width: 600px;
+        h1 {
+            color: white;
+            margin-bottom: 20px;
             text-align: center;
-            font-size: 0.9rem;
-            color: #555;
-            box-sizing: border-box;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-        
-        .contribution-info a {
-            color: #3498db;
-            text-decoration: none;
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            position: relative;
         }
-        
-        .contribution-info a:hover {
-            text-decoration: underline;
-        }
-        
-        /* 命運轉盤特有樣式 */
+
         .wheel-container {
             position: relative;
             width: 100%;
@@ -183,24 +54,24 @@
 
         canvas {
             display: block;
-        border-radius: 50%;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s ease-out;
-        max-width: 100%;
-        max-height: 100%;
-    }
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease-out;
+            max-width: 100%;
+            max-height: 100%;
+        }
 
         .pointer {
             position: absolute;
-        top: 0; /* 修改這個值 */
-        left: 50%;
-        transform: translateX(-50%);
-        width: 30px;
-        height: 40px;
-        background-color: #ff5252;
-        clip-path: polygon(50% 100%, 0 0, 100% 0);
-        z-index: 10;
-    }
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 40px;
+            background-color: #ff5252;
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            z-index: 10;
+        }
 
         button {
             display: block;
@@ -262,7 +133,8 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: auto;
         }
 
         .modal-content {
@@ -455,24 +327,24 @@
         .modal-footer {
             margin-top: 20px;
             text-align: center;
-            position: sticky;
-            bottom: 0;
-            background-color: #f5f7fa;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
         }
 
-        #saveOptionsBtn {
+        .save-options {
+            padding: 12px 30px;
             background-color: #4CAF50;
-            padding: 12px 25px;
-            font-size: 16px;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
             width: 100%;
         }
 
-        #saveOptionsBtn:hover {
-            background-color: #45a049;
+        .save-options:hover {
+            background-color: #3e8e41;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
         }
 
         .no-options {
@@ -482,27 +354,26 @@
             font-style: italic;
         }
 
-        /* 響應式設計 */
-        @media (max-width: 768px) {
-            .category-nav, .games-nav {
-                flex-wrap: wrap;
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
             }
             
+            h1 {
+                font-size: 24px;
+            }
             
+            .wheel-container {
+                max-width: 300px;
+                min-height: 320px;
+                margin-top: 15px;
+            }
             
-
-        
             .pointer {
-                position: absolute;
-    top: -8px; /* <--- 修改這裡 */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 30px;
-    height: 40px;
-    background-color: #ff5252;
-    clip-path: polygon(50% 100%, 0 0, 100% 0);
-    z-index: 10; /* <--- z-index: 10 通常足夠 */
-}
+                top: -8px;
+                width: 25px;
+                height: 35px;
+            }
             
             .modal-content {
                 margin: 5% auto;
@@ -534,70 +405,12 @@
                 font-size: 16px;
             }
         }
-        
-        /* 中等螢幕（平板）響應式調整 */
-        @media (min-width: 768px) {
-            .wheel-container {
-                max-width: 500px;
-                min-height: 500px;
-            }
-            
-            .content-container {
-                max-width: 700px;
-            }
-            
-            button {
-                padding: 12px 25px;
-                font-size: 16px;
-            }
-        }
-        
-        /* 大螢幕（桌面）響應式調整 */
-        @media (min-width: 1200px) {
-            .wheel-container {
-                max-width: 600px;
-                min-height: 600px;
-            }
-            
-            .content-container {
-                max-width: 900px;
-            }
-            
-            button {
-                padding: 12px 30px;
-                font-size: 18px;
-            }
-        }
-
-
-
-
     </style>
 </head>
 <body>
-    <header class="page-title-header">
-        <h1 class="page-title">SunnyYummy 命運轉盤遊戲</h1>
-    </header>
-    
-    <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html">最新消息</a>
-        <a href="/scores.html">樂譜與舞蹈</a>
-        <a href="/game/card-game.html" class="active">互動遊戲</a>
-        <a href="/guestbook.html">留言板</a>
-    </nav>
-    
-    <!-- 遊戲導覽 -->
-    <nav class="games-nav">
-        <a href="/game/card-game.html">洞洞樂</a>
-        <a href="/game/wheel-game.html" class="active">命運轉盤</a>
-        <a href="">拼圖遊戲</a>
-        <a href="">音樂問答</a>
-        <a href="">配對記憶</a>
-    </nav>
-    
-    <div class="content-container">
+    <h1>命運轉盤</h1>
+
+    <div class="container">
         <div class="wheel-container">
             <div class="pointer"></div>
             <canvas id="wheel" width="350" height="350"></canvas>
@@ -606,16 +419,10 @@
         <button id="spin">開始旋轉</button>
 
         <div class="result" id="result"></div>
-        
-        <div class="controls">
-            <button id="editOptions" class="edit-options-btn">自定義選項</button>
-        </div>
-        
-        <div class="contribution-info">
-            這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
-        </div>
     </div>
-    
+
+    <button id="editOptions" class="edit-options-btn">編輯選項</button>
+
     <!-- 選項編輯彈出視窗 -->
     <div id="optionsModal" class="modal">
         <div class="modal-content">
@@ -626,27 +433,480 @@
             <div class="options-container" id="optionsContainer"></div>
             <button id="addOption" class="add-option">+ 新增選項</button>
             <div class="modal-footer">
-                <button class="save-options" id="saveOptionsBtn">儲存選項</button>
+                <button class="save-options" id="saveOptions">儲存選項</button>
             </div>
         </div>
     </div>
 
-    <footer>
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/games.html" class="active">互動遊戲</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2024 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-    <script src="wheel-game.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('wheel');
+            const ctx = canvas.getContext('2d');
+            const spinBtn = document.getElementById('spin');
+            const resultElement = document.getElementById('result');
+            const editOptionsBtn = document.getElementById('editOptions');
+            const optionsModal = document.getElementById('optionsModal');
+            const closeModal = document.querySelector('.close');
+            const saveOptionsBtn = document.getElementById('saveOptions');
+            const addOptionBtn = document.getElementById('addOption');
+            const optionsContainer = document.getElementById('optionsContainer');
 
+            // 預設顏色 (用於新選項或備用)
+            const defaultColors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                '#9966FF', '#FF9F40', '#7ED321', '#50E3C2',
+                '#F8E71C', '#BD10E0', '#8B572A', '#4A90E2'
+            ];
+            const fallbackColor = '#cccccc';
+
+            // 選項現在儲存為物件陣列 (包含文字和顏色)
+            let options = [
+                { text: '吃拉麵', color: '#FF6384' },
+                { text: '吃牛排', color: '#000000' },
+                { text: '吃披薩', color: '#FFCE56' },
+                { text: '吃漢堡', color: '#4BC0C0' }
+            ];
+
+            let spinning = false;
+            let currentAngle = 0;
+            let spinSpeed = 0;
+            let maxSpinTime = 5000;
+            let spinStartTime = 0;
+            let animationId = null;
+
+            // 繪製轉盤 (使用自訂顏色)
+            function drawWheel() {
+                const wheelRadius = canvas.width / 2;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const centerX = wheelRadius;
+                const centerY = wheelRadius;
+                const radius = wheelRadius - 10;
+
+                // 繪製轉盤背景
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ddd';
+                ctx.stroke();
+
+                // 如果沒有選項，顯示提示文字
+                if (options.length === 0) {
+                    ctx.fillStyle = '#888';
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('請新增選項', centerX, centerY);
+                    return;
+                }
+
+                const sliceAngle = (2 * Math.PI) / options.length;
+
+                // 繪製每個選項的扇形
+                for (let i = 0; i < options.length; i++) {
+                    const option = options[i];
+                    const startAngle = currentAngle + i * sliceAngle;
+                    const endAngle = startAngle + sliceAngle;
+
+                    // 繪製扇形
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                    ctx.closePath();
+                    ctx.fillStyle = option.color || fallbackColor;
+                    ctx.fill();
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                    ctx.stroke();
+
+                    // 計算文字大小和位置
+                    const text = option.text;
+                    const textAngle = startAngle + sliceAngle / 2;
+                    let textDistance = radius * 0.65;
+                    let fontSize = 14;
+                    
+                    // 根據選項數量調整文字大小
+                    if (options.length >= 8) {
+                        fontSize = 12;
+                        textDistance = radius * 0.7;
+                    }
+                    if (options.length >= 12) {
+                        fontSize = 10;
+                        textDistance = radius * 0.75;
+                    }
+
+                    // 計算文字座標
+                    const textX = centerX + Math.cos(textAngle) * textDistance;
+                    const textY = centerY + Math.sin(textAngle) * textDistance;
+
+                    // 繪製文字 (根據背景亮度調整文字顏色)
+                    ctx.save();
+                    ctx.translate(textX, textY);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const bgColor = option.color || fallbackColor;
+                    const brightness = calculateBrightness(bgColor);
+                    
+                    // 根據背景亮度選擇文字顏色
+                    if (brightness > 180) {
+                        ctx.fillStyle = '#333';
+                    } else {
+                        ctx.fillStyle = 'white';
+                        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                        ctx.shadowBlur = 3;
+                        ctx.shadowOffsetX = 1;
+                        ctx.shadowOffsetY = 1;
+                    }
+                    
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    ctx.fillText(text, 0, 0);
+                    ctx.restore();
+                }
+
+                // 繪製中心圓
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 15, 0, 2 * Math.PI);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ccc';
+                ctx.stroke();
+            }
+
+            // 計算顏色亮度 (0-255)
+            function calculateBrightness(hexColor) {
+                hexColor = hexColor.replace('#', '');
+                let r = 0, g = 0, b = 0;
+                
+                if (hexColor.length === 3) {
+                    r = parseInt(hexColor[0] + hexColor[0], 16);
+                    g = parseInt(hexColor[1] + hexColor[1], 16);
+                    b = parseInt(hexColor[2] + hexColor[2], 16);
+                } else if (hexColor.length === 6) {
+                    r = parseInt(hexColor.substring(0, 2), 16);
+                    g = parseInt(hexColor.substring(2, 4), 16);
+                    b = parseInt(hexColor.substring(4, 6), 16);
+                }
+                
+                return (0.299 * r + 0.587 * g + 0.114 * b);
+            }
+
+            // 顯示選項編輯視窗
+            function showOptionsModal() {
+                optionsContainer.innerHTML = '';
+                
+                if (options.length === 0) {
+                    const noOptions = document.createElement('div');
+                    noOptions.className = 'no-options';
+                    noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
+                    optionsContainer.appendChild(noOptions);
+                } else {
+                    // 為每個選項創建輸入框
+                    options.forEach((option, index) => {
+                        addOptionToModal(option, index);
+                    });
+                }
+                
+                optionsModal.style.display = 'block';
+                optionsContainer.scrollTop = 0;
+            }
+
+            // 添加選項到編輯視窗
+            function addOptionToModal(optionData = null, index = -1) {
+                // 移除"沒有選項"提示
+                const noOptions = optionsContainer.querySelector('.no-options');
+                if (noOptions) noOptions.remove();
+
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option-input';
+
+                // 確定新選項的索引
+                const effectiveIndex = index === -1 ? optionsContainer.querySelectorAll('.option-input').length : index;
+
+                // 創建顏色選擇器
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.className = 'option-color-input';
+                colorInput.value = optionData?.color || defaultColors[effectiveIndex % defaultColors.length] || fallbackColor;
+
+                // 創建文字輸入框
+                const textInput = document.createElement('input');
+                textInput.type = 'text';
+                textInput.className = 'option-text-input';
+                textInput.value = optionData?.text || '';
+                textInput.placeholder = `選項 ${effectiveIndex + 1}`;
+
+                // 創建移除按鈕
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-option';
+                removeBtn.textContent = '-';
+                removeBtn.onclick = function() {
+                    optionDiv.remove();
+                    updatePlaceholders();
+                    
+                    // 如果沒有選項了，顯示提示
+                    if (optionsContainer.children.length === 0) {
+                        const noOptions = document.createElement('div');
+                        noOptions.className = 'no-options';
+                        noOptions.textContent = '目前沒有選項，請點擊下方按鈕新增';
+                        optionsContainer.appendChild(noOptions);
+                    }
+                };
+
+                // 將元素添加到選項容器
+                optionDiv.appendChild(colorInput);
+                optionDiv.appendChild(textInput);
+                optionDiv.appendChild(removeBtn);
+                optionsContainer.appendChild(optionDiv);
+
+                // 如果是新選項，聚焦並高亮
+                if (!optionData) {
+                    textInput.focus();
+                    optionDiv.classList.add('highlight');
+                    setTimeout(() => optionDiv.classList.remove('highlight'), 1000);
+                    optionsContainer.scrollTop = optionsContainer.scrollHeight;
+                }
+            }
+
+            // 更新選項的佔位文字
+            function updatePlaceholders() {
+                const optionInputs = optionsContainer.querySelectorAll('.option-input');
+                
+                optionInputs.forEach((div, index) => {
+                    const textInput = div.querySelector('.option-text-input');
+                    if (textInput) {
+                        textInput.placeholder = `選項 ${index + 1}`;
+                    }
+                });
+            }
+
+            // 儲存選項
+            function saveOptions() {
+                const inputs = optionsContainer.querySelectorAll('.option-input');
+                const newOptions = [];
+
+                // 收集所有選項的文字和顏色
+                inputs.forEach(div => {
+                    const textInput = div.querySelector('.option-text-input');
+                    const colorInput = div.querySelector('.option-color-input');
+                    const textValue = textInput.value.trim();
+                    const colorValue = colorInput.value || fallbackColor;
+
+                    if (textValue !== '') {
+                        newOptions.push({ text: textValue, color: colorValue });
+                    }
+                });
+
+                // 處理不同情況的儲存邏輯
+                if (newOptions.length > 0 || (options.length === 0 && newOptions.length === 0)) {
+                    options = newOptions;
+                    optionsModal.style.display = 'none';
+                    drawWheel();
+                } else if (options.length > 0 && newOptions.length === 0) {
+                    if (confirm("您確定要刪除所有選項嗎？轉盤將無法使用。")) {
+                        options = newOptions;
+                        optionsModal.style.display = 'none';
+                        drawWheel();
+                    } else {
+                        return;
+                    }
+                } else if (options.length === 0 && newOptions.length === 0) {
+                    optionsModal.style.display = 'none';
+                }
+            }
+
+            // 轉盤動畫
+            function animateWheel(timestamp) {
+                if (!spinStartTime) spinStartTime = timestamp;
+                const elapsedTime = timestamp - spinStartTime;
+
+                if (spinning) {
+                    const progress = Math.min(elapsedTime / maxSpinTime, 1);
+                    const easingProgress = 1 - Math.pow(1 - progress, 4);
+                    const baseSpeed = 0.25;
+                    const decelerationFactor = 1 - easingProgress;
+                    spinSpeed = baseSpeed * decelerationFactor + 0.01;
+
+                    currentAngle += spinSpeed;
+                    drawWheel();
+
+                    if (progress >= 1) {
+                        finishSpin();
+                    } else {
+                        animationId = requestAnimationFrame(animateWheel);
+                    }
+                }
+            }
+
+            // 結束旋轉
+            function finishSpin() {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+
+                spinning = false;
+                spinBtn.disabled = false;
+                spinStartTime = 0;
+
+                const numOptions = options.length;
+                if (numOptions === 0) return;
+
+                // 計算最終角度和結果
+                const sliceAngle = (2 * Math.PI) / numOptions;
+                const finalAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+                const pointerRad = (3 * Math.PI / 2);
+                const pointerEffectiveAngle = ((pointerRad - finalAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                const resultIndex = Math.floor(pointerEffectiveAngle / sliceAngle);
+                const finalResultIndex = resultIndex % numOptions;
+
+                // 獲取獲勝選項
+                const winningOption = options[finalResultIndex];
+
+                // 顯示結果 (使用選項的文字和顏色)
+                resultElement.textContent = `結果: ${winningOption.text}`;
+                resultElement.style.color = winningOption.color || fallbackColor;
+                resultElement.classList.add('show-result');
+                playSound();
+
+                // 添加轉盤放大效果
+                canvas.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    canvas.style.transform = 'scale(1)';
+                }, 300);
+            }
+
+            // 處理關閉編輯視窗
+            function handleCloseModal() {
+                const inputs = optionsContainer.querySelectorAll('.option-input .option-text-input');
+                let hasNonEmpty = inputs.length > 0 && Array.from(inputs).some(input => input.value.trim() !== '');
+                const hasInputsInModal = optionsContainer.querySelectorAll('.option-input').length > 0;
+
+                if (options.length > 0 && !hasNonEmpty && hasInputsInModal) {
+                    if (confirm("您已清空所有選項文字，確定要關閉嗎？")) {
+                        optionsModal.style.display = 'none';
+                        saveOptions();
+                    }
+                } else if (options.length > 0 && !hasInputsInModal) {
+                    if (confirm("您已移除所有選項，確定要關閉嗎？轉盤將無法使用。")) {
+                        optionsModal.style.display = 'none';
+                        saveOptions();
+                    }
+                } else {
+                    optionsModal.style.display = 'none';
+                }
+            }
+
+            // 處理鍵盤事件
+            function handleKeyDown(event) {
+                if (optionsModal.style.display === 'block') {
+                    const activeElement = document.activeElement;
+                    
+                    if (event.key === 'Enter' && activeElement?.tagName !== 'INPUT' && activeElement?.tagName !== 'BUTTON') {
+                        event.preventDefault();
+                        addOptionToModal();
+                    } else if (event.key === 'Enter' && event.ctrlKey) {
+                        event.preventDefault();
+                        saveOptions();
+                    } else if (event.key === 'Escape') {
+                        event.preventDefault();
+                        handleCloseModal();
+                    }
+                }
+            }
+
+            // 播放音效
+            function playSound() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) {
+                        console.warn("瀏覽器不支持 AudioContext");
+                        return;
+                    }
+                    
+                    const audioCtx = new AudioContext();
+                    const oscillator = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    oscillator.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    oscillator.type = 'triangle';
+                    
+                    const baseFreq = 440;
+                    oscillator.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+                    oscillator.frequency.linearRampToValueAtTime(baseFreq * 1.5, audioCtx.currentTime + 0.1);
+                    oscillator.frequency.linearRampToValueAtTime(baseFreq * 1.2, audioCtx.currentTime + 0.2);
+                    oscillator.frequency.linearRampToValueAtTime(baseFreq * 2, audioCtx.currentTime + 0.3);
+                    
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.8);
+                    
+                    setTimeout(() => {
+                        if (audioCtx.state !== 'closed') audioCtx.close();
+                    }, 1000);
+                } catch(e) {
+                    console.error('音效播放失敗:', e);
+                }
+            }
+
+            // 初始化轉盤
+            function initWheel() {
+                drawWheel();
+
+                // 旋轉按鈕事件
+                spinBtn.addEventListener('click', function() {
+                    if (spinning) return;
+                    
+                    if (options.length === 0) {
+                        alert('請先編輯選項！');
+                        showOptionsModal();
+                        return;
+                    }
+                    
+                    if (options.length === 1) {
+                        alert('只有一個選項，不用轉啦！');
+                        const singleOption = options[0];
+                        resultElement.textContent = `結果: ${singleOption.text}`;
+                        resultElement.style.color = singleOption.color || fallbackColor;
+                        resultElement.classList.add('show-result');
+                        canvas.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            canvas.style.transform = 'scale(1)';
+                        }, 300);
+                        playSound();
+                        return;
+                    }
+                    
+                    spinning = true;
+                    spinBtn.disabled = true;
+                    resultElement.textContent = '';
+                    resultElement.classList.remove('show-result');
+                    spinStartTime = 0;
+                    currentAngle = ((currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+                    animationId = requestAnimationFrame(animateWheel);
+                });
+
+                // 其他事件監聽器
+                editOptionsBtn.addEventListener('click', showOptionsModal);
+                closeModal.addEventListener('click', () => handleCloseModal());
+                
+                window.addEventListener('click', (event) => {
+                    if (event.target === optionsModal) handleCloseModal();
+                });
+                
+                addOptionBtn.addEventListener('click', () => addOptionToModal());
+                saveOptionsBtn.addEventListener('click', saveOptions);
+                document.addEventListener('keydown', handleKeyDown);
+            }
+
+            // 啟動應用程式
+            initWheel();
+        });
+    </script>
 </body>
 </html>
