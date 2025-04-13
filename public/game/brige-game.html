@@ -24,6 +24,7 @@
             height: 60vh;
             perspective: 1000px;
             margin-bottom: 10px;
+            overflow: hidden;
         }
         .bridge {
             position: absolute;
@@ -34,6 +35,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
+            transition: transform 1s ease; /* 添加過渡效果 */
         }
         .bridge-row {
             display: flex;
@@ -365,6 +367,7 @@
         ];
         const playerColors = ['pink', 'yellow-pink', 'green-pink'];
         let lastFailPosition = 0;
+        let viewShifted = false; // 新增一個標記來追踪視角是否已經移動
         
         // 元素
         const bridge = document.getElementById('bridge');
@@ -412,8 +415,19 @@
             // 重置遊戲提示訊息
             message.innerText = "接力挑戰！小紅、小黃、小綠輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！";
             
+            // 重置橋的位置
+            resetBridgePosition();
+            
+            // 重置視角標記
+            viewShifted = false;
+            
             // 啟動計時器
             startTimer();
+        }
+        
+        // 重置橋的位置
+        function resetBridgePosition() {
+            bridge.style.transform = 'translateY(0)';
         }
         
         // 創建橋
@@ -585,6 +599,26 @@
             return null;
         }
         
+        // 調整視圖以顯示前面的玻璃板（第1～8層）
+        function adjustBridgeView() {
+            if (!viewShifted) {
+                // 計算移動的距離（根據橋的總高度和移動的比例來決定）
+                const bridgeHeight = bridge.getBoundingClientRect().height;
+                const shiftDistance = bridgeHeight * 0.4; // 移動大約40%的高度，這個比例可以調整
+                
+                // 平滑地移動橋的位置
+                bridge.style.transform = `translateY(-${shiftDistance}px)`;
+                
+                // 更新視角標記
+                viewShifted = true;
+                
+                // 放置小人在新的位置
+                setTimeout(() => {
+                    positionCharacter(Math.max(currentStep, lastFailPosition));
+                }, 500);
+            }
+        }
+        
         // 跳躍
         function jump(side) {
             if (!gameActive || isMoving) return;
@@ -649,6 +683,11 @@
                     updateProgress();
                     message.innerText = `${players[currentPlayerIndex].name} 安全! 繼續前進`;
                     
+                    // 如果跳到第9步或更高，調整視圖以顯示前面的玻璃板
+                    if (currentStep >= 9 && !viewShifted) {
+                        adjustBridgeView();
+                    }
+                    
                     // 按鈕恢復
                     setTimeout(() => {
                         isMoving = false;
@@ -675,6 +714,11 @@
                     
                     // 記錄當前失敗位置（用於接力）
                     lastFailPosition = Math.max(currentStep, lastFailPosition);
+                    
+                    // 如果失敗位置在第9步或更高，且視圖還沒調整，那麼調整視圖
+                    if (lastFailPosition >= 9 && !viewShifted) {
+                        adjustBridgeView();
+                    }
                     
                     setTimeout(() => {
                         // 切換到下一個玩家
