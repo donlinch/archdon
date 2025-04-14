@@ -30,9 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let player2PathIndex = 0;
     let selectedPlayer = 1;
     let isMoving = false;
+    let isRolling = false; // 新增並初始化isRolling變數
     let highlightedCell = null;
     let moveHistory = [];
-    let modalAutoPopup = false; // 控制是否自動彈出窗口
+    let modalAutoPopup = true; // 修改為true，讓玩家移動後自動顯示彈窗
     
     // 玩家標記元素
     let player1Token;
@@ -294,8 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetGame() {
       player1PathIndex = 0;
       player2PathIndex = 0;
-      diceElement.textContent = '?';
-      highlightedCell = null;
+      highlightedCell = null;  // 移除對diceElement的引用
       selectPlayer(1);
       moveHistory = [];
       updateUndoButtonState();
