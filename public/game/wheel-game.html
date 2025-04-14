@@ -751,12 +751,7 @@
         margin: 15px auto;
         width: 90%;
         max-width: 250px;
-        background-color: #4CAF50;
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-    margin-top: 20px;
-    margin-bottom: 20px;
-    position: relative;
-    z-index: 10;
+        
     }
 }
 
@@ -834,20 +829,8 @@
             
    
    
-<!-- 將編輯選項按鈕移到container內，而不是footer裡面 -->
-<div class="container">
-    <div class="wheel-container">
-        <div class="pointer"></div>
-        <canvas id="wheel" width="350" height="350"></canvas>
-    </div>
 
-    <button id="spin">開始旋轉</button>
-
-    <div class="result" id="result"></div>
-    
-    <!-- 將編輯選項按鈕移到這裡 -->
-    <button id="editOptions" class="edit-options-btn">編輯選項</button>
-</div>
+<button id="editOptions" class="edit-options-btn">編輯選項</button>
 
 <!-- 選項編輯彈出視窗 -->
 <div id="optionsModal" class="modal">
@@ -863,12 +846,16 @@
         </div>
     </div>
 </div>
-
-<div class="game-footer" id="gameFooter" style="display: none;">
+    
     <div class="footer-copyright">
         © 2024 SunnyYummy. All rights reserved.
     </div>
+
+
+
+
 </div>
+
 
  
 

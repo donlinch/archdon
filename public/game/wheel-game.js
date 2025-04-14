@@ -1,5 +1,3 @@
-// 修改部分代碼，讓導航欄和編輯選項視窗獨立運作
-
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
@@ -53,11 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let maxSpinTime = 5000;
     let spinStartTime = 0;
     let animationId = null;
-    let isEditModalOpen = false; // 新增變數追蹤編輯視窗狀態
 
     // 繪製轉盤 (使用自訂顏色)
     function drawWheel() {
-        // 保持原有繪製函數不變
         const wheelRadius = canvas.width / 2;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const centerX = wheelRadius;
@@ -175,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return (0.299 * r + 0.587 * g + 0.114 * b);
     }
 
-    // 顯示選項編輯視窗 - 修改此函數，讓編輯視窗不會影響導航欄
+    // 顯示選項編輯視窗
     function showOptionsModal() {
         optionsContainer.innerHTML = '';
         
@@ -193,11 +189,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         optionsModal.style.display = 'block';
         optionsContainer.scrollTop = 0;
-        isEditModalOpen = true;
         
-        // 移除自動顯示導航欄的部分，讓兩個功能互相獨立
-        // 將編輯選項視窗置於最上層，確保它不會被導航欄遮擋
-        optionsModal.style.zIndex = '2000';
+        // 同時顯示導航欄 (如果它不可見)
+        if (!navVisible) {
+            navVisible = true;
+            gameHeader.classList.add('visible');
+            gameFooter.style.display = 'block';
+            navToggle.textContent = '×';
+        }
     }
 
     // 添加選項到編輯視窗
@@ -289,25 +288,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // 處理不同情況的儲存邏輯
         if (newOptions.length > 0 || (options.length === 0 && newOptions.length === 0)) {
             options = newOptions;
-            closeEditModal();
+            optionsModal.style.display = 'none';
             drawWheel();
         } else if (options.length > 0 && newOptions.length === 0) {
             if (confirm("您確定要刪除所有選項嗎？轉盤將無法使用。")) {
                 options = newOptions;
-                closeEditModal();
+                optionsModal.style.display = 'none';
                 drawWheel();
             } else {
                 return;
             }
         } else if (options.length === 0 && newOptions.length === 0) {
-            closeEditModal();
+            optionsModal.style.display = 'none';
         }
-    }
-
-    // 新增函數：關閉編輯視窗（不影響導航欄）
-    function closeEditModal() {
-        optionsModal.style.display = 'none';
-        isEditModalOpen = false;
     }
 
     // 轉盤動畫
@@ -371,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     }
 
-    // 處理關閉編輯視窗 - 修改此函數，讓它只關閉編輯視窗
+    // 處理關閉編輯視窗
     function handleCloseModal() {
         const inputs = optionsContainer.querySelectorAll('.option-input .option-text-input');
         let hasNonEmpty = inputs.length > 0 && Array.from(inputs).some(input => input.value.trim() !== '');
@@ -379,16 +372,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (options.length > 0 && !hasNonEmpty && hasInputsInModal) {
             if (confirm("您已清空所有選項文字，確定要關閉嗎？")) {
-                closeEditModal();
+                optionsModal.style.display = 'none';
                 saveOptions();
             }
         } else if (options.length > 0 && !hasInputsInModal) {
             if (confirm("您已移除所有選項，確定要關閉嗎？轉盤將無法使用。")) {
-                closeEditModal();
+                optionsModal.style.display = 'none';
                 saveOptions();
             }
         } else {
-            closeEditModal();
+            optionsModal.style.display = 'none';
         }
     }
 
@@ -495,14 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
         addOptionBtn.addEventListener('click', () => addOptionToModal());
         saveOptionsBtn.addEventListener('click', saveOptions);
         document.addEventListener('keydown', handleKeyDown);
-
-        // 修改導航欄切換事件，防止它關閉編輯視窗
-        navToggle.addEventListener('click', function(event) {
-            // 如果編輯視窗是開啟的，點擊導航按鈕時不會影響編輯視窗
-            if (isEditModalOpen) {
-                event.stopPropagation();
-            }
-        });
     }
 
     // 啟動應用程式
