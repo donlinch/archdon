@@ -935,7 +935,22 @@
 <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
 
 
-
+<!-- 編輯選項的彈出視窗 -->
+<div id="optionsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>編輯選項</h2>
+        <span class="close">&times;</span>
+      </div>
+      <div id="optionsContainer" class="options-container">
+        <!-- 選項會由 JS 動態插入 -->
+      </div>
+      <button id="addOption" class="add-option">➕ 新增選項</button>
+      <div class="modal-footer">
+        <button id="saveOptions" class="save-options">💾 儲存選項</button>
+      </div>
+    </div>
+  </div>
  
 
 
