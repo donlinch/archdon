@@ -377,6 +377,6 @@ const MonopolyGame = () => {
       );
     };
     
-}
+} 
 
 export default MonopolyGame;
