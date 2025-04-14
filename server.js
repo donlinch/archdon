@@ -165,9 +165,16 @@ app.get('/api/card-game/templates/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
-// POST /api/card-game/templates - 创建新模板 (修改版)
+// POST /api/card-game/templates - 创建新模板 (修正版)
 app.post('/api/card-game/templates', async (req, res) => {
     const { template_name, content_data, is_public = true } = req.body;
+    
+    console.log('收到模板創建請求:', {
+        template_name,
+        content_data_type: typeof content_data,
+        is_array: Array.isArray(content_data),
+        content_sample: Array.isArray(content_data) ? content_data.slice(0, 3) : content_data
+    });
     
     if (!template_name) {
         return res.status(400).json({ error: '模板名称不能为空' });
@@ -176,24 +183,41 @@ app.post('/api/card-game/templates', async (req, res) => {
     // 数据验证和处理
     let validContentData;
     try {
-        // 如果已经是对象，使用它
-        if (typeof content_data === 'object' && content_data !== null) {
+        // 確保我們有一個有效的陣列
+        if (Array.isArray(content_data)) {
             validContentData = content_data;
         } 
         // 如果是字符串，尝试解析
         else if (typeof content_data === 'string') {
-            validContentData = JSON.parse(content_data);
+            const parsed = JSON.parse(content_data);
+            // 解析後確保它是陣列
+            validContentData = Array.isArray(parsed) ? parsed : [parsed];
         } 
         // 其他类型，包装成数组
-        else {
+        else if (content_data !== null && content_data !== undefined) {
             validContentData = [content_data];
         }
+        // 兜底：如果都不是，使用空陣列
+        else {
+            validContentData = [];
+        }
         
-        // 再次验证是否为有效JSON
-        JSON.stringify(validContentData);
+        // 再次验证是否為有效 JSON，確保可序列化
+        console.log('處理後的 content_data:', {
+            is_array: Array.isArray(validContentData),
+            length: Array.isArray(validContentData) ? validContentData.length : 0,
+            sample: Array.isArray(validContentData) ? validContentData.slice(0, 3) : validContentData
+        });
+        
+        // 測試是否可序列化
+        JSON.stringify(validContentData); 
     } catch (error) {
         console.error('内容数据格式错误:', error, '收到的数据:', content_data);
-        return res.status(400).json({ error: '内容数据格式错误，必须是有效的JSON' });
+        return res.status(400).json({ 
+            error: '内容数据格式错误，必须是有效的JSON',
+            detail: error.message,
+            received: typeof content_data
+        });
     }
     
     try {
@@ -217,10 +241,19 @@ app.post('/api/card-game/templates', async (req, res) => {
             [template_name, validContentData, ip_address, is_public]
         );
         
+        console.log('模板創建成功:', {
+            id: result.rows[0].id,
+            template_name: result.rows[0].template_name
+        });
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('创建洞洞乐模板失败:', err);
-        res.status(500).json({ error: '服务器内部错误' });
+        res.status(500).json({ 
+            error: '服务器内部错误',
+            detail: err.message,
+            code: err.code
+        });
     }
 });
 

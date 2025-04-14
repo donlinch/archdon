@@ -444,7 +444,7 @@ function clearTemplateCache() {
     cachedTemplates = null;
     console.log("模板緩存已清除。");
 }
-// 保存當前內容為模板 (使用 API)
+// 保存當前內容為模板 (使用 API) - 修正 JSON 格式問題
 async function saveCurrentAsTemplate() {
     const { templateNameInput } = getDOMElements();
     const templateName = templateNameInput.value.trim();
@@ -456,15 +456,15 @@ async function saveCurrentAsTemplate() {
         return;
     }
 
-    // 2. 獲取當前輸入框的內容
-    const templateContent = [];
+    // 2. 獲取當前輸入框的內容 - 確保是陣列格式
+    const templateContent = [];  // 一定要是陣列！
     const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
     let hasContent = false; // 檢查是否有實際內容
     
     for (let i = 0; i < totalCells; i++) {
         const input = document.getElementById(`content-${i}`);
         const content = input ? (input.value || `格子 ${i+1}`) : `格子 ${i+1}`;
-        templateContent.push(content);
+        templateContent.push(content);  // 將內容加入陣列
         
         // 檢查是否至少有一個非預設內容的格子
         if (input && input.value && input.value.trim() !== `格子 ${i+1}`) {
@@ -472,67 +472,76 @@ async function saveCurrentAsTemplate() {
         }
     }
     
-    // 如果全都是預設內容，提醒使用者但仍然允許儲存
+    // 3. 檢查資料完整性
     if (!hasContent) {
         if (!confirm('所有格子內容似乎都是預設值。確定要儲存此模板嗎？')) {
             return;
         }
     }
 
-    // 3. 檢查名稱是否與現有模板衝突 (前端檢查，服務端也會檢查)
+    // 檢查名稱是否與現有模板衝突
     if (cachedTemplates && cachedTemplates.some(t => t.template_name === templateName)) {
         if (!confirm(`模板 "${templateName}" 已存在。若繼續將創建一個新模板。是否繼續？`)) {
             templateNameInput.focus();
             return;
         }
-        console.warn(`用戶嘗試保存一個已存在的模板名稱: ${templateName}. 服務器端將處理衝突。`);
     }
 
-    // 4. 調用 API 保存模板
     console.log(`正在嘗試保存模板: ${templateName}`, templateContent);
+    console.log("templateContent 類型:", Array.isArray(templateContent) ? "陣列" : typeof templateContent);
+    
+    // 4. 確保傳送有效的 JSON 資料格式
     try {
+        // 先測試我們的資料是否能被正確地序列化為 JSON
+        const testJson = JSON.stringify(templateContent);
+        console.log("資料可序列化為有效 JSON:", testJson.substring(0, 100) + "...");
+        
+        // 5. 調用 API 保存模板
         const response = await fetch('/api/card-game/templates', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
                 template_name: templateName,
-                content_data: templateContent, // 確保這是 JS 陣列
-                is_public: true // 假設預設為公開
+                content_data: templateContent,  // 確保這是一個陣列！
+                is_public: true
             })
         });
 
+        // 檢查回應
         if (response.status === 201) { // Created
             const newTemplate = await response.json();
             console.log("模板保存成功:", newTemplate);
             alert(`模板 "${templateName}" 已成功保存！`);
-            clearTemplateCache(); // 清除緩存以便下次重新加載
-            await updateTemplateSelect(); // 更新下拉列表
-            templateNameInput.value = ''; // 清空名稱輸入框
-            // 可選：直接選中新創建的模板
+            clearTemplateCache();
+            await updateTemplateSelect();
+            templateNameInput.value = '';
+            
+            // 選中新創建的模板
             const { templateSelect } = getDOMElements();
-            if(templateSelect) templateSelect.value = newTemplate.template_name;
+            if(templateSelect) templateSelect.value = templateName;
         } else {
-            // 處理錯誤情況
+            // 詳細處理錯誤
             let errorMsg = `保存模板失敗: ${response.status} ${response.statusText}`;
+            let errorDetail = "";
+            
             try {
                 const errorData = await response.json();
                 errorMsg = errorData.error || errorMsg;
+                errorDetail = JSON.stringify(errorData);
             } catch (parseError) {
-                console.warn("無法解析錯誤回應", parseError);
+                errorDetail = "無法解析錯誤回應";
             }
-            console.error('保存模板失敗:', response.status, errorMsg);
-            alert(`保存模板失敗: ${errorMsg}`);
             
-            if (response.status === 409) { // Conflict (Name exists)
-                templateNameInput.focus();
-            }
+            console.error('保存模板失敗:', errorMsg, errorDetail);
+            alert(`保存模板失敗: ${errorMsg}\n\n${errorDetail}`);
         }
     } catch (error) {
-        console.error('保存模板時發生網絡或解析錯誤:', error);
+        console.error('保存模板時發生錯誤:', error);
         alert(`保存模板時出錯: ${error.message}`);
     }
 }
-
 
 // 從模板載入內容 (使用下拉選單的 data-* 屬性)
 async function loadSelectedTemplate() {
