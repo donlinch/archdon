@@ -28,6 +28,132 @@
             box-sizing: border-box;
         }
         
+
+
+/* 新增導航欄樣式 */
+ .game-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: #f0f0f0;
+            transition: all 0.3s ease;
+            transform: translateY(-100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-header.visible {
+            transform: translateY(0);
+        }
+        
+        .page-title-header {
+            background-color: #FFB74D;
+            padding: 1rem;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #f0f0f0;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        
+        .category-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav a.active {
+            background-color: #FFB74D;
+            color: white;
+        }
+        
+        .games-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #fff5e6;
+            width: 100%;
+            border-bottom: 1px solid #ffe0b2;
+        }
+        
+        .games-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            background-color: #ffecb3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .games-nav a.active {
+            background-color: #FF9800;
+            color: white;
+            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
+        }
+        
+        .nav-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+
+          /* 添加頁腳樣式 */
+          .game-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 12px;
+            z-index: 999;
+            display: none; /* 默認隱藏 */
+        }
+
+
+
+
+
+
+
+
+
         /* 頁面標題樣式 */
         .page-title-header {
             background-color: #FFB74D;
