@@ -46,86 +46,53 @@ const defaultLeaderboard = {
     return leaderboard;
   }
   
+
+
   // 獲取排行榜數據
-  function getLeaderboard(playerCount) {
-    const leaderboard = JSON.parse(localStorage.getItem('bridgeGameLeaderboard'));
-    return leaderboard[playerCount] || [];
-  }
-  
-  // 格式化時間顯示 (將秒轉為分:秒格式)
-  function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-  
-  // 顯示排行榜
-  function showLeaderboard(playerCount) {
-    const leaderboardData = getLeaderboard(playerCount);
+function getLeaderboard(playerCount) {
+    // 顯示載入中提示
     const leaderboardBody = document.getElementById('leaderboardBody');
+    leaderboardBody.innerHTML = '<tr><td colspan="3" class="loading">載入中...</td></tr>';
     
-    // 清空現有內容
-    leaderboardBody.innerHTML = '';
-    
-    if (leaderboardData.length === 0) {
-      const row = document.createElement('tr');
-      row.innerHTML = '<td colspan="3" class="no-records">目前尚無記錄</td>';
-      leaderboardBody.appendChild(row);
-      return;
-    }
-    
-    // 填充排行榜
-    leaderboardData.forEach((entry, index) => {
-      const row = document.createElement('tr');
-      
-      // 決定排名的樣式
-      let rankClass = '';
-      if (index === 0) rankClass = 'rank-gold';
-      else if (index === 1) rankClass = 'rank-silver';
-      else if (index === 2) rankClass = 'rank-bronze';
-      
-      row.innerHTML = `
-        <td class="rank ${rankClass}">${index + 1}</td>
-        <td class="name">${entry.name}</td>
-        <td class="time">${formatTime(entry.time)}</td>
-      `;
-      
-      leaderboardBody.appendChild(row);
-    });
-  }
-  
-  // 顯示排行榜對話框
-  function openLeaderboardModal() {
-    const leaderboardModal = document.getElementById('leaderboardModal');
-    leaderboardModal.style.display = 'block';
-    
-    // 默認顯示目前的玩家數量排行
-    const currentPlayerCount = document.getElementById('playerCount').value;
-    document.getElementById('leaderboardPlayerCount').value = currentPlayerCount;
-    showLeaderboard(currentPlayerCount);
-  }
-  
-  // 關閉排行榜對話框
-  function closeLeaderboardModal() {
-    document.getElementById('leaderboardModal').style.display = 'none';
-  }
-  
-  // 更改排行榜的玩家數量分類
-  function changeLeaderboardCategory(playerCount) {
-    showLeaderboard(playerCount);
-  }
-  
-  // 顯示記錄成績對話框
-  function openScoreSubmitModal(remainingTime) {
-    const completionTime = 120 - remainingTime; // 總時間120秒減去剩餘時間
-    document.getElementById('completionTime').textContent = formatTime(completionTime);
-    document.getElementById('completionTimeValue').value = completionTime;
-    document.getElementById('scoreSubmitModal').style.display = 'block';
-  }
-  
-  // 關閉記錄成績對話框
-  function closeScoreSubmitModal() {
-    document.getElementById('scoreSubmitModal').style.display = 'none';
+    // 發送AJAX請求
+    fetch(`/api/bridge-game/leaderboard?player_count=${playerCount}`)
+      .then(response => response.json())
+      .then(data => {
+        // 清空現有內容
+        leaderboardBody.innerHTML = '';
+        
+        if (data.length === 0) {
+          const row = document.createElement('tr');
+          row.innerHTML = '<td colspan="3" class="no-records">目前尚無記錄</td>';
+          leaderboardBody.appendChild(row);
+          return;
+        }
+        
+        // 填充排行榜
+        data.forEach((entry, index) => {
+          const row = document.createElement('tr');
+          
+          // 決定排名的樣式
+          let rankClass = '';
+          if (index === 0) rankClass = 'rank-gold';
+          else if (index === 1) rankClass = 'rank-silver';
+          else if (index === 2) rankClass = 'rank-bronze';
+          
+          // 格式化時間
+          const formattedTime = formatTime(entry.completion_time);
+          
+          row.innerHTML = `
+            <td class="rank ${rankClass}">${index + 1}</td>
+            <td class="name">${entry.player_name}</td>
+            <td class="time">${formattedTime}</td>
+          `;
+          
+          leaderboardBody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        leaderboardBody.innerHTML = `<tr><td colspan="3" class="error">載入失敗: ${error.message}</td></tr>`;
+      });
   }
   
   // 提交成績
@@ -141,14 +108,42 @@ const defaultLeaderboard = {
     const playerCount = document.getElementById('playerCount').value;
     const completionTime = parseInt(document.getElementById('completionTimeValue').value);
     
-    // 添加到排行榜
-    addLeaderboardEntry(playerCount, playerName, completionTime);
+    // 禁用提交按鈕，防止重複提交
+    const submitBtn = document.querySelector('.submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
     
-    // 關閉提交對話框並打開排行榜
-    closeScoreSubmitModal();
-    openLeaderboardModal();
+    // 發送AJAX請求
+    fetch('/api/bridge-game/submit-score', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        player_name: playerName,
+        player_count: parseInt(playerCount),
+        completion_time: completionTime
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(`提交失敗: ${data.error}`);
+      } else {
+        // 關閉提交對話框並打開排行榜
+        closeScoreSubmitModal();
+        openLeaderboardModal();
+      }
+    })
+    .catch(error => {
+      alert(`提交失敗: ${error.message}`);
+    })
+    .finally(() => {
+      // 恢復提交按鈕
+      submitBtn.disabled = false;
+      submitBtn.textContent = '提交成績';
+    });
   }
-  
   // 遊戲變數
   let currentStep = 0;
   let totalSteps = 15;
