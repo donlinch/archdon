@@ -706,7 +706,9 @@
  <!-- 新增可折疊導航欄 -->
  <div class="game-header" id="gameHeader">
  
-    
+    <header class="page-title-header">
+        <h1 class="page-title">轉到什麼做什麼</h1>
+    </header>
     <nav class="category-nav">
         <a href="/">週邊商品</a>
         <a href="/music.html">音樂專輯</a>
@@ -742,6 +744,18 @@
         <div class="result" id="result"></div>
     </div>
 
+<small >*編輯選項在右上角</small>
+   
+
+ 
+
+
+
+
+
+<div class="game-footer" id="gameFooter" style="display: none;">
+          
+            
     <button id="editOptions" class="edit-options-btn">編輯選項</button>
 
     <!-- 選項編輯彈出視窗 -->
@@ -758,24 +772,19 @@
             </div>
         </div>
     </div>
-
- <!-- 新增頁腳 -->
- <div class="game-footer" id="gameFooter">
-    <div class="contribution-info">
-        這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
-    </div>   
    
-</div>
-
-
-
-
-<div class="game-footer" id="gameFooter" style="display: none;">
-     <div class="footer-copyright">
+    
+    <div class="footer-copyright">
         © 2024 SunnyYummy. All rights reserved.
     </div>
+
+
+
+
 </div>
-    
+
+
+ 
 
 
     <script>
@@ -793,25 +802,24 @@
 
 
 
-
-// 新增導航欄控制
+// 导航栏控制
 const navToggle = document.getElementById('navToggle');
-        const gameHeader = document.getElementById('gameHeader');
-        const gameFooter = document.getElementById('gameFooter');
-        let navVisible = false;
-        
-        navToggle.addEventListener('click', function() {
-            navVisible = !navVisible;
-            if (navVisible) {
-                gameHeader.classList.add('visible');
-                gameFooter.classList.add('visible');
-                navToggle.textContent = '×';
-            } else {
-                gameHeader.classList.remove('visible');
-                gameFooter.classList.remove('visible');
-                navToggle.textContent = '≡';
-            }
-        });
+const gameHeader = document.getElementById('gameHeader');
+const gameFooter = document.getElementById('gameFooter');
+let navVisible = false;
+
+navToggle.addEventListener('click', function() {
+    navVisible = !navVisible;
+    if (navVisible) {
+        gameHeader.classList.add('visible');
+        gameFooter.style.display = 'block'; // 直接设置显示样式
+        navToggle.textContent = '×';
+    } else {
+        gameHeader.classList.remove('visible');
+        gameFooter.style.display = 'none'; // 直接设置隐藏样式
+        navToggle.textContent = '≡';
+    }
+});
 
 
 
