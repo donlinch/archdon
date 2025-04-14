@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>魷魚遊戲 - 玻璃橋挑戰(接力版)</title>
+    <title>SunnyYummy 魷魚遊戲 - 玻璃橋挑戰(接力版)</title>
     <link rel="stylesheet" href="/style.css">
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
@@ -575,12 +575,12 @@
         <div class="player-count-container">
             <label for="playerCount">遊戲人數：</label>
             <select id="playerCount" class="player-count-select">
-                <option value="3" selected>3人</option>
+                <option value="3" >3人</option>
                 <option value="4">4人</option>
                 <option value="5">5人</option>
                 <option value="6">6人</option>
                 <option value="7">7人</option>
-                <option value="8">8人</option>
+                <option value="8" selected>8人</option>
             </select>
         </div>
         <div class="footer-copyright">
@@ -613,7 +613,7 @@
         let isMoving = false;
         let currentPlayerIndex = 0;
         let players = [];
-        let playerCount = 3; 
+        let playerCount = 8; 
         const playerColors = ['pink', 'yellow-pink', 'green-pink', 'blue-pink', 'purple-pink', 'orange-pink', 'cyan-pink', 'brown-pink'];
         const playerNames = ['小紅', '小黃', '小綠', '小藍', '小紫', '小橙', '小青', '小棕'];
         const playerCountSelect = document.getElementById('playerCount');
