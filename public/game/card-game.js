@@ -379,7 +379,6 @@ async function loadTemplates() {
         return []; // 返回空數組表示失敗或無數據
     }
 }
-
 // 更新模板下拉選單 (使用 cachedTemplates 數組)
 async function updateTemplateSelect() {
     const { templateSelect, loadTemplateBtn, deleteTemplateBtn } = getDOMElements();
@@ -408,23 +407,43 @@ async function updateTemplateSelect() {
 
     // 添加模板選項
     cachedTemplates.forEach(template => {
+        // 確保 template 有所有必要的屬性
+        if (!template.id || !template.template_name) {
+            console.warn("跳過不完整的模板數據:", template);
+            return;
+        }
+
+        // 確保 content_data 是有效的
+        let contentData = template.content_data;
+        if (!contentData) {
+            console.warn(`模板 "${template.template_name}" 無內容數據，將使用空陣列`);
+            contentData = [];
+        }
+        
         const option = document.createElement('option');
         option.value = template.template_name; // value 仍然用 name，方便查找
         option.textContent = template.template_name;
-        option.dataset.id = template.id; // **關鍵：存儲模板 ID**
-        option.dataset.content = JSON.stringify(template.content_data); // 將內容存儲為字符串
+        option.dataset.id = template.id; // 存儲模板 ID
+        
+        // 安全地處理 JSON 字符串化
+        try {
+            option.dataset.content = JSON.stringify(contentData);
+        } catch (e) {
+            console.error(`無法將模板 "${template.template_name}" 的內容轉換為 JSON:`, e);
+            option.dataset.content = '[]'; // 出錯時使用空陣列
+        }
+        
         templateSelect.appendChild(option);
     });
-     console.log("模板下拉選單已更新。");
+    
+    console.log("模板下拉選單已更新，共 " + cachedTemplates.length + " 個模板");
 }
-
 
 // 清除模板緩存
 function clearTemplateCache() {
     cachedTemplates = null;
     console.log("模板緩存已清除。");
 }
-
 // 保存當前內容為模板 (使用 API)
 async function saveCurrentAsTemplate() {
     const { templateNameInput } = getDOMElements();
@@ -440,24 +459,37 @@ async function saveCurrentAsTemplate() {
     // 2. 獲取當前輸入框的內容
     const templateContent = [];
     const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
+    let hasContent = false; // 檢查是否有實際內容
+    
     for (let i = 0; i < totalCells; i++) {
         const input = document.getElementById(`content-${i}`);
-        templateContent.push(input ? (input.value || `格子 ${i+1}`) : `格子 ${i+1}`);
+        const content = input ? (input.value || `格子 ${i+1}`) : `格子 ${i+1}`;
+        templateContent.push(content);
+        
+        // 檢查是否至少有一個非預設內容的格子
+        if (input && input.value && input.value.trim() !== `格子 ${i+1}`) {
+            hasContent = true;
+        }
+    }
+    
+    // 如果全都是預設內容，提醒使用者但仍然允許儲存
+    if (!hasContent) {
+        if (!confirm('所有格子內容似乎都是預設值。確定要儲存此模板嗎？')) {
+            return;
+        }
     }
 
-     // 3. 檢查名稱是否與現有模板衝突 (前端檢查，服務端也會檢查)
-     if (cachedTemplates && cachedTemplates.some(t => t.template_name === templateName)) {
-         if (!confirm(`模板 "${templateName}" 已存在。注意：保存操作將創建一個新的同名模板（如果服務器允許），或可能失敗。確定要繼續嗎？`)) {
-             // 建議：更好的做法是提供“更新”功能，或者要求用戶更改名稱
-             templateNameInput.focus();
-             return;
-         }
-          console.warn(`用戶嘗試保存一個已存在的模板名稱: ${templateName}. 服務器端將處理衝突。`);
-     }
-
+    // 3. 檢查名稱是否與現有模板衝突 (前端檢查，服務端也會檢查)
+    if (cachedTemplates && cachedTemplates.some(t => t.template_name === templateName)) {
+        if (!confirm(`模板 "${templateName}" 已存在。若繼續將創建一個新模板。是否繼續？`)) {
+            templateNameInput.focus();
+            return;
+        }
+        console.warn(`用戶嘗試保存一個已存在的模板名稱: ${templateName}. 服務器端將處理衝突。`);
+    }
 
     // 4. 調用 API 保存模板
-    console.log(`正在嘗試保存模板: ${templateName}`);
+    console.log(`正在嘗試保存模板: ${templateName}`, templateContent);
     try {
         const response = await fetch('/api/card-game/templates', {
             method: 'POST',
@@ -476,18 +508,24 @@ async function saveCurrentAsTemplate() {
             clearTemplateCache(); // 清除緩存以便下次重新加載
             await updateTemplateSelect(); // 更新下拉列表
             templateNameInput.value = ''; // 清空名稱輸入框
-             // 可選：直接選中新創建的模板
+            // 可選：直接選中新創建的模板
             const { templateSelect } = getDOMElements();
             if(templateSelect) templateSelect.value = newTemplate.template_name;
-
         } else {
             // 處理錯誤情況
-            const errorData = await response.json();
-            console.error('保存模板失敗:', response.status, errorData);
-            alert(`保存模板失敗: ${errorData.error || response.statusText}`);
-             if (response.status === 409) { // Conflict (Name exists)
-                 templateNameInput.focus();
-             }
+            let errorMsg = `保存模板失敗: ${response.status} ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+            } catch (parseError) {
+                console.warn("無法解析錯誤回應", parseError);
+            }
+            console.error('保存模板失敗:', response.status, errorMsg);
+            alert(`保存模板失敗: ${errorMsg}`);
+            
+            if (response.status === 409) { // Conflict (Name exists)
+                templateNameInput.focus();
+            }
         }
     } catch (error) {
         console.error('保存模板時發生網絡或解析錯誤:', error);
@@ -1325,39 +1363,53 @@ function showTemplatePreview(templateId, templateName, templateContent) {
     modal.style.display = 'block';
 }
 
-
-// 7. Load Template Content (from Manager) - Adjusted
-// Separated from config modal's load function
+// 從管理器中載入模板內容
 function loadTemplateContentFromManager(templateId, templateName, templateContent) {
     const { configModal, templateNameInput } = getDOMElements();
 
-    // Ensure content is array
-    const contents = Array.isArray(templateContent) ? templateContent : [];
+    // 確保內容是有效的陣列
+    let contents = [];
+    if (Array.isArray(templateContent)) {
+        contents = templateContent;
+    } else if (typeof templateContent === 'string') {
+        try {
+            // 嘗試解析 JSON 字符串
+            contents = JSON.parse(templateContent);
+            if (!Array.isArray(contents)) {
+                console.warn(`模板 "${templateName}" 的內容解析後不是陣列，將使用空陣列`);
+                contents = [];
+            }
+        } catch (e) {
+            console.error(`無法解析模板 "${templateName}" 的內容:`, e);
+            contents = [];
+        }
+    } else {
+        console.warn(`模板 "${templateName}" 的內容不是陣列或字符串，將使用空陣列`);
+    }
 
-    // Update input fields in config modal
-    loadContentToInputs(contents); // Use the helper
+    console.log(`載入模板 "${templateName}" (ID: ${templateId}) 的內容:`, contents);
 
-    // Set the template name in the input field (useful if user wants to save changes later)
+    // 更新輸入欄位
+    loadContentToInputs(contents);
+
+    // 在輸入欄位中設置模板名稱（如果使用者想稍後保存更改）
     if (templateNameInput) {
         templateNameInput.value = templateName;
-        templateNameInput.dataset.editMode = 'false'; // Reset edit mode state
+        templateNameInput.dataset.editMode = 'false'; // 重置編輯模式狀態
         templateNameInput.dataset.originalName = '';
     }
 
-
-    // Close Manager and Preview modals if open
+    // 關閉管理器和預覽模態窗口
     const managerModal = document.getElementById('templateManagerModal');
     if (managerModal) managerModal.style.display = 'none';
     const previewModal = document.getElementById('templatePreviewModal');
     if (previewModal) previewModal.style.display = 'none';
 
-    // Open the config modal for potential editing/saving
-    // OR directly apply to game state? Let's open config modal first.
+    // 打開配置模態窗口進行潛在的編輯/保存
     if (configModal) configModal.style.display = 'block';
 
     alert(`模板 "${templateName}" 已載入編輯器。請點擊 "保存設置" 將其應用到遊戲。`);
 }
-
 
 // 8. Edit Template Content (Adjusted)
 // Loads content and sets up the config modal for editing this template
