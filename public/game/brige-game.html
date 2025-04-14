@@ -1,3 +1,188 @@
+brige-game.html
+607 lines
+
+html
+
+
+brige-game.js
+475 lines
+
+js
+
+我們來建立資料庫吧。 因為想要為這個遊戲做排行榜。 用闖關的人數做分類  例如 8人 - 1. （名字）用的時間 所以也要製作一個排行的跳窗按鈕。  跳窗後再顯示 分類 跟排名 預設先看到 8 人  在玩家闖關成功後可以輸入名字做計錄。
+
+我來幫你為玻璃橋遊戲建立排行榜功能。我們需要實現以下功能：
+
+建立數據庫來儲存排行資訊
+新增一個排行榜跳窗按鈕
+在排行榜中按人數分類顯示成績
+玩家成功闖關後可以輸入名字記錄成績
+讓我們開始吧！
+
+
+Analysis
+
+javascript
+// 先檢查 localStorage 是否已存在排行榜數據
+const existingLeaderboard = localStorage.getItem('bridgeGameLeaderboard');
+console.log('現有排行榜數據:', existingLeaderboard);
+
+// 定義排行榜基本結構
+const defaultLeaderboard = {
+  "3": [], // 3人模式的排行
+  "4": [], // 4人模式的排行
+  "5": [], // 5人模式的排行
+  "6": [], // 6人模式的排行
+  "7": [], // 7人模式的排行
+  "8": []  // 8人模式的排行
+};
+
+// 如果還沒有排行榜數據，初始化一個
+if (!existingLeaderboard) {
+  localStorage.setItem('bridgeGameLeaderboard', JSON.stringify(defaultLeaderboard));
+  console.log('已初始化排行榜數據');
+}
+
+// 測試排行榜功能 - 新增記錄
+function addLeaderboardEntry(playerCount, playerName, completionTime) {
+  const leaderboard = JSON.parse(localStorage.getItem('bridgeGameLeaderboard'));
+  
+  // 確保該玩家數量的陣列存在
+  if (!leaderboard[playerCount]) {
+    leaderboard[playerCount] = [];
+  }
+  
+  // 新增記錄
+  leaderboard[playerCount].push({
+    name: playerName,
+    time: completionTime, // 以秒為單位
+    date: new Date().toISOString()
+  });
+  
+  // 按照完成時間排序 (從小到大)
+  leaderboard[playerCount].sort((a, b) => a.time - b.time);
+  
+  // 只保留前10名
+  if (leaderboard[playerCount].length > 10) {
+    leaderboard[playerCount] = leaderboard[playerCount].slice(0, 10);
+  }
+  
+  // 保存更新後的排行榜
+  localStorage.setItem('bridgeGameLeaderboard', JSON.stringify(leaderboard));
+  
+  return leaderboard;
+}
+
+// 添加幾筆測試數據
+const updatedLeaderboard = addLeaderboardEntry("8", "測試玩家1", 75);
+addLeaderboardEntry("8", "測試玩家2", 82);
+addLeaderboardEntry("8", "測試玩家3", 63);
+addLeaderboardEntry("5", "測試玩家A", 58);
+addLeaderboardEntry("5", "測試玩家B", 90);
+
+console.log('測試完成後的排行榜數據:', updatedLeaderboard);
+
+// 測試讀取排行榜數據
+function getLeaderboard(playerCount) {
+  const leaderboard = JSON.parse(localStorage.getItem('bridgeGameLeaderboard'));
+  return leaderboard[playerCount] || [];
+}
+
+console.log('8人模式排行榜:', getLeaderboard("8"));
+console.log('5人模式排行榜:', getLeaderboard("5"));
+
+// 清除測試數據 (開發用)
+// localStorage.removeItem('bridgeGameLeaderboard');
+// console.log('已清除排行榜數據');
+Result
+
+Error
+
+localStorage is not defined
+抱歉，我需要修改方法。在分析工具中無法直接使用 localStorage，因為它是瀏覽器的 API。讓我直接為你開發所需的代碼，並創建一個合適的解決方案：
+
+
+排行榜系統代碼
+Code 
+
+排行榜HTML結構
+Code 
+
+排行榜CSS樣式
+Code 
+
+修改後的HTML結構
+Code 
+
+continue
+
+
+修改後的HTML結構
+Code ∙ Version 2 
+
+修改後的HTML結構
+Code ∙ Version 3 
+
+修改後的JavaScript代碼
+Code 
+現在我已經完成了排行榜功能的開發，讓我為你說明實現的內容和如何整合到遊戲中：
+
+功能實現內容
+排行榜系統：
+使用 localStorage 存儲玩家成績數據
+按照玩家數量分類顯示成績
+每個類別保留前10名最佳成績
+自動按完成時間排序
+用戶界面：
+添加了排行榜按鈕 (左上角)
+排行榜對話框，顯示按人數分類的成績
+成績提交對話框，用於勝利後記錄玩家名稱
+功能整合：
+與原有遊戲邏輯無縫整合
+在遊戲勝利時自動提示記錄成績
+可以從排行榜選擇查看不同人數模式的排名
+使用方法
+查看排行榜：
+點擊左上角的「排行榜」按鈕
+可以從下拉菜單選擇不同人數的排行榜
+記錄成績：
+成功闖關後會自動彈出成績提交窗口
+輸入玩家名稱後點擊「提交成績」
+系統將自動記錄並顯示排行榜
+技術說明
+使用 localStorage 進行資料儲存，無需後端資料庫支援
+排行榜數據結構區分了不同玩家數量的模式
+成績按照完成時間從低到高排序
+排行榜前三名有金、銀、銅的特殊顯示效果
+整合步驟
+你需要將我提供的三個檔案整合到現有專案中：
+
+將 CSS 樣式部分添加到現有的 CSS 中
+將 HTML 結構部分添加到頁面中
+更新 JavaScript 檔案，或者直接使用我提供的完整整合版本
+整合後，你的玻璃橋遊戲就有了完整的排行榜功能，玩家可以競爭最佳成績並查看排名。
+
+你還有其他需要我調整或解釋的部分嗎？
+
+我需要完整的 html 程式碼
+
+我了解了，您需要完整的 HTML 程式碼。我將為您提供整合了所有排行榜功能的完整 HTML 文件：
+
+
+完整 HTML 程式碼
+Code 
+
+continue
+
+
+完整 HTML 程式碼
+Code 
+
+Making edits...
+Code 
+
+
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -14,129 +199,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-
-
-   /* 新增導航欄樣式 */
-   .game-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1000;
-            background-color: #f0f0f0;
-            transition: all 0.3s ease;
-            transform: translateY(-100%);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-        
-        .game-header.visible {
-            transform: translateY(0);
-        }
-        
-        .page-title-header {
-            background-color: #FFB74D;
-            padding: 1rem;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .page-title {
-            color: #424242;
-            margin: 0;
-            font-family: 'Noto Sans TC', sans-serif;
-        }
-        
-        .category-nav {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            padding: 1rem 0;
-            background-color: #f0f0f0;
-            width: 100%;
-            flex-wrap: wrap;
-        }
-        
-        .category-nav a {
-            text-decoration: none;
-            color: #333;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            font-family: 'Noto Sans TC', sans-serif;
-        }
-        
-        .category-nav a.active {
-            background-color: #FFB74D;
-            color: white;
-        }
-        
-        .games-nav {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-            padding: 1rem 0;
-            background-color: #fff5e6;
-            width: 100%;
-            border-bottom: 1px solid #ffe0b2;
-        }
-        
-        .games-nav a {
-            text-decoration: none;
-            color: #333;
-            padding: 0.5rem 1.5rem;
-            border-radius: 20px;
-            background-color: #ffecb3;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            font-family: 'Noto Sans TC', sans-serif;
-        }
-        
-        .games-nav a.active {
-            background-color: #FF9800;
-            color: white;
-            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
-        }
-        
-        .nav-toggle {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1001;
-            background-color: #e94560;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-
-          /* 添加頁腳樣式 */
-          .game-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #333;
-            color: white;
-            padding: 10px 0;
-            text-align: center;
-            font-size: 12px;
-            z-index: 999;
-            display: none; /* 默認隱藏 */
-        }
-
-
-        .game-footer.visible {
-            display: block;
-        }
-
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
@@ -477,78 +539,490 @@
             background-color: #ff6b81;
         }
 
+        .player {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(15, 52, 96, 0.9);
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            position: relative;
+            width: 40px;
+            height: 40px;
+            margin: 0 5px;
+        }
 
- 
-.player {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(15, 52, 96, 0.9);
-    padding: 10px;
-    border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    position: relative;
-    width: 40px;
-    height: 40px;
-    margin: 0 5px;
-}
+        .player-figure {
+            width: 25px;
+            height: 35px;
+            position: relative;
+        }
 
-.player-figure {
-    width: 25px;
-    height: 35px;
-    position: relative;
-}
+        .players-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+        }
 
-.players-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    padding: 5px;
-    margin: 5px 0;
-}
+        .current-player-indicator-icon {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 15px;
+            height: 15px;
+            background-color: #e94560;
+            border-radius: 50%;
+            border: 2px solid white;
+            z-index: 5;
+        }
+        
+        /* 新增導航欄樣式 */
+        .game-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: #f0f0f0;
+            transition: all 0.3s ease;
+            transform: translateY(-100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-header.visible {
+            transform: translateY(0);
+        }
+        
+        .page-title-header {
+            background-color: #FFB74D;
+            padding: 1rem;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #f0f0f0;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        
+        .category-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav a.active {
+            background-color: #FFB74D;
+            color: white;
+        }
+        
+        .games-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #fff5e6;
+            width: 100%;
+            border-bottom: 1px solid #ffe0b2;
+        }
+        
+        .games-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            background-color: #ffecb3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .games-nav a.active {
+            background-color: #FF9800;
+            color: white;
+            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
+        }
+        
+        .nav-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.current-player-indicator-icon {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    width: 15px;
-    height: 15px;
-    background-color: #e94560;
-    border-radius: 50%;
-    border: 2px solid white;
-    z-index: 5;
-} 
+        /* 添加頁腳樣式 */
+        .game-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 12px;
+            z-index: 999;
+            display: none; /* 默認隱藏 */
+        }
 
+        .game-footer.visible {
+            display: block;
+        }
+        
+        /* 排行榜按鈕樣式 */
+        .leaderboard-btn {
+          position: fixed;
+          top: 10px;
+          left: 10px;
+          z-index: 1001;
+          background-color: #FFB74D;
+          color: #333;
+          border: none;
+          border-radius: 5px;
+          padding: 10px 15px;
+          font-size: 16px;
+          cursor: pointer;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+          font-family: 'Noto Sans TC', sans-serif;
+          font-weight: bold;
+        }
 
+        .leaderboard-btn:hover {
+          background-color: #FFA726;
+        }
+
+        /* 模態對話框基本樣式 */
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 2000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.8);
+          overflow: auto;
+        }
+
+        .modal-content {
+          background-color: #1a1a2e;
+          margin: 10% auto;
+          padding: 0;
+          width: 90%;
+          max-width: 500px;
+          border-radius: 10px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+          color: white;
+          font-family: 'Noto Sans TC', sans-serif;
+          animation: modalOpen 0.3s ease;
+        }
+
+        @keyframes modalOpen {
+          from {transform: scale(0.8); opacity: 0;}
+          to {transform: scale(1); opacity: 1;}
+        }
+
+        .modal-header {
+          background-color: #e94560;
+          padding: 15px;
+          border-radius: 10px 10px 0 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          color: white;
+          font-size: 22px;
+        }
+
+        .close-btn {
+          color: white;
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        .close-btn:hover {
+          color: #ccc;
+        }
+
+        .modal-body {
+          padding: 20px;
+        }
+
+        /* 排行榜特定樣式 */
+        .leaderboard-category {
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .leaderboard-select {
+          margin-left: 10px;
+          padding: 8px 15px;
+          font-size: 16px;
+          background-color: #0f3460;
+          color: white;
+          border: 2px solid #e94560;
+          border-radius: 5px;
+          cursor: pointer;
+          font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        .leaderboard-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+          padding: 12px 15px;
+          text-align: center;
+          border-bottom: 1px solid #0f3460;
+        }
+
+        .leaderboard-table th {
+          background-color: #0f3460;
+          color: white;
+          font-weight: bold;
+          font-size: 16px;
+        }
+
+        .leaderboard-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .leaderboard-table tr:hover td {
+          background-color: rgba(15, 52, 96, 0.5);
+        }
+
+        .rank {
+          font-weight: bold;
+          font-size: 18px;
+        }
+
+        .rank-gold {
+          color: #FFD700;
+        }
+
+        .rank-silver {
+          color: #C0C0C0;
+        }
+
+        .rank-bronze {
+          color: #CD7F32;
+        }
+
+        .no-records {
+          text-align: center;
+          padding: 20px;
+          font-style: italic;
+          color: #888;
+        }
+
+        /* 提交成績對話框特定樣式 */
+        .score-info {
+          text-align: center;
+          font-size: 20px;
+          margin-bottom: 20px;
+        }
+
+        #completionTime {
+          font-weight: bold;
+          color: #e94560;
+          font-size: 22px;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 16px;
+        }
+
+        #playerNameInput {
+          width: 100%;
+          padding: 12px;
+          font-size: 16px;
+          background-color: #0f3460;
+          color: white;
+          border: 2px solid #666;
+          border-radius: 5px;
+          font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        #playerNameInput:focus {
+          border-color: #e94560;
+          outline: none;
+        }
+
+        .submit-btn {
+          display: block;
+          width: 100%;
+          padding: 12px;
+          background-color: #e94560;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          font-size: 18px;
+          cursor: pointer;
+          margin-top: 10px;
+          font-family: 'Noto Sans TC', sans-serif;
+          font-weight: bold;
+        }
+
+        .submit-btn:hover {
+          background-color: #ff6b81;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 600px) {
+          .modal-content {
+            width: 95%;
+            margin: 15% auto;
+          }
+          
+          .leaderboard-category {
+            flex-direction: column;
+            gap: 10px;
+          }
+          
+          .leaderboard-table th,
+          .leaderboard-table td {
+            padding: 10px 8px;
+            font-size: 14px;
+          }
+          
+          .rank {
+            font-size: 16px;
+          }
+          
+          .modal-header h2 {
+            font-size: 18px;
+          }
+        }
     </style>
 </head>
 <body>
-
- <!-- 新增可折疊導航欄 -->
- <div class="game-header" id="gameHeader">
-    <header class="page-title-header">
-        <h1 class="page-title">魷魚遊戲-玻璃橋</h1>
-    </header>
+    <!-- 排行榜按鈕 -->
+    <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
     
-    <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html">最新消息</a>
-        <a href="/scores.html">樂譜與舞蹈</a>
-        <a href="/game/card-game.html" class="active">互動遊戲</a>
-        <a href="/guestbook.html">留言板</a>
-    </nav>
+    <!-- 排行榜對話框 -->
+    <div id="leaderboardModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>玻璃橋挑戰排行榜</h2>
+          <span id="closeLeaderboardBtn" class="close-btn">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="leaderboard-category">
+            <label for="leaderboardPlayerCount">遊戲人數：</label>
+            <select id="leaderboardPlayerCount" class="leaderboard-select">
+              <option value="3">3人</option>
+              <option value="4">4人</option>
+              <option value="5">5人</option>
+              <option value="6">6人</option>
+              <option value="7">7人</option>
+              <option value="8" selected>8人</option>
+            </select>
+          </div>
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>玩家名稱</th>
+                <th>完成時間</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+              <!-- 排行榜內容將由JavaScript動態生成 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     
-    <nav class="games-nav">
-        <a href="/game/card-game.html">洞洞樂</a>
-        <a href="/game/wheel-game.html">命運輪盤</a>
-        <a href="/game/brige-game.html" class="active">玻璃橋挑戰</a>
-    </nav>
-</div>
+    <!-- 提交成績對話框 -->
+    <div id="scoreSubmitModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>恭喜完成挑戰!</h2>
+          <span id="closeScoreSubmitBtn" class="close-btn">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p class="score-info">您的完成時間: <span id="completionTime">00:00</span></p>
+          <form id="scoreForm">
+            <input type="hidden" id="completionTimeValue" value="0">
+            <div class="form-group">
+              <label for="playerNameInput">請輸入您的名稱:</label>
+              <input type="text" id="playerNameInput" maxlength="10" required>
+            </div>
+            <button type="submit" class="submit-btn">提交成績</button>
+          </form>
+        </div>
+      </div>
+    </div>
 
-<!-- 導航切換按鈕 -->
-<button class="nav-toggle" id="navToggle">≡</button>
+    <!-- 新增可折疊導航欄 -->
+    <div class="game-header" id="gameHeader">
+        <header class="page-title-header">
+            <h1 class="page-title">魷魚遊戲-玻璃橋</h1>
+        </header>
+        
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html">樂譜與舞蹈</a>
+            <a href="/game/card-game.html" class="active">互動遊戲</a>
+            <a href="/guestbook.html">留言板</a>
+        </nav>
+        
+        <nav class="games-nav">
+            <a href="/game/card-game.html">洞洞樂</a>
+            <a href="/game/wheel-game.html">命運輪盤</a>
+            <a href="/game/brige-game.html" class="active">玻璃橋挑戰</a>
+        </nav>
+    </div>
 
+    <!-- 導航切換按鈕 -->
+    <button class="nav-toggle" id="navToggle">≡</button>
 
     <div class="game-container">
         <div class="timer">02:00</div>
@@ -569,13 +1043,12 @@
         </div>
     </div>
 
-
-     <!-- 新增頁腳 -->
-     <div class="game-footer" id="gameFooter">
+    <!-- 新增頁腳 -->
+    <div class="game-footer" id="gameFooter">
         <div class="player-count-container">
             <label for="playerCount">遊戲人數：</label>
             <select id="playerCount" class="player-count-select">
-                <option value="3" >3人</option>
+                <option value="3">3人</option>
                 <option value="4">4人</option>
                 <option value="5">5人</option>
                 <option value="6">6人</option>

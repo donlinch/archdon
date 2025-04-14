@@ -1,3 +1,154 @@
+// 排行榜系統
+// 定義排行榜基本結構
+const defaultLeaderboard = {
+    "3": [], // 3人模式的排行
+    "4": [], // 4人模式的排行
+    "5": [], // 5人模式的排行
+    "6": [], // 6人模式的排行
+    "7": [], // 7人模式的排行
+    "8": []  // 8人模式的排行
+  };
+  
+  // 初始化排行榜
+  function initLeaderboard() {
+    if (!localStorage.getItem('bridgeGameLeaderboard')) {
+      localStorage.setItem('bridgeGameLeaderboard', JSON.stringify(defaultLeaderboard));
+    }
+  }
+  
+  // 添加排行榜記錄
+  function addLeaderboardEntry(playerCount, playerName, completionTime) {
+    const leaderboard = JSON.parse(localStorage.getItem('bridgeGameLeaderboard'));
+    
+    // 確保該玩家數量的陣列存在
+    if (!leaderboard[playerCount]) {
+      leaderboard[playerCount] = [];
+    }
+    
+    // 新增記錄
+    leaderboard[playerCount].push({
+      name: playerName,
+      time: completionTime, // 以秒為單位
+      date: new Date().toISOString()
+    });
+    
+    // 按照完成時間排序 (從小到大)
+    leaderboard[playerCount].sort((a, b) => a.time - b.time);
+    
+    // 只保留前10名
+    if (leaderboard[playerCount].length > 10) {
+      leaderboard[playerCount] = leaderboard[playerCount].slice(0, 10);
+    }
+    
+    // 保存更新後的排行榜
+    localStorage.setItem('bridgeGameLeaderboard', JSON.stringify(leaderboard));
+    
+    return leaderboard;
+  }
+  
+  // 獲取排行榜數據
+  function getLeaderboard(playerCount) {
+    const leaderboard = JSON.parse(localStorage.getItem('bridgeGameLeaderboard'));
+    return leaderboard[playerCount] || [];
+  }
+  
+  // 格式化時間顯示 (將秒轉為分:秒格式)
+  function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+  
+  // 顯示排行榜
+  function showLeaderboard(playerCount) {
+    const leaderboardData = getLeaderboard(playerCount);
+    const leaderboardBody = document.getElementById('leaderboardBody');
+    
+    // 清空現有內容
+    leaderboardBody.innerHTML = '';
+    
+    if (leaderboardData.length === 0) {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td colspan="3" class="no-records">目前尚無記錄</td>';
+      leaderboardBody.appendChild(row);
+      return;
+    }
+    
+    // 填充排行榜
+    leaderboardData.forEach((entry, index) => {
+      const row = document.createElement('tr');
+      
+      // 決定排名的樣式
+      let rankClass = '';
+      if (index === 0) rankClass = 'rank-gold';
+      else if (index === 1) rankClass = 'rank-silver';
+      else if (index === 2) rankClass = 'rank-bronze';
+      
+      row.innerHTML = `
+        <td class="rank ${rankClass}">${index + 1}</td>
+        <td class="name">${entry.name}</td>
+        <td class="time">${formatTime(entry.time)}</td>
+      `;
+      
+      leaderboardBody.appendChild(row);
+    });
+  }
+  
+  // 顯示排行榜對話框
+  function openLeaderboardModal() {
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    leaderboardModal.style.display = 'block';
+    
+    // 默認顯示目前的玩家數量排行
+    const currentPlayerCount = document.getElementById('playerCount').value;
+    document.getElementById('leaderboardPlayerCount').value = currentPlayerCount;
+    showLeaderboard(currentPlayerCount);
+  }
+  
+  // 關閉排行榜對話框
+  function closeLeaderboardModal() {
+    document.getElementById('leaderboardModal').style.display = 'none';
+  }
+  
+  // 更改排行榜的玩家數量分類
+  function changeLeaderboardCategory(playerCount) {
+    showLeaderboard(playerCount);
+  }
+  
+  // 顯示記錄成績對話框
+  function openScoreSubmitModal(remainingTime) {
+    const completionTime = 120 - remainingTime; // 總時間120秒減去剩餘時間
+    document.getElementById('completionTime').textContent = formatTime(completionTime);
+    document.getElementById('completionTimeValue').value = completionTime;
+    document.getElementById('scoreSubmitModal').style.display = 'block';
+  }
+  
+  // 關閉記錄成績對話框
+  function closeScoreSubmitModal() {
+    document.getElementById('scoreSubmitModal').style.display = 'none';
+  }
+  
+  // 提交成績
+  function submitScore(event) {
+    event.preventDefault();
+    
+    const playerName = document.getElementById('playerNameInput').value.trim();
+    if (!playerName) {
+      alert('請輸入您的名稱！');
+      return;
+    }
+    
+    const playerCount = document.getElementById('playerCount').value;
+    const completionTime = parseInt(document.getElementById('completionTimeValue').value);
+    
+    // 添加到排行榜
+    addLeaderboardEntry(playerCount, playerName, completionTime);
+    
+    // 關閉提交對話框並打開排行榜
+    closeScoreSubmitModal();
+    openLeaderboardModal();
+  }
+  
   // 遊戲變數
   let currentStep = 0;
   let totalSteps = 15;
@@ -7,7 +158,7 @@
   let isMoving = false;
   let currentPlayerIndex = 0;
   let players = [];
-  let playerCount = 8; 
+  let playerCount = 8;
   const playerColors = ['pink', 'yellow-pink', 'green-pink', 'blue-pink', 'purple-pink', 'orange-pink', 'cyan-pink', 'brown-pink'];
   const playerNames = ['小紅', '小黃', '小綠', '小藍', '小紫', '小橙', '小青', '小棕'];
   const playerCountSelect = document.getElementById('playerCount');
@@ -26,12 +177,9 @@
   const character = document.getElementById('character');
   const characterBody = document.getElementById('characterBody');
   const playersContainer = document.getElementById('players');
-
-
-
-
-// 新增導航欄控制
-const navToggle = document.getElementById('navToggle');
+  
+  // 新增導航欄控制
+  const navToggle = document.getElementById('navToggle');
   const gameHeader = document.getElementById('gameHeader');
   const gameFooter = document.getElementById('gameFooter');
   let navVisible = false;
@@ -48,17 +196,13 @@ const navToggle = document.getElementById('navToggle');
           navToggle.textContent = '≡';
       }
   });
-
-
-
-
-
+  
   // 玩家數量選擇事件
   playerCountSelect.addEventListener('change', function() {
       playerCount = parseInt(this.value);
       restartGame();
   });
-
+  
   // 初始化玩家列表
   function initPlayers() {
       players = [];
@@ -71,43 +215,43 @@ const navToggle = document.getElementById('navToggle');
           });
       }
   }
-
+  
   // 更新玩家UI
   function updatePlayersUI() {
       playersContainer.innerHTML = '';
-players.forEach((player, index) => {
-  const playerElement = document.createElement('div');
-  playerElement.className = 'player';
-  playerElement.id = `player${index+1}`;
-  
-  const playerFigure = document.createElement('div');
-  playerFigure.className = 'player-figure';
-  
-  const playerBody = document.createElement('div');
-  playerBody.className = `player-body ${player.color}`;
-  
-  const playerHead = document.createElement('div');
-  playerHead.className = 'player-head';
-  
-  // 添加當前玩家指示器，現在直接放在玩家圖示上
-  if (player.active) {
-      const indicator = document.createElement('div');
-      indicator.className = 'current-player-indicator-icon';
-      playerFigure.appendChild(indicator);
+    players.forEach((player, index) => {
+      const playerElement = document.createElement('div');
+      playerElement.className = 'player';
+      playerElement.id = `player${index+1}`;
+      
+      const playerFigure = document.createElement('div');
+      playerFigure.className = 'player-figure';
+      
+      const playerBody = document.createElement('div');
+      playerBody.className = `player-body ${player.color}`;
+      
+      const playerHead = document.createElement('div');
+      playerHead.className = 'player-head';
+      
+      // 添加當前玩家指示器，現在直接放在玩家圖示上
+      if (player.active) {
+          const indicator = document.createElement('div');
+          indicator.className = 'current-player-indicator-icon';
+          playerFigure.appendChild(indicator);
+      }
+      
+      playerBody.appendChild(playerHead);
+      playerFigure.appendChild(playerBody);
+      
+      playerElement.appendChild(playerFigure);
+      
+      if (!player.active && index <= currentPlayerIndex) {
+          playerElement.style.opacity = '0.5';
+      }
+      
+      playersContainer.appendChild(playerElement);
+    });
   }
-  
-  playerBody.appendChild(playerHead);
-  playerFigure.appendChild(playerBody);
-  
-  playerElement.appendChild(playerFigure);
-  
-  if (!player.active && index <= currentPlayerIndex) {
-      playerElement.style.opacity = '0.5';
-  }
-  
-  playersContainer.appendChild(playerElement);
-});
-}
   
   // 初始化遊戲
   function initGame() {
@@ -439,8 +583,16 @@ players.forEach((player, index) => {
       gameOverElement.style.backgroundColor = isWin ? 'rgba(0, 100, 0, 0.9)' : 'rgba(100, 0, 0, 0.9)';
       leftBtn.disabled = true;
       rightBtn.disabled = true;
+      
+      // 勝利時顯示提交成績對話框
+      if (isWin) {
+          // 延遲一下再彈出提交對話框，讓玩家先看到勝利消息
+          setTimeout(() => {
+              openScoreSubmitModal(time); // 傳入剩餘時間
+          }, 1500);
+      }
   }
-       
+  
   // 重新開始遊戲
   function restartGame() {
       gameOverElement.style.display = 'none';
@@ -470,6 +622,25 @@ players.forEach((player, index) => {
       e.preventDefault(); // 防止預設行為
       jump('right');
   });
-  
+         
   // 初始啟動遊戲
-  initGame();
+  document.addEventListener('DOMContentLoaded', function() {
+      // 初始化排行榜系統
+      initLeaderboard();
+      
+      // 綁定排行榜按鈕事件
+      document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboardModal);
+      
+      // 綁定排行榜切換分類的事件
+      document.getElementById('leaderboardPlayerCount').addEventListener('change', function() {
+          changeLeaderboardCategory(this.value);
+      });
+      
+      // 綁定其他相關事件
+      document.getElementById('closeLeaderboardBtn').addEventListener('click', closeLeaderboardModal);
+      document.getElementById('closeScoreSubmitBtn').addEventListener('click', closeScoreSubmitModal);
+      document.getElementById('scoreForm').addEventListener('submit', submitScore);
+      
+      // 啟動遊戲
+      initGame();
+  });
