@@ -3,8 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const ctx = canvas.getContext('2d');
     const spinBtn = document.getElementById('spin');
     const resultElement = document.getElementById('result');
-    const editOptionsBtn = document.getElementById('editOptions');
-    const optionsModal = document.getElementById('optionsModal');
+     const optionsModal = document.getElementById('optionsModal');
     const closeModal = document.querySelector('.close');
     const saveOptionsBtn = document.getElementById('saveOptions');
     const addOptionBtn = document.getElementById('addOption');
@@ -34,15 +33,15 @@ let currentThemeId = null;        // 當前主題ID
     let navVisible = false;
 
    // 修改現有的導航切換代碼
-navToggle.addEventListener('click', function() {
+   navToggle.addEventListener('click', function() {
     navVisible = !navVisible;
     if (navVisible) {
         gameHeader.classList.add('visible');
-        gameFooter.style.display = 'block'; // 直接設置顯示樣式
+        gameFooter.style.display = 'block';
         navToggle.textContent = '×';
     } else {
         gameHeader.classList.remove('visible');
-        gameFooter.style.display = 'none'; // 直接設置隱藏樣式
+        gameFooter.style.display = 'none';
         navToggle.textContent = '≡';
     }
 });
@@ -513,9 +512,11 @@ jsonFileInput.addEventListener('change', function(e) {
 });
 
 
+// 添加儲存主題按鈕事件
+saveThemeBtn.addEventListener('click', saveCurrentAsTheme);
 
-
-
+// 編輯選項按鈕事件監聽
+editOptionsBtn.addEventListener('click', showOptionsModal);
 
         // 其他事件監聽器
         editOptionsBtn.addEventListener('click', showOptionsModal);
