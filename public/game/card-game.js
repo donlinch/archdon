@@ -172,6 +172,9 @@ function resetGame() {
     shuffleArray(gameState.contentPositions);
     
     initializeBoard();
+    
+    // 如果導航菜單是打開的，關閉它
+    closeNavigationIfOpen();
 }
 
 // 設置示例內容
@@ -207,17 +210,22 @@ function toggleNavigation() {
     return navVisible;
 }
 
+// 檢查並關閉導航菜單（如果它是打開的）
+function closeNavigationIfOpen() {
+    const gameHeader = document.getElementById('gameHeader');
+    if (gameHeader.classList.contains('visible')) {
+        navToggle.click();
+    }
+}
+
 // 事件監聽
 configBtn.addEventListener('click', () => {
     // 首先打開配置模態窗口
     initializeInputs();
     configModal.style.display = 'block';
     
-    // 如果導航菜單是打開的，模擬點擊導航切換按鈕關閉它
-    const gameHeader = document.getElementById('gameHeader');
-    if (gameHeader.classList.contains('visible')) {
-        navToggle.click();
-    }
+    // 如果導航菜單是打開的，關閉它
+    closeNavigationIfOpen();
 });
 
 closeBtn.addEventListener('click', () => {
