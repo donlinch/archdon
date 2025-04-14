@@ -1,0 +1,335 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁遊戲</title>
+    <link rel="stylesheet" href="style.css">
+
+<style>
+
+
+/* public/style.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    max-width: 1200px;
+    width: 100%;
+}
+
+/* 遊戲面板 */
+.game-board {
+    position: relative;
+    width: 630px;  /* 7 * 90px */
+    height: 630px; /* 7 * 90px */
+    background-color: #f0f0f0;
+    border: 2px solid #333;
+}
+
+.cell {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 90px;
+    border: 1px solid #666;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.cell.highlighted {
+    transform: scale(1.05);
+    z-index: 2;
+    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+}
+
+.player-token {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: bold;
+    color: white;
+    border: 2px solid white;
+    z-index: 10;
+    transition: left 0.3s, top 0.3s;
+}
+
+.player1-token {
+    background-color: #e53e3e; /* 紅色 */
+}
+
+.player2-token {
+    background-color: #3182ce; /* 藍色 */
+}
+
+/* 控制面板 */
+.control-panel {
+    margin-left: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    font-size: 1.875rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+}
+
+.player-select-container,
+.dice-container {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.player-select-container h2,
+.dice-container h2 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.player-select {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.player-btn {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.25rem;
+    border: none;
+    cursor: pointer;
+}
+
+.player1 {
+    background-color: #fc8181; /* 淺紅色 */
+}
+
+.player1.selected {
+    background-color: #e53e3e; /* 深紅色 */
+}
+
+.player2 {
+    background-color: #63b3ed; /* 淺藍色 */
+}
+
+.player2.selected {
+    background-color: #3182ce; /* 深藍色 */
+}
+
+.dice {
+    width: 6rem;
+    height: 6rem;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 2px solid #cbd5e0;
+    font-size: 3rem;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
+}
+
+.dice.rolling {
+    transform: rotate(10deg);
+}
+
+.action-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: bold;
+    font-size: 1.25rem;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.roll-dice {
+    background-color: #48bb78; /* 綠色 */
+}
+
+.roll-dice:hover:not(:disabled) {
+    background-color: #38a169; /* 深綠色 */
+}
+
+.undo {
+    background-color: #ecc94b; /* 黃色 */
+}
+
+.undo:hover:not(:disabled) {
+    background-color: #d69e2e; /* 深黃色 */
+}
+
+.reset {
+    background-color: #f56565; /* 紅色 */
+}
+
+.reset:hover:not(:disabled) {
+    background-color: #e53e3e; /* 深紅色 */
+}
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+/* 彈窗 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.modal {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    width: 24rem;
+    max-width: 90%;
+    border-top: 8px solid #4299e1; /* 預設顏色 */
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.modal-description {
+    margin-bottom: 1rem;
+}
+
+.modal-close-btn {
+    padding: 0.5rem 1rem;
+    background-color: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.modal-close-btn:hover {
+    background-color: #3182ce;
+}
+
+.hidden {
+    display: none;
+}
+
+
+
+</style>
+
+
+
+
+
+
+
+</head>
+<body>
+    <div class="game-container">
+        <!-- 左側遊戲面板 -->
+        <div id="game-board" class="game-board">
+            <!-- 遊戲格子會由 JavaScript 動態生成 -->
+        </div>
+        
+        <!-- 右側控制面板 -->
+        <div class="control-panel">
+            <h1 class="title">大富翁遊戲</h1>
+            
+            <!-- 玩家選擇 -->
+            <div class="player-select-container">
+                <h2>選擇玩家</h2>
+                <div class="player-select">
+                    <button id="player1-btn" class="player-btn player1 selected">P1</button>
+                    <button id="player2-btn" class="player-btn player2">P2</button>
+                </div>
+            </div>
+            
+            <!-- 骰子區域 -->
+            <div class="dice-container">
+                <div id="dice" class="dice">?</div>
+                <button id="roll-dice-btn" class="action-btn roll-dice">擲骰子</button>
+            </div>
+            
+            <!-- 控制按鈕 -->
+            <div class="control-buttons">
+                <button id="undo-btn" class="action-btn undo">回上一步</button>
+                <button id="reset-btn" class="action-btn reset">重新開始</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 彈窗 -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal" class="modal">
+            <h2 id="modal-title" class="modal-title">標題</h2>
+            <p id="modal-description" class="modal-description">描述</p>
+            <button id="close-modal-btn" class="modal-close-btn">關閉</button>
+        </div>
+    </div>
+    
+    <script src="rich.js"></script>
+</body>
+</html>
