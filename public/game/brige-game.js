@@ -1,3 +1,48 @@
+
+
+// 格式化時間顯示 (將秒轉為分:秒格式)
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+  
+  // 顯示排行榜對話框
+  function openLeaderboardModal() {
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    leaderboardModal.style.display = 'block';
+    
+    // 默認顯示目前的玩家數量排行
+    const currentPlayerCount = document.getElementById('playerCount').value;
+    document.getElementById('leaderboardPlayerCount').value = currentPlayerCount;
+    getLeaderboard(currentPlayerCount);
+  }
+  
+  // 關閉排行榜對話框
+  function closeLeaderboardModal() {
+    document.getElementById('leaderboardModal').style.display = 'none';
+  }
+  
+  // 更改排行榜的玩家數量分類
+  function changeLeaderboardCategory(playerCount) {
+    getLeaderboard(playerCount);
+  }
+  
+  // 顯示記錄成績對話框
+  function openScoreSubmitModal(remainingTime) {
+    const completionTime = 120 - remainingTime; // 總時間120秒減去剩餘時間
+    document.getElementById('completionTime').textContent = formatTime(completionTime);
+    document.getElementById('completionTimeValue').value = completionTime;
+    document.getElementById('scoreSubmitModal').style.display = 'block';
+  }
+  
+  // 關閉記錄成績對話框
+  function closeScoreSubmitModal() {
+    document.getElementById('scoreSubmitModal').style.display = 'none';
+  }
+
+
+
 // 排行榜系統
 // 定義排行榜基本結構
 const defaultLeaderboard = {
