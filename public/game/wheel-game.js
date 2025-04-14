@@ -10,31 +10,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const addOptionBtn = document.getElementById('addOption');
     const optionsContainer = document.getElementById('optionsContainer');
 
+    // 导航栏控制
+    const navToggle = document.getElementById('navToggle');
+    const gameHeader = document.getElementById('gameHeader');
+    const gameFooter = document.getElementById('gameFooter');
+    let navVisible = false;
 
-
-// 导航栏控制
-const navToggle = document.getElementById('navToggle');
-const gameHeader = document.getElementById('gameHeader');
-const gameFooter = document.getElementById('gameFooter');
-let navVisible = false;
-
-navToggle.addEventListener('click', function() {
-navVisible = !navVisible;
-if (navVisible) {
-gameHeader.classList.add('visible');
-gameFooter.style.display = 'block'; // 直接设置显示样式
-navToggle.textContent = '×';
-} else {
-gameHeader.classList.remove('visible');
-gameFooter.style.display = 'none'; // 直接设置隐藏样式
-navToggle.textContent = '≡';
-}
-});
-
-
-
-
-
+    navToggle.addEventListener('click', function() {
+        navVisible = !navVisible;
+        if (navVisible) {
+            gameHeader.classList.add('visible');
+            gameFooter.style.display = 'block'; // 直接设置显示样式
+            navToggle.textContent = '×';
+        } else {
+            gameHeader.classList.remove('visible');
+            gameFooter.style.display = 'none'; // 直接设置隐藏样式
+            navToggle.textContent = '≡';
+        }
+    });
 
     // 預設顏色 (用於新選項或備用)
     const defaultColors = [
@@ -58,12 +51,6 @@ navToggle.textContent = '≡';
     let maxSpinTime = 5000;
     let spinStartTime = 0;
     let animationId = null;
-
-
-
-
-
-    
 
     // 繪製轉盤 (使用自訂顏色)
     function drawWheel() {
@@ -202,6 +189,14 @@ navToggle.textContent = '≡';
         
         optionsModal.style.display = 'block';
         optionsContainer.scrollTop = 0;
+        
+        // 同時顯示導航欄 (如果它不可見)
+        if (!navVisible) {
+            navVisible = true;
+            gameHeader.classList.add('visible');
+            gameFooter.style.display = 'block';
+            navToggle.textContent = '×';
+        }
     }
 
     // 添加選項到編輯視窗
