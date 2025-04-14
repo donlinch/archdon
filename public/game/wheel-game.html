@@ -749,8 +749,10 @@
     /* 確保編輯按鈕在頁腳中更突出 */
     .edit-options-btn {
         margin: 15px auto;
-        width: 90%;
-        max-width: 250px;
+        width: auto;  /* Let it size based on content */
+        min-width: 120px;  /* Ensure minimum width */
+        max-width: 180px;  /* Maximum width reduced */
+        padding: 10px 15px;  /* Slightly smaller padding */
         
     }
 }
