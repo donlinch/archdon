@@ -1,5 +1,3 @@
-
- 
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
@@ -11,6 +9,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveOptionsBtn = document.getElementById('saveOptions');
     const addOptionBtn = document.getElementById('addOption');
     const optionsContainer = document.getElementById('optionsContainer');
+
+
+
+// 导航栏控制
+const navToggle = document.getElementById('navToggle');
+const gameHeader = document.getElementById('gameHeader');
+const gameFooter = document.getElementById('gameFooter');
+let navVisible = false;
+
+navToggle.addEventListener('click', function() {
+navVisible = !navVisible;
+if (navVisible) {
+gameHeader.classList.add('visible');
+gameFooter.style.display = 'block'; // 直接设置显示样式
+navToggle.textContent = '×';
+} else {
+gameHeader.classList.remove('visible');
+gameFooter.style.display = 'none'; // 直接设置隐藏样式
+navToggle.textContent = '≡';
+}
+});
+
+
+
+
+
 
     // 預設顏色 (用於新選項或備用)
     const defaultColors = [
@@ -34,6 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let maxSpinTime = 5000;
     let spinStartTime = 0;
     let animationId = null;
+
+
+
+
+
+    
 
     // 繪製轉盤 (使用自訂顏色)
     function drawWheel() {
@@ -468,4 +498,3 @@ document.addEventListener('DOMContentLoaded', function() {
     // 啟動應用程式
     initWheel();
 });
- 
