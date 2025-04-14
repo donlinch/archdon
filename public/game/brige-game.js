@@ -440,7 +440,7 @@ players.forEach((player, index) => {
       leftBtn.disabled = true;
       rightBtn.disabled = true;
   }
-  
+       
   // 重新開始遊戲
   function restartGame() {
       gameOverElement.style.display = 'none';
