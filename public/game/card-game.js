@@ -39,104 +39,6 @@ function getDOMElements() {
     };
 }
 
-
-
-
-// 从服务器加载所有模板
-async function loadTemplatesFromServer() {
-    try {
-        const response = await fetch('/api/card-game/templates');
-        if (!response.ok) {
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-        }
-        
-        const templates = await response.json();
-        
-        // 将服务器格式转换为本地格式
-        const formattedTemplates = {};
-        templates.forEach(template => {
-            formattedTemplates[template.template_name] = template.content_data;
-        });
-        
-        return formattedTemplates;
-    } catch (error) {
-        console.warn('从服务器加载模板失败，回退到本地存储:', error);
-        return loadTemplatesFromLocalStorage();
-    }
-}
-
-
-
-// 保存模板到服务器
-async function saveTemplateToServer(templateName, contentData) {
-    try {
-        const response = await fetch('/api/card-game/templates', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                template_name: templateName,
-                content_data: contentData,
-                is_public: true // 默认为公开
-            })
-        });
-        
-        if (!response.ok) {
-            // 处理冲突（模板名称已存在）
-            if (response.status === 409) {
-                alert(`模板 "${templateName}" 已存在，请使用其他名称或更新现有模板。`);
-                return null;
-            }
-            
-            const errorData = await response.json();
-            throw new Error(errorData.error || `服务器返回错误: ${response.status}`);
-        }
-        
-        return await response.json();
-    } catch (error) {
-        console.warn('保存模板到服务器失败:', error);
-        return null;
-    }
-}
-
-
-
-
-// 删除服务器上的模板
-async function deleteTemplateFromServer(templateName) {
-    try {
-        // 首先需要获取模板ID
-        const response = await fetch('/api/card-game/templates');
-        if (!response.ok) {
-            throw new Error(`无法获取模板列表: ${response.status}`);
-        }
-        
-        const templates = await response.json();
-        const templateToDelete = templates.find(t => t.template_name === templateName);
-        
-        if (!templateToDelete) {
-            throw new Error(`找不到模板: ${templateName}`);
-        }
-        
-        const deleteResponse = await fetch(`/api/card-game/templates/${templateToDelete.id}`, {
-            method: 'DELETE'
-        });
-        
-        if (!deleteResponse.ok && deleteResponse.status !== 404) {
-            throw new Error(`服务器返回错误: ${deleteResponse.status}`);
-        }
-        
-        return true;
-    } catch (error) {
-        console.warn('从服务器删除模板失败:', error);
-        return false;
-    }
-}
-
-
-
-
 // 洗牌函數 (Fisher-Yates 算法)
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -368,85 +270,42 @@ async function loadTemplatesFromServer() {
     try {
         const response = await fetch('/api/card-game/templates');
         if (!response.ok) {
-            console.warn('服务器模板API不可用，使用本地存储。');
-            gameState.useServerStorage = false;
-        } else {
-            console.log('服务器模板API可用。');
-            gameState.useServerStorage = true;
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
+        
+        const templates = await response.json();
+        
+        // 將服務器格式轉換為本地格式
+        const formattedTemplates = {};
+        templates.forEach(template => {
+            formattedTemplates[template.template_name] = template.content_data;
+        });
+        
+        return formattedTemplates;
     } catch (error) {
-        console.warn('服务器模板API连接错误，使用本地存储:', error);
-        gameState.useServerStorage = false;
+        console.warn('從服務器加載模板失敗，回退到本地存儲:', error);
+        return loadTemplatesFromLocalStorage();
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // 統一的加載模板函數
 async function loadTemplates() {
-    // 先尝试从服务器加载
     if (gameState.useServerStorage) {
         try {
-            const serverTemplates = await loadTemplatesFromServer();
-            if (Object.keys(serverTemplates).length > 0) {
-                console.log('已從服務器加載模板');
-                return serverTemplates;
-            } else {
-                console.warn('服務器模板為空，嘗試從本地加載');
-                // 尝试本地加载
-                const localTemplates = loadTemplatesFromLocalStorage();
-                if (Object.keys(localTemplates).length > 0) {
-                    console.log('已從本地加載模板');
-                    return localTemplates;
-                }
-            }
-            // 如果都没有，返回空对象
-            return {};
+            return await loadTemplatesFromServer();
         } catch (error) {
             console.warn('服務器連接失敗，回退到本地存儲:', error);
-            gameState.useServerStorage = false; // 自动回退到本地模式
-            // 尝试本地加载
+            gameState.useServerStorage = false; // 自動回退到本地模式
             return loadTemplatesFromLocalStorage();
         }
     } else {
-        // 直接从本地加载
         return loadTemplatesFromLocalStorage();
     }
-}1
+}
 
-// 保存模板到服务器 - 修复版本
+// 保存模板到服務器
 async function saveTemplateToServer(templateName, contentData) {
     try {
-        // 确保 contentData 是一个有效的 JSON 对象或数组
-        let jsonData = contentData;
-        
-        // 如果 contentData 不是对象或数组，将其转换为数组
-        if (typeof contentData === 'string') {
-            try {
-                jsonData = JSON.parse(contentData);
-            } catch (e) {
-                // 如果不是有效的JSON字符串，则将其包装在数组中
-                jsonData = [contentData];
-            }
-        }
-        
-        // 如果是基本类型，包装成数组
-        if (typeof contentData !== 'object' || contentData === null) {
-            jsonData = [contentData];
-        }
-        
         const response = await fetch('/api/card-game/templates', {
             method: 'POST',
             headers: {
@@ -454,23 +313,23 @@ async function saveTemplateToServer(templateName, contentData) {
             },
             body: JSON.stringify({
                 template_name: templateName,
-                content_data: jsonData, // 使用确保是有效JSON的数据
-                is_public: true
+                content_data: contentData,
+                is_public: true // 預設為公開
             })
         });
         
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `服务器返回错误: ${response.status}`);
+            throw new Error(errorData.error || `服務器返回錯誤: ${response.status}`);
         }
         
         return await response.json();
     } catch (error) {
-        console.warn('保存模板到服务器失败:', error);
-        console.error('详细错误:', error.stack || error);
+        console.warn('保存模板到服務器失敗:', error);
         return null;
     }
 }
+
 // 統一的保存模板函數
 async function saveTemplate(templateName, contentData) {
     if (gameState.useServerStorage) {
@@ -559,15 +418,16 @@ async function deleteTemplate(templateName) {
 async function updateTemplateSelect() {
     const { templateSelect, loadTemplateBtn, deleteTemplateBtn } = getDOMElements();
     
-    // 清空当前选项
+    // 清空當前選項
     templateSelect.innerHTML = '<option value="" disabled selected>-- 選擇已保存的模板 --</option>';
     
     try {
-        // 强制重新加载模板，不使用缓存
-        cachedTemplates = null; // 重要：强制清除缓存
-        cachedTemplates = await loadTemplates();
+        // 獲取保存的模板 (使用緩存或重新加載)
+        if (!cachedTemplates) {
+            cachedTemplates = await loadTemplates();
+        }
         
-        // 如果没有模板，禁用相关按钮
+        // 如果沒有模板，禁用相關按鈕
         if (Object.keys(cachedTemplates).length === 0) {
             loadTemplateBtn.disabled = true;
             deleteTemplateBtn.disabled = true;
@@ -577,7 +437,7 @@ async function updateTemplateSelect() {
             deleteTemplateBtn.disabled = false;
         }
         
-        // 添加模板选项
+        // 添加模板選項
         for (const templateName in cachedTemplates) {
             const option = document.createElement('option');
             option.value = templateName;
@@ -597,33 +457,30 @@ function clearTemplateCache() {
 }
 
 // 保存當前內容為模板
-// 保存当前内容为模板
 async function saveCurrentAsTemplate() {
     const { templateNameInput, templateSelect } = getDOMElements();
     const templateName = templateNameInput.value.trim();
     
-    // 验证名称
+    // 驗證名稱
     if (!templateName) {
         alert('請輸入模板名稱！');
         templateNameInput.focus();
         return;
     }
     
-    // 获取当前输入框的内容
+    // 獲取當前輸入框的內容
     const templateContent = [];
     for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
         const input = document.getElementById(`content-${i}`);
         templateContent.push(input.value || `內容 ${i+1}`);
     }
     
-    console.log('即将保存的模板内容:', JSON.stringify(templateContent, null, 2));
-    
-    // 确保模板缓存已加载
+    // 確保模板緩存已加載
     if (!cachedTemplates) {
         cachedTemplates = await loadTemplates();
     }
     
-    // 询问是否覆盖现有模板
+    // 詢問是否覆蓋現有模板
     if (cachedTemplates[templateName] && !confirm(`模板 "${templateName}" 已存在，是否覆蓋？`)) {
         return;
     }
@@ -632,20 +489,20 @@ async function saveCurrentAsTemplate() {
     const success = await saveTemplate(templateName, templateContent);
     
     if (success) {
-        // 清除缓存并更新下拉选单
+        // 清除緩存並更新下拉選單
         clearTemplateCache();
         cachedTemplates = await loadTemplates();
         await updateTemplateSelect();
         
-        // 更新选中的模板
+        // 更新選中的模板
         templateSelect.value = templateName;
         
-        // 清空输入框
+        // 清空輸入框
         templateNameInput.value = '';
         
         alert(`模板 "${templateName}" 已成功保存！`);
     } else {
-        alert('保存模板失败，请稍后再试。');
+        alert('保存模板失敗，請稍後再試。');
     }
 }
 
@@ -767,57 +624,45 @@ function setupEventListeners() {
 // 在頁面載入時初始化應用
 async function initializeApp() {
     try {
-        // 设置示例内容
+        // 設置示例內容
         setExampleContent();
         
-        // 初始随机排列内容
+        // 初始隨機排列內容
         shuffleArray(gameState.contentPositions);
         
-        // 初始化游戏板
+        // 初始化遊戲板
         initializeBoard();
         
-        // 显示底部导航栏
+        // 顯示底部導航欄
         const { gameFooter } = getDOMElements();
         gameFooter.style.display = 'block';
         
-        // 先测试服务器连接
+        // 嘗試預先加載模板
+        try {
+            cachedTemplates = await loadTemplates();
+            console.log('已載入模板數:', Object.keys(cachedTemplates).length);
+        } catch (error) {
+            console.warn('預載模板失敗:', error);
+            cachedTemplates = {};
+        }
+        
+        // 檢查是否支持服務器連接
         try {
             const response = await fetch('/api/card-game/templates');
-            if (response.ok) {
-                console.log('服務器模板API可用。');
-                gameState.useServerStorage = true;
-            } else {
+            if (!response.ok) {
                 console.warn('服務器模板API不可用，使用本地存儲。');
                 gameState.useServerStorage = false;
+            } else {
+                console.log('服務器模板API可用。');
             }
         } catch (error) {
             console.warn('服務器模板API連接錯誤，使用本地存儲:', error);
             gameState.useServerStorage = false;
         }
         
-        // 确保彻底加载模板 - 修改点
-        clearTemplateCache();
-        try {
-            cachedTemplates = await loadTemplates();
-            console.log('已載入模板數:', Object.keys(cachedTemplates).length);
-        } catch (error) {
-            console.warn('預載模板失敗:', error);
-            cachedTemplates = {}; // 确保至少有一个空对象
-            
-            // 尝试从本地加载
-            if (gameState.useServerStorage) {
-                gameState.useServerStorage = false;
-                try {
-                    cachedTemplates = loadTemplatesFromLocalStorage();
-                    console.log('從本地存儲加載模板數:', Object.keys(cachedTemplates).length);
-                } catch (e) {
-                    console.error('本地存儲加載也失敗:', e);
-                }
-            }
-        }
-        
-        // 设置事件监听器
+        // 設置事件監聽器
         setupEventListeners();
+        initTemplateManager();
     } catch (error) {
         console.error('初始化應用時出錯:', error);
     }
