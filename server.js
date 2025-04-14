@@ -144,6 +144,111 @@ app.post('/api/bridge-game/submit-score', async (req, res) => {
 
 
 
+
+// --- 洞洞樂模板 API (Card Game Templates API) ---
+
+// GET /api/card-game/templates - 獲取所有公開模板
+app.get('/api/card-game/templates', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, template_name, content_data, created_at, updated_at 
+             FROM card_game_templates 
+             WHERE is_public = TRUE 
+             ORDER BY updated_at DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取洞洞樂模板失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/card-game/templates/:id - 獲取特定模板
+app.get('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) return res.status(400).json({ error: '無效的模板 ID' });
+    
+    try {
+        const result = await pool.query(
+            'SELECT id, template_name, content_data, created_at, updated_at FROM card_game_templates WHERE id = $1',
+            [id]
+        );
+        
+        if (result.rows.length === 0) return res.status(404).json({ error: '找不到模板' });
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取洞洞樂模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/card-game/templates - 創建新模板
+app.post('/api/card-game/templates', async (req, res) => {
+    const { template_name, content_data, is_public = true } = req.body;
+    
+    if (!template_name || !content_data) {
+        return res.status(400).json({ error: '模板名稱和內容不能為空' });
+    }
+    
+    try {
+        // 檢查模板名稱是否已存在
+        const existingCheck = await pool.query(
+            'SELECT 1 FROM card_game_templates WHERE template_name = $1',
+            [template_name]
+        );
+        
+        if (existingCheck.rows.length > 0) {
+            return res.status(409).json({ error: '此模板名稱已存在' });
+        }
+        
+        // 插入新模板
+        const ip_address = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        
+        const result = await pool.query(
+            `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING id, template_name, content_data, created_at, updated_at`,
+            [template_name, content_data, ip_address, is_public]
+        );
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('創建洞洞樂模板失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// DELETE /api/card-game/templates/:id - 刪除模板
+app.delete('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) return res.status(400).json({ error: '無效的模板 ID' });
+    
+    try {
+        const result = await pool.query(
+            'DELETE FROM card_game_templates WHERE id = $1',
+            [id]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的模板' });
+        }
+        
+        res.status(204).send(); // 成功刪除，無內容返回
+    } catch (err) {
+        console.error(`刪除洞洞樂模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
+
+
+
+
+
+
 // --- 受保護的管理頁面和 API Routes ---
 
 app.use([

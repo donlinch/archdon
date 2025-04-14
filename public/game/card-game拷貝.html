@@ -441,236 +441,139 @@
         
         .modal-content {
             background-color: #f5f7fa;
-            margin: 0 auto;  /* 從 5% auto 改為 0 auto */
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 800px;
-            max-height: 85vh;  /* 從 80vh 增加到 85vh */
-            overflow-y: auto;
-            position: relative;  /* 添加相對定位 */
-            top: 50%;  /* 將模態窗口置於屏幕中央 */
-            transform: translateY(-50%);  /* 垂直居中 */
+    margin: 0 auto;  /* 從 5% auto 改為 0 auto */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;  /* 從 80vh 增加到 85vh */
+    overflow-y: auto;
+    position: relative;  /* 添加相對定位 */
+    top: 50%;  /* 將模態窗口置於屏幕中央 */
+    transform: translateY(-50%);  /* 垂直居中 */
         }
         
         .close {
             color: #ff6b6b;  /* 更改顏色以提高可見度 */
-            position: absolute;  /* 使用絕對定位 */
-            top: 15px;
-            right: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            text-align: center;
-            line-height: 30px;
-            background-color: rgba(255, 255, 255, 0.8);  /* 添加背景色 */
-            border-radius: 50%;  /* 圓形按鈕 */
-            z-index: 2;  /* 確保按鈕在頂層 */
+    position: absolute;  /* 使用絕對定位 */
+    top: 15px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    background-color: rgba(255, 255, 255, 0.8);  /* 添加背景色 */
+    border-radius: 50%;  /* 圓形按鈕 */
+    z-index: 2;  /* 確保按鈕在頂層 */
         }
         
         .close:hover {
             color: #ff0000;
-            background-color: rgba(255, 255, 255, 1);
+    background-color: rgba(255, 255, 255, 1);
         }
 
         /* 標題樣式優化 */
-        .modal-content h2 {
-            margin-top: 10px;
-            margin-bottom: 15px;
-            padding-right: 30px;  /* 避免與關閉按鈕重疊 */
-        }
+.modal-content h2 {
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding-right: 30px;  /* 避免與關閉按鈕重疊 */
+}
         
-        /* 改進輸入格子的佈局 */
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));  /* 改用自適應欄 */
-            grid-gap: 12px;
-            margin-top: 15px;
-        }
 
-        .input-group {
-            display: flex;
-            align-items: center;
-            background-color: #ffffff;  /* 添加背景色以增強視覺區分 */
-            border-radius: 6px;
-            padding: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
 
-        .input-group label {
-            width: 24px;  /* 縮小標籤寬度 */
-            font-weight: bold;
-            margin-right: 8px;
-            text-align: center;
-            color: #666;
-        }
 
-        .input-group input {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;  /* 增大字體大小，有助於手機輸入 */
-        }
+/* 改進輸入格子的佈局 */
+.input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));  /* 改用自適應欄 */
+    grid-gap: 12px;
+    margin-top: 15px;
+}
 
-        /* 按鈕容器樣式 */
-        .modal-buttons {
-            margin-top: 20px;
-            text-align: center;  /* 改為居中對齊 */
-            position: sticky;  /* 使按鈕容器固定在底部 */
-            bottom: 0;
-            background-color: #f5f7fa;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
-        }
+.input-group {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;  /* 添加背景色以增強視覺區分 */
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
 
-        #saveConfigBtn {
-            background-color: #4CAF50;  /* 綠色按鈕更醒目 */
-            padding: 12px 25px;  /* 增大按鈕點擊區域 */
-            font-size: 16px;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
+.input-group label {
+    width: 24px;  /* 縮小標籤寬度 */
+    font-weight: bold;
+    margin-right: 8px;
+    text-align: center;
+    color: #666;
+}
 
-        #saveConfigBtn:hover {
-            background-color: #45a049;
-        }
-        
-        /* 模板管理區域樣式 */
-        .template-manager {
-            background-color: #e8f4fc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border: 1px solid #bde0fa;
-        }
-        
-        .template-manager h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #2980b9;
-            font-size: 18px;
-            border-bottom: 1px solid #bde0fa;
-            padding-bottom: 8px;
-        }
-        
-        .template-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .template-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-        
-        .template-input {
-            flex-grow: 1;
-            padding: 8px 12px;
-            border: 1px solid #bde0fa;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        
-        .template-select {
-            flex-grow: 1;
-            padding: 8px 12px;
-            border: 1px solid #bde0fa;
-            border-radius: 4px;
-            font-size: 16px;
-            background-color: white;
-        }
-        
-        .template-action-btn {
-            padding: 8px 15px;
-            border-radius: 4px;
-            font-size: 15px;
-            font-weight: bold;
-        }
-        
-        .save-template-btn {
-            background-color: #27ae60;
-        }
-        
-        .save-template-btn:hover {
-            background-color: #219955;
-        }
-        
-        .load-template-btn {
-            background-color: #3498db;
-        }
-        
-        .load-template-btn:hover {
-            background-color: #2980b9;
-        }
-        
-        .delete-template-btn {
-            background-color: #e74c3c;
-        }
-        
-        .delete-template-btn:hover {
-            background-color: #c0392b;
-        }
-        
-        /* 提示文字 */
-        .template-manager p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #666;
-        }
+.input-group input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;  /* 增大字體大小，有助於手機輸入 */
+}
 
-        /* 移動設備特定樣式 */
-        @media (max-width: 480px) {
-            .modal-content {
-                width: 95%;  /* 在更小的屏幕上增加寬度 */
-                padding: 15px;  /* 減少內邊距 */
-                margin: 0 auto;
-            }
-            
-            .input-group {
-                padding: 6px;
-            }
-            
-            .input-group input {
-                padding: 10px 6px;  /* 調整輸入框大小 */
-            }
-            
-            /* 在更小的屏幕上使用單欄佈局 */
-            .input-grid {
-                grid-template-columns: 1fr;
-                grid-gap: 10px;
-            }
-            
-            /* 增大保存按鈕 */
-            #saveConfigBtn {
-                width: 100%;  /* 全寬按鈕 */
-                padding: 14px 0;
-            }
-            
-            /* 模板管理區域在手機上的樣式 */
-            .template-controls {
-                flex-direction: column;
-            }
-            
-            .template-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .template-action-btn {
-                width: 100%;
-                margin-top: 5px;
-            }
-        }
+/* 按鈕容器樣式 */
+.modal-buttons {
+    margin-top: 20px;
+    text-align: center;  /* 改為居中對齊 */
+    position: sticky;  /* 使按鈕容器固定在底部 */
+    bottom: 0;
+    background-color: #f5f7fa;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+
+
+#saveConfigBtn {
+    background-color: #4CAF50;  /* 綠色按鈕更醒目 */
+    padding: 12px 25px;  /* 增大按鈕點擊區域 */
+    font-size: 16px;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#saveConfigBtn:hover {
+    background-color: #45a049;
+}
+
+/* 移動設備特定樣式 */
+@media (max-width: 480px) {
+    .modal-content {
+        width: 95%;  /* 在更小的屏幕上增加寬度 */
+        padding: 15px;  /* 減少內邊距 */
+        margin: 0 auto;
+    }
+    
+    .input-group {
+        padding: 6px;
+    }
+    
+    .input-group input {
+        padding: 10px 6px;  /* 調整輸入框大小 */
+    }
+    
+    /* 在更小的屏幕上使用單欄佈局 */
+    .input-grid {
+        grid-template-columns: 1fr;
+        grid-gap: 10px;
+    }
+    
+    /* 增大保存按鈕 */
+    #saveConfigBtn {
+        width: 100%;  /* 全寬按鈕 */
+        padding: 14px 0;
+    }
+}
+
+
         
         /* 居中顯示卡片的樣式 */
         .centered-card {
@@ -800,105 +703,113 @@
         }
         
         /* 中等螢幕（平板）響應式調整 */
-        @media (min-width: 768px) {
-            .hole {
-                height: 120px; /* 增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 40px; /* 增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 20px; /* 增加背面文字大小 */
-                padding: 10px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 15px; /* 增加格子間距 */
-                max-width: 700px; /* 控制遊戲板最大寬度 */
-                margin: 0 auto 30px;
-            }
-            
-            .game-container {
-                max-width: 700px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .centered-card-content {
-                font-size: 42px; /* 增加卡片文字大小 */
-                padding: 50px; /* 增加卡片內邊距 */
-            }
-            
-            .card-inner {
-                padding: 30px 40px; /* 增加卡片內部內邊距 */
-            }
-            
-            .card-hint {
-                font-size: 18px; /* 增加提示文字大小 */
-            }
+@media (min-width: 768px) {
+    .hole {
+        height: 120px; /* 增加格子高度 */
+    }
+    
+    .hole-front::before {
+        font-size: 40px; /* 增加問號大小 */
+    }
+    
+    .hole-back {
+        font-size: 20px; /* 增加背面文字大小 */
+        padding: 10px; /* 增加內邊距 */
+    }
+    
+    .board {
+        grid-gap: 15px; /* 增加格子間距 */
+        max-width: 700px; /* 控制遊戲板最大寬度 */
+        margin: 0 auto 30px;
+    }
+    
+    .game-container {
+        max-width: 700px; /* 調整遊戲容器最大寬度 */
 
-            .controls {
-                max-width: 700px; /* 控制按鈕區域最大寬度 */
-                padding: 25px; /* 增加內邊距 */
-            }
-            
-            .controls button {
-                padding: 12px 20px; /* 增加按鈕大小 */
-                font-size: 16px; /* 增加按鈕字體大小 */
-                margin: 0 15px; /* 增加按鈕間距 */
-            }
-        }
+
+        .centered-card-content {
+        font-size: 42px; /* 增加卡片文字大小 */
+        padding: 50px; /* 增加卡片內邊距 */
+    }
+    
+    .card-inner {
+        padding: 30px 40px; /* 增加卡片內部內邊距 */
+    }
+    
+    .card-hint {
+        font-size: 18px; /* 增加提示文字大小 */
+    }
+
+    .controls {
+        max-width: 700px; /* 控制按鈕區域最大寬度 */
+        padding: 25px; /* 增加內邊距 */
+    }
+    
+    .controls button {
+        padding: 12px 20px; /* 增加按鈕大小 */
+        font-size: 16px; /* 增加按鈕字體大小 */
+        margin: 0 15px; /* 增加按鈕間距 */
+    }
+
+
+
+
+    }
+}
         
-        /* 大螢幕（桌面）響應式調整 */
-        @media (min-width: 1200px) {
-            .hole {
-                height: 150px; /* 進一步增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 48px; /* 進一步增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 24px; /* 進一步增加背面文字大小 */
-                padding: 15px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 20px; /* 增加格子間距 */
-                max-width: 900px; /* 進一步控制遊戲板最大寬度 */
-            }
-            
-            .game-container {
-                max-width: 900px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .controls button {
-                padding: 12px 25px; /* 增加按鈕大小 */
-                font-size: 18px; /* 增加按鈕字體大小 */
-            }
-        }
+       /* 大螢幕（桌面）響應式調整 */
+@media (min-width: 1200px) {
+    .hole {
+        height: 150px; /* 進一步增加格子高度 */
+    }
+    
+    .hole-front::before {
+        font-size: 48px; /* 進一步增加問號大小 */
+    }
+    
+    .hole-back {
+        font-size: 24px; /* 進一步增加背面文字大小 */
+        padding: 15px; /* 增加內邊距 */
+    }
+    
+    .board {
+        grid-gap: 20px; /* 增加格子間距 */
+        max-width: 900px; /* 進一步控制遊戲板最大寬度 */
+    }
+    
+    .game-container {
+        max-width: 900px; /* 調整遊戲容器最大寬度 */
+    }
+    
+    .controls button {
+        padding: 12px 25px; /* 增加按鈕大小 */
+        font-size: 18px; /* 增加按鈕字體大小 */
+    }
+}
 
-        @media (min-width: 1600px) {
-            .hole {
-                height: 180px; /* 進一步增加格子高度 */
-            }
-            
-            .content-container {
-                max-width: 1200px; /* 增加內容容器最大寬度 */
-            }
-            
-            .game-container {
-                max-width: 1100px; /* 增加遊戲容器最大寬度 */
-            }
-            
-            .centered-card-content {
-                font-size: 48px; /* 增加卡片文字大小 */
-                min-width: 400px; /* 增加卡片最小寬度 */
-                min-height: 300px; /* 增加卡片最小高度 */
-                padding: 60px; /* 增加卡片內邊距 */
-            }
-        }
+
+
+@media (min-width: 1600px) {
+    .hole {
+        height: 180px; /* 進一步增加格子高度 */
+    }
+    
+    .content-container {
+        max-width: 1200px; /* 增加內容容器最大寬度 */
+    }
+    
+    .game-container {
+        max-width: 1100px; /* 增加遊戲容器最大寬度 */
+    }
+    
+    .centered-card-content {
+        font-size: 48px; /* 增加卡片文字大小 */
+        min-width: 400px; /* 增加卡片最小寬度 */
+        min-height: 300px; /* 增加卡片最小高度 */
+        padding: 60px; /* 增加卡片內邊距 */
+    }
+}
+
  
 
 
@@ -911,54 +822,83 @@
 
     </style>
 </head>
-
 <body>
+  
+    
+
+
+
     <header class="page-title-header">
         <h1 class="page-title">20格洞洞樂遊戲</h1>
     </header>
 
-    <!-- 新增可折疊導航欄 -->
-    <div class="game-header" id="gameHeader">
-        <header class="page-title-header">
-            <h1 class="page-title">20格洞洞樂遊戲</h1>
-        </header>
-        
-        <nav class="category-nav">
-            <a href="/">週邊商品</a>
-            <a href="/music.html">音樂專輯</a>
-            <a href="/news.html">最新消息</a>
-            <a href="/scores.html">樂譜與舞蹈</a>
-            <a href="/game/card-game.html" class="active">互動遊戲</a>
-            <a href="/guestbook.html">留言板</a>
-        </nav>
-        
-        <!-- 新增：遊戲導覽 -->
-        <nav class="games-nav">
-            <a href="/game/card-game.html" class="active">洞洞樂</a>
-            <a href="/game/wheel-game.html">命運輪盤</a>
-            <a href="/game/brige-game.html">玻璃橋挑戰</a>
-        </nav>
-    </div>
+
+ <!-- 新增可折疊導航欄 -->
+ <div class="game-header" id="gameHeader">
+    <header class="page-title-header">
+        <h1 class="page-title">20格洞洞樂遊戲</h1>
+    </header>
     
-    <!-- 導航切換按鈕 -->
-    <button class="nav-toggle" id="navToggle">≡</button>
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html" class="active">互動遊戲</a>
+        <a href="/guestbook.html">留言板</a>
+    </nav>
+    
+    <!-- 新增：遊戲導覽 -->
+    <nav class="games-nav">
+
+        <a href="/game/card-game.html " class="active" >洞洞樂</a>
+        <a href="/game/wheel-game.html "  >命運輪盤</a>
+        <a href="/game/brige-game.html" >玻璃橋挑戰</a>
+ 
+    </nav>
+</div>
+<!-- 導航切換按鈕 -->
+<button class="nav-toggle" id="navToggle">≡</button>
+    
+
+
 
     <div class="content-container">
+         
+        
         <div class="game-container">
             <div class="board" id="gameBoard">
                 <!-- 洞洞格子由JS動態生成 -->
             </div>
         </div>
         
+        
+       
+
         <div class="game-footer" id="gameFooter" style="display: none;">
+          
+            
+
+
+            
+        
             <button id="configBtn">自定義內容</button>
-            <button id="templatesBtn">模板列表</button>
             <button id="resetBtn" class="reset-btn">重置遊戲</button>
             
             <div class="footer-copyright">
                 © 2024 SunnyYummy. All rights reserved.
             </div>
+
+
+
+
         </div>
+
+
+
+
+
+
     </div>
     
     <!-- 自定義內容彈窗 -->
@@ -966,30 +906,6 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>自定義洞洞樂內容</h2>
-            
-            <!-- 新增：模板管理區域 -->
-            <div class="template-manager">
-                <h3>模板管理</h3>
-                
-                <!-- 模板列表區域 -->
-                <div class="template-row">
-                    <select id="templateSelect" class="template-select">
-                        <option value="" disabled selected>-- 選擇已保存的模板 --</option>
-                        <!-- 模板選項將由JS動態生成 -->
-                    </select>
-                    <button id="loadTemplateBtn" class="template-action-btn load-template-btn">載入</button>
-                    <button id="deleteTemplateBtn" class="template-action-btn delete-template-btn">刪除</button>
-                </div>
-                
-                <!-- 保存新模板區域 -->
-                <div class="template-row" style="margin-top: 15px;">
-                    <input type="text" id="templateNameInput" class="template-input" placeholder="輸入模板名稱...">
-                    <button id="saveTemplateBtn" class="template-action-btn save-template-btn">保存為模板</button>
-                </div>
-                
-                <p>提示：保存模板可以方便下次快速載入相同的內容配置。</p>
-            </div>
-            
             <p>請為每個格子填寫內容：</p>
             
             <div class="input-grid" id="inputGrid">
@@ -1012,6 +928,11 @@
         </div>
     </div>
 
-    <script src="card-game.js"></script>
+    
+
+    
+
+<script src="card-game.js"></script>
+
 </body>
 </html>

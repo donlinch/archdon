@@ -53,7 +53,16 @@ app.use(express.json());
 
 // --- 記錄 Page View 中間件 ---
 app.use(async (req, res, next) => {
-    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/guestbook.html', '/message-detail.html']; // 添加 scores.html
+    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/guestbook.html', '/message-detail.html'
+
+
+,'/game/card-game.html', // <-- 新增
+    '/game/wheel-game.html', // <-- 新增
+    '/game/brige-game.html'  // <-- 新增
+
+
+
+    ]; // 添加 scores.html
     // 確保只記錄 'GET' 請求且路徑在列表中
     const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
 
@@ -81,6 +90,52 @@ app.use(async (req, res, next) => {
         }
     }
     next(); // 確保總是調用 next()
+});
+
+
+
+
+
+
+// --- 玻璃橋遊戲排行榜 API ---
+// GET /api/bridge-game/leaderboard - 獲取排行榜數據
+app.get('/api/bridge-game/leaderboard', async (req, res) => {
+    const playerCount = parseInt(req.query.player_count) || 8;
+    
+    try {
+        const result = await pool.query(
+            'SELECT player_name, completion_time, created_at FROM bridge_game_leaderboard WHERE player_count = $1 ORDER BY completion_time ASC LIMIT 10',
+            [playerCount]
+        );
+        
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取橋遊戲排行榜數據錯誤:', err);
+        res.status(500).json({ error: '獲取排行榜數據失敗' });
+    }
+});
+
+// POST /api/bridge-game/submit-score - 提交分數
+app.post('/api/bridge-game/submit-score', async (req, res) => {
+    try {
+        const { player_name, player_count, completion_time } = req.body;
+        
+        if (!player_name || !player_count || !completion_time) {
+            return res.status(400).json({ error: '缺少必要參數' });
+        }
+        
+        const ip_address = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        
+        await pool.query(
+            'INSERT INTO bridge_game_leaderboard (player_name, player_count, completion_time, ip_address) VALUES ($1, $2, $3, $4)',
+            [player_name, player_count, completion_time, ip_address]
+        );
+        
+        res.json({ success: true, message: '成績提交成功' });
+    } catch (err) {
+        console.error('提交橋遊戲分數錯誤:', err);
+        res.status(500).json({ error: '提交分數失敗' });
+    }
 });
 
 
@@ -116,6 +171,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- 公開 API Routes ---
 
 
+
+
+
+
+
+
+
+
+
 // --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
 
 // GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
@@ -143,31 +207,32 @@ app.get('/api/guestbook', async (req, res) => {
             `SELECT
                 m.id,
                 m.author_name,
-                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview, -- 內容預覽 (約 2-3 行)
+                substring(m.content for 80) || (CASE WHEN length(m.content) > 80 THEN '...' ELSE '' END) AS content_preview,
                 m.reply_count,
-                m.view_count, -- 新增
-                m.like_count, -- 新增
-                m.last_activity_at
-             FROM guestbook_messages m -- 給表加個別名 m
+                m.view_count,
+                m.like_count,
+                m.last_activity_at,
+                m.is_admin_post  -- ★★★ 新增此行 ★★★
+             FROM guestbook_messages m
              WHERE m.is_visible = TRUE
-             ${orderByClause} -- 使用動態排序
+             ${orderByClause}
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
 
         res.json({
-            messages: messagesResult.rows,
+            messages: messagesResult.rows, // 現在 messages 陣列中的每個物件會多一個 is_admin_post 屬性
             currentPage: page,
             totalPages: totalPages,
             totalItems: totalItems,
             limit: limit,
-            sort: sort // 將當前排序方式也回傳給前端
+            sort: sort 
         });
     } catch (err) {
         console.error('[API GET /guestbook] Error:', err);
         res.status(500).json({ error: '無法獲取留言列表' });
     }
-});
+}); 
 
 // GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
 // GET /api/guestbook/message/:id - 獲取單一留言詳情及回覆
@@ -718,6 +783,15 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
 const adminRouter = express.Router();
 
@@ -750,6 +824,71 @@ adminRouter.delete('/identities/:id', async (req, res) => { /* ...身份刪除�
         if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的身份' }); res.status(204).send();
     } catch (err) { console.error(`[API DELETE /admin/identities/${id}] Error:`, err); res.status(500).json({ error: '無法刪除身份' }); }
 });
+
+
+
+
+
+
+
+// --- ★ 新增: 管理員發表新留言 API ---
+adminRouter.post('/guestbook/messages', async (req, res) => {
+    const { admin_identity_id, content } = req.body;
+    const identityIdInt = parseInt(admin_identity_id, 10);
+
+    // 驗證輸入
+    if (isNaN(identityIdInt)) {
+        return res.status(400).json({ error: '無效的管理員身份 ID。' });
+    }
+    if (!content || content.trim() === '') {
+        return res.status(400).json({ error: '留言內容不能為空。' });
+    }
+    const trimmedContent = content.trim();
+
+    const client = await pool.connect();
+    try {
+        // 1. 驗證身份 ID 並獲取身份名稱
+        const identityResult = await client.query(
+            'SELECT name FROM admin_identities WHERE id = $1',
+            [identityIdInt]
+        );
+        if (identityResult.rowCount === 0) {
+            return res.status(400).json({ error: '找不到指定的管理員身份。' });
+        }
+        const adminIdentityName = identityResult.rows[0].name;
+
+        // 2. 插入新留言到 guestbook_messages
+        const insertQuery = `
+            INSERT INTO guestbook_messages (
+                author_name, content, is_admin_post, admin_identity_id,
+                last_activity_at, created_at, is_visible,
+                reply_count, view_count, like_count
+            )
+            VALUES ($1, $2, TRUE, $3, NOW(), NOW(), TRUE, 0, 0, 0)
+            RETURNING id, author_name, content, is_admin_post, admin_identity_id, created_at, last_activity_at, reply_count, view_count, like_count, is_visible;
+        `;
+        const insertParams = [adminIdentityName, trimmedContent, identityIdInt];
+        const newMessageResult = await client.query(insertQuery, insertParams);
+
+        console.log('[API POST /admin/guestbook/messages] 管理員留言已新增:', newMessageResult.rows[0]);
+        res.status(201).json(newMessageResult.rows[0]); // 返回新增的留言數據
+
+    } catch (err) {
+        console.error('[API POST /admin/guestbook/messages] Error:', err.stack || err);
+        // 檢查是否是外鍵錯誤 (不太可能，因為前面驗證了)
+        if (err.code === '23503') {
+             return res.status(400).json({ error: '內部錯誤：關聯的管理員身份無效。' });
+         }
+        res.status(500).json({ error: '無法新增管理員留言' });
+    } finally {
+        client.release(); 
+    }
+});
+
+
+
+
+
 
 
 
