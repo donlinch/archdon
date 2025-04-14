@@ -3,90 +3,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const ctx = canvas.getContext('2d');
     const spinBtn = document.getElementById('spin');
     const resultElement = document.getElementById('result');
-     const optionsModal = document.getElementById('optionsModal');
+    const editOptionsBtn = document.getElementById('editOptions');
+    const optionsModal = document.getElementById('optionsModal');
     const closeModal = document.querySelector('.close');
     const saveOptionsBtn = document.getElementById('saveOptions');
     const addOptionBtn = document.getElementById('addOption');
     const optionsContainer = document.getElementById('optionsContainer');
 
-
-
-// 在現有的全局變數下方添加這些新變數
-const gameFooter = document.getElementById('gameFooter');
-const currentThemeEl = document.getElementById('currentTheme');
-const themeSelect = document.getElementById('themeSelect');
-const exportJSONBtn = document.getElementById('exportJSONBtn');
-const importJSONBtn = document.getElementById('importJSONBtn');
-const jsonFileInput = document.getElementById('jsonFileInput');
-
-let currentThemeName = '未命名';  // 當前主題名稱
-let currentThemeId = null;        // 當前主題ID
-
-
-
-
-document.getElementById('saveOptions').addEventListener('click', () => {
-    const optionElements = document.querySelectorAll('.option-row');
-    currentOptions = [];
-  
-    optionElements.forEach((row, index) => {
-      const text = row.querySelector('input[type="text"]').value.trim();
-      const color = row.querySelector('input[type="color"]').value;
-      if (text) {
-        currentOptions.push({
-          text,
-          color,
-          display_order: index
-        });
-      }
-    });
-  
-    // 關閉 modal
-    document.getElementById('optionsModal').style.display = 'none';
-    console.log('已更新 currentOptions:', currentOptions);
-  });
-
-
-
-
-document.getElementById('exportJSONBtn').addEventListener('click', exportToJSON);
-
-function exportToJSON() {
-  const data = {
-    themeName: currentThemeName,
-    options: currentOptions
-  };
-  const jsonStr = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${currentThemeName || 'theme'}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-
-
     // 导航栏控制
     const navToggle = document.getElementById('navToggle');
     const gameHeader = document.getElementById('gameHeader');
+    const gameFooter = document.getElementById('gameFooter');
     let navVisible = false;
 
-   // 修改現有的導航切換代碼
-   navToggle.addEventListener('click', function() {
-    navVisible = !navVisible;
-    if (navVisible) {
-        gameHeader.classList.add('visible');
-        gameFooter.style.display = 'block';
-        navToggle.textContent = '×';
-    } else {
-        gameHeader.classList.remove('visible');
-        gameFooter.style.display = 'none';
-        navToggle.textContent = '≡';
-    }
-});
+    navToggle.addEventListener('click', function() {
+        navVisible = !navVisible;
+        if (navVisible) {
+            gameHeader.classList.add('visible');
+            gameFooter.style.display = 'block'; // 直接设置显示样式
+            navToggle.textContent = '×';
+        } else {
+            gameHeader.classList.remove('visible');
+            gameFooter.style.display = 'none'; // 直接设置隐藏样式
+            navToggle.textContent = '≡';
+        }
+    });
 
     // 預設顏色 (用於新選項或備用)
     const defaultColors = [
@@ -530,36 +471,6 @@ function exportToJSON() {
             animationId = requestAnimationFrame(animateWheel);
         });
 
-
-
- // 添加新的事件監聽器
- themeSelect.addEventListener('change', function() {
-    const selectedValue = this.value;
-    if (selectedValue) {
-        loadTheme(selectedValue);
-    }
-});
-
-exportJSONBtn.addEventListener('click', exportToJSON);
-
-importJSONBtn.addEventListener('click', function() {
-    jsonFileInput.click();
-});
-
-jsonFileInput.addEventListener('change', function(e) {
-    if (this.files && this.files[0]) {
-        importFromJSON(this.files[0]);
-        this.value = ''; // 重置文件輸入
-    }
-});
-
-
-// 添加儲存主題按鈕事件
-saveThemeBtn.addEventListener('click', saveCurrentAsTheme);
-
-// 編輯選項按鈕事件監聽
-editOptionsBtn.addEventListener('click', showOptionsModal);
-
         // 其他事件監聽器
         editOptionsBtn.addEventListener('click', showOptionsModal);
         closeModal.addEventListener('click', () => handleCloseModal());
@@ -575,232 +486,4 @@ editOptionsBtn.addEventListener('click', showOptionsModal);
 
     // 啟動應用程式
     initWheel();
-    loadThemeList();
 });
-
-
-
-
-const saveThemeBtn = document.getElementById('saveThemeBtn');
-
-saveThemeBtn.addEventListener('click', async () => {
-  const themeName = prompt('請輸入主題名稱：');
-  if (!themeName) return;
-
-  const payload = {
-    name: themeName,
-    description: '',
-    options: currentOptions
-  };
-
-  try {
-    const response = await fetch('/api/wheel-game/themes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error('儲存失敗');
-    const result = await response.json();
-    alert('主題已成功儲存！');
-    currentThemeName = result.name;
-    currentThemeId = result.id;
-  } catch (err) {
-    console.error('儲存主題失敗:', err);
-    alert('無法儲存主題');
-  }
-});
-
-
-
-
-
-
-// 匯出為JSON檔案
-function exportToJSON() {
-    const themeData = {
-        theme: {
-            name: currentThemeName || "未命名主題",
-            created_at: new Date().toISOString()
-        },
-        options: options.map(option => ({
-            text: option.text,
-            color: option.color,
-            display_order: options.indexOf(option)
-        }))
-    };
-    
-    const dataStr = JSON.stringify(themeData, null, 2);
-    const blob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `${currentThemeName || 'wheel-theme'}.json`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-// 匯入JSON檔案
-function importFromJSON(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const jsonData = JSON.parse(e.target.result);
-            
-            // 驗證JSON格式
-            if (!jsonData.options || !Array.isArray(jsonData.options)) {
-                alert('無效的JSON格式：缺少選項陣列');
-                return;
-            }
-            
-            // 提取主題名稱（如果有）
-            if (jsonData.theme && jsonData.theme.name) {
-                currentThemeName = jsonData.theme.name;
-                currentThemeEl.textContent = `目前主題: ${currentThemeName}`;
-            }
-            
-            // 提取選項
-            const importedOptions = jsonData.options.map(opt => ({
-                text: opt.text || '',
-                color: opt.color || fallbackColor
-            }));
-            
-            if (importedOptions.length === 0) {
-                alert('JSON檔案中沒有有效的選項');
-                return;
-            }
-            
-            // 更新選項並重繪轉盤
-            options = importedOptions;
-            drawWheel();
-            
-            alert('成功匯入主題：' + currentThemeName);
-            
-        } catch (err) {
-            console.error('匯入JSON時出錯:', err);
-            alert('匯入JSON時出錯：' + err.message);
-        }
-    };
-    reader.readAsText(file);
-}
-
-// 從資料庫加載主題列表
-async function loadThemeList() {
-    try {
-        const response = await fetch('/api/wheel-game/themes');
-        if (response.ok) {
-            const themes = await response.json();
-            populateThemeSelect(themes);
-        } else {
-            console.error('無法獲取主題列表');
-        }
-    } catch (err) {
-        console.error('獲取主題列表時出錯:', err);
-    }
-}
-
-// 填充主題選單
-function populateThemeSelect(themes) {
-    // 清空選單，保留預設選項
-    themeSelect.innerHTML = '<option value="" disabled selected>-- 載入主題 --</option>';
-    
-    // 添加主題選項
-    themes.forEach(theme => {
-        const option = document.createElement('option');
-        option.value = theme.id;
-        option.textContent = theme.name;
-        themeSelect.appendChild(option);
-    });
-}
-
-// 從資料庫加載特定主題
-async function loadTheme(themeId) {
-    try {
-        const response = await fetch(`/api/wheel-game/themes/${themeId}`);
-        if (response.ok) {
-            const themeData = await response.json();
-            applyThemeData(themeData);
-            return true;
-        } else {
-            console.error('無法獲取主題');
-            return false;
-        }
-    } catch (err) {
-        console.error('獲取主題時出錯:', err);
-        return false;
-    }
-}
-
-// 應用主題數據
-function applyThemeData(themeData) {
-    // 設置主題名稱
-    currentThemeName = themeData.name;
-    currentThemeId = themeData.id;
-    currentThemeEl.textContent = `目前主題: ${currentThemeName}`;
-    
-    // 設置選項
-    if (themeData.options && Array.isArray(themeData.options)) {
-        options = themeData.options.map(opt => ({
-            text: opt.text,
-            color: opt.color
-        }));
-        
-        // 重繪轉盤
-        drawWheel();
-    }
-}
-
-// 保存當前主題到資料庫
-async function saveTheme(themeName) {
-    if (!themeName || !options.length) {
-        alert('請輸入主題名稱且確保有至少一個選項');
-        return false;
-    }
-    
-    try {
-        const themeData = {
-            name: themeName,
-            options: options.map(option => ({
-                text: option.text,
-                color: option.color,
-                display_order: options.indexOf(option)
-            }))
-        };
-        
-        const response = await fetch('/api/wheel-game/themes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(themeData)
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            currentThemeName = themeName;
-            currentThemeId = result.id;
-            currentThemeEl.textContent = `目前主題: ${currentThemeName}`;
-            
-            // 重新加載主題列表
-            loadThemeList();
-            
-            return true;
-        } else {
-            const error = await response.json();
-            alert('儲存主題失敗: ' + (error.error || '未知錯誤'));
-            return false;
-        }
-    } catch (err) {
-        console.error('儲存主題時出錯:', err);
-        alert('儲存主題時發生錯誤: ' + err.message);
-        return false;
-    }
-}
-
-// 儲存當前選項為新主題
-function saveCurrentAsTheme() {
-    const themeName = prompt('請輸入主題名稱:', currentThemeName);
-    if (themeName) {
-        saveTheme(themeName);
-    }
-}

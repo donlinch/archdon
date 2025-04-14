@@ -758,95 +758,9 @@
 }
 
 
-/* 頁腳樣式 */
-.game-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #333;
-    color: white;
-    padding: 10px 0;
-    text-align: center;
-    font-size: 12px;
-    z-index: 999;
-    display: none; /* 默認隱藏 */
-}
 
-.theme-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 5px;
-    flex-wrap: wrap;
-    padding: 0 15px;
-}
 
-.current-theme {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 14px;
-}
 
-.theme-select {
-    padding: 5px 8px;
-    border-radius: 4px;
-    background-color: #555;
-    color: white;
-    border: 1px solid #777;
-}
-
-.footer-btn {
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
-}
-
-.edit-btn {
-    background-color: #3498db;
-    color: white;
-}
-
-.export-btn {
-    background-color: #27ae60;
-    color: white;
-}
-
-.import-btn {
-    background-color: #9b59b6;
-    color: white;
-}
-
-/* 確保 game-footer 在可見時顯示 */
-.game-footer.visible {
-    display: block;
-}
-
-/* 移動設備上的樣式調整 */
-@media (max-width: 600px) {
-    .theme-controls {
-        gap: 5px;
-    }
-    
-    .footer-btn, .current-theme {
-        font-size: 12px;
-        padding: 4px 8px;
-    }
-    
-    .theme-select {
-        font-size: 12px;
-        max-width: 120px;
-    }
-}
-
-.save-btn {
-    background-color: #f39c12;
-    color: white;
-}
 
     </style>
 </head>
@@ -906,52 +820,53 @@
 
    
 
+    
+    <button id="editOptions" class="edit-options-btn">編輯選項</button>
 
-
-
-
-
-
-<!-- 在它下方添加以下 footer 代碼 -->
-<div class="game-footer" id="gameFooter" style="display: none;">
-    <div class="theme-controls">
-        <span class="current-theme" id="currentTheme">目前主題: 未命名</span>
-        <button id="editOptionsBtn" class="footer-btn edit-btn">編輯選項</button>
-        <select id="themeSelect" class="theme-select">
-            <option value="" disabled selected>-- 載入主題 --</option>
-            <!-- 主題選項將由JS動態生成 -->
-        </select>
-        <button id="exportJSONBtn" class="footer-btn export-btn">匯出JSON</button>
-        <button id="saveThemeBtn" class="footer-btn save-btn">儲存主題</button>
-
-        <button id="importJSONBtn" class="footer-btn import-btn">匯入JSON</button>
+    <!-- 選項編輯彈出視窗 -->
+    <div id="optionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>編輯選項</h2>
+                <span class="close">×</span>
+            </div>
+            <div class="options-container" id="optionsContainer"></div>
+            <button id="addOption" class="add-option">+ 新增選項</button>
+            <div class="modal-footer">
+                <button class="save-options" id="saveOptions">儲存選項</button>
+            </div>
+        </div>
     </div>
+
+
+
+
+<div class="game-footer" id="gameFooter" style="display: none;">
+          
+            
+   
+   
+
+
+    
     <div class="footer-copyright">
         © 2024 SunnyYummy. All rights reserved.
     </div>
+
+
+
+
 </div>
 
-<!-- 添加隱藏的文件輸入元素用於匯入JSON -->
-<input type="file" id="jsonFileInput" accept=".json" style="display: none;">
 
-
-<!-- 編輯選項的彈出視窗 -->
-<div id="optionsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>編輯選項</h2>
-        <span class="close">&times;</span>
-      </div>
-      <div id="optionsContainer" class="options-container">
-        <!-- 選項會由 JS 動態插入 -->
-      </div>
-      <button id="addOption" class="add-option">➕ 新增選項</button>
-      <div class="modal-footer">
-        <button id="saveOptions" class="save-options">💾 儲存選項</button>
-      </div>
-    </div>
-  </div>
  
+
+
+
+
+
+
+
 
 
 <script src="wheel-game.js"></script>
