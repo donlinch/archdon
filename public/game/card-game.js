@@ -1,4 +1,3 @@
-
 // 預先加載模板數據
 let cachedTemplates = null;
 
@@ -9,31 +8,36 @@ const gameState = {
     revealed: Array(20).fill(false),
     contentPositions: Array(20).fill(0).map((_, i) => i), // 內容位置映射
     cardTimerId: null, // 計時器ID追蹤變數
-    useServerStorage: true // 是否使用伺服器存儲 (如果伺服器連接失敗則自動回退到本地)
+    useServerStorage: true // 如果伺服器連接失敗則自動回退到本地
 };
 
 // 新增：模板相關常量
 const TEMPLATES_STORAGE_KEY = 'sunnyYummy_cardGame_templates';
  
-// DOM 元素
-const configModal = document.getElementById('configModal');
-const configBtn = document.getElementById('configBtn');
-const templatesBtn = document.getElementById('templatesBtn');
-const closeBtn = document.querySelector('.close');
-const saveConfigBtn = document.getElementById('saveConfigBtn');
-const resetBtn = document.getElementById('resetBtn');
-const inputGrid = document.getElementById('inputGrid');
-const centeredCard = document.getElementById('centeredCard');
-const cardInner = document.getElementById('cardInner');
-const cardCloseBtn = document.querySelector('.card-close');
-const navToggle = document.getElementById('navToggle');
-
-// 新增：模板管理相關DOM元素
-const templateSelect = document.getElementById('templateSelect');
-const templateNameInput = document.getElementById('templateNameInput');
-const saveTemplateBtn = document.getElementById('saveTemplateBtn');
-const loadTemplateBtn = document.getElementById('loadTemplateBtn');
-const deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
+// DOM 元素引用獲取函數 - 避免在DOM加載前嘗試獲取元素
+function getDOMElements() {
+    return {
+        configModal: document.getElementById('configModal'),
+        configBtn: document.getElementById('configBtn'),
+        templatesBtn: document.getElementById('templatesBtn'),
+        closeBtn: document.querySelector('.close'),
+        saveConfigBtn: document.getElementById('saveConfigBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        inputGrid: document.getElementById('inputGrid'),
+        centeredCard: document.getElementById('centeredCard'),
+        cardInner: document.getElementById('cardInner'),
+        cardCloseBtn: document.querySelector('.card-close'),
+        navToggle: document.getElementById('navToggle'),
+        templateSelect: document.getElementById('templateSelect'),
+        templateNameInput: document.getElementById('templateNameInput'),
+        saveTemplateBtn: document.getElementById('saveTemplateBtn'),
+        loadTemplateBtn: document.getElementById('loadTemplateBtn'),
+        deleteTemplateBtn: document.getElementById('deleteTemplateBtn'),
+        gameHeader: document.getElementById('gameHeader'),
+        gameFooter: document.getElementById('gameFooter'),
+        gameBoard: document.getElementById('gameBoard')
+    };
+}
 
 // 洗牌函數 (Fisher-Yates 算法)
 function shuffleArray(array) {
@@ -46,8 +50,8 @@ function shuffleArray(array) {
 
 // 初始化遊戲板
 function initializeBoard() {
-    const board = document.getElementById('gameBoard');
-    board.innerHTML = '';
+    const { gameBoard } = getDOMElements();
+    gameBoard.innerHTML = '';
     
     for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
         const hole = document.createElement('div');
@@ -65,7 +69,7 @@ function initializeBoard() {
         
         hole.appendChild(front);
         hole.appendChild(back);
-        board.appendChild(hole);
+        gameBoard.appendChild(hole);
         
         if (gameState.revealed[i]) {
             hole.classList.add('revealed');
@@ -77,6 +81,7 @@ function initializeBoard() {
 
 // 初始化輸入框
 function initializeInputs() {
+    const { inputGrid } = getDOMElements();
     inputGrid.innerHTML = '';
     
     for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
@@ -120,6 +125,8 @@ function revealHole(event) {
 
 // 顯示居中卡片
 function showCenteredCard(content, index) {
+    const { centeredCard, cardInner } = getDOMElements();
+    
     // 清除之前的計時器，如果存在的話
     if (gameState.cardTimerId !== null) {
         clearTimeout(gameState.cardTimerId);
@@ -143,6 +150,8 @@ function showCenteredCard(content, index) {
 
 // 關閉居中卡片
 function closeCenteredCard() {
+    const { centeredCard } = getDOMElements();
+    
     // 清除計時器
     if (gameState.cardTimerId !== null) {
         clearTimeout(gameState.cardTimerId);
@@ -158,6 +167,8 @@ function closeCenteredCard() {
 
 // 保存配置
 function saveConfig() {
+    const { configModal } = getDOMElements();
+    
     for (let i = 0; i < gameState.boardSize.rows * gameState.boardSize.cols; i++) {
         const input = document.getElementById(`content-${i}`);
         gameState.contents[i] = input.value || `內容 ${i+1}`;
@@ -208,8 +219,7 @@ function setExampleContent() {
 
 // 切換導航顯示狀態
 function toggleNavigation() {
-    const gameHeader = document.getElementById('gameHeader');
-    const gameFooter = document.getElementById('gameFooter');
+    const { gameHeader, gameFooter, navToggle } = getDOMElements();
     let navVisible = gameHeader.classList.contains('visible');
     
     navVisible = !navVisible;
@@ -228,7 +238,7 @@ function toggleNavigation() {
 
 // 檢查並關閉導航菜單（如果它是打開的）
 function closeNavigationIfOpen() {
-    const gameHeader = document.getElementById('gameHeader');
+    const { gameHeader, navToggle } = getDOMElements();
     if (gameHeader.classList.contains('visible')) {
         navToggle.click();
     }
@@ -403,8 +413,11 @@ async function deleteTemplate(templateName) {
         return true;
     }
 }
-// 更新模板下拉選單 - 修正版本
+
+// 更新模板下拉選單
 async function updateTemplateSelect() {
+    const { templateSelect, loadTemplateBtn, deleteTemplateBtn } = getDOMElements();
+    
     // 清空當前選項
     templateSelect.innerHTML = '<option value="" disabled selected>-- 選擇已保存的模板 --</option>';
     
@@ -433,7 +446,6 @@ async function updateTemplateSelect() {
         }
     } catch (error) {
         console.error('更新模板選單時出錯:', error);
-        // 即使出錯也要啟用按鈕，以便使用者可以嘗試創建新模板
         loadTemplateBtn.disabled = true;
         deleteTemplateBtn.disabled = true;
     }
@@ -444,8 +456,9 @@ function clearTemplateCache() {
     cachedTemplates = null;
 }
 
-// 保存當前內容為模板 - 修正版本
+// 保存當前內容為模板
 async function saveCurrentAsTemplate() {
+    const { templateNameInput, templateSelect } = getDOMElements();
     const templateName = templateNameInput.value.trim();
     
     // 驗證名稱
@@ -478,7 +491,7 @@ async function saveCurrentAsTemplate() {
     if (success) {
         // 清除緩存並更新下拉選單
         clearTemplateCache();
-        cachedTemplates = await loadTemplates(); // 重新加載緩存
+        cachedTemplates = await loadTemplates();
         await updateTemplateSelect();
         
         // 更新選中的模板
@@ -487,15 +500,15 @@ async function saveCurrentAsTemplate() {
         // 清空輸入框
         templateNameInput.value = '';
         
-        // 顯示成功訊息
         alert(`模板 "${templateName}" 已成功保存！`);
     } else {
         alert('保存模板失敗，請稍後再試。');
     }
 }
 
-// 從模板載入內容 - 修正版本
+// 從模板載入內容
 async function loadSelectedTemplate() {
+    const { templateSelect } = getDOMElements();
     const templateName = templateSelect.value;
     
     if (!templateName) {
@@ -512,8 +525,8 @@ async function loadSelectedTemplate() {
     
     if (!templateContent) {
         alert(`找不到模板 "${templateName}"！`);
-        clearTemplateCache(); // 緩存可能已過期
-        await updateTemplateSelect(); // 重新載入模板列表
+        clearTemplateCache();
+        await updateTemplateSelect();
         return;
     }
     
@@ -526,8 +539,9 @@ async function loadSelectedTemplate() {
     alert(`已成功載入模板 "${templateName}"！`);
 }
 
-// 刪除選中的模板 - 修正版本
+// 刪除選中的模板
 async function deleteSelectedTemplate() {
+    const { templateSelect } = getDOMElements();
     const templateName = templateSelect.value;
     
     if (!templateName) {
@@ -542,7 +556,6 @@ async function deleteSelectedTemplate() {
     const success = await deleteTemplate(templateName);
     
     if (success) {
-        // 清除緩存並更新下拉選單
         clearTemplateCache();
         await updateTemplateSelect();
         alert(`模板 "${templateName}" 已刪除！`);
@@ -551,99 +564,115 @@ async function deleteSelectedTemplate() {
     }
 }
 
-// 在頁面載入時預先加載模板
-window.addEventListener('DOMContentLoaded', async () => {
-    setExampleContent();
-    // 初始隨機排列內容
-    shuffleArray(gameState.contentPositions);
-    initializeBoard();
+// 設置事件監聽器
+function setupEventListeners() {
+    const {
+        configBtn, templatesBtn, closeBtn, saveConfigBtn, resetBtn,
+        saveTemplateBtn, loadTemplateBtn, deleteTemplateBtn,
+        configModal, centeredCard, navToggle
+    } = getDOMElements();
     
-    // 預先加載模板 (在背景進行，不阻塞頁面載入)
+    // 自定義內容按鈕點擊事件
+    configBtn.addEventListener('click', () => {
+        initializeInputs();
+        updateTemplateSelect();
+        configModal.style.display = 'block';
+        closeNavigationIfOpen();
+    });
+    
+    // 模板按鈕點擊事件
+    templatesBtn.addEventListener('click', () => {
+        initializeInputs();
+        updateTemplateSelect();
+        configModal.style.display = 'block';
+        
+        setTimeout(() => {
+            templateSelect.focus();
+        }, 300);
+        
+        closeNavigationIfOpen();
+    });
+    
+    // 關閉按鈕點擊事件
+    closeBtn.addEventListener('click', () => {
+        configModal.style.display = 'none';
+    });
+    
+    // 保存設置按鈕點擊事件
+    saveConfigBtn.addEventListener('click', saveConfig);
+    
+    // 重置按鈕點擊事件
+    resetBtn.addEventListener('click', resetGame);
+    
+    // 模板相關事件監聽
+    saveTemplateBtn.addEventListener('click', saveCurrentAsTemplate);
+    loadTemplateBtn.addEventListener('click', loadSelectedTemplate);
+    deleteTemplateBtn.addEventListener('click', deleteSelectedTemplate);
+    
+    // 點擊彈窗外區域關閉彈窗
+    window.addEventListener('click', (event) => {
+        if (event.target === configModal) {
+            configModal.style.display = 'none';
+        }
+    });
+    
+    // 导航栏控制
+    navToggle.addEventListener('click', toggleNavigation);
+    
+    // 點擊卡片區域關閉
+    centeredCard.addEventListener('click', closeCenteredCard);
+    
+    // 防止點擊卡片內容區域時事件冒泡
+    document.querySelector('.centered-card-content').addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+// 在頁面載入時初始化應用
+async function initializeApp() {
     try {
-        cachedTemplates = await loadTemplates();
-    } catch (error) {
-        console.warn('預載模板失敗:', error);
-    }
-    
-    // 檢查是否支持服務器連接
-    fetch('/api/card-game/templates')
-        .then(response => {
+        // 設置示例內容
+        setExampleContent();
+        
+        // 初始隨機排列內容
+        shuffleArray(gameState.contentPositions);
+        
+        // 初始化遊戲板
+        initializeBoard();
+        
+        // 顯示底部導航欄
+        const { gameFooter } = getDOMElements();
+        gameFooter.style.display = 'block';
+        
+        // 嘗試預先加載模板
+        try {
+            cachedTemplates = await loadTemplates();
+            console.log('已載入模板數:', Object.keys(cachedTemplates).length);
+        } catch (error) {
+            console.warn('預載模板失敗:', error);
+            cachedTemplates = {};
+        }
+        
+        // 檢查是否支持服務器連接
+        try {
+            const response = await fetch('/api/card-game/templates');
             if (!response.ok) {
                 console.warn('服務器模板API不可用，使用本地存儲。');
                 gameState.useServerStorage = false;
             } else {
                 console.log('服務器模板API可用。');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.warn('服務器模板API連接錯誤，使用本地存儲:', error);
             gameState.useServerStorage = false;
-        });
-    
-    // 新增：點擊整個卡片區域關閉
-    centeredCard.addEventListener('click', (e) => {
-        // 點擊卡片任何位置都會關閉
-        closeCenteredCard();
-    });
-    
-    // 防止點擊卡片內容區域時事件冒泡到外層
-    document.querySelector('.centered-card-content').addEventListener('click', (e) => {
-        // 如果想讓點擊任何位置都關閉，請移除這個事件監聽器或註釋掉 stopPropagation
-    });
-});
-// ----- 事件監聽 -----
-
-
-
-// 自定義內容按鈕點擊事件
-configBtn.addEventListener('click', () => {
-    // 首先打開配置模態窗口
-    initializeInputs();
-    updateTemplateSelect(); // 更新模板下拉選單
-    configModal.style.display = 'block';
-    
-    // 如果導航菜單是打開的，關閉它
-    closeNavigationIfOpen();
-});
-
-// 模板按鈕點擊事件
-templatesBtn.addEventListener('click', () => {
-    // 直接打開配置模態窗口，專注於模板部分
-    initializeInputs();
-    updateTemplateSelect();
-    configModal.style.display = 'block';
-    
-    // 聚焦到模板選擇下拉選單
-    setTimeout(() => {
-        templateSelect.focus();
-    }, 300);
-    
-    // 如果導航菜單是打開的，關閉它
-    closeNavigationIfOpen();
-});
-
-// 關閉按鈕點擊事件
-closeBtn.addEventListener('click', () => {
-    configModal.style.display = 'none';
-});
-
-// 保存設置按鈕點擊事件
-saveConfigBtn.addEventListener('click', saveConfig);
-
-// 重置按鈕點擊事件
-resetBtn.addEventListener('click', resetGame);
-
-// 新增：模板相關事件監聽
-saveTemplateBtn.addEventListener('click', saveCurrentAsTemplate);
-loadTemplateBtn.addEventListener('click', loadSelectedTemplate);
-deleteTemplateBtn.addEventListener('click', deleteSelectedTemplate);
-
-// 點擊彈窗外區域關閉彈窗
-window.addEventListener('click', (event) => {
-    if (event.target === configModal) {
-        configModal.style.display = 'none';
+        }
+        
+        // 設置事件監聽器
+        setupEventListeners();
+    } catch (error) {
+        console.error('初始化應用時出錯:', error);
     }
-});
+}
 
-// 导航栏控制
-navToggle.addEventListener('click', toggleNavigation);
+// 等待DOM完全加載後初始化應用
+document.addEventListener('DOMContentLoaded', initializeApp);
