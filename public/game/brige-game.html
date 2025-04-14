@@ -468,6 +468,50 @@
         .brown-pink .character-head, .brown-pink .player-head {
             background-color: #ff6b81;
         }
+
+
+ 
+.player {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(15, 52, 96, 0.9);
+    padding: 10px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin: 0 5px;
+}
+
+.player-figure {
+    width: 25px;
+    height: 35px;
+    position: relative;
+}
+
+.players-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 5px;
+    margin: 5px 0;
+}
+
+.current-player-indicator-icon {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 15px;
+    height: 15px;
+    background-color: #e94560;
+    border-radius: 50%;
+    border: 2px solid white;
+    z-index: 5;
+} 
+
+
     </style>
 </head>
 <body>
@@ -628,37 +672,39 @@
         // 更新玩家UI
         function updatePlayersUI() {
             playersContainer.innerHTML = '';
-            players.forEach((player, index) => {
-                const playerElement = document.createElement('div');
-                playerElement.className = 'player';
-                playerElement.id = `player${index+1}`;
-                
-                const playerFigure = document.createElement('div');
-                playerFigure.className = 'player-figure';
-                
-                const playerBody = document.createElement('div');
-                playerBody.className = `player-body ${player.color}`;
-                
-                const playerHead = document.createElement('div');
-                playerHead.className = 'player-head';
-                
-                playerBody.appendChild(playerHead);
-                playerFigure.appendChild(playerBody);
-                
-                const playerLabel = document.createElement('div');
-                playerLabel.className = 'player-label';
-                playerLabel.innerHTML = `${player.name} <span class="current-player-indicator">${player.active ? '▶' : ''}</span>`;
-                
-                playerElement.appendChild(playerFigure);
-                playerElement.appendChild(playerLabel);
-                
-                if (!player.active && index <= currentPlayerIndex) {
-                    playerElement.style.opacity = '0.5';
-                }
-                
-                playersContainer.appendChild(playerElement);
-            });
+    players.forEach((player, index) => {
+        const playerElement = document.createElement('div');
+        playerElement.className = 'player';
+        playerElement.id = `player${index+1}`;
+        
+        const playerFigure = document.createElement('div');
+        playerFigure.className = 'player-figure';
+        
+        const playerBody = document.createElement('div');
+        playerBody.className = `player-body ${player.color}`;
+        
+        const playerHead = document.createElement('div');
+        playerHead.className = 'player-head';
+        
+        // 添加當前玩家指示器，現在直接放在玩家圖示上
+        if (player.active) {
+            const indicator = document.createElement('div');
+            indicator.className = 'current-player-indicator-icon';
+            playerFigure.appendChild(indicator);
         }
+        
+        playerBody.appendChild(playerHead);
+        playerFigure.appendChild(playerBody);
+        
+        playerElement.appendChild(playerFigure);
+        
+        if (!player.active && index <= currentPlayerIndex) {
+            playerElement.style.opacity = '0.5';
+        }
+        
+        playersContainer.appendChild(playerElement);
+    });
+}
         
         // 初始化遊戲
         function initGame() {
