@@ -290,15 +290,32 @@ async function loadTemplatesFromServer() {
 
 // 統一的加載模板函數
 async function loadTemplates() {
+    // 先尝试从服务器加载
     if (gameState.useServerStorage) {
         try {
-            return await loadTemplatesFromServer();
+            const serverTemplates = await loadTemplatesFromServer();
+            if (Object.keys(serverTemplates).length > 0) {
+                console.log('已從服務器加載模板');
+                return serverTemplates;
+            } else {
+                console.warn('服務器模板為空，嘗試從本地加載');
+                // 尝试本地加载
+                const localTemplates = loadTemplatesFromLocalStorage();
+                if (Object.keys(localTemplates).length > 0) {
+                    console.log('已從本地加載模板');
+                    return localTemplates;
+                }
+            }
+            // 如果都没有，返回空对象
+            return {};
         } catch (error) {
             console.warn('服務器連接失敗，回退到本地存儲:', error);
-            gameState.useServerStorage = false; // 自動回退到本地模式
+            gameState.useServerStorage = false; // 自动回退到本地模式
+            // 尝试本地加载
             return loadTemplatesFromLocalStorage();
         }
     } else {
+        // 直接从本地加载
         return loadTemplatesFromLocalStorage();
     }
 }
