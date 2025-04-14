@@ -190,13 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
         optionsModal.style.display = 'block';
         optionsContainer.scrollTop = 0;
         
-        // 同時顯示導航欄 (如果它不可見)
-        if (!navVisible) {
-            navVisible = true;
-            gameHeader.classList.add('visible');
-            gameFooter.style.display = 'block';
-            navToggle.textContent = '×';
-        }
+       
     }
 
     // 添加選項到編輯視窗
