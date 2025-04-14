@@ -813,6 +813,16 @@
     </style>
 </head>
 <body>
+  
+    
+
+
+
+
+
+
+ <!-- 新增可折疊導航欄 -->
+ <div class="game-header" id="gameHeader">
     <header class="page-title-header">
         <h1 class="page-title">SunnyYummy 洞洞樂遊戲</h1>
     </header>
@@ -834,72 +844,27 @@
         <a href="/game/brige-game.html" >玻璃橋挑戰</a>
  
     </nav>
-    
-
-
-
-
-
-
- <!-- 新增可折疊導航欄 -->
- <div class="game-header" id="gameHeader">
-    <header class="page-title-header">
-        <h1 class="page-title">魷魚遊戲-玻璃橋</h1>
-    </header>
-    
-    <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html">最新消息</a>
-        <a href="/scores.html">樂譜與舞蹈</a>
-        <a href="/game/card-game.html" class="active">互動遊戲</a>
-        <a href="/guestbook.html">留言板</a>
-    </nav>
-    
-    <nav class="games-nav">
-        <a href="/game/card-game.html">洞洞樂</a>
-        <a href="/game/wheel-game.html">命運輪盤</a>
-        <a href="/game/brige-game.html" class="active">玻璃橋挑戰</a>
-    </nav>
-</div>
 
 <!-- 導航切換按鈕 -->
 <button class="nav-toggle" id="navToggle">≡</button>
-
-
-    <div class="game-container">
-        <div class="timer">02:00</div>
-        <div class="progress">進度: 0/15</div>
-        <div class="bridge" id="bridge"></div>
-        <div id="character" class="character">
-            <div class="character-body pink" id="characterBody">
-                <div class="character-head"></div>
-                <div class="character-legs">
-                    <div class="character-leg pink"></div>
-                    <div class="character-leg pink"></div>
-                </div>
-            </div>
-        </div>
-        <div class="game-over" id="gameOver">
-            <div id="gameOverText">遊戲結束!</div>
-            <button class="restart-btn" onclick="restartGame()">重新開始</button>
-        </div>
     </div>
 
 
      <!-- 新增頁腳 -->
      <div class="game-footer" id="gameFooter">
-        <div class="player-count-container">
-            <label for="playerCount">遊戲人數：</label>
-            <select id="playerCount" class="player-count-select">
-                <option value="3" selected>3人</option>
-                <option value="4">4人</option>
-                <option value="5">5人</option>
-                <option value="6">6人</option>
-                <option value="7">7人</option>
-                <option value="8">8人</option>
-            </select>
+    
+
+        <div class="controls">
+            <button id="configBtn">自定義內容</button>
+            <button id="resetBtn" class="reset-btn">重置遊戲</button>
         </div>
+        
+        <div class="contribution-info">
+            這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
+        </div>
+
+
+        
         <div class="footer-copyright">
             © 2024 SunnyYummy. All rights reserved.
         </div>
@@ -925,14 +890,7 @@
             </div>
         </div>
         
-        <div class="controls">
-            <button id="configBtn">自定義內容</button>
-            <button id="resetBtn" class="reset-btn">重置遊戲</button>
-        </div>
-        
-        <div class="contribution-info">
-            這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
-        </div>
+       
     </div>
     
     <!-- 自定義內容彈窗 -->
@@ -962,21 +920,7 @@
         </div>
     </div>
 
-    <footer>
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/games.html" class="active">互動遊戲</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2024 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+    
 
     
 
