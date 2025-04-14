@@ -183,39 +183,62 @@ app.get('/api/card-game/templates/:id', async (req, res) => {
     }
 });
 
-// POST /api/card-game/templates - 創建新模板
+// POST /api/card-game/templates - 创建新模板 (修改版)
 app.post('/api/card-game/templates', async (req, res) => {
     const { template_name, content_data, is_public = true } = req.body;
     
-    if (!template_name || !content_data) {
-        return res.status(400).json({ error: '模板名稱和內容不能為空' });
+    if (!template_name) {
+        return res.status(400).json({ error: '模板名称不能为空' });
+    }
+    
+    // 数据验证和处理
+    let validContentData;
+    try {
+        // 如果已经是对象，使用它
+        if (typeof content_data === 'object' && content_data !== null) {
+            validContentData = content_data;
+        } 
+        // 如果是字符串，尝试解析
+        else if (typeof content_data === 'string') {
+            validContentData = JSON.parse(content_data);
+        } 
+        // 其他类型，包装成数组
+        else {
+            validContentData = [content_data];
+        }
+        
+        // 再次验证是否为有效JSON
+        JSON.stringify(validContentData);
+    } catch (error) {
+        console.error('内容数据格式错误:', error, '收到的数据:', content_data);
+        return res.status(400).json({ error: '内容数据格式错误，必须是有效的JSON' });
     }
     
     try {
-        // 檢查模板名稱是否已存在
+        // 检查模板名称是否已存在
         const existingCheck = await pool.query(
             'SELECT 1 FROM card_game_templates WHERE template_name = $1',
             [template_name]
         );
         
         if (existingCheck.rows.length > 0) {
-            return res.status(409).json({ error: '此模板名稱已存在' });
+            return res.status(409).json({ error: '此模板名称已存在' });
         }
         
-        // 插入新模板
+        // 插入新模板，使用验证过的数据
         const ip_address = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         
         const result = await pool.query(
             `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
              VALUES ($1, $2, $3, $4) 
              RETURNING id, template_name, content_data, created_at, updated_at`,
-            [template_name, content_data, ip_address, is_public]
+            [template_name, validContentData, ip_address, is_public]
         );
         
         res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error('創建洞洞樂模板失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
+        console.error('创建洞洞乐模板失败:', err);
+        res.status(500).json({ error: '服务器内部错误' });
     }
 });
 
