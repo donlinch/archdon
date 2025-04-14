@@ -2,29 +2,201 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport from bridge-game, crucial for interaction -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>魷魚遊戲 - 玻璃橋挑戰(接力版)</title>
+    <!-- Title and Description from wheel-game, adapted -->
+    <title>SunnyYummy 互動遊戲 - 玻璃橋挑戰</title>
+    <meta name="description" content="SunnyYummy 互動遊戲 - 魷魚遊戲風格的玻璃橋接力挑戰。">
+    <!-- Favicon and PWA icons (from wheel-game, assuming paths are correct) -->
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <!-- Fonts (from wheel-game) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Combined CSS -->
     <style>
+        /* --- Styles from wheel-game.html (Header, Nav, Footer) --- */
         body {
-            margin: 0;
+            /* Base styles, adjusted for bridge game */
+            font-family: 'Noto Sans TC', sans-serif;
+            display: flex;
+            flex-direction: column;
+            background-color: #1a1a2e; /* Bridge game background */
+            color: white; /* Bridge game default text color */
             padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #1a1a2e;
+            margin: 0;
+            min-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+            /* overflow: hidden; /* REMOVED from body initially */
+        }
+
+        /* Page Title Header */
+        .page-title-header {
+            background-color: #FFB74D; /* wheel-game style */
+            padding: 1rem;
+            text-align: center;
+            width: 100%;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        .page-title {
+            color: #424242; /* wheel-game style */
+            margin: 0;
+            font-size: 1.5em; /* Adjust size if needed */
+        }
+
+        /* Category Navigation */
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 0.8rem 0; /* Slightly reduced padding */
+            background-color: #f0f0f0; /* wheel-game style */
+            width: 100%;
+            flex-shrink: 0; /* Prevent nav from shrinking */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+
+        .category-nav a {
+            text-decoration: none;
+            color: #333; /* wheel-game style */
+            padding: 0.4rem 0.8rem; /* Slightly reduced padding */
+            border-radius: 4px;
+            font-size: 0.9em; /* Adjust size if needed */
+        }
+
+        .category-nav a.active {
+            background-color: #FFB74D; /* wheel-game style */
             color: white;
+        }
+
+        .category-nav a:hover:not(.active) {
+            background-color: #e0e0e0; /* wheel-game style */
+        }
+
+        /* Games Navigation */
+        .games-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 0.8rem 0; /* Slightly reduced padding */
+            background-color: #fff5e6; /* wheel-game style */
+            width: 100%;
+            border-bottom: 1px solid #ffe0b2; /* wheel-game style */
+            flex-shrink: 0; /* Prevent nav from shrinking */
+        }
+
+        .games-nav a {
+            text-decoration: none;
+            color: #333; /* wheel-game style */
+            padding: 0.4rem 1rem; /* Slightly reduced padding */
+            border-radius: 20px;
+            background-color: #ffecb3; /* wheel-game style */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            font-size: 0.9em; /* Adjust size if needed */
+        }
+
+        .games-nav a.active {
+            background-color: #FF9800; /* wheel-game style */
+            color: white;
+            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
+            transform: translateY(-2px);
+        }
+
+        .games-nav a:hover:not(.active) {
+            background-color: #ffe082; /* wheel-game style */
+            transform: translateY(-2px);
+        }
+
+        /* Footer Styles */
+        footer {
+            background-color: #333; /* wheel-game style */
+            color: white;
+            width: 100%;
+            padding: 1.5rem 0; /* Slightly reduced padding */
+            margin-top: auto; /* Pushes footer to bottom */
+            flex-shrink: 0; /* Prevent footer from shrinking */
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap; /* Allow wrapping */
+        }
+
+        .footer-nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .footer-nav a.active {
+            color: #FFB74D; /* wheel-game style */
+        }
+
+        .footer-copyright {
+            text-align: center;
+            font-size: 0.8em; /* Slightly reduced size */
+        }
+
+        /* Contribution Info (Optional, if you want to add it) */
+        .contribution-info {
+             background-color: rgba(15, 52, 96, 0.6); /* Adjusted background */
+             padding: 10px;
+             border-radius: 8px;
+             margin: 15px auto; /* Spacing */
+             max-width: 90%;
+             width: 600px;
+             text-align: center;
+             font-size: 0.85em;
+             color: #eee; /* Lighter text */
+             box-sizing: border-box;
+        }
+         .contribution-info a {
+             color: #FFB74D; /* Match theme */
+             text-decoration: none;
+         }
+         .contribution-info a:hover {
+             text-decoration: underline;
+         }
+
+        /* --- Styles specific to bridge-game.html --- */
+
+        /* New Game Wrapper */
+        .game-wrapper {
+            flex-grow: 1; /* Takes available vertical space */
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-            font-size: 16px;
+            justify-content: center; /* Center game vertically */
+            width: 100%;
+            padding: 5px 0; /* Minimal padding */
+            box-sizing: border-box;
+            position: relative; /* Needed for absolute children like timer */
+            overflow: hidden; /* VERY IMPORTANT: Prevents internal scrolling */
         }
+
         .game-container {
             position: relative;
-            width: 100%;
-            height: 60vh;
+            width: 100%; /* Take full width of wrapper */
+            max-width: 500px; /* Limit max width for larger screens */
+            height: 60vh; /* Keep the viewport height based size */
             perspective: 1000px;
-            margin-bottom: 10px;
-            overflow: hidden;
+            margin-bottom: 5px; /* Reduced margin */
+            overflow: hidden; /* Clip bridge if needed */
+            flex-shrink: 0; /* Don't shrink */
         }
         .bridge {
             position: absolute;
@@ -35,69 +207,68 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            transition: transform 0.8s ease; /* 添加平滑過渡效果 */
+            transition: transform 0.8s ease;
         }
         .bridge-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 8px; /* Slightly reduced */
             width: 100%;
             perspective: 500px;
             transform: rotateX(60deg);
         }
         .glass-panel {
             width: 45%;
-            height: 60px;
+            height: 50px; /* Slightly reduced */
             background-color: rgba(167, 197, 235, 0.5);
-            border: 2px solid white;
+            border: 1px solid white; /* Thinner border */
             display: flex;
             justify-content: center;
             align-items: center;
             transform-style: preserve-3d;
             transition: all 0.3s;
             position: relative;
-            font-size: 20px;
+            font-size: 16px; /* Slightly reduced */
             font-weight: bold;
         }
-        .controls-and-players {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            padding: 10px;
-            gap: 15px;
-        }
+        /* Removed controls-and-players wrapper, elements styled directly */
         .controls {
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
-            gap: 20px;
-            margin: 5px 0 15px 0;
+            width: 90%;
+            max-width: 450px; /* Limit width */
+            gap: 15px; /* Reduced gap */
+            margin: 5px 0 10px 0; /* Adjusted margin */
+            flex-shrink: 0;
         }
         .players-container {
             display: flex;
-            justify-content: space-around;
-            width: 100%;
-            padding: 0 10px;
-            margin: 10px 0;
+            justify-content: center; /* Center players */
+            flex-wrap: wrap; /* Allow wrapping */
+            gap: 8px; /* Space between players */
+            width: 95%;
+            max-width: 600px; /* Limit width */
+            padding: 0 5px;
+            margin: 5px 0; /* Adjusted margin */
+            flex-shrink: 0;
         }
         .btn {
-            padding: 20px 50px;
-            font-size: 28px;
+            padding: 15px 30px; /* Reduced padding */
+            font-size: 20px; /* Reduced font size */
             background-color: #e94560;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px; /* Slightly smaller radius */
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2); /* Adjusted shadow */
             transition: transform 0.1s, box-shadow 0.1s;
-            width: 40%;
-            max-width: 180px;
+            width: 45%;
+            max-width: 160px; /* Limit max width */
+            flex-shrink: 0; /* Prevent shrinking */
         }
         .btn:active {
-            transform: translateY(4px);
+            transform: translateY(2px); /* Reduced active effect */
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
         .btn:hover {
@@ -110,39 +281,42 @@
         }
         .info-panel {
             width: 90%;
-            padding: 15px;
+            max-width: 500px; /* Limit width */
+            padding: 10px; /* Reduced padding */
             text-align: center;
             background-color: #0f3460;
-            border-radius: 10px;
-            margin: 10px 0;
-            font-size: 18px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin: 5px 0; /* Adjusted margin */
+            font-size: 14px; /* Reduced font size */
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
         }
         .timer {
-            position: absolute;
-            top: 15px;
+            position: absolute; /* Relative to game-wrapper now */
+            top: 10px; /* Position within wrapper */
             left: 50%;
             transform: translateX(-50%);
             background-color: #0f3460;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 28px;
-            border: 3px solid #e94560;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            padding: 8px 15px; /* Reduced padding */
+            border-radius: 8px;
+            font-size: 22px; /* Reduced font size */
+            border: 2px solid #e94560;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
             z-index: 10;
         }
         .player {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px; /* Reduced gap */
             background-color: rgba(15, 52, 96, 0.9);
-            padding: 12px 15px;
-            border-radius: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            padding: 8px 12px; /* Reduced padding */
+            border-radius: 15px; /* Adjusted radius */
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0; /* Prevent shrinking */
         }
         .player-figure {
-            width: 30px;
-            height: 45px;
+            width: 25px; /* Reduced size */
+            height: 38px; /* Reduced size */
             position: relative;
         }
         .player-body {
@@ -156,25 +330,26 @@
             justify-content: center;
         }
         .player-head {
-            width: 60%;
-            height: 40%;
+            width: 55%; /* Adjusted ratio */
+            height: 35%; /* Adjusted ratio */
             border-radius: 50%;
             position: relative;
         }
         .player-label {
-            font-size: 18px;
+            font-size: 14px; /* Reduced font size */
             font-weight: bold;
+            white-space: nowrap; /* Prevent wrapping */
         }
         .progress {
-            position: absolute;
-            top: 70px;
+            position: absolute; /* Relative to game-wrapper */
+            top: 55px; /* Position below timer */
             left: 50%;
             transform: translateX(-50%);
-            font-size: 22px;
+            font-size: 18px; /* Reduced font size */
             color: #e94560;
             background-color: rgba(15, 52, 96, 0.7);
-            padding: 8px 15px;
-            border-radius: 15px;
+            padding: 6px 12px; /* Reduced padding */
+            border-radius: 12px;
             z-index: 10;
         }
         .broken {
@@ -185,7 +360,7 @@
             background-color: rgba(66, 245, 179, 0.5);
         }
         .game-over {
-            position: absolute;
+            position: absolute; /* Covers game-wrapper */
             top: 0;
             left: 0;
             width: 100%;
@@ -195,7 +370,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 42px;
+            font-size: 36px; /* Reduced font size */
             color: #e94560;
             z-index: 100;
             display: none;
@@ -203,25 +378,27 @@
             padding: 20px;
         }
         .restart-btn {
-            margin-top: 30px;
-            padding: 15px 30px;
+            margin-top: 25px; /* Reduced margin */
+            padding: 12px 25px; /* Reduced padding */
             background-color: #e94560;
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 24px;
+            border-radius: 8px;
+            font-size: 20px; /* Reduced font size */
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
         }
         .character {
+            /* Position relative to game-container */
             position: absolute;
-            width: 30px;
-            height: 45px;
+            width: 25px; /* Match player figure size */
+            height: 38px; /* Match player figure size */
             z-index: 20;
             transition: all 0.5s ease;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            /* Initial positioning done by JS */
+            bottom: 20px; /* Default bottom if JS fails */
+            left: 50%;  /* Default left if JS fails */
+            transform: translateX(-50%); /* Default transform */
         }
         .character-body {
             position: absolute;
@@ -234,14 +411,14 @@
             justify-content: center;
         }
         .character-head {
-            width: 60%;
-            height: 40%;
+            width: 55%; /* Match player head ratio */
+            height: 35%; /* Match player head ratio */
             border-radius: 50%;
             position: relative;
         }
         .character-legs {
             position: absolute;
-            bottom: -10px;
+            bottom: -8px; /* Adjusted leg position */
             left: 0;
             width: 100%;
             display: flex;
@@ -249,27 +426,25 @@
         }
         .character-leg {
             width: 30%;
-            height: 12px;
+            height: 10px; /* Reduced leg size */
         }
-        /* 角色顏色 */
-        .pink {
-            background-color: #ff6b81;
-        }
-        .pink .character-head, .pink .player-head {
-            background-color: #ffd166;
-        }
-        .yellow-pink {
-            background-color: #ffd166;
-        }
-        .yellow-pink .character-head, .yellow-pink .player-head {
-            background-color: #ff6b81;
-        }
-        .green-pink {
-            background-color: #06d6a0;
-        }
-        .green-pink .character-head, .green-pink .player-head {
-            background-color: #ff6b81;
-        }
+        /* Character Colors */
+        .pink { background-color: #ff6b81; }
+        .pink .character-head, .pink .player-head { background-color: #ffd166; }
+        .yellow-pink { background-color: #ffd166; }
+        .yellow-pink .character-head, .yellow-pink .player-head { background-color: #ff6b81; }
+        .green-pink { background-color: #06d6a0; }
+        .green-pink .character-head, .green-pink .player-head { background-color: #ff6b81; }
+        .blue-pink { background-color: #4392f1; }
+        .blue-pink .character-head, .blue-pink .player-head { background-color: #ff6b81; }
+        .purple-pink { background-color: #8d7cba; }
+        .purple-pink .character-head, .purple-pink .player-head { background-color: #ff6b81; }
+        .orange-pink { background-color: #ff9a3c; }
+        .orange-pink .character-head, .orange-pink .player-head { background-color: #ff6b81; }
+        .cyan-pink { background-color: #4ec2c2; }
+        .cyan-pink .character-head, .cyan-pink .player-head { background-color: #ff6b81; }
+        .brown-pink { background-color: #a06235; }
+        .brown-pink .character-head, .brown-pink .player-head { background-color: #ff6b81; }
         .blood {
             position: absolute;
             width: 100%;
@@ -280,136 +455,174 @@
             transition: opacity 0.3s;
         }
         .fall-animation {
-            animation: fall 2s forwards;
+            animation: fall 1.5s forwards; /* Faster fall */
         }
         @keyframes fall {
-            0% { transform: translateY(0) rotateZ(0deg); }
-            25% { transform: translateY(20px) rotateZ(45deg); }
-            100% { transform: translateY(500px) rotateZ(180deg); opacity: 0; }
+            0% { transform: translateY(0) rotateZ(0deg) scale(1); }
+            25% { transform: translateY(15px) rotateZ(30deg) scale(1.05); } /* Slightly smaller translate */
+            100% { transform: translateY(400px) rotateZ(180deg) scale(0.5); opacity: 0; } /* Fall further, shrink */
         }
         .current-player-indicator {
             font-weight: bold;
             color: #e94560;
-            margin-left: 8px;
-            font-size: 22px;
+            margin-left: 5px; /* Reduced margin */
+            font-size: 18px; /* Reduced size */
         }
-
         .player-count-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            margin: 15px 0;
+            gap: 10px; /* Reduced gap */
+            margin: 8px 0; /* Reduced margin */
             background-color: #0f3460;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            padding: 10px 15px; /* Reduced padding */
+            border-radius: 8px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
         }
         .player-count-select {
-            padding: 8px 15px;
-            font-size: 18px;
+            padding: 6px 10px; /* Reduced padding */
+            font-size: 16px; /* Reduced font size */
             background-color: #1a1a2e;
             color: white;
-            border: 2px solid #e94560;
-            border-radius: 5px;
+            border: 1px solid #e94560; /* Thinner border */
+            border-radius: 4px;
             cursor: pointer;
         }
 
-        .blue-pink {
-            background-color: #4392f1;
+        /* Media query for smaller screens if needed */
+        @media (max-height: 700px) {
+             /* Adjust sizes further if header/footer take too much space */
+            .game-container { height: 55vh; }
+            .btn { padding: 12px 25px; font-size: 18px; }
+            .player-count-container { margin: 5px 0; padding: 8px 12px; }
+            .info-panel { font-size: 13px; padding: 8px; }
+            .players-container { margin: 3px 0; }
         }
-        .blue-pink .character-head, .blue-pink .player-head {
-            background-color: #ff6b81;
-        }
-        .purple-pink {
-            background-color: #8d7cba;
-        }
-        .purple-pink .character-head, .purple-pink .player-head {
-            background-color: #ff6b81;
-        }
-        .orange-pink {
-            background-color: #ff9a3c;
-        }
-        .orange-pink .character-head, .orange-pink .player-head {
-            background-color: #ff6b81;
-        }
-        .cyan-pink {
-            background-color: #4ec2c2;
-        }
-        .cyan-pink .character-head, .cyan-pink .player-head {
-            background-color: #ff6b81;
-        }
-        .brown-pink {
-            background-color: #a06235;
-        }
-        .brown-pink .character-head, .brown-pink .player-head {
-            background-color: #ff6b81;
-        }
+         @media (max-width: 400px) {
+             .category-nav a, .games-nav a { font-size: 0.8em; padding: 0.3rem 0.6rem; }
+             .btn { padding: 10px 20px; font-size: 16px; }
+             .player-label { font-size: 12px;}
+             .player { padding: 6px 8px; gap: 5px;}
+             .player-figure { width: 20px; height: 30px;}
+             .timer { font-size: 18px; padding: 6px 10px; }
+             .progress { font-size: 15px; top: 45px; padding: 5px 10px; }
+         }
+
     </style>
 </head>
 <body>
-    <div class="game-container">
-        <div class="timer">02:00</div>
-        <div class="progress">進度: 0/15</div>
-        <div class="bridge" id="bridge"></div>
-        <div id="character" class="character">
-            <div class="character-body pink" id="characterBody">
-                <div class="character-head"></div>
-                <div class="character-legs">
-                    <div class="character-leg pink"></div>
-                    <div class="character-leg pink"></div>
+    <!-- Header from wheel-game -->
+    <header class="page-title-header">
+        <h1 class="page-title">SunnyYummy 互動遊戲</h1>
+    </header>
+
+    <!-- Category Nav from wheel-game -->
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html" class="active">互動遊戲</a> <!-- Mark as active -->
+        <a href="/guestbook.html">留言板</a>
+    </nav>
+
+    <!-- Games Nav from wheel-game -->
+    <nav class="games-nav">
+        <a href="/game/card-game.html">洞洞樂</a>
+        <a href="/game/wheel-game.html">命運輪盤</a>
+        <a href="/game/brige-game.html" class="active">玻璃橋</a> <!-- Added link for this game -->
+    </nav>
+
+    <!-- Main Game Wrapper -->
+    <main class="game-wrapper">
+        <div class="game-container">
+            <div class="timer">02:00</div>
+            <div class="progress">進度: 0/15</div>
+            <div class="bridge" id="bridge"></div>
+            <div id="character" class="character">
+                <!-- Character body updated by JS -->
+                <div class="character-body pink" id="characterBody">
+                    <div class="character-head"></div>
+                    <div class="character-legs">
+                        <div class="character-leg pink"></div>
+                        <div class="character-leg pink"></div>
+                    </div>
                 </div>
             </div>
+             <!-- Game Over screen still targets game-container effectively due to absolute positioning -->
+             <div class="game-over" id="gameOver">
+                <div id="gameOverText">遊戲結束!</div>
+                <button class="restart-btn" onclick="restartGame()">重新開始</button>
+             </div>
         </div>
-        <div class="game-over" id="gameOver">
-            <div id="gameOverText">遊戲結束!</div>
-            <button class="restart-btn" onclick="restartGame()">重新開始</button>
-        </div>
-    </div>
-    
-    <div class="players-container" id="players">
-        <!-- 玩家列表將由JavaScript動態生成 -->
-    </div>
-    
-    <div class="controls">
-        <button class="btn" id="leftBtn">左側</button>
-        <button class="btn" id="rightBtn">右側</button>
-    </div>
-    
-    <div class="info-panel">
-        <p id="message">接力挑戰！小紅、小黃、小綠輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！</p>
-    </div>
 
-    <div class="player-count-container">
-        <label for="playerCount">遊戲人數：</label>
-        <select id="playerCount" class="player-count-select">
-            <option value="3" selected>3人</option>
-            <option value="4">4人</option>
-            <option value="5">5人</option>
-            <option value="6">6人</option>
-            <option value="7">7人</option>
-            <option value="8">8人</option>
-        </select>
-    </div>
+        <div class="players-container" id="players">
+            <!-- Players generated by JS -->
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="leftBtn">左側</button>
+            <button class="btn" id="rightBtn">右側</button>
+        </div>
+
+        <div class="info-panel">
+            <p id="message">接力挑戰！選擇人數開始。當一位玩家失敗，下一位玩家將從該位置繼續！</p>
+        </div>
+
+        <div class="player-count-container">
+            <label for="playerCount">遊戲人數：</label>
+            <select id="playerCount" class="player-count-select">
+                <option value="3" selected>3人</option>
+                <option value="4">4人</option>
+                <option value="5">5人</option>
+                <option value="6">6人</option>
+                <option value="7">7人</option>
+                <option value="8">8人</option>
+            </select>
+        </div>
+    </main>
+
+    <!-- Optional: Contribution Info -->
+     <div class="contribution-info">
+         這是 SunnyYummy 提供的互動遊戲。魷魚遊戲玻璃橋挑戰改編。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
+     </div>
+
+    <!-- Footer from wheel-game -->
+    <footer>
+        <div class="footer-container">
+            <nav class="footer-nav">
+                 <a href="/">週邊商品</a>
+                 <a href="/music.html">音樂專輯</a>
+                 <a href="/news.html">最新消息</a>
+                 <a href="/scores.html">樂譜與舞蹈</a>
+                 <a href="/game/card-game.html" class="active">互動遊戲</a> <!-- Mark as active -->
+                 <a href="/guestbook.html">留言板</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2024 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
     <script>
-        // 遊戲變數
+        // --- Bridge Game JavaScript (No changes needed to the logic itself) ---
         let currentStep = 0;
         let totalSteps = 15;
-        let time = 120;
+        let time = 120; // 2 minutes in seconds
         let gameActive = true;
         let safePattern = [];
         let isMoving = false;
         let currentPlayerIndex = 0;
         let players = [];
-        let playerCount = 3; 
+        let playerCount = 3; // Default
         const playerColors = ['pink', 'yellow-pink', 'green-pink', 'blue-pink', 'purple-pink', 'orange-pink', 'cyan-pink', 'brown-pink'];
         const playerNames = ['小紅', '小黃', '小綠', '小藍', '小紫', '小橙', '小青', '小棕'];
         const playerCountSelect = document.getElementById('playerCount');
         let lastFailPosition = 0;
-        let currentViewStage = 0; // 當前視圖的階段（0-3，每4步調整一次）
-        
-        // 元素
+        let currentViewStage = 0; // Tracks the vertical scroll adjustment stage
+
+        // DOM Elements
         const bridge = document.getElementById('bridge');
         const leftBtn = document.getElementById('leftBtn');
         const rightBtn = document.getElementById('rightBtn');
@@ -421,425 +634,471 @@
         const character = document.getElementById('character');
         const characterBody = document.getElementById('characterBody');
         const playersContainer = document.getElementById('players');
+        const gameContainer = document.querySelector('.game-container'); // Get game container for positioning
 
-        // 玩家數量選擇事件
+        // Player Count Selection
         playerCountSelect.addEventListener('change', function() {
             playerCount = parseInt(this.value);
             restartGame();
         });
 
-        // 初始化玩家列表
         function initPlayers() {
             players = [];
             for (let i = 0; i < playerCount; i++) {
                 players.push({
-                    name: playerNames[i],
-                    color: playerColors[i],
+                    name: playerNames[i % playerNames.length], // Use modulo for safety
+                    color: playerColors[i % playerColors.length],
                     active: i === 0,
-                    lastFailPosition: 0
+                    lastFailPosition: 0 // Tracks individual player's fail point if needed
                 });
             }
         }
 
-        // 更新玩家UI
         function updatePlayersUI() {
             playersContainer.innerHTML = '';
             players.forEach((player, index) => {
                 const playerElement = document.createElement('div');
                 playerElement.className = 'player';
-                playerElement.id = `player${index+1}`;
-                
+                playerElement.id = `player${index}`; // Use index directly
+
                 const playerFigure = document.createElement('div');
                 playerFigure.className = 'player-figure';
-                
-                const playerBody = document.createElement('div');
-                playerBody.className = `player-body ${player.color}`;
-                
+
+                const playerBodyDiv = document.createElement('div'); // Renamed variable
+                playerBodyDiv.className = `player-body ${player.color}`;
+
                 const playerHead = document.createElement('div');
                 playerHead.className = 'player-head';
-                
-                playerBody.appendChild(playerHead);
-                playerFigure.appendChild(playerBody);
-                
+
+                playerBodyDiv.appendChild(playerHead);
+                playerFigure.appendChild(playerBodyDiv);
+
                 const playerLabel = document.createElement('div');
                 playerLabel.className = 'player-label';
-                playerLabel.innerHTML = `${player.name} <span class="current-player-indicator">${player.active ? '▶' : ''}</span>`;
-                
+                // Use innerHTML carefully or create text nodes
+                playerLabel.textContent = `${player.name} `; // Add space
+                 const indicatorSpan = document.createElement('span');
+                 indicatorSpan.className = 'current-player-indicator';
+                 indicatorSpan.textContent = player.active ? '▶' : '';
+                 playerLabel.appendChild(indicatorSpan);
+
+
                 playerElement.appendChild(playerFigure);
                 playerElement.appendChild(playerLabel);
-                
-                if (!player.active && index <= currentPlayerIndex) {
-                    playerElement.style.opacity = '0.5';
-                }
-                
+
+                // Dim inactive players who have already failed
+                if (!player.active && index < currentPlayerIndex) {
+                   playerElement.style.opacity = '0.5';
+                 } else {
+                    playerElement.style.opacity = '1';
+                 }
+
                 playersContainer.appendChild(playerElement);
             });
         }
-        
-        // 初始化遊戲
+
         function initGame() {
-            // 生成安全路徑
             safePattern = [];
             for (let i = 0; i < totalSteps; i++) {
                 safePattern.push(Math.random() < 0.5 ? 'left' : 'right');
             }
-            
-            // 創建橋面板
+
             createBridge();
-            
-            // 初始化玩家
             initPlayers();
             currentPlayerIndex = 0;
             lastFailPosition = 0;
+            currentViewStage = 0; // Reset view stage
             updatePlayersUI();
-            
-            // 放置小人在起點
-            positionCharacter(0);
-            
-            // 更新小人顏色
+
+            // Reset Character
+            character.classList.remove('fall-animation');
+             character.style.opacity = 1; // Ensure visible
+            positionCharacter(0); // Reset to start
             updateCharacterColor();
-            
-            // 更新進度顯示
+
             updateProgress();
-            
-            // 重置遊戲提示訊息
-            message.innerText = `接力挑戰！${playerCount}位玩家輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！`;
-            
-            // 重置橋的位置
-            resetBridgePosition();
-            
-            // 重置視角階段
-            currentViewStage = 0;
-            
-            // 啟動計時器
-            startTimer();
+            message.innerText = `接力挑戰！${playerCount}位玩家輪流挑戰。點擊左右側玻璃！`;
+
+            resetBridgePosition(); // Reset bridge scroll
+
+            // Reset Timer & Game State
+             time = 120;
+             timerElement.innerText = `02:00`;
+             gameActive = true;
+             isMoving = false;
+             gameOverElement.style.display = 'none';
+             leftBtn.disabled = false;
+             rightBtn.disabled = false;
+
+
+            startTimer(); // Start timer last
         }
-        
-        // 重置橋的位置
+
         function resetBridgePosition() {
+            bridge.style.transition = 'transform 0s'; // No animation during reset
             bridge.style.transform = 'translateY(0)';
+             setTimeout(() => {
+                 bridge.style.transition = 'transform 0.8s ease'; // Restore animation
+             }, 50);
         }
-        
-        // 創建橋
+
         function createBridge() {
             bridge.innerHTML = '';
             for (let i = 0; i < totalSteps; i++) {
                 const row = document.createElement('div');
                 row.className = 'bridge-row';
                 row.setAttribute('data-index', i);
-                row.style.opacity = 1 - (i * 0.04);
-                
+                // Opacity adjustment based on index (optional)
+                 row.style.opacity = Math.max(0.3, 1 - (i * 0.05));
+
                 const leftPanel = document.createElement('div');
                 leftPanel.className = 'glass-panel';
-                leftPanel.innerText = `L${i+1}`;
-                
+                leftPanel.textContent = `L${i + 1}`; // Use textContent for safety
+
                 const rightPanel = document.createElement('div');
                 rightPanel.className = 'glass-panel';
-                rightPanel.innerText = `R${i+1}`;
-                
-                // 添加血跡效果的div
+                rightPanel.textContent = `R${i + 1}`; // Use textContent for safety
+
+                // Add blood effect divs
                 const leftBlood = document.createElement('div');
                 leftBlood.className = 'blood';
                 leftPanel.appendChild(leftBlood);
-                
+
                 const rightBlood = document.createElement('div');
                 rightBlood.className = 'blood';
                 rightPanel.appendChild(rightBlood);
-                
+
                 row.appendChild(leftPanel);
                 row.appendChild(rightPanel);
                 bridge.appendChild(row);
             }
         }
-        
-        // 放置小人在指定位置
-        function positionCharacter(stepPosition) {
+
+        // Position character relative to the gameContainer
+         function positionCharacter(stepPosition) {
+            const containerRect = gameContainer.getBoundingClientRect();
+
             if (stepPosition === 0) {
-                // 回到起點
-                character.style.bottom = '20px';
+                character.style.bottom = '10px'; // Closer to bottom edge of container
                 character.style.left = '50%';
-                character.style.top = '';
-                character.style.transform = 'translateX(-50%)';
-            } else {
-                // 放在指定的步數位置
-                const rows = document.querySelectorAll('.bridge-row');
-                // 找到正確的行，注意索引計算
-                const rowIndex = totalSteps - stepPosition;
-                if (rowIndex >= 0 && rowIndex < rows.length) {
-                    const targetRow = rows[rowIndex];
-                    if (targetRow) {
-                        const rowRect = targetRow.getBoundingClientRect();
-                        character.style.top = `${rowRect.top + rowRect.height/2 - 30}px`;
-                        character.style.left = '50%';
-                        character.style.bottom = '';
-                        character.style.transform = 'translate(-50%, -50%) rotateX(60deg)';
-                    }
-                }
-            }
-            
-            character.classList.remove('fall-animation');
-        }
-        
-        // 更新小人顏色
+                character.style.top = ''; // Remove top positioning
+                character.style.transform = 'translateX(-50%)'; // Reset transform
+             } else {
+                 const rows = bridge.querySelectorAll('.bridge-row');
+                 const rowIndex = totalSteps - stepPosition; // Index from the bottom up
+
+                 if (rowIndex >= 0 && rowIndex < rows.length) {
+                     const targetRow = rows[rowIndex];
+                     if (targetRow) {
+                         const rowRect = targetRow.getBoundingClientRect();
+                         // Calculate position relative to gameContainer top
+                         const topOffset = rowRect.top - containerRect.top + (rowRect.height / 2) - (character.offsetHeight / 2) ;
+                        const leftOffset = (containerRect.width / 2) - (character.offsetWidth / 2); // Center horizontally within container
+
+                        character.style.top = `${topOffset}px`;
+                        character.style.left = `${leftOffset}px`;
+                         character.style.bottom = ''; // Remove bottom positioning
+                        character.style.transform = 'rotateX(0deg)'; // Adjust transform if needed, maybe remove rotation
+                     } else {
+                         console.warn("Target row not found for positioning:", rowIndex);
+                     }
+                 } else {
+                      console.warn("Invalid row index for positioning:", rowIndex);
+                      // Fallback: position near last known good spot or start
+                      positionCharacter(stepPosition - 1 >= 0 ? stepPosition - 1 : 0);
+                 }
+             }
+             // Ensure character is visible and not falling
+             character.classList.remove('fall-animation');
+             character.style.opacity = 1;
+         }
+
+
         function updateCharacterColor() {
             if (currentPlayerIndex >= 0 && currentPlayerIndex < players.length) {
-                characterBody.className = `character-body ${players[currentPlayerIndex].color}`;
-                
-                // 更新腿部顏色
+                const colorClass = players[currentPlayerIndex].color;
+                characterBody.className = `character-body ${colorClass}`; // Update body class
+
+                // Update legs
                 const legs = characterBody.querySelectorAll('.character-leg');
                 legs.forEach(leg => {
-                    leg.className = `character-leg ${players[currentPlayerIndex].color}`;
+                    // Remove old color classes before adding new one
+                     leg.className = 'character-leg'; // Reset classes
+                     leg.classList.add(colorClass);
                 });
-            }
+            } else {
+                 console.error("Invalid currentPlayerIndex for color update:", currentPlayerIndex);
+                 // Default color if error
+                 characterBody.className = 'character-body pink';
+                 const legs = characterBody.querySelectorAll('.character-leg');
+                 legs.forEach(leg => { leg.className = 'character-leg pink'; });
+             }
         }
-        
-        // 計時器
+
+        let timerInterval = null; // Store interval ID
         function startTimer() {
-            const timer = setInterval(() => {
+             clearInterval(timerInterval); // Clear existing timer first
+            timerInterval = setInterval(() => {
                 if (!gameActive) {
-                    clearInterval(timer);
+                    clearInterval(timerInterval);
                     return;
                 }
-                
+
                 time--;
                 const minutes = Math.floor(time / 60);
                 const seconds = time % 60;
                 timerElement.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                
+
                 if (time <= 0) {
-                    gameActive = false;
+                     clearInterval(timerInterval); // Stop timer first
                     endGame(false, "時間到！");
-                    clearInterval(timer);
                 }
             }, 1000);
         }
-        
-        // 切換到下一個玩家
+
         function switchToNextPlayer() {
             if (currentPlayerIndex >= 0 && currentPlayerIndex < players.length) {
                 players[currentPlayerIndex].active = false;
+                // Optional: Record where this player failed if needed later
+                // players[currentPlayerIndex].lastFailPosition = lastFailPosition;
             }
-            
-            // 尋找下一個可用的玩家
-            let foundNextPlayer = false;
-            for (let i = currentPlayerIndex + 1; i < players.length; i++) {
-                if (!players[i].active) {
-                    currentPlayerIndex = i;
-                    players[i].active = true;
-                    foundNextPlayer = true;
+
+            let nextPlayerFound = false;
+            // Start searching from the player *after* the current one
+            for (let i = 1; i < players.length; i++) {
+                let checkIndex = (currentPlayerIndex + i) % players.length;
+                 // Check if this player hasn't already been marked inactive (e.g., by failing)
+                 // This simple logic assumes players only become inactive upon failing
+                 // A more robust system might track player state (active, failed, succeeded)
+                if (players[checkIndex].active !== false) { // Check if not explicitly failed? This logic might need refinement.
+                                                            // Let's assume for now that if active isn't false, they can play.
+                     // Mark previous player inactive in UI if needed
+                     const prevPlayerUI = document.getElementById(`player${currentPlayerIndex}`);
+                     if (prevPlayerUI) prevPlayerUI.style.opacity = '0.5';
+
+
+                    currentPlayerIndex = checkIndex;
+                    players[currentPlayerIndex].active = true;
+                    nextPlayerFound = true;
                     break;
                 }
             }
-            
-            if (foundNextPlayer) {
+
+
+            if (nextPlayerFound) {
                 updatePlayersUI();
                 updateCharacterColor();
-                // 從上一個玩家失敗的位置開始
-                positionCharacter(lastFailPosition);
-                message.innerText = `${players[currentPlayerIndex].name}開始接力！從第${lastFailPosition}步開始`;
-                
-                // 根據失敗位置調整視圖
-                adjustBridgeViewByPosition(lastFailPosition);
-                
-                // 恢復按鈕
+                positionCharacter(lastFailPosition); // Move new player to the fail spot
+                adjustBridgeViewByPosition(lastFailPosition); // Adjust view for the new player
+                message.innerText = `${players[currentPlayerIndex].name} 接力! 從第 ${lastFailPosition + 1} 步開始`;
+
+                // Short delay before enabling controls for the new player
                 setTimeout(() => {
                     isMoving = false;
-                    leftBtn.disabled = false;
-                    rightBtn.disabled = false;
-                }, 500);
+                    if (gameActive) { // Only enable if game is still active
+                        leftBtn.disabled = false;
+                        rightBtn.disabled = false;
+                    }
+                }, 500); // Delay allows character repositioning visually
             } else {
-                // 所有玩家都用完了
+                // No more players left
                 endGame(false, "所有玩家都失敗了！");
             }
         }
-        
-        // 獲取當前行
+
+
         function getCurrentRow() {
-            const stepToCheck = Math.max(currentStep, lastFailPosition);
-            if (stepToCheck >= totalSteps) return null;
-            
-            const rows = document.querySelectorAll('.bridge-row');
-            const rowIndex = totalSteps - stepToCheck - 1;
-            
+             // Use lastFailPosition as the starting point if接力
+            const stepToFind = Math.max(currentStep, lastFailPosition);
+            if (stepToFind >= totalSteps) return null;
+
+            const rows = bridge.querySelectorAll('.bridge-row');
+            // Rows are ordered top-to-bottom in HTML, so index is totalSteps - 1 - step
+            const rowIndex = totalSteps - 1 - stepToFind;
+
             if (rowIndex >= 0 && rowIndex < rows.length) {
                 return rows[rowIndex];
             }
+             console.error("Could not find row for step:", stepToFind, "Calculated index:", rowIndex);
             return null;
         }
-        
-        // 根據當前位置調整橋的視圖
-        function adjustBridgeViewByPosition(position) {
-            // 每4步進行一次調整
-            const targetStage = Math.floor(position / 3);
-            
-            // 如果需要移動到新階段
-            if (targetStage !== currentViewStage) {
-                currentViewStage = targetStage;
-                
-                // 計算需要移動的距離
-                const bridgeHeight = bridge.getBoundingClientRect().height;
-                // 根據當前階段計算不同的移動距離
-                const stageShift = bridgeHeight * 0.4 * targetStage; // 每個階段移動25%高度
-                
-                // 向下移動橋（正值表示向下移動）
-                bridge.style.transform = `translateY(${stageShift}px)`;
-                
-                // 重新定位角色
-                setTimeout(() => {
-                    positionCharacter(position);
-                }, 500);
-            }
-        }
-        
-        // 跳躍
+
+        // Adjusts the vertical position of the bridge
+         function adjustBridgeViewByPosition(position) {
+             const stepsPerStage = 3; // Adjust how many steps trigger a view shift
+             const targetStage = Math.floor(position / stepsPerStage);
+
+             if (targetStage !== currentViewStage) {
+                 currentViewStage = targetStage;
+                 const bridgeHeight = bridge.offsetHeight; // Use offsetHeight
+                 // Calculate shift amount - move up more significantly per stage
+                 const stageShiftPercentage = 0.20; // Move 20% of bridge height per stage
+                 const moveAmount = bridgeHeight * stageShiftPercentage * currentViewStage;
+
+                 // Apply translateY to move the bridge UP (negative value)
+                 bridge.style.transform = `translateY(-${moveAmount}px)`;
+
+                 // Reposition character smoothly after bridge moves
+                  setTimeout(() => {
+                     positionCharacter(position);
+                  }, 300); // Delay to allow bridge move animation
+             } else if (position === 0) {
+                 // Ensure reset if back to step 0
+                 resetBridgePosition();
+             }
+         }
+
+
         function jump(side) {
             if (!gameActive || isMoving) return;
-            
-            // 防止重複點擊
+
             isMoving = true;
             leftBtn.disabled = true;
             rightBtn.disabled = true;
-            
-            const stepToCheck = Math.max(currentStep, lastFailPosition);
-            const currentRow = getCurrentRow();
-            
+
+            const stepForLogic = Math.max(currentStep, lastFailPosition); // Step to check against safePattern
+             if (stepForLogic >= totalSteps) {
+                 console.warn("Jump attempted at or beyond final step.");
+                 isMoving = false; // Re-enable buttons maybe? Or should be win state.
+                 // endGame(true, "Already finished!"); // Or similar logic
+                 return;
+             }
+
+            const currentRow = getCurrentRow(); // Get row based on stepForLogic
             if (!currentRow) {
-                console.error("找不到目標行", stepToCheck);
+                console.error("Cannot jump, current row not found for step:", stepForLogic);
                 isMoving = false;
-                leftBtn.disabled = false;
-                rightBtn.disabled = false;
+                 leftBtn.disabled = false; // Allow retry?
+                 rightBtn.disabled = false;
                 return;
             }
-            
+
             const leftPanel = currentRow.children[0];
             const rightPanel = currentRow.children[1];
-            
-            if (!leftPanel || !rightPanel) {
-                console.error("找不到面板");
-                isMoving = false;
-                leftBtn.disabled = false;
-                rightBtn.disabled = false;
-                return;
-            }
-            
-            const isSafe = (side === safePattern[stepToCheck]);
-            
-            // 計算小人的位置
-            const rowRect = currentRow.getBoundingClientRect();
-            const leftRect = leftPanel.getBoundingClientRect();
-            const rightRect = rightPanel.getBoundingClientRect();
-            
-            const targetPanel = side === 'left' ? leftPanel : rightPanel;
-            const targetRect = side === 'left' ? leftRect : rightRect;
-            
-            // 移動小人到選擇的面板上
-            const panelCenterX = targetRect.left + (targetRect.width / 2);
-            const panelCenterY = targetRect.top + (targetRect.height / 2) - 30; // 稍微調整高度
-            
-            character.style.left = `${panelCenterX}px`;
-            character.style.top = `${panelCenterY}px`;
-            character.style.transform = 'translate(-50%, -50%) rotateX(60deg)';
-            
+             const targetPanel = side === 'left' ? leftPanel : rightPanel;
+
+            if (!targetPanel) {
+                 console.error("Target panel not found for side:", side);
+                 isMoving = false; leftBtn.disabled = false; rightBtn.disabled = false;
+                 return;
+             }
+
+            const isSafe = (side === safePattern[stepForLogic]);
+
+            // --- Character Movement ---
+            const targetRect = targetPanel.getBoundingClientRect();
+             const containerRect = gameContainer.getBoundingClientRect();
+
+             // Calculate target position relative to gameContainer
+             const targetTop = targetRect.top - containerRect.top + (targetRect.height / 2) - (character.offsetHeight / 2);
+             const targetLeft = targetRect.left - containerRect.left + (targetRect.width / 2) - (character.offsetWidth / 2);
+
+             // Apply new position
+             character.style.top = `${targetTop}px`;
+             character.style.left = `${targetLeft}px`;
+             character.style.bottom = '';
+             character.style.transform = ''; // Clear transform if needed
+
+
+            // Delay the outcome logic slightly for visual effect
             setTimeout(() => {
                 if (isSafe) {
-                    // 安全通過
                     targetPanel.classList.add('safe');
-                    
-                    // 如果是從接力位置繼續，則更新當前步數
-                    if (lastFailPosition > currentStep) {
-                        currentStep = lastFailPosition;
-                    }
-                    
-                    // 前進一步
-                    currentStep++;
+                     // Reveal the other panel as safe too if needed? Or keep it hidden?
+                    // For this version, just mark the chosen one.
+
+                    // Update currentStep correctly whether starting fresh or relaying
+                    currentStep = stepForLogic + 1; // Move to the *next* step number
+
+                    lastFailPosition = currentStep; // Successful step becomes the new 'last position'
+
                     updateProgress();
-                    message.innerText = `${players[currentPlayerIndex].name} 安全! 繼續前進`;
-                    
-                    // 根據當前位置調整視圖
+                    message.innerText = `${players[currentPlayerIndex].name} 安全! 前往第 ${currentStep + 1} 步`;
+
+                    // Adjust view for the *next* step
                     adjustBridgeViewByPosition(currentStep);
-                    
-                    // 按鈕恢復
-                    setTimeout(() => {
-                        isMoving = false;
-                        leftBtn.disabled = false;
-                        rightBtn.disabled = false;
-                    }, 500);
-                    
-                    // 檢查是否勝利
+
+                    // Check for win
                     if (currentStep >= totalSteps) {
+                         clearInterval(timerInterval); // Stop timer on win
                         endGame(true, `恭喜! ${players[currentPlayerIndex].name} 成功穿過了玻璃橋!`);
+                    } else {
+                        // Re-enable buttons after a short delay
+                        setTimeout(() => {
+                            isMoving = false;
+                            if (gameActive) {
+                                leftBtn.disabled = false;
+                                rightBtn.disabled = false;
+                            }
+                        }, 300); // Shorter delay after success
                     }
                 } else {
-                    // 失敗，玻璃破裂
+                    // Failure
                     targetPanel.classList.add('broken');
-                    
-                    // 顯示血跡
                     const blood = targetPanel.querySelector('.blood');
-                    if (blood) {
-                        blood.style.opacity = '0.7';
-                    }
-                    
-                    // 小人墜落動畫
+                    if (blood) blood.style.opacity = '0.7';
+
                     character.classList.add('fall-animation');
-                    
-                    // 記錄當前失敗位置（用於接力）
-                    lastFailPosition = Math.max(currentStep, lastFailPosition);
-                    
+
+                    // lastFailPosition remains where they failed (stepForLogic)
+                    // Mark current player as inactive/failed
+                     players[currentPlayerIndex].active = false;
+                     // Update UI immediately to show failure
+                     const failedPlayerUI = document.getElementById(`player${currentPlayerIndex}`);
+                     if (failedPlayerUI) { failedPlayerUI.style.opacity = '0.5'; } // Dim immediately
+
+                     message.innerText = `${players[currentPlayerIndex].name} 失敗了!`;
+
+                    // Wait for fall animation, then switch player
                     setTimeout(() => {
-                        // 切換到下一個玩家
+                         character.style.opacity = 0; // Hide fallen character
                         switchToNextPlayer();
-                    }, 2000);
+                    }, 1500); // Match fall animation duration
                 }
-            }, 500);
+            }, 400); // Delay after character moves onto panel
         }
-        
-        // 更新進度
+
+
         function updateProgress() {
+            // Display based on currentStep, which reflects successful steps completed
             progressElement.innerText = `進度: ${currentStep}/${totalSteps}`;
         }
-        
-        // 結束遊戲
+
         function endGame(isWin, msg) {
             gameActive = false;
+             clearInterval(timerInterval); // Ensure timer stops
             gameOverText.innerText = msg;
-            gameOverElement.style.display = 'flex';
-            gameOverElement.style.backgroundColor = isWin ? 'rgba(0, 100, 0, 0.9)' : 'rgba(100, 0, 0, 0.9)';
+            gameOverElement.style.display = 'flex'; // Show overlay
+            gameOverElement.style.backgroundColor = isWin ? 'rgba(66, 245, 179, 0.8)' : 'rgba(233, 69, 96, 0.8)'; // Adjusted colors
+            gameOverText.style.color = isWin ? '#0f3460' : 'white'; // Contrasting text color
             leftBtn.disabled = true;
             rightBtn.disabled = true;
         }
-        
-        // 重新開始遊戲
+
+        // Restart Game Function (called by button)
         function restartGame() {
-            gameOverElement.style.display = 'none';
-            leftBtn.disabled = false;
-            rightBtn.disabled = false;
-            time = 120;
-            gameActive = true;
-            isMoving = false;
-            currentStep = 0;
-            lastFailPosition = 0;
-            currentPlayerIndex = 0;
-            updateProgress();
-            initGame();
+            initGame(); // Re-initialize everything
         }
-        
-        // 按鈕事件
+
+        // Button Event Listeners
         leftBtn.addEventListener('click', () => jump('left'));
         rightBtn.addEventListener('click', () => jump('right'));
-        
-        // 添加觸摸事件支持
-        leftBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 防止預設行為
+
+        // Touch Events (Important for mobile)
+         // Use touchend to prevent issues with accidental moves during scroll/pan attempt
+         leftBtn.addEventListener('touchend', (e) => {
+            e.preventDefault(); // Prevent click event from firing too
             jump('left');
-        });
-        
-        rightBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 防止預設行為
-            jump('right');
-        });
-        
-        // 初始啟動遊戲
-        initGame();
+         });
+         rightBtn.addEventListener('touchend', (e) => {
+             e.preventDefault();
+             jump('right');
+         });
+
+
+        // Initial Game Load
+        document.addEventListener('DOMContentLoaded', initGame);
+
     </script>
 </body>
 </html>
