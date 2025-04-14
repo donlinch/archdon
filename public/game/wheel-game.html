@@ -19,6 +19,10 @@
         
 
        body {
+
+
+
+
             font-family: 'Noto Sans TC', sans-serif;
             display: flex;
             flex-direction: column;
@@ -30,6 +34,130 @@
             width: 100%;
             box-sizing: border-box;
         }
+
+
+
+ /* 新增導航欄樣式 */
+ .game-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: #1a1a2e;
+            transition: all 0.3s ease;
+            transform: translateY(-100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-header.visible {
+            transform: translateY(0);
+        }
+        
+        .page-title-header {
+            background-color: #FFB74D;
+            padding: 1rem;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #f0f0f0;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        
+        .category-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .category-nav a.active {
+            background-color: #FFB74D;
+            color: white;
+        }
+        
+        .games-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 0;
+            background-color: #fff5e6;
+            width: 100%;
+            border-bottom: 1px solid #ffe0b2;
+        }
+        
+        .games-nav a {
+            text-decoration: none;
+            color: #333;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            background-color: #ffecb3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .games-nav a.active {
+            background-color: #FF9800;
+            color: white;
+            box-shadow: 0 3px 8px rgba(255,152,0,0.3);
+        }
+        
+        .nav-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+
+          /* 添加頁腳樣式 */
+          .game-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 12px;
+            z-index: 999;
+            display: none; /* 默認隱藏 */
+        }
+
+
+
+
+
+
         
         /* 頁面標題樣式 */
         .page-title-header {
@@ -564,6 +692,55 @@
     </style>
 </head>
 <body>
+
+
+
+
+
+
+
+
+
+ <!-- 新增可折疊導航欄 -->
+ <div class="game-header" id="gameHeader">
+    <header class="page-title-header">
+        <h1 class="page-title">SunnyYummy 魷魚遊戲</h1>
+    </header>
+    
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html">互動遊戲</a>
+        <a href="/guestbook.html">留言板</a>
+    </nav>
+    
+    <nav class="games-nav">
+
+        <a href="/game/card-game.html ">洞洞樂</a>
+        <a href="/game/wheel-game.html " class="active" >命運輪盤</a>
+        <a href="/game/brige-game.html" >玻璃橋挑戰</a>
+    </nav>
+</div>
+
+<!-- 導航切換按鈕 -->
+<button class="nav-toggle" id="navToggle">≡</button>
+
+ 
+
+
+    
+
+
+
+
+
+
+
+
+
+
     <header class="page-title-header">
         <h1 class="page-title">SunnyYummy 洞洞樂遊戲</h1>
     </header>
@@ -578,11 +755,7 @@
     </nav>
     
     <!-- 新增：遊戲導覽 -->
-    <nav class="games-nav">
-
-        <a href="/game/card-game.html ">洞洞樂</a>
-        <a href="/game/wheel-game.html " class="active" >命運輪盤</a>
-    </nav>
+ 
 
     <div class="container">
         <div class="wheel-container">
@@ -612,26 +785,18 @@
         </div>
     </div>
 
-
+ <!-- 新增頁腳 -->
+ <div class="game-footer" id="gameFooter">
     <div class="contribution-info">
         這是 SunnyYummy 提供的互動遊戲。如有建議或想分享您的使用體驗，歡迎至<a href="/guestbook.html">留言板</a>留言或寄信至 <a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a>。
+    </div>   
+    <div class="footer-copyright">
+        © 2024 SunnyYummy. All rights reserved.
     </div>
+</div>
 
-    <footer>
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/games.html" class="active">互動遊戲</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2024 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+    
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -645,6 +810,33 @@
             const saveOptionsBtn = document.getElementById('saveOptions');
             const addOptionBtn = document.getElementById('addOption');
             const optionsContainer = document.getElementById('optionsContainer');
+
+
+
+
+// 新增導航欄控制
+const navToggle = document.getElementById('navToggle');
+        const gameHeader = document.getElementById('gameHeader');
+        const gameFooter = document.getElementById('gameFooter');
+        let navVisible = false;
+        
+        navToggle.addEventListener('click', function() {
+            navVisible = !navVisible;
+            if (navVisible) {
+                gameHeader.classList.add('visible');
+                gameFooter.classList.add('visible');
+                navToggle.textContent = '×';
+            } else {
+                gameHeader.classList.remove('visible');
+                gameFooter.classList.remove('visible');
+                navToggle.textContent = '≡';
+            }
+        });
+
+
+
+
+
 
             // 預設顏色 (用於新選項或備用)
             const defaultColors = [
@@ -668,6 +860,12 @@
             let maxSpinTime = 5000;
             let spinStartTime = 0;
             let animationId = null;
+
+
+
+
+
+            
 
             // 繪製轉盤 (使用自訂顏色)
             function drawWheel() {
