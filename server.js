@@ -1,5 +1,5 @@
 // --- START OF FILE server.js ---
-
+app.set('trust proxy', true);
 // server.js
 require('dotenv').config(); // 從 .env 載入環境變數
 const https = require('https'); // <--- 確保引入 https
@@ -108,8 +108,7 @@ app.post('/api/bridge-game/submit-score', async (req, res) => {
         if (!player_name || !player_count || !completion_time) {
             return res.status(400).json({ error: '缺少必要參數' });
         }
-        const ip_address = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-        await pool.query(
+        const ip_address = req.ip || 'unknown';        await pool.query(
             'INSERT INTO bridge_game_leaderboard (player_name, player_count, completion_time, ip_address) VALUES ($1, $2, $3, $4)',
             [player_name, player_count, completion_time, ip_address]
         );
@@ -236,10 +235,10 @@ app.post('/api/card-game/templates', async (req, res) => {
         
         const result = await pool.query(
             `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
-             VALUES ($1, $2, $3, $4) 
+             VALUES ($1, $2::json, $3, $4) 
              RETURNING id, template_name, content_data, created_at, updated_at`,
-            [template_name, validContentData, ip_address, is_public]
-        );
+            [template_name, JSON.stringify(validContentData), ip_address, is_public]
+          );
         
         console.log('模板創建成功:', {
             id: result.rows[0].id,
