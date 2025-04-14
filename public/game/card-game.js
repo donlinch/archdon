@@ -21,24 +21,6 @@ const cardCloseBtn = document.querySelector('.card-close');
 
  
 
-// 新增導航欄控制
-const navToggle = document.getElementById('navToggle');
-        const gameHeader = document.getElementById('gameHeader');
-        const gameFooter = document.getElementById('gameFooter');
-        let navVisible = false;
-        
-        navToggle.addEventListener('click', function() {
-            navVisible = !navVisible;
-            if (navVisible) {
-                gameHeader.classList.add('visible');
-                gameFooter.classList.add('visible');
-                navToggle.textContent = '×';
-            } else {
-                gameHeader.classList.remove('visible');
-                gameFooter.classList.remove('visible');
-                navToggle.textContent = '≡';
-            }
-        });
 
 
 
