@@ -237,3 +237,24 @@ window.addEventListener('DOMContentLoaded', () => {
         // 如果想讓點擊任何位置都關閉，請移除這個事件監聽器或註釋掉 stopPropagation
     });
 });
+
+
+
+  // 新增導航欄控制
+  const navToggle = document.getElementById('navToggle');
+        const gameHeader = document.getElementById('gameHeader');
+        const gameFooter = document.getElementById('gameFooter');
+        let navVisible = false;
+        
+        navToggle.addEventListener('click', function() {
+            navVisible = !navVisible;
+            if (navVisible) {
+                gameHeader.classList.add('visible');
+                gameFooter.classList.add('visible');
+                navToggle.textContent = '×';
+            } else {
+                gameHeader.classList.remove('visible');
+                gameFooter.classList.remove('visible');
+                navToggle.textContent = '≡';
+            }
+        });
