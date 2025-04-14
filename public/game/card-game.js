@@ -1249,6 +1249,38 @@ function createTemplateListRow(templateId, templateName, templateContent, displa
     return row;
 }
 
+
+
+
+// Show Template Manager Modal
+function showTemplateManager() {
+    console.log("Opening template manager...");
+    
+    // Create or get the template manager modal
+    let managerModal = document.getElementById('templateManagerModal');
+    if (!managerModal) {
+        managerModal = createTemplateManager();
+    }
+    
+    // Load templates if needed and populate the views
+    (async () => {
+        try {
+            if (!cachedTemplates) {
+                console.log("Loading templates for manager view...");
+                cachedTemplates = await loadTemplates();
+            }
+            
+            populateTemplateViews(cachedTemplates);
+            managerModal.style.display = 'block';
+        } catch (error) {
+            console.error("Error showing template manager:", error);
+            alert("載入模板管理器時出錯: " + error.message);
+        }
+    })();
+}
+
+
+
 // 6. Show Template Preview (Adjusted)
 // Takes id, name, content
 function showTemplatePreview(templateId, templateName, templateContent) {
