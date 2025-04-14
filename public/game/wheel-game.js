@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 選項現在儲存為物件陣列 (包含文字和顏色)
     let options = [
         { text: '吃拉麵', color: '#FF6384' },
-        { text: '吃牛排', color: '#000000' },
+        { text: '吃牛排', color: '#9B7E12' },
         { text: '吃披薩', color: '#FFCE56' },
         { text: '吃漢堡', color: '#4BC0C0' }
     ];
