@@ -411,14 +411,14 @@
         /* 彈出視窗樣式 */
         .modal {
             display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            overflow: auto;
+    position: fixed;
+    z-index: 2000; /* 更高的z-index確保它在導航欄上方 */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    overflow: auto;
         }
 
         .modal-content {
@@ -693,8 +693,7 @@
 
 
 
-
-/* 添加在你的 <style> 部分底部 */
+/* 添加這些樣式到你的 <style> 標籤中 */
     @media (max-width: 600px) {
     .option-input {
         margin-bottom: 8px;
@@ -719,6 +718,7 @@
     .modal-content {
         padding: 15px 10px;
         margin: 10% auto;
+        max-width: 90%;
     }
     
     .remove-option {
@@ -733,6 +733,30 @@
     
     .modal-header h2 {
         font-size: 18px;
+    }
+    
+    /* 改善在小屏幕上的遊戲導航 */
+    .games-nav {
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+    
+    .games-nav a {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+    
+    /* 確保編輯按鈕在頁腳中更突出 */
+    .edit-options-btn {
+        margin: 15px auto;
+        width: 90%;
+        max-width: 250px;
+        background-color: #4CAF50;
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    margin-top: 20px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 10;
     }
 }
 
@@ -810,8 +834,20 @@
             
    
    
+<!-- 將編輯選項按鈕移到container內，而不是footer裡面 -->
+<div class="container">
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="350" height="350"></canvas>
+    </div>
 
-<button id="editOptions" class="edit-options-btn">編輯選項</button>
+    <button id="spin">開始旋轉</button>
+
+    <div class="result" id="result"></div>
+    
+    <!-- 將編輯選項按鈕移到這裡 -->
+    <button id="editOptions" class="edit-options-btn">編輯選項</button>
+</div>
 
 <!-- 選項編輯彈出視窗 -->
 <div id="optionsModal" class="modal">
@@ -827,16 +863,12 @@
         </div>
     </div>
 </div>
-    
+
+<div class="game-footer" id="gameFooter" style="display: none;">
     <div class="footer-copyright">
         © 2024 SunnyYummy. All rights reserved.
     </div>
-
-
-
-
 </div>
-
 
  
 
