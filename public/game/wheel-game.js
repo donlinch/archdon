@@ -25,6 +25,48 @@ let currentThemeId = null;        // 當前主題ID
 
 
 
+document.getElementById('saveOptions').addEventListener('click', () => {
+    const optionElements = document.querySelectorAll('.option-row');
+    currentOptions = [];
+  
+    optionElements.forEach((row, index) => {
+      const text = row.querySelector('input[type="text"]').value.trim();
+      const color = row.querySelector('input[type="color"]').value;
+      if (text) {
+        currentOptions.push({
+          text,
+          color,
+          display_order: index
+        });
+      }
+    });
+  
+    // 關閉 modal
+    document.getElementById('optionsModal').style.display = 'none';
+    console.log('已更新 currentOptions:', currentOptions);
+  });
+
+
+
+
+document.getElementById('exportJSONBtn').addEventListener('click', exportToJSON);
+
+function exportToJSON() {
+  const data = {
+    themeName: currentThemeName,
+    options: currentOptions
+  };
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentThemeName || 'theme'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 
 
     // 导航栏控制
@@ -535,6 +577,42 @@ editOptionsBtn.addEventListener('click', showOptionsModal);
     initWheel();
     loadThemeList();
 });
+
+
+
+
+const saveThemeBtn = document.getElementById('saveThemeBtn');
+
+saveThemeBtn.addEventListener('click', async () => {
+  const themeName = prompt('請輸入主題名稱：');
+  if (!themeName) return;
+
+  const payload = {
+    name: themeName,
+    description: '',
+    options: currentOptions
+  };
+
+  try {
+    const response = await fetch('/api/wheel-game/themes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error('儲存失敗');
+    const result = await response.json();
+    alert('主題已成功儲存！');
+    currentThemeName = result.name;
+    currentThemeId = result.id;
+  } catch (err) {
+    console.error('儲存主題失敗:', err);
+    alert('無法儲存主題');
+  }
+});
+
+
+
 
 
 
