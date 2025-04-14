@@ -8,8 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameBoard = document.getElementById('game-board');
     const player1Btn = document.getElementById('player1-btn');
     const player2Btn = document.getElementById('player2-btn');
-    const diceElement = document.getElementById('dice');
-    const rollDiceBtn = document.getElementById('roll-dice-btn');
+    const stepBtns = [
+      document.getElementById('step-1-btn'),
+      document.getElementById('step-2-btn'),
+      document.getElementById('step-3-btn'),
+      document.getElementById('step-4-btn'),
+      document.getElementById('step-5-btn'),
+      document.getElementById('step-6-btn')
+    ];
     const undoBtn = document.getElementById('undo-btn');
     const resetBtn = document.getElementById('reset-btn');
     const modalOverlay = document.getElementById('modal-overlay');
@@ -23,10 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let player1PathIndex = 0;
     let player2PathIndex = 0;
     let selectedPlayer = 1;
-    let isRolling = false;
     let isMoving = false;
     let highlightedCell = null;
     let moveHistory = [];
+    let modalAutoPopup = false; // 控制是否自動彈出窗口
     
     // 玩家標記元素
     let player1Token;
@@ -184,42 +190,21 @@ document.addEventListener('DOMContentLoaded', () => {
       modalOverlay.classList.add('hidden');
     }
     
-    // 擲骰子
-    function rollDice() {
-      if (isRolling || isMoving) return;
+    // 處理步數選擇
+    function handleStepSelection(steps) {
+      if (isMoving) return;
       
-      isRolling = true;
-      diceElement.classList.add('rolling');
+      // 在移動前保存當前狀態到歷史記錄
+      const currentState = {
+        player1PathIndex,
+        player2PathIndex,
+        selectedPlayer
+      };
+      moveHistory.push(currentState);
+      updateUndoButtonState();
       
-      // 模擬骰子滾動的視覺效果
-      let rollCount = 0;
-      const maxRolls = 10; // 滾動次數
-      
-      const rollInterval = setInterval(() => {
-        // 生成1-6的隨機數字
-        const randomValue = Math.floor(Math.random() * 6) + 1;
-        diceElement.textContent = randomValue;
-        
-        rollCount++;
-        
-        if (rollCount >= maxRolls) {
-          clearInterval(rollInterval);
-          isRolling = false;
-          diceElement.classList.remove('rolling');
-          
-          // 在移動前保存當前狀態到歷史記錄
-          const currentState = {
-            player1PathIndex,
-            player2PathIndex,
-            selectedPlayer
-          };
-          moveHistory.push(currentState);
-          updateUndoButtonState();
-          
-          // 擲骰子結束後，移動玩家
-          movePlayer(parseInt(diceElement.textContent, 10));
-        }
-      }, 100);
+      // 移動玩家
+      movePlayer(steps);
     }
     
     // 處理玩家移動
@@ -235,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 計算新位置
       let newIndex = currentPlayerPathIndex + steps;
       
-      // 如果超過或剛好到終點，停在終點
+      // 如果超過或剛好到終點，停在起點/終點
       if (newIndex >= pathCells.length) {
         newIndex = 0; // 停在起點/終點
       }
@@ -250,19 +235,22 @@ document.addEventListener('DOMContentLoaded', () => {
       // 更新玩家位置顯示
       updatePlayerPositions();
       
-      // 移動完成後顯示格子信息
+      // 移動完成後高亮格子
       setTimeout(() => {
         isMoving = false;
         highlightedCell = newIndex;
         renderBoard(); // 重新渲染以顯示高亮
         
-        // 顯示玩家到達的格子信息
-        const arrivedCell = pathCells[newIndex];
-        showModal(
-          `玩家 ${selectedPlayer} 到達 ${arrivedCell.title}`,
-          arrivedCell.description,
-          arrivedCell.color
-        );
+        // 只有在設置了自動彈窗時才顯示格子信息
+        if (modalAutoPopup) {
+          // 顯示玩家到達的格子信息
+          const arrivedCell = pathCells[newIndex];
+          showModal(
+            `玩家 ${selectedPlayer} 到達 ${arrivedCell.title}`,
+            arrivedCell.description,
+            arrivedCell.color
+          );
+        }
       }, 500);
     }
     
@@ -299,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 更新回上一步按鈕狀態
     function updateUndoButtonState() {
-      undoBtn.disabled = moveHistory.length === 0 || isRolling || isMoving;
+      undoBtn.disabled = moveHistory.length === 0 || isMoving;
     }
     
     // 重置遊戲
@@ -318,12 +306,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function addEventListeners() {
       player1Btn.addEventListener('click', () => selectPlayer(1));
       player2Btn.addEventListener('click', () => selectPlayer(2));
-      rollDiceBtn.addEventListener('click', rollDice);
+      
+      // 添加步數按鈕的事件監聽器
+      stepBtns.forEach((btn, index) => {
+        btn.addEventListener('click', () => handleStepSelection(index + 1));
+      });
+      
       undoBtn.addEventListener('click', undoMove);
       resetBtn.addEventListener('click', resetGame);
       modalCloseBtn.addEventListener('click', closeModal);
     }
-     
+    
     // 初始化遊戲
     initGame();
   });
