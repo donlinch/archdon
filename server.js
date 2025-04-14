@@ -53,7 +53,16 @@ app.use(express.json());
 
 // --- 記錄 Page View 中間件 ---
 app.use(async (req, res, next) => {
-    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/guestbook.html', '/message-detail.html']; // 添加 scores.html
+    const pathsToLog = ['/', '/index.html', '/music.html', '/news.html', '/scores.html', '/guestbook.html', '/message-detail.html'
+
+
+,'/game/card-game.html', // <-- 新增
+    '/game/wheel-game.html', // <-- 新增
+    '/game/brige-game.html'  // <-- 新增
+
+
+
+    ]; // 添加 scores.html
     // 確保只記錄 'GET' 請求且路徑在列表中
     const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
 

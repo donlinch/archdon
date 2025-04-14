@@ -1,5 +1,5 @@
-  // 遊戲狀態和默認內容
-  const gameState = {
+// 遊戲狀態和默認內容
+const gameState = {
     boardSize: {rows: 4, cols: 5},
     contents: Array(20).fill('').map((_, i) => `內容 ${i+1}`),
     revealed: Array(20).fill(false),
@@ -17,15 +17,7 @@ const inputGrid = document.getElementById('inputGrid');
 const centeredCard = document.getElementById('centeredCard');
 const cardInner = document.getElementById('cardInner');
 const cardCloseBtn = document.querySelector('.card-close');
-
-
- 
-
-
-
-
-
-
+const navToggle = document.getElementById('navToggle');
 
 // 洗牌函數 (Fisher-Yates 算法)
 function shuffleArray(array) {
@@ -195,10 +187,37 @@ function setExampleContent() {
     gameState.contents = exampleContent;
 }
 
+// 切換導航顯示狀態
+function toggleNavigation() {
+    const gameHeader = document.getElementById('gameHeader');
+    const gameFooter = document.getElementById('gameFooter');
+    let navVisible = gameHeader.classList.contains('visible');
+    
+    navVisible = !navVisible;
+    if (navVisible) {
+        gameHeader.classList.add('visible');
+        gameFooter.style.display = 'block';
+        navToggle.textContent = '×';
+    } else {
+        gameHeader.classList.remove('visible');
+        gameFooter.style.display = 'none';
+        navToggle.textContent = '≡';
+    }
+    
+    return navVisible;
+}
+
 // 事件監聽
 configBtn.addEventListener('click', () => {
+    // 首先打開配置模態窗口
     initializeInputs();
     configModal.style.display = 'block';
+    
+    // 如果導航菜單是打開的，模擬點擊導航切換按鈕關閉它
+    const gameHeader = document.getElementById('gameHeader');
+    if (gameHeader.classList.contains('visible')) {
+        navToggle.click();
+    }
 });
 
 closeBtn.addEventListener('click', () => {
@@ -215,6 +234,9 @@ window.addEventListener('click', (event) => {
         configModal.style.display = 'none';
     }
 });
+
+// 导航栏控制
+navToggle.addEventListener('click', toggleNavigation);
 
 // 初始化遊戲
 window.addEventListener('DOMContentLoaded', () => {
@@ -237,26 +259,3 @@ window.addEventListener('DOMContentLoaded', () => {
         // 如果想讓點擊任何位置都關閉，請移除這個事件監聽器或註釋掉 stopPropagation
     });
 });
-
-
-// 导航栏控制
-const navToggle = document.getElementById('navToggle');
-const gameHeader = document.getElementById('gameHeader');
-const gameFooter = document.getElementById('gameFooter');
-let navVisible = false;
-
-navToggle.addEventListener('click', function() {
-    navVisible = !navVisible;
-    if (navVisible) {
-        gameHeader.classList.add('visible');
-        gameFooter.style.display = 'block'; // 直接设置显示样式
-        navToggle.textContent = '×';
-    } else {
-        gameHeader.classList.remove('visible');
-        gameFooter.style.display = 'none'; // 直接设置隐藏样式
-        navToggle.textContent = '≡';
-    }
-});
-
-
-        
