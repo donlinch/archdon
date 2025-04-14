@@ -120,6 +120,153 @@ app.post('/api/bridge-game/submit-score', async (req, res) => {
 });
 
 
+
+
+
+
+
+// --- 命運轉輪主題 API ---
+// GET /api/wheel-game/themes - 獲取所有主題
+app.get('/api/wheel-game/themes', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name, created_at FROM wheel_themes ORDER BY created_at DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取轉輪主題失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/wheel-game/themes/:id - 獲取特定主題
+app.get('/api/wheel-game/themes/:id', async (req, res) => {
+    const { id } = req.params;
+    const themeId = parseInt(id, 10);
+    if (isNaN(themeId)) {
+        return res.status(400).json({ error: '無效的主題 ID' });
+    }
+
+    try {
+        // 獲取主題基本信息
+        const themeResult = await pool.query(
+            'SELECT id, name, description, created_at, updated_at FROM wheel_themes WHERE id = $1',
+            [themeId]
+        );
+
+        if (themeResult.rows.length === 0) {
+            return res.status(404).json({ error: '找不到主題' });
+        }
+
+        // 獲取主題的選項
+        const optionsResult = await pool.query(
+            'SELECT id, text, color, display_order FROM wheel_options WHERE theme_id = $1 ORDER BY display_order ASC',
+            [themeId]
+        );
+
+        // 組合返回數據
+        const theme = themeResult.rows[0];
+        theme.options = optionsResult.rows;
+
+        res.json(theme);
+    } catch (err) {
+        console.error(`獲取轉輪主題 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/wheel-game/themes - 創建新主題
+app.post('/api/wheel-game/themes', async (req, res) => {
+    const { name, description, options } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ error: '主題名稱不能為空' });
+    }
+    
+    if (!options || !Array.isArray(options) || options.length === 0) {
+        return res.status(400).json({ error: '必須提供至少一個有效的選項' });
+    }
+    
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // 插入主題
+        const ip_address = req.ip || 'unknown';
+        const themeResult = await client.query(
+            `INSERT INTO wheel_themes (name, description, creator_ip) 
+             VALUES ($1, $2, $3) 
+             RETURNING id, name, description, created_at, updated_at`,
+            [name, description || null, ip_address]
+        );
+        
+        const themeId = themeResult.rows[0].id;
+        
+        // 插入選項
+        for (const option of options) {
+            if (!option.text) continue; // 跳過空文字的選項
+            
+            await client.query(
+                `INSERT INTO wheel_options (theme_id, text, color, display_order) 
+                 VALUES ($1, $2, $3, $4)`,
+                [themeId, option.text, option.color || '#cccccc', option.display_order || 0]
+            );
+        }
+        
+        await client.query('COMMIT');
+        
+        // 獲取選項
+        const optionsResult = await client.query(
+            'SELECT id, text, color, display_order FROM wheel_options WHERE theme_id = $1 ORDER BY display_order ASC',
+            [themeId]
+        );
+        
+        // 組合返回數據
+        const result = themeResult.rows[0];
+        result.options = optionsResult.rows;
+        
+        res.status(201).json(result);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('創建轉輪主題失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/wheel-game/themes/:id - 刪除主題
+app.delete('/api/wheel-game/themes/:id', async (req, res) => {
+    const { id } = req.params;
+    const themeId = parseInt(id, 10);
+    if (isNaN(themeId)) {
+        return res.status(400).json({ error: '無效的主題 ID' });
+    }
+
+    try {
+        const result = await pool.query(
+            'DELETE FROM wheel_themes WHERE id = $1',
+            [themeId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的主題' });
+        }
+
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除轉輪主題 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
+
+
+
+
+
 // --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
 
 // GET /api/card-game/templates - 獲取所有公開模板
