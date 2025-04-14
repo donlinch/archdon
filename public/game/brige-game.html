@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>魷魚遊戲 - 玻璃橋挑戰(接力版)</title>
-    <!-- 添加 favicon 和字體 -->
-    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 新增導航欄樣式 */
-        .game-header {
+        body {
+
+
+   /* 新增導航欄樣式 */
+   .game-header {
             position: fixed;
             top: 0;
             left: 0;
@@ -111,34 +108,9 @@
             justify-content: center;
         }
         
-        /* 原有遊戲樣式保持不變 */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #1a1a2e;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-            font-size: 16px;
-        }
-        
-        /* 其餘原有樣式保持不變... */
-        
-        /* 調整遊戲容器位置，為導航欄留出空間 */
-        .game-container {
-            position: relative;
-            width: 100%;
-            height: 100vh; /* 改為100vh以填滿視口 */
-            perspective: 1000px;
-            overflow: hidden;
-        }
-        
-        /* 添加頁腳樣式 */
-        .game-footer {
+
+          /* 添加頁腳樣式 */
+          .game-footer {
             position: fixed;
             bottom: 0;
             left: 0;
@@ -151,39 +123,381 @@
             z-index: 999;
             display: none; /* 默認隱藏 */
         }
-        
+
+
         .game-footer.visible {
             display: block;
+        }
+
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-size: 16px;
+        }
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            perspective: 1000px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .bridge {
+            position: absolute;
+            width: 90%;
+            height: 100%;
+            left: 5%;
+            transform-style: preserve-3d;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            transition: transform 0.8s ease; /* 添加平滑過渡效果 */
+        }
+        .bridge-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            width: 100%;
+            perspective: 500px;
+            transform: rotateX(60deg);
+        }
+        .glass-panel {
+            width: 45%;
+            height: 60px;
+            background-color: rgba(167, 197, 235, 0.5);
+            border: 2px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            transition: all 0.3s;
+            position: relative;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .controls-and-players {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            gap: 15px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            gap: 20px;
+            margin: 5px 0 15px 0;
+        }
+        .players-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            padding: 0 10px;
+            margin: 10px 0;
+        }
+        .btn {
+            padding: 20px 50px;
+            font-size: 28px;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+            width: 40%;
+            max-width: 180px;
+        }
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .btn:hover {
+            background-color: #ff6b81;
+        }
+        .btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .info-panel {
+            width: 90%;
+            padding: 15px;
+            text-align: center;
+            background-color: #0f3460;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .timer {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0f3460;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 28px;
+            border: 3px solid #e94560;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        .player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: rgba(15, 52, 96, 0.9);
+            padding: 12px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .player-figure {
+            width: 30px;
+            height: 45px;
+            position: relative;
+        }
+        .player-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50% 50% 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .player-head {
+            width: 60%;
+            height: 40%;
+            border-radius: 50%;
+            position: relative;
+        }
+        .player-label {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .progress {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+            color: #e94560;
+            background-color: rgba(15, 52, 96, 0.7);
+            padding: 8px 15px;
+            border-radius: 15px;
+            z-index: 10;
+        }
+        .broken {
+            background-color: rgba(233, 69, 96, 0.3);
+            transform: scale(0.9);
+        }
+        .safe {
+            background-color: rgba(66, 245, 179, 0.5);
+        }
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 42px;
+            color: #e94560;
+            z-index: 100;
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .restart-btn {
+            margin-top: 30px;
+            padding: 15px 30px;
+            background-color: #e94560;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .character {
+            position: absolute;
+            width: 30px;
+            height: 45px;
+            z-index: 20;
+            transition: all 0.5s ease;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .character-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50% 50% 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .character-head {
+            width: 60%;
+            height: 40%;
+            border-radius: 50%;
+            position: relative;
+        }
+        .character-legs {
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+        .character-leg {
+            width: 30%;
+            height: 12px;
+        }
+        /* 角色顏色 */
+        .pink {
+            background-color: #ff6b81;
+        }
+        .pink .character-head, .pink .player-head {
+            background-color: #ffd166;
+        }
+        .yellow-pink {
+            background-color: #ffd166;
+        }
+        .yellow-pink .character-head, .yellow-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .green-pink {
+            background-color: #06d6a0;
+        }
+        .green-pink .character-head, .green-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .blood {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #e94560;
+            opacity: 0;
+            z-index: 5;
+            transition: opacity 0.3s;
+        }
+        .fall-animation {
+            animation: fall 2s forwards;
+        }
+        @keyframes fall {
+            0% { transform: translateY(0) rotateZ(0deg); }
+            25% { transform: translateY(20px) rotateZ(45deg); }
+            100% { transform: translateY(500px) rotateZ(180deg); opacity: 0; }
+        }
+        .current-player-indicator {
+            font-weight: bold;
+            color: #e94560;
+            margin-left: 8px;
+            font-size: 22px;
+        }
+
+        .player-count-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0;
+            background-color: #0f3460;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .player-count-select {
+            padding: 8px 15px;
+            font-size: 18px;
+            background-color: #1a1a2e;
+            color: white;
+            border: 2px solid #e94560;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .blue-pink {
+            background-color: #4392f1;
+        }
+        .blue-pink .character-head, .blue-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .purple-pink {
+            background-color: #8d7cba;
+        }
+        .purple-pink .character-head, .purple-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .orange-pink {
+            background-color: #ff9a3c;
+        }
+        .orange-pink .character-head, .orange-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .cyan-pink {
+            background-color: #4ec2c2;
+        }
+        .cyan-pink .character-head, .cyan-pink .player-head {
+            background-color: #ff6b81;
+        }
+        .brown-pink {
+            background-color: #a06235;
+        }
+        .brown-pink .character-head, .brown-pink .player-head {
+            background-color: #ff6b81;
         }
     </style>
 </head>
 <body>
-    <!-- 新增可折疊導航欄 -->
-    <div class="game-header" id="gameHeader">
-        <header class="page-title-header">
-            <h1 class="page-title">SunnyYummy 魷魚遊戲</h1>
-        </header>
-        
-        <nav class="category-nav">
-            <a href="/">週邊商品</a>
-            <a href="/music.html">音樂專輯</a>
-            <a href="/news.html">最新消息</a>
-            <a href="/scores.html">樂譜與舞蹈</a>
-            <a href="/game/card-game.html">互動遊戲</a>
-            <a href="/guestbook.html">留言板</a>
-        </nav>
-        
-        <nav class="games-nav">
-            <a href="/game/card-game.html">洞洞樂</a>
-            <a href="/game/wheel-game.html">命運輪盤</a>
-            <a href="/game/brige-game.html" class="active">玻璃橋挑戰</a>
-        </nav>
-    </div>
+
+ <!-- 新增可折疊導航欄 -->
+ <div class="game-header" id="gameHeader">
+    <header class="page-title-header">
+        <h1 class="page-title">SunnyYummy 魷魚遊戲</h1>
+    </header>
     
-    <!-- 導航切換按鈕 -->
-    <button class="nav-toggle" id="navToggle">≡</button>
+    <nav class="category-nav">
+        <a href="/">週邊商品</a>
+        <a href="/music.html">音樂專輯</a>
+        <a href="/news.html">最新消息</a>
+        <a href="/scores.html">樂譜與舞蹈</a>
+        <a href="/game/card-game.html">互動遊戲</a>
+        <a href="/guestbook.html">留言板</a>
+    </nav>
     
-    <!-- 原有遊戲容器 -->
+    <nav class="games-nav">
+        <a href="/game/card-game.html">洞洞樂</a>
+        <a href="/game/wheel-game.html">命運輪盤</a>
+        <a href="/game/brige-game.html" class="active">玻璃橋挑戰</a>
+    </nav>
+</div>
+
+<!-- 導航切換按鈕 -->
+<button class="nav-toggle" id="navToggle">≡</button>
+
+
     <div class="game-container">
         <div class="timer">02:00</div>
         <div class="progress">進度: 0/15</div>
@@ -202,15 +516,15 @@
             <button class="restart-btn" onclick="restartGame()">重新開始</button>
         </div>
     </div>
-    
-    <!-- 新增頁腳 -->
-    <div class="game-footer" id="gameFooter">
+
+
+     <!-- 新增頁腳 -->
+     <div class="game-footer" id="gameFooter">
         <div class="footer-copyright">
             © 2024 SunnyYummy. All rights reserved.
         </div>
     </div>
     
-    <!-- 原有玩家容器和按鈕 -->
     <div class="players-container" id="players">
         <!-- 玩家列表將由JavaScript動態生成 -->
     </div>
@@ -237,33 +551,7 @@
     </div>
 
     <script>
-        // 新增導航欄控制
-        const navToggle = document.getElementById('navToggle');
-        const gameHeader = document.getElementById('gameHeader');
-        const gameFooter = document.getElementById('gameFooter');
-        let navVisible = false;
-        
-        navToggle.addEventListener('click', function() {
-            navVisible = !navVisible;
-            if (navVisible) {
-                gameHeader.classList.add('visible');
-                gameFooter.classList.add('visible');
-                navToggle.textContent = '×';
-            } else {
-                gameHeader.classList.remove('visible');
-                gameFooter.classList.remove('visible');
-                navToggle.textContent = '≡';
-            }
-        });
-        
-        // 防止觸摸事件影響遊戲
-        document.addEventListener('touchmove', function(e) {
-            if (!navVisible) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        // 原有遊戲變數和函數保持不變...
+        // 遊戲變數
         let currentStep = 0;
         let totalSteps = 15;
         let time = 120;
@@ -291,6 +579,32 @@
         const character = document.getElementById('character');
         const characterBody = document.getElementById('characterBody');
         const playersContainer = document.getElementById('players');
+
+
+
+
+  // 新增導航欄控制
+  const navToggle = document.getElementById('navToggle');
+        const gameHeader = document.getElementById('gameHeader');
+        const gameFooter = document.getElementById('gameFooter');
+        let navVisible = false;
+        
+        navToggle.addEventListener('click', function() {
+            navVisible = !navVisible;
+            if (navVisible) {
+                gameHeader.classList.add('visible');
+                gameFooter.classList.add('visible');
+                navToggle.textContent = '×';
+            } else {
+                gameHeader.classList.remove('visible');
+                gameFooter.classList.remove('visible');
+                navToggle.textContent = '≡';
+            }
+        });
+
+
+
+
 
         // 玩家數量選擇事件
         playerCountSelect.addEventListener('change', function() {
