@@ -486,7 +486,7 @@
         /* 改進輸入格子的佈局 */
         .input-grid {
             display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 修改為固定兩欄 */
+    grid-template-columns: repeat(3, 1fr); /* 修改為固定兩欄 */
     grid-gap: 12px;
     margin-top: 15px;
         }
@@ -515,6 +515,15 @@
             border-radius: 4px;
             font-size: 16px;  /* 增大字體大小，有助於手機輸入 */
         }
+
+/* 移動設備上調整為單欄 */
+@media (max-width: 600px) {
+    .input-grid {
+        grid-template-columns: 1fr; /* 小螢幕時改為單欄 */
+    }
+}
+
+
 
         /* 按鈕容器樣式 */
         .modal-buttons {
