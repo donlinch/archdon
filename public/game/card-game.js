@@ -1,3 +1,7 @@
+
+// 預先加載模板數據
+let cachedTemplates = null;
+
 // 遊戲狀態和默認內容
 const gameState = {
     boardSize: {rows: 4, cols: 5},
@@ -399,35 +403,48 @@ async function deleteTemplate(templateName) {
         return true;
     }
 }
-
-// 更新模板下拉選單
+// 更新模板下拉選單 - 修正版本
 async function updateTemplateSelect() {
     // 清空當前選項
     templateSelect.innerHTML = '<option value="" disabled selected>-- 選擇已保存的模板 --</option>';
     
-    // 獲取保存的模板
-    const templates = await loadTemplates();
-    
-    // 如果沒有模板，禁用相關按鈕
-    if (Object.keys(templates).length === 0) {
+    try {
+        // 獲取保存的模板 (使用緩存或重新加載)
+        if (!cachedTemplates) {
+            cachedTemplates = await loadTemplates();
+        }
+        
+        // 如果沒有模板，禁用相關按鈕
+        if (Object.keys(cachedTemplates).length === 0) {
+            loadTemplateBtn.disabled = true;
+            deleteTemplateBtn.disabled = true;
+            return;
+        } else {
+            loadTemplateBtn.disabled = false;
+            deleteTemplateBtn.disabled = false;
+        }
+        
+        // 添加模板選項
+        for (const templateName in cachedTemplates) {
+            const option = document.createElement('option');
+            option.value = templateName;
+            option.textContent = templateName;
+            templateSelect.appendChild(option);
+        }
+    } catch (error) {
+        console.error('更新模板選單時出錯:', error);
+        // 即使出錯也要啟用按鈕，以便使用者可以嘗試創建新模板
         loadTemplateBtn.disabled = true;
         deleteTemplateBtn.disabled = true;
-        return;
-    } else {
-        loadTemplateBtn.disabled = false;
-        deleteTemplateBtn.disabled = false;
-    }
-    
-    // 添加模板選項
-    for (const templateName in templates) {
-        const option = document.createElement('option');
-        option.value = templateName;
-        option.textContent = templateName;
-        templateSelect.appendChild(option);
     }
 }
 
-// 保存當前內容為模板
+// 當保存新模板或刪除模板時，清除緩存
+function clearTemplateCache() {
+    cachedTemplates = null;
+}
+
+// 保存當前內容為模板 - 修正版本
 async function saveCurrentAsTemplate() {
     const templateName = templateNameInput.value.trim();
     
@@ -445,11 +462,13 @@ async function saveCurrentAsTemplate() {
         templateContent.push(input.value || `內容 ${i+1}`);
     }
     
-    // 獲取現有模板，檢查是否重名
-    const templates = await loadTemplates();
+    // 確保模板緩存已加載
+    if (!cachedTemplates) {
+        cachedTemplates = await loadTemplates();
+    }
     
     // 詢問是否覆蓋現有模板
-    if (templates[templateName] && !confirm(`模板 "${templateName}" 已存在，是否覆蓋？`)) {
+    if (cachedTemplates[templateName] && !confirm(`模板 "${templateName}" 已存在，是否覆蓋？`)) {
         return;
     }
     
@@ -457,7 +476,9 @@ async function saveCurrentAsTemplate() {
     const success = await saveTemplate(templateName, templateContent);
     
     if (success) {
-        // 更新下拉選單
+        // 清除緩存並更新下拉選單
+        clearTemplateCache();
+        cachedTemplates = await loadTemplates(); // 重新加載緩存
         await updateTemplateSelect();
         
         // 更新選中的模板
@@ -473,7 +494,7 @@ async function saveCurrentAsTemplate() {
     }
 }
 
-// 從模板載入內容
+// 從模板載入內容 - 修正版本
 async function loadSelectedTemplate() {
     const templateName = templateSelect.value;
     
@@ -482,11 +503,16 @@ async function loadSelectedTemplate() {
         return;
     }
     
-    const templates = await loadTemplates();
-    const templateContent = templates[templateName];
+    // 確保模板緩存已加載
+    if (!cachedTemplates) {
+        cachedTemplates = await loadTemplates();
+    }
+    
+    const templateContent = cachedTemplates[templateName];
     
     if (!templateContent) {
         alert(`找不到模板 "${templateName}"！`);
+        clearTemplateCache(); // 緩存可能已過期
         await updateTemplateSelect(); // 重新載入模板列表
         return;
     }
@@ -500,7 +526,7 @@ async function loadSelectedTemplate() {
     alert(`已成功載入模板 "${templateName}"！`);
 }
 
-// 刪除選中的模板
+// 刪除選中的模板 - 修正版本
 async function deleteSelectedTemplate() {
     const templateName = templateSelect.value;
     
@@ -516,6 +542,8 @@ async function deleteSelectedTemplate() {
     const success = await deleteTemplate(templateName);
     
     if (success) {
+        // 清除緩存並更新下拉選單
+        clearTemplateCache();
         await updateTemplateSelect();
         alert(`模板 "${templateName}" 已刪除！`);
     } else {
@@ -523,14 +551,19 @@ async function deleteSelectedTemplate() {
     }
 }
 
-// ----- 事件監聽 -----
-
-// 加載頁面後的初始化
-window.addEventListener('DOMContentLoaded', () => {
+// 在頁面載入時預先加載模板
+window.addEventListener('DOMContentLoaded', async () => {
     setExampleContent();
     // 初始隨機排列內容
     shuffleArray(gameState.contentPositions);
     initializeBoard();
+    
+    // 預先加載模板 (在背景進行，不阻塞頁面載入)
+    try {
+        cachedTemplates = await loadTemplates();
+    } catch (error) {
+        console.warn('預載模板失敗:', error);
+    }
     
     // 檢查是否支持服務器連接
     fetch('/api/card-game/templates')
@@ -558,6 +591,9 @@ window.addEventListener('DOMContentLoaded', () => {
         // 如果想讓點擊任何位置都關閉，請移除這個事件監聽器或註釋掉 stopPropagation
     });
 });
+// ----- 事件監聽 -----
+
+
 
 // 自定義內容按鈕點擊事件
 configBtn.addEventListener('click', () => {
