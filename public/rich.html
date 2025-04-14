@@ -9,7 +9,6 @@
 
 <style>
 
-
 /* public/style.css */
 * {
     margin: 0;
@@ -105,7 +104,7 @@ body {
 }
 
 .player-select-container,
-.dice-container {
+.steps-container {
     background-color: white;
     padding: 1rem;
     border-radius: 0.5rem;
@@ -116,7 +115,7 @@ body {
 }
 
 .player-select-container h2,
-.dice-container h2 {
+.steps-container h2 {
     font-size: 1.25rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
@@ -158,24 +157,32 @@ body {
     background-color: #3182ce; /* 深藍色 */
 }
 
-.dice {
-    width: 6rem;
-    height: 6rem;
-    margin: 0 auto 1rem;
+.steps-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.step-btn {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: white;
-    border-radius: 0.5rem;
-    border: 2px solid #cbd5e0;
-    font-size: 3rem;
+    background-color: #4299e1;
+    color: white;
     font-weight: bold;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.1s;
+    font-size: 1.1rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
-.dice.rolling {
-    transform: rotate(10deg);
+.step-btn:hover {
+    background-color: #3182ce;
+    transform: translateY(-2px);
 }
 
 .action-btn {
@@ -276,8 +283,6 @@ body {
     display: none;
 }
 
-
-
 </style>
 
 
@@ -286,8 +291,7 @@ body {
 
 
 
-</head>
-<body>
+</head><body>
     <div class="game-container">
         <!-- 左側遊戲面板 -->
         <div id="game-board" class="game-board">
@@ -307,10 +311,17 @@ body {
                 </div>
             </div>
             
-            <!-- 骰子區域 -->
-            <div class="dice-container">
-                <div id="dice" class="dice">?</div>
-                <button id="roll-dice-btn" class="action-btn roll-dice">擲骰子</button>
+            <!-- 步數選擇區域 -->
+            <div class="steps-container">
+                <h2>選擇步數</h2>
+                <div class="steps-buttons">
+                    <button id="step-1-btn" class="step-btn">1步</button>
+                    <button id="step-2-btn" class="step-btn">2步</button>
+                    <button id="step-3-btn" class="step-btn">3步</button>
+                    <button id="step-4-btn" class="step-btn">4步</button>
+                    <button id="step-5-btn" class="step-btn">5步</button>
+                    <button id="step-6-btn" class="step-btn">6步</button>
+                </div>
             </div>
             
             <!-- 控制按鈕 -->
