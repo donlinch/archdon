@@ -418,16 +418,15 @@ async function deleteTemplate(templateName) {
 async function updateTemplateSelect() {
     const { templateSelect, loadTemplateBtn, deleteTemplateBtn } = getDOMElements();
     
-    // 清空當前選項
+    // 清空当前选项
     templateSelect.innerHTML = '<option value="" disabled selected>-- 選擇已保存的模板 --</option>';
     
     try {
-        // 獲取保存的模板 (使用緩存或重新加載)
-        if (!cachedTemplates) {
-            cachedTemplates = await loadTemplates();
-        }
+        // 强制重新加载模板，不使用缓存
+        cachedTemplates = null; // 重要：强制清除缓存
+        cachedTemplates = await loadTemplates();
         
-        // 如果沒有模板，禁用相關按鈕
+        // 如果没有模板，禁用相关按钮
         if (Object.keys(cachedTemplates).length === 0) {
             loadTemplateBtn.disabled = true;
             deleteTemplateBtn.disabled = true;
@@ -437,7 +436,7 @@ async function updateTemplateSelect() {
             deleteTemplateBtn.disabled = false;
         }
         
-        // 添加模板選項
+        // 添加模板选项
         for (const templateName in cachedTemplates) {
             const option = document.createElement('option');
             option.value = templateName;
