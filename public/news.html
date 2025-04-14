@@ -281,84 +281,59 @@
 
     </style>
 </head>
-<body>
-    <!-- Header -->
-    <header>
-        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
-            <!-- Additional required wrapper -->
-            <div class="swiper-wrapper" id="banner-wrapper">
-                <!-- Slides 會由 JavaScript 動態載入 -->
-            </div>
-            <!-- If we need pagination -->
-            <div class="swiper-pagination"></div>
-     
-            <!-- If we need navigation buttons -->
-            <div class="swiper-button-prev"></div>
-            <div class="swiper-button-next"></div>
-        </div>
-    </header>
-
-    <main>
+<div class="game-container">
+    <!-- 左側遊戲面板 -->
+    <div id="game-board" class="game-board">
+        <!-- 遊戲格子會由 JavaScript 動態生成 -->
+    </div>
     
-
-        <nav class="category-nav">
-            <a href="/" >週邊商品</a>  <!-- Current page, marked active -->
-            <a href="/music.html" >音樂專輯</a>        <!-- Placeholder -->
-            <a href="/news.html" class="active" >最新消息</a>  
-            <a href="/scores.html" >樂譜與舞蹈</a>
-            <a href="/game/card-game.html" >互動遊戲</a>
-            <a href="/guestbook.html" >留言板</a>
-</nav>
-
-<div class="news-list" id="news-list">
-    <p>正在加載最新消息...</p>
+    <!-- 右側控制面板 -->
+    <div class="control-panel">
+        <h1 class="title">大富翁遊戲</h1>
+        
+        <!-- 玩家選擇 -->
+        <div class="player-select-container">
+            <h2>選擇玩家</h2>
+            <div class="player-select">
+                <button id="player1-btn" class="player-btn player1 selected">P1</button>
+                <button id="player2-btn" class="player-btn player2">P2</button>
+            </div>
+        </div>
+        
+        <!-- 步數選擇區域 -->
+        <div class="steps-container">
+            <h2>選擇步數</h2>
+            <div class="steps-buttons">
+                <button id="step-1-btn" class="step-btn">1步</button>
+                <button id="step-2-btn" class="step-btn">2步</button>
+                <button id="step-3-btn" class="step-btn">3步</button>
+                <button id="step-4-btn" class="step-btn">4步</button>
+                <button id="step-5-btn" class="step-btn">5步</button>
+                <button id="step-6-btn" class="step-btn">6步</button>
+            </div>
+        </div>
+        
+        <!-- 方向選擇區域 -->
+        <div class="direction-container">
+            <h2>選擇方向</h2>
+            <div class="direction-buttons">
+                <button id="forward-btn" class="direction-btn forward" disabled>
+                    <span class="icon">➡️</span>前進
+                </button>
+                <button id="backward-btn" class="direction-btn backward" disabled>
+                    <span class="icon">⬅️</span>後退
+                </button>
+            </div>
+        </div>
+        
+        <!-- 控制按鈕 -->
+        <div class="control-buttons">
+            <button id="undo-btn" class="action-btn undo">回上一步</button>
+            <button id="reset-btn" class="action-btn reset">重新開始</button>
+        </div>
+    </div>
 </div>
 
-
-
-        <!-- 分頁控制容器 -->
-        <div id="pagination-controls">
-            <!-- 分頁按鈕將由 JS 生成 -->
-        </div>
-    </main>
-
-   <!-- 消息詳情 Modal -->
-   <div id="news-detail-modal" class="modal">
-       <div class="modal-content">
-           <span class="close-btn" onclick="closeNewsDetailModal()">×</span>
-           <img src="" alt="消息圖片" id="detail-image" class="detail-image">
-           <div class="detail-content">
-               <h2 id="detail-title" class="detail-title"></h2>
-               <p id="detail-meta" class="detail-meta"></p> <!-- 用於顯示日期等元信息 -->
-               <div id="detail-body" class="detail-body"></div> <!-- 用於顯示完整內容 -->
-           </div>
-       </div>
-   </div>
-
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html" class="active">最新消息</a>
-                <a href="/scores.html" >樂譜與舞蹈</a>
-                <a href="/game/card-game.html" >互動遊戲</a>
-                <a href="/guestbook.html" >留言板</a>
-                
-                 
-               <!-- 新增消息管理連結 -->
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2023 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- 先引入 Swiper JS -->
-    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <!-- 再引入你自己的 JS -->
-    <script src="news.js"></script>
+<script src="rich.js"></script>
 </body>
 </html>
