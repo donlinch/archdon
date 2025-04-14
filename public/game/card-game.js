@@ -623,45 +623,57 @@ function setupEventListeners() {
 // 在頁面載入時初始化應用
 async function initializeApp() {
     try {
-        // 設置示例內容
+        // 设置示例内容
         setExampleContent();
         
-        // 初始隨機排列內容
+        // 初始随机排列内容
         shuffleArray(gameState.contentPositions);
         
-        // 初始化遊戲板
+        // 初始化游戏板
         initializeBoard();
         
-        // 顯示底部導航欄
+        // 显示底部导航栏
         const { gameFooter } = getDOMElements();
         gameFooter.style.display = 'block';
         
-        // 嘗試預先加載模板
-        try {
-            cachedTemplates = await loadTemplates();
-            console.log('已載入模板數:', Object.keys(cachedTemplates).length);
-        } catch (error) {
-            console.warn('預載模板失敗:', error);
-            cachedTemplates = {};
-        }
-        
-        // 檢查是否支持服務器連接
+        // 先测试服务器连接
         try {
             const response = await fetch('/api/card-game/templates');
-            if (!response.ok) {
+            if (response.ok) {
+                console.log('服務器模板API可用。');
+                gameState.useServerStorage = true;
+            } else {
                 console.warn('服務器模板API不可用，使用本地存儲。');
                 gameState.useServerStorage = false;
-            } else {
-                console.log('服務器模板API可用。');
             }
         } catch (error) {
             console.warn('服務器模板API連接錯誤，使用本地存儲:', error);
             gameState.useServerStorage = false;
         }
         
-        // 設置事件監聽器
+        // 确保彻底加载模板 - 修改点
+        clearTemplateCache();
+        try {
+            cachedTemplates = await loadTemplates();
+            console.log('已載入模板數:', Object.keys(cachedTemplates).length);
+        } catch (error) {
+            console.warn('預載模板失敗:', error);
+            cachedTemplates = {}; // 确保至少有一个空对象
+            
+            // 尝试从本地加载
+            if (gameState.useServerStorage) {
+                gameState.useServerStorage = false;
+                try {
+                    cachedTemplates = loadTemplatesFromLocalStorage();
+                    console.log('從本地存儲加載模板數:', Object.keys(cachedTemplates).length);
+                } catch (e) {
+                    console.error('本地存儲加載也失敗:', e);
+                }
+            }
+        }
+        
+        // 设置事件监听器
         setupEventListeners();
-        initTemplateManager();
     } catch (error) {
         console.error('初始化應用時出錯:', error);
     }
