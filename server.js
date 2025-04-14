@@ -97,6 +97,47 @@ app.use(async (req, res, next) => {
 
 
 
+// --- 玻璃橋遊戲排行榜 API ---
+// GET /api/bridge-game/leaderboard - 獲取排行榜數據
+app.get('/api/bridge-game/leaderboard', async (req, res) => {
+    const playerCount = parseInt(req.query.player_count) || 8;
+    
+    try {
+        const result = await pool.query(
+            'SELECT player_name, completion_time, created_at FROM bridge_game_leaderboard WHERE player_count = $1 ORDER BY completion_time ASC LIMIT 10',
+            [playerCount]
+        );
+        
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取橋遊戲排行榜數據錯誤:', err);
+        res.status(500).json({ error: '獲取排行榜數據失敗' });
+    }
+});
+
+// POST /api/bridge-game/submit-score - 提交分數
+app.post('/api/bridge-game/submit-score', async (req, res) => {
+    try {
+        const { player_name, player_count, completion_time } = req.body;
+        
+        if (!player_name || !player_count || !completion_time) {
+            return res.status(400).json({ error: '缺少必要參數' });
+        }
+        
+        const ip_address = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        
+        await pool.query(
+            'INSERT INTO bridge_game_leaderboard (player_name, player_count, completion_time, ip_address) VALUES ($1, $2, $3, $4)',
+            [player_name, player_count, completion_time, ip_address]
+        );
+        
+        res.json({ success: true, message: '成績提交成功' });
+    } catch (err) {
+        console.error('提交橋遊戲分數錯誤:', err);
+        res.status(500).json({ error: '提交分數失敗' });
+    }
+});
+
 
 
 
@@ -128,8 +169,6 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 公開 API Routes ---
-
-
 
 
 
