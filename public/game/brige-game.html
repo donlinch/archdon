@@ -564,6 +564,17 @@
 
      <!-- 新增頁腳 -->
      <div class="game-footer" id="gameFooter">
+        <div class="player-count-container">
+            <label for="playerCount">遊戲人數：</label>
+            <select id="playerCount" class="player-count-select">
+                <option value="3" selected>3人</option>
+                <option value="4">4人</option>
+                <option value="5">5人</option>
+                <option value="6">6人</option>
+                <option value="7">7人</option>
+                <option value="8">8人</option>
+            </select>
+        </div>
         <div class="footer-copyright">
             © 2024 SunnyYummy. All rights reserved.
         </div>
@@ -582,17 +593,7 @@
         <p id="message">接力挑戰！小紅、小黃、小綠輪流挑戰。當一位玩家失敗，下一位玩家將從該位置繼續！</p>
     </div>
 
-    <div class="player-count-container">
-        <label for="playerCount">遊戲人數：</label>
-        <select id="playerCount" class="player-count-select">
-            <option value="3" selected>3人</option>
-            <option value="4">4人</option>
-            <option value="5">5人</option>
-            <option value="6">6人</option>
-            <option value="7">7人</option>
-            <option value="8">8人</option>
-        </select>
-    </div>
+    
 
     <script>
         // 遊戲變數
