@@ -169,18 +169,51 @@
 
     .player-token {
         position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        font-weight: bold;
-        font-size: 0.75rem;
-        color: white;
-        border: 2px solid white;
-        z-index: 10;
-        transition: left 0.3s, top 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: white;
+    border: 2px solid white;
+    z-index: 10;
+    transition: left 0.3s ease-in-out, top 0.3s ease-in-out; /* 平滑過渡 */
+}
+
+
+
+/* 按鈕禁用狀態 */
+.step-btn:disabled,
+.player-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.step-btn:disabled:hover {
+    background-color: #4299e1;
+    transform: none;
+}
+
+
+/* 高亮當前格子 */
+.cell.highlighted {
+    transform: scale(1.05);
+    z-index: 2;
+    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    from {
+        box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+    }
+    to {
+        box-shadow: 0 0 15px 8px rgba(255, 215, 0, 0.9);
+    }
     }
 
     .player1-token {
@@ -332,7 +365,7 @@
     }
 
 
-    
+
     </style>
 </head><body>
     <div class="game-container">
