@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁網頁版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1>大富翁網頁遊戲</h1>
+
+        <div id="board-container">
+            <div id="board">
+                <!-- 棋盤格子將由 JavaScript 動態生成 -->
+            </div>
+            <!-- 玩家棋子也將由 JavaScript 動態添加和控制 -->
+        </div>
+
+        <div id="controls-and-info">
+            <div id="player-info">
+                <h2>玩家資訊</h2>
+                <div id="players">
+                    <!-- 玩家狀態將由 JavaScript 更新 -->
+                    <p>玩家A: 單位 50, 位置 0</p>
+                    <p>玩家B: 單位 50, 位置 0</p>
+                </div>
+                <p>當前回合: <span id="current-player">玩家A</span></p>
+            </div> 
+
+            <div id="dice-area">
+                <h2>骰子</h2>
+                <div id="dice-display">
+                    <span class="die">?</span>
+                    <!-- 可能會用圖片或更多 span 來顯示骰子 -->
+                </div>
+                <button id="roll-dice-button">擲骰子</button>
+            </div>
+
+            <div id="game-log">
+                <h2>遊戲日誌</h2>
+                <div id="log-messages">
+                    <p>遊戲開始！</p>
+                </div>
+            </div>
+        </div>
+
+         <!-- 卡片顯示彈窗 (初始隱藏) -->
+        <div id="card-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3 id="card-type">卡片</h3>
+                <p id="card-description">卡片內容...</p>
+                <button id="close-card-button">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

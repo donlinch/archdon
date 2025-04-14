@@ -345,7 +345,7 @@ h1 {
     #controls-and-info {
         flex-direction: column; /* 垂直排列控制區 */
         align-items: center;
-    }
+    } 
     #player-info, #dice-area, #game-log {
         width: 90%; /* 佔滿寬度 */
         max-width: 400px; /* 限制最大寬度 */

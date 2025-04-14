@@ -1000,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 檢查是否因為卡片效果導致遊戲結束(例如破產)
         if (players.some(p => p.lapsCompleted >= TARGET_LAPS) && currentPlayerIndex === players.length - 1) {
              endGame();
-        } else {
+        } else { 
              // 等待效果顯示
              await delay(500);
              // 如果卡片效果沒有給予額外回合或跳過回合等，則正常進入下一回合
