@@ -153,6 +153,16 @@
 
 
 
+/* 在CSS部分添加这个规则来处理footer的可见性 */
+.game-footer.visible {
+    display: block; /* 当添加visible类时显示footer */
+}
+
+
+ 
+ 
+
+
 
         /* 頁面標題樣式 */
         .page-title-header {
@@ -860,8 +870,13 @@
             </div>
         </div>
         
-        <div class="game-footer" id="gameFooter">
-    
+        
+       
+
+        <div class="game-footer" id="gameFooter" style="display: none;">
+          
+            
+
 
             <div class="controls">
                 <button id="configBtn">自定義內容</button>
@@ -877,8 +892,17 @@
             <div class="footer-copyright">
                 © 2024 SunnyYummy. All rights reserved.
             </div>
+
+
+
+
         </div>
-       
+
+
+
+
+
+
     </div>
     
     <!-- 自定義內容彈窗 -->

@@ -239,22 +239,24 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// 导航栏控制
+const navToggle = document.getElementById('navToggle');
+const gameHeader = document.getElementById('gameHeader');
+const gameFooter = document.getElementById('gameFooter');
+let navVisible = false;
 
-  // 新增導航欄控制
-  const navToggle = document.getElementById('navToggle');
-        const gameHeader = document.getElementById('gameHeader');
-        const gameFooter = document.getElementById('gameFooter');
-        let navVisible = false;
+navToggle.addEventListener('click', function() {
+    navVisible = !navVisible;
+    if (navVisible) {
+        gameHeader.classList.add('visible');
+        gameFooter.style.display = 'block'; // 直接设置显示样式
+        navToggle.textContent = '×';
+    } else {
+        gameHeader.classList.remove('visible');
+        gameFooter.style.display = 'none'; // 直接设置隐藏样式
+        navToggle.textContent = '≡';
+    }
+});
+
+
         
-        navToggle.addEventListener('click', function() {
-            navVisible = !navVisible;
-            if (navVisible) {
-                gameHeader.classList.add('visible');
-                gameFooter.classList.add('visible');
-                navToggle.textContent = '×';
-            } else {
-                gameHeader.classList.remove('visible');
-                gameFooter.classList.remove('visible');
-                navToggle.textContent = '≡';
-            }
-        });
