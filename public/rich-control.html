@@ -105,22 +105,9 @@
             box-shadow: 0 0 0 4px rgba(255, 84, 77, 0.3);
         }
 
-        .direction-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
+         
 
-        .direction-btn {
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        
 
         .direction-btn:hover {
             transform: scale(1.05);
@@ -230,18 +217,7 @@
             background-color: #4a8cdf;
         }
 
-        .action-btn {
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            background-color: #9270ca;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 1rem;
-            width: 100%;
-        }
+        
 
         .action-btn:hover {
             background-color: #7d5fb3;
@@ -255,6 +231,79 @@
         .disconnected { background-color: #f8d7da; color: #721c24; }
         .connecting { background-color: #fff3cd; color: #856404; }
         button:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+
+
+
+
+ /* 移動控制按鈕容器 (使用 Flexbox) */
+ .direction-buttons-large {
+            display: flex;
+            gap: 1rem; /* 按鈕間距 */
+            justify-content: center; /* 水平居中 (如果需要) */
+            margin-top: 1rem; /* 與標題的間距 */
+        }
+
+        /* 更大的方塊按鈕樣式 */
+        .direction-btn-large {
+            flex: 1; /* 讓兩個按鈕平分寬度 */
+            padding: 1.5rem 1rem; /* 增加內邊距，讓按鈕變大 */
+            font-size: 1.2rem; /* 放大字體 */
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px; /* 方塊圓角 */
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .direction-btn-large:hover {
+            transform: scale(1.03); /* 稍微縮小 hover 效果 */
+            filter: brightness(90%); /* 懸停時稍微變暗 */
+        }
+        .forward-large { background-color: #0cd8b6; } /* 保持顏色 */
+        .backward-large { background-color: #ff544d; } /* 保持顏色 */
+
+        /* 格子資訊按鈕容器 (使用 Flexbox) */
+        .info-buttons-small {
+            display: flex;
+            gap: 0.8rem; /* 按鈕間距 */
+            justify-content: center; /* 居中顯示 */
+            margin-top: 1rem; /* 與標題的間距 */
+        }
+
+        /* 較小的並排按鈕樣式 */
+        .info-btn-small {
+            padding: 0.5rem 1rem; /* 減小內邊距 */
+            font-size: 0.9rem; /* 減小字體 */
+            /* background-color: #9270ca; */ /* 保持原紫色或自訂 */
+            /* color: white; */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: auto; /* 讓寬度由內容決定 */
+            margin-top: 0; /* 移除原 action-btn 的 margin-top */
+        }
+        .show-info-small { background-color: #9270ca; color: white; } /* 顯示按鈕顏色 */
+        .hide-info-small { background-color: #6c757d; color: white; } /* 關閉按鈕顏色 */
+
+        .info-btn-small:hover {
+            filter: brightness(90%);
+        }
+
+        /* 移除舊 .action-btn 的特定樣式 (如果不再需要) */
+        /* 例如 width: 100%; margin-top: 1rem; */
+        /* 如果其他地方還用 .action-btn，保留，只覆蓋需要的 */
+
+         /* 移除 .direction-buttons 和 .direction-btn 的舊樣式 (如果不再用) */
+         /* 或者保留，以防萬一，新樣式會覆蓋 */
+
+
+
+
+
+
     </style>
 </head>
 <body>
