@@ -387,22 +387,55 @@ case 'hidePlayerInfo':
       document.getElementById('center-description').textContent = description;
     }
   
-    function updatePlayerPositions() {
-      document.querySelectorAll('.player-token').forEach(el => el.remove());
-      playerPathIndices.forEach((index, i) => {
+   
+function updatePlayerPositions() {
+    // 清除舊的 token 元素
+    document.querySelectorAll('.player-token').forEach(el => el.remove());
+    // 清空 token 數組 (如果有的話，或者直接在這裡創建)
+    playerTokens = []; // 確保 playerTokens 數組被清空或重新填充
+
+    playerPathIndices.forEach((index, i) => {
+        const playerNum = i + 1;
         const cell = pathCells[index];
+
+        // --- ★ 獲取玩家配置 ★ ---
+        // 提供一個空對象作為後備，防止 gameConfig 還沒加載完或缺少玩家數據時出錯
+        const playerConfig = gameConfig[`player${playerNum}`] || {};
+
         const token = document.createElement('div');
-        token.className = `player-token player${i+1}-token`;
-        token.textContent = `P${i+1}`;
+        token.className = `player-token player${playerNum}-token`; // 保持基本 class
+
+        // --- ★ 根據配置決定內容 ★ ---
+        if (playerConfig.avatarUrl) {
+            // 如果有頭像 URL，創建 img 元素
+            token.innerHTML = `<img src="${playerConfig.avatarUrl}"
+                                   alt="${playerConfig.name || `P${playerNum}`}"
+                                   style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            // 移除背景色，讓圖片顯示
+            token.style.backgroundColor = 'transparent';
+             // 可以保留或調整邊框
+             token.style.border = '1px solid white';
+        } else {
+            // 如果沒有頭像 URL，顯示預設文字
+            token.textContent = playerConfig.name || `P${playerNum}`;
+            // 確保背景色能正確顯示 (移除可能存在的透明設置)
+            token.style.backgroundColor = ''; // 恢復使用 CSS 的背景色
+             token.style.border = '2px solid white'; // 恢復預設邊框
+        }
+        // --- ★ 內容決定結束 ★ ---
+
+        // 計算位置 (這部分不變)
         const angle = (2 * Math.PI / 3) * i;
         const radius = 15;
         const offsetX = Math.cos(angle) * radius;
         const offsetY = Math.sin(angle) * radius;
         token.style.left = `${cell.x * cellWidth + cellWidth / 2 + offsetX}px`;
         token.style.top = `${cell.y * cellHeight + cellHeight / 2 + offsetY}px`;
+
         gameBoard.appendChild(token);
-      });
-    }
+        playerTokens.push(token); // 將新創建的 token 加入數組 (如果需要引用)
+    });
+}
   
     function handleDirectionSelection(isForward, totalSteps) {
         if (isMoving) return;

@@ -104,38 +104,106 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'selectPlayer':
           selectPlayer(params.player);
           break;
-        case 'movePlayer':
-          handleDirectionSelection(params.direction === 'forward', parseInt(params.steps) || 1);
-          break;
-        case 'jumpToPosition':
-          if (params.player >= 1 && params.player <= 3) {
-            playerPathIndices[params.player - 1] = params.position;
-            renderBoard();
-            sendGameStateToControllers();
-          }
-          break;
-        case 'showInfo':
-          const cell = pathCells[highlightedCell ?? playerPathIndices[selectedPlayer - 1]];
-          if (cell) {
-            updateCenterInfo(cell.title, cell.description);
-            document.getElementById('center-info').style.backgroundColor = cell.color;
-            document.getElementById('center-info').classList.remove('hidden');
-            logoContainer.classList.add('hidden');
-          }
-          break;
-        case 'hideInfo':
-          document.getElementById('center-info').classList.add('hidden');
-          logoContainer.classList.remove('hidden');
-          break;
-        case 'resetGame':
-          initPlayerPositions();
-          highlightedCell = null;
-          renderBoard();
-          sendGameStateToControllers();
-          break;
-        case 'getGameState':
-          sendGameStateToControllers();
-          break;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          case 'movePlayer':
+            // ★ 確保這裡使用的是從 params 傳來的 player 參數 ★
+            // 之前的代碼可能直接用了本地 selectedPlayer，這裡確認一下
+            handleDirectionSelection(params.direction === 'forward', parseInt(params.steps) || 1, params.player); // <-- ★ 傳遞 params.player ★
+            break;
+      
+          // --- ★ 加回 jumpToPosition case ★ ---
+          case 'jumpToPosition':
+            if (params.player >= 1 && params.player <= 3 && params.position >= 0 && params.position < pathCells.length) {
+              playerPathIndices[params.player - 1] = params.position;
+              highlightedCell = params.position; // 更新高亮
+              renderBoard();
+              sendGameStateToControllers();
+            }
+            break;
+
+
+
+
+
+
+
+
+  // --- ★ 新增 Case ★ ---
+  case 'showPlayerInfo':
+    const playerToShow = params.player;
+    // 驗證玩家編號是否有效
+    if (playerToShow >= 1 && playerToShow <= 3) {
+        const playerIndex = playerToShow - 1;
+         // 確保索引在範圍內
+        if (playerIndex < playerPathIndices.length) {
+            const currentPositionIndex = playerPathIndices[playerIndex];
+            // 確保位置索引在範圍內
+            if (currentPositionIndex >= 0 && currentPositionIndex < pathCells.length) {
+                const targetCell = pathCells[currentPositionIndex];
+                if (targetCell) {
+                    console.log(`Received showPlayerInfo for P${playerToShow} at pos ${currentPositionIndex}, showing info for:`, targetCell.title);
+                    updateCenterInfo(targetCell.title, targetCell.description); // 更新文字
+                    const infoPanel = document.getElementById('center-info');
+                    if (infoPanel) {
+                        infoPanel.style.backgroundColor = targetCell.color; // 更新背景色
+                        infoPanel.classList.remove('hidden'); // 顯示面板
+                    }
+                    if (logoContainer) {
+                        logoContainer.classList.add('hidden'); // 隱藏 Logo
+                    }
+                } else {
+                     console.error(`showPlayerInfo: 無法在 pathCells 中找到位置 ${currentPositionIndex} 的數據`);
+                }
+            } else {
+                console.error(`showPlayerInfo: 玩家 ${playerToShow} 的位置索引 ${currentPositionIndex} 無效`);
+            }
+        } else {
+             console.error(`showPlayerInfo: 無效的玩家索引 ${playerIndex}`);
+        }
+    } else {
+         console.error(`showPlayerInfo: 無效的玩家編號 ${playerToShow}`);
+    }
+    break; // <--- 不要忘記 break
+
+case 'hidePlayerInfo':
+    console.log('Received hidePlayerInfo command');
+    const infoPanelToHide = document.getElementById('center-info');
+    if (infoPanelToHide) {
+        infoPanelToHide.classList.add('hidden'); // 隱藏面板
+    }
+    if (logoContainer) {
+        logoContainer.classList.remove('hidden'); // 顯示 Logo
+    }
+    break; // <--- 不要忘記 break
+// --- ★ 新增 Case 結束 ★ ---
+
+
+
+
+        
+          
+
+
+
+
+
+
+
       }
     }
   
@@ -147,6 +215,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // updatePlayerButtonStyles(); // 保持刪除
         // addEventListeners();      // 保持刪除
         connectWebSocket();
+
+
+
+
+ // --- ★ 新增：全局點擊監聽器，用於關閉中央面板 ★ ---
+        document.addEventListener('click', (event) => {
+            const centerInfoPanel = document.getElementById('center-info');
+            const clickedElement = event.target;
+
+            // 檢查中央面板是否存在且當前是可見的
+            if (centerInfoPanel && !centerInfoPanel.classList.contains('hidden')) {
+                // 檢查點擊的是否在中央面板內部 (包括關閉按鈕)
+                const isClickInsideInfo = centerInfoPanel.contains(clickedElement);
+                // 檢查點擊的是否在任何一個遊戲格子上
+                const isClickOnCell = clickedElement.closest('.cell'); // .closest 會查找自身及父元素
+
+                // 如果點擊既不在面板內部，也不在任何格子上
+                if (!isClickInsideInfo && !isClickOnCell) {
+                    console.log('點擊在面板和格子外部，關閉面板');
+                    centerInfoPanel.classList.add('hidden'); // 隱藏面板
+                    if (logoContainer) {
+                        logoContainer.classList.remove('hidden'); // 顯示 Logo
+                    }
+                }
+            }
+        });
+        // --- ★ 全局點擊監聽器結束 ★ ---
+
+
+
     }
 
 
@@ -191,18 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoImg = document.createElement('img');
             logoImg.src = gameConfig.centerLogoUrl;
             logoImg.alt = "遊戲 Logo";
-            // 調整樣式以適應您的 500x400 圖片和容器大小 (350x300)
-            logoImg.style.display = 'block'; // 確保圖片是塊級元素
-            logoImg.style.maxWidth = '100%'; // 限制最大寬度為容器寬度
-            logoImg.style.maxHeight = '100%'; // 限制最大高度為容器高度
-            logoImg.style.width = 'auto';     // 讓寬度自動調整以保持比例
-            logoImg.style.height = 'auto';    // 讓高度自動調整以保持比例
-            logoImg.style.margin = 'auto';    // 嘗試在容器內居中
-            // 可選：如果圖片加載失敗的處理
-            logoImg.onerror = () => {
-                console.error("Logo 圖片加載失敗:", gameConfig.centerLogoUrl);
-                logoContainer.innerHTML = '<p style="color:red;">Logo 加載失敗</p>'; // 顯示錯誤提示
-            };
+
+
+            logoImg.classList.add('game-logo-image');
+
+
+
+            
             logoContainer.appendChild(logoImg);
         } else {
             console.log('沒有配置 Logo URL，顯示預設文字 Logo');
@@ -230,29 +323,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   
-       // --- 渲染格子 ---
+     
+ 
+
+    // --- 渲染格子 ---
     pathCells.forEach(cell => {
         const div = document.createElement('div');
-        div.className = `cell cell-${cell.position}`; // 使用 position 或 index 作為 class
+        // ↓↓↓ 使用 cell.position 或 cell.index (取決於您 createBoardCells 如何定義) 來設置 class 和 data 屬性 ↓↓↓
+        const positionIdentifier = typeof cell.position !== 'undefined' ? cell.position : pathCells.indexOf(cell); // 使用 position 或 index
+        div.className = `cell cell-pos-${positionIdentifier}`; // <-- 用 position 或 index 作為 class
+        div.dataset.index = positionIdentifier; // <-- 儲存索引，方便點擊時查找數據
+        // ↑↑↑ --- ↑↑↑
+
         div.style.left = `${cell.x * cellWidth}px`;
         div.style.top = `${cell.y * cellHeight}px`;
         div.style.backgroundColor = cell.color;
-        // 確保 highlightedCell 使用 position 或 index 來比較
-        if (cell.position === highlightedCell) div.classList.add('highlighted');
+        if (positionIdentifier === highlightedCell) div.classList.add('highlighted');
 
-        div.innerHTML = `<div class="cell-content"><div class="cell-title">${cell.title}</div><div class="cell-description">${cell.description}</div></div>`;
+        // --- ★ 修改格子內容的創建 ★ ---
+        // 只創建包含標題的內容
+        div.innerHTML = `
+            <div class="cell-content">
+                <div class="cell-title">${cell.title}</div>
+             </div>
+        `;
+        // --- ★ 修改結束 ★ ---
+
+        // --- ★ 修改點擊事件處理 ★ ---
         div.addEventListener('click', () => {
-          updateCenterInfo(cell.title, cell.description);
-          const infoPanel = document.getElementById('center-info');
-          infoPanel.style.backgroundColor = cell.color;
-          infoPanel.classList.remove('hidden');
-          logoContainer.classList.add('hidden'); // 點擊格子時隱藏 Logo
+            // 從 pathCells 數組中通過索引找到完整的格子數據
+            const fullCellData = pathCells[positionIdentifier];
+            if (fullCellData) {
+                // 更新中央面板的標題和描述
+                updateCenterInfo(fullCellData.title, fullCellData.description); // <-- 使用完整數據
+                const infoPanel = document.getElementById('center-info');
+                infoPanel.style.backgroundColor = fullCellData.color; // <-- 使用完整數據
+                infoPanel.classList.remove('hidden');
+                logoContainer.classList.add('hidden'); // 點擊格子時隱藏 Logo
+            } else {
+                console.error(`無法找到索引為 ${positionIdentifier} 的格子數據`);
+            }
         });
+        // --- ★ 修改結束 ★ ---
+
         gameBoard.appendChild(div);
     });
     // --- 渲染格子結束 ---
     updatePlayerPositions(); // 渲染玩家標記
-    }
+}
+
+
+
+
+
+
+
+
+
+
   
     function updateCenterInfo(title, description) {
       document.getElementById('center-title').textContent = title;
