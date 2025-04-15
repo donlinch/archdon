@@ -1781,8 +1781,7 @@ function broadcastToControllers(message) {
 
     try {
         const messageString = JSON.stringify(message);
-        console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
-        controllerClients.forEach(client => {
+         controllerClients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                  try {
                      client.send(messageString);
