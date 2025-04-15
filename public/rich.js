@@ -230,29 +230,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   
-       // --- 渲染格子 ---
+     
+ 
+
+    // --- 渲染格子 ---
     pathCells.forEach(cell => {
         const div = document.createElement('div');
-        div.className = `cell cell-${cell.position}`; // 使用 position 或 index 作為 class
+        // ↓↓↓ 使用 cell.position 或 cell.index (取決於您 createBoardCells 如何定義) 來設置 class 和 data 屬性 ↓↓↓
+        const positionIdentifier = typeof cell.position !== 'undefined' ? cell.position : pathCells.indexOf(cell); // 使用 position 或 index
+        div.className = `cell cell-pos-${positionIdentifier}`; // <-- 用 position 或 index 作為 class
+        div.dataset.index = positionIdentifier; // <-- 儲存索引，方便點擊時查找數據
+        // ↑↑↑ --- ↑↑↑
+
         div.style.left = `${cell.x * cellWidth}px`;
         div.style.top = `${cell.y * cellHeight}px`;
         div.style.backgroundColor = cell.color;
-        // 確保 highlightedCell 使用 position 或 index 來比較
-        if (cell.position === highlightedCell) div.classList.add('highlighted');
+        if (positionIdentifier === highlightedCell) div.classList.add('highlighted');
 
-        div.innerHTML = `<div class="cell-content"><div class="cell-title">${cell.title}</div><div class="cell-description">${cell.description}</div></div>`;
+        // --- ★ 修改格子內容的創建 ★ ---
+        // 只創建包含標題的內容
+        div.innerHTML = `
+            <div class="cell-content">
+                <div class="cell-title">${cell.title}</div>
+             </div>
+        `;
+        // --- ★ 修改結束 ★ ---
+
+        // --- ★ 修改點擊事件處理 ★ ---
         div.addEventListener('click', () => {
-          updateCenterInfo(cell.title, cell.description);
-          const infoPanel = document.getElementById('center-info');
-          infoPanel.style.backgroundColor = cell.color;
-          infoPanel.classList.remove('hidden');
-          logoContainer.classList.add('hidden'); // 點擊格子時隱藏 Logo
+            // 從 pathCells 數組中通過索引找到完整的格子數據
+            const fullCellData = pathCells[positionIdentifier];
+            if (fullCellData) {
+                // 更新中央面板的標題和描述
+                updateCenterInfo(fullCellData.title, fullCellData.description); // <-- 使用完整數據
+                const infoPanel = document.getElementById('center-info');
+                infoPanel.style.backgroundColor = fullCellData.color; // <-- 使用完整數據
+                infoPanel.classList.remove('hidden');
+                logoContainer.classList.add('hidden'); // 點擊格子時隱藏 Logo
+            } else {
+                console.error(`無法找到索引為 ${positionIdentifier} 的格子數據`);
+            }
         });
+        // --- ★ 修改結束 ★ ---
+
         gameBoard.appendChild(div);
     });
     // --- 渲染格子結束 ---
     updatePlayerPositions(); // 渲染玩家標記
-    }
+}
+
+
+
+
+
+
+
+
+
+
   
     function updateCenterInfo(title, description) {
       document.getElementById('center-title').textContent = title;
