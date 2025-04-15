@@ -1727,7 +1727,7 @@ wss.on('connection', (ws, req) => {
             parsedMessage = JSON.parse(messageString); // Parse the string version
         } catch (e) {
             // Log the string that failed parsing for debugging
-            console.error(`Failed to parse message string: "${messageString}"`, e);
+
             // Optionally notify the sender about the error
             // ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON format received' }));
             return; // Stop processing this invalid message
@@ -1735,16 +1735,17 @@ wss.on('connection', (ws, req) => {
 
         // Route messages using parsedMessage
         if (ws.clientType === 'controller' && gameClient && gameClient.readyState === WebSocket.OPEN) {
-            console.log('Forwarding message from controller to game:', parsedMessage);
-             try {
+ 
+            try {
                  gameClient.send(JSON.stringify(parsedMessage)); // Forward the valid JSON object
              } catch (e) { console.error("Error sending message to game client:", e); }
         } else if (ws.clientType === 'game') {
-            console.log('Broadcasting message from game to controllers:', parsedMessage);
+
+
             broadcastToControllers(parsedMessage); // Broadcast the valid JSON object
         } else if (ws.clientType === 'controller' && (!gameClient || gameClient.readyState !== WebSocket.OPEN)) {
-            console.log('Controller sent message, but game is not connected.');
-             try {
+
+            try {
                  ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
              } catch (e) { console.error("Error sending 'game not connected' to controller:", e); }
         }
@@ -1781,14 +1782,16 @@ function broadcastToControllers(message) {
 
     try {
         const messageString = JSON.stringify(message);
+         // ↓↓↓ 找到這一行 (或類似的) ↓↓↓
+         // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
+         // ↓↓↓ 將其刪除或在前面加上 // 註解掉 ↓↓↓
+         // // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
          controllerClients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                  try {
                      client.send(messageString);
                  } catch (e) {
                      console.error("Error sending message to a controller:", e);
-                     // Optional: Remove this client if sending fails repeatedly
-                     // controllerClients.delete(client); client.terminate();
                  }
             }
         });
