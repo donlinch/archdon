@@ -53,83 +53,92 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 初始化玩家位置
   function initPlayerPositions() {
-    const startPositionIndex = 0; // 玩家從起點開始
+    const startPositionIndex = 0; // 玩家從起點開始 (左下角)
     playerPathIndices = [startPositionIndex, startPositionIndex, startPositionIndex];
   }
   
-  // 創建 7x6 棋盤格子 (使用新的顏色方案)
+  // 創建 7x6 棋盤格子 (7個橫向格子，兩邊各4個縱向格子)
   function createBoardCells() {
     pathCells = [];
     const boardWidth = 7; // 水平方向格子數量
-    const boardHeight = 6; // 垂直方向格子數量
+    const sideHeight = 4; // 左右兩側的格子數量（不包括角落）
     
-    // 頂部顏色排序 (只有6格)
+    // 定義顏色
+    // 頂部顏色排序
     const topColors = [
+        colors.goldenPurple, // 頂部左角
         colors.geekBlue,    // 頂部 1
         colors.cyan,        // 頂部 2
         colors.grey,        // 頂部 3
         colors.sunriseYellow, // 頂部 4
         colors.dustRed,     // 頂部 5
-        colors.daybreakBlue  // 頂部 6
+        colors.goldenPurple  // 頂部右角
     ];
     
     // 右側顏色排序
     const rightColors = [
-        colors.goldenPurple, // 右側 1
+        colors.daybreakBlue, // 右側 1
         colors.sunsetOrange, // 右側 2
         colors.darkGreen,   // 右側 3
-        colors.magenta,     // 右側 4
-        colors.geekBlue     // 右側 5
+        colors.magenta     // 右側 4
     ];
     
     // 底部顏色排序
     const bottomColors = [
-        colors.daybreakBlue, // 底部 1
-        colors.goldenPurple, // 底部 2
-        colors.sunsetOrange, // 底部 3
-        colors.darkGreen,   // 底部 4
-        colors.magenta,     // 底部 5
-        colors.geekBlue,    // 底部 6
-        colors.cyan         // 底部 7
+        colors.goldenPurple, // 底部左角
+        colors.sunsetOrange, // 底部 1
+        colors.darkGreen,   // 底部 2
+        colors.magenta,     // 底部 3
+        colors.geekBlue,    // 底部 4
+        colors.cyan,        // 底部 5
+        colors.goldenPurple  // 底部右角
     ];
     
     // 左側顏色排序
     const leftColors = [
-        colors.cyan,       // 左側 1
-        colors.grey,       // 左側 2
+        colors.daybreakBlue, // 左側 1
+        colors.grey,        // 左側 2
         colors.sunriseYellow, // 左側 3
-        colors.dustRed,    // 左側 4
-        colors.daybreakBlue // 左側 5
+        colors.dustRed     // 左側 4
     ];
     
-    // 定義遊戲路徑 - 從左下角開始繞板
     // 左下角起點
     pathCells.push({
         x: 0,
-        y: boardHeight - 1,
-        title: `起點`,
+        y: sideHeight + 1,
+        title: `左下角`,
         description: `遊戲開始的地方。`,
         color: colors.goldenPurple,
         position: 'corner'
     });
     
     // 底部 (從左到右)
-    for (let i = 1; i < boardWidth; i++) {
+    for (let i = 1; i < boardWidth - 1; i++) {
         pathCells.push({
             x: i,
-            y: boardHeight - 1,
+            y: sideHeight + 1,
             title: `底部 ${i}`,
             description: `這是底部第 ${i} 格。`,
-            color: bottomColors[i-1],
+            color: bottomColors[i],
             position: 'bottom'
         });
     }
     
+    // 右下角
+    pathCells.push({
+        x: boardWidth - 1,
+        y: sideHeight + 1,
+        title: `右下角`,
+        description: `右下角格子。`,
+        color: colors.goldenPurple,
+        position: 'corner'
+    });
+    
     // 右側 (從下到上)
-    for (let i = 0; i < rightColors.length; i++) {
+    for (let i = 0; i < sideHeight; i++) {
         pathCells.push({
             x: boardWidth - 1,
-            y: boardHeight - 2 - i,
+            y: sideHeight - i,
             title: `右側 ${i + 1}`,
             description: `這是右側第 ${i + 1} 格。`,
             color: rightColors[i],
@@ -137,20 +146,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // 頂部 (從右到左) - 注意這裡只有6格
+    // 右上角
+    pathCells.push({
+        x: boardWidth - 1,
+        y: 0,
+        title: `右上角`,
+        description: `右上角格子。`,
+        color: colors.goldenPurple,
+        position: 'corner'
+    });
+    
+    // 頂部 (從右到左)
     for (let i = boardWidth - 2; i > 0; i--) {
         pathCells.push({
             x: i,
             y: 0,
             title: `頂部 ${boardWidth - 1 - i}`,
             description: `這是頂部第 ${boardWidth - 1 - i} 格。`,
-            color: topColors[boardWidth - 2 - i],
+            color: topColors[i],
             position: 'top'
         });
     }
     
+    // 左上角
+    pathCells.push({
+        x: 0,
+        y: 0,
+        title: `左上角`,
+        description: `左上角格子。`,
+        color: colors.goldenPurple,
+        position: 'corner'
+    });
+    
     // 左側 (從上到下)
-    for (let i = 0; i < leftColors.length; i++) {
+    for (let i = 0; i < sideHeight; i++) {
         pathCells.push({
             x: 0,
             y: i + 1,
@@ -160,19 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             position: 'left'
         });
     }
-    
-    // 標記角落格子
-    // 右下角
-    pathCells[boardWidth - 1].position = 'corner';
-    pathCells[boardWidth - 1].color = colors.goldenPurple;
-    
-    // 右上角
-    pathCells[boardWidth + rightColors.length - 1].position = 'corner';
-    pathCells[boardWidth + rightColors.length - 1].color = colors.goldenPurple;
-    
-    // 左上角
-    pathCells[boardWidth + rightColors.length + (topColors.length - 1) - 1].position = 'corner';
-    pathCells[boardWidth + rightColors.length + (topColors.length - 1) - 1].color = colors.goldenPurple;
   }
   
   // 渲染遊戲板
