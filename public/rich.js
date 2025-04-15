@@ -86,24 +86,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     function sendGameStateToControllers() {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({
-        type: 'gameStateUpdate',
-        data: {
-          selectedPlayer,
-          playerPathIndices,
-          highlightedCell,
-          isMoving,
-          // pathCells: ... // 可以考慮是否真的需要每次都發送完整的格子信息
-          // ★ 新增：將玩家配置信息發送給控制器 ★
-          players: {
-              1: { avatarUrl: playersConfig.player1.avatarUrl },
-              2: { avatarUrl: playersConfig.player2.avatarUrl },
-              3: { avatarUrl: playersConfig.player3.avatarUrl }
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      
+        // ★ 直接從全局 gameConfig 獲取頭像 URL ★
+        // 同時提供後備，以防 gameConfig 或玩家數據不存在
+        const player1Avatar = gameConfig.player1 ? gameConfig.player1.avatarUrl : null;
+        const player2Avatar = gameConfig.player2 ? gameConfig.player2.avatarUrl : null;
+        const player3Avatar = gameConfig.player3 ? gameConfig.player3.avatarUrl : null;
+      
+        ws.send(JSON.stringify({
+          type: 'gameStateUpdate',
+          data: {
+            selectedPlayer,
+            playerPathIndices,
+            highlightedCell,
+            isMoving,
+            // pathCells: pathCells.map(...) // 可以考慮是否需要每次發送
+            players: {
+                1: { avatarUrl: player1Avatar }, // <-- 使用獲取到的 URL
+                2: { avatarUrl: player2Avatar }, // <-- 使用獲取到的 URL
+                3: { avatarUrl: player3Avatar }  // <-- 使用獲取到的 URL
+            }
           }
-          }
-      }));
-    }
+        }));
+      }
   
     function handleControlCommand(command, params) {
       switch (command) {
