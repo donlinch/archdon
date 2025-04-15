@@ -276,38 +276,18 @@
         </div>
         <div class="control-section">
             <h2>移動控制</h2>
-            <div class="steps-input">
-                <label for="steps">步數:</label>
-                <input type="number" id="steps" min="1" max="12" value="1">
-            </div>
+            
             <div class="direction-buttons">
                 <button id="forward-btn" class="direction-btn forward">前進</button>
                 <button id="backward-btn" class="direction-btn backward">後退</button>
             </div>
         </div>
-        <div class="control-section">
-            <h2>直接跳轉</h2>
-            <div class="position-jump">
-                <select id="position-select">
-                    <!-- Options added by JS -->
-                </select>
-                <button id="jump-btn">跳轉</button>
-            </div>
-        </div>
-        <div class="control-section">
-            <h2>特殊操作</h2>
-            <button id="show-info-btn" class="action-btn">顯示資訊</button>
-            <button id="hide-info-btn" class="action-btn">隱藏資訊</button>
-            <button id="reset-btn" class="action-btn">重置遊戲</button>
-        </div>
 
 
-        <div id="game-info" class="game-info">
-            <div class="game-info-title">遊戲狀態</div>
-            <div id="game-info-content" class="game-info-content">
-                等待連接遊戲...
-            </div>
-        </div>
+ 
+
+
+
     </div>
 
     <script>
@@ -318,15 +298,9 @@
             const player3Btn = document.getElementById('player3-btn');
             const forwardBtn = document.getElementById('forward-btn');
             const backwardBtn = document.getElementById('backward-btn');
-            const stepsInput = document.getElementById('steps');
-            const positionSelect = document.getElementById('position-select');
-            const jumpBtn = document.getElementById('jump-btn');
-            const showInfoBtn = document.getElementById('show-info-btn');
-            const hideInfoBtn = document.getElementById('hide-info-btn');
-            const resetBtn = document.getElementById('reset-btn');
+         
             const connectionStatusDiv = document.getElementById('connection-status');
-            const gameInfoContentDiv = document.getElementById('game-info-content');
-            const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
+             const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
 
 
             // --- State ---
@@ -447,23 +421,9 @@
                  }
                  // Update selected player button visually based on game state
                  selectPlayerUI(gameState.selectedPlayer || 1);
-
-                 // Update game info display
-                 let infoText = `當前玩家: P${gameState.selectedPlayer}\n`;
-                 infoText += `玩家位置: P1=${gameState.playerPathIndices[0]}, P2=${gameState.playerPathIndices[1]}, P3=${gameState.playerPathIndices[2]}\n`;
-                 infoText += `高亮格子: ${gameState.highlightedCell !== null ? gameState.highlightedCell : '無'}\n`;
-                 infoText += `移動中: ${gameState.isMoving ? '是' : '否'}`;
-                 gameInfoContentDiv.textContent = infoText;
-
-                  // Update position select options if needed (e.g., if pathCells length changes)
-                  updatePositionSelect(gameState.pathCells ? gameState.pathCells.length : 28); // Default 28 if no pathCells
-
-
-                 // Maybe disable movement buttons if game state indicates isMoving
-                 forwardBtn.disabled = gameState.isMoving || !gameIsConnected;
-                 backwardBtn.disabled = gameState.isMoving || !gameIsConnected;
-                 jumpBtn.disabled = gameState.isMoving || !gameIsConnected;
-                 resetBtn.disabled = gameState.isMoving || !gameIsConnected; // Prevent reset while moving
+                 const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
+     forwardBtn.disabled = controlsShouldBeDisabled;
+     backwardBtn.disabled = controlsShouldBeDisabled;
              }
 
               // Update position select dropdown
@@ -509,15 +469,16 @@
                  // because the *game's* state dictates the selected player display.
                  // We just update the local `selectedPlayer` variable for *sending* commands.
                  console.log(`Controller UI updated for Player ${playerNum}`);
+                 sendCommand('selectPlayer', { player: playerNum });
+
              }
 
             function movePlayer(direction) {
-                const steps = parseInt(stepsInput.value) || 1;
-                 console.log(`Sending move command: P${selectedPlayer}, ${direction}, ${steps} steps`);
-                 sendCommand('movePlayer', {
+                console.log(`Sending move command: P${selectedPlayer}, ${direction}, 1 step`); // <-- 日誌也改成 1 step
+                sendCommand('movePlayer', {
                     player: selectedPlayer, // Use the locally selected player for the command
                     direction,
-                    steps: Math.min(Math.max(steps, 1), 12) // Clamp steps
+                    steps: 1
                 });
             }
 
@@ -540,19 +501,13 @@
             player3Btn.addEventListener('click', () => selectPlayerUI(3));
             forwardBtn.addEventListener('click', () => movePlayer('forward'));
             backwardBtn.addEventListener('click', () => movePlayer('backward'));
-            jumpBtn.addEventListener('click', jumpToPosition);
-            showInfoBtn.addEventListener('click', () => sendCommand('showInfo'));
-            hideInfoBtn.addEventListener('click', () => sendCommand('hideInfo'));
-            resetBtn.addEventListener('click', () => {
-                if (confirm('確定要重置遊戲嗎？')) {
-                     console.log("Sending reset command");
-                     sendCommand('resetGame');
-                 }
-            });
+    
+            
+
+            
 
             // Initial Setup
-            updatePositionSelect(28); // Initial population with default size
-            setControlsEnabled(false); // Start disabled
+             setControlsEnabled(false); // Start disabled
             connectWebSocket(); // Start connection attempt
 
         }); // End DOMContentLoaded
