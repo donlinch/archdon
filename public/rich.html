@@ -311,6 +311,26 @@ body {
     padding-right: 5px; /* ★ (可選) 為滾動條留出空間 ★ */
 }
 
+
+
+#logo-container img.game-logo-image { /* 使用 class 選擇器 */
+    display: block;
+    /* ★ 在這裡設置您想要的尺寸 ★ */
+    width: 520px; /* 例如：固定寬度 */
+    height: auto; /* 高度自動保持比例 */
+    /* 或者 max-width: 80%; max-height: 80%; width: auto; height: auto; */
+    max-width: 100%; /* 確保不會超出容器 */
+    max-height: 100%;/* 確保不會超出容器 */
+    margin: auto; /* 居中 */
+    object-fit: contain; /* 確保圖片完整顯示 */
+}
+
+
+
+
+
+
+
 /* 關閉按鈕 */
 .close-btn {
     position: absolute;

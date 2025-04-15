@@ -289,18 +289,13 @@ case 'hidePlayerInfo':
             const logoImg = document.createElement('img');
             logoImg.src = gameConfig.centerLogoUrl;
             logoImg.alt = "遊戲 Logo";
-            // 調整樣式以適應您的 500x400 圖片和容器大小 (350x300)
-            logoImg.style.display = 'block'; // 確保圖片是塊級元素
-            logoImg.style.maxWidth = '100%'; // 限制最大寬度為容器寬度
-            logoImg.style.maxHeight = '100%'; // 限制最大高度為容器高度
-            logoImg.style.width = 'auto';     // 讓寬度自動調整以保持比例
-            logoImg.style.height = 'auto';    // 讓高度自動調整以保持比例
-            logoImg.style.margin = 'auto';    // 嘗試在容器內居中
-            // 可選：如果圖片加載失敗的處理
-            logoImg.onerror = () => {
-                console.error("Logo 圖片加載失敗:", gameConfig.centerLogoUrl);
-                logoContainer.innerHTML = '<p style="color:red;">Logo 加載失敗</p>'; // 顯示錯誤提示
-            };
+
+
+            logoImg.classList.add('game-logo-image');
+
+
+
+            
             logoContainer.appendChild(logoImg);
         } else {
             console.log('沒有配置 Logo URL，顯示預設文字 Logo');
