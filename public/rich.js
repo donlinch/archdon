@@ -1,8 +1,9 @@
 // 大富翁遊戲腳本
 document.addEventListener('DOMContentLoaded', () => {
   // 定義遊戲板的大小和格子尺寸
-  const boardSize = 7;
-  const cellSize = 90;
+  const boardSize = 7; // 維持原來的7x7格子數量
+  const cellWidth = 125; // 格子寬度
+  const cellHeight = 100; // 格子高度 (4:5的寬高比)
   
   // DOM 元素
   const gameBoard = document.getElementById('game-board');
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const player3Btn = document.getElementById('player3-btn');
   const forwardBtn = document.getElementById('forward-btn');
   const backwardBtn = document.getElementById('backward-btn');
+  const logoContainer = document.getElementById('logo-container');
   
   // 遊戲狀態
   let pathCells = [];
@@ -31,73 +33,78 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 初始化遊戲
   function initGame() {
-    createPathCells();
-    renderBoard();
-    addEventListeners();
+      createPathCells();
+      renderBoard();
+      addEventListeners();
   }
   
-  // 創建路徑格子
+  // 創建路徑格子 - 使用粉色系顏色
   function createPathCells() {
-    pathCells = [];
-    
-    // 首先添加起點/終點 (右下角)
-    pathCells.push({
-      x: boardSize - 1,
-      y: boardSize - 1,
-      title: '起點/終點',
-      description: '遊戲的起點和終點。',
-      color: '#FFA500'
-    });
-    
-    // 1. 右側從下到上 (第一步往上)
-    for (let y = boardSize - 2; y >= 0; y--) {
+      pathCells = [];
+      
+      // 首先添加起點/終點 (右下角)
       pathCells.push({
         x: boardSize - 1,
-        y,
-        title: `右側 ${boardSize - y - 1}`,
-        description: `這是右側第 ${boardSize - y - 1} 格。`,
-        color: getRandomColor()
-      });
-    }
-    
-    // 2. 頂部從右到左 (右上到左上)
-    for (let x = boardSize - 2; x >= 0; x--) {
-      pathCells.push({
-        x,
-        y: 0,
-        title: `頂部 ${boardSize - x - 1}`,
-        description: `這是頂部第 ${boardSize - x - 1} 格。`,
-        color: getRandomColor()
-      });
-    }
-    
-    // 3. 左側從上到下 (左上到左下)
-    for (let y = 1; y < boardSize; y++) {
-      pathCells.push({
-        x: 0,
-        y,
-        title: `左側 ${y}`,
-        description: `這是左側第 ${y} 格。`,
-        color: getRandomColor()
-      });
-    }
-    
-    // 4. 底部從左到右 (左下到右下，不包括起點/終點)
-    for (let x = 1; x < boardSize - 1; x++) {
-      pathCells.push({
-        x,
         y: boardSize - 1,
-        title: `底部 ${x}`,
-        description: `這是底部第 ${x} 格。`,
-        color: getRandomColor()
+        title: '起點/終點',
+        description: '遊戲的起點和終點。',
+        color: '#ff80ab' // 粉紅色
       });
-    }
+      
+      // 1. 右側從下到上 (第一步往上)
+      for (let y = boardSize - 2; y >= 0; y--) {
+        pathCells.push({
+          x: boardSize - 1,
+          y,
+          title: `右側 ${boardSize - y - 1}`,
+          description: `這是右側第 ${boardSize - y - 1} 格。`,
+          color: getRandomPinkColor()
+        });
+      }
+      
+      // 2. 頂部從右到左 (右上到左上)
+      for (let x = boardSize - 2; x >= 0; x--) {
+        pathCells.push({
+          x,
+          y: 0,
+          title: `頂部 ${boardSize - x - 1}`,
+          description: `這是頂部第 ${boardSize - x - 1} 格。`,
+          color: getRandomPinkColor()
+        });
+      }
+      
+      // 3. 左側從上到下 (左上到左下)
+      for (let y = 1; y < boardSize; y++) {
+        pathCells.push({
+          x: 0,
+          y,
+          title: `左側 ${y}`,
+          description: `這是左側第 ${y} 格。`,
+          color: getRandomPinkColor()
+        });
+      }
+      
+      // 4. 底部從左到右 (左下到右下，不包括起點/終點)
+      for (let x = 1; x < boardSize - 1; x++) {
+        pathCells.push({
+          x,
+          y: boardSize - 1,
+          title: `底部 ${x}`,
+          description: `這是底部第 ${x} 格。`,
+          color: getRandomPinkColor()
+        });
+      }
   }
   
-  // 生成隨機顏色
-  function getRandomColor() {
-    const colors = ['#FFD700', '#FF6347', '#4682B4', '#32CD32', '#9370DB', '#FF69B4', '#20B2AA'];
-    return colors[Math.floor(Math.random() * colors.length)];
+  // 生成隨機粉色系顏色
+  function getRandomPinkColor() {
+    const pinkColors = [
+      '#ff80ab', '#ff4081', '#f8bbd0', '#f48fb1', 
+      '#ec407a', '#ad1457', '#d81b60', '#c2185b',
+      '#f06292', '#e91e63', '#fce4ec', '#f06292',
+      '#ba68c8', '#9c27b0', '#ea80fc', '#e040fb'
+    ];
+    return pinkColors[Math.floor(Math.random() * pinkColors.length)];
   }
   
   // 渲染遊戲板
@@ -105,10 +112,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // 清空遊戲板
     gameBoard.innerHTML = '';
     
+    // 添加LOGO元素
+    gameBoard.appendChild(logoContainer);
+    
+    // 創建中央資訊顯示區
+    const centerInfo = document.createElement('div');
+    centerInfo.className = 'center-info hidden'; // 默認隱藏
+    centerInfo.id = 'center-info';
+    
+    const centerTitle = document.createElement('div');
+    centerTitle.className = 'center-title';
+    centerTitle.textContent = '表格內容';
+    centerTitle.id = 'center-title';
+    
+    const centerDescription = document.createElement('div');
+    centerDescription.className = 'center-description';
+    centerDescription.textContent = '點擊任意格子顯示詳細資訊';
+    centerDescription.id = 'center-description';
+    
+    // 添加關閉按鈕
+    const closeBtn = document.createElement('div');
+    closeBtn.className = 'close-btn';
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', function(event) {
+      event.stopPropagation(); // 阻止事件冒泡
+      document.getElementById('center-info').classList.add('hidden');
+      document.getElementById('logo-container').classList.remove('hidden');
+    });
+    
+    centerInfo.appendChild(closeBtn);
+    centerInfo.appendChild(centerTitle);
+    centerInfo.appendChild(centerDescription);
+    gameBoard.appendChild(centerInfo);
+    
     // 渲染路徑格子
     pathCells.forEach((cell, index) => {
       const cellElement = document.createElement('div');
       cellElement.className = 'cell';
+      cellElement.dataset.index = index; // 添加索引屬性方便識別
+      
+      // 添加點擊事件
+      cellElement.addEventListener('click', function() {
+        // 更新中央資訊
+        updateCenterInfo(cell.title, cell.description);
+        // 更新中央資訊區域的背景顏色與點擊的格子顏色一致
+        document.getElementById('center-info').style.backgroundColor = cell.color;
+        // 顯示中央資訊
+        document.getElementById('center-info').classList.remove('hidden');
+        // 隱藏LOGO
+        document.getElementById('logo-container').classList.add('hidden');
+      });
       
       // 創建格子內容：標題和描述
       const cellContent = document.createElement('div');
@@ -126,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
       cellContent.appendChild(descriptionElement);
       cellElement.appendChild(cellContent);
       
-      cellElement.style.left = `${cell.x * cellSize}px`;
-      cellElement.style.top = `${cell.y * cellSize}px`;
+      cellElement.style.left = `${cell.x * cellWidth}px`;
+      cellElement.style.top = `${cell.y * cellHeight}px`;
       cellElement.style.backgroundColor = cell.color;
       
       if (index === highlightedCell) {
@@ -185,8 +238,27 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const position = getPlayerPosition(pathIndex);
     
-    playerToken.style.left = `${position.x * cellSize + cellSize/2 + offsetX}px`;
-    playerToken.style.top = `${position.y * cellSize + cellSize/2 - 15}px`;
+    playerToken.style.left = `${position.x * cellWidth + cellWidth/2 + offsetX}px`;
+    playerToken.style.top = `${position.y * cellHeight + cellHeight/2 - 15}px`;
+  }
+  
+  // 更新中央資訊
+  function updateCenterInfo(title, description) {
+    const centerTitle = document.getElementById('center-title');
+    const centerDescription = document.getElementById('center-description');
+    
+    if (centerTitle && centerDescription) {
+      // 更新內容
+      centerTitle.textContent = title;
+      centerDescription.textContent = description;
+      
+      // 添加動畫效果
+      const centerInfo = document.getElementById('center-info');
+      centerInfo.style.animation = 'none';
+      // 觸發重繪
+      void centerInfo.offsetWidth;
+      centerInfo.style.animation = 'pulse 1s';
+    }
   }
   
   // 獲取玩家位置
@@ -222,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 決定當前移動的玩家
     const currentPlayer = selectedPlayer;
     const currentPathIndex = currentPlayer === 1 ? player1PathIndex : 
-                            (currentPlayer === 2 ? player2PathIndex : player3PathIndex);
+                           (currentPlayer === 2 ? player2PathIndex : player3PathIndex);
     
     // 逐步移動
     let stepsLeft = totalSteps;
@@ -284,6 +356,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 重新渲染以顯示高亮
     renderBoard();
+    
+    // 不再自動顯示中央資訊
+    // 只更新資訊內容，以便點擊時正確顯示
+    const cell = pathCells[finalIndex];
+    updateCenterInfo(cell.title, cell.description);
+    document.getElementById('center-info').style.backgroundColor = cell.color;
     
     // 啟用按鈕
     enableDisableButtons(true);
