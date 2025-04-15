@@ -660,13 +660,11 @@
               // 重新渲染以顯示高亮
               renderBoard();
               
-              // 在格子高亮的同時也更新中央顯示區域
+              // 不再自動顯示中央資訊
+              // 只更新資訊內容，以便點擊時正確顯示
               const cell = pathCells[finalIndex];
               updateCenterInfo(cell.title, cell.description);
-              // 更新中央資訊區域的背景顏色
               document.getElementById('center-info').style.backgroundColor = cell.color;
-              // 顯示中央資訊
-              document.getElementById('center-info').classList.remove('hidden');
               
               // 啟用按鈕
               enableDisableButtons(true);
