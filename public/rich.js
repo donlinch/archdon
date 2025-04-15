@@ -449,42 +449,23 @@ function updatePlayerPositions() {
     });
 }
   
-function handleDirectionSelection(isForward, totalSteps, playerToMove) { // <-- ★★★ 添加 playerToMove 參數 ★★★
-    if (isMoving) return;
-    // ★ 驗證傳入的 playerToMove 是否有效 (1, 2, or 3) ★
-    if (playerToMove < 1 || playerToMove > 3) {
-        console.error(`handleDirectionSelection 收到了無效的玩家編號: ${playerToMove}`);
-        return;
-    }
-
-    isMoving = true;
-    highlightedCell = null; // 清除舊的高亮
-
-    // ★★★ 使用傳入的 playerToMove，而不是本地的 selectedPlayer ★★★
-    const currentPlayer = playerToMove;
-    // ★ 驗證索引 ★
-    if (currentPlayer - 1 >= playerPathIndices.length) {
-        console.error(`玩家索引超出範圍: ${currentPlayer - 1}`);
-        isMoving = false;
-        return;
-    }
-    let currentIndex = playerPathIndices[currentPlayer - 1]; // <-- ★ 使用正確的玩家索引 ★
-    let stepsLeft = totalSteps;
-
-    function moveStep() {
-      currentIndex = isForward ? (currentIndex + 1) % pathCells.length : (currentIndex - 1 + pathCells.length) % pathCells.length;
-      playerPathIndices[currentPlayer - 1] = currentIndex; // <-- ★ 更新正確玩家的索引 ★
-      updatePlayerPositions(); // 這個函數會渲染所有玩家
-      if (--stepsLeft > 0) {
-          setTimeout(moveStep, STEP_ANIMATION_DELAY);
-      } else {
-          // 移動完成後，高亮當前移動的玩家的最終位置
-          finishMoving(currentIndex); // finishMoving 只需要知道最終位置索引
+    function handleDirectionSelection(isForward, totalSteps) {
+        if (isMoving) return;
+        isMoving = true;
+        // enableDisableButtons(false); // 已刪除
+        let currentIndex = playerPathIndices[selectedPlayer - 1];
+        let stepsLeft = totalSteps;
+  
+      function moveStep() {
+        currentIndex = isForward ? (currentIndex + 1) % pathCells.length : (currentIndex - 1 + pathCells.length) % pathCells.length;
+        playerPathIndices[selectedPlayer - 1] = currentIndex;
+        updatePlayerPositions();
+        if (--stepsLeft > 0) setTimeout(moveStep, STEP_ANIMATION_DELAY);
+        else finishMoving(currentIndex);
       }
+  
+      setTimeout(moveStep, STEP_ANIMATION_DELAY);
     }
-
-    setTimeout(moveStep, STEP_ANIMATION_DELAY);
-}
   
     function finishMoving(finalIndex) {
         isMoving = false;
