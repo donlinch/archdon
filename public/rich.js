@@ -36,6 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 玩家標記元素
   let playerTokens = [];
   
+  // 棋盤顏色（基於圖片3的配色方案）
+  const boardColors = {
+      corner: '#9c27b0', // Golden Purple
+      top: '#9c27b0',    // Golden Purple
+      right: '#e91e63',  // Magenta
+      bottom: '#9c27b0', // Golden Purple
+      left: '#e91e63'    // Magenta
+  };
+  
   // 初始化遊戲
   function initGame() {
       createSquareBoardCells();
@@ -45,72 +54,74 @@ document.addEventListener('DOMContentLoaded', () => {
       addEventListeners();
   }
   
-  // 創建正方形棋盤格子 (基於您的圖片佈局)
+  // 創建正方形棋盤格子 (基於圖片佈局)
   function createSquareBoardCells() {
       pathCells = [];
       const boardWidth = 6; // 每邊格子數量
       
-      // 添加頂部格子 (從左到右)
-      for (let x = 0; x < boardWidth; x++) {
+      // 首先添加起點/終點 (右下角) - 從該位置開始
+      const startPosition = {
+          x: boardWidth - 1,
+          y: boardWidth - 1
+      };
+      
+      // 添加底部格子 (從右到左，不包括右下角起點)
+      for (let x = boardWidth - 2; x >= 0; x--) {
           pathCells.push({
               x: x,
-              y: 0,
-              title: `頂部 ${x + 1}`,
-              description: `這是頂部第 ${x + 1} 格。`,
-              color: '#ba68c8', // 紫色
-              position: 'top'
+              y: boardWidth - 1,
+              title: `底部 ${boardWidth - x - 1}`,
+              description: `這是底部第 ${boardWidth - x - 1} 格。`,
+              color: x === 0 ? boardColors.corner : boardColors.bottom,
+              position: x === 0 ? 'corner' : 'bottom'
           });
       }
       
-      // 添加右側格子 (從上到下)
-      for (let y = 1; y < boardWidth; y++) {
+      // 添加左側格子 (從下到上，不包括左下角)
+      for (let y = boardWidth - 2; y >= 0; y--) {
+          pathCells.push({
+              x: 0,
+              y: y,
+              title: `左側 ${boardWidth - y - 1}`,
+              description: `這是左側第 ${boardWidth - y - 1} 格。`,
+              color: y === 0 ? boardColors.corner : boardColors.left,
+              position: y === 0 ? 'corner' : 'left'
+          });
+      }
+      
+      // 添加頂部格子 (從左到右，不包括左上角)
+      for (let x = 1; x < boardWidth; x++) {
+          pathCells.push({
+              x: x,
+              y: 0,
+              title: `頂部 ${x}`,
+              description: `這是頂部第 ${x} 格。`,
+              color: x === boardWidth - 1 ? boardColors.corner : boardColors.top,
+              position: x === boardWidth - 1 ? 'corner' : 'top'
+          });
+      }
+      
+      // 添加右側格子 (從上到下，不包括右上角)
+      for (let y = 1; y < boardWidth - 1; y++) {
           pathCells.push({
               x: boardWidth - 1,
               y: y,
               title: `右側 ${y}`,
               description: `這是右側第 ${y} 格。`,
-              color: '#f06292', // 粉紅色
+              color: boardColors.right,
               position: 'right'
           });
       }
       
-      // 添加底部格子 (從右到左)
-      for (let x = boardWidth - 2; x >= 0; x--) {
-          pathCells.push({
-              x: x,
-              y: boardWidth - 1,
-              title: `底部 ${boardWidth - x}`,
-              description: `這是底部第 ${boardWidth - x} 格。`,
-              color: '#e91e63', // 深粉色
-              position: 'bottom'
-          });
-      }
-      
-      // 添加左側格子 (從下到上)
-      for (let y = boardWidth - 2; y > 0; y--) {
-          pathCells.push({
-              x: 0,
-              y: y,
-              title: `左側 ${boardWidth - y}`,
-              description: `這是左側第 ${boardWidth - y} 格。`,
-              color: '#ec407a', // 亮粉色
-              position: 'left'
-          });
-      }
-      
-      // 修改四個角落格子的顏色
-      // 左上角
-      pathCells[0].color = '#9c27b0';
-      pathCells[0].position = 'corner';
-      // 右上角
-      pathCells[boardWidth - 1].color = '#9c27b0';
-      pathCells[boardWidth - 1].position = 'corner';
-      // 右下角
-      pathCells[boardWidth * 2 - 2].color = '#9c27b0';
-      pathCells[boardWidth * 2 - 2].position = 'corner';
-      // 左下角
-      pathCells[boardWidth * 3 - 3].color = '#9c27b0';
-      pathCells[boardWidth * 3 - 3].position = 'corner';
+      // 最後添加起點/終點（右下角）- 這將成為索引0的起點
+      pathCells.unshift({
+          x: startPosition.x,
+          y: startPosition.y,
+          title: '起點/終點',
+          description: '遊戲的起點和終點。',
+          color: boardColors.corner,
+          position: 'corner'
+      });
   }
   
   // 渲染遊戲板
@@ -143,7 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
       closeBtn.addEventListener('click', function(event) {
           event.stopPropagation(); // 阻止事件冒泡
           document.getElementById('center-info').classList.add('hidden');
-          document.getElementById('logo-container').classList.remove('hidden');
+          setTimeout(() => {
+              document.getElementById('logo-container').classList.remove('hidden');
+          }, 300); // 延遲顯示LOGO
       });
       
       centerInfo.appendChild(closeBtn);
@@ -169,10 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
               updateCenterInfo(cell.title, cell.description);
               // 更新中央資訊區域的背景顏色與點擊的格子顏色一致
               document.getElementById('center-info').style.backgroundColor = cell.color;
-              // 顯示中央資訊
-              document.getElementById('center-info').classList.remove('hidden');
+              
               // 隱藏LOGO
               document.getElementById('logo-container').classList.add('hidden');
+              
+              // 延遲顯示中央信息（與圖片要求一致）
+              setTimeout(() => {
+                  document.getElementById('center-info').classList.remove('hidden');
+              }, 100);
           });
           
           // 創建格子內容：標題和描述
@@ -235,15 +252,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const playerToken = playerTokens[playerNum - 1];
       if (!playerToken) return;
       
-      // 計算水平偏移以避免玩家標記重疊
-      let offsetX = 0;
-      let offsetY = 0;
-      
       // 根據玩家數量計算偏移量，排成圓形
       const angle = (2 * Math.PI / activePlayerCount) * (playerNum - 1);
       const radius = 15;
-      offsetX = Math.cos(angle) * radius;
-      offsetY = Math.sin(angle) * radius;
+      const offsetX = Math.cos(angle) * radius;
+      const offsetY = Math.sin(angle) * radius;
       
       // 計算棋盤位置偏移，使其居中
       const boardOffset = {
