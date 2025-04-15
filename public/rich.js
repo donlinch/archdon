@@ -313,6 +313,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+function renderBoard() {
+  gameBoard.innerHTML = ''; // 清空畫面
+
+  pathCells.forEach(cell => {
+      const cellDiv = document.createElement('div');
+      cellDiv.className = `cell cell-content`;
+      cellDiv.style.left = `${cell.x * cellWidth}px`;
+      cellDiv.style.top = `${cell.y * cellHeight}px`;
+      cellDiv.style.backgroundColor = cell.color;
+
+      if (highlightedCell === cell.position) {
+          cellDiv.classList.add('highlighted');
+      }
+
+      const title = document.createElement('div');
+      title.className = 'cell-title';
+      title.textContent = cell.title;
+
+      const desc = document.createElement('div');
+      desc.className = 'cell-description';
+      desc.textContent = cell.description;
+
+      const content = document.createElement('div');
+      content.className = 'cell-content';
+      content.appendChild(title);
+      content.appendChild(desc);
+      cellDiv.appendChild(content);
+
+      gameBoard.appendChild(cellDiv);
+  });
+
+  updatePlayerPositions(); // 繪製角色位置
+}
+
+
+
+
+
+
 
 
 
