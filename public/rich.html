@@ -403,6 +403,13 @@ body {
     background-color: #e64840; /* 深一點的 Sunset Orange */
 }
 
+.game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
 
 
 </style>
@@ -422,33 +429,15 @@ body {
                 <div class="logo-text">大富翁</div>
                 <div class="logo-subtitle">開始你的幸運之旅吧！</div>
             </div>
-        </div>
-        
-        <!-- 右側控制面板 -->
-        <div class="control-panel">
-            <h1 class="title">大富翁遊戲</h1>
-            
-            <!-- 玩家選擇 -->
-            <div class="player-select-container">
-                <h2>選擇玩家</h2>
-                <div class="player-select">
-                    <button id="player1-btn" class="player-btn player1 selected">P1</button>
-                    <button id="player2-btn" class="player-btn player2">P2</button>
-                    <button id="player3-btn" class="player-btn player3">P3</button>
-                </div>
-            </div>
-            
-            <!-- 移動方向選擇 -->
-            <div class="steps-container">
-                <h2>選擇移動方向</h2>
-                <div class="direction-buttons">
-                    <button id="forward-btn" class="direction-btn forward">前進</button>
-                    <button id="backward-btn" class="direction-btn backward">後退</button>
-                </div>
+            <!-- 顯示資訊（隱藏狀態） -->
+            <div id="center-info" class="center-info hidden">
+                <div class="center-title">格子名稱</div>
+                <div class="center-description">這裡會顯示格子說明文字</div>
             </div>
         </div>
     </div>
-    
+
     <script src="rich.js"></script>
 </body>
+
 </html>
