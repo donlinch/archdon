@@ -108,8 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initGame() {
       createBoardCells();
       renderBoard();
-      updatePlayerButtonStyles();
-      addEventListeners();
+      
       connectWebSocket();
     }
   
