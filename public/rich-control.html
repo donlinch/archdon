@@ -59,51 +59,48 @@
         }
 
         .player-btn {
-            width: 4rem;
-            height: 4rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.25rem;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.25rem;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
         .player-btn:hover {
             transform: scale(1.05);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .player1 {
-            background-color: #8ab5f3;
-        }
+    background-color: #5b9df0; /* P1 - Geek Blue */
+}
+/* .player1.selected 的樣式可以保持，或者讓背景色更深 */
+.player1.selected {
+    background-color: #4a8cdf; /* 可以用深一點的藍色 */
+    box-shadow: 0 0 0 4px rgba(91, 157, 240, 0.4); /* 光暈顏色也可以調整 */
+}
 
-        .player1.selected {
-            background-color: #5b9df0;
-            box-shadow: 0 0 0 4px rgba(91, 157, 240, 0.3);
-        }
+.player2 {
+    background-color: #9270ca; /* P2 - Golden Purple */
+}
+.player2.selected {
+    background-color: #7d5fb3; /* 深一點的紫色 */
+    box-shadow: 0 0 0 4px rgba(146, 112, 202, 0.4);
+}
 
-        .player2 {
-            background-color: #b79de2;
-        }
-
-        .player2.selected {
-            background-color: #9270ca;
-            box-shadow: 0 0 0 4px rgba(146, 112, 202, 0.3);
-        }
-
-        .player3 {
-            background-color: #ff8a85;
-        }
-
-        .player3.selected {
-            background-color: #ff544d;
-            box-shadow: 0 0 0 4px rgba(255, 84, 77, 0.3);
-        }
+.player3 {
+    background-color: #ff544d; /* P3 - Sunset Orange */
+}
+.player3.selected {
+    background-color: #e64840; /* 深一點的紅色/橙色 */
+    box-shadow: 0 0 0 4px rgba(255, 84, 77, 0.4);
+}
 
         .direction-buttons {
             display: flex;
@@ -471,13 +468,15 @@
             function handleServerMessage(message) {
                 switch (message.type) {
                     case 'gameStateUpdate':
-                        console.log("Received game state update:", message.data);
-                        updateGameInfo(message.data);
-                        // If we just connected and received state, enable controls
-                        if (!gameIsConnected) {
-                            setControlsEnabled(true);
-                        }
-                        break;
+            console.log("Received game state update:", message.data);
+            updateGameInfo(message.data);
+            // ★ 新增：如果狀態更新包含玩家信息，則更新按鈕外觀 ★
+            if (message.data && message.data.players) {
+                updatePlayerButtonAppearance(message.data.players);
+            }
+            // ★ 新增結束 ★
+            if (!gameIsConnected) { setControlsEnabled(true); }
+            break;
                      case 'gameStatus':
                          console.log("Received game status:", message.status);
                          gameIsConnected = (message.status === 'connected');

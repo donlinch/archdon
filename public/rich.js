@@ -94,8 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
           playerPathIndices,
           highlightedCell,
           isMoving,
-          pathCells: pathCells.map(({ title, position, color }) => ({ title, position, color }))
-        }
+          // pathCells: ... // 可以考慮是否真的需要每次都發送完整的格子信息
+          // ★ 新增：將玩家配置信息發送給控制器 ★
+          players: {
+              1: { avatarUrl: playersConfig.player1.avatarUrl },
+              2: { avatarUrl: playersConfig.player2.avatarUrl },
+              3: { avatarUrl: playersConfig.player3.avatarUrl }
+          }
+          }
       }));
     }
   
