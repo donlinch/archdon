@@ -5,6 +5,451 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大富翁遊戲</title>
     <link rel="stylesheet" href="style.css">
+
+
+ <style>
+
+
+/* 玩家數量選擇 */
+.num-players-container {
+    background-color: white;
+    padding: 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(255, 105, 180, 0.2);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    border: 1px solid #ffccdc; /* 淺粉色邊框 */
+}
+
+.num-players-container h2 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 0.8rem;
+    color: #ff4081; /* 粉紅色標題 */
+}
+
+.player-count-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.player-count-btn {
+    padding: 0.5rem 1rem;
+    background-color: #f8bbd0;
+    color: #880e4f;
+    border: none;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.player-count-btn:hover {
+    background-color: #f48fb1;
+    transform: scale(1.05);
+}
+
+.player-count-btn.selected {
+    background-color: #ff4081;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
+}/* 基本樣式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background-color: #fff0f5; /* 淺粉色背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    max-width: 1200px;
+    width: 100%;
+}
+
+/* 遊戲面板 */
+.game-board {
+    position: relative;
+    width: 875px;  /* 7 * 125px */
+    height: 700px; /* 7 * 100px */
+    background-color: #ffecf2; /* 粉色背景 */
+    border: 2px solid #ff80ab; /* 粉紅色邊框 */
+    border-radius: 12px; /* 圓角邊框 */
+    box-shadow: 0 8px 16px rgba(255, 105, 180, 0.2); /* 粉色陰影 */
+}
+
+.cell {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 125px;  /* 新的格子寬度 */
+    height: 100px; /* 新的格子高度，4:5的寬高比 */
+    border: 1px solid #ff80ab; /* 粉紅色邊框 */
+    text-align: center;
+    font-weight: bold;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    padding: 5px;
+    border-radius: 8px; /* 圓角格子 */
+}
+
+.cell.highlighted {
+    transform: scale(1.05);
+    z-index: 2;
+    box-shadow: 0 0 10px 5px rgba(255, 105, 180, 0.7); /* 粉紅色高亮 */
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 182, 193, 0.7);
+    }
+    
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(255, 182, 193, 0);
+    }
+    
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 182, 193, 0);
+    }
+}
+
+.cell-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.cell-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.cell-description {
+    font-size: 0.7rem;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.player-token {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: white;
+    border: 2px solid white;
+    z-index: 10;
+    transition: left 0.3s ease-in-out, top 0.3s ease-in-out; /* 平滑過渡 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 添加陰影 */
+}
+
+.player1-token {
+    background-color: #ff4081; /* 亮粉紅色 */
+}
+
+.player2-token {
+    background-color: #9c27b0; /* 紫色 */
+}
+
+.player3-token {
+    background-color: #00bcd4; /* 青色 */
+}
+
+.player4-token {
+    background-color: #ff9800; /* 橙色 */
+}
+
+.player5-token {
+    background-color: #4caf50; /* 綠色 */
+}
+
+.player6-token {
+    background-color: #607d8b; /* 藍灰色 */
+}
+
+/* 控制面板 */
+.control-panel {
+    margin-left: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    font-size: 1.875rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #ff4081; /* 粉紅色標題 */
+    text-shadow: 1px 1px 2px rgba(255, 105, 180, 0.3); /* 文字陰影 */
+}
+
+.player-select-container,
+.steps-container {
+    background-color: white;
+    padding: 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(255, 105, 180, 0.2);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    border: 1px solid #ffccdc; /* 淺粉色邊框 */
+}
+
+.player-select-container h2,
+.steps-container h2 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 0.8rem;
+    color: #ff4081; /* 粉紅色標題 */
+}
+
+.player-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+}
+
+.player-btn {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.25rem;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.player-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.player1 {
+    background-color: #ff80ab; /* 淺粉紅色 */
+}
+
+.player1.selected {
+    background-color: #ff4081; /* 深粉紅色 */
+    box-shadow: 0 0 0 4px rgba(255, 64, 129, 0.3);
+}
+
+.player2 {
+    background-color: #ce93d8; /* 淺紫色 */
+}
+
+.player2.selected {
+    background-color: #9c27b0; /* 深紫色 */
+    box-shadow: 0 0 0 4px rgba(156, 39, 176, 0.3);
+}
+
+.player3 {
+    background-color: #80deea; /* 淺青色 */
+}
+
+.player3.selected {
+    background-color: #00bcd4; /* 深青色 */
+    box-shadow: 0 0 0 4px rgba(0, 188, 212, 0.3);
+}
+
+.player4 {
+    background-color: #ffcc80; /* 淺橙色 */
+}
+
+.player4.selected {
+    background-color: #ff9800; /* 深橙色 */
+    box-shadow: 0 0 0 4px rgba(255, 152, 0, 0.3);
+}
+
+.player5 {
+    background-color: #a5d6a7; /* 淺綠色 */
+}
+
+.player5.selected {
+    background-color: #4caf50; /* 深綠色 */
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.3);
+}
+
+.player6 {
+    background-color: #90a4ae; /* 淺藍灰色 */
+}
+
+.player6.selected {
+    background-color: #607d8b; /* 深藍灰色 */
+    box-shadow: 0 0 0 4px rgba(96, 125, 139, 0.3);
+}
+
+/* 中央資訊顯示區 */
+.center-info {
+    position: absolute;
+    left: 262.5px; /* (875 - 350) / 2 */
+    top: 200px;
+    width: 350px;
+    height: 300px;
+    background-color: #ff80ab; /* 默認粉紅色，會被動態替換 */
+    border: 3px dashed #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding: 15px;
+    z-index: 5;
+    transition: background-color 0.3s ease; /* 添加顏色過渡效果 */
+    border-radius: 16px; /* 圓角 */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.center-title {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.center-description {
+    font-size: 1.2rem;
+    line-height: 1.5;
+}
+
+/* 關閉按鈕 */
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    color: #ff4081;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    z-index: 6;
+    transition: transform 0.2s;
+}
+
+.close-btn:hover {
+    background-color: #f8f8f8;
+    transform: scale(1.1);
+}
+
+.hidden {
+    display: none;
+}
+
+/* 按鈕禁用狀態 */
+.player-btn:disabled,
+.direction-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 大富翁LOGO */
+.logo-container {
+    position: absolute;
+    left: 262.5px; /* (875 - 350) / 2 */
+    top: 200px;
+    width: 350px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+}
+
+.logo-text {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: #ff4081;
+    text-shadow: 3px 3px 0 #ffb6c1, 
+                 6px 6px 0 rgba(255, 105, 180, 0.3);
+    letter-spacing: 3px;
+    transform: rotate(-5deg);
+    margin-bottom: 20px;
+}
+
+.logo-subtitle {
+    font-size: 1.2rem;
+    color: #9c27b0;
+    transform: rotate(-5deg);
+}
+
+/* 方向按鈕 */
+.direction-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.direction-btn {
+    padding: 8px 16px;
+    background-color: #ff80ab;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.direction-btn:hover {
+    background-color: #ff4081;
+    transform: scale(1.05);
+}
+
+
+ </style>
+
+
+
 </head>
 <body>
     <div class="game-container">
@@ -24,11 +469,25 @@
             
             <!-- 玩家選擇 -->
             <div class="player-select-container">
-                <h2>選擇玩家</h2>
+                <h2>選擇玩家數量</h2>
                 <div class="player-select">
                     <button id="player1-btn" class="player-btn player1 selected">P1</button>
                     <button id="player2-btn" class="player-btn player2">P2</button>
                     <button id="player3-btn" class="player-btn player3">P3</button>
+                    <button id="player4-btn" class="player-btn player4">P4</button>
+                    <button id="player5-btn" class="player-btn player5">P5</button>
+                    <button id="player6-btn" class="player-btn player6">P6</button>
+                </div>
+            </div>
+            
+            <!-- 玩家數量選擇 -->
+            <div class="num-players-container">
+                <h2>遊戲人數</h2>
+                <div class="player-count-select">
+                    <button id="players-3" class="player-count-btn selected">3人</button>
+                    <button id="players-4" class="player-count-btn">4人</button>
+                    <button id="players-5" class="player-count-btn">5人</button>
+                    <button id="players-6" class="player-count-btn">6人</button>
                 </div>
             </div>
             

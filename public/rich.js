@@ -10,26 +10,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const player1Btn = document.getElementById('player1-btn');
   const player2Btn = document.getElementById('player2-btn');
   const player3Btn = document.getElementById('player3-btn');
+  const player4Btn = document.getElementById('player4-btn');
+  const player5Btn = document.getElementById('player5-btn');
+  const player6Btn = document.getElementById('player6-btn');
   const forwardBtn = document.getElementById('forward-btn');
   const backwardBtn = document.getElementById('backward-btn');
   const logoContainer = document.getElementById('logo-container');
   
+  // 玩家數量選擇按鈕
+  const players3Btn = document.getElementById('players-3');
+  const players4Btn = document.getElementById('players-4');
+  const players5Btn = document.getElementById('players-5');
+  const players6Btn = document.getElementById('players-6');
+  
   // 遊戲狀態
   let pathCells = [];
-  let player1PathIndex = 0;
-  let player2PathIndex = 0;
-  let player3PathIndex = 0;
-  let selectedPlayer = 1;
+  let playerPathIndices = [0, 0, 0, 0, 0, 0]; // 每個玩家的位置索引
+  let selectedPlayer = 1; // 當前選擇的玩家
   let isMoving = false;
   let highlightedCell = null;
+  let activePlayerCount = 3; // 默認3名玩家
   
   // 動畫相關變數
   const STEP_ANIMATION_DELAY = 300; // 每步移動的延遲時間(毫秒)
   
   // 玩家標記元素
-  let player1Token;
-  let player2Token;
-  let player3Token;
+  let playerTokens = [];
   
   // 初始化遊戲
   function initGame() {
@@ -190,23 +196,20 @@ document.addEventListener('DOMContentLoaded', () => {
       gameBoard.appendChild(cellElement);
     });
     
-    // 創建玩家1標記
-    player1Token = document.createElement('div');
-    player1Token.className = 'player-token player1-token';
-    player1Token.textContent = 'P1';
-    gameBoard.appendChild(player1Token);
+    // 清空玩家標記陣列
+    playerTokens = [];
     
-    // 創建玩家2標記
-    player2Token = document.createElement('div');
-    player2Token.className = 'player-token player2-token';
-    player2Token.textContent = 'P2';
-    gameBoard.appendChild(player2Token);
-    
-    // 創建玩家3標記
-    player3Token = document.createElement('div');
-    player3Token.className = 'player-token player3-token';
-    player3Token.textContent = 'P3';
-    gameBoard.appendChild(player3Token);
+    // 創建玩家標記
+    for (let i = 1; i <= 6; i++) {
+      // 只為活躍的玩家創建標記
+      if (i <= activePlayerCount) {
+        const playerToken = document.createElement('div');
+        playerToken.className = `player-token player${i}-token`;
+        playerToken.textContent = `P${i}`;
+        gameBoard.appendChild(playerToken);
+        playerTokens.push(playerToken);
+      }
+    }
     
     // 更新玩家位置
     updatePlayerPositions();
@@ -214,26 +217,28 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 更新玩家位置
   function updatePlayerPositions() {
-    updatePlayerPosition(1, player1PathIndex);
-    updatePlayerPosition(2, player2PathIndex);
-    updatePlayerPosition(3, player3PathIndex);
+    for (let i = 0; i < activePlayerCount; i++) {
+      updatePlayerPosition(i + 1, playerPathIndices[i]);
+    }
   }
   
   // 更新特定玩家的位置
   function updatePlayerPosition(playerNum, pathIndex) {
-    let playerToken;
+    if (playerNum > activePlayerCount) return;
+    
+    const playerToken = playerTokens[playerNum - 1];
+    if (!playerToken) return;
+    
+    // 計算水平偏移以避免玩家標記重疊
     let offsetX = 0;
     
-    // 根據玩家編號選擇對應的標記
-    if (playerNum === 1) {
-      playerToken = player1Token;
-      offsetX = -15; // 左側偏移
-    } else if (playerNum === 2) {
-      playerToken = player2Token;
-      offsetX = 0; // 居中偏移
-    } else {
-      playerToken = player3Token;
-      offsetX = 15; // 右側偏移
+    switch (playerNum) {
+      case 1: offsetX = -25; break; // 最左側
+      case 2: offsetX = -15; break;
+      case 3: offsetX = -5; break;
+      case 4: offsetX = 5; break;
+      case 5: offsetX = 15; break;
+      case 6: offsetX = 25; break; // 最右側
     }
     
     const position = getPlayerPosition(pathIndex);
@@ -277,6 +282,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDirectionSelection(isForward) {
     if (isMoving) return;
     
+    // 確保選擇的玩家不超過活躍玩家數量
+    if (selectedPlayer > activePlayerCount) {
+      selectedPlayer = 1;
+    }
+    
     // 修改為只移動一步
     movePlayerStepByStep(1, isForward);
   }
@@ -293,8 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 決定當前移動的玩家
     const currentPlayer = selectedPlayer;
-    const currentPathIndex = currentPlayer === 1 ? player1PathIndex : 
-                           (currentPlayer === 2 ? player2PathIndex : player3PathIndex);
+    const currentPathIndex = playerPathIndices[currentPlayer - 1];
     
     // 逐步移動
     let stepsLeft = totalSteps;
@@ -321,14 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // 更新當前位置
       currentIndex = nextIndex;
       
-      // 更新玩家位置
-      if (currentPlayer === 1) {
-        player1PathIndex = currentIndex;
-      } else if (currentPlayer === 2) {
-        player2PathIndex = currentIndex;
-      } else {
-        player3PathIndex = currentIndex;
-      }
+      // 更新玩家位置索引
+      playerPathIndices[currentPlayer - 1] = currentIndex;
       
       // 更新玩家位置
       updatePlayerPosition(currentPlayer, currentIndex);
@@ -348,6 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 開始移動
     setTimeout(moveOneStep, STEP_ANIMATION_DELAY);
   }
+    
+ 
   
   // 完成移動
   function finishMoving(finalIndex) {
@@ -373,53 +378,120 @@ document.addEventListener('DOMContentLoaded', () => {
     player1Btn.disabled = !enable;
     player2Btn.disabled = !enable;
     player3Btn.disabled = !enable;
+    player4Btn.disabled = !enable;
+    player5Btn.disabled = !enable;
+    player6Btn.disabled = !enable;
     
     // 方向按鈕
     forwardBtn.disabled = !enable;
     backwardBtn.disabled = !enable;
+    
+    // 玩家數量選擇按鈕
+    players3Btn.disabled = !enable;
+    players4Btn.disabled = !enable;
+    players5Btn.disabled = !enable;
+    players6Btn.disabled = !enable;
   }
   
   // 選擇玩家
   function selectPlayer(playerNum) {
+    // 確保玩家編號不超過活躍玩家數量
+    if (playerNum > activePlayerCount) {
+      return;
+    }
+    
     selectedPlayer = playerNum;
     
     // 更新玩家按鈕樣式
+    updatePlayerButtonStyles();
+  }
+  
+  // 更新玩家按鈕樣式
+  function updatePlayerButtonStyles() {
+    // 先移除所有按鈕的selected類
     player1Btn.classList.remove('selected');
     player2Btn.classList.remove('selected');
     player3Btn.classList.remove('selected');
+    player4Btn.classList.remove('selected');
+    player5Btn.classList.remove('selected');
+    player6Btn.classList.remove('selected');
     
-    if (playerNum === 1) {
-      player1Btn.classList.add('selected');
-    } else if (playerNum === 2) {
-      player2Btn.classList.add('selected');
-    } else {
-      player3Btn.classList.add('selected');
+    // 根據選擇的玩家添加selected類
+    switch (selectedPlayer) {
+      case 1: player1Btn.classList.add('selected'); break;
+      case 2: player2Btn.classList.add('selected'); break;
+      case 3: player3Btn.classList.add('selected'); break;
+      case 4: player4Btn.classList.add('selected'); break;
+      case 5: player5Btn.classList.add('selected'); break;
+      case 6: player6Btn.classList.add('selected'); break;
+    }
+    
+    // 禁用/啟用玩家按鈕
+    player1Btn.disabled = false;
+    player2Btn.disabled = false;
+    player3Btn.disabled = false;
+    player4Btn.disabled = activePlayerCount < 4;
+    player5Btn.disabled = activePlayerCount < 5;
+    player6Btn.disabled = activePlayerCount < 6;
+  }
+  
+  // 設置玩家數量
+  function setPlayerCount(count) {
+    if (count < 3 || count > 6) return;
+    
+    activePlayerCount = count;
+    
+    // 如果當前選擇的玩家超過了活躍玩家數量，重置為玩家1
+    if (selectedPlayer > activePlayerCount) {
+      selectedPlayer = 1;
+    }
+    
+    // 更新玩家數量按鈕樣式
+    updatePlayerCountButtonStyles();
+    
+    // 更新玩家按鈕樣式
+    updatePlayerButtonStyles();
+    
+    // 重新渲染遊戲板
+    renderBoard();
+  }
+  
+  // 更新玩家數量按鈕樣式
+  function updatePlayerCountButtonStyles() {
+    // 移除所有數量按鈕的selected類
+    players3Btn.classList.remove('selected');
+    players4Btn.classList.remove('selected');
+    players5Btn.classList.remove('selected');
+    players6Btn.classList.remove('selected');
+    
+    // 根據活躍玩家數量添加selected類
+    switch (activePlayerCount) {
+      case 3: players3Btn.classList.add('selected'); break;
+      case 4: players4Btn.classList.add('selected'); break;
+      case 5: players5Btn.classList.add('selected'); break;
+      case 6: players6Btn.classList.add('selected'); break;
     }
   }
   
   // 添加事件監聽器
   function addEventListeners() {
-    // 確保所有元素都存在再添加事件監聽器
-    if (player1Btn) {
-      player1Btn.addEventListener('click', () => selectPlayer(1));
-    }
+    // 玩家選擇按鈕
+    if (player1Btn) player1Btn.addEventListener('click', () => selectPlayer(1));
+    if (player2Btn) player2Btn.addEventListener('click', () => selectPlayer(2));
+    if (player3Btn) player3Btn.addEventListener('click', () => selectPlayer(3));
+    if (player4Btn) player4Btn.addEventListener('click', () => selectPlayer(4));
+    if (player5Btn) player5Btn.addEventListener('click', () => selectPlayer(5));
+    if (player6Btn) player6Btn.addEventListener('click', () => selectPlayer(6));
     
-    if (player2Btn) {
-      player2Btn.addEventListener('click', () => selectPlayer(2));
-    }
+    // 方向按鈕
+    if (forwardBtn) forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
+    if (backwardBtn) backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
     
-    if (player3Btn) {
-      player3Btn.addEventListener('click', () => selectPlayer(3));
-    }
-    
-    // 添加方向按鈕的事件監聽器
-    if (forwardBtn) {
-      forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
-    }
-    
-    if (backwardBtn) {
-      backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
-    }
+    // 玩家數量選擇按鈕
+    if (players3Btn) players3Btn.addEventListener('click', () => setPlayerCount(3));
+    if (players4Btn) players4Btn.addEventListener('click', () => setPlayerCount(4));
+    if (players5Btn) players5Btn.addEventListener('click', () => setPlayerCount(5));
+    if (players6Btn) players6Btn.addEventListener('click', () => setPlayerCount(6));
   }
   
   // 初始化遊戲
