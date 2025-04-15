@@ -1662,72 +1662,91 @@ app.get('/rich.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/rich-control.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich-control.html')));
 
 // --- Create HTTP Server ---
-const server = http.createServer(app); // <--- Create server from Express app
+const server = http.createServer(app);
 
 // --- WebSocket Server Setup ---
-const wss = new WebSocket.Server({ server }); // <--- Attach WS to the HTTP server
+const wss = new WebSocket.Server({ server });
 
-let gameClient = null; // Reference to the game client WebSocket
-const controllerClients = new Set(); // References to controller clients
+let gameClient = null;
+const controllerClients = new Set();
 
 wss.on('connection', (ws, req) => {
     console.log('WebSocket client connected');
 
-    // Basic identification (could be improved with URL params or initial message)
-    // Example: ws://.../?clientType=game or ws://.../?clientType=controller
-    const urlParams = new URLSearchParams(req.url.substring(req.url.indexOf('?')));
-    const clientType = urlParams.get('clientType');
+    let clientType = 'unknown'; // Default client type
+    try {
+        // Extract clientType from URL query parameter, handle potential errors
+        const requestUrl = new URL(req.url, `ws://${req.headers.host}`); // Need a base URL
+        clientType = requestUrl.searchParams.get('clientType') || 'unknown';
+    } catch (e) {
+        console.error('Error parsing client connection URL:', e);
+        // Keep clientType as 'unknown' or handle appropriately
+    }
+
+    console.log(`Identified client type: ${clientType}`); // Log identified type
+
+    ws.clientType = clientType; // Assign type to the WebSocket object
 
     if (clientType === 'game') {
         console.log('Game client identified');
         if (gameClient && gameClient.readyState === WebSocket.OPEN) {
             console.log('Existing game client found, terminating previous.');
-            gameClient.terminate(); // Allow only one game instance
+            try { gameClient.terminate(); } catch (e) { console.error("Error terminating previous game client:", e); }
         }
         gameClient = ws;
-        ws.clientType = 'game';
-
-        // Notify controllers a game is ready (or reconnected)
         broadcastToControllers({ type: 'gameStatus', status: 'connected' });
-
     } else if (clientType === 'controller') {
         console.log('Controller client identified');
         controllerClients.add(ws);
-        ws.clientType = 'controller';
-         // Send current game status to the new controller
-        ws.send(JSON.stringify({ type: 'gameStatus', status: gameClient && gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected' }));
-
+        // Send current game status to the new controller immediately
+        try {
+             ws.send(JSON.stringify({ type: 'gameStatus', status: gameClient && gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected' }));
+         } catch (e) { console.error("Error sending initial status to controller:", e); }
     } else {
         console.log('Unknown client type connected');
-        ws.clientType = 'unknown';
-        // Maybe close connection or just log it
-        // ws.terminate();
-        // return;
     }
 
-
     ws.on('message', (message) => {
-        console.log(`Received message: ${message}`);
+        let messageString;
+        // --- START: Buffer Handling ---
+        if (message instanceof Buffer) {
+            messageString = message.toString('utf8'); // Convert Buffer to UTF-8 string
+            console.log(`Received Buffer message, converted to string: ${messageString}`);
+        } else if (typeof message === 'string') {
+            messageString = message; // Already a string
+            console.log(`Received string message: ${messageString}`);
+        } else {
+            // Handle or ignore other types if necessary (e.g., ArrayBuffer)
+            console.log('Received unexpected message type:', typeof message, message);
+            return; // Ignore non-string/buffer messages for now
+        }
+        // --- END: Buffer Handling ---
+
         let parsedMessage;
         try {
-            parsedMessage = JSON.parse(message);
+            parsedMessage = JSON.parse(messageString); // Parse the string version
         } catch (e) {
-            console.error('Failed to parse message or message is not JSON:', message);
-            return;
+            // Log the string that failed parsing for debugging
+            console.error(`Failed to parse message string: "${messageString}"`, e);
+            // Optionally notify the sender about the error
+            // ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON format received' }));
+            return; // Stop processing this invalid message
         }
 
-        // Route messages
+        // Route messages using parsedMessage
         if (ws.clientType === 'controller' && gameClient && gameClient.readyState === WebSocket.OPEN) {
-            // Message from controller, forward to game
             console.log('Forwarding message from controller to game:', parsedMessage);
-            gameClient.send(JSON.stringify(parsedMessage)); // Forward directly
+             try {
+                 gameClient.send(JSON.stringify(parsedMessage)); // Forward the valid JSON object
+             } catch (e) { console.error("Error sending message to game client:", e); }
         } else if (ws.clientType === 'game') {
-            // Message from game, broadcast to all controllers
             console.log('Broadcasting message from game to controllers:', parsedMessage);
-            broadcastToControllers(parsedMessage);
+            broadcastToControllers(parsedMessage); // Broadcast the valid JSON object
         } else if (ws.clientType === 'controller' && (!gameClient || gameClient.readyState !== WebSocket.OPEN)) {
             console.log('Controller sent message, but game is not connected.');
-            ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
+             try {
+                 ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
+             } catch (e) { console.error("Error sending 'game not connected' to controller:", e); }
         }
     });
 
@@ -1736,8 +1755,7 @@ wss.on('connection', (ws, req) => {
         if (ws === gameClient) {
             gameClient = null;
             console.log('Game client disconnected');
-            // Notify controllers
-             broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
+            broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
         } else if (controllerClients.has(ws)) {
             controllerClients.delete(ws);
             console.log('Controller client disconnected');
@@ -1745,26 +1763,41 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-         // Clean up on error too
+        console.error(`WebSocket error (Client Type: ${ws.clientType}):`, error);
+        // Clean up resources if an error occurs
         if (ws === gameClient) {
-             gameClient = null;
+            gameClient = null;
              broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
-         } else if (controllerClients.has(ws)) {
-             controllerClients.delete(ws);
-         }
+        } else if (controllerClients.has(ws)) {
+            controllerClients.delete(ws);
+        }
+        // Optionally try to close the connection if it's still open
+        try { if (ws.readyState === WebSocket.OPEN) ws.close(); } catch (e) {}
     });
 });
 
 function broadcastToControllers(message) {
-    const messageString = JSON.stringify(message);
-    console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
-    controllerClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(messageString);
-        }
-    });
+    if (controllerClients.size === 0) return; // No controllers connected
+
+    try {
+        const messageString = JSON.stringify(message);
+        console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
+        controllerClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                 try {
+                     client.send(messageString);
+                 } catch (e) {
+                     console.error("Error sending message to a controller:", e);
+                     // Optional: Remove this client if sending fails repeatedly
+                     // controllerClients.delete(client); client.terminate();
+                 }
+            }
+        });
+    } catch (e) {
+         console.error("Error stringifying message for broadcast:", e, message);
+     }
 }
+
 
 // --- 404 Handler ---
 app.use((req, res, next) => {
