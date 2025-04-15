@@ -372,15 +372,17 @@ body {
 /* 大富翁LOGO */
 .logo-container {
     position: absolute;
-    left: 262.5px; /* (875 - 350) / 2 */
-    top: 150px;
-    width: 800px;
-    height: 500px;
+    left: 125px;      /* ★ 正確的左邊距 (跳過第一列格子) */
+    top: 100px;       /* ★ 正確的上邊距 (跳過第一行格子) */
+    width: 625px;     /* ★ 正確的寬度 (中間 5 格的寬度) */
+    height: 400px;    /* ★ 正確的高度 (中間 4 格的高度) */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 4;
+    z-index: 4;       /* 確保在格子之上，但在彈出面板之下 */
+    /* 可以加點 padding 讓圖片不要貼邊 (可選) */
+    /* padding: 10px; */
 }
 
 .logo-text {
