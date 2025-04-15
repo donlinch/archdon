@@ -1,14 +1,17 @@
 // --- START OF FILE server.js ---
  
 // server.js
-require('dotenv').config(); // 從 .env 載入環境變數
-const https = require('https'); // <--- 確保引入 https
+require('dotenv').config();
+const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
+const http = require('http'); // <--- Need http module
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg'); // PostgreSQL 客戶端
+const { Pool } = require('pg');
+const WebSocket = require('ws'); // <--- Import the ws library
+// const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
 
 const app = express();
-const PORT = process.env.PORT || 3000; // 使用 Render 提供的 PORT 或本地的 3000
+const PORT = process.env.PORT || 3000;
 
 // --- 資料庫連接池設定 ---
 const pool = new Pool({
@@ -58,7 +61,11 @@ app.use(async (req, res, next) => {
         '/game/card-game.html', // <-- 新增
         '/game/wheel-game.html', // <-- 新增
         '/game/brige-game.html',  // <-- 新增
-         '/rich/index.html'
+        '/rich.html', // <-- Log rich.html
+        '/rich-control.html' // <-- Log rich-control.html
+
+
+
     ]; // 添加 scores.html
     // 確保只記錄 'GET' 請求且路徑在列表中
     const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
@@ -260,6 +267,13 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
+
+
+
+
 
 
 
@@ -1644,24 +1658,130 @@ app.get('/news/:id(\\d+)', (req, res) => res.sendFile(path.join(__dirname, 'publ
 app.get('/scores', (req, res) => res.sendFile(path.join(__dirname, 'public', 'scores.html')));
 app.get('/guestbook', (req, res) => res.sendFile(path.join(__dirname, 'public', 'guestbook.html')));
 app.get('/message-detail.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'message-detail.html')));
+app.get('/rich.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich.html')));
+app.get('/rich-control.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich-control.html')));
+
+// --- Create HTTP Server ---
+const server = http.createServer(app); // <--- Create server from Express app
+
+// --- WebSocket Server Setup ---
+const wss = new WebSocket.Server({ server }); // <--- Attach WS to the HTTP server
+
+let gameClient = null; // Reference to the game client WebSocket
+const controllerClients = new Set(); // References to controller clients
+
+wss.on('connection', (ws, req) => {
+    console.log('WebSocket client connected');
+
+    // Basic identification (could be improved with URL params or initial message)
+    // Example: ws://.../?clientType=game or ws://.../?clientType=controller
+    const urlParams = new URLSearchParams(req.url.substring(req.url.indexOf('?')));
+    const clientType = urlParams.get('clientType');
+
+    if (clientType === 'game') {
+        console.log('Game client identified');
+        if (gameClient && gameClient.readyState === WebSocket.OPEN) {
+            console.log('Existing game client found, terminating previous.');
+            gameClient.terminate(); // Allow only one game instance
+        }
+        gameClient = ws;
+        ws.clientType = 'game';
+
+        // Notify controllers a game is ready (or reconnected)
+        broadcastToControllers({ type: 'gameStatus', status: 'connected' });
+
+    } else if (clientType === 'controller') {
+        console.log('Controller client identified');
+        controllerClients.add(ws);
+        ws.clientType = 'controller';
+         // Send current game status to the new controller
+        ws.send(JSON.stringify({ type: 'gameStatus', status: gameClient && gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected' }));
+
+    } else {
+        console.log('Unknown client type connected');
+        ws.clientType = 'unknown';
+        // Maybe close connection or just log it
+        // ws.terminate();
+        // return;
+    }
 
 
-// --- 404 處理 ---
-app.use((req, res, next) => {
-    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
-    res.status(404).sendFile(path.join(__dirname, 'public', '404.html')); // 提供一個 404 頁面
+    ws.on('message', (message) => {
+        console.log(`Received message: ${message}`);
+        let parsedMessage;
+        try {
+            parsedMessage = JSON.parse(message);
+        } catch (e) {
+            console.error('Failed to parse message or message is not JSON:', message);
+            return;
+        }
+
+        // Route messages
+        if (ws.clientType === 'controller' && gameClient && gameClient.readyState === WebSocket.OPEN) {
+            // Message from controller, forward to game
+            console.log('Forwarding message from controller to game:', parsedMessage);
+            gameClient.send(JSON.stringify(parsedMessage)); // Forward directly
+        } else if (ws.clientType === 'game') {
+            // Message from game, broadcast to all controllers
+            console.log('Broadcasting message from game to controllers:', parsedMessage);
+            broadcastToControllers(parsedMessage);
+        } else if (ws.clientType === 'controller' && (!gameClient || gameClient.readyState !== WebSocket.OPEN)) {
+            console.log('Controller sent message, but game is not connected.');
+            ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
+        }
+    });
+
+    ws.on('close', () => {
+        console.log(`WebSocket client disconnected (Type: ${ws.clientType})`);
+        if (ws === gameClient) {
+            gameClient = null;
+            console.log('Game client disconnected');
+            // Notify controllers
+             broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
+        } else if (controllerClients.has(ws)) {
+            controllerClients.delete(ws);
+            console.log('Controller client disconnected');
+        }
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+         // Clean up on error too
+        if (ws === gameClient) {
+             gameClient = null;
+             broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
+         } else if (controllerClients.has(ws)) {
+             controllerClients.delete(ws);
+         }
+    });
 });
 
-// --- 全局錯誤處理 ---
+function broadcastToControllers(message) {
+    const messageString = JSON.stringify(message);
+    console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
+    controllerClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(messageString);
+        }
+    });
+}
+
+// --- 404 Handler ---
+app.use((req, res, next) => {
+    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
+    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+});
+
+// --- Global Error Handler ---
 app.use((err, req, res, next) => {
     console.error("全局錯誤處理:", err.stack || err);
     if (res.headersSent) { return next(err); }
     res.status(err.status || 500).send(process.env.NODE_ENV === 'production' ? '伺服器發生了一些問題！' : `伺服器錯誤: ${err.message}`);
 });
 
-// --- 啟動伺服器 ---
-app.listen(PORT, () => {
-    console.log(`伺服器正在監聽 port ${PORT}`);
+// --- Start Server ---
+server.listen(PORT, () => { // <--- Use server.listen instead of app.listen
+    console.log(`伺服器 (HTTP + WebSocket) 正在監聽 port ${PORT}`);
     pool.query('SELECT NOW()')
         .then(result => console.log('資料庫連接成功於', result.rows[0].now))
         .catch(err => console.error('資料庫連接錯誤:', err.stack || err));
