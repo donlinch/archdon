@@ -59,48 +59,51 @@
         }
 
         .player-btn {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 1.25rem;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
         .player-btn:hover {
             transform: scale(1.05);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .player1 {
-    background-color: #5b9df0; /* P1 - Geek Blue */
-}
-/* .player1.selected 的樣式可以保持，或者讓背景色更深 */
-.player1.selected {
-    background-color: #4a8cdf; /* 可以用深一點的藍色 */
-    box-shadow: 0 0 0 4px rgba(91, 157, 240, 0.4); /* 光暈顏色也可以調整 */
-}
+            background-color: #8ab5f3;
+        }
 
-.player2 {
-    background-color: #9270ca; /* P2 - Golden Purple */
-}
-.player2.selected {
-    background-color: #7d5fb3; /* 深一點的紫色 */
-    box-shadow: 0 0 0 4px rgba(146, 112, 202, 0.4);
-}
+        .player1.selected {
+            background-color: #5b9df0;
+            box-shadow: 0 0 0 4px rgba(91, 157, 240, 0.3);
+        }
 
-.player3 {
-    background-color: #ff544d; /* P3 - Sunset Orange */
-}
-.player3.selected {
-    background-color: #e64840; /* 深一點的紅色/橙色 */
-    box-shadow: 0 0 0 4px rgba(255, 84, 77, 0.4);
-}
+        .player2 {
+            background-color: #b79de2;
+        }
+
+        .player2.selected {
+            background-color: #9270ca;
+            box-shadow: 0 0 0 4px rgba(146, 112, 202, 0.3);
+        }
+
+        .player3 {
+            background-color: #ff8a85;
+        }
+
+        .player3.selected {
+            background-color: #ff544d;
+            box-shadow: 0 0 0 4px rgba(255, 84, 77, 0.3);
+        }
 
         .direction-buttons {
             display: flex;
@@ -109,15 +112,14 @@
         }
 
         .direction-btn {
-            padding: 1.2rem 2.5rem;  /* 增加內邊距 */
-    font-size: 1.3rem;      /* 增大字體 */
-    font-weight: bold;
-    color: white;
-    border: none;
-    border-radius: 30px;    /* 更圓的邊角 */
-    cursor: pointer;
-    transition: transform 0.2s; /* 只對縮放效果做過渡 */
-
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
         .direction-btn:hover {
@@ -253,79 +255,6 @@
         .disconnected { background-color: #f8d7da; color: #721c24; }
         .connecting { background-color: #fff3cd; color: #856404; }
         button:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
-
-
-
-
-
- /* 移動控制按鈕容器 (使用 Flexbox) */
- .direction-buttons-large {
-            display: flex;
-            gap: 1rem; /* 按鈕間距 */
-            justify-content: center; /* 水平居中 (如果需要) */
-            margin-top: 1rem; /* 與標題的間距 */
-        }
-
-        /* 更大的方塊按鈕樣式 */
-        .direction-btn-large {
-            flex: 1; /* 讓兩個按鈕平分寬度 */
-            padding: 1.5rem 1rem; /* 增加內邊距，讓按鈕變大 */
-            font-size: 1.2rem; /* 放大字體 */
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 8px; /* 方塊圓角 */
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .direction-btn-large:hover {
-            transform: scale(1.03); /* 稍微縮小 hover 效果 */
-            filter: brightness(90%); /* 懸停時稍微變暗 */
-        }
-        .forward-large { background-color: #0cd8b6; } /* 保持顏色 */
-        .backward-large { background-color: #ff544d; } /* 保持顏色 */
-
-        /* 格子資訊按鈕容器 (使用 Flexbox) */
-        .info-buttons-small {
-            display: flex;
-            gap: 0.8rem; /* 按鈕間距 */
-            justify-content: center; /* 居中顯示 */
-            margin-top: 1rem; /* 與標題的間距 */
-        }
-
-        /* 較小的並排按鈕樣式 */
-        .info-btn-small {
-            padding: 0.5rem 1rem; /* 減小內邊距 */
-            font-size: 0.9rem; /* 減小字體 */
-            /* background-color: #9270ca; */ /* 保持原紫色或自訂 */
-            /* color: white; */
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            width: auto; /* 讓寬度由內容決定 */
-            margin-top: 0; /* 移除原 action-btn 的 margin-top */
-        }
-        .show-info-small { background-color: #9270ca; color: white; } /* 顯示按鈕顏色 */
-        .hide-info-small { background-color: #6c757d; color: white; } /* 關閉按鈕顏色 */
-
-        .info-btn-small:hover {
-            filter: brightness(90%);
-        }
-
-        /* 移除舊 .action-btn 的特定樣式 (如果不再需要) */
-        /* 例如 width: 100%; margin-top: 1rem; */
-        /* 如果其他地方還用 .action-btn，保留，只覆蓋需要的 */
-
-         /* 移除 .direction-buttons 和 .direction-btn 的舊樣式 (如果不再用) */
-         /* 或者保留，以防萬一，新樣式會覆蓋 */
-
-
-
-
-
-
     </style>
 </head>
 <body>
@@ -336,37 +265,23 @@
             未連接遊戲
         </div>
 
-       
-        <!-- ★★★ 修改：應用新的 CSS class ★★★ -->
-        <div class="control-section">
-
-<!-- ★★★ 您缺少了這個區塊！ ★★★ -->
-<div class="control-section">
-    <h2>玩家選擇</h2>
-    <div class="player-select">
-        <button id="player1-btn" class="player-btn player1 selected">P1</button>
-        <button id="player2-btn" class="player-btn player2">P2</button>
-        <button id="player3-btn" class="player-btn player3">P3</button>
-    </div>
-</div>
-<!-- ★★★ 缺少結束 ★★★ -->
-
-
-            <h2>移動控制</h2>
-            <div class="direction-buttons-large"> <!-- ★ 使用新的容器 class ★ -->
-                <button id="forward-btn" class="direction-btn-large forward-large">前進</button> <!-- ★ 使用新的按鈕 class ★ -->
-                <button id="backward-btn" class="direction-btn-large backward-large">後退</button> <!-- ★ 使用新的按鈕 class ★ -->
-            </div>
-        </div>
-
+        <!-- ... (keep player select, move control, jump, actions sections) ... -->
          <div class="control-section">
-            <!-- <h2>格子資訊</h2> --> <!-- 可以移除 H2 -->
-            <div class="info-buttons-small"> <!-- ★ 使用新的容器 class ★ -->
-                <button id="show-player-info-btn" class="info-btn-small show-info-small">顯示</button> <!-- ★ 使用新的按鈕 class ★ -->
-                <button id="hide-player-info-btn" class="info-btn-small hide-info-small">關閉</button> <!-- ★ 使用新的按鈕 class ★ -->
+            <h2>玩家選擇</h2>
+            <div class="player-select">
+                <button id="player1-btn" class="player-btn player1 selected">P1</button>
+                <button id="player2-btn" class="player-btn player2">P2</button>
+                <button id="player3-btn" class="player-btn player3">P3</button>
             </div>
         </div>
-        <!-- ★★★ 修改結束 ★★★ -->
+        <div class="control-section">
+            <h2>移動控制</h2>
+            
+            <div class="direction-buttons">
+                <button id="forward-btn" class="direction-btn forward">前進</button>
+                <button id="backward-btn" class="direction-btn backward">後退</button>
+            </div>
+        </div>
 
 
  
@@ -385,12 +300,8 @@
             const backwardBtn = document.getElementById('backward-btn');
          
             const connectionStatusDiv = document.getElementById('connection-status');
+             const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
 
-              // ★ 新增按鈕引用 ★
-    const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
-    const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
-    // ↓↓↓ 確保這裡包含了新按鈕的 class 或 ID ↓↓↓
-    const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
 
             // --- State ---
             let selectedPlayer = 1; // Local controller state
@@ -461,7 +372,7 @@
                      ws = null;
                      setControlsEnabled(false);
                      updateConnectionStatusUI();
-                     // gameInfoContentDiv.textContent = '與伺服器斷線，5秒後嘗試重連...';
+                     gameInfoContentDiv.textContent = '與伺服器斷線，5秒後嘗試重連...';
                      setTimeout(connectWebSocket, 5000); // Reconnect
                  };
              }
@@ -471,22 +382,20 @@
             function handleServerMessage(message) {
                 switch (message.type) {
                     case 'gameStateUpdate':
-            console.log("Received game state update:", message.data);
-            updateGameInfo(message.data);
-            // ★ 新增：如果狀態更新包含玩家信息，則更新按鈕外觀 ★
-            if (message.data && message.data.players) {
-                updatePlayerButtonAppearance(message.data.players);
-            }
-            // ★ 新增結束 ★
-            if (!gameIsConnected) { setControlsEnabled(true); }
-            break;
+                        console.log("Received game state update:", message.data);
+                        updateGameInfo(message.data);
+                        // If we just connected and received state, enable controls
+                        if (!gameIsConnected) {
+                            setControlsEnabled(true);
+                        }
+                        break;
                      case 'gameStatus':
                          console.log("Received game status:", message.status);
                          gameIsConnected = (message.status === 'connected');
                          setControlsEnabled(gameIsConnected); // Enable/disable based on game connection
                          updateConnectionStatusUI();
                          if (gameIsConnected) {
-                            // gameInfoContentDiv.textContent = '遊戲已連接，等待狀態更新...';
+                             gameInfoContentDiv.textContent = '遊戲已連接，等待狀態更新...';
                               // Request state again if needed
                              sendCommand('getGameState');
                          } else {
@@ -495,7 +404,7 @@
                          break;
                     case 'error':
                         console.error('Received error from server:', message.message);
-                       // gameInfoContentDiv.textContent = `錯誤: ${message.message}`;
+                        gameInfoContentDiv.textContent = `錯誤: ${message.message}`;
                         // Decide if controls should be disabled based on error
                         break;
                      // Add other message types if the server sends confirmations, etc.
@@ -507,18 +416,14 @@
              // --- Update Controller UI based on Game State ---
             function updateGameInfo(gameState) {
                  if (!gameState) {
-                   //  gameInfoContentDiv.textContent = '無法獲取遊戲狀態。';
+                     gameInfoContentDiv.textContent = '無法獲取遊戲狀態。';
                      return;
                  }
                  // Update selected player button visually based on game state
-// 不要送出 selectPlayer 命令，只更新 UI
-selectPlayerUI(gameState.selectedPlayer || 1, false);
-         const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
-         forwardBtn.disabled = controlsShouldBeDisabled;
-         backwardBtn.disabled = controlsShouldBeDisabled;
-         // ★ 控制新按鈕的禁用狀態 ★
-         showPlayerInfoBtn.disabled = controlsShouldBeDisabled;
-         hidePlayerInfoBtn.disabled = controlsShouldBeDisabled;
+                 selectPlayerUI(gameState.selectedPlayer || 1);
+                 const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
+     forwardBtn.disabled = controlsShouldBeDisabled;
+     backwardBtn.disabled = controlsShouldBeDisabled;
              }
 
               // Update position select dropdown
@@ -535,51 +440,12 @@ selectPlayerUI(gameState.selectedPlayer || 1, false);
                  positionSelectPopulated = true;
              }
 
-// --- ★ 修改：更新玩家按鈕外觀的函數 ★ ---
-function updatePlayerButtonAppearance(playersData) {
-    const buttons = [player1Btn, player2Btn, player3Btn];
-    buttons.forEach((btn, index) => {
-        const playerNum = index + 1;
-        const currentAvatarUrl = (btn.dataset.avatarUrl || '').trim();
-        const playerData = playersData[playerNum];
-        const newAvatarUrl = (playerData && playerData.avatarUrl) ? playerData.avatarUrl.trim() : '';
-
-        // --- 嚴格字串比較，避免不必要重繪 ---
-        if (newAvatarUrl !== currentAvatarUrl) {
-            console.log(`Updating appearance for Player ${playerNum}, New URL: ${newAvatarUrl || '(清空)'}`);
-            if (newAvatarUrl) {
-                btn.innerHTML = `<img src="${newAvatarUrl}"
-                                  alt="P${playerNum}"
-                                  style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-                btn.dataset.avatarUrl = newAvatarUrl;
-            } else {
-                btn.innerHTML = `P${playerNum}`;
-                delete btn.dataset.avatarUrl;
-            }
-        }
-    });
-}
-  // --- ★ 新增事件監聽器 ★ ---
-  showPlayerInfoBtn.addEventListener('click', () => {
-        console.log(`Sending showPlayerInfo command for player ${selectedPlayer}`);
-        // ★ 發送新指令，帶上當前控制器選中的玩家 ★
-        sendCommand('showPlayerInfo', { player: selectedPlayer });
-    });
-
-    hidePlayerInfoBtn.addEventListener('click', () => {
-        console.log(`Sending hidePlayerInfo command`);
-        // ★ 發送隱藏指令，不需要玩家參數 ★
-        sendCommand('hidePlayerInfo', {});
-    });
-    // --- 事件監聽器添加結束 ---
-
-
 
             // --- Send Command via WebSocket ---
             function sendCommand(command, params = {}) {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     console.error('WebSocket not connected, cannot send command.');
-                   // gameInfoContentDiv.textContent = '錯誤：未連接到伺服器。';
+                    gameInfoContentDiv.textContent = '錯誤：未連接到伺服器。';
                     setControlsEnabled(false); // Ensure controls are disabled if WS disconnects
                     updateConnectionStatusUI();
                     return;
@@ -594,18 +460,18 @@ function updatePlayerButtonAppearance(playersData) {
             }
 
             // --- UI Actions ---
-            function selectPlayerUI(playerNum, shouldSendCommand = true) {
-    selectedPlayer = playerNum;
-    player1Btn.classList.toggle('selected', playerNum === 1);
-    player2Btn.classList.toggle('selected', playerNum === 2);
-    player3Btn.classList.toggle('selected', playerNum === 3);
+            function selectPlayerUI(playerNum) {
+                 selectedPlayer = playerNum; // Update local state for sending commands
+                 player1Btn.classList.toggle('selected', playerNum === 1);
+                 player2Btn.classList.toggle('selected', playerNum === 2);
+                 player3Btn.classList.toggle('selected', playerNum === 3);
+                 // Note: We don't send a 'selectPlayer' command here anymore,
+                 // because the *game's* state dictates the selected player display.
+                 // We just update the local `selectedPlayer` variable for *sending* commands.
+                 console.log(`Controller UI updated for Player ${playerNum}`);
+                 sendCommand('selectPlayer', { player: playerNum });
 
-    console.log(`Controller UI updated for Player ${playerNum}`);
-
-    if (shouldSendCommand) {
-        sendCommand('selectPlayer', { player: playerNum });
-    }
-}
+             }
 
             function movePlayer(direction) {
                 console.log(`Sending move command: P${selectedPlayer}, ${direction}, 1 step`); // <-- 日誌也改成 1 step
@@ -630,10 +496,9 @@ function updatePlayerButtonAppearance(playersData) {
             }
 
             // --- Event Listeners ---
-            player1Btn.addEventListener('click', () => selectPlayerUI(1, true));
-player2Btn.addEventListener('click', () => selectPlayerUI(2, true));
-player3Btn.addEventListener('click', () => selectPlayerUI(3, true));
-
+            player1Btn.addEventListener('click', () => selectPlayerUI(1)); // Only update local UI selection
+            player2Btn.addEventListener('click', () => selectPlayerUI(2));
+            player3Btn.addEventListener('click', () => selectPlayerUI(3));
             forwardBtn.addEventListener('click', () => movePlayer('forward'));
             backwardBtn.addEventListener('click', () => movePlayer('backward'));
     
