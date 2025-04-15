@@ -65,11 +65,19 @@
     }
 
     @keyframes pulse {
-        from {
-            box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
         }
-        to {
-            box-shadow: 0 0 15px 8px rgba(255, 215, 0, 0.9);
+        
+        70% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+        }
+        
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
         }
     }
 
@@ -203,6 +211,66 @@
         background-color: #38a169; /* 深綠色 */
     }
 
+    /* 中央資訊顯示區 */
+    .center-info {
+        position: absolute;
+        left: 262.5px; /* (875 - 350) / 2 */
+        top: 200px;
+        width: 350px;
+        height: 300px;
+        background-color: #ff6347; /* 默認橙紅色，會被動態替換 */
+        border: 3px dashed #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        padding: 15px;
+        z-index: 5;
+        transition: background-color 0.3s ease; /* 添加顏色過渡效果 */
+    }
+    
+    .center-title {
+        font-size: 1.8rem;
+        margin-bottom: 15px;
+    }
+    
+    .center-description {
+        font-size: 1.2rem;
+        line-height: 1.5;
+    }
+    
+    /* 關閉按鈕 */
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 24px;
+        height: 24px;
+        background-color: white;
+        color: #ff6347;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        z-index: 6;
+    }
+    
+    .close-btn:hover {
+        background-color: #f8f8f8;
+        transform: scale(1.1);
+    }
+    
+    .hidden {
+        display: none;
+    }
+    
     /* 按鈕禁用狀態 */
     .player-btn:disabled,
     .direction-btn:disabled {
@@ -353,10 +421,50 @@
               // 清空遊戲板
               gameBoard.innerHTML = '';
               
+              // 創建中央資訊顯示區
+              const centerInfo = document.createElement('div');
+              centerInfo.className = 'center-info hidden'; // 默認隱藏
+              centerInfo.id = 'center-info';
+              
+              const centerTitle = document.createElement('div');
+              centerTitle.className = 'center-title';
+              centerTitle.textContent = '表格內容';
+              centerTitle.id = 'center-title';
+              
+              const centerDescription = document.createElement('div');
+              centerDescription.className = 'center-description';
+              centerDescription.textContent = '點擊任意格子顯示詳細資訊';
+              centerDescription.id = 'center-description';
+              
+              // 添加關閉按鈕
+              const closeBtn = document.createElement('div');
+              closeBtn.className = 'close-btn';
+              closeBtn.textContent = '×';
+              closeBtn.addEventListener('click', function(event) {
+                event.stopPropagation(); // 阻止事件冒泡
+                document.getElementById('center-info').classList.add('hidden');
+              });
+              
+              centerInfo.appendChild(closeBtn);
+              centerInfo.appendChild(centerTitle);
+              centerInfo.appendChild(centerDescription);
+              gameBoard.appendChild(centerInfo);
+              
               // 渲染路徑格子
               pathCells.forEach((cell, index) => {
                 const cellElement = document.createElement('div');
                 cellElement.className = 'cell';
+                cellElement.dataset.index = index; // 添加索引屬性方便識別
+                
+            // 添加點擊事件
+                cellElement.addEventListener('click', function() {
+                  // 更新中央資訊
+                  updateCenterInfo(cell.title, cell.description);
+                  // 更新中央資訊區域的背景顏色與點擊的格子顏色一致
+                  document.getElementById('center-info').style.backgroundColor = cell.color;
+                  // 顯示中央資訊
+                  document.getElementById('center-info').classList.remove('hidden');
+                });
                 
                 // 創建格子內容：標題和描述
                 const cellContent = document.createElement('div');
@@ -435,6 +543,25 @@
               
               playerToken.style.left = `${position.x * cellWidth + cellWidth/2 + offsetX}px`;
               playerToken.style.top = `${position.y * cellHeight + cellHeight/2 - 15}px`;
+            }
+            
+            // 更新中央資訊
+            function updateCenterInfo(title, description) {
+              const centerTitle = document.getElementById('center-title');
+              const centerDescription = document.getElementById('center-description');
+              
+              if (centerTitle && centerDescription) {
+                // 更新內容
+                centerTitle.textContent = title;
+                centerDescription.textContent = description;
+                
+                // 添加動畫效果
+                const centerInfo = document.getElementById('center-info');
+                centerInfo.style.animation = 'none';
+                // 觸發重繪
+                void centerInfo.offsetWidth;
+                centerInfo.style.animation = 'pulse 1s';
+              }
             }
             
             // 獲取玩家位置
@@ -532,6 +659,14 @@
               
               // 重新渲染以顯示高亮
               renderBoard();
+              
+              // 在格子高亮的同時也更新中央顯示區域
+              const cell = pathCells[finalIndex];
+              updateCenterInfo(cell.title, cell.description);
+              // 更新中央資訊區域的背景顏色
+              document.getElementById('center-info').style.backgroundColor = cell.color;
+              // 顯示中央資訊
+              document.getElementById('center-info').classList.remove('hidden');
               
               // 啟用按鈕
               enableDisableButtons(true);
