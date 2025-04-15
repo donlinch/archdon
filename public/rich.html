@@ -467,11 +467,19 @@ body {
 
 </head>
 <body>
-    <select id="map-selector">
-      <option selected disabled>載入中...</option>
-    </select>
-    <div id="game-board" class="game-board"></div>
-    <div id="logo-container" class="logo-container"></div>
+    <div class="game-container">
+        <!-- 左側遊戲面板 -->
+        <div id="game-board" class="game-board">
+            <!-- 遊戲格子會由 JavaScript 動態生成 -->
+            <!-- 預設LOGO區域 -->
+            <div id="logo-container" class="logo-container">
+                <!-- 內容由 rich.js 動態生成 -->
+            </div>
+        </div>
+        
+      
+    </div>
+    
     <script src="rich.js"></script>
-  </body>
-  </html>
+</body>
+</html>
