@@ -15,9 +15,6 @@
 
 
 
-
-
-
 /* 基本樣式 */
 * {
     margin: 0;
@@ -48,7 +45,7 @@ body {
 .game-board {
     position: relative;
     width: 875px;  /* 7 * 125px */
-    height: 700px; /* 7 * 100px */
+    height: 600px; /* 6 * 100px */
     background-color: #ffecf2; /* 粉色背景 */
     border: 2px solid #ff80ab; /* 粉紅色邊框 */
     border-radius: 12px; /* 圓角邊框 */
@@ -92,87 +89,6 @@ body {
 
 .cell-corner {
     background-color: #9270ca; /* Golden Purple */
-}
-
-/* 為每個單獨的位置添加變體顏色 - 使用新的配色方案 */
-.cell[data-index="0"] {
-    background-color: #9270ca; /* Golden Purple (左上角) */
-}
-
-.cell[data-index="1"] {
-    background-color: #5b9df0; /* Geek Blue */
-}
-
-.cell[data-index="2"] {
-    background-color: #0cd8b6; /* Cyan */
-}
-
-.cell[data-index="3"] {
-    background-color: #5d7092; /* Grey */
-}
-
-.cell[data-index="4"] {
-    background-color: #fbd115; /* Sunrise Yellow */
-}
-
-.cell[data-index="5"] {
-    background-color: #f9584a; /* Dust Red */
-}
-
-.cell[data-index="6"] {
-    background-color: #9270ca; /* Golden Purple (右上角) */
-}
-
-.cell[data-index="7"] {
-    background-color: #9270ca; /* Golden Purple */
-}
-
-.cell[data-index="8"] {
-    background-color: #ff544d; /* Sunset Orange */
-}
-
-.cell[data-index="9"] {
-    background-color: #26b9a9; /* Dark Green */
-}
-
-.cell[data-index="10"] {
-    background-color: #ff94c3; /* Magenta */
-}
-
-.cell[data-index="11"] {
-    background-color: #5b9df0; /* Geek Blue */
-}
-
-.cell[data-index="12"] {
-    background-color: #9270ca; /* Golden Purple (右下角) */
-}
-
-.cell[data-index="13"] {
-    background-color: #6dc8ec; /* Daybreak Blue */
-}
-
-.cell[data-index="14"] {
-    background-color: #9270ca; /* Golden Purple */
-}
-
-.cell[data-index="15"] {
-    background-color: #ff544d; /* Sunset Orange */
-}
-
-.cell[data-index="16"] {
-    background-color: #26b9a9; /* Dark Green */
-}
-
-.cell[data-index="17"] {
-    background-color: #ff94c3; /* Magenta */
-}
-
-.cell[data-index="18"] {
-    background-color: #5b9df0; /* Geek Blue */
-}
-
-.cell[data-index="19"] {
-    background-color: #9270ca; /* Golden Purple (左下角) */
 }
 
 .cell.highlighted {
@@ -349,7 +265,7 @@ body {
 .center-info {
     position: absolute;
     left: 262.5px; /* (875 - 350) / 2 */
-    top: 200px;
+    top: 150px;
     width: 350px;
     height: 300px;
     background-color: #5b9df0; /* Geek Blue */
@@ -421,7 +337,7 @@ body {
 .logo-container {
     position: absolute;
     left: 262.5px; /* (875 - 350) / 2 */
-    top: 200px;
+    top: 150px;
     width: 350px;
     height: 300px;
     display: flex;
@@ -489,16 +405,14 @@ body {
 
 
 
-
-
-
 </style>
 
 
 
 
 
-</head><body>
+</head>
+<body>
     <div class="game-container">
         <!-- 左側遊戲面板 -->
         <div id="game-board" class="game-board">

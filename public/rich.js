@@ -1,4 +1,4 @@
-// 大富翁遊戲腳本
+// 大富翁遊戲腳本 (修改版含 WebSocket 通訊)
 document.addEventListener('DOMContentLoaded', () => {
   // 定義遊戲板的大小和格子尺寸
   const cellWidth = 125;
@@ -43,12 +43,117 @@ document.addEventListener('DOMContentLoaded', () => {
     magenta: '#ff94c3'      // Magenta
   };
   
+  // WebSocket 連接控制
+  let wsConnection = null;
+  
   // 初始化遊戲
   function initGame() {
     createBoardCells();
     renderBoard();
     updatePlayerButtonStyles();
     addEventListeners();
+    initWebSocket();
+  }
+  
+  // 初始化 WebSocket 連接
+  function initWebSocket() {
+    try {
+      // 監聽來自外部控制器的連接請求
+      window.addEventListener('message', (event) => {
+        // 確保消息來自可信任的來源
+        if (event.origin !== window.location.origin) return;
+        
+        const data = event.data;
+        if (data.type === 'controlCommand') {
+          handleControlCommand(data.command, data.params);
+        }
+      });
+      
+      console.log('已設置 WebSocket 消息處理');
+    } catch (e) {
+      console.error('WebSocket 初始化錯誤:', e);
+    }
+  }
+  
+  // 處理來自控制器的命令
+  function handleControlCommand(command, params) {
+    console.log('收到控制命令:', command, params);
+    
+    switch (command) {
+      case 'selectPlayer':
+        selectPlayer(params.player);
+        break;
+        
+      case 'movePlayer':
+        handleDirectionSelection(params.isForward, params.steps || 1);
+        break;
+        
+      case 'jumpToPosition':
+        if (typeof params.position === 'number' && params.player) {
+          // 直接跳到指定位置
+          selectPlayer(params.player);
+          playerPathIndices[params.player - 1] = params.position;
+          updatePlayerPositions();
+          renderBoard();
+        }
+        break;
+        
+      case 'showInfo':
+        // 顯示中央資訊
+        const centerInfo = document.getElementById('center-info');
+        const cell = pathCells[highlightedCell || 0];
+        if (centerInfo && logoContainer) {
+          updateCenterInfo(cell.title, cell.description);
+          centerInfo.style.backgroundColor = cell.color;
+          centerInfo.classList.remove('hidden');
+          logoContainer.classList.add('hidden');
+        }
+        break;
+        
+      case 'hideInfo':
+        // 隱藏中央資訊
+        const centerInfoHide = document.getElementById('center-info');
+        if (centerInfoHide && logoContainer) {
+          centerInfoHide.classList.add('hidden');
+          logoContainer.classList.remove('hidden');
+        }
+        break;
+        
+      case 'resetGame':
+        // 重置遊戲
+        initPlayerPositions();
+        highlightedCell = null;
+        renderBoard();
+        break;
+        
+      case 'getGameState':
+        // 回傳當前遊戲狀態
+        sendGameState(params.source);
+        break;
+    }
+  }
+  
+  // 發送遊戲狀態到控制器
+  function sendGameState(targetWindow) {
+    if (!targetWindow) return;
+    
+    const gameState = {
+      selectedPlayer,
+      playerPathIndices,
+      pathCells: pathCells.map(cell => ({
+        title: cell.title,
+        description: cell.description,
+        position: cell.position,
+        color: cell.color
+      })),
+      highlightedCell,
+      isMoving
+    };
+    
+    targetWindow.postMessage({
+      type: 'gameState',
+      data: gameState
+    }, '*');
   }
   
   // 初始化玩家位置
@@ -356,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // 處理方向選擇 (前進或後退)
-  function handleDirectionSelection(isForward) {
+  function handleDirectionSelection(isForward, steps = 1) {
     if (isMoving) return;
     
     // 確保選擇的玩家不超過活躍玩家數量
@@ -364,8 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPlayer = 1;
     }
     
-    // 修改為只移動一步
-    movePlayerStepByStep(1, isForward);
+    // 移動指定步數
+    movePlayerStepByStep(steps, isForward);
   }
   
   // 逐步移動玩家
@@ -446,6 +551,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 啟用按鈕
     enableDisableButtons(true);
+    
+    // 通知控制器玩家移動已完成
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'moveComplete',
+        player: selectedPlayer,
+        position: finalIndex,
+        cellTitle: cell.title
+      }, '*');
+    }
   }
   
   // 啟用/禁用按鈕
@@ -471,6 +586,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 更新玩家按鈕樣式
     updatePlayerButtonStyles();
+    
+    // 通知控制器玩家選擇已變更
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'playerSelected',
+        player: playerNum
+      }, '*');
+    }
   }
   
   // 更新玩家按鈕樣式
@@ -498,7 +621,68 @@ document.addEventListener('DOMContentLoaded', () => {
     // 方向按鈕
     if (forwardBtn) forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
     if (backwardBtn) backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
+    
+    // 用於控制器頁面的跨窗口通訊
+    window.addEventListener('message', (event) => {
+      // 這裡可以檢查 event.origin 來確保消息來自可信任的源
+      try {
+        const data = event.data;
+        
+        if (data.type === 'controlCommand') {
+          handleControlCommand(data.command, data.params || {});
+        } else if (data.type === 'requestGameState') {
+          sendGameState(event.source);
+        }
+      } catch (error) {
+        console.error('處理跨窗口消息時出錯:', error);
+      }
+    });
   }
+  
+  // 暴露遊戲控制 API 到全局作用域，供外部控制器使用
+  window.gameControl = {
+    selectPlayer,
+    moveForward: (steps = 1) => handleDirectionSelection(true, steps),
+    moveBackward: (steps = 1) => handleDirectionSelection(false, steps),
+    jumpToPosition: (player, position) => {
+      if (player >= 1 && player <= 3 && position >= 0 && position < pathCells.length) {
+        selectPlayer(player);
+        playerPathIndices[player - 1] = position;
+        updatePlayerPositions();
+        renderBoard();
+      }
+    },
+    showInfo: () => {
+      const centerInfo = document.getElementById('center-info');
+      const cell = pathCells[highlightedCell || 0];
+      if (centerInfo && logoContainer) {
+        updateCenterInfo(cell.title, cell.description);
+        centerInfo.style.backgroundColor = cell.color;
+        centerInfo.classList.remove('hidden');
+        logoContainer.classList.add('hidden');
+      }
+    },
+    hideInfo: () => {
+      const centerInfo = document.getElementById('center-info');
+      if (centerInfo && logoContainer) {
+        centerInfo.classList.add('hidden');
+        logoContainer.classList.remove('hidden');
+      }
+    },
+    resetGame: () => {
+      initPlayerPositions();
+      highlightedCell = null;
+      renderBoard();
+    },
+    getGameState: () => {
+      return {
+        selectedPlayer,
+        playerPathIndices: [...playerPathIndices],
+        highlightedCell,
+        isMoving
+      };
+    }
+  };
   
   // 初始化遊戲
   initPlayerPositions(); // 初始化玩家位置

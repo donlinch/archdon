@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁遊戲控制橋接器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #5b9df0;
+            text-align: center;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #5b9df0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4a8cdf;
+        }
+        .game-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .control-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .frames-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>大富翁遊戲控制橋接器</h1>
+        
+        <div id="connection-status" class="status disconnected">
+            未連接
+        </div>
+        
+        <div class="buttons">
+            <button id="open-game">打開遊戲</button>
+            <button id="open-controller">打開控制器</button>
+            <button id="connect-windows">連接視窗</button>
+        </div>
+        
+        <div class="frames-container">
+            <iframe id="game-frame" class="game-frame" src="about:blank"></iframe>
+            <iframe id="control-frame" class="control-frame" src="about:blank"></iframe>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameFrame = document.getElementById('game-frame');
+            const controlFrame = document.getElementById('control-frame');
+            const openGameBtn = document.getElementById('open-game');
+            const openControllerBtn = document.getElementById('open-controller');
+            const connectWindowsBtn = document.getElementById('connect-windows');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            let gameWindow = null;
+            let controllerWindow = null;
+            let isConnected = false;
+            
+            // 更新連接狀態
+            function updateConnectionStatus(connected) {
+                isConnected = connected;
+                connectionStatus.className = 'status ' + (connected ? 'connected' : 'disconnected');
+                connectionStatus.textContent = connected ? '已連接' : '未連接';
+            }
+            
+            // 打開遊戲
+            openGameBtn.addEventListener('click', () => {
+                gameFrame.src = 'rich.html';
+                gameWindow = gameFrame.contentWindow;
+                console.log('遊戲已加載');
+            });
+            
+            // 打開控制器
+            openControllerBtn.addEventListener('click', () => {
+                controlFrame.src = 'rich-control.html';
+                controllerWindow = controlFrame.contentWindow;
+                console.log('控制器已加載');
+            });
+            
+            // 連接視窗
+            connectWindowsBtn.addEventListener('click', () => {
+                if (!gameWindow || !controllerWindow) {
+                    alert('請先打開遊戲和控制器！');
+                    return;
+                }
+                
+                // 告訴控制器遊戲視窗已準備好
+                controllerWindow.postMessage({
+                    type: 'gameWindowReady',
+                    gameWindowOrigin: window.location.origin
+                }, '*');
+                
+                updateConnectionStatus(true);
+                console.log('視窗已連接！控制器可以開始控制遊戲了。');
+                alert('視窗已連接！控制器可以開始控制遊戲了。');
+            });
+            
+            // 轉發消息
+            window.addEventListener('message', (event) => {
+                // 輸出收到的消息以便調試
+                console.log('橋接器收到消息:', event.data);
+                
+                // 從控制器到遊戲
+                if (event.source === controllerWindow && gameWindow) {
+                    gameWindow.postMessage(event.data, '*');
+                    console.log('轉發消息到遊戲:', event.data);
+                }
+                
+                // 從遊戲到控制器
+                if (event.source === gameWindow && controllerWindow) {
+                    controllerWindow.postMessage(event.data, '*');
+                    console.log('轉發消息到控制器:', event.data);
+                }
+                
+                // 檢測控制器就緒
+                if (event.data && event.data.type === 'controllerReady') {
+                    console.log('控制器已準備就緒');
+                }
+                
+                // 檢測遊戲就緒
+                if (event.data && event.data.type === 'gameReady') {
+                    console.log('遊戲已準備就緒');
+                }
+            });
+            
+            // 初始狀態
+            updateConnectionStatus(false);
+        });
+    </script>
+</body>
+</html>
