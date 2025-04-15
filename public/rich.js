@@ -1,16 +1,15 @@
 // rich.js (Relevant Sections Modified)
 
-let player1Btn, player2Btn, player3Btn, forwardBtn, backwardBtn;
-
-
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Element Variables ---
-  const gameBoard = document.getElementById('game-board'); // 假設在這裡
-  const player1Btn = document.getElementById('player1-btn'); // 在這裡獲取一次
-  const player2Btn = document.getElementById('player2-btn'); // 在這裡獲取一次
-  const player3Btn = document.getElementById('player3-btn'); // 在這裡獲取一次
-  const forwardBtn = document.getElementById('forward-btn'); // 在這裡獲取一次
-  const backwardBtn = document.getElementById('backward-btn'); // 在這裡獲取一次
+  // ... (keep existing DOM element variables: gameBoard, buttons, etc.) ...
+  const cellWidth = 125;
+  const cellHeight = 100;
+  const gameBoard = document.getElementById('game-board');
+  const player1Btn = document.getElementById('player1-btn');
+  const player2Btn = document.getElementById('player2-btn');
+  const player3Btn = document.getElementById('player3-btn');
+  const forwardBtn = document.getElementById('forward-btn');
+  const backwardBtn = document.getElementById('backward-btn');
   const logoContainer = document.getElementById('logo-container');
 
 
@@ -26,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const colors = { /* ... your colors ... */
       geekBlue: '#5b9df0', cyan: '#0cd8b6', grey: '#5d7092', sunriseYellow: '#fbd115', dustRed: '#f9584a', daybreakBlue: '#6dc8ec', goldenPurple: '#9270ca', sunsetOrange: '#ff544d', darkGreen: '#26b9a9', magenta: '#ff94c3'
    };
-   
 
   // --- WebSocket Variables ---
   let ws = null;
@@ -36,26 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // const broadcastChannel = new BroadcastChannel('rich_game_channel');
   // broadcastChannel.onmessage = (event) => { ... };
 
-
   // Initialize Game
-    function initGame() {
-        console.log("Initializing game...");
-
-  // 現在可以直接使用在外面已經獲取的變數了
-  createBoardCells();
-  renderBoard();
-  updatePlayerButtonStyles();
-  addEventListeners(); // 確保 addEventListeners 內部能訪問這些按鈕變數
-  connectWebSocket();
-  initPlayerPositions();
-  console.log("Game initialization complete.");
-
-
-
-
-
+  function initGame() {
+      createBoardCells();
+      renderBoard();
+      updatePlayerButtonStyles();
+      addEventListeners();
+      connectWebSocket(); // Connect WebSocket instead of initWebSocket
+      initPlayerPositions(); // Ensure positions are set initially
   }
-
 
   // --- WebSocket Connection Logic ---
   function connectWebSocket() {
@@ -262,151 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Remove the postMessage listener
       // window.addEventListener('message', (event) => { ... });
   }
-
-
-
-
-
-
-
-
-
-  function createBoardCells() {
-    pathCells = [];
-
-    const layout = [
-        { title: '起點', description: '從這裡出發', x: 0, y: 0, color: colors.geekBlue },
-        { title: '甜甜圈', description: '甜而不膩，元氣滿滿！', x: 1, y: 0, color: colors.sunriseYellow },
-        { title: '拉麵', description: '濃郁湯頭加麵免費！', x: 2, y: 0, color: colors.cyan },
-        { title: '火鍋', description: '麻辣到爆汗', x: 3, y: 0, color: colors.sunsetOrange },
-        { title: '巧克力', description: '熱量爆表但快樂翻倍', x: 4, y: 0, color: colors.magenta },
-        { title: '壽司', description: '滑進嘴裡的幸福', x: 5, y: 0, color: colors.daybreakBlue },
-        { title: '左上轉角', description: '轉彎啦～', x: 6, y: 0, color: colors.goldenPurple },
-
-        { title: '牛奶', description: '早睡早起身體好', x: 6, y: 1, color: colors.cyan },
-        { title: '炸雞', description: '配可樂才對味！', x: 6, y: 2, color: colors.sunsetOrange },
-        { title: '蛋糕', description: '生日快樂～', x: 6, y: 3, color: colors.sunriseYellow },
-        { title: '關卡', description: '要回答問題才能過', x: 6, y: 4, color: colors.grey },
-        { title: '右下轉角', description: '再轉一次！', x: 6, y: 5, color: colors.goldenPurple },
-
-        { title: '冰淇淋', description: '消暑良方', x: 5, y: 5, color: colors.magenta },
-        { title: '燒肉', description: '油脂香氣逼人', x: 4, y: 5, color: colors.sunsetOrange },
-        { title: '水果盤', description: '平衡飲食補充纖維', x: 3, y: 5, color: colors.cyan },
-        { title: '左下轉角', description: '下一站是什麼？', x: 2, y: 5, color: colors.goldenPurple },
-
-        { title: '三明治', description: '輕食能量補給', x: 1, y: 5, color: colors.daybreakBlue },
-        { title: '吐司', description: '烤焦也好吃', x: 0, y: 5, color: colors.sunriseYellow },
-
-        { title: '健康便當', description: '低脂高纖，超營養', x: 0, y: 4, color: colors.darkGreen },
-        { title: '左轉再來', description: '這裡沒什麼', x: 0, y: 3, color: colors.grey },
-        { title: '咖哩飯', description: '香氣逼人，來自印度', x: 0, y: 2, color: colors.magenta },
-        { title: '轉回原點', description: '回到原點吧', x: 0, y: 1, color: colors.goldenPurple },
-
-        { title: '再轉一次！', description: '你確定不是迷路了嗎？', x: 1, y: 1, color: colors.grey },
-        { title: '漢堡', description: '雙層起司！', x: 2, y: 1, color: colors.sunsetOrange },
-        { title: '冷氣房', description: '稍作休息', x: 3, y: 1, color: colors.cyan },
-        { title: '主餐時間', description: '準備大啖美食！', x: 4, y: 1, color: colors.sunriseYellow },
-        { title: '右轉即出現', description: '轉出來！', x: 5, y: 1, color: colors.goldenPurple }
-    ];
-
-    layout.forEach((item, index) => {
-        pathCells.push({
-            title: item.title,
-            description: item.description,
-            x: item.x,
-            y: item.y,
-            position: index,
-            color: item.color
-        });
-    });
-}
-
-
-
-
-
-
-function renderBoard() {
-  gameBoard.innerHTML = ''; // 清空畫面
-
-  pathCells.forEach(cell => {
-      const cellDiv = document.createElement('div');
-      cellDiv.className = `cell cell-content`;
-      cellDiv.style.left = `${cell.x * cellWidth}px`;
-      cellDiv.style.top = `${cell.y * cellHeight}px`;
-      cellDiv.style.backgroundColor = cell.color;
-
-      if (highlightedCell === cell.position) {
-          cellDiv.classList.add('highlighted');
-      }
-
-      const title = document.createElement('div');
-      title.className = 'cell-title';
-      title.textContent = cell.title;
-
-      const desc = document.createElement('div');
-      desc.className = 'cell-description';
-      desc.textContent = cell.description;
-
-      const content = document.createElement('div');
-      content.className = 'cell-content';
-      content.appendChild(title);
-      content.appendChild(desc);
-      cellDiv.appendChild(content);
-
-      gameBoard.appendChild(cellDiv);
-  });
-
-  updatePlayerPositions(); // 繪製角色位置
-}
-
-
- 
-
-
-function updatePlayerButtonStyles() {
-  if (!player1Btn || !player2Btn || !player3Btn) return;
-  player1Btn.classList.toggle('selected', selectedPlayer === 1);
-  player2Btn.classList.toggle('selected', selectedPlayer === 2);
-  player3Btn.classList.toggle('selected', selectedPlayer === 3);
-}
-
-function addEventListeners() {
-  if (player1Btn) player1Btn.addEventListener('click', () => selectPlayer(1));
-  if (player2Btn) player2Btn.addEventListener('click', () => selectPlayer(2));
-  if (player3Btn) player3Btn.addEventListener('click', () => selectPlayer(3));
-  if (forwardBtn) forwardBtn.addEventListener('click', () => handleDirectionSelection(true, 1));
-  if (backwardBtn) backwardBtn.addEventListener('click', () => handleDirectionSelection(false, 1));
-}
-
-
-
-
-   
-
-
-function updatePlayerPositions() {
-  // 先移除現有的玩家標記
-  document.querySelectorAll('.player-token').forEach(el => el.remove());
-
-  playerPathIndices.forEach((cellIndex, i) => {
-      const cell = pathCells[cellIndex];
-      if (!cell) return;
-
-      const token = document.createElement('div');
-      token.className = `player-token player${i + 1}-token`;
-      token.textContent = `P${i + 1}`;
-      token.style.left = `${cell.x * cellWidth + 5 + (i * 30)}px`;
-      token.style.top = `${cell.y * cellHeight + 5}px`;
-
-      gameBoard.appendChild(token);
-  });
-}
-
-
-
-
-
 
 
   // Start the game
