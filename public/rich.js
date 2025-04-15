@@ -1,5 +1,9 @@
 // rich.js (Relevant Sections Modified)
 
+let player1Btn, player2Btn, player3Btn, forwardBtn, backwardBtn;
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
   // ... (keep existing DOM element variables: gameBoard, buttons, etc.) ...
   const cellWidth = 125;
