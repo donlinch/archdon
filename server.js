@@ -1711,14 +1711,13 @@ wss.on('connection', (ws, req) => {
         // --- START: Buffer Handling ---
         if (message instanceof Buffer) {
             messageString = message.toString('utf8'); // Convert Buffer to UTF-8 string
-            console.log(`Received Buffer message, converted to string: ${messageString}`);
-        } else if (typeof message === 'string') {
+// console.log('Controller sent message, but game is not connected.');        } else if (typeof message === 'string') {
             messageString = message; // Already a string
-            console.log(`Received string message: ${messageString}`);
+           // console.log(`Received string message: ${messageString}`);
         } else {
             // Handle or ignore other types if necessary (e.g., ArrayBuffer)
-            console.log('Received unexpected message type:', typeof message, message);
-            return; // Ignore non-string/buffer messages for now
+// console.log(`Received string message: ${messageString}`);     
+//        return; // Ignore non-string/buffer messages for now
         }
         // --- END: Buffer Handling ---
 
