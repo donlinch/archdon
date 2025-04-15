@@ -349,6 +349,11 @@ function renderBoard() {
 
 
 
+function updatePlayerButtonStyles() {
+  player1Btn.classList.toggle('selected', selectedPlayer === 1);
+  player2Btn.classList.toggle('selected', selectedPlayer === 2);
+  player3Btn.classList.toggle('selected', selectedPlayer === 3);
+}
 
 
 
