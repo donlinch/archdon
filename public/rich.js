@@ -27,6 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // 玩家標記元素
   let playerTokens = [];
   
+  // 定義新的顏色方案
+  const colors = {
+    geekBlue: '#5b9df0',    // Geek Blue
+    cyan: '#0cd8b6',        // Cyan
+    grey: '#5d7092',        // Grey
+    sunriseYellow: '#fbd115', // Sunrise Yellow
+    dustRed: '#f9584a',     // Dust Red
+    daybreakBlue: '#6dc8ec', // Daybreak Blue
+    goldenPurple: '#9270ca', // Golden Purple
+    sunsetOrange: '#ff544d', // Sunset Orange
+    darkGreen: '#26b9a9',   // Dark Green
+    magenta: '#ff94c3'      // Magenta
+  };
+  
   // 初始化遊戲
   function initGame() {
       createSquareBoardCells();
@@ -35,10 +49,48 @@ document.addEventListener('DOMContentLoaded', () => {
       addEventListeners();
   }
   
-  // 創建正方形棋盤格子 (基於您的圖片佈局)
+  // 創建正方形棋盤格子 (使用新的顏色方案)
   function createSquareBoardCells() {
       pathCells = [];
       const boardWidth = 6; // 每邊格子數量
+      
+      // 頂部顏色排序 (Geek Blue, Cyan, Grey, Sunrise Yellow, Dust Red, Daybreak Blue)
+      const topColors = [
+          colors.geekBlue,    // 頂部 1
+          colors.cyan,        // 頂部 2
+          colors.grey,        // 頂部 3
+          colors.sunriseYellow, // 頂部 4
+          colors.dustRed,     // 頂部 5
+          colors.daybreakBlue  // 頂部 6
+      ];
+      
+      // 右側顏色排序 (Golden Purple, Sunset Orange, Dark Green, Magenta, Geek Blue)
+      const rightColors = [
+          colors.goldenPurple, // 右側 1
+          colors.sunsetOrange, // 右側 2
+          colors.darkGreen,   // 右側 3
+          colors.magenta,     // 右側 4
+          colors.geekBlue     // 右側 5
+      ];
+      
+      // 底部顏色排序 (Cyan, Grey, Sunrise Yellow, Dust Red, Daybreak Blue, Golden Purple)
+      const bottomColors = [
+          colors.daybreakBlue, // 底部 1
+          colors.goldenPurple, // 底部 2
+          colors.sunsetOrange, // 底部 3
+          colors.darkGreen,   // 底部 4
+          colors.magenta,     // 底部 5
+          colors.geekBlue     // 底部 6
+      ];
+      
+      // 左側顏色排序 (Sunset Orange, Dark Green, Magenta, Geek Blue, Cyan)
+      const leftColors = [
+          colors.cyan,       // 左側 1
+          colors.grey,       // 左側 2
+          colors.sunriseYellow, // 左側 3
+          colors.dustRed,    // 左側 4
+          colors.daybreakBlue // 左側 5
+      ];
       
       // 添加頂部格子 (從左到右)
       for (let x = 0; x < boardWidth; x++) {
@@ -47,59 +99,65 @@ document.addEventListener('DOMContentLoaded', () => {
               y: 0,
               title: `頂部 ${x + 1}`,
               description: `這是頂部第 ${x + 1} 格。`,
-              color: '#ba68c8', // 紫色
+              color: topColors[x],
               position: 'top'
           });
       }
       
       // 添加右側格子 (從上到下)
       for (let y = 1; y < boardWidth; y++) {
-          pathCells.push({
-              x: boardWidth - 1,
-              y: y,
-              title: `右側 ${y}`,
-              description: `這是右側第 ${y} 格。`,
-              color: '#f06292', // 粉紅色
-              position: 'right'
-          });
+          if (y <= rightColors.length) {
+              pathCells.push({
+                  x: boardWidth - 1,
+                  y: y,
+                  title: `右側 ${y}`,
+                  description: `這是右側第 ${y} 格。`,
+                  color: rightColors[y-1],
+                  position: 'right'
+              });
+          }
       }
       
       // 添加底部格子 (從右到左)
       for (let x = boardWidth - 2; x >= 0; x--) {
+          const reverseIndex = boardWidth - 2 - x;
           pathCells.push({
               x: x,
               y: boardWidth - 1,
               title: `底部 ${boardWidth - x}`,
               description: `這是底部第 ${boardWidth - x} 格。`,
-              color: '#e91e63', // 深粉色
+              color: bottomColors[reverseIndex],
               position: 'bottom'
           });
       }
       
       // 添加左側格子 (從下到上)
       for (let y = boardWidth - 2; y > 0; y--) {
-          pathCells.push({
-              x: 0,
-              y: y,
-              title: `左側 ${boardWidth - y}`,
-              description: `這是左側第 ${boardWidth - y} 格。`,
-              color: '#ec407a', // 亮粉色
-              position: 'left'
-          });
+          const reverseIndex = boardWidth - 2 - y;
+          if (reverseIndex < leftColors.length) {
+              pathCells.push({
+                  x: 0,
+                  y: y,
+                  title: `左側 ${boardWidth - y}`,
+                  description: `這是左側第 ${boardWidth - y} 格。`,
+                  color: leftColors[reverseIndex],
+                  position: 'left'
+              });
+          }
       }
       
-      // 修改四個角落格子的顏色
+      // 修改四個角落格子的顏色為 Golden Purple
       // 左上角
-      pathCells[0].color = '#9c27b0';
+      pathCells[0].color = colors.goldenPurple;
       pathCells[0].position = 'corner';
       // 右上角
-      pathCells[boardWidth - 1].color = '#9c27b0';
+      pathCells[boardWidth - 1].color = colors.goldenPurple;
       pathCells[boardWidth - 1].position = 'corner';
       // 右下角
-      pathCells[boardWidth * 2 - 2].color = '#9c27b0';
+      pathCells[boardWidth * 2 - 2].color = colors.goldenPurple;
       pathCells[boardWidth * 2 - 2].position = 'corner';
       // 左下角
-      pathCells[boardWidth * 3 - 3].color = '#9c27b0';
+      pathCells[boardWidth * 3 - 3].color = colors.goldenPurple;
       pathCells[boardWidth * 3 - 3].position = 'corner';
   }
   
