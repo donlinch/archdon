@@ -1,11 +1,13 @@
-// ✅ rich.js（支援模組化格子資料 + 玩家頭像）
+// ✅ rich.js（支援多組地圖模板 template_name 與玩家頭像模組）
 document.addEventListener('DOMContentLoaded', () => {
     const cellWidth = 125;
     const cellHeight = 100;
     const gameBoard = document.getElementById('game-board');
     const logoContainer = document.getElementById('logo-container');
+    const mapSelector = document.getElementById('map-template-selector');
   
     let gameConfig = {};
+    let mapTemplates = [];
     let pathCells = [];
     let selectedPlayer = 1;
     let isMoving = false;
@@ -34,16 +36,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   
-    async function loadMapCells() {
+    async function loadMapTemplates() {
       try {
         const res = await fetch('/map-config.json');
         if (!res.ok) throw new Error();
-        const raw = await res.json();
-        pathCells = raw.map((c, i) => ({ ...c, position: i }));
+        mapTemplates = await res.json();
+        populateMapSelector();
       } catch {
         console.warn('無法載入 map-config.json');
-        pathCells = [];
+        mapTemplates = [];
       }
+    }
+  
+    function populateMapSelector() {
+      mapSelector.innerHTML = '';
+      mapTemplates.forEach((template, i) => {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = template.template_name;
+        mapSelector.appendChild(option);
+      });
+    }
+  
+    function applySelectedMap() {
+      const selectedIndex = parseInt(mapSelector.value);
+      const selectedTemplate = mapTemplates[selectedIndex];
+      if (!selectedTemplate || !Array.isArray(selectedTemplate.content_data)) return;
+      pathCells = selectedTemplate.content_data.map((cell, i) => ({ ...cell, position: i }));
+      renderBoard();
+      sendGameStateToControllers();
     }
   
     function connectWebSocket() {
@@ -210,9 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
       playerPathIndices = [0, 0, 0];
     }
   
+    mapSelector.addEventListener('change', applySelectedMap);
+  
     initPlayerPositions();
-    Promise.all([loadGameConfig(), loadMapCells()]).then(() => {
-      renderBoard();
+    Promise.all([loadGameConfig(), loadMapTemplates()]).then(() => {
+      applySelectedMap();
       connectWebSocket();
     });
   });

@@ -1,156 +1,86 @@
 [
     {
-      "x": 0,
-      "y": 5,
-      "title": "左下角",
-      "description": "起點",
-      "color": "#9270ca"
+      "template_name": "食物地圖",
+      "content_data": [
+        { "x": 0, "y": 5, "title": "🍙 飯糰", "description": "美味米飯包裹海苔", "color": "#fbd115" },
+        { "x": 1, "y": 5, "title": "🍜 拉麵", "description": "熱呼呼的湯麵", "color": "#ff544d" },
+        { "x": 2, "y": 5, "title": "🍗 炸雞", "description": "香酥可口", "color": "#0cd8b6" },
+        { "x": 3, "y": 5, "title": "🍰 蛋糕", "description": "草莓鮮奶油", "color": "#ff94c3" },
+        { "x": 4, "y": 5, "title": "🍩 甜甜圈", "description": "糖霜滿滿", "color": "#5b9df0" },
+        { "x": 5, "y": 5, "title": "🍱 便當", "description": "元氣午餐組合", "color": "#26b9a9" },
+        { "x": 6, "y": 5, "title": "🍕 披薩", "description": "起司爆炸", "color": "#9270ca" },
+        { "x": 6, "y": 4, "title": "🥟 煎餃", "description": "金黃焦香", "color": "#6dc8ec" },
+        { "x": 6, "y": 3, "title": "🍔 漢堡", "description": "雙層起司牛", "color": "#ff544d" },
+        { "x": 6, "y": 2, "title": "🥗 沙拉", "description": "清爽健康", "color": "#26b9a9" },
+        { "x": 6, "y": 1, "title": "🧁 杯子蛋糕", "description": "迷你甜點", "color": "#ff94c3" },
+        { "x": 6, "y": 0, "title": "🍦 冰淇淋", "description": "香草或巧克力", "color": "#9270ca" },
+        { "x": 5, "y": 0, "title": "🍤 炸蝦", "description": "金黃酥脆", "color": "#f9584a" },
+        { "x": 4, "y": 0, "title": "🍚 白飯", "description": "最基本的溫暖", "color": "#fbd115" },
+        { "x": 3, "y": 0, "title": "🥩 牛排", "description": "三分熟還是全熟？", "color": "#5d7092" },
+        { "x": 2, "y": 0, "title": "🍛 咖哩飯", "description": "微辣濃郁", "color": "#0cd8b6" },
+        { "x": 1, "y": 0, "title": "🍡 糰子", "description": "甜糯三色團子", "color": "#5b9df0" },
+        { "x": 0, "y": 0, "title": "🍇 葡萄", "description": "新鮮多汁", "color": "#9270ca" },
+        { "x": 0, "y": 1, "title": "🍫 巧克力", "description": "甜中帶苦", "color": "#6dc8ec" },
+        { "x": 0, "y": 2, "title": "🍉 西瓜", "description": "夏日清涼", "color": "#5d7092" },
+        { "x": 0, "y": 3, "title": "🥖 法國麵包", "description": "硬皮香脆", "color": "#fbd115" },
+        { "x": 0, "y": 4, "title": "🥓 培根", "description": "香煎油亮", "color": "#f9584a" }
+      ]
     },
+  
     {
-      "x": 1,
-      "y": 5,
-      "title": "底部 1",
-      "description": "底部格 1",
-      "color": "#ff544d"
+      "template_name": "辦公用品",
+      "content_data": [
+        { "x": 0, "y": 5, "title": "🖊 原子筆", "description": "滑順好寫", "color": "#5b9df0" },
+        { "x": 1, "y": 5, "title": "📎 曲別針", "description": "固定紙張", "color": "#0cd8b6" },
+        { "x": 2, "y": 5, "title": "📏 尺", "description": "長度精準", "color": "#9270ca" },
+        { "x": 3, "y": 5, "title": "📐 三角板", "description": "畫圖專用", "color": "#fbd115" },
+        { "x": 4, "y": 5, "title": "📋 文件板", "description": "便利書寫", "color": "#ff544d" },
+        { "x": 5, "y": 5, "title": "🖨 印表機", "description": "公司必備", "color": "#26b9a9" },
+        { "x": 6, "y": 5, "title": "🧻 衛生紙", "description": "總會用到", "color": "#ff94c3" },
+        { "x": 6, "y": 4, "title": "📁 資料夾", "description": "整理神器", "color": "#6dc8ec" },
+        { "x": 6, "y": 3, "title": "📌 圖釘", "description": "牆面好幫手", "color": "#ff544d" },
+        { "x": 6, "y": 2, "title": "🖇 長尾夾", "description": "超耐用", "color": "#26b9a9" },
+        { "x": 6, "y": 1, "title": "📝 便利貼", "description": "記憶小幫手", "color": "#ff94c3" },
+        { "x": 6, "y": 0, "title": "📒 筆記本", "description": "記錄一切", "color": "#9270ca" },
+        { "x": 5, "y": 0, "title": "📠 傳真機", "description": "復古工具", "color": "#f9584a" },
+        { "x": 4, "y": 0, "title": "🧷 安全別針", "description": "夾緊處理", "color": "#fbd115" },
+        { "x": 3, "y": 0, "title": "🖍 螢光筆", "description": "重點標示", "color": "#5d7092" },
+        { "x": 2, "y": 0, "title": "🪑 辦公椅", "description": "人體工學", "color": "#0cd8b6" },
+        { "x": 1, "y": 0, "title": "💻 筆電", "description": "辦公核心", "color": "#5b9df0" },
+        { "x": 0, "y": 0, "title": "🖱 滑鼠", "description": "右鍵左鍵都要用", "color": "#9270ca" },
+        { "x": 0, "y": 1, "title": "⌨️ 鍵盤", "description": "打字主力", "color": "#6dc8ec" },
+        { "x": 0, "y": 2, "title": "🖥 螢幕", "description": "看清一切", "color": "#5d7092" },
+        { "x": 0, "y": 3, "title": "🔌 延長線", "description": "插頭不夠用", "color": "#fbd115" },
+        { "x": 0, "y": 4, "title": "📦 紙箱", "description": "打包用具", "color": "#f9584a" }
+      ]
     },
+  
     {
-      "x": 2,
-      "y": 5,
-      "title": "底部 2",
-      "description": "底部格 2",
-      "color": "#26b9a9"
-    },
-    {
-      "x": 3,
-      "y": 5,
-      "title": "底部 3",
-      "description": "底部格 3",
-      "color": "#ff94c3"
-    },
-    {
-      "x": 4,
-      "y": 5,
-      "title": "底部 4",
-      "description": "底部格 4",
-      "color": "#5b9df0"
-    },
-    {
-      "x": 5,
-      "y": 5,
-      "title": "底部 5",
-      "description": "底部格 5",
-      "color": "#0cd8b6"
-    },
-    {
-      "x": 6,
-      "y": 5,
-      "title": "右下角",
-      "description": "轉角",
-      "color": "#9270ca"
-    },
-    {
-      "x": 6,
-      "y": 4,
-      "title": "右側 1",
-      "description": "右邊第 1 格",
-      "color": "#6dc8ec"
-    },
-    {
-      "x": 6,
-      "y": 3,
-      "title": "右側 2",
-      "description": "右邊第 2 格",
-      "color": "#ff544d"
-    },
-    {
-      "x": 6,
-      "y": 2,
-      "title": "右側 3",
-      "description": "右邊第 3 格",
-      "color": "#26b9a9"
-    },
-    {
-      "x": 6,
-      "y": 1,
-      "title": "右側 4",
-      "description": "右邊第 4 格",
-      "color": "#ff94c3"
-    },
-    {
-      "x": 6,
-      "y": 0,
-      "title": "右上角",
-      "description": "轉角",
-      "color": "#9270ca"
-    },
-    {
-      "x": 5,
-      "y": 0,
-      "title": "頂部 1",
-      "description": "頂部格",
-      "color": "#f9584a"
-    },
-    {
-      "x": 4,
-      "y": 0,
-      "title": "頂部 2",
-      "description": "頂部格",
-      "color": "#fbd115"
-    },
-    {
-      "x": 3,
-      "y": 0,
-      "title": "頂部 3",
-      "description": "頂部格",
-      "color": "#5d7092"
-    },
-    {
-      "x": 2,
-      "y": 0,
-      "title": "頂部 4",
-      "description": "頂部格",
-      "color": "#0cd8b6"
-    },
-    {
-      "x": 1,
-      "y": 0,
-      "title": "頂部 5",
-      "description": "頂部格",
-      "color": "#5b9df0"
-    },
-    {
-      "x": 0,
-      "y": 0,
-      "title": "左上角",
-      "description": "轉角",
-      "color": "#9270ca"
-    },
-    {
-      "x": 0,
-      "y": 1,
-      "title": "左側 1",
-      "description": "左邊第 1 格",
-      "color": "#6dc8ec"
-    },
-    {
-      "x": 0,
-      "y": 2,
-      "title": "左側 2",
-      "description": "左邊第 2 格",
-      "color": "#5d7092"
-    },
-    {
-      "x": 0,
-      "y": 3,
-      "title": "左側 3",
-      "description": "左邊第 3 格",
-      "color": "#fbd115"
-    },
-    {
-      "x": 0,
-      "y": 4,
-      "title": "左側 4",
-      "description": "左邊第 4 格",
-      "color": "#f9584a"
+      "template_name": "運動主題",
+      "content_data": [
+        { "x": 0, "y": 5, "title": "🏀 籃球", "description": "三分球命中！", "color": "#5b9df0" },
+        { "x": 1, "y": 5, "title": "⚽ 足球", "description": "世界盃射門", "color": "#0cd8b6" },
+        { "x": 2, "y": 5, "title": "🎾 網球", "description": "ACE 發球", "color": "#9270ca" },
+        { "x": 3, "y": 5, "title": "🏸 羽球", "description": "精準吊球", "color": "#fbd115" },
+        { "x": 4, "y": 5, "title": "🏐 排球", "description": "強力扣殺", "color": "#ff544d" },
+        { "x": 5, "y": 5, "title": "🏓 桌球", "description": "超旋發球", "color": "#26b9a9" },
+        { "x": 6, "y": 5, "title": "🤸 體操", "description": "翻滾落地", "color": "#ff94c3" },
+        { "x": 6, "y": 4, "title": "🏋️ 舉重", "description": "力量全開", "color": "#6dc8ec" },
+        { "x": 6, "y": 3, "title": "🚴 腳踏車", "description": "爬坡挑戰", "color": "#ff544d" },
+        { "x": 6, "y": 2, "title": "🤾 手球", "description": "空中飛撲", "color": "#26b9a9" },
+        { "x": 6, "y": 1, "title": "🥊 拳擊", "description": "KO 一拳", "color": "#ff94c3" },
+        { "x": 6, "y": 0, "title": "🏊 游泳", "description": "蝶式飛翔", "color": "#9270ca" },
+        { "x": 5, "y": 0, "title": "🏃‍♂️ 跑步", "description": "百米衝刺", "color": "#f9584a" },
+        { "x": 4, "y": 0, "title": "⛳ 高爾夫", "description": "Hole in one!", "color": "#fbd115" },
+        { "x": 3, "y": 0, "title": "🎿 滑雪", "description": "雪道衝刺", "color": "#5d7092" },
+        { "x": 2, "y": 0, "title": "⛸ 花式滑冰", "description": "旋轉跳躍", "color": "#0cd8b6" },
+        { "x": 1, "y": 0, "title": "🛹 滑板", "description": "街頭特技", "color": "#5b9df0" },
+        { "x": 0, "y": 0, "title": "🤺 擊劍", "description": "刺中目標", "color": "#9270ca" },
+        { "x": 0, "y": 1, "title": "🥋 柔道", "description": "一摔制敵", "color": "#6dc8ec" },
+        { "x": 0, "y": 2, "title": "🎯 飛鏢", "description": "命中紅心", "color": "#5d7092" },
+        { "x": 0, "y": 3, "title": "🥌 冰壺", "description": "精準滑行", "color": "#fbd115" },
+        { "x": 0, "y": 4, "title": "🏇 馬術", "description": "跨欄奔馳", "color": "#f9584a" }
+      ]
     }
   ]
+  

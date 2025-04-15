@@ -1,4 +1,4 @@
-// ✅ 修正版 rich.js（遊戲主頁面）
+// ✅ rich.js（支援模組化格子資料 + 玩家頭像）
 document.addEventListener('DOMContentLoaded', () => {
     const cellWidth = 125;
     const cellHeight = 100;
@@ -12,8 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let highlightedCell = null;
     let playerPathIndices = [0, 0, 0];
     const STEP_ANIMATION_DELAY = 300;
+    let playerTokens = [];
   
-    const colors = { geekBlue: '#5b9df0', cyan: '#0cd8b6', grey: '#5d7092', sunriseYellow: '#fbd115', dustRed: '#f9584a', daybreakBlue: '#6dc8ec', goldenPurple: '#9270ca', sunsetOrange: '#ff544d', darkGreen: '#26b9a9', magenta: '#ff94c3' };
+    const bgColors = {
+      1: '#5b9df0',
+      2: '#9270ca',
+      3: '#ff544d'
+    };
   
     let ws = null;
     const wsUrl = `wss://${window.location.host}?clientType=game`;
@@ -21,9 +26,23 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadGameConfig() {
       try {
         const res = await fetch('/game-config.json');
+        if (!res.ok) throw new Error();
         gameConfig = await res.json();
       } catch {
+        console.warn('無法載入 game-config.json');
         gameConfig = {};
+      }
+    }
+  
+    async function loadMapCells() {
+      try {
+        const res = await fetch('/map-config.json');
+        if (!res.ok) throw new Error();
+        const raw = await res.json();
+        pathCells = raw.map((c, i) => ({ ...c, position: i }));
+      } catch {
+        console.warn('無法載入 map-config.json');
+        pathCells = [];
       }
     }
   
@@ -31,8 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
       ws = new WebSocket(wsUrl);
       ws.onopen = () => sendGameStateToControllers();
       ws.onmessage = ({ data }) => {
-        const msg = JSON.parse(data);
-        if (msg.type === 'controlCommand') handleControlCommand(msg.command, msg.params);
+        try {
+          const msg = JSON.parse(data);
+          if (msg.type === 'controlCommand') handleControlCommand(msg.command, msg.params);
+        } catch (err) {
+          console.error('WS message error:', err);
+        }
       };
       ws.onclose = () => setTimeout(connectWebSocket, 3000);
     }
@@ -57,95 +80,81 @@ document.addEventListener('DOMContentLoaded', () => {
   
     function handleControlCommand(cmd, params) {
       switch (cmd) {
-        case 'selectPlayer': selectPlayer(params.player); break;
-        case 'movePlayer': handleDirectionSelection(params.direction === 'forward', +params.steps || 1, params.player); break;
-        case 'jumpToPosition':
-          if (params.player >= 1 && params.player <= 3 && params.position >= 0 && params.position < pathCells.length) {
-            playerPathIndices[params.player - 1] = params.position;
-            highlightedCell = params.position;
-            renderBoard();
-            sendGameStateToControllers();
-          }
+        case 'selectPlayer':
+          selectedPlayer = params.player;
+          sendGameStateToControllers();
           break;
+        case 'movePlayer':
+          handleDirectionSelection(params.direction === 'forward', +params.steps || 1, params.player);
+          break;
+        case 'showPlayerInfo': showPlayerInfo(params.player); break;
+        case 'hidePlayerInfo': hidePlayerInfo(); break;
       }
     }
   
-    function selectPlayer(num) {
-      if (num < 1 || num > 3 || isMoving) return;
-      if (selectedPlayer !== num) {
-        selectedPlayer = num;
-        sendGameStateToControllers();
+    function showPlayerInfo(playerNum) {
+      const panel = document.getElementById('center-info');
+      const index = playerPathIndices[playerNum - 1];
+      const cell = pathCells[index];
+      if (panel && cell) {
+        document.getElementById('center-title').textContent = cell.title;
+        document.getElementById('center-description').textContent = cell.description;
+        panel.style.backgroundColor = cell.color;
+        panel.classList.remove('hidden');
+        logoContainer.classList.add('hidden');
       }
     }
   
-    function handleDirectionSelection(isForward, totalSteps, playerToMove) {
-      if (isMoving) return;
-      if (playerToMove < 1 || playerToMove > 3) return;
+    function hidePlayerInfo() {
+      const panel = document.getElementById('center-info');
+      if (panel) panel.classList.add('hidden');
+      logoContainer.classList.remove('hidden');
+    }
+  
+    function handleDirectionSelection(isForward, steps, player) {
+      if (isMoving || player < 1 || player > 3) return;
       isMoving = true;
       highlightedCell = null;
-      let currentIndex = playerPathIndices[playerToMove - 1];
-      let stepsLeft = totalSteps;
+      let index = playerPathIndices[player - 1];
+  
       function moveStep() {
-        currentIndex = isForward ? (currentIndex + 1) % pathCells.length : (currentIndex - 1 + pathCells.length) % pathCells.length;
-        playerPathIndices[playerToMove - 1] = currentIndex;
+        index = isForward ? (index + 1) % pathCells.length : (index - 1 + pathCells.length) % pathCells.length;
+        playerPathIndices[player - 1] = index;
         updatePlayerPositions();
-        if (--stepsLeft > 0) setTimeout(moveStep, STEP_ANIMATION_DELAY);
-        else finishMoving(currentIndex);
+        if (--steps > 0) setTimeout(moveStep, STEP_ANIMATION_DELAY);
+        else finishMoving(index);
       }
+  
       setTimeout(moveStep, STEP_ANIMATION_DELAY);
     }
   
-    function finishMoving(finalIndex) {
+    function finishMoving(index) {
       isMoving = false;
-      highlightedCell = finalIndex;
+      highlightedCell = index;
       renderBoard();
       sendGameStateToControllers();
     }
   
-    function updatePlayerPositions() {
-      document.querySelectorAll('.player-token').forEach(el => el.remove());
-      playerPathIndices.forEach((index, i) => {
-        const cell = pathCells[index];
-        const token = document.createElement('div');
-        token.className = `player-token player${i+1}-token`;
-        token.textContent = `P${i+1}`;
-        const angle = (2 * Math.PI / 3) * i;
-        const radius = 15;
-        const offsetX = Math.cos(angle) * radius;
-        const offsetY = Math.sin(angle) * radius;
-        token.style.left = `${cell.x * cellWidth + cellWidth / 2 + offsetX}px`;
-        token.style.top = `${cell.y * cellHeight + cellHeight / 2 + offsetY}px`;
-        gameBoard.appendChild(token);
-      });
-    }
-  
-    function createBoardCells() {
-      const boardWidth = 7, sideHeight = 4;
-      const topColors = [colors.goldenPurple, colors.geekBlue, colors.cyan, colors.grey, colors.sunriseYellow, colors.dustRed, colors.goldenPurple];
-      const rightColors = [colors.daybreakBlue, colors.sunsetOrange, colors.darkGreen, colors.magenta];
-      const bottomColors = [colors.goldenPurple, colors.sunsetOrange, colors.darkGreen, colors.magenta, colors.geekBlue, colors.cyan, colors.goldenPurple];
-      const leftColors = [colors.daybreakBlue, colors.grey, colors.sunriseYellow, colors.dustRed];
-      pathCells = [];
-      pathCells.push({ x: 0, y: sideHeight + 1, title: '左下角', color: colors.goldenPurple, position: 0 });
-      for (let i = 1; i < boardWidth - 1; i++) pathCells.push({ x: i, y: sideHeight + 1, title: `底部 ${i}`, color: bottomColors[i], position: pathCells.length });
-      pathCells.push({ x: boardWidth - 1, y: sideHeight + 1, title: '右下角', color: colors.goldenPurple, position: pathCells.length });
-      for (let i = 0; i < sideHeight; i++) pathCells.push({ x: boardWidth - 1, y: sideHeight - i, title: `右側 ${i+1}`, color: rightColors[i], position: pathCells.length });
-      pathCells.push({ x: boardWidth - 1, y: 0, title: '右上角', color: colors.goldenPurple, position: pathCells.length });
-      for (let i = boardWidth - 2; i > 0; i--) pathCells.push({ x: i, y: 0, title: `頂部 ${boardWidth - 1 - i}`, color: topColors[i], position: pathCells.length });
-      pathCells.push({ x: 0, y: 0, title: '左上角', color: colors.goldenPurple, position: pathCells.length });
-      for (let i = 0; i < sideHeight; i++) pathCells.push({ x: 0, y: i + 1, title: `左側 ${i+1}`, color: leftColors[i], position: pathCells.length });
-    }
-  
     function renderBoard() {
       gameBoard.innerHTML = '';
-      if (gameConfig.centerLogoUrl && logoContainer) {
-        const logo = document.createElement('img');
-        logo.src = gameConfig.centerLogoUrl;
-        logo.className = 'game-logo-image';
-        logoContainer.innerHTML = '';
-        logoContainer.appendChild(logo);
+      logoContainer.innerHTML = '';
+      logoContainer.classList.remove('hidden');
+      if (gameConfig.centerLogoUrl) {
+        const img = document.createElement('img');
+        img.src = gameConfig.centerLogoUrl;
+        img.className = 'game-logo-image';
+        logoContainer.appendChild(img);
+      } else {
+        logoContainer.innerHTML = `<div class="logo-text">大富翁</div><div class="logo-subtitle">開始你的幸運之旅吧！</div>`;
       }
       gameBoard.appendChild(logoContainer);
+  
+      const panel = document.createElement('div');
+      panel.id = 'center-info';
+      panel.className = 'center-info hidden';
+      panel.innerHTML = `<div class="close-btn" onclick="this.parentElement.classList.add('hidden'); document.getElementById('logo-container').classList.remove('hidden')">×</div><div id="center-title" class="center-title"></div><div id="center-description" class="center-description"></div>`;
+      gameBoard.appendChild(panel);
+  
       pathCells.forEach(cell => {
         const div = document.createElement('div');
         div.className = `cell cell-pos-${cell.position}`;
@@ -153,19 +162,57 @@ document.addEventListener('DOMContentLoaded', () => {
         div.style.left = `${cell.x * cellWidth}px`;
         div.style.top = `${cell.y * cellHeight}px`;
         div.style.backgroundColor = cell.color;
+        if (cell.position === highlightedCell) div.classList.add('highlighted');
         div.innerHTML = `<div class="cell-content"><div class="cell-title">${cell.title}</div></div>`;
+        div.addEventListener('click', () => showPlayerInfo(selectedPlayer));
         gameBoard.appendChild(div);
       });
       updatePlayerPositions();
     }
   
-    async function initGame() {
-      await loadGameConfig();
-      createBoardCells();
-      renderBoard();
-      connectWebSocket();
+    function updatePlayerPositions() {
+      document.querySelectorAll('.player-token').forEach(el => el.remove());
+      playerTokens = [];
+  
+      playerPathIndices.forEach((index, i) => {
+        const cell = pathCells[index];
+        const num = i + 1;
+        const config = gameConfig[`player${num}`] || {};
+        const token = document.createElement('div');
+        token.className = `player-token player${num}-token`;
+        token.style.position = 'absolute';
+        token.style.width = '40px';
+        token.style.height = '40px';
+        token.style.transform = 'translate(-50%, -50%)';
+        token.style.zIndex = '10';
+  
+        if (config.avatarUrl) {
+          token.innerHTML = `<div style="width: 100%; height: 100%; border-radius: 50%; background-color: ${bgColors[num]}; display: flex; align-items: center; justify-content: center; padding: 4px;"><img src="${config.avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div>`;
+        } else {
+          token.textContent = config.name || `P${num}`;
+          token.style.backgroundColor = bgColors[num];
+          token.style.border = '2px solid white';
+        }
+  
+        const angle = (2 * Math.PI / 3) * i;
+        const radius = 15;
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+        token.style.left = `${cell.x * cellWidth + cellWidth / 2 + offsetX}px`;
+        token.style.top = `${cell.y * cellHeight + cellHeight / 2 + offsetY}px`;
+  
+        gameBoard.appendChild(token);
+        playerTokens.push(token);
+      });
     }
   
-    initGame();
-  });
+    function initPlayerPositions() {
+      playerPathIndices = [0, 0, 0];
+    }
   
+    initPlayerPositions();
+    Promise.all([loadGameConfig(), loadMapCells()]).then(() => {
+      renderBoard();
+      connectWebSocket();
+    });
+  });
