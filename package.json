@@ -1,20 +1,19 @@
 {
-  "name": "sunnyyummy-app",
+  "name": "your-project-name",
   "version": "1.0.0",
+  "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
-    "connect-pg-simple": "^10.0.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-session": "^1.18.1",
-    "pg": "^8.14.1"
+    "dotenv": "^16.x.x",  
+    "express": "^4.x.x",  
+    "pg": "^8.x.x",       
+    "ws": "^8.17.0"       
   }
 }
