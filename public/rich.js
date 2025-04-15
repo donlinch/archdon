@@ -353,6 +353,28 @@ function renderBoard() {
 
 
 
+function updatePlayerPositions() {
+  // 先移除現有的玩家標記
+  document.querySelectorAll('.player-token').forEach(el => el.remove());
+
+  playerPathIndices.forEach((cellIndex, i) => {
+      const cell = pathCells[cellIndex];
+      if (!cell) return;
+
+      const token = document.createElement('div');
+      token.className = `player-token player${i + 1}-token`;
+      token.textContent = `P${i + 1}`;
+      token.style.left = `${cell.x * cellWidth + 5 + (i * 30)}px`;
+      token.style.top = `${cell.y * cellHeight + 5}px`;
+
+      gameBoard.appendChild(token);
+  });
+}
+
+
+
+
+
 
 
   // Start the game
