@@ -318,7 +318,8 @@
             const player3Btn = document.getElementById('player3-btn');
             const forwardBtn = document.getElementById('forward-btn');
             const backwardBtn = document.getElementById('backward-btn');
-             const positionSelect = document.getElementById('position-select');
+            const stepsInput = document.getElementById('steps');
+            const positionSelect = document.getElementById('position-select');
             const jumpBtn = document.getElementById('jump-btn');
             const showInfoBtn = document.getElementById('show-info-btn');
             const hideInfoBtn = document.getElementById('hide-info-btn');
@@ -511,11 +512,12 @@
              }
 
             function movePlayer(direction) {
-                  console.log(`Sending move command: P${selectedPlayer}, ${direction}, ${steps} steps`);
+                const steps = parseInt(stepsInput.value) || 1;
+                 console.log(`Sending move command: P${selectedPlayer}, ${direction}, ${steps} steps`);
                  sendCommand('movePlayer', {
                     player: selectedPlayer, // Use the locally selected player for the command
                     direction,
-                    steps: 1
+                    steps: Math.min(Math.max(steps, 1), 12) // Clamp steps
                 });
             }
 
