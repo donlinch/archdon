@@ -7,6 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const logoContainer = document.getElementById('logo-container');
   
+    let gameConfig = {}; // <-- ★ 新增：全局變數儲存配置 ★
+
+
+
+
+
+
+
     let pathCells = [];
     let selectedPlayer = 1;
     let isMoving = false;
@@ -32,6 +40,32 @@ document.addEventListener('DOMContentLoaded', () => {
     let ws = null;
     const wsUrl = `wss://${window.location.host}?clientType=game`;
   
+
+
+
+
+  // --- ★ 新增：異步函數加載配置 ---
+  async function loadGameConfig() {
+    try {
+        // 使用相對路徑或絕對路徑，確保能正確訪問到 public 文件夾下的 json
+        const response = await fetch('/game-config.json'); // <-- 假設 game-config.json 在 public 根目錄
+        if (!response.ok) {
+            throw new Error(`無法加載 game-config.json: ${response.status}`);
+        }
+        gameConfig = await response.json();
+        console.log('遊戲配置已加載:', gameConfig);
+    } catch (error) {
+        console.error('加載遊戲配置失敗:', error);
+        // 提供一個基本的預設值，以防配置加載失敗
+        gameConfig = { centerLogoUrl: null }; // 預設沒有 Logo
+    }
+}
+
+
+
+
+
+
     function connectWebSocket() {
       ws = new WebSocket(wsUrl);
       ws.onopen = () => {
@@ -105,12 +139,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   
-    function initGame() {
-      createBoardCells();
-      renderBoard();
-      
-      connectWebSocket();
+    async function initGame() { // <-- ★ 將 initGame 標記為 async ★
+        await loadGameConfig(); // <-- ★ 等待配置加載完成 ★
+
+        createBoardCells();
+        renderBoard(); // <-- renderBoard 現在可以使用 gameConfig 了
+        // updatePlayerButtonStyles(); // 保持刪除
+        // addEventListeners();      // 保持刪除
+        connectWebSocket();
     }
+
+
+
   
     function createBoardCells() {
       const boardWidth = 7;
@@ -132,35 +172,86 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < sideHeight; i++) pathCells.push({ x: 0, y: i + 1, title: `左側 ${i+1}`, description: `左邊第 ${i+1} 格`, color: leftColors[i], position: pathCells.length });
     }
   
+  // --- ★ 修改：renderBoard 函數，使用配置顯示 Logo ---
     function renderBoard() {
-      gameBoard.innerHTML = '';
-      gameBoard.appendChild(logoContainer);
+        gameBoard.innerHTML = ''; // 清空遊戲板
+
+        // 確保 Logo 容器存在並清空
+        if (!logoContainer) {
+            console.error("找不到 logo-container 元素！");
+            // 如果找不到，可以動態創建一個，或者報錯停止
+            return;
+        }
+        logoContainer.innerHTML = ''; // 清空舊的 Logo 或文字
+        logoContainer.classList.remove('hidden'); // 確保 Logo 容器預設是可見的
+
+        // 根據配置決定顯示圖片還是預設文字
+        if (gameConfig.centerLogoUrl) {
+            console.log('正在渲染 Logo 圖片:', gameConfig.centerLogoUrl);
+            const logoImg = document.createElement('img');
+            logoImg.src = gameConfig.centerLogoUrl;
+            logoImg.alt = "遊戲 Logo";
+            // 調整樣式以適應您的 500x400 圖片和容器大小 (350x300)
+            logoImg.style.display = 'block'; // 確保圖片是塊級元素
+            logoImg.style.maxWidth = '100%'; // 限制最大寬度為容器寬度
+            logoImg.style.maxHeight = '100%'; // 限制最大高度為容器高度
+            logoImg.style.width = 'auto';     // 讓寬度自動調整以保持比例
+            logoImg.style.height = 'auto';    // 讓高度自動調整以保持比例
+            logoImg.style.margin = 'auto';    // 嘗試在容器內居中
+            // 可選：如果圖片加載失敗的處理
+            logoImg.onerror = () => {
+                console.error("Logo 圖片加載失敗:", gameConfig.centerLogoUrl);
+                logoContainer.innerHTML = '<p style="color:red;">Logo 加載失敗</p>'; // 顯示錯誤提示
+            };
+            logoContainer.appendChild(logoImg);
+        } else {
+            console.log('沒有配置 Logo URL，顯示預設文字 Logo');
+            // 如果沒有配置 URL，顯示預設文字
+            logoContainer.innerHTML = `
+                <div class="logo-text">大富翁</div>
+                <div class="logo-subtitle">開始你的幸運之旅吧！</div>
+            `;
+        }
+        gameBoard.appendChild(logoContainer); // 將 Logo 容器加回遊戲板
+
+
+
+ // --- ★ 加回中央資訊面板的創建 ★ ---
+ const centerInfo = document.createElement('div');
+ centerInfo.className = 'center-info hidden'; // 初始隱藏
+ centerInfo.id = 'center-info';
+ // 注意 onclick 裡要重新顯示 logoContainer
+ centerInfo.innerHTML = `<div class="close-btn" onclick="this.parentElement.classList.add('hidden'); document.getElementById('logo-container').classList.remove('hidden')">×</div><div id="center-title" class="center-title"></div><div id="center-description" class="center-description"></div>`;
+ gameBoard.appendChild(centerInfo);
+ // --- 中央資訊面板創建結束 ---
+
+
+
+
+
   
-      const centerInfo = document.createElement('div');
-      centerInfo.className = 'center-info hidden';
-      centerInfo.id = 'center-info';
-      centerInfo.innerHTML = `<div class="close-btn" onclick="this.parentElement.classList.add('hidden'); logoContainer.classList.remove('hidden')">×</div><div id="center-title" class="center-title">表格內容</div><div id="center-description" class="center-description">點擊任意格子顯示詳細資訊</div>`;
-      gameBoard.appendChild(centerInfo);
-  
-      pathCells.forEach(cell => {
+       // --- 渲染格子 ---
+    pathCells.forEach(cell => {
         const div = document.createElement('div');
-        div.className = `cell cell-${cell.position}`;
+        div.className = `cell cell-${cell.position}`; // 使用 position 或 index 作為 class
         div.style.left = `${cell.x * cellWidth}px`;
         div.style.top = `${cell.y * cellHeight}px`;
         div.style.backgroundColor = cell.color;
+        // 確保 highlightedCell 使用 position 或 index 來比較
         if (cell.position === highlightedCell) div.classList.add('highlighted');
-  
+
         div.innerHTML = `<div class="cell-content"><div class="cell-title">${cell.title}</div><div class="cell-description">${cell.description}</div></div>`;
         div.addEventListener('click', () => {
           updateCenterInfo(cell.title, cell.description);
-          document.getElementById('center-info').style.backgroundColor = cell.color;
-          document.getElementById('center-info').classList.remove('hidden');
-          logoContainer.classList.add('hidden');
+          const infoPanel = document.getElementById('center-info');
+          infoPanel.style.backgroundColor = cell.color;
+          infoPanel.classList.remove('hidden');
+          logoContainer.classList.add('hidden'); // 點擊格子時隱藏 Logo
         });
         gameBoard.appendChild(div);
-      });
-  
-      updatePlayerPositions();
+    });
+    // --- 渲染格子結束 ---
+    updatePlayerPositions(); // 渲染玩家標記
     }
   
     function updateCenterInfo(title, description) {
@@ -186,11 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     function handleDirectionSelection(isForward, totalSteps) {
-      if (isMoving) return;
-      isMoving = true;
-      enableDisableButtons(false);
-      let currentIndex = playerPathIndices[selectedPlayer - 1];
-      let stepsLeft = totalSteps;
+        if (isMoving) return;
+        isMoving = true;
+        // enableDisableButtons(false); // 已刪除
+        let currentIndex = playerPathIndices[selectedPlayer - 1];
+        let stepsLeft = totalSteps;
   
       function moveStep() {
         currentIndex = isForward ? (currentIndex + 1) % pathCells.length : (currentIndex - 1 + pathCells.length) % pathCells.length;
@@ -204,22 +295,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     function finishMoving(finalIndex) {
-      isMoving = false;
-      highlightedCell = finalIndex;
-      renderBoard();
-      enableDisableButtons(true);
-      sendGameStateToControllers();
-    }
+        isMoving = false;
+        highlightedCell = finalIndex;
+        renderBoard();
+        // enableDisableButtons(true); // 已刪除
+        sendGameStateToControllers();
+      }
   
     function enableDisableButtons(enable) {
      }
   
-    function selectPlayer(num) {
-      if (num < 1 || num > 3 || isMoving) return;
-      selectedPlayer = num;
-      updatePlayerButtonStyles();
-      sendGameStateToControllers();
-    }
+     function selectPlayer(num) {
+        if (num < 1 || num > 3 || isMoving) return;
+        selectedPlayer = num;
+        // updatePlayerButtonStyles(); // 已刪除
+        sendGameStateToControllers();
+      }
   
     
   
