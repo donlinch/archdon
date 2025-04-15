@@ -1,4 +1,4 @@
-// public/script.js
+// 大富翁遊戲腳本
 document.addEventListener('DOMContentLoaded', () => {
   // 定義遊戲板的大小和格子尺寸
   const boardSize = 7;
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const gameBoard = document.getElementById('game-board');
   const player1Btn = document.getElementById('player1-btn');
   const player2Btn = document.getElementById('player2-btn');
-  const player3Btn = document.getElementById('player3-btn'); // 新增玩家3按鈕
+  const player3Btn = document.getElementById('player3-btn');
   const forwardBtn = document.getElementById('forward-btn');
   const backwardBtn = document.getElementById('backward-btn');
   
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let pathCells = [];
   let player1PathIndex = 0;
   let player2PathIndex = 0;
-  let player3PathIndex = 0; // 新增玩家3路徑索引
+  let player3PathIndex = 0;
   let selectedPlayer = 1;
   let isMoving = false;
   let highlightedCell = null;
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 玩家標記元素
   let player1Token;
   let player2Token;
-  let player3Token; // 新增玩家3標記
+  let player3Token;
   
   // 初始化遊戲
   function initGame() {
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDirectionSelection(isForward) {
     if (isMoving) return;
     
-    // 移動玩家一步
+    // 修改為只移動一步
     movePlayerStepByStep(1, isForward);
   }
   
@@ -252,14 +252,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 更新玩家位置
       if (currentPlayer === 1) {
         player1PathIndex = currentIndex;
-        updatePlayerPosition(1, player1PathIndex);
       } else if (currentPlayer === 2) {
         player2PathIndex = currentIndex;
-        updatePlayerPosition(2, player2PathIndex);
       } else {
         player3PathIndex = currentIndex;
-        updatePlayerPosition(3, player3PathIndex);
       }
+      
+      // 更新玩家位置
+      updatePlayerPosition(currentPlayer, currentIndex);
       
       // 減少剩餘步數
       stepsLeft--;
@@ -321,13 +321,27 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 添加事件監聽器
   function addEventListeners() {
-    player1Btn.addEventListener('click', () => selectPlayer(1));
-    player2Btn.addEventListener('click', () => selectPlayer(2));
-    player3Btn.addEventListener('click', () => selectPlayer(3));
+    // 確保所有元素都存在再添加事件監聽器
+    if (player1Btn) {
+      player1Btn.addEventListener('click', () => selectPlayer(1));
+    }
+    
+    if (player2Btn) {
+      player2Btn.addEventListener('click', () => selectPlayer(2));
+    }
+    
+    if (player3Btn) {
+      player3Btn.addEventListener('click', () => selectPlayer(3));
+    }
     
     // 添加方向按鈕的事件監聽器
-    forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
-    backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
+    if (forwardBtn) {
+      forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
+    }
+    
+    if (backwardBtn) {
+      backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
+    }
   }
   
   // 初始化遊戲
