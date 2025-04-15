@@ -4,11 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cellWidth = 125;
     const cellHeight = 100;
     const gameBoard = document.getElementById('game-board');
-    const player1Btn = document.getElementById('player1-btn');
-    const player2Btn = document.getElementById('player2-btn');
-    const player3Btn = document.getElementById('player3-btn');
-    const forwardBtn = document.getElementById('forward-btn');
-    const backwardBtn = document.getElementById('backward-btn');
+    
     const logoContainer = document.getElementById('logo-container');
   
     let pathCells = [];
@@ -232,11 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     function addEventListeners() {
-      player1Btn.addEventListener('click', () => selectPlayer(1));
-      player2Btn.addEventListener('click', () => selectPlayer(2));
-      player3Btn.addEventListener('click', () => selectPlayer(3));
-      forwardBtn.addEventListener('click', () => handleDirectionSelection(true, 1));
-      backwardBtn.addEventListener('click', () => handleDirectionSelection(false, 1));
+     
     }
   
     function initPlayerPositions() {
