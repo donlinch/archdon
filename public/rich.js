@@ -1,17 +1,22 @@
 // rich.js (Relevant Sections Modified)
 
-let player1Btn, player2Btn, player3Btn, forwardBtn, backwardBtn;
-
-
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Element Variables ---
-  const gameBoard = document.getElementById('game-board'); // 假設在這裡
-  const player1Btn = document.getElementById('player1-btn'); // 在這裡獲取一次
-  const player2Btn = document.getElementById('player2-btn'); // 在這裡獲取一次
-  const player3Btn = document.getElementById('player3-btn'); // 在這裡獲取一次
-  const forwardBtn = document.getElementById('forward-btn'); // 在這裡獲取一次
-  const backwardBtn = document.getElementById('backward-btn'); // 在這裡獲取一次
+  // ... (keep existing DOM element variables: gameBoard, buttons, etc.) ...
+  const cellWidth = 125;
+  const cellHeight = 100;
+  const gameBoard = document.getElementById('game-board');
+  const player1Btn = document.getElementById('player1-btn');
+  const player2Btn = document.getElementById('player2-btn');
+  const player3Btn = document.getElementById('player3-btn');
+  const forwardBtn = document.getElementById('forward-btn');
+  const backwardBtn = document.getElementById('backward-btn');
   const logoContainer = document.getElementById('logo-container');
+
+
+  
+
+
+  
 
 
   // ... (keep existing game state variables: pathCells, selectedPlayer, etc.) ...
@@ -26,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const colors = { /* ... your colors ... */
       geekBlue: '#5b9df0', cyan: '#0cd8b6', grey: '#5d7092', sunriseYellow: '#fbd115', dustRed: '#f9584a', daybreakBlue: '#6dc8ec', goldenPurple: '#9270ca', sunsetOrange: '#ff544d', darkGreen: '#26b9a9', magenta: '#ff94c3'
    };
-   
 
   // --- WebSocket Variables ---
   let ws = null;
@@ -36,26 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // const broadcastChannel = new BroadcastChannel('rich_game_channel');
   // broadcastChannel.onmessage = (event) => { ... };
 
-
   // Initialize Game
-    function initGame() {
-        console.log("Initializing game...");
-
-  // 現在可以直接使用在外面已經獲取的變數了
-  createBoardCells();
-  renderBoard();
-  updatePlayerButtonStyles();
-  addEventListeners(); // 確保 addEventListeners 內部能訪問這些按鈕變數
-  connectWebSocket();
-  initPlayerPositions();
-  console.log("Game initialization complete.");
-
-
-
-
-
+  function initGame() {
+      createBoardCells();
+      renderBoard();
+      updatePlayerButtonStyles();
+      addEventListeners();
+      connectWebSocket(); // Connect WebSocket instead of initWebSocket
+      initPlayerPositions(); // Ensure positions are set initially
   }
-
 
   // --- WebSocket Connection Logic ---
   function connectWebSocket() {
@@ -382,7 +375,7 @@ function addEventListeners() {
 
 
 
-   
+
 
 
 function updatePlayerPositions() {
