@@ -7,56 +7,13 @@
     <link rel="stylesheet" href="style.css">
 
 
- <style>
 
 
-/* 玩家數量選擇 */
-.num-players-container {
-    background-color: white;
-    padding: 1.2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(255, 105, 180, 0.2);
-    text-align: center;
-    margin-bottom: 1.5rem;
-    width: 100%;
-    border: 1px solid #ffccdc; /* 淺粉色邊框 */
-}
+<style>
 
-.num-players-container h2 {
-    font-size: 1.25rem;
-    font-weight: bold;
-    margin-bottom: 0.8rem;
-    color: #ff4081; /* 粉紅色標題 */
-}
 
-.player-count-select {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-}
 
-.player-count-btn {
-    padding: 0.5rem 1rem;
-    background-color: #f8bbd0;
-    color: #880e4f;
-    border: none;
-    border-radius: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.player-count-btn:hover {
-    background-color: #f48fb1;
-    transform: scale(1.05);
-}
-
-.player-count-btn.selected {
-    background-color: #ff4081;
-    color: white;
-    box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
-}/* 基本樣式 */
+/* 基本樣式 */
 * {
     margin: 0;
     padding: 0;
@@ -65,7 +22,7 @@
 }
 
 body {
-    background-color: #fff0f5; /* 淺粉色背景 */
+    background-color: #f8f9fa;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -75,22 +32,23 @@ body {
 .game-container {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 1rem;
     max-width: 1200px;
     width: 100%;
+    gap: 2rem;
 }
 
 /* 遊戲面板 */
 .game-board {
     position: relative;
-    width: 875px;  /* 7 * 125px */
-    height: 700px; /* 7 * 100px */
-    background-color: #ffecf2; /* 粉色背景 */
-    border: 2px solid #ff80ab; /* 粉紅色邊框 */
-    border-radius: 12px; /* 圓角邊框 */
-    box-shadow: 0 8px 16px rgba(255, 105, 180, 0.2); /* 粉色陰影 */
+    width: 780px;
+    height: 650px;
+    background-color: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .cell {
@@ -99,39 +57,39 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 125px;  /* 新的格子寬度 */
-    height: 100px; /* 新的格子高度，4:5的寬高比 */
-    border: 1px solid #ff80ab; /* 粉紅色邊框 */
+    width: 120px;
+    height: 100px;
+    border: 1px solid #ddd;
     text-align: center;
     font-weight: bold;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
     padding: 5px;
-    border-radius: 8px; /* 圓角格子 */
+    color: #fff;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
 }
 
 .cell.highlighted {
     transform: scale(1.05);
     z-index: 2;
-    box-shadow: 0 0 10px 5px rgba(255, 105, 180, 0.7); /* 粉紅色高亮 */
+    box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.7);
     animation: pulse 1s infinite alternate;
 }
 
 @keyframes pulse {
     0% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(255, 182, 193, 0.7);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
     }
     
     70% {
         transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(255, 182, 193, 0);
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
     }
     
     100% {
         transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(255, 182, 193, 0);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
     }
 }
 
@@ -174,12 +132,13 @@ body {
     color: white;
     border: 2px solid white;
     z-index: 10;
-    transition: left 0.3s ease-in-out, top 0.3s ease-in-out; /* 平滑過渡 */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 添加陰影 */
+    transition: left 0.3s ease-in-out, top 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* 玩家顏色 - 基於您的圖片 */
 .player1-token {
-    background-color: #ff4081; /* 亮粉紅色 */
+    background-color: #ff5252; /* 紅色 */
 }
 
 .player2-token {
@@ -204,38 +163,40 @@ body {
 
 /* 控制面板 */
 .control-panel {
-    margin-left: 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 340px;
 }
 
 .title {
     font-size: 1.875rem;
     font-weight: bold;
     margin-bottom: 1.5rem;
-    color: #ff4081; /* 粉紅色標題 */
-    text-shadow: 1px 1px 2px rgba(255, 105, 180, 0.3); /* 文字陰影 */
+    color: #d81b60;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .player-select-container,
+.num-players-container,
 .steps-container {
     background-color: white;
     padding: 1.2rem;
     border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(255, 105, 180, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
     margin-bottom: 1.5rem;
     width: 100%;
-    border: 1px solid #ffccdc; /* 淺粉色邊框 */
+    border: 1px solid #eee;
 }
 
 .player-select-container h2,
+.num-players-container h2,
 .steps-container h2 {
     font-size: 1.25rem;
     font-weight: bold;
     margin-bottom: 0.8rem;
-    color: #ff4081; /* 粉紅色標題 */
+    color: #333;
 }
 
 .player-select {
@@ -246,15 +207,15 @@ body {
 }
 
 .player-btn {
-    width: 4rem;
-    height: 4rem;
+    width: 3.5rem;
+    height: 3.5rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     font-weight: bold;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     border: none;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -265,17 +226,18 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* 各玩家顏色 - 基於您的圖片 */
 .player1 {
-    background-color: #ff80ab; /* 淺粉紅色 */
+    background-color: #ff7979; /* 淺紅色 */
 }
 
 .player1.selected {
-    background-color: #ff4081; /* 深粉紅色 */
-    box-shadow: 0 0 0 4px rgba(255, 64, 129, 0.3);
+    background-color: #ff5252; /* 深紅色 */
+    box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.3);
 }
 
 .player2 {
-    background-color: #ce93d8; /* 淺紫色 */
+    background-color: #ba68c8; /* 淺紫色 */
 }
 
 .player2.selected {
@@ -284,7 +246,7 @@ body {
 }
 
 .player3 {
-    background-color: #80deea; /* 淺青色 */
+    background-color: #4dd0e1; /* 淺青色 */
 }
 
 .player3.selected {
@@ -293,7 +255,7 @@ body {
 }
 
 .player4 {
-    background-color: #ffcc80; /* 淺橙色 */
+    background-color: #ffb74d; /* 淺橙色 */
 }
 
 .player4.selected {
@@ -302,7 +264,7 @@ body {
 }
 
 .player5 {
-    background-color: #a5d6a7; /* 淺綠色 */
+    background-color: #81c784; /* 淺綠色 */
 }
 
 .player5.selected {
@@ -319,14 +281,45 @@ body {
     box-shadow: 0 0 0 4px rgba(96, 125, 139, 0.3);
 }
 
+/* 玩家數量選擇 */
+.player-count-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.player-count-btn {
+    padding: 0.5rem 1rem;
+    background-color: #f0f0f0;
+    color: #333;
+    border: none;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.player-count-btn:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+.player-count-btn.selected {
+    background-color: #d81b60;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.3);
+}
+
 /* 中央資訊顯示區 */
 .center-info {
     position: absolute;
-    left: 262.5px; /* (875 - 350) / 2 */
-    top: 200px;
-    width: 350px;
-    height: 300px;
-    background-color: #ff80ab; /* 默認粉紅色，會被動態替換 */
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 250px;
+    transform: translate(-50%, -50%);
+    background-color: #e91e63;
     border: 3px dashed #ffffff;
     display: flex;
     flex-direction: column;
@@ -337,8 +330,8 @@ body {
     font-weight: bold;
     padding: 15px;
     z-index: 5;
-    transition: background-color 0.3s ease; /* 添加顏色過渡效果 */
-    border-radius: 16px; /* 圓角 */
+    transition: background-color 0.3s ease;
+    border-radius: 16px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -361,7 +354,7 @@ body {
     width: 24px;
     height: 24px;
     background-color: white;
-    color: #ff4081;
+    color: #e91e63;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -385,7 +378,8 @@ body {
 
 /* 按鈕禁用狀態 */
 .player-btn:disabled,
-.direction-btn:disabled {
+.direction-btn:disabled,
+.player-count-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
@@ -394,10 +388,11 @@ body {
 /* 大富翁LOGO */
 .logo-container {
     position: absolute;
-    left: 262.5px; /* (875 - 350) / 2 */
-    top: 200px;
-    width: 350px;
-    height: 300px;
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 250px;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -408,9 +403,9 @@ body {
 .logo-text {
     font-size: 3.5rem;
     font-weight: bold;
-    color: #ff4081;
-    text-shadow: 3px 3px 0 #ffb6c1, 
-                 6px 6px 0 rgba(255, 105, 180, 0.3);
+    color: #e91e63;
+    text-shadow: 3px 3px 0 #e0e0e0, 
+                 6px 6px 0 rgba(0, 0, 0, 0.1);
     letter-spacing: 3px;
     transform: rotate(-5deg);
     margin-bottom: 20px;
@@ -430,23 +425,46 @@ body {
 }
 
 .direction-btn {
-    padding: 8px 16px;
-    background-color: #ff80ab;
+    padding: 10px 25px;
+    background-color: #f06292;
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 25px;
     font-weight: bold;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .direction-btn:hover {
-    background-color: #ff4081;
+    background-color: #e91e63;
     transform: scale(1.05);
 }
 
+/* 格子顏色 - 基於您的圖片 */
+.cell-top {
+    background-color: #ba68c8; /* 紫色 */
+}
 
- </style>
+.cell-right {
+    background-color: #f06292; /* 粉紅色 */
+}
+
+.cell-bottom {
+    background-color: #e91e63; /* 深粉色 */
+}
+
+.cell-left {
+    background-color: #ec407a; /* 亮粉色 */
+}
+
+/* 特殊位置格子 */
+.cell-corner {
+    background-color: #9c27b0; /* 深紫色 */
+}
+
+
+</style>
 
 
 
@@ -456,7 +474,7 @@ body {
         <!-- 左側遊戲面板 -->
         <div id="game-board" class="game-board">
             <!-- 遊戲格子會由 JavaScript 動態生成 -->
-            <!-- 預設LOGO區域 -->
+            <!-- 中央LOGO區域 -->
             <div id="logo-container" class="logo-container">
                 <div class="logo-text">大富翁</div>
                 <div class="logo-subtitle">開始你的幸運之旅吧！</div>
