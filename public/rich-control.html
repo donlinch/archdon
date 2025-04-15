@@ -335,35 +335,24 @@
             未連接遊戲
         </div>
 
-        <!-- ... (keep player select, move control, jump, actions sections) ... -->
-         <div class="control-section">
-            <h2>玩家選擇</h2>
-            <div class="player-select">
-                <button id="player1-btn" class="player-btn player1 selected">P1</button>
-                <button id="player2-btn" class="player-btn player2">P2</button>
-                <button id="player3-btn" class="player-btn player3">P3</button>
-            </div>
-        </div>
+       
+        <!-- ★★★ 修改：應用新的 CSS class ★★★ -->
         <div class="control-section">
             <h2>移動控制</h2>
-            
-            <div class="direction-buttons">
-                <button id="forward-btn" class="direction-btn forward">前進</button>
-                <button id="backward-btn" class="direction-btn backward">後退</button>
+            <div class="direction-buttons-large"> <!-- ★ 使用新的容器 class ★ -->
+                <button id="forward-btn" class="direction-btn-large forward-large">前進</button> <!-- ★ 使用新的按鈕 class ★ -->
+                <button id="backward-btn" class="direction-btn-large backward-large">後退</button> <!-- ★ 使用新的按鈕 class ★ -->
             </div>
-
-
-
-
         </div>
 
-         <!-- ★★★ 新增：格子資訊控制區塊 ★★★ -->
          <div class="control-section">
-             
-            <button id="show-player-info-btn" class="action-btn">顯示</button>
-            <button id="hide-player-info-btn" class="action-btn" style="margin-top: 0.5rem; background-color: #6c757d;">關閉</button> <!-- 可以加點間距和不同顏色 -->
+            <!-- <h2>格子資訊</h2> --> <!-- 可以移除 H2 -->
+            <div class="info-buttons-small"> <!-- ★ 使用新的容器 class ★ -->
+                <button id="show-player-info-btn" class="info-btn-small show-info-small">顯示</button> <!-- ★ 使用新的按鈕 class ★ -->
+                <button id="hide-player-info-btn" class="info-btn-small hide-info-small">關閉</button> <!-- ★ 使用新的按鈕 class ★ -->
+            </div>
         </div>
-        <!-- ★★★ 新增結束 ★★★ -->
+        <!-- ★★★ 修改結束 ★★★ -->
 
 
  
@@ -532,7 +521,28 @@
              }
 
 
+// --- ★ 新增：更新玩家按鈕外觀的函數 ★ ---
+function updatePlayerButtonAppearance(playersData) {
+    const buttons = [player1Btn, player2Btn, player3Btn];
+    buttons.forEach((btn, index) => {
+        const playerNum = index + 1;
+        const playerData = playersData[playerNum]; // 獲取對應玩家數據
 
+        if (playerData && playerData.avatarUrl) {
+            // 有頭像 URL，顯示圖片
+            btn.innerHTML = `<img src="${playerData.avatarUrl}"
+                                 alt="P${playerNum}"
+                                 style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            // (可選) 移除背景色，如果 CSS 沒有處理
+            // btn.style.backgroundColor = 'transparent';
+        } else {
+            // 沒有頭像 URL，顯示預設文字
+            btn.textContent = `P${playerNum}`;
+            // (可選) 恢復背景色
+            // btn.style.backgroundColor = ''; // 恢復 CSS 預設
+        }
+    });
+}
 
   // --- ★ 新增事件監聽器 ★ ---
   showPlayerInfoBtn.addEventListener('click', () => {
