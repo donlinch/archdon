@@ -348,12 +348,26 @@ function renderBoard() {
 }
 
 
+ 
+
 
 function updatePlayerButtonStyles() {
+  if (!player1Btn || !player2Btn || !player3Btn) return;
   player1Btn.classList.toggle('selected', selectedPlayer === 1);
   player2Btn.classList.toggle('selected', selectedPlayer === 2);
   player3Btn.classList.toggle('selected', selectedPlayer === 3);
 }
+
+function addEventListeners() {
+  if (player1Btn) player1Btn.addEventListener('click', () => selectPlayer(1));
+  if (player2Btn) player2Btn.addEventListener('click', () => selectPlayer(2));
+  if (player3Btn) player3Btn.addEventListener('click', () => selectPlayer(3));
+  if (forwardBtn) forwardBtn.addEventListener('click', () => handleDirectionSelection(true, 1));
+  if (backwardBtn) backwardBtn.addEventListener('click', () => handleDirectionSelection(false, 1));
+}
+
+
+
 
 
 
