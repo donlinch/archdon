@@ -147,6 +147,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // updatePlayerButtonStyles(); // 保持刪除
         // addEventListeners();      // 保持刪除
         connectWebSocket();
+
+
+
+
+ // --- ★ 新增：全局點擊監聽器，用於關閉中央面板 ★ ---
+ document.addEventListener('click', (event) => {
+    const centerInfoPanel = document.getElementById('center-info');
+    const clickedElement = event.target;
+
+    // 檢查中央面板是否存在且當前是可見的
+    if (centerInfoPanel && !centerInfoPanel.classList.contains('hidden')) {
+        // 檢查點擊的是否在中央面板內部 (包括關閉按鈕)
+        const isClickInsideInfo = centerInfoPanel.contains(clickedElement);
+        // 檢查點擊的是否在任何一個遊戲格子上
+        const isClickOnCell = clickedElement.closest('.cell'); // .closest 會查找自身及父元素
+
+        // 如果點擊既不在面板內部，也不在任何格子上
+        if (!isClickInsideInfo && !isClickOnCell) {
+            console.log('點擊在面板和格子外部，關閉面板');
+            centerInfoPanel.classList.add('hidden'); // 隱藏面板
+            if (logoContainer) {
+                logoContainer.classList.remove('hidden'); // 顯示 Logo
+            }
+        }
+    }
+});
+// --- ★ 全局點擊監聽器結束 ★ ---
+
+
+
     }
 
 
