@@ -104,38 +104,102 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'selectPlayer':
           selectPlayer(params.player);
           break;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         case 'movePlayer':
           handleDirectionSelection(params.direction === 'forward', parseInt(params.steps) || 1);
           break;
-        case 'jumpToPosition':
-          if (params.player >= 1 && params.player <= 3) {
-            playerPathIndices[params.player - 1] = params.position;
-            renderBoard();
-            sendGameStateToControllers();
-          }
-          break;
-        case 'showInfo':
-          const cell = pathCells[highlightedCell ?? playerPathIndices[selectedPlayer - 1]];
-          if (cell) {
-            updateCenterInfo(cell.title, cell.description);
-            document.getElementById('center-info').style.backgroundColor = cell.color;
-            document.getElementById('center-info').classList.remove('hidden');
-            logoContainer.classList.add('hidden');
-          }
-          break;
-        case 'hideInfo':
-          document.getElementById('center-info').classList.add('hidden');
-          logoContainer.classList.remove('hidden');
-          break;
-        case 'resetGame':
-          initPlayerPositions();
-          highlightedCell = null;
-          renderBoard();
-          sendGameStateToControllers();
-          break;
-        case 'getGameState':
-          sendGameStateToControllers();
-          break;
+
+
+
+
+
+
+
+
+
+
+
+  // --- ★ 新增 Case ★ ---
+  case 'showPlayerInfo':
+    const playerToShow = params.player;
+    // 驗證玩家編號是否有效
+    if (playerToShow >= 1 && playerToShow <= 3) {
+        const playerIndex = playerToShow - 1;
+         // 確保索引在範圍內
+        if (playerIndex < playerPathIndices.length) {
+            const currentPositionIndex = playerPathIndices[playerIndex];
+            // 確保位置索引在範圍內
+            if (currentPositionIndex >= 0 && currentPositionIndex < pathCells.length) {
+                const targetCell = pathCells[currentPositionIndex];
+                if (targetCell) {
+                    console.log(`Received showPlayerInfo for P${playerToShow} at pos ${currentPositionIndex}, showing info for:`, targetCell.title);
+                    updateCenterInfo(targetCell.title, targetCell.description); // 更新文字
+                    const infoPanel = document.getElementById('center-info');
+                    if (infoPanel) {
+                        infoPanel.style.backgroundColor = targetCell.color; // 更新背景色
+                        infoPanel.classList.remove('hidden'); // 顯示面板
+                    }
+                    if (logoContainer) {
+                        logoContainer.classList.add('hidden'); // 隱藏 Logo
+                    }
+                } else {
+                     console.error(`showPlayerInfo: 無法在 pathCells 中找到位置 ${currentPositionIndex} 的數據`);
+                }
+            } else {
+                console.error(`showPlayerInfo: 玩家 ${playerToShow} 的位置索引 ${currentPositionIndex} 無效`);
+            }
+        } else {
+             console.error(`showPlayerInfo: 無效的玩家索引 ${playerIndex}`);
+        }
+    } else {
+         console.error(`showPlayerInfo: 無效的玩家編號 ${playerToShow}`);
+    }
+    break; // <--- 不要忘記 break
+
+case 'hidePlayerInfo':
+    console.log('Received hidePlayerInfo command');
+    const infoPanelToHide = document.getElementById('center-info');
+    if (infoPanelToHide) {
+        infoPanelToHide.classList.add('hidden'); // 隱藏面板
+    }
+    if (logoContainer) {
+        logoContainer.classList.remove('hidden'); // 顯示 Logo
+    }
+    break; // <--- 不要忘記 break
+// --- ★ 新增 Case 結束 ★ ---
+
+
+
+
+        
+          
+
+
+
+
+
+
+
       }
     }
   
@@ -152,28 +216,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
  // --- ★ 新增：全局點擊監聽器，用於關閉中央面板 ★ ---
- document.addEventListener('click', (event) => {
-    const centerInfoPanel = document.getElementById('center-info');
-    const clickedElement = event.target;
+        document.addEventListener('click', (event) => {
+            const centerInfoPanel = document.getElementById('center-info');
+            const clickedElement = event.target;
 
-    // 檢查中央面板是否存在且當前是可見的
-    if (centerInfoPanel && !centerInfoPanel.classList.contains('hidden')) {
-        // 檢查點擊的是否在中央面板內部 (包括關閉按鈕)
-        const isClickInsideInfo = centerInfoPanel.contains(clickedElement);
-        // 檢查點擊的是否在任何一個遊戲格子上
-        const isClickOnCell = clickedElement.closest('.cell'); // .closest 會查找自身及父元素
+            // 檢查中央面板是否存在且當前是可見的
+            if (centerInfoPanel && !centerInfoPanel.classList.contains('hidden')) {
+                // 檢查點擊的是否在中央面板內部 (包括關閉按鈕)
+                const isClickInsideInfo = centerInfoPanel.contains(clickedElement);
+                // 檢查點擊的是否在任何一個遊戲格子上
+                const isClickOnCell = clickedElement.closest('.cell'); // .closest 會查找自身及父元素
 
-        // 如果點擊既不在面板內部，也不在任何格子上
-        if (!isClickInsideInfo && !isClickOnCell) {
-            console.log('點擊在面板和格子外部，關閉面板');
-            centerInfoPanel.classList.add('hidden'); // 隱藏面板
-            if (logoContainer) {
-                logoContainer.classList.remove('hidden'); // 顯示 Logo
+                // 如果點擊既不在面板內部，也不在任何格子上
+                if (!isClickInsideInfo && !isClickOnCell) {
+                    console.log('點擊在面板和格子外部，關閉面板');
+                    centerInfoPanel.classList.add('hidden'); // 隱藏面板
+                    if (logoContainer) {
+                        logoContainer.classList.remove('hidden'); // 顯示 Logo
+                    }
+                }
             }
-        }
-    }
-});
-// --- ★ 全局點擊監聽器結束 ★ ---
+        });
+        // --- ★ 全局點擊監聽器結束 ★ ---
 
 
 
