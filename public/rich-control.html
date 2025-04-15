@@ -469,6 +469,8 @@
                  // because the *game's* state dictates the selected player display.
                  // We just update the local `selectedPlayer` variable for *sending* commands.
                  console.log(`Controller UI updated for Player ${playerNum}`);
+                 sendCommand('selectPlayer', { player: playerNum });
+
              }
 
             function movePlayer(direction) {
