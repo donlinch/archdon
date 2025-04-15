@@ -373,283 +373,130 @@
 
 
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const player1Btn = document.getElementById('player1-btn');
-            const player2Btn = document.getElementById('player2-btn');
-            const player3Btn = document.getElementById('player3-btn');
-            const forwardBtn = document.getElementById('forward-btn');
-            const backwardBtn = document.getElementById('backward-btn');
-         
-            const connectionStatusDiv = document.getElementById('connection-status');
-
-              // ★ 新增按鈕引用 ★
-    const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
-    const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
-    // ↓↓↓ 確保這裡包含了新按鈕的 class 或 ID ↓↓↓
-    const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
-
-            // --- State ---
-            let selectedPlayer = 1; // Local controller state
-            let gameIsConnected = false;
-
-            // --- WebSocket Variables ---
-            let ws = null;
-            const wsUrl = `wss://${window.location.host}?clientType=controller`; // Use wss://
-
-            // --- Remove BroadcastChannel ---
-            // const channel = new BroadcastChannel('rich_game_channel');
-
-             // --- Disable/Enable Controls ---
-            function setControlsEnabled(enabled) {
-                allControlButtons.forEach(el => el.disabled = !enabled);
-                gameIsConnected = enabled; // Update connection state
-                updateConnectionStatusUI(); // Update UI based on actual connection status
-            }
-
-            // --- Update Connection Status UI ---
-            function updateConnectionStatusUI() {
-                 if (ws && ws.readyState === WebSocket.OPEN && gameIsConnected) {
-                    connectionStatusDiv.className = 'connection-status connected';
-                    connectionStatusDiv.textContent = '已連接遊戲';
-                 } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-                     connectionStatusDiv.className = 'connection-status connecting';
-                     connectionStatusDiv.textContent = '連接中...';
-                 } else {
-                    connectionStatusDiv.className = 'connection-status disconnected';
-                    connectionStatusDiv.textContent = '未連接遊戲';
-                 }
-             }
-
-
-            // --- WebSocket Connection Logic ---
-            function connectWebSocket() {
-                 console.log(`Attempting to connect WebSocket to ${wsUrl}`);
-                 setControlsEnabled(false); // Disable controls while connecting
-                 connectionStatusDiv.className = 'connection-status connecting';
-                 connectionStatusDiv.textContent = '連接中...';
-                 ws = new WebSocket(wsUrl);
-
-                 ws.onopen = () => {
-                    console.log('WebSocket connection established (Controller)');
-                    // Don't enable controls yet, wait for game status confirmation
-                    // Request initial game state
-                    sendCommand('getGameState');
-                 };
-
-                 ws.onmessage = (event) => {
-                    console.log('WebSocket message received (Controller):', event.data);
-                     try {
-                         const message = JSON.parse(event.data);
-                         handleServerMessage(message);
-                     } catch (error) {
-                         console.error('Failed to parse WebSocket message:', error);
-                     }
-                 };
-
-                 ws.onerror = (error) => {
-                     console.error('WebSocket error (Controller):', error);
-                     setControlsEnabled(false);
-                     updateConnectionStatusUI();
-                 };
-
-                 ws.onclose = (event) => {
-                     console.log(`WebSocket connection closed (Controller): Code=${event.code}, Reason=${event.reason}`);
-                     ws = null;
-                     setControlsEnabled(false);
-                     updateConnectionStatusUI();
-                     // gameInfoContentDiv.textContent = '與伺服器斷線，5秒後嘗試重連...';
-                     setTimeout(connectWebSocket, 5000); // Reconnect
-                 };
-             }
-
-
-             // --- Handle Messages from Server ---
-            function handleServerMessage(message) {
-                switch (message.type) {
-                    case 'gameStateUpdate':
-            console.log("Received game state update:", message.data);
-            updateGameInfo(message.data);
-            // ★ 新增：如果狀態更新包含玩家信息，則更新按鈕外觀 ★
-            if (message.data && message.data.players) {
-                updatePlayerButtonAppearance(message.data.players);
-            }
-            // ★ 新增結束 ★
-            if (!gameIsConnected) { setControlsEnabled(true); }
-            break;
-                     case 'gameStatus':
-                         console.log("Received game status:", message.status);
-                         gameIsConnected = (message.status === 'connected');
-                         setControlsEnabled(gameIsConnected); // Enable/disable based on game connection
-                         updateConnectionStatusUI();
-                         if (gameIsConnected) {
-                            // gameInfoContentDiv.textContent = '遊戲已連接，等待狀態更新...';
-                              // Request state again if needed
-                             sendCommand('getGameState');
-                         } else {
-                             gameInfoContentDiv.textContent = '遊戲已斷線。';
-                         }
-                         break;
-                    case 'error':
-                        console.error('Received error from server:', message.message);
-                       // gameInfoContentDiv.textContent = `錯誤: ${message.message}`;
-                        // Decide if controls should be disabled based on error
-                        break;
-                     // Add other message types if the server sends confirmations, etc.
-                     default:
-                         console.log("Received unhandled message type:", message.type);
-                 }
-             }
-
-             // --- Update Controller UI based on Game State ---
-            function updateGameInfo(gameState) {
-                 if (!gameState) {
-                   //  gameInfoContentDiv.textContent = '無法獲取遊戲狀態。';
-                     return;
-                 }
-                 // Update selected player button visually based on game state
-                 selectPlayerUI(gameState.selectedPlayer || 1);
-         const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
-         forwardBtn.disabled = controlsShouldBeDisabled;
-         backwardBtn.disabled = controlsShouldBeDisabled;
-         // ★ 控制新按鈕的禁用狀態 ★
-         showPlayerInfoBtn.disabled = controlsShouldBeDisabled;
-         hidePlayerInfoBtn.disabled = controlsShouldBeDisabled;
-             }
-
-              // Update position select dropdown
-             let positionSelectPopulated = false;
-             function updatePositionSelect(cellCount) {
-                 if (positionSelectPopulated && positionSelect.options.length === cellCount) return; // Avoid unnecessary updates
-                 positionSelect.innerHTML = ''; // Clear existing
-                 for (let i = 0; i < cellCount; i++) {
-                     const opt = document.createElement('option');
-                     opt.value = i;
-                     opt.textContent = `位置 ${i}`;
-                     positionSelect.appendChild(opt);
-                 }
-                 positionSelectPopulated = true;
-             }
-
-// --- ★ 修改：更新玩家按鈕外觀的函數 ★ ---
-function updatePlayerButtonAppearance(playersData) {
-    const buttons = [player1Btn, player2Btn, player3Btn];
-    buttons.forEach((btn, index) => {
-        const playerNum = index + 1;
-        // ★ 獲取當前按鈕的數據 (如果之前存儲過) 或直接檢查內容 ★
-        const currentAvatarUrl = btn.dataset.avatarUrl || null; // 使用 dataset 存儲當前 URL
-        const playerData = playersData[playerNum];
-        const newAvatarUrl = (playerData && playerData.avatarUrl) ? playerData.avatarUrl : null;
-
-        // --- ★ 只有在新舊 URL 不同時才更新 DOM ★ ---
-        if (newAvatarUrl !== currentAvatarUrl) {
-            console.log(`Updating appearance for Player ${playerNum}, New URL: ${newAvatarUrl}`); // 調試日誌
-            if (newAvatarUrl) {
-                // 新 URL 存在，設置為圖片
-                btn.innerHTML = `<img src="${newAvatarUrl}"
-                                     alt="P${playerNum}"
-                                     style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-                btn.dataset.avatarUrl = newAvatarUrl; // ★ 存儲新的 URL 到 dataset ★
-            } else {
-                // 新 URL 為空，設置為文字
-                btn.innerHTML = `P${playerNum}`; // 直接設置文字
-                delete btn.dataset.avatarUrl; // ★ 移除 dataset 中的 URL ★
-            }
-        } else {
-            // console.log(`Skipping update for Player ${playerNum}, URL unchanged.`); // (可選) 取消註解以調試
-        }
-        // --- ★ 判斷結束 ★ ---
-    });
-}
-  // --- ★ 新增事件監聽器 ★ ---
-  showPlayerInfoBtn.addEventListener('click', () => {
-        console.log(`Sending showPlayerInfo command for player ${selectedPlayer}`);
-        // ★ 發送新指令，帶上當前控制器選中的玩家 ★
-        sendCommand('showPlayerInfo', { player: selectedPlayer });
-    });
-
-    hidePlayerInfoBtn.addEventListener('click', () => {
-        console.log(`Sending hidePlayerInfo command`);
-        // ★ 發送隱藏指令，不需要玩家參數 ★
-        sendCommand('hidePlayerInfo', {});
-    });
-    // --- 事件監聽器添加結束 ---
-
-
-
-            // --- Send Command via WebSocket ---
-            function sendCommand(command, params = {}) {
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    console.error('WebSocket not connected, cannot send command.');
-                   // gameInfoContentDiv.textContent = '錯誤：未連接到伺服器。';
-                    setControlsEnabled(false); // Ensure controls are disabled if WS disconnects
-                    updateConnectionStatusUI();
-                    return;
+          const player1Btn = document.getElementById('player1-btn');
+          const player2Btn = document.getElementById('player2-btn');
+          const player3Btn = document.getElementById('player3-btn');
+          const forwardBtn = document.getElementById('forward-btn');
+          const backwardBtn = document.getElementById('backward-btn');
+          const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
+          const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
+          const connectionStatusDiv = document.getElementById('connection-status');
+        
+          let selectedPlayer = 1;
+          let ws = null;
+          let gameIsConnected = false;
+          const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
+        
+          function connectWebSocket() {
+            const wsUrl = `wss://${window.location.host}?clientType=controller`;
+            ws = new WebSocket(wsUrl);
+        
+            ws.onopen = () => {
+              setControlsEnabled(false);
+              updateConnectionStatusUI();
+              sendCommand('getGameState');
+            };
+        
+            ws.onmessage = (event) => {
+              const message = JSON.parse(event.data);
+              if (message.type === 'gameStateUpdate') {
+                updateGameInfo(message.data);
+                if (message.data.players) {
+                  updatePlayerAvatars(message.data.players);
                 }
-                const message = {
-                    type: 'controlCommand', // Send as a command type
-                    command,
-                    params
-                };
-                console.log('Sending command via WebSocket:', message);
-                ws.send(JSON.stringify(message));
+                if (!gameIsConnected) setControlsEnabled(true);
+              }
+            };
+        
+            ws.onclose = () => {
+              setControlsEnabled(false);
+              updateConnectionStatusUI();
+              setTimeout(connectWebSocket, 3000);
+            };
+          }
+        
+          function setControlsEnabled(enabled) {
+            allControlButtons.forEach(el => el.disabled = !enabled);
+            gameIsConnected = enabled;
+            updateConnectionStatusUI();
+          }
+        
+          function updateConnectionStatusUI() {
+            if (ws && ws.readyState === WebSocket.OPEN && gameIsConnected) {
+              connectionStatusDiv.className = 'connection-status connected';
+              connectionStatusDiv.textContent = '已連接遊戲';
+            } else {
+              connectionStatusDiv.className = 'connection-status disconnected';
+              connectionStatusDiv.textContent = '未連接遊戲';
             }
-
-            // --- UI Actions ---
-            function selectPlayerUI(playerNum) {
-                 selectedPlayer = playerNum; // Update local state for sending commands
-                 player1Btn.classList.toggle('selected', playerNum === 1);
-                 player2Btn.classList.toggle('selected', playerNum === 2);
-                 player3Btn.classList.toggle('selected', playerNum === 3);
-                 // Note: We don't send a 'selectPlayer' command here anymore,
-                 // because the *game's* state dictates the selected player display.
-                 // We just update the local `selectedPlayer` variable for *sending* commands.
-                 console.log(`Controller UI updated for Player ${playerNum}`);
-                 sendCommand('selectPlayer', { player: playerNum });
-
-             }
-
-            function movePlayer(direction) {
-                console.log(`Sending move command: P${selectedPlayer}, ${direction}, 1 step`); // <-- 日誌也改成 1 step
-                sendCommand('movePlayer', {
-                    player: selectedPlayer, // Use the locally selected player for the command
-                    direction,
-                    steps: 1
-                });
-            }
-
-            function jumpToPosition() {
-                const position = parseInt(positionSelect.value);
-                 if (!isNaN(position)) {
-                    console.log(`Sending jump command: P${selectedPlayer} to position ${position}`);
-                     sendCommand('jumpToPosition', {
-                         player: selectedPlayer,
-                         position
-                     });
-                 } else {
-                     console.error("Invalid position selected for jump:", positionSelect.value);
-                 }
-            }
-
-            // --- Event Listeners ---
-            player1Btn.addEventListener('click', () => selectPlayerUI(1)); // Only update local UI selection
-            player2Btn.addEventListener('click', () => selectPlayerUI(2));
-            player3Btn.addEventListener('click', () => selectPlayerUI(3));
-            forwardBtn.addEventListener('click', () => movePlayer('forward'));
-            backwardBtn.addEventListener('click', () => movePlayer('backward'));
-    
-            
-
-            
-
-            // Initial Setup
-             setControlsEnabled(false); // Start disabled
-            connectWebSocket(); // Start connection attempt
-
-        }); // End DOMContentLoaded
-    </script>
+          }
+        
+          function sendCommand(command, params = {}) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const message = { type: 'controlCommand', command, params };
+            ws.send(JSON.stringify(message));
+          }
+        
+          function updateGameInfo(data) {
+            if (!data) return;
+            selectPlayerUI(data.selectedPlayer || 1, false);
+            const disable = data.isMoving || !gameIsConnected;
+            forwardBtn.disabled = disable;
+            backwardBtn.disabled = disable;
+            showPlayerInfoBtn.disabled = disable;
+            hidePlayerInfoBtn.disabled = disable;
+          }
+        
+          function updatePlayerAvatars(playersData) {
+            const buttons = [player1Btn, player2Btn, player3Btn];
+            buttons.forEach((btn, i) => {
+              const num = i + 1;
+              const avatar = (playersData[num] && playersData[num].avatarUrl || '').trim();
+              const current = (btn.dataset.avatarUrl || '').trim();
+              if (avatar !== current) {
+                if (avatar) {
+                  btn.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                  btn.dataset.avatarUrl = avatar;
+                } else {
+                  btn.innerHTML = `P${num}`;
+                  delete btn.dataset.avatarUrl;
+                }
+              }
+            });
+          }
+        
+          function selectPlayerUI(num, send = true) {
+            selectedPlayer = num;
+            player1Btn.classList.toggle('selected', num === 1);
+            player2Btn.classList.toggle('selected', num === 2);
+            player3Btn.classList.toggle('selected', num === 3);
+            if (send) sendCommand('selectPlayer', { player: num });
+          }
+        
+          function movePlayer(direction) {
+            sendCommand('movePlayer', { player: selectedPlayer, direction, steps: 1 });
+          }
+        
+          showPlayerInfoBtn.addEventListener('click', () => {
+            sendCommand('showPlayerInfo', { player: selectedPlayer });
+          });
+        
+          hidePlayerInfoBtn.addEventListener('click', () => {
+            sendCommand('hidePlayerInfo');
+          });
+        
+          player1Btn.addEventListener('click', () => selectPlayerUI(1, true));
+          player2Btn.addEventListener('click', () => selectPlayerUI(2, true));
+          player3Btn.addEventListener('click', () => selectPlayerUI(3, true));
+          forwardBtn.addEventListener('click', () => movePlayer('forward'));
+          backwardBtn.addEventListener('click', () => movePlayer('backward'));
+        
+          connectWebSocket();
+        });
+        </script>
+        
 
 </body>
 </html>

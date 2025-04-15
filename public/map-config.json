@@ -1,0 +1,156 @@
+[
+    {
+      "x": 0,
+      "y": 5,
+      "title": "左下角",
+      "description": "起點",
+      "color": "#9270ca"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "title": "底部 1",
+      "description": "底部格 1",
+      "color": "#ff544d"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "title": "底部 2",
+      "description": "底部格 2",
+      "color": "#26b9a9"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "title": "底部 3",
+      "description": "底部格 3",
+      "color": "#ff94c3"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "title": "底部 4",
+      "description": "底部格 4",
+      "color": "#5b9df0"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "title": "底部 5",
+      "description": "底部格 5",
+      "color": "#0cd8b6"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "title": "右下角",
+      "description": "轉角",
+      "color": "#9270ca"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "title": "右側 1",
+      "description": "右邊第 1 格",
+      "color": "#6dc8ec"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "title": "右側 2",
+      "description": "右邊第 2 格",
+      "color": "#ff544d"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "title": "右側 3",
+      "description": "右邊第 3 格",
+      "color": "#26b9a9"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "title": "右側 4",
+      "description": "右邊第 4 格",
+      "color": "#ff94c3"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "title": "右上角",
+      "description": "轉角",
+      "color": "#9270ca"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "title": "頂部 1",
+      "description": "頂部格",
+      "color": "#f9584a"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "title": "頂部 2",
+      "description": "頂部格",
+      "color": "#fbd115"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "title": "頂部 3",
+      "description": "頂部格",
+      "color": "#5d7092"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "title": "頂部 4",
+      "description": "頂部格",
+      "color": "#0cd8b6"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "title": "頂部 5",
+      "description": "頂部格",
+      "color": "#5b9df0"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "title": "左上角",
+      "description": "轉角",
+      "color": "#9270ca"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "title": "左側 1",
+      "description": "左邊第 1 格",
+      "color": "#6dc8ec"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "title": "左側 2",
+      "description": "左邊第 2 格",
+      "color": "#5d7092"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "title": "左側 3",
+      "description": "左邊第 3 格",
+      "color": "#fbd115"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "title": "左側 4",
+      "description": "左邊第 4 格",
+      "color": "#f9584a"
+    }
+  ]
