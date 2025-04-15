@@ -447,7 +447,7 @@
                      ws = null;
                      setControlsEnabled(false);
                      updateConnectionStatusUI();
-                     gameInfoContentDiv.textContent = '與伺服器斷線，5秒後嘗試重連...';
+                     // gameInfoContentDiv.textContent = '與伺服器斷線，5秒後嘗試重連...';
                      setTimeout(connectWebSocket, 5000); // Reconnect
                  };
              }
@@ -472,7 +472,7 @@
                          setControlsEnabled(gameIsConnected); // Enable/disable based on game connection
                          updateConnectionStatusUI();
                          if (gameIsConnected) {
-                             gameInfoContentDiv.textContent = '遊戲已連接，等待狀態更新...';
+                            // gameInfoContentDiv.textContent = '遊戲已連接，等待狀態更新...';
                               // Request state again if needed
                              sendCommand('getGameState');
                          } else {
@@ -481,7 +481,7 @@
                          break;
                     case 'error':
                         console.error('Received error from server:', message.message);
-                        gameInfoContentDiv.textContent = `錯誤: ${message.message}`;
+                       // gameInfoContentDiv.textContent = `錯誤: ${message.message}`;
                         // Decide if controls should be disabled based on error
                         break;
                      // Add other message types if the server sends confirmations, etc.
@@ -493,7 +493,7 @@
              // --- Update Controller UI based on Game State ---
             function updateGameInfo(gameState) {
                  if (!gameState) {
-                     gameInfoContentDiv.textContent = '無法獲取遊戲狀態。';
+                   //  gameInfoContentDiv.textContent = '無法獲取遊戲狀態。';
                      return;
                  }
                  // Update selected player button visually based on game state
@@ -564,7 +564,7 @@ function updatePlayerButtonAppearance(playersData) {
             function sendCommand(command, params = {}) {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     console.error('WebSocket not connected, cannot send command.');
-                    gameInfoContentDiv.textContent = '錯誤：未連接到伺服器。';
+                   // gameInfoContentDiv.textContent = '錯誤：未連接到伺服器。';
                     setControlsEnabled(false); // Ensure controls are disabled if WS disconnects
                     updateConnectionStatusUI();
                     return;
