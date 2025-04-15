@@ -13,6 +13,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const backwardBtn = document.getElementById('backward-btn');
   const logoContainer = document.getElementById('logo-container');
   
+
+
+
+  const channel = new BroadcastChannel('rich_game_channel');
+
+  // 接收訊息
+  channel.onmessage = (event) => {
+    const message = event.data;
+  
+    if (message.type === 'controlCommand') {
+      window.postMessage(message, '*'); // 轉給原本處理 postMessage 的系統
+    }
+  };
+
+
+
+
   // 遊戲狀態
   let pathCells = [];
   let selectedPlayer = 1; // 當前選擇的玩家

@@ -309,6 +309,7 @@
     </div>
 
     <script>
+
         document.addEventListener('DOMContentLoaded', () => {
             const connectionStatus = document.getElementById('connection-status');
             const player1Btn = document.getElementById('player1-btn');
@@ -323,6 +324,22 @@
             const showInfoBtn = document.getElementById('show-info-btn');
             const hideInfoBtn = document.getElementById('hide-info-btn');
             const resetBtn = document.getElementById('reset-btn');
+
+
+
+            const channel = new BroadcastChannel('rich_game_channel');
+
+// 接收訊息
+channel.onmessage = (event) => {
+  const message = event.data;
+
+  if (message.type === 'controlCommand') {
+    window.postMessage(message, '*'); // 轉給原本處理 postMessage 的系統
+  }
+};
+
+
+
 
             let selectedPlayer = 1;
             let isConnected = false;
@@ -373,19 +390,13 @@
 
             // 發送命令到遊戲視窗
             function sendCommand(command, params = {}) {
-                if (!isConnected) {
-                    console.warn('未連接到遊戲視窗，無法發送命令');
-                    return;
-                }
-                
-                const message = {
-                    type: 'controlCommand',
-                    command,
-                    params
-                };
-                
-                window.parent.postMessage(message, '*');
-            }
+  const message = {
+    type: 'controlCommand',
+    command,
+    params
+  };
+  channel.postMessage(message);
+}
 
             // 請求遊戲狀態
             function requestGameState() {
