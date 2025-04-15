@@ -120,17 +120,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
-
-
-
-
-        case 'movePlayer':
-          handleDirectionSelection(params.direction === 'forward', parseInt(params.steps) || 1);
-          break;
-
-
-
+          case 'movePlayer':
+            // ★ 確保這裡使用的是從 params 傳來的 player 參數 ★
+            // 之前的代碼可能直接用了本地 selectedPlayer，這裡確認一下
+            handleDirectionSelection(params.direction === 'forward', parseInt(params.steps) || 1, params.player); // <-- ★ 傳遞 params.player ★
+            break;
+      
+          // --- ★ 加回 jumpToPosition case ★ ---
+          case 'jumpToPosition':
+            if (params.player >= 1 && params.player <= 3 && params.position >= 0 && params.position < pathCells.length) {
+              playerPathIndices[params.player - 1] = params.position;
+              highlightedCell = params.position; // 更新高亮
+              renderBoard();
+              sendGameStateToControllers();
+            }
+            break;
 
 
 
