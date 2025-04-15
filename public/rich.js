@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const colors = { /* ... your colors ... */
       geekBlue: '#5b9df0', cyan: '#0cd8b6', grey: '#5d7092', sunriseYellow: '#fbd115', dustRed: '#f9584a', daybreakBlue: '#6dc8ec', goldenPurple: '#9270ca', sunsetOrange: '#ff544d', darkGreen: '#26b9a9', magenta: '#ff94c3'
    };
+   
 
   // --- WebSocket Variables ---
   let ws = null;
@@ -34,8 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // const broadcastChannel = new BroadcastChannel('rich_game_channel');
   // broadcastChannel.onmessage = (event) => { ... };
 
+
   // Initialize Game
   function initGame() {
+    player1Btn = document.getElementById('player1-btn');
+    player2Btn = document.getElementById('player2-btn');
+    player3Btn = document.getElementById('player3-btn');
+    forwardBtn = document.getElementById('forward-btn');
+    backwardBtn = document.getElementById('backward-btn');
       createBoardCells();
       renderBoard();
       updatePlayerButtonStyles();
@@ -43,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
       connectWebSocket(); // Connect WebSocket instead of initWebSocket
       initPlayerPositions(); // Ensure positions are set initially
   }
+
 
   // --- WebSocket Connection Logic ---
   function connectWebSocket() {
