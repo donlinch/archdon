@@ -393,7 +393,7 @@ body {
 
 .forward:hover {
     background-color: #09b699; /* 深一點的 Cyan */
-}   
+}
 
 .backward {
     background-color: #ff544d; /* Sunset Orange */
@@ -419,13 +419,36 @@ body {
             <!-- 遊戲格子會由 JavaScript 動態生成 -->
             <!-- 預設LOGO區域 -->
             <div id="logo-container" class="logo-container">
-                <!-- 內容由 rich.js 動態生成 -->
+                <div class="logo-text">大富翁</div>
+                <div class="logo-subtitle">開始你的幸運之旅吧！</div>
             </div>
         </div>
         
-      
+        <!-- 右側控制面板 -->
+        <div class="control-panel">
+            <h1 class="title">大富翁遊戲</h1>
+            
+            <!-- 玩家選擇 -->
+            <div class="player-select-container">
+                <h2>選擇玩家</h2>
+                <div class="player-select">
+                    <button id="player1-btn" class="player-btn player1 selected">P1</button>
+                    <button id="player2-btn" class="player-btn player2">P2</button>
+                    <button id="player3-btn" class="player-btn player3">P3</button>
+                </div>
+            </div>
+            
+            <!-- 移動方向選擇 -->
+            <div class="steps-container">
+                <h2>選擇移動方向</h2>
+                <div class="direction-buttons">
+                    <button id="forward-btn" class="direction-btn forward">前進</button>
+                    <button id="backward-btn" class="direction-btn backward">後退</button>
+                </div>
+            </div>
+        </div>
     </div>
     
-    <script src="rich.js"></script>
+    <script src="rich拷貝.js"></script>
 </body>
 </html>
