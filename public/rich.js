@@ -18,11 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     const undoBtn = document.getElementById('undo-btn');
     const resetBtn = document.getElementById('reset-btn');
-    const modalOverlay = document.getElementById('modal-overlay');
-    const modalTitle = document.getElementById('modal-title');
-    const modalDescription = document.getElementById('modal-description');
-    const modalCloseBtn = document.getElementById('close-modal-btn');
-    const modal = document.getElementById('modal');
+    const forwardBtn = document.getElementById('forward-btn');
+    const backwardBtn = document.getElementById('backward-btn');
     
     // 遊戲狀態
     let pathCells = [];
@@ -30,10 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let player2PathIndex = 0;
     let selectedPlayer = 1;
     let isMoving = false;
-    let isRolling = false; // 新增並初始化isRolling變數
+    let isRolling = false; 
     let highlightedCell = null;
     let moveHistory = [];
-    let modalAutoPopup = true; // 修改為true，讓玩家移動後自動顯示彈窗
+    let selectedSteps = 0; // 儲存所選的步數
+    let directionSelected = false; // 是否已選擇方向
+    
+    // 動畫相關變數
+    const STEP_ANIMATION_DELAY = 300; // 每步移動的延遲時間(毫秒)
     
     // 玩家標記元素
     let player1Token;
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderBoard();
       addEventListeners();
       updateUndoButtonState();
+      updateDirectionButtonState();
     }
     
     // 創建路徑格子
@@ -120,7 +122,23 @@ document.addEventListener('DOMContentLoaded', () => {
       pathCells.forEach((cell, index) => {
         const cellElement = document.createElement('div');
         cellElement.className = 'cell';
-        cellElement.textContent = cell.title;
+        
+        // 創建格子內容：標題和描述
+        const cellContent = document.createElement('div');
+        cellContent.className = 'cell-content';
+        
+        const titleElement = document.createElement('div');
+        titleElement.className = 'cell-title';
+        titleElement.textContent = cell.title;
+        
+        const descriptionElement = document.createElement('div');
+        descriptionElement.className = 'cell-description';
+        descriptionElement.textContent = cell.description;
+        
+        cellContent.appendChild(titleElement);
+        cellContent.appendChild(descriptionElement);
+        cellElement.appendChild(cellContent);
+        
         cellElement.style.left = `${cell.x * cellSize}px`;
         cellElement.style.top = `${cell.y * cellSize}px`;
         cellElement.style.backgroundColor = cell.color;
@@ -129,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
           cellElement.classList.add('highlighted');
         }
         
-        cellElement.addEventListener('click', () => handleCellClick(cell));
         gameBoard.appendChild(cellElement);
       });
       
@@ -151,14 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 更新玩家位置
     function updatePlayerPositions() {
-      const player1Position = getPlayerPosition(player1PathIndex);
-      const player2Position = getPlayerPosition(player2PathIndex);
+      updatePlayerPosition(1, player1PathIndex);
+      updatePlayerPosition(2, player2PathIndex);
+    }
+    
+    // 更新特定玩家的位置
+    function updatePlayerPosition(playerNum, pathIndex) {
+      const playerToken = playerNum === 1 ? player1Token : player2Token;
+      const position = getPlayerPosition(pathIndex);
       
-      player1Token.style.left = `${player1Position.x * cellSize + cellSize/2 - 15}px`;
-      player1Token.style.top = `${player1Position.y * cellSize + cellSize/2 - 15}px`;
-      
-      player2Token.style.left = `${player2Position.x * cellSize + cellSize/2 - 15}px`;
-      player2Token.style.top = `${player2Position.y * cellSize + cellSize/2 - 15}px`;
+      playerToken.style.left = `${position.x * cellSize + cellSize/2 - 15}px`;
+      playerToken.style.top = `${position.y * cellSize + cellSize/2 - 15}px`;
     }
     
     // 獲取玩家位置
@@ -173,27 +193,26 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     }
     
-    // 處理格子點擊
-    function handleCellClick(cell) {
-      showModal(cell.title, cell.description, cell.color);
-    }
-    
-    // 顯示彈窗
-    function showModal(title, description, color) {
-      modalTitle.textContent = title;
-      modalDescription.textContent = description;
-      modal.style.borderTopColor = color;
-      modalOverlay.classList.remove('hidden');
-    }
-    
-    // 關閉彈窗
-    function closeModal() {
-      modalOverlay.classList.add('hidden');
-    }
-    
     // 處理步數選擇
     function handleStepSelection(steps) {
       if (isMoving) return;
+      
+      selectedSteps = steps;
+      directionSelected = false;
+      
+      // 移除所有步數按鈕選中狀態
+      stepBtns.forEach(btn => btn.classList.remove('selected'));
+      
+      // 添加選中的步數按鈕的選中狀態
+      stepBtns[steps - 1].classList.add('selected');
+      
+      // 啟用方向按鈕
+      updateDirectionButtonState();
+    }
+    
+    // 處理方向選擇
+    function handleDirectionSelection(isForward) {
+      if (isMoving || selectedSteps === 0) return;
       
       // 在移動前保存當前狀態到歷史記錄
       const currentState = {
@@ -202,57 +221,147 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPlayer
       };
       moveHistory.push(currentState);
-      updateUndoButtonState();
       
       // 移動玩家
-      movePlayer(steps);
+      movePlayerStepByStep(selectedSteps, isForward);
+      
+      // 重置選擇狀態
+      directionSelected = true;
+      updateDirectionButtonState();
+      updateUndoButtonState();
     }
     
-    // 處理玩家移動
-    function movePlayer(steps) {
+    // 更新方向按鈕狀態
+    function updateDirectionButtonState() {
+      const buttonsEnabled = selectedSteps > 0 && !isMoving && !directionSelected;
+      forwardBtn.disabled = !buttonsEnabled;
+      backwardBtn.disabled = !buttonsEnabled;
+      
+      if (buttonsEnabled) {
+        forwardBtn.classList.add('active');
+        backwardBtn.classList.add('active');
+      } else {
+        forwardBtn.classList.remove('active');
+        backwardBtn.classList.remove('active');
+      }
+    }
+    
+    // 逐步移動玩家
+    function movePlayerStepByStep(totalSteps, isForward) {
       if (isMoving) return;
       
       isMoving = true;
       highlightedCell = null;
       
+      // 禁用所有按鈕
+      enableDisableButtons(false);
+      
       // 決定當前移動的玩家
-      const currentPlayerPathIndex = selectedPlayer === 1 ? player1PathIndex : player2PathIndex;
+      const currentPlayer = selectedPlayer;
+      const currentPathIndex = currentPlayer === 1 ? player1PathIndex : player2PathIndex;
       
-      // 計算新位置
-      let newIndex = currentPlayerPathIndex + steps;
+      // 逐步移動
+      let stepsLeft = totalSteps;
+      let currentIndex = currentPathIndex;
       
-      // 如果超過或剛好到終點，停在起點/終點
-      if (newIndex >= pathCells.length) {
-        newIndex = 0; // 停在起點/終點
-      }
-      
-      // 更新玩家位置
-      if (selectedPlayer === 1) {
-        player1PathIndex = newIndex;
-      } else {
-        player2PathIndex = newIndex;
-      }
-      
-      // 更新玩家位置顯示
-      updatePlayerPositions();
-      
-      // 移動完成後高亮格子
-      setTimeout(() => {
-        isMoving = false;
-        highlightedCell = newIndex;
-        renderBoard(); // 重新渲染以顯示高亮
+      function moveOneStep() {
+        // 計算下一步的位置
+        let nextIndex;
         
-        // 只有在設置了自動彈窗時才顯示格子信息
-        if (modalAutoPopup) {
-          // 顯示玩家到達的格子信息
-          const arrivedCell = pathCells[newIndex];
-          showModal(
-            `玩家 ${selectedPlayer} 到達 ${arrivedCell.title}`,
-            arrivedCell.description,
-            arrivedCell.color
-          );
+        if (isForward) {
+          nextIndex = currentIndex + 1;
+          // 如果到達終點，回到起點
+          if (nextIndex >= pathCells.length) {
+            nextIndex = 0;
+          }
+        } else {
+          nextIndex = currentIndex - 1;
+          // 如果到達起點之前，回到終點
+          if (nextIndex < 0) {
+            nextIndex = pathCells.length - 1;
+          }
         }
-      }, 500);
+        
+        // 更新當前位置
+        currentIndex = nextIndex;
+        
+        // 更新玩家位置
+        if (currentPlayer === 1) {
+          player1PathIndex = currentIndex;
+          updatePlayerPosition(1, player1PathIndex);
+        } else {
+          player2PathIndex = currentIndex;
+          updatePlayerPosition(2, player2PathIndex);
+        }
+        
+        // 減少剩餘步數
+        stepsLeft--;
+        
+        // 如果還有步數，繼續移動
+        if (stepsLeft > 0) {
+          setTimeout(moveOneStep, STEP_ANIMATION_DELAY);
+        } else {
+          // 移動完成
+          finishMoving(currentIndex);
+        }
+      }
+      
+      // 開始移動
+      setTimeout(moveOneStep, STEP_ANIMATION_DELAY);
+    }
+    
+    // 完成移動
+    function finishMoving(finalIndex) {
+      isMoving = false;
+      highlightedCell = finalIndex;
+      selectedSteps = 0;
+      
+      // 移除步數按鈕選中狀態
+      stepBtns.forEach(btn => btn.classList.remove('selected'));
+      
+      // 重新渲染以顯示高亮
+      renderBoard();
+      
+      // 啟用按鈕
+      enableDisableButtons(true);
+      
+      // 更新方向按鈕狀態
+      updateDirectionButtonState();
+      
+      // 更新回上一步按鈕狀態
+      updateUndoButtonState();
+    }
+    
+    // 啟用/禁用按鈕
+    function enableDisableButtons(enable) {
+      // 步數按鈕
+      stepBtns.forEach(btn => {
+        btn.disabled = !enable;
+      });
+      
+      // 玩家選擇按鈕
+      player1Btn.disabled = !enable;
+      player2Btn.disabled = !enable;
+      
+      // 方向按鈕
+      forwardBtn.disabled = !enable;
+      backwardBtn.disabled = !enable;
+      
+      // 方向按鈕樣式
+      if (!enable) {
+        forwardBtn.classList.remove('active');
+        backwardBtn.classList.remove('active');
+      }
+      
+      // 回上一步按鈕
+      if (enable) {
+        updateUndoButtonState();
+      } else {
+        undoBtn.disabled = true;
+      }
+      
+      // 重置按鈕
+      resetBtn.disabled = !enable;
     }
     
     // 選擇玩家
@@ -267,6 +376,12 @@ document.addEventListener('DOMContentLoaded', () => {
         player1Btn.classList.remove('selected');
         player2Btn.classList.add('selected');
       }
+      
+      // 重置選擇狀態
+      selectedSteps = 0;
+      directionSelected = false;
+      stepBtns.forEach(btn => btn.classList.remove('selected'));
+      updateDirectionButtonState();
     }
     
     // 回上一步
@@ -283,7 +398,14 @@ document.addEventListener('DOMContentLoaded', () => {
       highlightedCell = null;
       renderBoard();
       
+      // 重置選擇狀態
+      selectedSteps = 0;
+      directionSelected = false;
+      stepBtns.forEach(btn => btn.classList.remove('selected'));
+      
+      // 更新按鈕狀態
       updateUndoButtonState();
+      updateDirectionButtonState();
     }
     
     // 更新回上一步按鈕狀態
@@ -295,10 +417,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetGame() {
       player1PathIndex = 0;
       player2PathIndex = 0;
-      highlightedCell = null;  // 移除對diceElement的引用
+      highlightedCell = null;
       selectPlayer(1);
       moveHistory = [];
+      selectedSteps = 0;
+      directionSelected = false;
+      
+      // 移除步數按鈕選中狀態
+      stepBtns.forEach(btn => btn.classList.remove('selected'));
+      
       updateUndoButtonState();
+      updateDirectionButtonState();
       renderBoard();
     }
     
@@ -312,9 +441,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => handleStepSelection(index + 1));
       });
       
+      // 添加方向按鈕的事件監聽器
+      forwardBtn.addEventListener('click', () => handleDirectionSelection(true));
+      backwardBtn.addEventListener('click', () => handleDirectionSelection(false));
+      
       undoBtn.addEventListener('click', undoMove);
       resetBtn.addEventListener('click', resetGame);
-      modalCloseBtn.addEventListener('click', closeModal);
     }
     
     // 初始化遊戲

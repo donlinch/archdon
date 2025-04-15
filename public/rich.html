@@ -1,90 +1,12 @@
-<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大富翁遊戲</title>
-    <link rel="stylesheet" href="style.css">
-
-<style>
-/* 更新格子樣式，以便更好地展示內容 */
-.cell {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 90px;
-    height: 90px;
-    border: 1px solid #666;
-    text-align: center;
-    font-weight: bold;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
-    padding: 5px;
-}
-
-.cell.highlighted {
-    transform: scale(1.05);
-    z-index: 2;
-    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
-}
-
-.cell-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-.cell-title {
-    font-size: 0.9rem;
-    font-weight: bold;
-    margin-bottom: 4px;
-}
-
-.cell-description {
-    font-size: 0.7rem;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-}
-
-/* 確保遊戲板是固定大小並且可以正確顯示所有格子 */
-.game-board {
-    position: relative;
-    width: 630px;  /* 7 * 90px */
-    height: 630px; /* 7 * 90px */
-    background-color: #f0f0f0;
-    border: 2px solid #333;
-}
-
-/* 修改玩家標記的位置，使其不會覆蓋文字 */
-.player-token {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 0.75rem;
-    color: white;
-    border: 2px solid white;
-    z-index: 10;
-    transition: left 0.3s, top 0.3s;
-}
- /* 基本樣式 */
- * {
+    <style>
+    /* 基本樣式 */
+    * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
@@ -139,6 +61,16 @@
         transform: scale(1.05);
         z-index: 2;
         box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+        animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+        from {
+            box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
+        }
+        to {
+            box-shadow: 0 0 15px 8px rgba(255, 215, 0, 0.9);
+        }
     }
 
     .cell-content {
@@ -169,51 +101,18 @@
 
     .player-token {
         position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 0.75rem;
-    color: white;
-    border: 2px solid white;
-    z-index: 10;
-    transition: left 0.3s ease-in-out, top 0.3s ease-in-out; /* 平滑過渡 */
-}
-
-
-
-/* 按鈕禁用狀態 */
-.step-btn:disabled,
-.player-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.step-btn:disabled:hover {
-    background-color: #4299e1;
-    transform: none;
-}
-
-
-/* 高亮當前格子 */
-.cell.highlighted {
-    transform: scale(1.05);
-    z-index: 2;
-    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
-    animation: pulse 1s infinite alternate;
-}
-
-@keyframes pulse {
-    from {
-        box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.7);
-    }
-    to {
-        box-shadow: 0 0 15px 8px rgba(255, 215, 0, 0.9);
-    }
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 0.75rem;
+        color: white;
+        border: 2px solid white;
+        z-index: 10;
+        transition: left 0.3s ease-in-out, top 0.3s ease-in-out; /* 平滑過渡 */
     }
 
     .player1-token {
@@ -222,6 +121,10 @@
 
     .player2-token {
         background-color: #3182ce; /* 藍色 */
+    }
+
+    .player3-token {
+        background-color: #38a169; /* 綠色 */
     }
 
     /* 控制面板 */
@@ -292,35 +195,21 @@
         background-color: #3182ce; /* 深藍色 */
     }
 
-    .steps-buttons {
+    .player3 {
+        background-color: #68d391; /* 淺綠色 */
+    }
+
+    .player3.selected {
+        background-color: #38a169; /* 深綠色 */
+    }
+
+    .direction-buttons {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 1rem;
         justify-content: center;
     }
 
-    .step-btn {
-        width: 3.5rem;
-        height: 3.5rem;
-        border-radius: 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #4299e1;
-        color: white;
-        font-weight: bold;
-        font-size: 1.1rem;
-        border: none;
-        cursor: pointer;
-        transition: background-color 0.2s, transform 0.1s;
-    }
-
-    .step-btn:hover {
-        background-color: #3182ce;
-        transform: translateY(-2px);
-    }
-
-    .action-btn {
+    .direction-btn {
         padding: 0.75rem 1.5rem;
         border-radius: 0.5rem;
         color: white;
@@ -328,46 +217,35 @@
         font-size: 1.25rem;
         border: none;
         cursor: pointer;
-        width: 100%;
-        margin-bottom: 0.75rem;
+        width: 45%;
     }
 
-    .action-btn:disabled {
+    .forward {
+        background-color: #4299e1; /* 藍色 */
+    }
+
+    .forward:hover:not(:disabled) {
+        background-color: #3182ce; /* 深藍色 */
+    }
+
+    .backward {
+        background-color: #ed8936; /* 橙色 */
+    }
+
+    .backward:hover:not(:disabled) {
+        background-color: #dd6b20; /* 深橙色 */
+    }
+
+    /* 按鈕禁用狀態 */
+    .player-btn:disabled,
+    .direction-btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
     }
-
-    .undo {
-        background-color: #ecc94b; /* 黃色 */
-    }
-
-    .undo:hover:not(:disabled) {
-        background-color: #d69e2e; /* 深黃色 */
-    }
-
-    .reset {
-        background-color: #f56565; /* 紅色 */
-    }
-
-    .reset:hover:not(:disabled) {
-        background-color: #e53e3e; /* 深紅色 */
-    }
-
-    .control-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        width: 100%;
-    }
-
-    .hidden {
-        display: none;
-    }
-
-
-
     </style>
-</head><body>
+</head>
+<body>
     <div class="game-container">
         <!-- 左側遊戲面板 -->
         <div id="game-board" class="game-board">
@@ -384,31 +262,20 @@
                 <div class="player-select">
                     <button id="player1-btn" class="player-btn player1 selected">P1</button>
                     <button id="player2-btn" class="player-btn player2">P2</button>
+                    <button id="player3-btn" class="player-btn player3">P3</button>
                 </div>
             </div>
             
-            <!-- 步數選擇區域 -->
+            <!-- 移動方向選擇 -->
             <div class="steps-container">
-                <h2>選擇步數</h2>
-                <div class="steps-buttons">
-                    <button id="step-1-btn" class="step-btn">1步</button>
-                    <button id="step-2-btn" class="step-btn">2步</button>
-                    <button id="step-3-btn" class="step-btn">3步</button>
-                    <button id="step-4-btn" class="step-btn">4步</button>
-                    <button id="step-5-btn" class="step-btn">5步</button>
-                    <button id="step-6-btn" class="step-btn">6步</button>
+                <h2>選擇移動方向</h2>
+                <div class="direction-buttons">
+                    <button id="forward-btn" class="direction-btn forward">前進</button>
+                    <button id="backward-btn" class="direction-btn backward">後退</button>
                 </div>
-            </div>
-            
-            <!-- 控制按鈕 -->
-            <div class="control-buttons">
-                <button id="undo-btn" class="action-btn undo">回上一步</button>
-                <button id="reset-btn" class="action-btn reset">重新開始</button>
             </div>
         </div>
     </div>
-    
-    <!-- 移除彈窗相關HTML -->
     
     <script src="rich.js"></script>
 </body>
