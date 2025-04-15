@@ -276,10 +276,7 @@
         </div>
         <div class="control-section">
             <h2>移動控制</h2>
-            <div class="steps-input">
-                <label for="steps">步數:</label>
-                <input type="number" id="steps" min="1" max="12" value="1">
-            </div>
+            
             <div class="direction-buttons">
                 <button id="forward-btn" class="direction-btn forward">前進</button>
                 <button id="backward-btn" class="direction-btn backward">後退</button>
@@ -511,8 +508,8 @@
              }
 
             function movePlayer(direction) {
-                  console.log(`Sending move command: P${selectedPlayer}, ${direction}, ${steps} steps`);
-                 sendCommand('movePlayer', {
+                console.log(`Sending move command: P${selectedPlayer}, ${direction}, 1 step`); // <-- 日誌也改成 1 step
+                sendCommand('movePlayer', {
                     player: selectedPlayer, // Use the locally selected player for the command
                     direction,
                     steps: 1
