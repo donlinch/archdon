@@ -511,7 +511,8 @@
                      return;
                  }
                  // Update selected player button visually based on game state
-                 selectPlayerUI(gameState.selectedPlayer || 1);
+// 不要送出 selectPlayer 命令，只更新 UI
+selectPlayerUI(gameState.selectedPlayer || 1, false);
          const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
          forwardBtn.disabled = controlsShouldBeDisabled;
          backwardBtn.disabled = controlsShouldBeDisabled;
@@ -593,18 +594,18 @@ function updatePlayerButtonAppearance(playersData) {
             }
 
             // --- UI Actions ---
-            function selectPlayerUI(playerNum) {
-                 selectedPlayer = playerNum; // Update local state for sending commands
-                 player1Btn.classList.toggle('selected', playerNum === 1);
-                 player2Btn.classList.toggle('selected', playerNum === 2);
-                 player3Btn.classList.toggle('selected', playerNum === 3);
-                 // Note: We don't send a 'selectPlayer' command here anymore,
-                 // because the *game's* state dictates the selected player display.
-                 // We just update the local `selectedPlayer` variable for *sending* commands.
-                 console.log(`Controller UI updated for Player ${playerNum}`);
-                 sendCommand('selectPlayer', { player: playerNum });
+            function selectPlayerUI(playerNum, shouldSendCommand = true) {
+    selectedPlayer = playerNum;
+    player1Btn.classList.toggle('selected', playerNum === 1);
+    player2Btn.classList.toggle('selected', playerNum === 2);
+    player3Btn.classList.toggle('selected', playerNum === 3);
 
-             }
+    console.log(`Controller UI updated for Player ${playerNum}`);
+
+    if (shouldSendCommand) {
+        sendCommand('selectPlayer', { player: playerNum });
+    }
+}
 
             function movePlayer(direction) {
                 console.log(`Sending move command: P${selectedPlayer}, ${direction}, 1 step`); // <-- 日誌也改成 1 step
@@ -629,9 +630,10 @@ function updatePlayerButtonAppearance(playersData) {
             }
 
             // --- Event Listeners ---
-            player1Btn.addEventListener('click', () => selectPlayerUI(1)); // Only update local UI selection
-            player2Btn.addEventListener('click', () => selectPlayerUI(2));
-            player3Btn.addEventListener('click', () => selectPlayerUI(3));
+            player1Btn.addEventListener('click', () => selectPlayerUI(1, true));
+player2Btn.addEventListener('click', () => selectPlayerUI(2, true));
+player3Btn.addEventListener('click', () => selectPlayerUI(3, true));
+
             forwardBtn.addEventListener('click', () => movePlayer('forward'));
             backwardBtn.addEventListener('click', () => movePlayer('backward'));
     
