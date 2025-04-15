@@ -533,30 +533,36 @@
                  positionSelectPopulated = true;
              }
 
-
-// --- ★ 新增：更新玩家按鈕外觀的函數 ★ ---
+// --- ★ 修改：更新玩家按鈕外觀的函數 ★ ---
 function updatePlayerButtonAppearance(playersData) {
     const buttons = [player1Btn, player2Btn, player3Btn];
     buttons.forEach((btn, index) => {
         const playerNum = index + 1;
-        const playerData = playersData[playerNum]; // 獲取對應玩家數據
+        // ★ 獲取當前按鈕的數據 (如果之前存儲過) 或直接檢查內容 ★
+        const currentAvatarUrl = btn.dataset.avatarUrl || null; // 使用 dataset 存儲當前 URL
+        const playerData = playersData[playerNum];
+        const newAvatarUrl = (playerData && playerData.avatarUrl) ? playerData.avatarUrl : null;
 
-        if (playerData && playerData.avatarUrl) {
-            // 有頭像 URL，顯示圖片
-            btn.innerHTML = `<img src="${playerData.avatarUrl}"
-                                 alt="P${playerNum}"
-                                 style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-            // (可選) 移除背景色，如果 CSS 沒有處理
-            // btn.style.backgroundColor = 'transparent';
+        // --- ★ 只有在新舊 URL 不同時才更新 DOM ★ ---
+        if (newAvatarUrl !== currentAvatarUrl) {
+            console.log(`Updating appearance for Player ${playerNum}, New URL: ${newAvatarUrl}`); // 調試日誌
+            if (newAvatarUrl) {
+                // 新 URL 存在，設置為圖片
+                btn.innerHTML = `<img src="${newAvatarUrl}"
+                                     alt="P${playerNum}"
+                                     style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                btn.dataset.avatarUrl = newAvatarUrl; // ★ 存儲新的 URL 到 dataset ★
+            } else {
+                // 新 URL 為空，設置為文字
+                btn.innerHTML = `P${playerNum}`; // 直接設置文字
+                delete btn.dataset.avatarUrl; // ★ 移除 dataset 中的 URL ★
+            }
         } else {
-            // 沒有頭像 URL，顯示預設文字
-            btn.textContent = `P${playerNum}`;
-            // (可選) 恢復背景色
-            // btn.style.backgroundColor = ''; // 恢復 CSS 預設
+            // console.log(`Skipping update for Player ${playerNum}, URL unchanged.`); // (可選) 取消註解以調試
         }
+        // --- ★ 判斷結束 ★ ---
     });
 }
-
   // --- ★ 新增事件監聽器 ★ ---
   showPlayerInfoBtn.addEventListener('click', () => {
         console.log(`Sending showPlayerInfo command for player ${selectedPlayer}`);
