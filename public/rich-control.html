@@ -281,7 +281,19 @@
                 <button id="forward-btn" class="direction-btn forward">前進</button>
                 <button id="backward-btn" class="direction-btn backward">後退</button>
             </div>
+
+
+
+
         </div>
+
+         <!-- ★★★ 新增：格子資訊控制區塊 ★★★ -->
+         <div class="control-section">
+             
+            <button id="show-player-info-btn" class="action-btn">顯示</button>
+            <button id="hide-player-info-btn" class="action-btn" style="margin-top: 0.5rem; background-color: #6c757d;">關閉</button> <!-- 可以加點間距和不同顏色 -->
+        </div>
+        <!-- ★★★ 新增結束 ★★★ -->
 
 
  
@@ -300,8 +312,12 @@
             const backwardBtn = document.getElementById('backward-btn');
          
             const connectionStatusDiv = document.getElementById('connection-status');
-             const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
 
+              // ★ 新增按鈕引用 ★
+    const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
+    const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
+    // ↓↓↓ 確保這裡包含了新按鈕的 class 或 ID ↓↓↓
+    const allControlButtons = document.querySelectorAll('.controller-container button, .controller-container input, .controller-container select');
 
             // --- State ---
             let selectedPlayer = 1; // Local controller state
@@ -421,9 +437,12 @@
                  }
                  // Update selected player button visually based on game state
                  selectPlayerUI(gameState.selectedPlayer || 1);
-                 const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
-     forwardBtn.disabled = controlsShouldBeDisabled;
-     backwardBtn.disabled = controlsShouldBeDisabled;
+         const controlsShouldBeDisabled = gameState.isMoving || !gameIsConnected;
+         forwardBtn.disabled = controlsShouldBeDisabled;
+         backwardBtn.disabled = controlsShouldBeDisabled;
+         // ★ 控制新按鈕的禁用狀態 ★
+         showPlayerInfoBtn.disabled = controlsShouldBeDisabled;
+         hidePlayerInfoBtn.disabled = controlsShouldBeDisabled;
              }
 
               // Update position select dropdown
@@ -439,6 +458,24 @@
                  }
                  positionSelectPopulated = true;
              }
+
+
+
+
+  // --- ★ 新增事件監聽器 ★ ---
+  showPlayerInfoBtn.addEventListener('click', () => {
+        console.log(`Sending showPlayerInfo command for player ${selectedPlayer}`);
+        // ★ 發送新指令，帶上當前控制器選中的玩家 ★
+        sendCommand('showPlayerInfo', { player: selectedPlayer });
+    });
+
+    hidePlayerInfoBtn.addEventListener('click', () => {
+        console.log(`Sending hidePlayerInfo command`);
+        // ★ 發送隱藏指令，不需要玩家參數 ★
+        sendCommand('hidePlayerInfo', {});
+    });
+    // --- 事件監聽器添加結束 ---
+
 
 
             // --- Send Command via WebSocket ---
