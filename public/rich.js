@@ -213,8 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     function enableDisableButtons(enable) {
-      [player1Btn, player2Btn, player3Btn, forwardBtn, backwardBtn].forEach(btn => btn.disabled = !enable);
-    }
+     }
   
     function selectPlayer(num) {
       if (num < 1 || num > 3 || isMoving) return;
@@ -223,13 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sendGameStateToControllers();
     }
   
-    function updatePlayerButtonStyles() {
-      [player1Btn, player2Btn, player3Btn].forEach((btn, idx) => btn.classList.toggle('selected', idx + 1 === selectedPlayer));
-    }
-  
-    function addEventListeners() {
-     
-    }
+    
   
     function initPlayerPositions() {
       playerPathIndices = [0, 0, 0];
