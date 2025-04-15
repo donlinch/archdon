@@ -680,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playerPathIndices: [...playerPathIndices],
         highlightedCell,
         isMoving
-      };
+      };   
     }
   };
   

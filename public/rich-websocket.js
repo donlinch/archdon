@@ -239,7 +239,7 @@ class GameWebSocketServer {
     notifyGameStateChanged() {
       this.sendGameState();
     }
-  }
+  }   
   
   // 導出 WebSocket 服務器實例
   // 注意：此部分在瀏覽器中會被忽略，在 Node.js 中使用
