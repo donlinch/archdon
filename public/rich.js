@@ -3,17 +3,14 @@
 let player1Btn, player2Btn, player3Btn, forwardBtn, backwardBtn;
 
 
-
 document.addEventListener('DOMContentLoaded', () => {
-  // ... (keep existing DOM element variables: gameBoard, buttons, etc.) ...
-  const cellWidth = 125;
-  const cellHeight = 100;
-  const gameBoard = document.getElementById('game-board');
-  const player1Btn = document.getElementById('player1-btn');
-  const player2Btn = document.getElementById('player2-btn');
-  const player3Btn = document.getElementById('player3-btn');
-  const forwardBtn = document.getElementById('forward-btn');
-  const backwardBtn = document.getElementById('backward-btn');
+  // --- DOM Element Variables ---
+  const gameBoard = document.getElementById('game-board'); // 假設在這裡
+  const player1Btn = document.getElementById('player1-btn'); // 在這裡獲取一次
+  const player2Btn = document.getElementById('player2-btn'); // 在這裡獲取一次
+  const player3Btn = document.getElementById('player3-btn'); // 在這裡獲取一次
+  const forwardBtn = document.getElementById('forward-btn'); // 在這裡獲取一次
+  const backwardBtn = document.getElementById('backward-btn'); // 在這裡獲取一次
   const logoContainer = document.getElementById('logo-container');
 
 
@@ -41,18 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // Initialize Game
-  function initGame() {
-    player1Btn = document.getElementById('player1-btn');
-    player2Btn = document.getElementById('player2-btn');
-    player3Btn = document.getElementById('player3-btn');
-    forwardBtn = document.getElementById('forward-btn');
-    backwardBtn = document.getElementById('backward-btn');
-      createBoardCells();
-      renderBoard();
-      updatePlayerButtonStyles();
-      addEventListeners();
-      connectWebSocket(); // Connect WebSocket instead of initWebSocket
-      initPlayerPositions(); // Ensure positions are set initially
+    function initGame() {
+        console.log("Initializing game...");
+
+  // 現在可以直接使用在外面已經獲取的變數了
+  createBoardCells();
+  renderBoard();
+  updatePlayerButtonStyles();
+  addEventListeners(); // 確保 addEventListeners 內部能訪問這些按鈕變數
+  connectWebSocket();
+  initPlayerPositions();
+  console.log("Game initialization complete.");
+
+
+
+
+
   }
 
 
