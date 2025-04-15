@@ -307,213 +307,55 @@
             </div>
         </div>
     </div>
-
     <script>
-
         document.addEventListener('DOMContentLoaded', () => {
-            const connectionStatus = document.getElementById('connection-status');
+            const channel = new BroadcastChannel('rich_game_channel'); // 建立頻道
+    
             const player1Btn = document.getElementById('player1-btn');
             const player2Btn = document.getElementById('player2-btn');
             const player3Btn = document.getElementById('player3-btn');
             const forwardBtn = document.getElementById('forward-btn');
             const backwardBtn = document.getElementById('backward-btn');
             const stepsInput = document.getElementById('steps');
-            const gameInfoContent = document.getElementById('game-info-content');
             const positionSelect = document.getElementById('position-select');
             const jumpBtn = document.getElementById('jump-btn');
             const showInfoBtn = document.getElementById('show-info-btn');
             const hideInfoBtn = document.getElementById('hide-info-btn');
             const resetBtn = document.getElementById('reset-btn');
-
-
-
-            const channel = new BroadcastChannel('rich_game_channel');
-
-// 接收訊息
-channel.onmessage = (event) => {
-  const message = event.data;
-
-  if (message.type === 'controlCommand') {
-    window.postMessage(message, '*'); // 轉給原本處理 postMessage 的系統
-  }
-};
-
-
-
-
+    
             let selectedPlayer = 1;
-            let isConnected = false;
-            let gameState = null;
-            let gameWindowOrigin = '*'; // 遊戲視窗的來源
-
-            // 連接遊戲視窗
-            function connectToGame() {
-                updateConnectionStatus('connecting');
-                
-                // 請求遊戲狀態
-                window.parent.postMessage({
-                    type: 'controlCommand',
-                    command: 'getGameState'
-                }, '*');
-                
-                // 設置連接狀態
-                isConnected = true;
-                updateConnectionStatus('connected');
-                enableControls(true);
-            }
-
-            // 更新連接狀態顯示
-            function updateConnectionStatus(status) {
-                connectionStatus.className = 'connection-status ' + status;
-                switch(status) {
-                    case 'connected':
-                        connectionStatus.textContent = '已連接';
-                        break;
-                    case 'disconnected':
-                        connectionStatus.textContent = '未連接';
-                        break;
-                    case 'connecting':
-                        connectionStatus.textContent = '正在連接...';
-                        break;
-                }
-            }
-
-            // 啟用或禁用控制按鈕
-            function enableControls(enable) {
-                const buttons = document.querySelectorAll('button');
-                buttons.forEach(button => {
-                    button.disabled = !enable;
-                });
-                stepsInput.disabled = !enable;
-                positionSelect.disabled = !enable;
-            }
-
-            // 發送命令到遊戲視窗
+    
             function sendCommand(command, params = {}) {
-  const message = {
-    type: 'controlCommand',
-    command,
-    params
-  };
-  channel.postMessage(message);
-}
-
-            // 請求遊戲狀態
-            function requestGameState() {
-                sendCommand('getGameState');
+                const message = {
+                    type: 'controlCommand',
+                    command,
+                    params
+                };
+                channel.postMessage(message); // 使用 BroadcastChannel 傳送
             }
-
-            // 處理接收到的消息
-            function handleMessage(event) {
-                const message = event.data;
-                
-                if (!message || !message.type) return;
-                
-                switch(message.type) {
-                    case 'gameState':
-                        updateGameState(message.data);
-                        break;
-                    case 'moveComplete':
-                        updateGameInfo(`玩家 ${message.player} 移動到 ${message.cellTitle || '位置 ' + message.position}`);
-                        requestGameState(); // 更新狀態
-                        break;
-                    case 'playerSelected':
-                        updateGameInfo(`選擇玩家 ${message.player}`);
-                        break;
-                    case 'gameWindowReady':
-                        gameWindowOrigin = message.gameWindowOrigin || '*';
-                        connectToGame();
-                        break;
-                    case 'error':
-                        updateGameInfo(`錯誤: ${message.message}`);
-                        break;
-                    default:
-                        console.log('未處理的消息類型:', message.type);
-                }
-            }
-
-            // 更新遊戲狀態
-            function updateGameState(state) {
-                gameState = state;
-                
-                // 更新位置選擇下拉框
-                populatePositionSelect(state.pathCells);
-                
-                // 更新遊戲信息
-                let infoText = `當前選擇: 玩家${state.selectedPlayer}\n`;
-                infoText += `玩家位置: `;
-                
-                state.playerPathIndices.forEach((index, i) => {
-                    const cell = state.pathCells[index];
-                    infoText += `P${i+1}: ${cell.title || '位置 ' + index}`;
-                    if (i < state.playerPathIndices.length - 1) {
-                        infoText += ', ';
-                    }
-                });
-                
-                updateGameInfo(infoText);
-                
-                // 同步選擇的玩家按鈕
-                selectPlayer(state.selectedPlayer, false); // 不發送命令，僅更新UI
-            }
-
-            // 填充位置選擇下拉框
-            function populatePositionSelect(pathCells) {
-                positionSelect.innerHTML = '';
-                
-                if (pathCells && pathCells.length > 0) {
-                    pathCells.forEach((cell, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = cell.title || `位置 ${index}`;
-                        positionSelect.appendChild(option);
-                    });
-                }
-            }
-
-            // 更新遊戲信息顯示
-            function updateGameInfo(text) {
-                gameInfoContent.textContent = text;
-            }
-
-            // 選擇玩家
-            function selectPlayer(playerNum, sendCommand = true) {
+    
+            function selectPlayer(playerNum) {
                 selectedPlayer = playerNum;
-                
-                // 更新按鈕樣式
                 player1Btn.classList.remove('selected');
                 player2Btn.classList.remove('selected');
                 player3Btn.classList.remove('selected');
-                
-                switch(playerNum) {
-                    case 1:
-                        player1Btn.classList.add('selected');
-                        break;
-                    case 2:
-                        player2Btn.classList.add('selected');
-                        break;
-                    case 3:
-                        player3Btn.classList.add('selected');
-                        break;
+                switch (playerNum) {
+                    case 1: player1Btn.classList.add('selected'); break;
+                    case 2: player2Btn.classList.add('selected'); break;
+                    case 3: player3Btn.classList.add('selected'); break;
                 }
-                
-                // 發送玩家選擇命令
-                if (sendCommand) {
-                    sendCommand('selectPlayer', { player: playerNum });
-                }
+                sendCommand('selectPlayer', { player: playerNum });
             }
-
-            // 移動玩家
+    
             function movePlayer(direction) {
                 const steps = parseInt(stepsInput.value) || 1;
                 sendCommand('movePlayer', {
                     player: selectedPlayer,
                     direction,
-                    steps: Math.min(Math.max(steps, 1), 12)  // 限制步數在1-12之間
+                    steps: Math.min(Math.max(steps, 1), 12)
                 });
             }
-
-            // 直接跳轉到位置
+    
             function jumpToPosition() {
                 const position = parseInt(positionSelect.value);
                 sendCommand('jumpToPosition', {
@@ -521,44 +363,30 @@ channel.onmessage = (event) => {
                     position
                 });
             }
-
-            // 顯示資訊
-            function showInfo() {
-                sendCommand('showInfo');
-            }
-
-            // 隱藏資訊
-            function hideInfo() {
-                sendCommand('hideInfo');
-            }
-
-            // 重置遊戲
-            function resetGame() {
-                if (confirm('確定要重置遊戲嗎？')) {
-                    sendCommand('resetGame');
-                }
-            }
-
-            // 添加事件監聽器
+    
             player1Btn.addEventListener('click', () => selectPlayer(1));
             player2Btn.addEventListener('click', () => selectPlayer(2));
             player3Btn.addEventListener('click', () => selectPlayer(3));
             forwardBtn.addEventListener('click', () => movePlayer('forward'));
             backwardBtn.addEventListener('click', () => movePlayer('backward'));
             jumpBtn.addEventListener('click', jumpToPosition);
-            showInfoBtn.addEventListener('click', showInfo);
-            hideInfoBtn.addEventListener('click', hideInfo);
-            resetBtn.addEventListener('click', resetGame);
-            
-            // 監聽來自橋接器的消息
-            window.addEventListener('message', handleMessage);
-
-            // 初始化時禁用控制
-            enableControls(false);
-   
-            // 發送準備就緒消息
-            window.parent.postMessage({ type: 'controllerReady' }, '*');
+            showInfoBtn.addEventListener('click', () => sendCommand('showInfo'));
+            hideInfoBtn.addEventListener('click', () => sendCommand('hideInfo'));
+            resetBtn.addEventListener('click', () => {
+                if (confirm('確定要重置遊戲嗎？')) {
+                    sendCommand('resetGame');
+                }
+            });
+    
+            // 可選：初始化位置選單
+            for (let i = 0; i < 28; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `位置 ${i}`;
+                positionSelect.appendChild(opt);
+            }
         });
     </script>
+    
 </body>
 </html>

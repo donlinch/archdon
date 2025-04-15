@@ -16,19 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  const channel = new BroadcastChannel('rich_game_channel');
-
-  // 接收訊息
-  channel.onmessage = (event) => {
-    const message = event.data;
-  
-    if (message.type === 'controlCommand') {
-      window.postMessage(message, '*'); // 轉給原本處理 postMessage 的系統
-    }
-  };
-
-
-
 
   // 遊戲狀態
   let pathCells = [];
@@ -63,6 +50,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // WebSocket 連接控制
   let wsConnection = null;
   
+
+  const broadcastChannel = new BroadcastChannel('rich_game_channel');
+
+  broadcastChannel.onmessage = (event) => {
+    const message = event.data;
+    if (message.type === 'controlCommand') {
+      handleControlCommand(message.command, message.params || {});
+    }
+  };
+
+
+
+
+
+
+
   // 初始化遊戲
   function initGame() {
     createBoardCells();
