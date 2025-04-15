@@ -116,7 +116,8 @@
     border: none;
     border-radius: 30px;    /* 更圓的邊角 */
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s; /* 只對縮放效果做過渡 */
+
         }
 
         .direction-btn:hover {
@@ -538,29 +539,23 @@ function updatePlayerButtonAppearance(playersData) {
     const buttons = [player1Btn, player2Btn, player3Btn];
     buttons.forEach((btn, index) => {
         const playerNum = index + 1;
-        // ★ 獲取當前按鈕的數據 (如果之前存儲過) 或直接檢查內容 ★
-        const currentAvatarUrl = btn.dataset.avatarUrl || null; // 使用 dataset 存儲當前 URL
+        const currentAvatarUrl = (btn.dataset.avatarUrl || '').trim();
         const playerData = playersData[playerNum];
-        const newAvatarUrl = (playerData && playerData.avatarUrl) ? playerData.avatarUrl : null;
+        const newAvatarUrl = (playerData && playerData.avatarUrl) ? playerData.avatarUrl.trim() : '';
 
-        // --- ★ 只有在新舊 URL 不同時才更新 DOM ★ ---
+        // --- 嚴格字串比較，避免不必要重繪 ---
         if (newAvatarUrl !== currentAvatarUrl) {
-            console.log(`Updating appearance for Player ${playerNum}, New URL: ${newAvatarUrl}`); // 調試日誌
+            console.log(`Updating appearance for Player ${playerNum}, New URL: ${newAvatarUrl || '(清空)'}`);
             if (newAvatarUrl) {
-                // 新 URL 存在，設置為圖片
                 btn.innerHTML = `<img src="${newAvatarUrl}"
-                                     alt="P${playerNum}"
-                                     style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-                btn.dataset.avatarUrl = newAvatarUrl; // ★ 存儲新的 URL 到 dataset ★
+                                  alt="P${playerNum}"
+                                  style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                btn.dataset.avatarUrl = newAvatarUrl;
             } else {
-                // 新 URL 為空，設置為文字
-                btn.innerHTML = `P${playerNum}`; // 直接設置文字
-                delete btn.dataset.avatarUrl; // ★ 移除 dataset 中的 URL ★
+                btn.innerHTML = `P${playerNum}`;
+                delete btn.dataset.avatarUrl;
             }
-        } else {
-            // console.log(`Skipping update for Player ${playerNum}, URL unchanged.`); // (可選) 取消註解以調試
         }
-        // --- ★ 判斷結束 ★ ---
     });
 }
   // --- ★ 新增事件監聽器 ★ ---
