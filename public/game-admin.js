@@ -241,7 +241,7 @@ function updateStatistics(data) {
         document.getElementById('total-plays-count').textContent = totalPlays;
         document.getElementById('most-popular-game').textContent = mostPopular ? mostPopular.title : '-';
     }
-    
+       
     // 獲取今日遊玩次數
     fetch('/api/admin/games/stats/today')
     .then(response => response.json())
