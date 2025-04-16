@@ -54,6 +54,36 @@ function renderBoard() {
   });
 }
 
+
+
+
+
+// --- 面板內圖片上傳邏輯 ---
+const panelImageFile = document.getElementById('panel-image-file');
+const uploadPanelImageBtn = document.getElementById('upload-panel-image-btn');
+
+uploadPanelImageBtn.addEventListener('click', () => {
+  if (panelImageFile.files.length > 0) {
+    const file = panelImageFile.files[0];
+    // 呼叫你已經寫好的 uploadImage 函數
+    uploadImage(file, (uploadedUrl) => {
+      if (uploadedUrl) {
+        // 上傳成功後，更新 URL 輸入框和預覽圖
+        imageInput.value = uploadedUrl;
+        document.getElementById('preview-image').src = uploadedUrl;
+        alert('圖片上傳成功！URL 已填入。');
+      } else {
+        alert('圖片上傳失敗，請檢查後端或網路連線。');
+      }
+    });
+  } else {
+    alert('請先選擇要上傳的圖片檔案。');
+  }
+});
+
+
+
+
 // 打開編輯器
 function openEditor(index) {
   editingIndex = index;
@@ -62,6 +92,7 @@ function openEditor(index) {
   descInput.value = cell.description;
   colorInput.value = cell.color;
   imageInput.value = cell.image_url || '';
+  document.getElementById('preview-image').src = cell.image_url || ''; // 如果沒有圖片URL，設為空字串
   editorPanel.style.display = 'flex';
 }
 

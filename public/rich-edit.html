@@ -162,6 +162,46 @@
       display: none;
     }
 
+
+
+    /* ▼▼▼ 新增 Logo 編輯區樣式 ▼▼▼ */
+    .logo-editor {
+      margin-top: 20px; /* 與上方遊戲板間距 */
+      padding: 15px;
+      background-color: #e8f0fe; /* 淡藍色背景 */
+      border: 1px solid #a8c7fa;
+      border-radius: 8px;
+      text-align: center;
+      width: 80%; /* 限制寬度 */
+      max-width: 600px; /* 最大寬度 */
+      margin-left: auto;
+      margin-right: auto; /* 水平居中 */
+    }
+    .logo-editor label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .logo-editor input[type="url"] {
+      width: 70%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .logo-editor img {
+      display: block;
+      max-width: 200px; /* 限制 Logo 預覽大小 */
+      max-height: 100px;
+      margin: 10px auto; /* 上下間距並居中 */
+      border: 1px solid #ccc;
+      background-color: #fff; /* 白色底，以防透明圖看不清 */
+      object-fit: contain;
+    }
+    /* ▲▲▲ 新增 Logo 編輯區樣式 ▲▲▲ */
+
+
+
+
   </style>
 </head>
 <body>
@@ -176,6 +216,17 @@
 
   </div>
 
+
+
+  <!-- ▼▼▼ 新增 Logo 編輯區 ▼▼▼ -->
+  <div class="logo-editor">
+    <label for="edit-logo-url">中央 LOGO 圖片 URL：</label>
+    <input type="url" id="edit-logo-url" placeholder="請輸入圖片網址">
+    <img id="logo-preview" src="" alt="Logo 預覽">
+    </div>
+  <!-- ▲▲▲ 新增 Logo 編輯區 ▲▲▲ -->
+
+
   <!-- 編輯面板 (初始隱藏) -->
   <div id="editor-panel" class="editor-card hidden">
       <!-- 面板標題和關閉按鈕 -->
@@ -189,6 +240,16 @@
       <input type="url" id="edit-image" placeholder="圖片網址 (選填)" />
       <!-- 圖片預覽 -->
       <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
+     
+     
+<!-- ▼▼▼ 加入檔案選擇和上傳按鈕 ▼▼▼ -->
+<div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
+    <input type="file" id="panel-image-file" accept="image/*" style="flex-grow: 1;">
+    <button type="button" id="upload-panel-image-btn" style="padding: 5px 10px; font-size: 0.8rem;">上傳</button>
+  </div>
+  <!-- ▲▲▲ 加入檔案選擇和上傳按鈕 ▲▲▲ -->
+  
+     
       <!-- 顏色選擇 -->
       <label>
         顏色：
