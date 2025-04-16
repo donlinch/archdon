@@ -372,7 +372,10 @@ function renderGridView(files) {
         if (!button) return;
         const filePath = button.dataset.filePath;
         if (!filePath) return;
-
+ // ▼▼▼ 拼接成完整的 URL ▼▼▼
+ const siteUrl = window.location.origin; // 獲取當前網站的基礎 URL (https://sunnyyummy.onrender.com)
+ const fullUrl = siteUrl + relativePath; // 拼接成 https://sunnyyummy.onrender.com/uploads/xyz.png
+ // ▲▲▲ 拼接成完整的 URL ▲▲▲
         navigator.clipboard.writeText(filePath).then(() => {
             const originalText = button.textContent;
             button.textContent = '✓'; // 用打勾符號
