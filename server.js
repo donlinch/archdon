@@ -76,6 +76,16 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
 
 
+app.get("/api/rich-map/templates", async (req, res) => {
+    // 這邊你要從資料庫撈出 rich_map_templates 的 template_name
+    const result = await pool.query("SELECT id, template_name FROM rich_map_templates");
+    res.json(result.rows);
+  });
+  
+
+
+
+
 
 
 
