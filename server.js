@@ -23,7 +23,7 @@ const pool = new Pool({
    
 const multer = require('multer');
 const fs = require('fs');
-const path = require('path');
+ 
 
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
