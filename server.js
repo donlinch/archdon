@@ -329,14 +329,14 @@ app.post('/api/rich-map/templates', async (req, res) => {
              }
              // 如果預設模板沒有玩家資料，playersToUse 會保持上面的預設值
         }
-
-        // 4. 插入新的模板記錄
-        const newTemplateResult = await client.query(
-            `INSERT INTO rich_map_templates (template_name, background_color, logo_url)
-             VALUES ($1, $2, $3) RETURNING id`,
-            [trimmedName, bgColorToUse, logoUrlToUse]
-        );
-        const newTemplateId = newTemplateResult.rows[0].id;
+// ▼▼▼ 修正後的第 4 步 ▼▼▼
+const newTemplateResult = await client.query(
+    `INSERT INTO rich_map_templates (template_name, background_color, logo_url)
+     VALUES ($1, $2, $3) RETURNING id`, // <-- 只插入需要的欄位，不指定 id
+    [trimmedName, bgColorToUse, logoUrlToUse] // <-- 參數列表也不包含 id
+);
+const newTemplateId = newTemplateResult.rows[0].id; // <-- 正確獲取自動生成的 ID
+// ▲▲▲ 修正後的第 4 步 ▲▲▲
         console.log(`新模板基礎資料已插入，ID: ${newTemplateId}`);
 
         // 5. 插入格子資料 (如果有)

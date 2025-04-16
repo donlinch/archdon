@@ -20,6 +20,7 @@ const saveTemplateBtn = document.getElementById('save-template-btn');
 const playerConfigTableBody = document.querySelector('#player-config-table tbody');
 const saveAsNewBtn = document.getElementById('save-as-new-btn');
 const createNewBtn = document.getElementById('create-new-btn');
+const deleteTemplateBtn = document.getElementById('delete-template-btn');
 
 
 // --- 全域變數 ---
@@ -84,6 +85,72 @@ function renderBoard() {
     board.appendChild(div);
   });
 }
+
+
+
+
+// ▼▼▼ 新增：處理刪除模板的函數 ▼▼▼
+async function deleteCurrentTemplate() {
+    if (!currentTemplateId) {
+        alert("錯誤：尚未載入任何模板，無法刪除！");
+        return;
+    }
+
+    // 增加保護，不允許刪除 ID=1
+    if (currentTemplateId === 1) {
+         alert("錯誤：不允許刪除預設模板 (ID=1)！");
+         return;
+     }
+
+
+    const templateName = templateSelect.options[templateSelect.selectedIndex]?.text || `ID: ${currentTemplateId}`; // 獲取當前選中模板的名稱
+    if (!confirm(`確定要永久刪除模板 "${templateName}" 嗎？\n這個操作無法復原！`)) {
+        return; // 使用者取消
+    }
+
+    console.log(`準備刪除模板 ID: ${currentTemplateId}`);
+    deleteTemplateBtn.disabled = true; // 禁用按鈕
+    deleteTemplateBtn.textContent = '刪除中...';
+
+    try {
+        const response = await fetch(`/api/rich-map/templates/${currentTemplateId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.status === 204) { // 成功刪除 (No Content)
+            alert(`✅ 模板 "${templateName}" 已成功刪除！`);
+            // 清空當前狀態並刷新列表
+            currentTemplateId = null;
+            cells = [];
+            currentLogoUrl = '';
+            currentPlayers = [];
+            if (board) board.innerHTML = '';
+            if (logoUrlInput) logoUrlInput.value = '';
+            if (logoPreview) logoPreview.src = '';
+            if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請選擇或建立模板</td></tr>';
+            applyTemplateBackgroundColor('#fff0f5');
+            saveTemplateBtn.disabled = true; // 禁用儲存
+            await fetchTemplateList(); // 刷新下拉選單 (會自動載入第一個)
+        } else {
+             // 如果伺服器回傳錯誤 (例如 404, 500)
+             const errData = await response.json().catch(() => ({}));
+             throw new Error(`刪除失敗 ${response.status}: ${errData.error || response.statusText}`);
+        }
+
+    } catch (err) {
+        console.error('❌ 刪除模板失敗:', err);
+        alert(`刪除模板失敗：\n${err.message}`);
+    } finally {
+        // 恢復按鈕狀態 (如果按鈕還存在的話)
+        if (deleteTemplateBtn) {
+             deleteTemplateBtn.disabled = false;
+             deleteTemplateBtn.textContent = '🗑️ 刪除目前版本';
+        }
+    }
+}
+// ▲▲▲ 新增：處理刪除模板的函數 ▲▲▲
+
+
 
 // 打開編輯器
 function openEditor(index) {
@@ -635,6 +702,15 @@ if (dragPanel && header) {
 
 } else {
     console.warn("編輯面板或其標題頭未找到，拖曳功能將無法使用。");
+}
+
+
+
+// ▼▼▼ 新增刪除按鈕的事件監聽 ▼▼▼
+if (deleteTemplateBtn) {
+    deleteTemplateBtn.addEventListener('click', deleteCurrentTemplate);
+} else {
+    console.warn("刪除模板按鈕未找到。");
 }
 
 
