@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲管理 - SunnyYummy</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* 管理頁面特定樣式 */
+        body { background-color: #fff; color: #333; }
+        .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        
+        #games-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
+        #games-list-table th, #games-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #games-list-table th { background-color: #e9ecef; }
+        
+        #games-list-table th:nth-child(1), #games-list-table td:nth-child(1) { width: 8%; }  /* ID */
+        #games-list-table th:nth-child(2), #games-list-table td:nth-child(2) { width: 18%; } /* 名稱 */
+        #games-list-table th:nth-child(3), #games-list-table td:nth-child(3) { width: 30%; } /* 描述 */
+        #games-list-table th:nth-child(4), #games-list-table td:nth-child(4) { width: 15%; text-align: center;} /* 遊玩次數 */
+        #games-list-table th:nth-child(5), #games-list-table td:nth-child(5) { width: 15%; text-align: center;} /* 圖片 */
+        #games-list-table th:nth-child(6), #games-list-table td:nth-child(6) { width: 14%; text-align: center;} /* 操作 */
+
+        .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap; }
+        .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
+        .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
+        .add-game-btn { display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; }
+
+        /* Modal 相關樣式 */
+        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
+        .modal[style*="display: flex"] { display: flex !important; }
+        .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
+        .close-btn:hover { color: #333; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
+        .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
+        .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
+        .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
+        #edit-image-preview, #add-image-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; }
+        #edit-image-preview[src], #add-image-preview[src] { display: block; }
+        #edit-form-error, #add-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; }
+        
+        /* 遊戲數據卡片 */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            color: #ff6b6b;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+   <nav class="admin-nav">
+       <a href="/admin.html">商品管理</a>
+       <a href="/music-admin.html">音樂管理</a>
+       <a href="/news-admin.html">消息管理</a>
+       <a href="/banner-admin.html">輪播圖管理</a>
+       <a href="/figures-admin.html">庫存管理</a>
+       <a href="/sales-report.html">銷售報告</a>
+       <a href="/guestbook-admin.html">留言管理</a>
+       <a href="/games-admin.html" class="active">遊戲管理</a>
+       <a href="/file-admin.html">檔案管理</a>
+   </nav>
+
+   <div class="admin-container">
+       <h1>遊戲管理</h1>
+       <a href="/games.html" style="display: inline-block; margin-bottom: 1rem;">前往遊戲頁面</a>
+       <button class="add-game-btn" onclick="showAddForm()">新增遊戲</button>
+       
+       <!-- 遊戲數據統計卡片 -->
+       <div class="stats-cards">
+           <div class="stat-card">
+               <div class="stat-label">遊戲總數</div>
+               <div class="stat-value" id="total-games-count">3</div>
+           </div>
+           <div class="stat-card">
+               <div class="stat-label">總遊玩次數</div>
+               <div class="stat-value" id="total-plays-count">257</div>
+           </div>
+           <div class="stat-card">
+               <div class="stat-label">最受歡迎遊戲</div>
+               <div class="stat-value" id="most-popular-game">洞洞樂</div>
+           </div>
+           <div class="stat-card">
+               <div class="stat-label">今日遊玩次數</div>
+               <div class="stat-value" id="today-plays-count">24</div>
+           </div>
+       </div>
+       
+       <h2>現有遊戲列表</h2>
+       <div id="games-list-container">
+           <table id="games-list-table">
+               <thead>
+                   <tr>
+                       <th>ID</th>
+                       <th>名稱</th>
+                       <th>描述</th>
+                       <th>遊玩次數</th>
+                       <th>縮圖</th>
+                       <th>操作</th>
+                   </tr>
+               </thead>
+               <tbody>
+                   <tr>
+                       <td>1</td>
+                       <td>洞洞樂</td>
+                       <td>考驗你的運氣！在這個刺激的洞洞樂遊戲中，找出藏著獎品的洞口，但小心別碰到陷阱！</td>
+                       <td>124</td>
+                       <td><img src="/images/games/card-game.jpg" alt="洞洞樂" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                       <td>
+                           <button class="action-btn edit-btn" onclick="editGame(1)">編輯</button>
+                           <button class="action-btn delete-btn" onclick="deleteGame(1)">刪除</button>
+                       </td>
+                   </tr>
+                   <tr>
+                       <td>2</td>
+                       <td>命運轉盤</td>
+                       <td>輕鬆有趣的轉盤遊戲，讓命運之輪決定你的下一步！適合做決定或進行隨機抽獎。</td>
+                       <td>86</td>
+                       <td><img src="/images/games/wheel-game.jpg" alt="命運轉盤" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                       <td>
+                           <button class="action-btn edit-btn" onclick="editGame(2)">編輯</button>
+                           <button class="action-btn delete-btn" onclick="deleteGame(2)">刪除</button>
+                       </td>
+                   </tr>
+                   <tr>
+                       <td>3</td>
+                       <td>玻璃橋遊戲</td>
+                       <td>靈感來自熱門影集的玻璃橋挑戰！測試你的記憶力和膽量，看看你能否安全穿越這座危險的橋樑。</td>
+                       <td>47</td>
+                       <td><img src="/images/games/bridge-game.jpg" alt="玻璃橋遊戲" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                       <td>
+                           <button class="action-btn edit-btn" onclick="editGame(3)">編輯</button>
+                           <button class="action-btn delete-btn" onclick="deleteGame(3)">刪除</button>
+                       </td>
+                   </tr>
+               </tbody>
+           </table>
+       </div>
+   </div>
+
+   <!-- Add Game Modal -->
+   <div id="add-modal" class="modal">
+       <div class="modal-content">
+           <span class="close-btn" onclick="closeAddModal()">×</span>
+           <h2>新增遊戲</h2>
+           <form id="add-game-form">
+               <div class="form-group">
+                   <label for="add-game-name">遊戲名稱:</label>
+                   <input type="text" id="add-game-name" name="name" required>
+               </div>
+               <div class="form-group">
+                   <label for="add-game-description">遊戲描述:</label>
+                   <textarea id="add-game-description" name="description" rows="3"></textarea>
+               </div>
+               <div class="form-group">
+                   <label for="add-game-play-url">遊戲連結:</label>
+                   <input type="text" id="add-game-play-url" name="play_url" placeholder="例如: /game/new-game.html" required>
+               </div>
+               <div class="form-group">
+                   <label for="add-game-image-url">縮圖路徑:</label>
+                   <input type="text" id="add-game-image-url" name="image_url" placeholder="例如: /images/games/new-game.jpg">
+                   <img id="add-image-preview" src="" alt="縮圖預覽">
+               </div>
+               <div class="form-group">
+                   <label for="add-game-sort-order">排序順序:</label>
+                   <input type="number" id="add-game-sort-order" name="sort_order" value="0" min="0">
+               </div>
+               <div class="form-group">
+                   <label for="add-game-is-active">啟用狀態:</label>
+                   <select id="add-game-is-active" name="is_active">
+                       <option value="1" selected>啟用</option>
+                       <option value="0">停用</option>
+                   </select>
+               </div>
+               <div class="form-actions">
+                   <button type="submit" class="action-btn save-btn">確認新增</button>
+                   <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button>
+               </div>
+               <p id="add-form-error"></p>
+           </form>
+       </div>
+   </div>
+
+   <!-- Edit Game Modal -->
+   <div id="edit-modal" class="modal">
+       <div class="modal-content">
+           <span class="close-btn" onclick="closeModal()">×</span>
+           <h2>編輯遊戲</h2>
+           <form id="edit-game-form">
+               <input type="hidden" id="edit-game-id">
+               <div class="form-group">
+                   <label for="edit-game-name">遊戲名稱:</label>
+                   <input type="text" id="edit-game-name" name="name" required>
+               </div>
+               <div class="form-group">
+                   <label for="edit-game-description">遊戲描述:</label>
+                   <textarea id="edit-game-description" name="description" rows="3"></textarea>
+               </div>
+               <div class="form-group">
+                   <label for="edit-game-play-url">遊戲連結:</label>
+                   <input type="text" id="edit-game-play-url" name="play_url" required>
+               </div>
+               <div class="form-group">
+                   <label for="edit-game-image-url">縮圖路徑:</label>
+                   <input type="text" id="edit-game-image-url" name="image_url">
+                   <img id="edit-image-preview" src="" alt="縮圖預覽">
+               </div>
+               <div class="form-group">
+                   <label for="edit-game-sort-order">排序順序:</label>
+                   <input type="number" id="edit-game-sort-order" name="sort_order" min="0">
+               </div>
+               <div class="form-group">
+                   <label for="edit-game-is-active">啟用狀態:</label>
+                   <select id="edit-game-is-active" name="is_active">
+                       <option value="1">啟用</option>
+                       <option value="0">停用</option>
+                   </select>
+               </div>
+               <div class="form-group">
+                   <label>遊玩次數:</label>
+                   <span id="edit-game-play-count" style="font-weight: bold; padding: 8px 0; display: inline-block;">-</span>
+               </div>
+               <div class="form-actions">
+                   <button type="submit" class="action-btn save-btn">儲存變更</button>
+                   <button type="button" class="action-btn cancel-btn" onclick="closeModal()">取消</button>
+               </div>
+               <p id="edit-form-error"></p>
+           </form>
+       </div>
+   </div>
+
+   <script>
+      // games-admin.js - 遊戲管理後台完整 JavaScript 代碼
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 初始化頁面
+    // fetchAndDisplayGames(); // 若後端API已完成，可以解除註釋
+
+    // 預覽圖片功能
+    document.getElementById('add-game-image-url').addEventListener('input', function() {
+        previewImage('add-image-preview', this.value);
+    });
+
+    document.getElementById('edit-game-image-url').addEventListener('input', function() {
+        previewImage('edit-image-preview', this.value);
+    });
+
+    // 新增遊戲表單提交
+    document.getElementById('add-game-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // 表單驗證和提交邏輯
+        const formData = {
+            name: document.getElementById('add-game-name').value.trim(),
+            description: document.getElementById('add-game-description').value.trim(),
+            play_url: document.getElementById('add-game-play-url').value.trim(),
+            image_url: document.getElementById('add-game-image-url').value.trim(),
+            sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
+            is_active: document.getElementById('add-game-is-active').value === '1'
+        };
+
+        // 驗證表單
+        if (!formData.name) {
+            document.getElementById('add-form-error').textContent = '遊戲名稱不能為空';
+            return;
+        }
+        if (!formData.play_url) {
+            document.getElementById('add-form-error').textContent = '遊戲連結不能為空';
+            return;
+        }
+
+        // 模擬API調用
+        console.log('提交新遊戲資料:', formData);
+        alert('遊戲資料已提交！\n\n此功能將在後端API完成後啟用。');
+        closeAddModal();
+
+        /* 
+        // 真實API調用 (未來實現)
+        fetch('/api/admin/games', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('新增遊戲失敗');
+            return response.json();
+        })
+        .then(data => {
+            closeAddModal();
+            fetchAndDisplayGames();
+        })
+        .catch(error => {
+            document.getElementById('add-form-error').textContent = error.message;
+        });
+        */
+    });
+
+    // 編輯遊戲表單提交
+    document.getElementById('edit-game-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const gameId = document.getElementById('edit-game-id').value;
+        const formData = {
+            name: document.getElementById('edit-game-name').value.trim(),
+            description: document.getElementById('edit-game-description').value.trim(),
+            play_url: document.getElementById('edit-game-play-url').value.trim(),
+            image_url: document.getElementById('edit-game-image-url').value.trim(),
+            sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
+            is_active: document.getElementById('edit-game-is-active').value === '1'
+        };
+
+        // 驗證表單
+        if (!formData.name) {
+            document.getElementById('edit-form-error').textContent = '遊戲名稱不能為空';
+            return;
+        }
+        if (!formData.play_url) {
+            document.getElementById('edit-form-error').textContent = '遊戲連結不能為空';
+            return;
+        }
+
+        // 模擬API調用
+        console.log('提交編輯遊戲資料:', gameId, formData);
+        alert('遊戲資料更新已提交！\n\n此功能將在後端API完成後啟用。');
+        closeModal();
+
+        /* 
+        // 真實API調用 (未來實現)
+        fetch(`/api/admin/games/${gameId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('更新遊戲失敗');
+            return response.json();
+        })
+        .then(data => {
+            closeModal();
+            fetchAndDisplayGames();
+        })
+        .catch(error => {
+            document.getElementById('edit-form-error').textContent = error.message;
+        });
+        */
+    });
+    
+    // 初始化一些示範數據
+    updateStatistics();
+});
+
+// 顯示新增表單
+function showAddForm() {
+    document.getElementById('add-form-error').textContent = '';
+    document.getElementById('add-game-form').reset();
+    document.getElementById('add-image-preview').style.display = 'none';
+    document.getElementById('add-modal').style.display = 'flex';
+}
+
+// 關閉新增表單
+function closeAddModal() {
+    document.getElementById('add-modal').style.display = 'none';
+}
+
+// 關閉編輯表單
+function closeModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+}
+
+// 編輯遊戲
+function editGame(id) {
+    document.getElementById('edit-form-error').textContent = '';
+    document.getElementById('edit-game-form').reset();
+    document.getElementById('edit-image-preview').style.display = 'none';
+    
+    // 模擬獲取遊戲資料
+    let gameData;
+    switch(id) {
+        case 1:
+            gameData = {
+                id: 1,
+                name: '洞洞樂',
+                description: '考驗你的運氣！在這個刺激的洞洞樂遊戲中，找出藏著獎品的洞口，但小心別碰到陷阱！',
+                play_url: '/game/card-game.html',
+                image_url: '/images/games/card-game.jpg',
+                sort_order: 1,
+                is_active: true,
+                play_count: 124
+            };
+            break;
+        case 2:
+            gameData = {
+                id: 2,
+                name: '命運轉盤',
+                description: '輕鬆有趣的轉盤遊戲，讓命運之輪決定你的下一步！適合做決定或進行隨機抽獎。',
+                play_url: '/game/wheel-game.html',
+                image_url: '/images/games/wheel-game.jpg',
+                sort_order: 2,
+                is_active: true,
+                play_count: 86
+            };
+            break;
+        case 3:
+            gameData = {
+                id: 3,
+                name: '玻璃橋遊戲',
+                description: '靈感來自熱門影集的玻璃橋挑戰！測試你的記憶力和膽量，看看你能否安全穿越這座危險的橋樑。',
+                play_url: '/game/bridge-game.html',
+                image_url: '/images/games/bridge-game.jpg',
+                sort_order: 3,
+                is_active: true,
+                play_count: 47
+            };
+            break;
+        default:
+            alert('找不到此遊戲資料!');
+            return;
+    }
+    
+    // 填充表單
+    document.getElementById('edit-game-id').value = gameData.id;
+    document.getElementById('edit-game-name').value = gameData.name;
+    document.getElementById('edit-game-description').value = gameData.description;
+    document.getElementById('edit-game-play-url').value = gameData.play_url;
+    document.getElementById('edit-game-image-url').value = gameData.image_url;
+    document.getElementById('edit-game-sort-order').value = gameData.sort_order;
+    document.getElementById('edit-game-is-active').value = gameData.is_active ? '1' : '0';
+    document.getElementById('edit-game-play-count').textContent = gameData.play_count;
+    
+    // 預覽圖片
+    previewImage('edit-image-preview', gameData.image_url);
+    
+    // 顯示編輯表單
+    document.getElementById('edit-modal').style.display = 'flex';
+    
+    /* 
+    // 真實API調用 (未來實現)
+    fetch(`/api/admin/games/${id}`)
+    .then(response => {
+        if (!response.ok) throw new Error('獲取遊戲詳情失敗');
+        return response.json();
+    })
+    .then(data => {
+        // 填充表單...
+        document.getElementById('edit-modal').style.display = 'flex';
+    })
+    .catch(error => {
+        alert(`載入遊戲資料時出錯: ${error.message}`);
+    });
+    */
+}
+
+// 刪除遊戲
+function deleteGame(id) {
+    if (confirm(`確定要刪除ID為 ${id} 的遊戲嗎？此操作無法復原！`)) {
+        // 模擬刪除操作
+        console.log('刪除遊戲:', id);
+        alert('遊戲刪除請求已提交！\n\n此功能將在後端API完成後啟用。');
+        
+        /* 
+        // 真實API調用 (未來實現)
+        fetch(`/api/admin/games/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('刪除遊戲失敗');
+            fetchAndDisplayGames();
+        })
+        .catch(error => {
+            alert(`刪除遊戲時出錯: ${error.message}`);
+        });
+        */
+    }
+}
+
+// 預覽圖片
+function previewImage(previewId, imageUrl) {
+    const preview = document.getElementById(previewId);
+    if (imageUrl) {
+        preview.src = imageUrl;
+        preview.style.display = 'block';
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+}
+
+// 獲取並顯示遊戲列表
+function fetchAndDisplayGames() {
+    // 此函數在後端API完成後實現
+    /* 
+    fetch('/api/admin/games')
+    .then(response => {
+        if (!response.ok) throw new Error('獲取遊戲列表失敗');
+        return response.json();
+    })
+    .then(data => {
+        // 更新遊戲列表
+        const tableBody = document.querySelector('#games-list-table tbody');
+        tableBody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6">目前沒有任何遊戲</td></tr>';
+            return;
+        }
+        
+        data.forEach(game => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${game.id}</td>
+                <td>${game.title}</td>
+                <td>${game.description || ''}</td>
+                <td>${game.play_count || 0}</td>
+                <td><img src="${game.image_url || '/images/placeholder.png'}" alt="${game.title}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="editGame(${game.id})">編輯</button>
+                    <button class="action-btn delete-btn" onclick="deleteGame(${game.id})">刪除</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+        
+        // 更新統計數據
+        updateStatistics(data);
+    })
+    .catch(error => {
+        alert(`載入遊戲列表時出錯: ${error.message}`);
+    });
+    */
+}
+
+// 更新統計數據
+function updateStatistics(data) {
+    // 使用模擬數據
+    document.getElementById('total-games-count').textContent = '3';
+    document.getElementById('total-plays-count').textContent = '257';
+    document.getElementById('most-popular-game').textContent = '洞洞樂';
+    document.getElementById('today-plays-count').textContent = '24';
+    
+    /* 
+    // 真實數據 (未來實現)
+    if (data) {
+        const totalGames = data.length;
+        const totalPlays = data.reduce((sum, game) => sum + game.play_count, 0);
+        const mostPopular = data.sort((a, b) => b.play_count - a.play_count)[0];
+        
+        document.getElementById('total-games-count').textContent = totalGames;
+        document.getElementById('total-plays-count').textContent = totalPlays;
+        document.getElementById('most-popular-game').textContent = mostPopular ? mostPopular.title : '-';
+    }
+    
+    // 獲取今日遊玩次數
+    fetch('/api/admin/games/stats/today')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('today-plays-count').textContent = data.today_count;
+    })
+    .catch(() => {
+        document.getElementById('today-plays-count').textContent = '0';
+    });
+    */
+}
+
+// 點擊外部關閉模態窗
+window.onclick = function(event) {
+    const addModal = document.getElementById('add-modal');
+    const editModal = document.getElementById('edit-modal');
+    
+    if (event.target === addModal) {
+        closeAddModal();
+    } else if (event.target === editModal) {
+        closeModal();
+    }
+};</script></body>
+               </html>
