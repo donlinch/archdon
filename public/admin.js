@@ -92,7 +92,162 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- *** 圖表相關邏輯 *** ---
 
+
+
+
+
+    async function displayPageComparisonChart() {
+        if (chartLoadingMsg) chartLoadingMsg.style.display = 'block';
+        if (chartErrorMsg) chartErrorMsg.style.display = 'none';
+        
+        try {
+          // 获取最近30天的数据
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+          const endDate = new Date().toISOString().split('T')[0];
+          
+          const response = await fetch(`/api/analytics/page-views?startDate=${startDate}&endDate=${endDate}`);
+          if (!response.ok) throw new Error(`HTTP错误 ${response.status}`);
+          
+          const data = await response.json();
+          
+          // 处理数据，按页面分组
+          const pageData = {};
+          const dates = new Set();
+          
+          data.forEach(item => {
+            if (!pageData[item.page]) pageData[item.page] = {};
+            pageData[item.page][item.view_date] = item.count;
+            dates.add(item.view_date);
+          });
+          
+          // 排序日期
+          const sortedDates = Array.from(dates).sort();
+          
+          // 准备图表数据
+          const datasets = Object.keys(pageData)
+            .sort((a, b) => {
+              // 计算总访问量以排序
+              const totalA = Object.values(pageData[a]).reduce((sum, val) => sum + val, 0);
+              const totalB = Object.values(pageData[b]).reduce((sum, val) => sum + val, 0);
+              return totalB - totalA;
+            })
+            .slice(0, 5) // 只取前5个最热门页面
+            .map((page, index) => {
+              // 为每个页面创建一个数据集，使用不同颜色
+              const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+              return {
+                label: page,
+                data: sortedDates.map(date => pageData[page][date] || 0),
+                borderColor: colors[index % colors.length],
+                backgroundColor: 'transparent',
+                tension: 0.2
+              };
+            });
+          
+          // 创建图表
+          const ctx = document.getElementById('page-comparison-chart').getContext('2d');
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: sortedDates,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: { beginAtZero: true },
+                x: { ticks: { maxRotation: 45, minRotation: 45 } }
+              },
+              plugins: {
+                title: { 
+                  display: true, 
+                  text: '热门页面访问量对比 (前5名)'
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false
+                }
+              }
+            }
+          });
+          
+          if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
+          
+        } catch (error) {
+          console.error('加载页面对比图表失败:', error);
+          if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
+          if (chartErrorMsg) {
+            chartErrorMsg.textContent = `无法加载页面对比图表: ${error.message}`;
+            chartErrorMsg.style.display = 'block';
+          }
+        }
+      }
+
+
+
+
+      async function displayPageRankingChart() {
+        try {
+          const response = await fetch('/api/analytics/page-views/ranking');
+          if (!response.ok) throw new Error(`HTTP错误 ${response.status}`);
+          
+          const data = await response.json();
+          
+          // 排序页面按总访问量
+          data.sort((a, b) => b.total_count - a.total_count);
+          const top10Pages = data.slice(0, 10);
+          
+          // 创建图表
+          const ctx = document.getElementById('page-ranking-chart').getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: top10Pages.map(item => item.page),
+              datasets: [{
+                label: '总访问量',
+                data: top10Pages.map(item => item.total_count),
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                title: {
+                  display: true,
+                  text: '页面访问量排行榜 (前10名)'
+                },
+                legend: {
+                  display: false
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.error('加载页面排行榜图表失败:', error);
+        }
+      }
+
+
+
     /**
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
      * 獲取並繪製流量圖表
      * @param {string} granularity - 'daily' 或 'monthly'
      */

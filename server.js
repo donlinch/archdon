@@ -2264,6 +2264,33 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => {
 });
 
 
+
+
+
+
+
+// 服务器端 - 新增API端点
+app.get('/api/analytics/page-views', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+      const query = `
+        SELECT page, view_date, SUM(view_count)::int AS count 
+        FROM page_views 
+        WHERE view_date BETWEEN $1 AND $2
+        GROUP BY page, view_date 
+        ORDER BY view_date ASC, page ASC
+      `;
+      const result = await pool.query(query, [startDate || '2023-01-01', endDate || 'CURRENT_DATE']);
+      res.json(result.rows);
+    } catch (err) {
+      console.error('获取页面访问数据失败:', err);
+      res.status(500).json({ error: '服务器内部错误' });
+    }
+  });
+
+
+
+
 // --- 銷售報告 API (受保護) ---
 app.get('/api/analytics/sales-report', async (req, res) => {
     const { startDate, endDate } = req.query;
