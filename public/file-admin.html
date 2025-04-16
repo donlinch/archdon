@@ -73,6 +73,39 @@
         #file-loading, #file-error { padding: 20px; text-align: center; color: #777; font-style: italic; }
         #file-error { color: red; font-weight: bold; }
 
+
+
+/* 新增：URL 輸入框樣式 */
+.file-url-input {
+            width: 100%; /* 佔滿可用寬度 */
+            padding: 4px 6px; /* 內部留白 */
+            font-size: 0.85em; /* 調整字體大小 */
+            border: 1px solid #ccc;
+            background-color: #f8f9fa; /* 淺灰色背景，表示唯讀 */
+            box-sizing: border-box; /* 確保 padding/border 包含在寬度內 */
+            cursor: text; /* 顯示文字選擇游標 */
+            overflow: hidden; /* 隱藏超出部分 */
+            text-overflow: ellipsis; /* 用省略號顯示 */
+            white-space: nowrap; /* 不換行 */
+        }
+
+        /* 修正格狀模式下輸入框的間距 */
+        .file-card .url-line {
+             margin-bottom: 8px; /* 保持原有底部間距 */
+             /* 移除 url-line 內 span 和 button 的特定樣式 (如果有的話) */
+        }
+        /* 移除列表模式下複製按鈕的間距 */
+        #file-list-view .copy-url-btn {
+            /* 此樣式不再需要，因為按鈕已移除 */
+            /* margin-left: 5px; */
+        }
+
+
+
+
+
+
+
     </style>
 </head>
 <body>
