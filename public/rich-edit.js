@@ -148,7 +148,7 @@ document.addEventListener('mousemove', e => {
 });
 
 
-
+/* 
 const imageFileInput = document.getElementById('edit-image-file');
 imageFileInput.addEventListener('change', () => {
   const file = imageFileInput.files[0];
@@ -161,7 +161,7 @@ imageFileInput.addEventListener('change', () => {
   }
 });
 
-
+*/
 
 function uploadImage(file, callback) {
     const formData = new FormData();
