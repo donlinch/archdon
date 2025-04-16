@@ -110,6 +110,16 @@
     .game-image {
         height: 150px;
     }
+    
+    /* 在平板上開始隱藏描述 */
+    .game-description {
+        display: none;
+    }
+    
+    .game-info {
+        padding: 1rem;
+        text-align: center;
+    }
 } 
 
 @media (max-width: 480px) {
@@ -124,11 +134,12 @@
     
     .game-title {
         font-size: 1.1rem;
+        margin-bottom: 0.2rem;
     }
     
+    /* 在手機上確保描述隱藏 */
     .game-description {
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
+        display: none;
     }
     
     .game-image {
@@ -136,6 +147,6 @@
     }
     
     .game-info {
-        padding: 1rem;
+        padding: 0.8rem 0.5rem;
     }
 }
