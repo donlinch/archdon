@@ -36,6 +36,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDaily = document.getElementById('btn-daily');
     const btnMonthly = document.getElementById('btn-monthly');
     
+    // 日期選擇器和頁面對比相關元素
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const applyDateBtn = document.getElementById('apply-date');
+    const resetDateBtn = document.getElementById('reset-date');
+    const pageSelectMulti = document.getElementById('page-select');
+    const updateComparisonBtn = document.getElementById('update-comparison');
+    
     // 圖表實例追蹤
     let currentChart = null;
     let pageRankingChart = null;
@@ -47,6 +55,14 @@ document.addEventListener('DOMContentLoaded', () => {
         startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0]
     };
+
+    // 初始化日期選擇器的值
+    function initializeDatePickers() {
+        if (startDateInput && endDateInput) {
+            startDateInput.value = currentTimeRange.startDate;
+            endDateInput.value = currentTimeRange.endDate;
+        }
+    }
 
     // --- Function to Fetch and Display ALL Products in the Table ---
     async function fetchAndDisplayProducts() {
@@ -340,7 +356,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- *** 圖表相關邏輯 *** ---
 
-    async function displayPageComparisonChart() {
+    // 統一刷新所有圖表的函數
+    function refreshAllCharts() {
+        displayTrafficChart(currentGranularity);
+    }
+
+    // 初始化页面列表选择器
+    async function initializePageSelect() {
+        if (!pageSelectMulti) return;
+        
+        try {
+            const response = await fetch('/api/analytics/page-list');
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            
+            const pages = await response.json();
+            
+            // 清空现有选项
+            pageSelectMulti.innerHTML = '';
+            
+            // 添加所有页面作为选项
+            pages.forEach(page => {
+                const option = document.createElement('option');
+                option.value = page;
+                option.textContent = page;
+                pageSelectMulti.appendChild(option);
+            });
+            
+            // 默认选中前5个
+            Array.from(pageSelectMulti.options).slice(0, 5).forEach(opt => opt.selected = true);
+        } catch (error) {
+            console.error('获取页面列表失败:', error);
+        }
+    }
+
+    async function displayPageComparisonChart(selectedPages = []) {
         if (!pageComparisonChartCanvas) {
             console.warn("找不到頁面對比圖表元素。");
             return;
@@ -375,17 +424,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const sortedDates = Array.from(dates).sort();
             
             // 準備圖表數據
-            const datasets = Object.keys(pageData)
+            let datasets = Object.keys(pageData)
                 .sort((a, b) => {
                     // 計算總訪問量以排序
                     const totalA = Object.values(pageData[a]).reduce((sum, val) => sum + val, 0);
                     const totalB = Object.values(pageData[b]).reduce((sum, val) => sum + val, 0);
                     return totalB - totalA;
                 })
-                .slice(0, 5) // 只取前5個最熱門頁面
                 .map((page, index) => {
                     // 為每個頁面創建一個數據集，使用不同顏色
-                    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+                    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#4BC0C0', '#9966FF', '#36A2EB', '#FF6384'];
                     return {
                         label: page,
                         data: sortedDates.map(date => pageData[page][date] || 0),
@@ -394,6 +442,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         tension: 0.2
                     };
                 });
+            
+            // 如果提供了选定页面，则只显示这些页面
+            if (selectedPages && selectedPages.length > 0) {
+                const filteredDatasets = datasets.filter(ds => selectedPages.includes(ds.label));
+                // 如果没有匹配，使用前5个（原始行为）
+                if (filteredDatasets.length > 0) {
+                    datasets = filteredDatasets;
+                } else {
+                    datasets = datasets.slice(0, 5);
+                }
+            } else {
+                // 没有指定，默认取前5个
+                datasets = datasets.slice(0, 5);
+            }
             
             // 創建圖表
             const ctx = pageComparisonChartCanvas.getContext('2d');
@@ -413,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     plugins: {
                         title: { 
                             display: true, 
-                            text: '熱門頁面訪問量對比 (前5名)'
+                            text: '熱門頁面訪問量對比'
                         },
                         tooltip: {
                             mode: 'index',
@@ -448,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            const response = await fetch('/api/analytics/page-views/ranking');
+            const response = await fetch(`/api/analytics/page-views/ranking?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             
             const data = await response.json();
@@ -506,11 +568,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 更新時間範圍
         if (granularity === 'daily') {
-            currentTimeRange.startDate = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
+            if (!startDateInput || !endDateInput || startDateInput.value === '' || endDateInput.value === '') {
+                currentTimeRange.startDate = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
+                currentTimeRange.endDate = new Date().toISOString().split('T')[0];
+            }
         } else if (granularity === 'monthly') {
-            currentTimeRange.startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+            if (!startDateInput || !endDateInput || startDateInput.value === '' || endDateInput.value === '') {
+                currentTimeRange.startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+                currentTimeRange.endDate = new Date().toISOString().split('T')[0];
+            }
         }
-        currentTimeRange.endDate = new Date().toISOString().split('T')[0];
+
+        if (startDateInput && endDateInput) {
+            startDateInput.value = currentTimeRange.startDate;
+            endDateInput.value = currentTimeRange.endDate;
+        }
 
         if (chartLoadingMsg) chartLoadingMsg.style.display = 'block';
         if (chartErrorMsg) chartErrorMsg.style.display = 'none';
@@ -527,6 +599,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (granularity === 'monthly') { 
             apiUrl = '/api/analytics/monthly-traffic'; 
         }
+
+        // 添加日期範圍参数
+        apiUrl += `?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`;
 
         try {
             const response = await fetch(apiUrl);
@@ -627,13 +702,54 @@ document.addEventListener('DOMContentLoaded', () => {
     } else { 
         console.warn("找不到圖表切換按鈕。"); 
     }
+ // 添加日期控制事件監聽器
+ if (applyDateBtn) {
+    applyDateBtn.addEventListener('click', function() {
+        if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            currentTimeRange.startDate = startDateInput.value;
+            currentTimeRange.endDate = endDateInput.value;
+            refreshAllCharts();
+        } else {
+            alert('請選擇有效的開始和結束日期');
+        }
+    });
+}
 
-    // --- Initial Load ---
-    fetchAndDisplayProducts(); // 載入商品列表
-    
-    // 延遲載入圖表，避免同時初始化多個圖表
-    setTimeout(() => {
-        displayTrafficChart('daily'); // 預設載入每日流量圖表
-    }, 300);
-    
+if (resetDateBtn) {
+    resetDateBtn.addEventListener('click', function() {
+        // 重置為默認時間範圍（近30天）
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const today = new Date();
+        
+        if (startDateInput && endDateInput) {
+            startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+            endDateInput.value = today.toISOString().split('T')[0];
+            
+            currentTimeRange.startDate = startDateInput.value;
+            currentTimeRange.endDate = endDateInput.value;
+            
+            refreshAllCharts();
+        }
+    });
+}
+
+// 添加頁面對比更新按鈕監聽器
+if (updateComparisonBtn && pageSelectMulti) {
+    updateComparisonBtn.addEventListener('click', function() {
+        const selectedPages = Array.from(pageSelectMulti.selectedOptions).map(opt => opt.value);
+        displayPageComparisonChart(selectedPages);
+    });
+}
+
+// --- Initial Load ---
+fetchAndDisplayProducts(); // 載入商品列表
+initializeDatePickers(); // 初始化日期選擇器
+initializePageSelect(); // 初始化頁面選擇器
+
+// 延遲載入圖表，避免同時初始化多個圖表
+setTimeout(() => {
+    displayTrafficChart('daily'); // 預設載入每日流量圖表
+}, 300);
+
 }); // --- End of DOMContentLoaded ---
