@@ -1,7 +1,5 @@
 const container = document.getElementById('game-container');
 const board = document.getElementById('game-board');
-
-// 可選：若你未建立這些欄位，請補 editor UI
 const editorPanel = document.getElementById('editor-panel');
 const titleInput = document.getElementById('edit-title');
 const descInput = document.getElementById('edit-description');
@@ -13,11 +11,13 @@ let cells = [];
 let currentTemplateId = 1;
 let backgroundColor = '#fff0f5';
 
+// 套用背景顏色
 function applyTemplateBackgroundColor(color) {
   backgroundColor = color || '#fff0f5';
   container.style.backgroundColor = backgroundColor;
 }
 
+// 渲染地圖格子
 function renderBoard() {
   board.innerHTML = '';
   cells.forEach((cell, i) => {
@@ -49,6 +49,7 @@ function renderBoard() {
   });
 }
 
+// 打開編輯器
 function openEditor(index) {
   editingIndex = index;
   const cell = cells[index];
@@ -59,6 +60,7 @@ function openEditor(index) {
   editorPanel.style.display = 'flex';
 }
 
+// 儲存單一格子編輯
 function saveCellChanges() {
   const cell = cells[editingIndex];
   cell.title = titleInput.value;
@@ -69,6 +71,7 @@ function saveCellChanges() {
   editorPanel.style.display = 'none';
 }
 
+// 載入資料庫中的模板資料
 function loadTemplate(templateId = 1) {
   currentTemplateId = templateId;
   fetch(`/api/rich-map/templates/${templateId}/full`)
@@ -84,6 +87,7 @@ function loadTemplate(templateId = 1) {
     });
 }
 
+// 儲存整份資料（背景顏色＋格子資料）
 function saveAllChanges() {
   const body = JSON.stringify({
     background_color: backgroundColor,
@@ -108,6 +112,7 @@ function saveAllChanges() {
     });
 }
 
+// 加入一顆儲存按鈕（你可以改成 UI 按鈕呼叫）
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 's') {
     e.preventDefault();
@@ -115,4 +120,5 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// 初始化
 loadTemplate();
