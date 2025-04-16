@@ -120,5 +120,36 @@ document.addEventListener('keydown', e => {
   }
 });
 
+
+
+// ✦ 讓面板可拖曳
+const dragPanel = document.getElementById('editor-panel');
+const header = dragPanel.querySelector('.editor-header');
+
+let isDragging = false;
+let offsetX, offsetY;
+
+header.addEventListener('mousedown', e => {
+  isDragging = true;
+  offsetX = e.clientX - dragPanel.offsetLeft;
+  offsetY = e.clientY - dragPanel.offsetTop;
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+document.addEventListener('mousemove', e => {
+  if (isDragging) {
+    dragPanel.style.left = `${e.clientX - offsetX}px`;
+    dragPanel.style.top = `${e.clientY - offsetY}px`;
+    dragPanel.style.transform = 'translate(0, 0)'; // 拖移後取消置中位移
+  }
+});
+
+
+
+
+
 // 初始化
 loadTemplate();

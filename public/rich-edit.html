@@ -88,22 +88,103 @@
       margin-top: 0.5rem;
       padding: 0.5rem 1rem;
     }
+
+
+
+    .editor-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 300px;
+  padding: 20px;
+  background-color: white;
+  border: 2px dashed #8ab5f3;
+  border-radius: 12px;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.editor-card input[type="text"],
+.editor-card input[type="url"] {
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.editor-card label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-card button {
+  background-color: #5b9df0;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.editor-card button:hover {
+  background-color: #4178d0;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #5b9df0;
+  margin-bottom: 10px;
+}
+
+.editor-close {
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #ff544d;
+  padding: 2px 6px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.editor-close:hover {
+  background-color: #ffe5e5;
+}
+
+.hidden {
+  display: none;
+}
+
+
+
+
+
   </style>
 </head>
 <body>
-  <div class="game-container" id="game-container">
-    <div id="game-board" class="game-board"></div>
-  </div>
-
-  <div id="editor-panel" class="editor-panel">
-    <input id="edit-title" placeholder="格子標題">
-    <textarea id="edit-description" rows="2" placeholder="說明文字"></textarea>
-    <input id="edit-image" placeholder="圖片網址 (選填)">
-    <label>
-      顏色：<input id="edit-color" type="color">
-    </label>
-    <button onclick="saveCellChanges()">儲存</button>
-  </div>
+    <div id="editor-panel" class="editor-card hidden">
+        <div class="editor-header">
+          <span>編輯格子</span>
+          <span class="editor-close" onclick="editorPanel.style.display='none'">×</span>
+        </div>
+        <input id="edit-title" placeholder="標題" />
+        <input id="edit-description" placeholder="描述" />
+        <input id="edit-image" placeholder="圖片網址 (選填)" />
+        <label>
+          顏色：
+          <input type="color" id="edit-color" />
+        </label>
+        <button onclick="saveCellChanges()">儲存</button>
+      </div>
+      
   <script src="rich-edit.js"></script>
 
 </body>
