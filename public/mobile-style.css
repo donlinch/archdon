@@ -1,0 +1,297 @@
+/* SunnyYummy 手機版優化樣式表 */
+
+/* 基本重置和通用樣式 */
+* {
+    box-sizing: border-box;
+  }
+  
+  body {
+    background-color: #faf6ff;
+    font-family: 'Noto Sans TC', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+  }
+  
+  /* 頂部導覽樣式 */
+  .category-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 15px 5px;
+    background-color: #FFEFD5;
+    border-bottom: 1px solid #FFE0B2;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    white-space: nowrap;
+  }
+  
+  .category-nav::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+  
+  .category-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    margin: 0 5px;
+    padding: 5px;
+    min-width: 50px;
+  }
+  
+  .category-nav .nav-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #FFCCBC;
+    margin-bottom: 5px;
+  }
+  
+  .category-nav a.active .nav-icon {
+    background-color: #FFB74D;
+    color: white;
+    transform: scale(1.1);
+  }
+  
+  .category-nav .nav-text {
+    font-size: 10px;
+    color: #795548;
+    text-align: center;
+  }
+  
+  .category-nav a.active .nav-text {
+    color: #FF7043;
+    font-weight: bold;
+  }
+  
+  /* 排序導覽 */
+  .sort-nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: transparent;
+    border-bottom: none;
+  }
+  
+  .sort-nav a {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    margin: 0 5px;
+    border-radius: 20px;
+    background-color: #FFCCBC;
+    color: #795548;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 16px;
+    transition: all 0.3s ease;
+  }
+  
+  .sort-nav a.active {
+    background-color: #FF8A65;
+    color: white;
+  }
+  
+  /* 產品網格優化 */
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 10px;
+  }
+  
+  .product-card {
+    display: block;
+    background-color: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    position: relative;
+    border: 2px solid #FFCCBC;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .product-card:active {
+    transform: scale(0.98);
+  }
+  
+  .product-card .image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 80%; /* 4:5 比例 */
+    background-color: #F5F5F5;
+    border-radius: 15px;
+    margin: 10px;
+    overflow: hidden;
+  }
+  
+  .product-card img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 15px;
+  }
+  
+  .product-card .card-content {
+    padding: 10px 15px 15px;
+  }
+  
+  .product-card h3 {
+    margin: 0 0 5px;
+    font-size: 14px;
+    color: #212121;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .product-card p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: #757575;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    min-height: 36px;
+  }
+  
+  .product-card .price {
+    color: #FF5722;
+    font-weight: bold;
+    font-size: 16px;
+    margin: 8px 0 0;
+  }
+  
+  /* 喜愛標記 */
+  .favorite-tag {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    background-color: #FFECB3;
+    color: #FFB74D;
+    font-size: 14px;
+    z-index: 2;
+  }
+  
+  /* 回到頂部按鈕 */
+  .back-to-top {
+    position: fixed;
+    right: 25px;
+    bottom: 70px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #FFE0B2;
+    border: 1px solid #FFB74D;
+    color: #FF8A65;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+    cursor: pointer;
+  }
+  
+  .back-to-top.visible {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+  
+  .back-to-top:active {
+    transform: scale(0.95);
+  }
+  
+  /* 頁面滾動指示器 */
+  .scroll-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+  }
+  
+  .scroll-indicator .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #FFCCBC;
+    margin: 0 5px;
+  }
+  
+  .scroll-indicator .dot.active {
+    width: 10px;
+    height: 10px;
+    background-color: #FFB74D;
+  }
+  
+  /* 裝飾性元素 */
+  .decoration {
+    position: absolute;
+    z-index: -1;
+    border-radius: 50%;
+    background-color: #FFE0B2;
+    opacity: 0.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #FF8A65;
+  }
+  
+  .decoration.heart {
+    width: 30px;
+    height: 30px;
+    top: 500px;
+    left: 40px;
+    font-size: 16px;
+  }
+  
+  .decoration.star {
+    width: 24px;
+    height: 24px;
+    top: 400px;
+    right: 80px;
+    font-size: 14px;
+  }
+  
+  /* Banner 區域保持不變 */
+  #banner-carousel {
+    margin-bottom: 10px;
+  }
+  
+  /* 載入中動畫 */
+  @keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 20px;
+    color: #FF8A65;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+  
+  /* 媒體查詢：大螢幕適配 */
+  @media (min-width: 768px) {
+    .product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+  }
