@@ -58,10 +58,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['.png', '.jpg', '.jpeg', '.gif'];
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.pdf'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (!allowed.includes(ext)) {
-      return cb(new Error('只允許上傳圖片類型！'));
+        return cb(new Error('只允許上傳圖片 (png, jpg, gif) 或 PDF 檔案！'));
     }
     cb(null, true);
   },
