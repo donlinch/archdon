@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檔案管理 - SunnyYummy 管理後台</title>
+    <link rel="stylesheet" href="style.css"> <!-- 引入通用樣式 -->
+    <style>
+        /* 頁面特定樣式 */
+        .file-manager-container { max-width: 1300px; } /* 可以比其他頁面寬一點 */
+        .controls-bar { display: flex; flex-wrap: wrap; gap: 10px 15px; align-items: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 1.5rem; border: 1px solid #eee; }
+        .controls-bar input[type="text"], .controls-bar select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .controls-bar input[type="text"] { flex-grow: 1; min-width: 150px; }
+        .controls-bar button { padding: 8px 15px; cursor: pointer; border-radius: 4px; font-size: 0.9rem; border: none; }
+        .controls-bar .view-toggle { background-color: #e0e0e0; }
+        .controls-bar .view-toggle.active { background-color: #007bff; color: white; }
+        #upload-new-file-btn { background-color: #28a745; color: white; }
+        #refresh-list-btn { background-color: #6c757d; color: white; }
+
+        /* 列表視圖 */
+        #file-list-view table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        #file-list-view th, #file-list-view td { padding: 10px 8px; border: 1px solid #ddd; text-align: left; vertical-align: middle; font-size: 0.9rem; }
+        #file-list-view th { background-color: #e9ecef; white-space: nowrap; }
+        #file-list-view td { word-break: break-all; }
+        #file-list-view th:nth-child(1), #file-list-view td:nth-child(1) { width: 80px; text-align: center; } /* 預覽 */
+        #file-list-view th:nth-child(2), #file-list-view td:nth-child(2) { width: 25%; } /* 原始檔名 */
+        #file-list-view th:nth-child(3), #file-list-view td:nth-child(3) { width: 35%; } /* 路徑 */
+        #file-list-view th:nth-child(4), #file-list-view td:nth-child(4) { width: 10%; } /* 類型 */
+        #file-list-view th:nth-child(5), #file-list-view td:nth-child(5) { width: 10%; text-align: right; } /* 大小 */
+        #file-list-view th:nth-child(6), #file-list-view td:nth-child(6) { width: 10%; text-align: center; } /* 操作 */
+        #file-list-view .preview-icon { width: 40px; height: 40px; object-fit: contain; }
+        #file-list-view .copy-url-btn { padding: 2px 5px; font-size: 0.8em; margin-left: 5px; background-color: #f0f0f0; border: 1px solid #ccc; cursor: pointer; }
+        #file-list-view .copy-url-btn:hover { background-color: #e0e0e0; }
+        #file-list-view .delete-file-btn { padding: 3px 6px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; cursor: pointer; border-radius: 3px; }
+
+        /* 格狀視圖 */
+        #file-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+        .file-card { background-color: #fff; border: 1px solid #eee; border-radius: 5px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .file-card .preview { height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; background-color: #f8f9fa; border-radius: 3px; }
+        .file-card .preview img, .file-card .preview span { max-width: 90%; max-height: 90%; object-fit: contain; font-size: 2.5rem; color: #aaa; } /* 放大圖示 */
+        .file-card .filename { font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-card .url-line { font-size: 0.8em; color: #666; margin-bottom: 8px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .file-card .url-path { flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis;}
+        .file-card .copy-url-btn-grid { padding: 1px 4px; font-size: 0.7em; background-color: #f0f0f0; border: 1px solid #ccc; cursor: pointer; flex-shrink: 0; }
+        .file-card .meta { font-size: 0.75em; color: #888; margin-bottom: 10px; }
+        .file-card .delete-file-btn-grid { padding: 4px 8px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; cursor: pointer; border-radius: 3px; margin-top: auto; /* 推到底部 */ }
+
+        /* 複製成功提示 */
+        .copy-success-indicator { background-color: #28a745 !important; color: white !important; border-color: #28a745 !important; }
+
+        /* Loading/Error */
+        #file-loading, #file-error { padding: 20px; text-align: center; color: #777; font-style: italic; }
+        #file-error { color: red; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+    <!-- 管理導覽列 -->
+    <nav class="admin-nav">
+        <a href="/admin.html">商品管理</a>
+        <a href="/music-admin.html">音樂管理</a>
+        <a href="/news-admin.html">消息管理</a>
+        <a href="/banner-admin.html">輪播圖管理</a>
+        <a href="/figures-admin.html">庫存管理</a>
+        <a href="/sales-report.html">銷售報告</a>
+        <a href="/guestbook-admin.html">留言板管理</a>
+        <a href="/admin-identities.html">身份管理</a>
+        <a href="/file-admin.html" class="active">檔案管理</a> <!-- 當前頁面 -->
+        <a href="/rich-edit.html">地圖編輯</a>
+    </nav>
+
+    <main class="admin-container file-manager-container">
+        <h1>檔案管理</h1>
+        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
+
+        <!-- 操作控制列 -->
+        <div class="controls-bar">
+            <button id="upload-new-file-btn">➕ 上傳新檔案...</button>
+            <input type="text" id="file-search-input" placeholder="搜尋原始檔名...">
+            <select id="file-type-filter">
+                <option value="all">所有類型</option>
+                <option value="image">圖片</option>
+                <option value="pdf">PDF</option>
+                <option value="other">其他</option>
+            </select>
+            <select id="file-sort-by">
+                <option value="newest">最新上傳</option>
+                <option value="oldest">最早上傳</option>
+                <option value="name_asc">名稱 (A-Z)</option>
+                <option value="name_desc">名稱 (Z-A)</option>
+                <option value="size_asc">大小 (小→大)</option>
+                <option value="size_desc">大小 (大→小)</option>
+            </select>
+            <button id="refresh-list-btn">🔄 刷新</button>
+            <div style="margin-left: auto;"> <!-- 推到最右邊 -->
+                 <button id="view-toggle-list" class="view-toggle active" data-view="list">列表</button>
+                 <button id="view-toggle-grid" class="view-toggle" data-view="grid">格狀</button>
+            </div>
+        </div>
+
+        <!-- 檔案顯示區 -->
+        <div id="file-display-area">
+            <div id="file-loading" style="display: none;">正在載入檔案列表...</div>
+            <div id="file-error" style="display: none; color: red;"></div>
+
+            <!-- 列表視圖 (預設) -->
+            <div id="file-list-view" class="file-view active">
+                <table id="file-list-table">
+                    <thead>
+                        <tr>
+                            <th>預覽</th>
+                            <th>原始檔名</th>
+                            <th>檔案路徑 (URL)</th>
+                            <th>類型</th>
+                            <th>大小</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 列表內容由 JS 填充 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 格狀視圖 -->
+            <div id="file-grid-view" class="file-view" style="display: none;">
+                <!-- 卡片由 JS 填充 -->
+            </div>
+        </div>
+
+        <!-- 分頁控制 -->
+        <div id="pagination-controls" class="pagination-controls" style="margin-top: 1.5rem;"></div>
+
+    </main>
+
+    <!-- 上傳 Modal (簡易版) -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-upload-modal">×</span>
+            <h2>上傳新檔案</h2>
+            <form id="upload-form">
+                <div class="form-group">
+                    <label for="file-input">選擇檔案 (允許 png, jpg, gif, pdf):</label>
+                    <input type="file" id="file-input" name="file" accept=".png,.jpg,.jpeg,.gif,.pdf" required>
+                    <div id="upload-preview" style="margin-top: 10px;"></div> <!-- 圖片預覽區 -->
+                </div>
+                <div class="form-actions">
+                    <p id="upload-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                    <button type="button" class="btn btn-secondary close-modal-btn">取消</button>
+                    <button type="submit" id="confirm-upload-btn" class="btn btn-primary">確認上傳</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <!-- 後台頁腳 -->
+    </footer>
+
+    <!-- 引入新的 JS 文件 -->
+    <script src="file-admin.js"></script>
+</body>
+</html>
