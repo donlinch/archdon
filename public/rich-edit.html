@@ -124,6 +124,7 @@
     .game-column {
       flex: 2;
       min-width: 600px;
+      position: relative; /* 為了定位中央備註列表 */
     }
     
     /* 設定區域的卡片樣式 */
@@ -153,6 +154,7 @@
       padding: 20px;
       border-radius: 12px;
       background-color: #fff0f5; /* 預設背景色 */
+      position: relative; /* 為了定位中央備註列表 */
     }
     
     .game-board {
@@ -325,24 +327,31 @@
       object-fit: cover;
     }
     
-    /* 備註列表 */
-    .notes-list {
-      padding: 15px;
-      background-color: #fefaf0;
+    /* 備註列表 - 中央位置版本 */
+    .notes-list-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      max-height: 300px;
+      background-color: rgba(254, 250, 240, 0.9);
       border: 1px solid #e0d9c0;
       border-radius: 8px;
-      margin-bottom: 20px;
+      padding: 15px;
+      z-index: 10;
     }
     
-    .notes-list h3 {
+    .notes-list-center h3 {
       text-align: center;
       margin-top: 0;
       margin-bottom: 15px;
       color: #8b7355;
+      font-size: 1.1rem;
     }
     
     .notes-container {
-      max-height: 300px;
+      max-height: 220px;
       overflow-y: auto;
       border: 1px solid #e0e0e0;
       border-radius: 5px;
@@ -355,6 +364,11 @@
       border-bottom: 1px solid #f0f0f0;
       margin-bottom: 5px;
       cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .note-item:hover {
+      background-color: #f9f5ea;
     }
     
     .note-item:last-child {
@@ -472,6 +486,20 @@
       z-index: 5;
     }
     
+    /* 控制備註列表可見性的按鈕 */
+    .toggle-notes-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      z-index: 11;
+    }
+    
     /* 響應式設計 */
     @media (max-width: 1200px) {
       .content-wrapper {
@@ -491,6 +519,10 @@
         width: 100px;
         height: 80px;
         font-size: 0.9rem;
+      }
+      
+      .notes-list-center {
+        width: 350px;
       }
     }
     
@@ -514,6 +546,11 @@
         width: 75px;
         height: 60px;
         font-size: 0.8rem;
+      }
+      
+      .notes-list-center {
+        width: 300px;
+        max-height: 250px;
       }
     }
   </style>
@@ -539,8 +576,7 @@
     <div class="settings-column">
       <!-- 背景顏色設定 -->
       <div class="settings-card background-editor">
-        <h3>🎨 背景顏色設定</h3>
-        <div class="background-color-picker">
+         <div class="background-color-picker">
           <label for="edit-background-color">選擇顏色:</label>
           <input type="color" id="edit-background-color" value="#fff0f5">
           <span id="background-color-preview">#fff0f5</span>
@@ -550,16 +586,13 @@
       
       <!-- Logo 編輯區 -->
       <div class="settings-card logo-editor">
-        <h3>🖼️ 中央 LOGO 設定</h3>
-        <label for="edit-logo-url">LOGO 圖片 URL：</label>
-        <input type="url" id="edit-logo-url" placeholder="請輸入圖片網址">
+         <input type="url" id="edit-logo-url" placeholder="請輸入圖片網址">
         <img id="logo-preview" src="" alt="Logo 預覽">
       </div>
       
       <!-- 玩家設定區 -->
       <div class="settings-card player-config">
-        <h3>👤 玩家設定</h3>
-        <table id="player-config-table">
+         <table id="player-config-table">
           <thead>
             <tr>
               <th>玩家</th>
@@ -574,14 +607,6 @@
           </tbody>
         </table>
       </div>
-      
-      <!-- 備註列表 -->
-      <div class="settings-card notes-list">
-        <h3>📝 格子備註清單</h3>
-        <div id="notes-container" class="notes-container">
-          <!-- 備註將在這裡動態生成 -->
-        </div>
-      </div>
     </div>
     
     <!-- 右側遊戲板區域 -->
@@ -592,6 +617,17 @@
         <div id="game-board" class="game-board">
           <!-- 格子由 JS 動態生成 -->
         </div>
+        
+        <!-- 中央備註列表 -->
+        <div class="notes-list-center">
+          <h3>📝 格子備註清單</h3>
+          <div id="notes-container" class="notes-container">
+            <!-- 備註將在這裡動態生成 -->
+          </div>
+        </div>
+        
+        <!-- 切換備註顯示的按鈕 -->
+        <button class="toggle-notes-btn" id="toggle-notes-btn">隱藏備註</button>
       </div>
     </div>
   </div>
@@ -621,5 +657,23 @@
   
   <!-- 引入 JavaScript 檔案 -->
   <script src="rich-edit.js"></script>
+  
+  <!-- 額外的 JavaScript 來處理備註顯示/隱藏 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const toggleNotesBtn = document.getElementById('toggle-notes-btn');
+      const notesList = document.querySelector('.notes-list-center');
+      
+      toggleNotesBtn.addEventListener('click', function() {
+        if (notesList.style.display === 'none') {
+          notesList.style.display = 'block';
+          toggleNotesBtn.textContent = '隱藏備註';
+        } else {
+          notesList.style.display = 'none';
+          toggleNotesBtn.textContent = '顯示備註';
+        }
+      });
+    });
+  </script>
 </body>
 </html>
