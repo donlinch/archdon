@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = (modal) => { if(modal) modal.style.display = 'none'; };
 
     function formatBytes(bytes, decimals = 2) {
-        if (!+bytes) return '0 Bytes'; // Handle 0 or invalid input
+        if (!+bytes) return '0 Bytes';
 
         const k = 1024;
         const dm = decimals < 0 ? 0 : decimals;
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unsafe === null || unsafe === undefined) return '';
         return unsafe
              .toString()
-             .replace(/&/g, "&")
+             .replace(/&/g, "&") // & 符號要先替換
              .replace(/</g, "<")
              .replace(/>/g, ">")
             // " 轉成 & q u o t ;
@@ -70,18 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchFiles(page = currentPage) {
         showLoading(true);
         hideError();
-        // 清空當前視圖的內容
         if (currentView === 'list' && listTableBody) listTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">正在載入...</td></tr>`;
         if (currentView === 'grid' && fileGridView) fileGridView.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">正在載入...</p>';
         if (paginationControls) paginationControls.innerHTML = '';
 
-        currentPage = page; // 更新當前頁碼狀態
+        currentPage = page;
 
         console.log(`Fetching page ${currentPage}, filter: ${currentFileType}, sort: ${currentSortBy}, search: ${currentSearch}`);
 
         const params = new URLSearchParams({
             page: currentPage,
-            limit: 15, // 每頁數量 (可以設為變數)
+            limit: 15,
             sortBy: currentSortBy,
             fileType: currentFileType,
             search: currentSearch
@@ -95,16 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`無法獲取檔案列表 (${errorMsg})`);
             }
             const data = await response.json();
-
-            console.log("API Response Data:", data); // 檢查返回的數據
-
-            renderFiles(data.files || []); // 渲染檔案列表
-            renderPagination(data.totalPages || 1, data.currentPage || 1); // 渲染分頁
+            console.log("API Response Data:", data);
+            renderFiles(data.files || []);
+            renderPagination(data.totalPages || 1, data.currentPage || 1);
 
         } catch (err) {
             console.error('❌ 獲取檔案列表失敗:', err);
             showError(`無法載入檔案列表：${err.message}`);
-            // 清空兩個視圖的內容
             if (listTableBody) listTableBody.innerHTML = `<tr><td colspan="6" style="color:red; text-align: center;">載入失敗</td></tr>`;
             if (fileGridView) fileGridView.innerHTML = `<p style="color:red; text-align: center; grid-column: 1 / -1;">載入失敗</p>`;
         } finally {
@@ -113,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderFiles(files) {
-        // 先清空，確保舊數據被移除
         if (listTableBody) listTableBody.innerHTML = '';
         if (fileGridView) fileGridView.innerHTML = '';
 
@@ -123,19 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 根據當前視圖渲染
         if (currentView === 'list') {
             renderListView(files);
         } else {
             renderGridView(files);
         }
-        addActionButtonListeners(); // 渲染後綁定事件
+        addActionButtonListeners(); // 渲染後綁定事件 (現在只處理刪除按鈕)
     }
 
+    // --- 修改：列表模式使用 Input Box 顯示 URL ---
     function renderListView(files) {
         console.log("Rendering list view...");
         if (!listTableBody) return;
-        listTableBody.innerHTML = ''; // 確保再次清空
+        listTableBody.innerHTML = '';
 
         files.forEach(file => {
             const row = listTableBody.insertRow();
@@ -145,11 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellPreview = row.insertCell();
             cellPreview.style.textAlign = 'center';
             if (file.file_type === 'image' && file.file_path) {
-                cellPreview.innerHTML = `<img src="${escapeHtml(file.file_path)}" alt="預覽" class="preview-icon" style="max-width: 60px; max-height: 40px;">`; // 限制大小
+                const img = document.createElement('img');
+                img.src = file.file_path; // 直接使用路徑
+                img.alt = `預覽: ${escapeHtml(file.original_filename)}`;
+                img.className = 'preview-icon';
+                img.style.maxWidth = '60px';
+                img.style.maxHeight = '40px';
+                img.onerror = () => cellPreview.innerHTML = '<span class="preview-icon" title="圖片載入失敗" style="font-size: 1.5rem; color: #ffc107;">⚠️</span>';
+                cellPreview.appendChild(img);
             } else if (file.file_type === 'pdf') {
-                cellPreview.innerHTML = '<span class="preview-icon" style="font-size: 1.5rem; color: #dc3545;">📄</span>'; // PDF 圖示
+                cellPreview.innerHTML = '<span class="preview-icon" title="PDF 文件" style="font-size: 1.5rem; color: #dc3545;">📄</span>';
             } else {
-                cellPreview.innerHTML = '<span class="preview-icon" style="font-size: 1.5rem; color: #6c757d;">❓</span>'; // 其他檔案圖示
+                cellPreview.innerHTML = '<span class="preview-icon" title="其他檔案" style="font-size: 1.5rem; color: #6c757d;">❓</span>';
             }
 
             // 原始檔名
@@ -157,29 +159,24 @@ document.addEventListener('DOMContentLoaded', () => {
             cellOrigName.textContent = file.original_filename;
             cellOrigName.title = file.original_filename;
 
-            // 檔案路徑 (URL) + 複製按鈕
+            // 檔案路徑 (URL) - 改用 Input Box
             const cellPath = row.insertCell();
             cellPath.style.wordBreak = 'break-all';
             cellPath.style.whiteSpace = 'normal';
-            const pathSpan = document.createElement('span');
 
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.className = 'file-url-input'; // 套用新樣式
+            urlInput.readOnly = true;
 
-            // --- ▼▼▼ 修改這裡 ▼▼▼ ---
-            const siteUrl = window.location.origin; // 獲取基礎 URL (例如 https://sunnyyummy.onrender.com)
-            const relativePath = file.file_path || ''; // 確保有值
-            const fullUrl = siteUrl + relativePath; // 拼接完整 URL
-            pathSpan.textContent = fullUrl; // 顯示完整 URL
-            // --- ▲▲▲ 修改結束 ▲▲▲ ---
-           
-           
-           
-           
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-url-btn btn btn-sm btn-outline-secondary'; // 使用 Bootstrap-like class
-            copyBtn.textContent = '複製';
-            copyBtn.dataset.filePath = file.file_path;
-            cellPath.appendChild(pathSpan);
-            cellPath.appendChild(copyBtn);
+            const siteUrl = window.location.origin;
+            const relativePath = file.file_path || '';
+            const fullUrl = siteUrl + relativePath;
+            urlInput.value = fullUrl; // 設定 input 的值為完整 URL
+
+            urlInput.onclick = function() { this.select(); }; // 點擊選取
+
+            cellPath.appendChild(urlInput);
 
             // 類型
             row.insertCell().textContent = file.file_type || '未知';
@@ -193,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellActions = row.insertCell();
             cellActions.style.textAlign = 'center';
             const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-file-btn btn btn-sm btn-danger'; // 使用 Bootstrap-like class
+            deleteBtn.className = 'delete-file-btn btn btn-sm btn-danger';
             deleteBtn.textContent = '刪除';
             deleteBtn.dataset.fileId = file.id;
             deleteBtn.dataset.fileName = file.original_filename;
@@ -201,94 +198,82 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-   // --- ★★★ 替換 renderGridView 函數 ★★★ ---
-function renderGridView(files) {
-    console.log("Rendering grid view...");
-    if (!fileGridView) return;
-    fileGridView.innerHTML = ''; // 清空
+    // --- 修改：格狀模式使用 Input Box 顯示 URL ---
+    function renderGridView(files) {
+        console.log("Rendering grid view...");
+        if (!fileGridView) return;
+        fileGridView.innerHTML = '';
 
-    if (!Array.isArray(files) || files.length === 0) {
-        fileGridView.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">找不到符合條件的檔案。</p>';
-        return;
+        if (!Array.isArray(files) || files.length === 0) {
+            fileGridView.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">找不到符合條件的檔案。</p>';
+            return;
+        }
+
+        files.forEach(file => {
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.dataset.fileId = file.id;
+
+            // 預覽區
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'preview';
+            if (file.file_type === 'image' && file.file_path) {
+                const img = document.createElement('img');
+                img.src = file.file_path;
+                img.alt = `預覽: ${escapeHtml(file.original_filename)}`;
+                img.onerror = () => previewDiv.innerHTML = '<span title="圖片載入失敗" style="font-size: 2.5rem; color: #ffc107;">⚠️</span>';
+                previewDiv.appendChild(img);
+            } else if (file.file_type === 'pdf') {
+                previewDiv.innerHTML = '<span title="PDF 文件" style="font-size: 2.5rem; color: #dc3545;">📄</span>';
+            } else {
+                previewDiv.innerHTML = '<span title="其他檔案" style="font-size: 2.5rem; color: #6c757d;">❓</span>';
+            }
+            card.appendChild(previewDiv);
+
+            // 檔名
+            const filenameDiv = document.createElement('div');
+            filenameDiv.className = 'filename';
+            filenameDiv.textContent = file.original_filename;
+            filenameDiv.title = file.original_filename;
+            card.appendChild(filenameDiv);
+
+            // URL 顯示區 - 改用 Input Box
+            const urlLineDiv = document.createElement('div');
+            urlLineDiv.className = 'url-line';
+
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.className = 'file-url-input';
+            urlInput.readOnly = true;
+
+            const siteUrl = window.location.origin;
+            const relativePath = file.file_path || '';
+            const fullUrl = siteUrl + relativePath;
+            urlInput.value = fullUrl;
+
+            urlInput.onclick = function() { this.select(); };
+
+            urlLineDiv.appendChild(urlInput);
+            card.appendChild(urlLineDiv);
+
+            // Meta
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'meta';
+            metaDiv.textContent = `類型: ${file.file_type || '未知'} | 大小: ${formatBytes(file.size_bytes)}`;
+            card.appendChild(metaDiv);
+
+            // 刪除按鈕
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-file-btn-grid btn btn-sm btn-danger';
+            deleteBtn.textContent = '刪除';
+            deleteBtn.dataset.fileId = file.id;
+            deleteBtn.dataset.fileName = file.original_filename;
+            card.appendChild(deleteBtn);
+
+            fileGridView.appendChild(card);
+        });
     }
 
-    files.forEach(file => {
-        const card = document.createElement('div');
-        card.className = 'file-card';
-        card.dataset.fileId = file.id;
-
-        // 預覽區
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'preview';
-
-        if (file.file_type === 'image' && file.file_path) {
-            // --- ▼▼▼ 修改開始 ▼▼▼ ---
-            const img = document.createElement('img');
-            img.src = file.file_path; // ★ 直接使用 file_path，不要 escapeHtml
-            img.alt = `預覽: ${escapeHtml(file.original_filename)}`; // Alt text 還是需要 escape
-            // ★ 添加 onerror 處理 ★
-            img.onerror = () => {
-                console.warn(`圖片預覽載入失敗: ${file.file_path}`);
-                previewDiv.innerHTML = '<span title="圖片載入失敗" style="font-size: 2.5rem; color: #ffc107;">⚠️</span>'; // 顯示警告圖示
-            };
-            previewDiv.appendChild(img); // 將 img 元素加入 previewDiv
-            // --- ▲▲▲ 修改結束 ▲▲▲ ---
-        } else if (file.file_type === 'pdf') {
-            previewDiv.innerHTML = '<span title="PDF 文件" style="font-size: 2.5rem; color: #dc3545;">📄</span>';
-        } else {
-            previewDiv.innerHTML = '<span title="其他檔案" style="font-size: 2.5rem; color: #6c757d;">❓</span>';
-        }
-        card.appendChild(previewDiv); // 添加預覽區
-
-        // --- 檔名、URL、Meta、刪除按鈕 (保持不變) ---
-        const filenameDiv = document.createElement('div');
-        filenameDiv.className = 'filename';
-        filenameDiv.textContent = file.original_filename;
-        filenameDiv.title = file.original_filename;
-
-        const urlLineDiv = document.createElement('div');
-        urlLineDiv.className = 'url-line';
-        const urlSpan = document.createElement('span');
-        urlSpan.className = 'url-path';
-
-
-  // --- ▼▼▼ 修改這裡 ▼▼▼ ---
-  const siteUrl = window.location.origin; // 獲取基礎 URL
-  const relativePath = file.file_path || ''; // 確保有值
-  const fullUrl = siteUrl + relativePath; // 拼接完整 URL
-  urlSpan.textContent = fullUrl; // 顯示完整 URL
-  // --- ▲▲▲ 修改結束 ▲▲▲ ---
-
-
-
-
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'copy-url-btn-grid';
-        copyBtn.textContent = '複製';
-        copyBtn.dataset.filePath = file.file_path;
-        urlLineDiv.appendChild(urlSpan);
-        urlLineDiv.appendChild(copyBtn);
-
-        const metaDiv = document.createElement('div');
-        metaDiv.className = 'meta';
-        metaDiv.textContent = `類型: ${file.file_type || '未知'} | 大小: ${formatBytes(file.size_bytes)}`;
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-file-btn-grid btn btn-sm btn-danger'; // 添加 btn class
-        deleteBtn.textContent = '刪除';
-        deleteBtn.dataset.fileId = file.id;
-        deleteBtn.dataset.fileName = file.original_filename;
-
-        card.appendChild(filenameDiv);
-        card.appendChild(urlLineDiv);
-        card.appendChild(metaDiv);
-        card.appendChild(deleteBtn);
-        // --- (保持不變的部分結束) ---
-
-        fileGridView.appendChild(card);
-    });
-}
-// --- ★★★ renderGridView 函數結束 ★★★ ---
 
     function renderPagination(totalPagesReceived, currentPageReceived) {
         totalPages = totalPagesReceived;
@@ -305,9 +290,9 @@ function renderGridView(files) {
             button.dataset.page = page;
             button.textContent = text;
             button.disabled = isDisabled;
-            button.className = 'page-btn'; // 基礎 class
-            if (isActive) button.classList.add('active'); // 當前頁
-            if (isDisabled) button.classList.add('disabled'); // 禁用狀態
+            button.className = 'page-btn';
+            if (isActive) button.classList.add('active');
+            if (isDisabled) button.classList.add('disabled');
             return button;
         };
 
@@ -341,9 +326,7 @@ function renderGridView(files) {
         if (viewGridBtn) viewGridBtn.classList.toggle('active', currentView === 'grid');
         if (fileListView) fileListView.style.display = currentView === 'list' ? 'block' : 'none';
         if (fileGridView) fileGridView.style.display = currentView === 'grid' ? 'grid' : 'none';
-        // 重新渲染，因為 DOM 結構不同，但不需要重新 fetch
-        // 需要一個變數來儲存上次 fetch 的結果
-        // 為了簡化，我們還是重新 fetch
+        // 重新 fetch 資料以在新的視圖中渲染
         fetchFiles();
     }
 
@@ -353,7 +336,6 @@ function renderGridView(files) {
             uploadStatus.textContent = '請先選擇一個檔案！'; uploadStatus.style.color = 'orange'; return;
         }
         const file = fileInput.files[0];
-        // 可以在此處添加檔案大小或類型的客戶端驗證
         const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
              uploadStatus.textContent = '不支援的檔案類型！'; uploadStatus.style.color = 'red'; return;
@@ -376,10 +358,10 @@ function renderGridView(files) {
              uploadStatus.textContent = '上傳成功！正在刷新列表...'; uploadStatus.style.color = 'green';
              setTimeout(() => {
                  closeModal(uploadModal);
-                 currentPage = 1; // 上傳後跳回第一頁
-                 currentSortBy = 'newest'; // 按最新排序
-                 sortBySelect.value = 'newest'; // 更新下拉選單
-                 fetchFiles(); // 上傳成功後刷新列表
+                 currentPage = 1;
+                 currentSortBy = 'newest';
+                 if(sortBySelect) sortBySelect.value = 'newest';
+                 fetchFiles();
              }, 1000);
         } catch (error) {
             console.error('上傳檔案失敗:', error);
@@ -389,33 +371,8 @@ function renderGridView(files) {
         }
     }
 
-    function handleCopyUrl(event) {
-        const button = event.target.closest('.copy-url-btn, .copy-url-btn-grid');
-        if (!button) return;
-
-
-  // --- ▼▼▼ 修改/添加這裡 ▼▼▼ ---
-  const relativePath = button.dataset.filePath; // 從 data-* 獲取相對路徑
-  if (!relativePath) return; // 如果沒有路徑，不執行
-
-  const siteUrl = window.location.origin; // 獲取基礎 URL
-  const fullUrl = siteUrl + relativePath; // 拼接成完整 URL
-  // --- ▲▲▲ 修改/添加結束 ▲▲▲ ---
-        navigator.clipboard.writeText(filePath).then(() => {
-            const originalText = button.textContent;
-            button.textContent = '✓'; // 用打勾符號
-            button.classList.add('copy-success-indicator');
-            button.disabled = true; // 複製後禁用一段時間
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('copy-success-indicator');
-                button.disabled = false;
-            }, 1500);
-        }).catch(err => {
-            console.error('複製 URL 失敗:', err);
-            alert('複製 URL 失敗，請手動複製。\n可能需要瀏覽器允許剪貼簿權限。');
-        });
-    }
+    // --- 移除：handleCopyUrl 函數 ---
+    // function handleCopyUrl(event) { ... } // 整段刪除
 
     async function handleDeleteFile(event) {
         const button = event.target.closest('.delete-file-btn, .delete-file-btn-grid');
@@ -434,8 +391,7 @@ function renderGridView(files) {
              const response = await fetch(`/api/admin/files/${fileId}`, { method: 'DELETE' });
              if (response.status === 204 || response.ok) {
                  alert(`檔案 "${escapeHtml(fileName)}" 已成功刪除。`);
-                 // 刪除成功後留在當前頁刷新
-                 fetchFiles();
+                 fetchFiles(); // 留在當前頁刷新
              } else {
                  const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
                  throw new Error(errorData.error || `刪除失敗 (${response.status})`);
@@ -443,31 +399,30 @@ function renderGridView(files) {
         } catch (error) {
              console.error('刪除檔案失敗:', error);
              alert(`刪除檔案失敗: ${error.message}`);
-             button.disabled = false; // 恢復按鈕
-             button.textContent = '刪除'; // 恢復文字
+             button.disabled = false;
+             button.textContent = '刪除';
         }
     }
 
     function addActionButtonListeners() {
         const displayArea = document.getElementById('file-display-area');
         if (displayArea) {
-            // 使用事件委派處理動態生成的按鈕
-            displayArea.removeEventListener('click', handleDynamicButtonClick); // 移除舊監聽器
-            displayArea.addEventListener('click', handleDynamicButtonClick); // 添加新監聽器
+            displayArea.removeEventListener('click', handleDynamicButtonClick);
+            displayArea.addEventListener('click', handleDynamicButtonClick);
         }
     }
 
-    // 統一處理動態按鈕點擊的函數
+    // --- 修改：統一處理動態按鈕點擊的函數 (移除複製按鈕的處理) ---
     function handleDynamicButtonClick(event) {
-        if (event.target.closest('.copy-url-btn, .copy-url-btn-grid')) {
-            handleCopyUrl(event);
-        } else if (event.target.closest('.delete-file-btn, .delete-file-btn-grid')) {
+        // 只處理刪除按鈕
+        if (event.target.closest('.delete-file-btn, .delete-file-btn-grid')) {
             handleDeleteFile(event);
         }
+        // 註：點擊 Input Box 的 select 功能是直接綁定在元素上的 onclick，不需要在這裡處理
     }
 
 
-    // --- 事件監聽器綁定 ---
+    // --- 事件監聽器綁定 (保持不變) ---
     if (uploadBtn) uploadBtn.addEventListener('click', () => {
          if(uploadForm) uploadForm.reset();
          if(uploadPreview) uploadPreview.innerHTML = '';
@@ -499,7 +454,7 @@ function renderGridView(files) {
     if (searchInput) searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') { currentSearch = searchInput.value.trim(); currentPage = 1; fetchFiles(); } });
     if (typeFilter) typeFilter.addEventListener('change', () => { currentFileType = typeFilter.value; currentPage = 1; fetchFiles(); });
     if (sortBySelect) sortBySelect.addEventListener('change', () => { currentSortBy = sortBySelect.value; currentPage = 1; fetchFiles(); });
-    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchFiles()); // 刷新使用當前參數
+    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchFiles());
 
     // 視圖切換
     if (viewListBtn) viewListBtn.addEventListener('click', () => switchView('list'));
@@ -508,10 +463,10 @@ function renderGridView(files) {
     // 分頁控制 (事件委派)
     if (paginationControls) {
         paginationControls.addEventListener('click', (e) => {
-            if (e.target.matches('button.page-btn') && !e.target.disabled) { // 使用 .page-btn class
+            if (e.target.matches('button.page-btn') && !e.target.disabled) {
                 const page = parseInt(e.target.dataset.page);
                 if (!isNaN(page) && page !== currentPage) {
-                    fetchFiles(page); // Fetch the requested page
+                    fetchFiles(page);
                 }
             }
         });
