@@ -6,10 +6,21 @@ const descInput = document.getElementById('edit-description');
 const colorInput = document.getElementById('edit-color');
 const imageInput = document.getElementById('edit-image');
 
+
+// ▼▼▼ 新增獲取 Logo 元素 ▼▼▼
+const logoUrlInput = document.getElementById('edit-logo-url');
+const logoPreview = document.getElementById('logo-preview');
+// ▲▲▲ 新增獲取 Logo 元素 ▲▲▲
+
+
+
 let editingIndex = -1;
 let cells = [];
 let currentTemplateId = 1;
 let backgroundColor = '#fff0f5';
+// ▼▼▼ 新增全域變數儲存 Logo URL ▼▼▼
+let currentLogoUrl = '';
+// ▲▲▲ 新增全域變數儲存 Logo URL ▲▲▲
 
 // 套用背景顏色
 function applyTemplateBackgroundColor(color) {
@@ -106,48 +117,81 @@ function saveCellChanges() {
   renderBoard();
   editorPanel.style.display = 'none';
 }
-
 // 載入資料庫中的模板資料
 function loadTemplate(templateId = 1) {
-  currentTemplateId = templateId;
-  fetch(`/api/rich-map/templates/${templateId}/full`)
-    .then(res => res.json())
-    .then(data => {
-      applyTemplateBackgroundColor(data.background_color);
-      cells = data.cells;
-      renderBoard();
-    })
-    .catch(err => {
-      console.error('❌ 載入模板失敗:', err);
-      alert('無法載入模板資料，請確認後端 API 有開！');
+    currentTemplateId = templateId;
+    fetch(`/api/rich-map/templates/${templateId}/full`)
+      .then(res => {
+          // ▼▼▼ 檢查回應是否 OK ▼▼▼
+          if (!res.ok) {
+              // 如果 fetch 成功但伺服器回傳錯誤 (例如 404, 500)
+              return res.json().then(errData => { // 嘗試解析錯誤訊息
+                 throw new Error(`伺服器錯誤 ${res.status}: ${errData.error || res.statusText}`);
+              }).catch(() => { // 如果連錯誤訊息都無法解析
+                  throw new Error(`伺服器錯誤 ${res.status}: ${res.statusText}`);
+              });
+          }
+          return res.json(); // 如果 OK，解析正常的回應
+          // ▲▲▲ 檢查回應是否 OK ▲▲▲
+      })
+      .then(data => {
+        applyTemplateBackgroundColor(data.background_color);
+        cells = data.cells || []; // 確保 cells 是陣列
+        // ▼▼▼ 設定 Logo URL 和預覽 ▼▼▼
+        currentLogoUrl = data.logo_url || '';
+        logoUrlInput.value = currentLogoUrl;
+        logoPreview.src = currentLogoUrl;
+        // ▲▲▲ 設定 Logo URL 和預覽 ▲▲▲
+        renderBoard();
+      })
+      .catch(err => {
+        console.error('❌ 載入模板失敗:', err);
+        // 顯示更詳細的錯誤給使用者
+        alert(`無法載入模板資料：\n${err.message}\n請檢查後端 API 是否正常運作，以及模板 ID 是否存在。`);
+        // 清空畫面或顯示錯誤提示
+        board.innerHTML = '<p style="color: red; text-align: center;">載入地圖失敗</p>';
+        cells = [];
+        currentLogoUrl = '';
+        logoUrlInput.value = '';
+        logoPreview.src = '';
+      });
+  }
+  // 儲存整份資料（背景顏色＋格子資料 + Logo URL）
+  function saveAllChanges() {
+    console.log("準備儲存:", { backgroundColor, currentLogoUrl, cells }); // 增加日誌，方便除錯
+    const body = JSON.stringify({
+      background_color: backgroundColor,
+      logo_url: currentLogoUrl, // <-- 加入 logo_url
+      cells
     });
-}
-
-// 儲存整份資料（背景顏色＋格子資料）
-function saveAllChanges() {
-  const body = JSON.stringify({
-    background_color: backgroundColor,
-    cells
-  });
-
-  fetch(`/api/rich-map/templates/${currentTemplateId}/full`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body
-  })
-    .then(res => {
-      if (res.ok) {
-        alert('✅ 儲存成功！');
-      } else {
-        throw new Error('伺服器錯誤');
-      }
+  
+    fetch(`/api/rich-map/templates/${currentTemplateId}/full`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body
     })
-    .catch(err => {
-      console.error('❌ 儲存失敗:', err);
-      alert('儲存失敗，請檢查後端連線');
-    });
-}
-
+      .then(res => {
+        if (res.ok) {
+          return res.json(); // <-- 如果成功，解析可能的成功訊息
+        } else {
+          // 如果失敗，嘗試解析錯誤訊息再拋出
+          return res.json().then(errData => {
+              throw new Error(`伺服器錯誤 ${res.status}: ${errData.error || '未知錯誤'}`);
+          }).catch(() => { // 如果連錯誤 JSON 都解析不了
+              throw new Error(`伺服器錯誤 ${res.status}`);
+          });
+        }
+      })
+      .then(data => { // <-- 處理成功的回應
+          console.log("儲存成功回應:", data);
+          alert(`✅ 儲存成功！ (${data.message || ''})`);
+      })
+      .catch(err => {
+        console.error('❌ 儲存失敗:', err);
+        alert(`儲存失敗：\n${err.message}\n請檢查後端連線及伺服器日誌。`);
+      });
+  }
+  
 // 加入一顆儲存按鈕（你可以改成 UI 按鈕呼叫）
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 's') {

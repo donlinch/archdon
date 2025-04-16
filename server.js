@@ -237,8 +237,9 @@ app.get('/api/rich-map/templates/:id/full', async (req, res) => {
 
 app.put('/api/rich-map/templates/:id/full', async (req, res) => {
     const templateId = parseInt(req.params.id);
-    const { background_color, cells } = req.body;
-
+    
+    const { background_color, logo_url, cells } = req.body;
+   
     // --- 基本驗證 ---
     if (isNaN(templateId)) {
         return res.status(400).json({ error: '無效的模板 ID' });
@@ -246,24 +247,26 @@ app.put('/api/rich-map/templates/:id/full', async (req, res) => {
     if (!Array.isArray(cells)) {
         return res.status(400).json({ error: '格子資料必須是陣列' });
     }
-    // 可選：更嚴格的顏色驗證
     const bgColorToSave = (typeof background_color === 'string' && background_color.trim())
                            ? background_color.trim()
-                           : '#fff0f5'; // 提供預設值
+                           : '#fff0f5';
+    // ▼▼▼ 處理 logo_url，允許空值 ▼▼▼
+    const logoUrlToSave = (typeof logo_url === 'string' && logo_url.trim()) ? logo_url.trim() : null;
+    // ▲▲▲ 處理 logo_url ▲▲▲
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN'); // --- 開始事務 ---
+        await client.query('BEGIN');
 
-        // 1. 更新模板背景色和時間戳
+        // 1. 更新模板背景色、Logo 和時間戳
         const templateUpdateResult = await client.query(
             `UPDATE rich_map_templates
-             SET background_color = $1, updated_at = NOW()
-             WHERE id = $2`,
-            [bgColorToSave, templateId]
+             SET background_color = $1, logo_url = $2, updated_at = NOW()
+             WHERE id = $3`, // <-- 加入 logo_url = $2
+            [bgColorToSave, logoUrlToSave, templateId] // <-- 加入 logoUrlToSave
         );
 
-        // 檢查模板是否存在
+        // 檢查模板是否存在 (不變)
         if (templateUpdateResult.rowCount === 0) {
             await client.query('ROLLBACK'); // 回滾事務
             client.release();
@@ -295,19 +298,18 @@ app.put('/api/rich-map/templates/:id/full', async (req, res) => {
         // 等待所有格子更新完成
         await Promise.all(cellUpdatePromises);
 
-        await client.query('COMMIT'); // --- 提交事務 ---
-        console.log(`模板 ID ${templateId} 已成功更新`);
-        res.status(200).json({ success: true, message: '模板已成功更新' });
+        await client.query('COMMIT');
+        console.log(`模板 ID ${templateId} (含Logo) 已成功更新`); // <-- 更新日誌訊息
+        res.status(200).json({ success: true, message: '模板 (含Logo) 已成功更新' }); // <-- 更新回應訊息
 
     } catch (err) {
-        await client.query('ROLLBACK'); // --- 出錯時回滾事務 ---
-        console.error(`更新模板 ${templateId} 時發生錯誤:`, err);
+        await client.query('ROLLBACK');
+        console.error(`更新模板 ${templateId} (含Logo) 時發生錯誤:`, err);
         res.status(500).json({ error: '伺服器錯誤，更新模板失敗', detail: err.message });
     } finally {
-        client.release(); // --- 確保釋放連接 ---
+        client.release();
     }
 });
-
 
 
 
