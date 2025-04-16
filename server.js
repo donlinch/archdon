@@ -1061,7 +1061,6 @@ app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), 
         client.release();
     }
 });
-
 // DELETE /api/admin/files/:id - 刪除檔案
 app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
     const fileId = parseInt(req.params.id);
@@ -1069,7 +1068,7 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
         return res.status(400).json({ error: '無效的檔案 ID' });
     }
 
-    console.log(`準備刪除檔案 ID: ${fileId}`); // 修改日誌訊息
+    console.log(`準備刪除檔案 ID: ${fileId}`);
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -1087,21 +1086,21 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
         }
         const filePath = fileResult.rows[0].file_path; // 例如: /uploads/xyz.png
 
-        // ★★★ 組合出實際的磁碟路徑來刪除 (移到這裡) ★★★
-        const filename = path.basename(filePath); // 從 URL 路徑中提取檔名
+        // ★★★ 組合出實際的磁碟路徑 (移動到這裡) ★★★
+        const filename = path.basename(filePath);
         const fullDiskPath = path.join(uploadDir, filename); // 指向 /data/uploads/xyz.png
 
         // 2. 刪除資料庫記錄
         const deleteDbResult = await client.query('DELETE FROM uploaded_files WHERE id = $1', [fileId]);
-         if (deleteDbResult.rowCount === 0) { // 再次檢查以防萬一
-            await client.query('ROLLBACK');
-             client.release();
-            console.warn(`嘗試刪除資料庫記錄時未找到 ID ${fileId} (可能已被刪除)`);
-            return res.status(404).json({ error: `找不到要刪除的檔案記錄 (ID: ${fileId})` });
-        }
+        if (deleteDbResult.rowCount === 0) {
+           await client.query('ROLLBACK');
+            client.release();
+           console.warn(`嘗試刪除資料庫記錄時未找到 ID ${fileId} (可能已被刪除)`);
+           return res.status(404).json({ error: `找不到要刪除的檔案記錄 (ID: ${fileId})` });
+       }
         console.log(`資料庫記錄 ID ${fileId} 已刪除`);
 
-        // 3. 嘗試刪除實際檔案 (保留這一段，移除之前重複的)
+        // 3. 嘗試刪除實際檔案 (★ 只保留這一段使用 fullDiskPath 的邏輯 ★)
         try {
             if (fs.existsSync(fullDiskPath)) {
                  await fs.promises.unlink(fullDiskPath);
@@ -1149,6 +1148,9 @@ app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
 // --- 靜態文件服務 ---
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/uploads', express.static(uploadDir)); // uploadDir 的值是 '/data/uploads'
+console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
 
 // --- 公開 API Routes (保持不變) ---
 // ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...
