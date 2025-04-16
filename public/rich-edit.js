@@ -18,6 +18,9 @@ const loadTemplateBtn = document.getElementById('load-template-btn');
 const saveTemplateBtn = document.getElementById('save-template-btn');
 // (玩家設定表格)
 const playerConfigTableBody = document.querySelector('#player-config-table tbody');
+const saveAsNewBtn = document.getElementById('save-as-new-btn');
+const createNewBtn = document.getElementById('create-new-btn');
+
 
 // --- 全域變數 ---
 let editingIndex = -1;
@@ -124,7 +127,7 @@ function saveCellChanges() {
 }
 
 // 獲取並填充模板列表
-async function fetchTemplateList() {
+async function fetchTemplateList(selectId = null) { // <-- 增加可選參數
     if (!templateSelect || !loadTemplateBtn) {
         console.error("模板選擇器的 DOM 元素未找到！");
         return;
@@ -155,11 +158,29 @@ async function fetchTemplateList() {
             option.textContent = `${template.template_name} (ID: ${template.id})`;
             templateSelect.appendChild(option);
         });
+  // 決定要選中哪個 ID
+  let idToSelect = selectId; // 優先使用傳入的 ID
+  if (!idToSelect && templates.length > 0) {
+      idToSelect = templates[0].id; // 否則選中第一個
+  }
 
-        templateSelect.value = templates[0].id;
-        loadTemplateBtn.disabled = false;
-        saveTemplateBtn.disabled = true;
-        await loadTemplate(templates[0].id);
+  if (idToSelect) {
+      templateSelect.value = idToSelect; // 設置選中項
+      loadTemplateBtn.disabled = false;
+      // 如果是新建或另存後刷新，則自動載入新選中的模板
+      if (selectId) {
+           await loadTemplate(idToSelect);
+      } else if (templates.length > 0 && templateSelect.value == templates[0].id){
+           // 如果是頁面首次載入，且有模板，自動載入第一個
+           await loadTemplate(templates[0].id);
+      } else {
+           // 否則，只更新下拉選單，不自動載入 (例如，只是刷新列表)
+           saveTemplateBtn.disabled = true; // 需要手動載入後才能儲存
+      }
+  } else {
+      loadTemplateBtn.disabled = true;
+      saveTemplateBtn.disabled = true;
+  }
 
     } catch (err) {
         console.error('❌ 獲取模板列表時出錯:', err);
@@ -223,6 +244,41 @@ async function loadTemplate(templateId) {
         currentTemplateId = null;
     }
 }
+
+
+
+// ▼▼▼ 新增：處理新建/另存的核心 API 呼叫函數 ▼▼▼
+async function createNewTemplateInAPI(payload) {
+    console.log("準備發送 POST 請求創建模板:", payload);
+    try {
+        const response = await fetch('/api/rich-map/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json(); // 嘗試解析回應
+
+        if (!response.ok) {
+            throw new Error(result.error || `伺服器錯誤 ${response.status}`);
+        }
+
+        console.log("模板創建/另存成功:", result);
+        alert(`✅ 操作成功！\n新模板名稱: ${result.newTemplate.template_name}\n新模板 ID: ${result.newTemplate.id}`);
+
+        // 刷新模板列表並選中新創建的模板
+        await fetchTemplateList(result.newTemplate.id); // 將新 ID 傳過去
+
+    } catch (err) {
+        console.error('❌ 創建/另存模板失敗:', err);
+        alert(`操作失敗：\n${err.message}`);
+        // 可以選擇在這裡恢復按鈕狀態，如果有的話
+    }
+}
+// ▲▲▲ 新增：處理新建/另存的核心 API 呼叫函數 ▲▲▲
+
+
+
 
 // 渲染玩家設定 UI
 function renderPlayerConfigUI() {
@@ -469,6 +525,57 @@ document.addEventListener('keydown', e => {
         }
     }
 });
+
+
+
+
+
+// ▼▼▼ 新增按鈕的事件監聽 ▼▼▼
+// "另存為新版本..." 按鈕
+if (saveAsNewBtn) {
+    saveAsNewBtn.addEventListener('click', () => {
+        const newName = prompt("請輸入新版本的名稱：");
+        if (newName && newName.trim()) {
+            // 收集當前所有資料
+            const currentData = {
+                template_name: newName.trim(),
+                background_color: backgroundColor,
+                logo_url: currentLogoUrl,
+                cells: cells,
+                players: currentPlayers
+            };
+            createNewTemplateInAPI(currentData); // 呼叫 API 函數
+        } else if (newName !== null) { // 使用者沒取消，但輸入了空值
+            alert("模板名稱不能為空！");
+        }
+    });
+} else {
+    console.warn("另存為新版本按鈕未找到。");
+}
+
+// "新建地圖..." 按鈕
+if (createNewBtn) {
+    createNewBtn.addEventListener('click', () => {
+        const newName = prompt("請輸入新地圖的名稱：");
+        if (newName && newName.trim()) {
+            // 只傳送新名稱，後端會知道要用預設資料
+            const payload = {
+                template_name: newName.trim(),
+                // 可以在這裡加一個標記，讓後端更明確知道是新建
+                // is_new_creation: true
+            };
+            createNewTemplateInAPI(payload); // 呼叫 API 函數
+        } else if (newName !== null) {
+            alert("地圖名稱不能為空！");
+        }
+    });
+} else {
+    console.warn("新建地圖按鈕未找到。");
+}
+// ▲▲▲ 新增按鈕的事件監聽 ▲▲▲
+
+
+
 
 // 拖曳編輯面板
 const dragPanel = document.getElementById('editor-panel');

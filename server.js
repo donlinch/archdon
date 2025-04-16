@@ -231,6 +231,170 @@ app.get('/api/rich-map/templates/:id/full', async (req, res) => {
 
 
 
+// ▼▼▼ 新增：處理新建或另存模板的 POST 請求 ▼▼▼
+app.post('/api/rich-map/templates', async (req, res) => {
+    const { template_name, background_color, logo_url, cells, players } = req.body;
+    const DEFAULT_TEMPLATE_ID = 1; // 假設 ID=1 是你的預設模板 (例如 "美食地圖1")
+
+    // 1. 驗證必要欄位
+    if (!template_name || !template_name.trim()) {
+        return res.status(400).json({ error: '模板名稱不能為空' });
+    }
+    const trimmedName = template_name.trim();
+
+    const client = await pool.connect();
+    try {
+        // 2. 檢查名稱是否重複
+        const checkResult = await client.query(
+            'SELECT 1 FROM rich_map_templates WHERE template_name = $1',
+            [trimmedName]
+        );
+        if (checkResult.rowCount > 0) {
+            client.release();
+            return res.status(409).json({ error: `模板名稱 "${trimmedName}" 已存在` });
+        }
+
+        await client.query('BEGIN'); // --- 開始事務 ---
+
+        let bgColorToUse = '#fff0f5'; // 預設背景色
+        let logoUrlToUse = null;
+        let cellsToUse = [];
+        let playersToUse = [ // 預設玩家結構 (如果預設模板沒有玩家資料)
+            { player_number: 1, name: null, avatar_url: null },
+            { player_number: 2, name: null, avatar_url: null },
+            { player_number: 3, name: null, avatar_url: null },
+        ];
+
+        // 3. 判斷是 "新建" 還是 "另存"
+        if (cells && Array.isArray(cells)) {
+            // --- 情況：另存為新版本 (使用請求 body 中的資料) ---
+            console.log(`正在處理 "另存為" 請求: ${trimmedName}`);
+            bgColorToUse = (typeof background_color === 'string' && background_color.trim()) ? background_color.trim() : '#fff0f5';
+            logoUrlToUse = (typeof logo_url === 'string' && logo_url.trim()) ? logo_url.trim() : null;
+            cellsToUse = cells; // 直接使用傳入的格子資料
+            // 處理傳入的玩家資料，如果沒有或格式不對，使用預設值
+            if (players && Array.isArray(players) && players.length > 0) {
+                 playersToUse = players.slice(0, 3).map((p, i) => ({ // 最多取3個
+                     player_number: p.player_number || (i + 1), // 確保有 player_number
+                     name: (typeof p.name === 'string') ? p.name.trim() : null,
+                     avatar_url: (typeof p.avatar_url === 'string' && p.avatar_url.trim()) ? p.avatar_url.trim() : null
+                 }));
+                 // 補足到 3 個 (如果需要)
+                 while (playersToUse.length < 3) {
+                     playersToUse.push({ player_number: playersToUse.length + 1, name: null, avatar_url: null });
+                 }
+            }
+        } else {
+            // --- 情況：新建地圖 (從預設模板 ID=1 複製資料) ---
+            console.log(`正在處理 "新建" 請求: ${trimmedName} (基於模板 ID ${DEFAULT_TEMPLATE_ID})`);
+            // 獲取預設模板的基本資料
+            const defaultTemplateResult = await client.query(
+                'SELECT background_color, logo_url FROM rich_map_templates WHERE id = $1',
+                [DEFAULT_TEMPLATE_ID]
+            );
+            if (defaultTemplateResult.rowCount > 0) {
+                bgColorToUse = defaultTemplateResult.rows[0].background_color || bgColorToUse;
+                logoUrlToUse = defaultTemplateResult.rows[0].logo_url || logoUrlToUse;
+            } else {
+                console.warn(`預設模板 ID ${DEFAULT_TEMPLATE_ID} 未找到，將使用硬編碼的預設值。`);
+                // 如果預設模板不存在，可以使用硬編碼的預設值
+                 bgColorToUse = '#fff0f5';
+                 logoUrlToUse = null;
+                 // 也可以在這裡生成一個標準的空白地圖格子結構
+                 // cellsToUse = generateStandardEmptyCells();
+                 // 目前 cellsToUse 保持空陣列，需要手動編輯
+            }
+
+            // 獲取預設模板的格子資料
+            const defaultCellsResult = await client.query(
+                'SELECT position, x, y, title, description, color, image_url FROM rich_map_cells WHERE template_id = $1 ORDER BY position ASC',
+                [DEFAULT_TEMPLATE_ID]
+            );
+            // 移除 id 和 template_id，因為要插入新的
+            cellsToUse = defaultCellsResult.rows.map(({ id, template_id, ...cellData }) => cellData);
+
+             // 獲取預設模板的玩家資料
+             const defaultPlayersResult = await client.query(
+                 'SELECT player_number, name, avatar_url FROM rich_players_config WHERE template_id = $1 ORDER BY player_number ASC',
+                 [DEFAULT_TEMPLATE_ID]
+             );
+              // 移除 id 和 template_id
+             if (defaultPlayersResult.rowCount > 0) {
+                 playersToUse = defaultPlayersResult.rows.map(({ id, template_id, ...playerData }) => playerData);
+                 // 確保有 3 個玩家記錄
+                 while (playersToUse.length < 3) {
+                     playersToUse.push({ player_number: playersToUse.length + 1, name: null, avatar_url: null });
+                 }
+                 playersToUse = playersToUse.slice(0, 3); // 最多取3個
+             }
+             // 如果預設模板沒有玩家資料，playersToUse 會保持上面的預設值
+        }
+
+        // 4. 插入新的模板記錄
+        const newTemplateResult = await client.query(
+            `INSERT INTO rich_map_templates (template_name, background_color, logo_url)
+             VALUES ($1, $2, $3) RETURNING id`,
+            [trimmedName, bgColorToUse, logoUrlToUse]
+        );
+        const newTemplateId = newTemplateResult.rows[0].id;
+        console.log(`新模板基礎資料已插入，ID: ${newTemplateId}`);
+
+        // 5. 插入格子資料 (如果有)
+        if (cellsToUse.length > 0) {
+            const cellInsertPromises = cellsToUse.map(cell => {
+                const position = parseInt(cell.position);
+                if (isNaN(position)) return Promise.resolve();
+                return client.query(
+                    `INSERT INTO rich_map_cells (template_id, position, x, y, title, description, color, image_url)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [
+                        newTemplateId, // <-- 使用新 ID
+                        position,
+                        cell.x, cell.y,
+                        cell.title || '',
+                        cell.description || '',
+                        (cell.color && cell.color.startsWith('#')) ? cell.color : '#ffffff',
+                        cell.image_url || null
+                    ]
+                );
+            });
+            await Promise.all(cellInsertPromises);
+            console.log(`為模板 ID ${newTemplateId} 插入了 ${cellsToUse.length} 個格子`);
+        }
+
+        // 6. 插入玩家設定資料
+        if (playersToUse.length > 0) {
+             const playerInsertPromises = playersToUse.map(player => {
+                 return client.query(
+                     `INSERT INTO rich_players_config (template_id, player_number, name, avatar_url)
+                      VALUES ($1, $2, $3, $4)`, // 這裡不需要 ON CONFLICT，因為是全新插入
+                     [newTemplateId, player.player_number, player.name, player.avatar_url]
+                 );
+             });
+             await Promise.all(playerInsertPromises);
+             console.log(`為模板 ID ${newTemplateId} 插入了 ${playersToUse.length} 個玩家設定`);
+         }
+
+        await client.query('COMMIT'); // --- 提交事務 ---
+        console.log(`模板 "${trimmedName}" (ID: ${newTemplateId}) 已成功創建/另存`);
+        res.status(201).json({
+            success: true,
+            message: `模板 "${trimmedName}" 已成功創建/另存`,
+            newTemplate: { // 回傳新模板的 ID 和名稱，方便前端使用
+                id: newTemplateId,
+                template_name: trimmedName
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // --- 出錯時回滾事務 ---
+        console.error(`創建/另存模板 "${trimmedName}" 時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器錯誤，操作失敗', detail: err.message });
+    } finally {
+        client.release(); // --- 確保釋放連接 ---
+    }
+});
+// ▲▲▲ 新增：處理新建或另存模板的 POST 請求 ▲▲▲
 
 
 
