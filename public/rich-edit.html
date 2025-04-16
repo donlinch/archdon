@@ -289,6 +289,98 @@
       object-fit: cover; /* 圖片填滿 */
     }
     /* ▲▲▲ 新增玩家設定區樣式 ▲▲▲ */
+
+
+
+/* ▼▼▼ 修改或新增版本控制區樣式 ▼▼▼ */
+.version-control {
+      background-color: #f0f0f0;
+      padding: 12px 20px; /* 稍微增加 padding */
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      gap: 15px; /* 元件間距 */
+      flex-wrap: wrap; /* 換行 */
+    }
+    .version-control label {
+      font-weight: bold;
+      color: #444; /* ★ 深灰色標籤文字 */
+    }
+    .version-control select,
+    .version-control button,
+    .version-control a { /* ★ 統一基本樣式 */
+      padding: 8px 14px; /* 統一 padding */
+      border: 1px solid #bbb; /* 稍微加深邊框 */
+      border-radius: 5px; /* 統一圓角 */
+      font-size: 0.95rem; /* 統一字體大小 */
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s; /* 加入過渡 */
+    }
+    .version-control select {
+        color: #333; /* ★ 下拉選單文字顏色 */
+        background-color: #fff; /* 確保背景白色 */
+        cursor: pointer;
+    }
+    .version-control select:hover {
+        border-color: #888;
+    }
+
+    /* --- 一般按鈕樣式 --- */
+    .version-control button:not(.save-btn):not(#delete-template-btn) {
+      cursor: pointer;
+      background-color: #e9ecef; /* 淺灰背景 */
+      color: #333; /* ★ 深灰色文字 */
+      border-color: #ccc; /* 匹配邊框 */
+    }
+    .version-control button:not(.save-btn):not(#delete-template-btn):hover {
+      background-color: #dee2e6; /* 淺灰 hover */
+      border-color: #aaa;
+      color: #000; /* hover 文字加深 */
+    }
+
+    /* --- 特殊按鈕樣式 (維持白色文字) --- */
+    .version-control button.save-btn {
+        background-color: #28a745; /* 保持綠色 */
+        color: white; /* ★ 維持白色文字 */
+        border-color: #28a745;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .version-control button.save-btn:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+    .version-control button#delete-template-btn {
+        background-color: #dc3545; /* 保持紅色 */
+        color: white; /* ★ 維持白色文字 */
+        border-color: #dc3545;
+        font-weight: bold;
+        cursor: pointer;
+    }
+     .version-control button#delete-template-btn:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+
+    /* --- 連結樣式 --- */
+     .version-control a {
+        color: #007bff; /* ★ 標準連結藍色 */
+        text-decoration: none; /* 移除底線 */
+        background-color: #fff; /* 白色背景 */
+        border-color: #ccc;
+    }
+    .version-control a:hover {
+        background-color: #e9ecef; /* 淺灰 hover 背景 */
+        color: #0056b3; /* 深藍 hover 文字 */
+        border-color: #aaa;
+        text-decoration: none; /* hover 時也不需要底線 */
+    }
+    /* ▲▲▲ 修改或新增版本控制區樣式 ▲▲▲ */
+
+
+
+
+
   </style>
 </head>
 <body>
