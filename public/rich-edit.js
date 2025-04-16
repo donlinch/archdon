@@ -149,6 +149,39 @@ document.addEventListener('mousemove', e => {
 
 
 
+const imageFileInput = document.getElementById('edit-image-file');
+imageFileInput.addEventListener('change', () => {
+  const file = imageFileInput.files[0];
+  if (file) {
+    uploadImage(file, url => {
+      imageInput.value = url;
+      document.getElementById('preview-image').src = url;
+
+    });
+  }
+});
+
+
+
+function uploadImage(file, callback) {
+    const formData = new FormData();
+    formData.append('image', file);
+  
+    fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        callback(data.url); // 成功回傳圖片 URL
+      })
+      .catch(err => {
+        alert('❌ 圖片上傳失敗');
+        console.error(err);
+      });
+  }
+  
+
 
 
 // 初始化

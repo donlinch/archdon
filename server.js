@@ -19,6 +19,66 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
 
+
+
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + ext;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowed.includes(ext)) {
+      return cb(new Error('只允許上傳圖片類型！'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 2 * 1024 * 1024 } // 限制 2MB
+});
+
+app.post('/api/upload', upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    const imageUrl = '/uploads/' + file.filename;
+
+    // 可選：儲存圖片記錄進資料庫
+    if (pool) {
+      await pool.query(
+        'INSERT INTO uploaded_images (url, original_filename) VALUES ($1, $2)',
+        [imageUrl, file.originalname]
+      );
+    }
+
+    res.json({ success: true, url: imageUrl });
+  } catch (err) {
+    console.error('上傳圖片錯誤:', err);
+    res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
+  }
+});
+
+
+
+
+
+
+
+
 // --- 基本認證中間件函數定義 ---
 const basicAuthMiddleware = (req, res, next) => {
     const adminUser = process.env.ADMIN_USERNAME || 'admin';
