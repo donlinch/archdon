@@ -83,6 +83,83 @@ app.get("/api/rich-map/templates", async (req, res) => {
   });
   
 
+// --- 在它後面加上這段新的 PUT 路由 ---
+
+app.put('/api/rich-map/templates/:id/full', async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    const { background_color, cells } = req.body;
+
+    // --- 基本驗證 ---
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    if (!Array.isArray(cells)) {
+        return res.status(400).json({ error: '格子資料必須是陣列' });
+    }
+    // 可選：更嚴格的顏色驗證
+    const bgColorToSave = (typeof background_color === 'string' && background_color.trim())
+                           ? background_color.trim()
+                           : '#fff0f5'; // 提供預設值
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN'); // --- 開始事務 ---
+
+        // 1. 更新模板背景色和時間戳
+        const templateUpdateResult = await client.query(
+            `UPDATE rich_map_templates
+             SET background_color = $1, updated_at = NOW()
+             WHERE id = $2`,
+            [bgColorToSave, templateId]
+        );
+
+        // 檢查模板是否存在
+        if (templateUpdateResult.rowCount === 0) {
+            await client.query('ROLLBACK'); // 回滾事務
+            client.release();
+            return res.status(404).json({ error: '找不到要更新的模板' });
+        }
+
+        // 2. 逐一更新格子資料 (使用 Promise.all 提高效率)
+        const cellUpdatePromises = cells.map(cell => {
+            // 對每個格子資料進行基本驗證和處理
+            const position = parseInt(cell.position);
+            if (isNaN(position)) {
+                // 如果 position 無效，可以選擇拋出錯誤或跳過此格子
+                console.warn(`模板 ${templateId} 中發現無效 position 的格子資料:`, cell);
+                return Promise.resolve(); // 跳過此格子，或者你可以改成 Promise.reject() 來中斷整個更新
+            }
+            const title = cell.title || '';
+            const description = cell.description || '';
+            const color = (cell.color && cell.color.startsWith('#')) ? cell.color : '#ffffff'; // 提供預設格子顏色
+            const imageUrl = cell.image_url || null; // 允許圖片為 null
+
+            return client.query(
+                `UPDATE rich_map_cells
+                 SET title = $1, description = $2, color = $3, image_url = $4
+                 WHERE template_id = $5 AND position = $6`,
+                [title, description, color, imageUrl, templateId, position]
+            );
+        });
+
+        // 等待所有格子更新完成
+        await Promise.all(cellUpdatePromises);
+
+        await client.query('COMMIT'); // --- 提交事務 ---
+        console.log(`模板 ID ${templateId} 已成功更新`);
+        res.status(200).json({ success: true, message: '模板已成功更新' });
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // --- 出錯時回滾事務 ---
+        console.error(`更新模板 ${templateId} 時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器錯誤，更新模板失敗', detail: err.message });
+    } finally {
+        client.release(); // --- 確保釋放連接 ---
+    }
+});
+
+
+
 
 
 
