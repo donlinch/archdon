@@ -38,6 +38,73 @@ let currentPlayers = []; // 儲存玩家設定
 
 // --- 函數定義 ---
 
+
+
+
+
+// 更新備註列表
+function updateNotesList() {
+    const notesContainer = document.getElementById('notes-container');
+    if (!notesContainer) return;
+    
+    // 清空現有內容
+    notesContainer.innerHTML = '';
+    
+    // 篩選有備註的格子
+    const cellsWithNotes = cells.filter(cell => cell.note && cell.note.trim());
+    
+    if (cellsWithNotes.length === 0) {
+        notesContainer.innerHTML = '<div class="empty-notes">尚無格子備註</div>';
+        return;
+    }
+    
+    // 添加每個備註項目
+    cellsWithNotes.forEach(cell => {
+        const noteItem = document.createElement('div');
+        noteItem.className = 'note-item';
+        
+        const noteTitle = document.createElement('div');
+        noteTitle.className = 'note-title';
+        noteTitle.textContent = cell.title || '無標題';
+        
+        const noteText = document.createElement('div');
+        noteText.className = 'note-text';
+        noteText.textContent = `備註: ${cell.note}`;
+        
+        noteItem.appendChild(noteTitle);
+        noteItem.appendChild(noteText);
+        notesContainer.appendChild(noteItem);
+        
+        // 添加點擊事件，點擊備註項目時打開對應的格子編輯
+        noteItem.addEventListener('click', () => {
+            const index = cells.indexOf(cell);
+            if (index !== -1) {
+                openEditor(index);
+            }
+        });
+    });
+}
+
+// 修改 renderBoard 函數最後添加
+function renderBoard() {
+    // 現有代碼保持不變
+    
+    // 渲染完格子後更新備註列表
+    updateNotesList();
+}
+
+// 同樣在 saveCellChanges 函數最後也添加更新備註列表
+function saveCellChanges() {
+    // 現有代碼保持不變
+    
+    // 保存格子後更新備註列表
+    updateNotesList();
+}
+
+
+
+
+
 // 套用背景顏色
 function applyTemplateBackgroundColor(color) {
   backgroundColor = color || '#fff0f5';
@@ -86,48 +153,43 @@ function initBackgroundColorInput() {
     
     console.log(`背景顏色已變更為: ${newColor} (尚未儲存)`);
   }
+  function renderBoard() {
+    // 前面部分保持不變
+    
+    cells.forEach((cell, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        // 位置設定等代碼保持不變
+        
+        if (cell.image_url) {
+            const img = document.createElement('img');
+            img.src = cell.image_url;
+            img.alt = cell.title || '格子圖片';
+            img.onerror = () => { img.style.display = 'none'; };
+            div.appendChild(img);
+        }
 
-// 渲染地圖格子
-function renderBoard() {
-    if (!board) {
-        console.error("無法找到 ID 為 'game-board' 的元素來渲染格子");
-        return;
-    }
-  board.innerHTML = ''; // 清空格子
-  cells.forEach((cell, i) => {
-    const div = document.createElement('div');
-    div.className = 'cell';
-    const x = Number(cell.x);
-    const y = Number(cell.y);
-    if (!isNaN(x) && !isNaN(y)) {
-        div.style.left = `${x * 125}px`;
-        div.style.top = `${y * 100}px`;
-    } else {
-        console.warn(`格子 ${i} 的 x 或 y 座標無效:`, cell);
-    }
-    div.style.backgroundColor = cell.color || '#cccccc';
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'title';
+        titleDiv.textContent = cell.title || '';
+        div.appendChild(titleDiv);
 
-    if (cell.image_url) {
-      const img = document.createElement('img');
-      img.src = cell.image_url;
-      img.alt = cell.title || '格子圖片';
-      img.onerror = () => { img.style.display = 'none'; };
-      div.appendChild(img);
-    }
+        const descDiv = document.createElement('div');
+        descDiv.className = 'description';
+        descDiv.textContent = cell.description || '';
+        div.appendChild(descDiv);
+        
+        // 添加備註顯示
+        if (cell.note && cell.note.trim()) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note';
+            noteDiv.textContent = `備註: ${cell.note}`;
+            div.appendChild(noteDiv);
+        }
 
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'title';
-    titleDiv.textContent = cell.title || '';
-    div.appendChild(titleDiv);
-
-    const descDiv = document.createElement('div');
-    descDiv.className = 'description';
-    descDiv.textContent = cell.description || '';
-    div.appendChild(descDiv);
-
-    div.onclick = () => openEditor(i);
-    board.appendChild(div);
-  });
+        div.onclick = () => openEditor(i);
+        board.appendChild(div);
+    });
 }
 
 
@@ -196,10 +258,18 @@ async function deleteCurrentTemplate() {
 
 
 // --- 修改 openEditor 函數，確保每次打開編輯器時都居中 ---
+// 修改 openEditor 函數
 function openEditor(index) {
-    if (!editorPanel || !titleInput || !descInput || !colorInput || !imageInput) {
-        console.error("編輯器面板的 DOM 元素未完全找到！");
-        return;
+    // 前面部分保持不變
+    titleInput.value = cell.title || '';
+    descInput.value = cell.description || '';
+    colorInput.value = cell.color || '#ffffff';
+    imageInput.value = cell.image_url || '';
+    
+    // 添加備註值設定
+    const noteInput = document.getElementById('edit-note');
+    if (noteInput) {
+        noteInput.value = cell.note || '';
     }
     
     editingIndex = index;
@@ -481,19 +551,20 @@ function handlePlayerInputChange(event) {
 }
 
 
-// 儲存目前編輯的模板資料到後端
 function saveAllChanges() {
-    if (!currentTemplateId) {
-        alert("錯誤：尚未載入任何模板，無法儲存！");
-        return;
-    }
-
-    console.log(`準備儲存模板 ID: ${currentTemplateId}`, { backgroundColor, currentLogoUrl, cells, players: currentPlayers });
+    // 現有代碼保持不變
+    
+    // 確保 cells 資料包含 note 欄位
+    const cellsToSave = cells.map(cell => ({
+        ...cell, 
+        note: cell.note || null // 確保 note 欄位存在且值有效
+    }));
+    
     const body = JSON.stringify({
         background_color: backgroundColor,
         logo_url: currentLogoUrl,
-        cells: cells,
-        players: currentPlayers // 包含更新後的玩家資料
+        cells: cellsToSave, // 使用包含備註的格子資料
+        players: currentPlayers
     });
 
     saveTemplateBtn.disabled = true;
@@ -727,10 +798,10 @@ if (dragPanel && header) {
 }
     */
 
-// 保存单个格子的修改
+// 修改 saveCellChanges 函數
 function saveCellChanges() {
     if (editingIndex < 0 || !cells[editingIndex]) {
-        console.error("保存格子时编辑索引无效");
+        console.error("保存格子時編輯索引無效");
         return;
     }
     const cell = cells[editingIndex];
@@ -738,20 +809,15 @@ function saveCellChanges() {
     cell.description = descInput.value.trim();
     cell.color = colorInput.value;
     cell.image_url = imageInput.value.trim() || null;
+    
+    // 添加備註保存
+    const noteInput = document.getElementById('edit-note');
+    if (noteInput) {
+        cell.note = noteInput.value.trim();
+    }
 
-    // 关闭编辑面板
-    editorPanel.style.display = 'none';
-    
-    // 重新渲染地图
     renderBoard();
-    
-    // 高亮刚刚修改的格子，提供视觉反馈
-    highlightCell(editingIndex);
-    
-    console.log(`格子 ${editingIndex} 已更新并保存到内存：`, cell);
-    
-    // 可选：提醒用户需要点击顶部的保存按钮
-    showTemporaryMessage("格子已更新！别忘了点击顶部的「💾 保存目前版本」来永久保存所有更改。");
+    editorPanel.style.display = 'none';
 }
 
 // 高亮格子的辅助函数

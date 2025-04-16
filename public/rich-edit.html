@@ -387,6 +387,132 @@
     z-index: 5; /* 确保高亮的格子在上层 */
 }
 
+/* 背景顏色編輯區樣式 - 加入到 rich-edit.html 的 style 標籤中 */
+.background-editor {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f0f8ff; /* 淡藍色背景 */
+  border: 1px solid #b0c4de;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  margin: 20px auto;
+  text-align: center;
+}
+
+.background-editor h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #4169e1; /* 皇家藍 */
+  font-size: 1.2rem;
+}
+
+.background-color-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.background-color-picker label {
+  font-weight: bold;
+  color: #333;
+}
+
+.background-color-picker input[type="color"] {
+  width: 50px;
+  height: 40px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.background-color-picker span {
+  font-family: monospace;
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-width: 80px;
+}
+
+.color-preview-box {
+  width: 80%;
+  height: 40px;
+  margin: 0 auto 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.hint-text {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 5px;
+  font-style: italic;
+}
+/* 備註列表樣式 */
+.notes-list {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #fefaf0; /* 淺黃色背景 */
+    border: 1px solid #e0d9c0;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    margin: 20px auto;
+}
+
+.notes-list h3 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #8b7355;
+}
+
+.notes-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: white;
+}
+
+.note-item {
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 5px;
+}
+
+.note-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.note-title {
+    font-weight: bold;
+    color: #333;
+}
+
+.note-text {
+    color: #666;
+    margin-top: 3px;
+}
+
+/* 格子中的備註樣式 */
+.cell .note {
+    font-size: 0.65rem;
+    color: #ff6347; /* 番茄紅色 */
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
 
 
   </style>
@@ -409,10 +535,25 @@
   </div>
   <!-- 主容器，用於設定整體背景和佈局 -->
   <div id="game-container" class="game-container">
-
+    <div class="background-editor">
+        <h3>🎨 背景顏色設定</h3>
+        <div class="background-color-picker">
+          <label for="edit-background-color">地圖背景顏色：</label>
+          <input type="color" id="edit-background-color" value="#fff0f5">
+          <span id="background-color-preview">#fff0f5</span>
+        </div>
+        <div class="color-preview-box" id="color-preview-box" style="background-color: #fff0f5"></div>
+        <p class="hint-text">修改後點擊「💾 儲存目前版本」按鈕來永久保存背景顏色</p>
+      </div>
     <!-- 遊戲板，格子會被 JS 繪製在這裡 -->
     <div id="game-board" class="game-board">
         <!-- 格子內容由 rich-edit.js 生成 -->
+    </div>
+    <div class="notes-list">
+        <h3>📋 格子備註列表</h3>
+        <div id="notes-container" class="notes-container">
+            <!-- 備註將在這裡動態生成 -->
+        </div>
     </div>
 
   </div>
@@ -457,6 +598,7 @@
       <!-- 輸入欄位 -->
       <input type="text" id="edit-title" placeholder="標題" />
       <input type="text" id="edit-description" placeholder="描述" />
+      <input type="text" id="edit-note" placeholder="備註" />
       <input type="url" id="edit-image" placeholder="圖片網址 (選填)" />
       <!-- 圖片預覽 -->
       <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
