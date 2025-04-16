@@ -73,20 +73,20 @@
 
     /* --- 編輯面板樣式 --- */
     .editor-card {
-      position: absolute;
-      top: 50%; /* 使用 transform 置中 */
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 300px;
-      padding: 20px;
-      background-color: white;
-      border: 2px dashed #8ab5f3;
-      border-radius: 12px;
-      z-index: 999;
-      display: flex; /* 使用 flex 排列內部元素 */
-      flex-direction: column;
-      gap: 10px; /* 元素間距 */
-      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        position: absolute;
+  top: 50%; /* 使用 top 和 left 50% */
+  left: 50%;
+  transform: translate(-50%, -50%); /* 確保始終居中 */
+  width: 300px;
+  padding: 20px;
+  background-color: white;
+  border: 2px solid #8ab5f3; /* 改成實線邊框，不再使用虛線提示可拖曳 */
+  border-radius: 12px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
 
     .editor-card input[type="text"],
@@ -130,27 +130,25 @@
     }
 
     .editor-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center; /* 垂直居中 */
-      font-weight: bold;
-      font-size: 1.2rem;
-      color: #5b9df0;
-      margin-bottom: 10px;
-      cursor: grab; /* 讓標題列看起來可以拖曳 */
+        display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #5b9df0;
+  margin-bottom: 10px;
+  cursor: default; /* 改為默認游標，不再顯示 grab 游標 */
     }
-    .editor-header:active {
-        cursor: grabbing;
-    }
+  
 
     .editor-close {
-      cursor: pointer;
-      font-size: 1.5rem; /* 稍微放大 */
-      line-height: 1; /* 避免影響高度 */
-      color: #ff544d;
-      padding: 0 6px; /* 調整 padding */
-      border-radius: 50%;
-      transition: background-color 0.2s;
+        cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #ff544d;
+  padding: 0 6px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
     }
 
     .editor-close:hover {

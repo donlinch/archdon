@@ -151,47 +151,42 @@ async function deleteCurrentTemplate() {
 // ▲▲▲ 新增：處理刪除模板的函數 ▲▲▲
 
 
-
-// 打開編輯器
+// --- 修改 openEditor 函數，確保每次打開編輯器時都居中 ---
 function openEditor(index) {
     if (!editorPanel || !titleInput || !descInput || !colorInput || !imageInput) {
         console.error("編輯器面板的 DOM 元素未完全找到！");
         return;
     }
-  editingIndex = index;
-  const cell = cells[editingIndex];
-  if (!cell) {
-      console.error(`無法找到索引為 ${index} 的格子資料`);
-      return;
-  }
-  titleInput.value = cell.title || '';
-  descInput.value = cell.description || '';
-  colorInput.value = cell.color || '#ffffff';
-  imageInput.value = cell.image_url || '';
-  const previewImage = document.getElementById('preview-image');
-  if (previewImage) {
-    previewImage.src = cell.image_url || '';
-  }
-  editorPanel.style.display = 'flex';
-}
-
-// 儲存單一格子編輯（更新前端記憶體）
-function saveCellChanges() {
-    if (editingIndex < 0 || !cells[editingIndex]) {
-        console.error("儲存格子時編輯索引無效");
+    
+    editingIndex = index;
+    const cell = cells[editingIndex];
+    if (!cell) {
+        console.error(`無法找到索引為 ${index} 的格子資料`);
         return;
     }
-    const cell = cells[editingIndex];
-    cell.title = titleInput.value.trim();
-    cell.description = descInput.value.trim();
-    cell.color = colorInput.value;
-    cell.image_url = imageInput.value.trim() || null;
-
-    renderBoard();
-    if (editorPanel) {
-        editorPanel.style.display = 'none';
+    
+    // 填充資料
+    titleInput.value = cell.title || '';
+    descInput.value = cell.description || '';
+    colorInput.value = cell.color || '#ffffff';
+    imageInput.value = cell.image_url || '';
+    
+    const previewImage = document.getElementById('preview-image');
+    if (previewImage) {
+        previewImage.src = cell.image_url || '';
     }
+    
+    // 重置編輯面板位置到中間
+    // 清除任何已設定的 left/top 值
+    editorPanel.style.left = '';
+    editorPanel.style.top = '';
+    // 確保 transform 有正確設定為居中
+    editorPanel.style.transform = 'translate(-50%, -50%)';
+    
+    // 顯示編輯面板
+    editorPanel.style.display = 'flex';
 }
+
 
 // 獲取並填充模板列表
 async function fetchTemplateList(selectId = null) { // <-- 增加可選參數
@@ -619,7 +614,7 @@ if (createNewBtn) {
 // ▲▲▲ 新增按鈕的事件監聽 ▲▲▲
 
 
-
+/*
 
 // 拖曳編輯面板
 const dragPanel = document.getElementById('editor-panel');
@@ -680,6 +675,7 @@ if (dragPanel && header) {
 } else {
     console.warn("編輯面板或其標題頭未找到，拖曳功能將無法使用。");
 }
+    */
 
 
 
