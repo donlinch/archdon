@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentChart = null; // 用於儲存 Chart.js 實例
     let currentGranularity = 'daily'; // 當前圖表粒度 
 
+    fetchAndDisplayProducts(); // 載入商品列表
+    displayTrafficChart('daily'); // 預設載入每日流量圖表
+    displayPageComparisonChart(); // 加载页面对比图表
+    displayPageRankingChart(); // 加载页面排行榜图表
+
+
+
     // --- Function to Fetch and Display ALL Products in the Table ---
     async function fetchAndDisplayProducts() {
         // ... (這個函數的內部邏輯保持不變) ...

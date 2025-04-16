@@ -24,7 +24,10 @@ const pool = new Pool({
 const multer = require('multer');
 const fs = require('fs');
  
-
+fetchAndDisplayProducts(); // 載入商品列表
+displayTrafficChart('daily'); // 預設載入每日流量圖表
+displayPageComparisonChart(); // 加载页面对比图表
+displayPageRankingChart(); // 加载页面排行榜图表
 
 
 // --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
@@ -2265,7 +2268,22 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => {
 
 
 
-
+// 添加到server.js
+app.get('/api/analytics/page-views/ranking', async (req, res) => {
+    try {
+      const query = `
+        SELECT page, SUM(view_count)::int AS total_count 
+        FROM page_views 
+        GROUP BY page 
+        ORDER BY total_count DESC
+      `;
+      const result = await pool.query(query);
+      res.json(result.rows);
+    } catch (err) {
+      console.error('获取页面排名数据失败:', err);
+      res.status(500).json({ error: '服务器内部错误' });
+    }
+  });
 
 
 
