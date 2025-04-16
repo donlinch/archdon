@@ -24,10 +24,7 @@ const pool = new Pool({
 const multer = require('multer');
 const fs = require('fs');
  
-fetchAndDisplayProducts(); // 載入商品列表
-displayTrafficChart('daily'); // 預設載入每日流量圖表
-displayPageComparisonChart(); // 加载页面对比图表
-displayPageRankingChart(); // 加载页面排行榜图表
+
 
 
 // --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
