@@ -231,6 +231,8 @@ app.get('/api/rich-map/templates/:id/full', async (req, res) => {
 
 
 
+
+
 // ▼▼▼ 新增：處理新建或另存模板的 POST 請求 ▼▼▼
 app.post('/api/rich-map/templates', async (req, res) => {
     const { template_name, background_color, logo_url, cells, players } = req.body;
@@ -482,6 +484,43 @@ app.put('/api/rich-map/templates/:id/full', async (req, res) => {
 
 
 
+
+// ▼▼▼ 新增：處理刪除模板的 DELETE 請求 ▼▼▼
+app.delete('/api/rich-map/templates/:id', async (req, res) => {
+    const templateId = parseInt(req.params.id);
+
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    if (templateId === 1) { // 保護預設模板
+         return res.status(403).json({ error: '不允許刪除預設模板 (ID=1)' });
+     }
+
+    console.log(`準備刪除模板 ID: ${templateId}`);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const deleteResult = await client.query(
+            'DELETE FROM rich_map_templates WHERE id = $1',
+            [templateId]
+        );
+        if (deleteResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            client.release();
+            return res.status(404).json({ error: `找不到要刪除的模板 (ID: ${templateId})` });
+        }
+        await client.query('COMMIT');
+        console.log(`模板 ID ${templateId} 已成功刪除`);
+        res.status(204).send(); // 成功，無內容返回
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`刪除模板 ID ${templateId} 時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器錯誤，刪除模板失敗', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+// ▲▲▲ 新增：處理刪除模板的 DELETE 請求 ▲▲▲
 
 
 
