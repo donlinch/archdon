@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rich 地圖編輯器</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #fff0f5;
+    }
+    .game-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .game-board {
+      position: relative;
+      width: 875px;
+      height: 600px;
+      background-color: #ffecf2;
+      border: 2px solid #ff80ab;
+      border-radius: 12px;
+    }
+    .cell {
+      position: absolute;
+      width: 125px;
+      height: 100px;
+      border-radius: 8px;
+      border: 1px solid white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .cell img {
+      max-width: 80%;
+      max-height: 60%;
+      object-fit: contain;
+      margin-bottom: 4px;
+    }
+    .editor-panel {
+      position: absolute;
+      top: 150px;
+      left: 262.5px;
+      width: 350px;
+      height: auto;
+      background-color: #ffffff;
+      border: 3px dashed #5b9df0;
+      border-radius: 16px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+    .editor-panel input,
+    .editor-panel textarea {
+      width: 90%;
+      margin-bottom: 0.5rem;
+    }
+    .editor-panel input[type="color"] {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+    }
+    .editor-panel button {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div id="game-board" class="game-board"></div>
+  </div>
+
+  <div id="editor-panel" class="editor-panel">
+    <input id="edit-title" placeholder="格子標題">
+    <textarea id="edit-description" rows="2" placeholder="說明文字"></textarea>
+    <input id="edit-image" placeholder="圖片網址 (選填)">
+    <label>
+      顏色：<input id="edit-color" type="color">
+    </label>
+    <button onclick="saveCellChanges()">儲存</button>
+  </div>
+
+  <script>
+    const board = document.getElementById('game-board');
+    const editorPanel = document.getElementById('editor-panel');
+    const titleInput = document.getElementById('edit-title');
+    const descInput = document.getElementById('edit-description');
+    const colorInput = document.getElementById('edit-color');
+    const imageInput = document.getElementById('edit-image');
+
+    let editingIndex = -1;
+    const cells = [
+      { x: 0, y: 5, title: '起點', description: '開始遊戲', color: '#9270ca', imageUrl: '' },
+      { x: 1, y: 5, title: '甜甜圈', description: '香甜可口', color: '#fbd115', imageUrl: 'https://example.com/donut.png' },
+      // 可繼續填滿完整 22 格...
+    ];
+
+    function renderBoard() {
+      board.innerHTML = '';
+      cells.forEach((cell, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.style.left = `${cell.x * 125}px`;
+        div.style.top = `${cell.y * 100}px`;
+        div.style.backgroundColor = cell.color;
+
+        if (cell.imageUrl) {
+          const img = document.createElement('img');
+          img.src = cell.imageUrl;
+          div.appendChild(img);
+        }
+
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = cell.title;
+        div.appendChild(titleDiv);
+
+        const descDiv = document.createElement('div');
+        descDiv.style.fontSize = '0.7rem';
+        descDiv.style.lineHeight = '1.2';
+        descDiv.textContent = cell.description;
+        div.appendChild(descDiv);
+
+        div.onclick = () => openEditor(i);
+        board.appendChild(div);
+      });
+    }
+
+    function openEditor(index) {
+      editingIndex = index;
+      const cell = cells[index];
+      titleInput.value = cell.title;
+      descInput.value = cell.description;
+      colorInput.value = cell.color;
+      imageInput.value = cell.imageUrl || '';
+      editorPanel.style.display = 'flex';
+    }
+
+    function saveCellChanges() {
+      const cell = cells[editingIndex];
+      cell.title = titleInput.value;
+      cell.description = descInput.value;
+      cell.color = colorInput.value;
+      cell.imageUrl = imageInput.value;
+      renderBoard();
+      editorPanel.style.display = 'none';
+    }
+
+    renderBoard();
+  </script>
+</body>
+</html>
