@@ -145,8 +145,8 @@ app.use(async (req, res, next) => {
         '/game/wheel-game.html', // <-- 新增
         '/game/brige-game.html',  // <-- 新增
         '/rich.html', // <-- Log rich.html
-        '/rich-control.html' // <-- Log rich-control.html
-
+        '/rich-control.html', // <-- Log rich-control.html
+'/games.html'
 
 
     ]; // 添加 scores.html
