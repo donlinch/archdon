@@ -17,6 +17,11 @@ function applyTemplateBackgroundColor(color) {
   container.style.backgroundColor = backgroundColor;
 }
 
+
+
+
+
+
 // 渲染地圖格子
 function renderBoard() {
   board.innerHTML = '';

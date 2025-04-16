@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rich 地圖編輯器</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- 假設你的 CSS 檔案叫做 style.css -->
+  <link rel="stylesheet" href="style.css">
   <style>
     body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
-      background-color: #fff0f5;
+      background-color: #fff0f5; /* 預設背景色 */
     }
-
-    .game-container {
+    .game-container { /* 這個 class 用於佈局 */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -21,16 +21,15 @@
       padding: 2rem;
       transition: background-color 0.5s ease;
     }
-
-    .game-board {
+    .game-board { /* 這是遊戲板本身的樣式 */
       position: relative;
-      width: 875px;
-      height: 600px;
-      background-color: #ffecf2;
+      width: 875px; /* 7 格寬 * 125px */
+      height: 600px; /* 6 格高 * 100px */
+      background-color: #ffecf2; /* 遊戲板背景，可選 */
       border: 2px solid #ff80ab;
       border-radius: 12px;
+      /* JavaScript 會在這個 div 裡面動態添加格子 */
     }
-
     .cell {
       position: absolute;
       width: 125px;
@@ -46,75 +45,110 @@
       text-align: center;
       cursor: pointer;
       overflow: hidden;
+      box-sizing: border-box; /* 讓 padding 和 border 不會增加尺寸 */
+      padding: 5px;
     }
-
     .cell img {
       max-width: 80%;
-      max-height: 60%;
+      max-height: 50%; /* 稍微調整，給文字留空間 */
       object-fit: contain;
       margin-bottom: 4px;
       border: 2px solid white;
       border-radius: 8px;
       transition: transform 0.3s ease;
     }
-
     .cell img:hover {
       transform: scale(1.3);
       z-index: 2;
     }
+    .cell .title { /* 給標題加個 class 方便選取 */
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+    .cell .description { /* 給描述加個 class */
+        font-size: 0.7rem;
+        line-height: 1.2;
+        font-weight: normal; /* 描述通常不用粗體 */
+    }
 
-    .editor-panel {
-      position: fixed;
-      top: 150px;
+    /* --- 編輯面板樣式 --- */
+    .editor-card {
+      position: absolute;
+      top: 50%; /* 使用 transform 置中 */
       left: 50%;
-      transform: translateX(-50%);
-      width: 350px;
-      height: auto;
-      background-color: #ffffff;
-      border: 3px dashed #5b9df0;
-      border-radius: 16px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 1rem;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      padding: 20px;
+      background-color: white;
+      border: 2px dashed #8ab5f3;
+      border-radius: 12px;
       z-index: 999;
+      display: flex; /* 使用 flex 排列內部元素 */
+      flex-direction: column;
+      gap: 10px; /* 元素間距 */
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
 
-    .editor-panel input,
-    .editor-panel textarea {
-      width: 90%;
-      margin-bottom: 0.5rem;
+    .editor-card input[type="text"],
+    .editor-card input[type="url"] {
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 100%; /* 寬度佔滿 */
+      box-sizing: border-box; /* padding 不影響寬度 */
     }
 
-    .editor-panel input[type="color"] {
-      width: 40px;
-      height: 40px;
-      padding: 0;
+    .editor-card label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .editor-card input[type="color"] {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: none;
+        cursor: pointer;
+    }
+
+    .editor-card button {
+      background-color: #5b9df0;
+      color: white;
+      font-weight: bold;
       border: none;
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      align-self: center; /* 按鈕居中 */
     }
 
-    .editor-panel button {
-      margin-top: 0.5rem;
-      padding: 0.5rem 1rem;
+    .editor-card button:hover {
+      background-color: #4178d0;
     }
 
     .editor-header {
       display: flex;
       justify-content: space-between;
+      align-items: center; /* 垂直居中 */
       font-weight: bold;
       font-size: 1.2rem;
       color: #5b9df0;
       margin-bottom: 10px;
-      width: 90%;
+      cursor: grab; /* 讓標題列看起來可以拖曳 */
+    }
+    .editor-header:active {
+        cursor: grabbing;
     }
 
     .editor-close {
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.5rem; /* 稍微放大 */
+      line-height: 1; /* 避免影響高度 */
       color: #ff544d;
-      padding: 2px 6px;
+      padding: 0 6px; /* 調整 padding */
       border-radius: 50%;
       transition: background-color 0.2s;
     }
@@ -123,99 +157,48 @@
       background-color: #ffe5e5;
     }
 
+    /* 用於隱藏編輯面板 */
     .hidden {
       display: none;
     }
+
   </style>
 </head>
 <body>
 
-  <div class="game-container">
-    <div id="game-board" class="game-board"></div>
-  </div>
+  <!-- 主容器，用於設定整體背景和佈局 -->
+  <div id="game-container" class="game-container">
 
-  <div id="editor-panel" class="editor-panel hidden">
-    <div class="editor-header">
-      <span>編輯格子</span>
-      <span class="editor-close" onclick="editorPanel.style.display='none'">×</span>
+    <!-- 遊戲板，格子會被 JS 繪製在這裡 -->
+    <div id="game-board" class="game-board">
+        <!-- 格子內容由 rich-edit.js 生成 -->
     </div>
-    <input id="edit-title" placeholder="標題" />
-    <input id="edit-description" placeholder="描述" />
-    <input id="edit-image" placeholder="圖片網址 (選填)" />
-    <img id="preview-image" style="max-width: 90%; border-radius: 6px;" />
-    <label>
-      顏色：
-      <input type="color" id="edit-color" />
-    </label>
-    <button onclick="saveCellChanges()">儲存</button>
+
   </div>
 
-  <input type="file" id="edit-image-file" accept="image/*" />
+  <!-- 編輯面板 (初始隱藏) -->
+  <div id="editor-panel" class="editor-card hidden">
+      <!-- 面板標題和關閉按鈕 -->
+      <div class="editor-header">
+        <span>編輯格子</span>
+        <span class="editor-close" onclick="editorPanel.style.display='none'">×</span>
+      </div>
+      <!-- 輸入欄位 -->
+      <input type="text" id="edit-title" placeholder="標題" />
+      <input type="text" id="edit-description" placeholder="描述" />
+      <input type="url" id="edit-image" placeholder="圖片網址 (選填)" />
+      <!-- 圖片預覽 -->
+      <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
+      <!-- 顏色選擇 -->
+      <label>
+        顏色：
+        <input type="color" id="edit-color" />
+      </label>
+      <!-- 儲存按鈕 -->
+      <button onclick="saveCellChanges()">儲存</button>
+  </div>
 
-  <form id="upload-form" enctype="multipart/form-data">
-    <input type="file" name="image" id="image-file" accept="image/*">
-    <button type="submit">上傳圖片</button>
-  </form>
-  <img id="image-preview" style="max-width: 90%; margin-top: 10px;" />
-
-  <script>
-    document.getElementById("image-file").addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          document.getElementById("image-preview").src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    document.getElementById("upload-form").addEventListener("submit", async e => {
-      e.preventDefault();
-      const formData = new FormData();
-      formData.append("image", document.getElementById("image-file").files[0]);
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
-      const data = await res.json();
-      if (data.url) {
-        alert("圖片上傳成功！URL: " + data.url);
-        document.getElementById("edit-image").value = data.url;
-        document.getElementById("image-preview").src = data.url;
-      } else {
-        alert("上傳失敗：" + data.error);
-      }
-    });
-
-    function uploadImage(file, callback) {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      })
-        .then(res => res.json())
-        .then(data => {
-          callback(data.url);
-          if (editingIndex >= 0) {
-            cells[editingIndex].image_url = data.url;
-            saveAllChanges();
-          }
-        })
-        .catch(err => {
-          alert('❌ 圖片上傳失敗');
-          console.error(err);
-        });
-    }
-
-    // 自動載入初始模板
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof loadTemplate === 'function') loadTemplate();
-    });
-  </script>
-
+  <!-- 引入 JavaScript 檔案 -->
   <script src="rich-edit.js"></script>
 
 </body>
