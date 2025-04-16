@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // 不阻止默認行為，讓用戶跳轉到遊戲頁面
             });
-        });
+        }); 
         
     } catch (error) {
         console.error('載入遊戲列表失敗:', error);

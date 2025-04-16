@@ -247,7 +247,7 @@ function updateStatistics(data) {
     .then(response => response.json())
     .then(data => {
         document.getElementById('today-plays-count').textContent = data.today_count;
-    })
+    }) 
     .catch(error => {
         console.error('獲取今日遊玩統計失敗:', error);
         document.getElementById('today-plays-count').textContent = '0';
