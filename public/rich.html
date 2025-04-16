@@ -451,27 +451,173 @@ body {
 
 
 
+
+
+        /* Template Toggle Button */
+        .template-nav-toggle {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1001;
+            background-color: #5b9df0; /* Use a color from your theme */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .template-nav-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Template Menu Panel */
+        .template-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent background */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 15px 20px;
+            transform: translateY(-120%); /* Start fully hidden above */
+            transition: transform 0.4s ease-out;
+            display: flex;
+            flex-direction: column; /* Align items vertically */
+            align-items: center; /* Center items horizontally */
+            gap: 10px; /* Space between elements */
+        }
+
+        .template-menu.visible {
+            transform: translateY(0); /* Slide into view */
+        }
+
+        .template-menu-header {
+             width: 100%;
+             max-width: 400px; /* Limit header width */
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             margin-bottom: 10px;
+             font-weight: bold;
+             color: #333;
+        }
+
+        .template-menu-close {
+            font-size: 24px;
+            color: #ff544d;
+            cursor: pointer;
+            padding: 5px;
+        }
+         .template-menu-close:hover {
+             opacity: 0.7;
+         }
+
+        .template-menu label {
+            font-weight: bold;
+            margin-right: 5px;
+            color: #555;
+        }
+
+        .template-menu select {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 200px; /* Ensure select has decent width */
+            flex-grow: 1; /* Allow select to grow */
+            max-width: 300px; /* Limit max width */
+        }
+
+        .template-menu button {
+            padding: 8px 15px;
+            background-color: #0cd8b6; /* Use a theme color */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .template-menu button:hover:not(:disabled) {
+            background-color: #09b699;
+        }
+        .template-menu button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Add spinner style */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #5b9df0; /* Blue */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Ensure game board is below the fixed menu */
+        .game-container {
+             padding-top: 80px; /* Adjust as needed based on menu height */
+             /* Keep other styles */
+        }
+
+
+
+
+
 </style>
 
 
 
 
 
-</head>
-<body><small> <a href="/rich-control.html" >搖控器</a></small>
-    <div class="game-container">
-        <!-- 左側遊戲面板 -->
-        <div id="game-board" class="game-board">
-            <!-- 遊戲格子會由 JavaScript 動態生成 -->
-            <!-- 預設LOGO區域 -->
-            <div id="logo-container" class="logo-container">
-                <!-- 內容由 rich.js 動態生成 -->
-            </div>
+</head><body>
+    <!-- Template Toggle Button -->
+    <button class="template-nav-toggle" id="templateNavToggle">≡</button>
+
+    <!-- Template Menu Panel -->
+    <div class="template-menu" id="templateMenu">
+        <div class="template-menu-header">
+            <span>選擇地圖模板</span>
+            <span class="template-menu-close" id="templateMenuClose">×</span>
         </div>
-        
-      
+        <div style="display: flex; align-items: center; width: 100%; max-width: 450px;">
+             <label for="templateSelect">模板:</label>
+             <select id="templateSelect">
+                 <option value="">載入中...</option>
+             </select>
+             <button id="loadTemplateBtn" disabled>載入</button>
+             <div id="loadingSpinner" class="loader"></div>
+        </div>
     </div>
-    
+
+    <div id="game-container" class="game-container"> {/* Add ID if not present */}
+        <div id="game-board" class="game-board">
+            {/* Default Logo Area */}
+            <div id="logo-container" class="logo-container">
+                {/* Content generated by JS */}
+            </div>
+            {/* Cells generated by JS */}
+        </div>
+        {/* Potentially add other game elements here if needed */}
+    </div>
+
+    {/* Ensure you have rich.js included */}
     <script src="rich.js"></script>
 </body>
 </html>
