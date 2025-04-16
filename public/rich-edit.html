@@ -18,6 +18,7 @@
       align-items: center;
       min-height: 100vh;
       padding: 2rem;
+      transition: background-color 0.5s ease;
     }
     .game-board {
       position: relative;
@@ -90,7 +91,7 @@
   </style>
 </head>
 <body>
-  <div class="game-container">
+  <div class="game-container" id="game-container">
     <div id="game-board" class="game-board"></div>
   </div>
 
@@ -106,6 +107,7 @@
 
   <script>
     const board = document.getElementById('game-board');
+    const container = document.getElementById('game-container');
     const editorPanel = document.getElementById('editor-panel');
     const titleInput = document.getElementById('edit-title');
     const descInput = document.getElementById('edit-description');
@@ -116,7 +118,6 @@
     const cells = [
       { x: 0, y: 5, title: '起點', description: '開始遊戲', color: '#9270ca', imageUrl: '' },
       { x: 1, y: 5, title: '甜甜圈', description: '香甜可口', color: '#fbd115', imageUrl: 'https://example.com/donut.png' },
-      // 可繼續填滿完整 22 格...
     ];
 
     function renderBoard() {
@@ -169,6 +170,14 @@
       renderBoard();
       editorPanel.style.display = 'none';
     }
+
+    // 🟨 套用地圖背景顏色（模擬從 DB 載入）
+    function applyTemplateBackgroundColor(hexColor) {
+      container.style.backgroundColor = hexColor;
+    }
+
+    // 模擬載入 template 時套用背景色
+    applyTemplateBackgroundColor('#fff0f5'); // 這裡未來可從 API 取得 template.background_color
 
     renderBoard();
   </script>
