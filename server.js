@@ -571,6 +571,251 @@ app.delete('/api/rich-map/templates/:id', async (req, res) => {
 
 
 
+
+
+
+
+// --- 遊戲 API (Games API) ---
+
+// GET /api/games - 獲取公開遊戲列表 (給前端遊戲頁面用)
+app.get('/api/games', async (req, res) => {
+    try {
+        // 只獲取啟用狀態的遊戲，按排序順序排列
+        const result = await pool.query(`
+            SELECT id, title, description, play_url, image_url, play_count
+            FROM games 
+            WHERE is_active = TRUE
+            ORDER BY sort_order ASC, id ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取公開遊戲列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/games/:id/play - 記錄遊戲被遊玩
+app.post('/api/games/:id/play', async (req, res) => {
+    const { id } = req.params;
+    const gameId = parseInt(id);
+    
+    if (isNaN(gameId)) {
+        return res.status(400).json({ error: '無效的遊戲 ID' });
+    }
+    
+    try {
+        // 更新遊戲的遊玩次數
+        await pool.query(`
+            UPDATE games 
+            SET play_count = play_count + 1,
+                last_played_at = NOW()
+            WHERE id = $1
+        `, [gameId]);
+        
+        // 記錄遊玩日誌
+        const ip_address = req.ip || 'unknown';
+        await pool.query(`
+            INSERT INTO game_play_logs (game_id, played_at, ip_address)
+            VALUES ($1, NOW(), $2)
+        `, [gameId, ip_address]);
+        
+        res.status(204).send(); // 成功但不返回內容
+    } catch (err) {
+        console.error(`記錄遊戲 ID ${gameId} 遊玩時出錯:`, err.stack || err);
+        // 即使出錯也返回成功，不影響用戶體驗
+        res.status(204).send();
+    }
+});
+
+// --- 遊戲管理 API (Admin Games API) ---
+// 這些 API 都需要通過 basicAuthMiddleware 保護
+
+// GET /api/admin/games - 獲取所有遊戲列表 (給管理後台用)
+app.get('/api/admin/games', basicAuthMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, title, description, play_url, image_url, play_count, 
+                   sort_order, is_active, created_at, updated_at
+            FROM games 
+            ORDER BY sort_order ASC, id ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取管理遊戲列表時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/games/:id - 獲取特定遊戲詳情
+app.get('/api/admin/games/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const gameId = parseInt(id);
+    
+    if (isNaN(gameId)) {
+        return res.status(400).json({ error: '無效的遊戲 ID' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            SELECT id, title, description, play_url, image_url, play_count, 
+                   sort_order, is_active, created_at, updated_at, last_played_at
+            FROM games 
+            WHERE id = $1
+        `, [gameId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到遊戲' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取遊戲 ID ${gameId} 詳情時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/admin/games - 新增遊戲
+app.post('/api/admin/games', basicAuthMiddleware, async (req, res) => {
+    const { name, description, play_url, image_url, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: '遊戲名稱不能為空' });
+    }
+    
+    if (!play_url || !play_url.trim()) {
+        return res.status(400).json({ error: '遊戲連結不能為空' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO games (
+                title, description, play_url, image_url, 
+                sort_order, is_active, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            RETURNING *
+        `, [
+            name.trim(), 
+            description ? description.trim() : null, 
+            play_url.trim(), 
+            image_url ? image_url.trim() : null, 
+            sort_order || 0, 
+            is_active === false ? false : true
+        ]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('新增遊戲時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// PUT /api/admin/games/:id - 更新遊戲
+app.put('/api/admin/games/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const gameId = parseInt(id);
+    
+    if (isNaN(gameId)) {
+        return res.status(400).json({ error: '無效的遊戲 ID' });
+    }
+    
+    const { name, description, play_url, image_url, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: '遊戲名稱不能為空' });
+    }
+    
+    if (!play_url || !play_url.trim()) {
+        return res.status(400).json({ error: '遊戲連結不能為空' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE games
+            SET title = $1, 
+                description = $2, 
+                play_url = $3, 
+                image_url = $4, 
+                sort_order = $5, 
+                is_active = $6, 
+                updated_at = NOW()
+            WHERE id = $7
+            RETURNING *
+        `, [
+            name.trim(), 
+            description ? description.trim() : null, 
+            play_url.trim(), 
+            image_url ? image_url.trim() : null, 
+            sort_order || 0, 
+            is_active === false ? false : true,
+            gameId
+        ]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到遊戲' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新遊戲 ID ${gameId} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// DELETE /api/admin/games/:id - 刪除遊戲
+app.delete('/api/admin/games/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const gameId = parseInt(id);
+    
+    if (isNaN(gameId)) {
+        return res.status(400).json({ error: '無效的遊戲 ID' });
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM games WHERE id = $1', [gameId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到遊戲' });
+        }
+        
+        res.status(204).send(); // 成功刪除，無內容返回
+    } catch (err) {
+        console.error(`刪除遊戲 ID ${gameId} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/games/stats/today - 獲取今日遊玩統計
+app.get('/api/admin/games/stats/today', basicAuthMiddleware, async (req, res) => {
+    try {
+        // 獲取今日遊玩次數
+        const today = new Date().toISOString().split('T')[0]; // 獲取當前日期 YYYY-MM-DD
+        
+        const result = await pool.query(`
+            SELECT COUNT(*) as today_count
+            FROM game_play_logs
+            WHERE DATE(played_at) = $1
+        `, [today]);
+        
+        const todayCount = parseInt(result.rows[0].today_count) || 0;
+        
+        res.json({ today_count: todayCount });
+    } catch (err) {
+        console.error('獲取今日遊玩統計時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
 // --- 玻璃橋遊戲排行榜 API ---
 // GET /api/bridge-game/leaderboard - 獲取排行榜數據
 app.get('/api/bridge-game/leaderboard', async (req, res) => {
@@ -1130,6 +1375,175 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
 
 
 
+
+
+// GET /api/admin/games - 獲取所有遊戲列表 (包括非啟用)
+adminRouter.get('/games', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, title, description, image_url, play_url, sort_order, is_active, play_count, created_at, updated_at
+             FROM games
+             ORDER BY sort_order ASC, id ASC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取管理遊戲列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/games/:id - 獲取特定遊戲詳情
+adminRouter.get('/games/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的遊戲 ID 格式。' }); 
+    }
+    try {
+        const result = await pool.query(
+            `SELECT id, title, description, image_url, play_url, sort_order, is_active, play_count, created_at, updated_at
+             FROM games
+             WHERE id = $1`, 
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到該遊戲。' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 獲取遊戲 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/admin/games - 新增遊戲
+adminRouter.post('/games', async (req, res) => {
+    const { name, description, play_url, image_url, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: '遊戲名稱不能為空。' });
+    }
+    if (!play_url || !play_url.trim()) {
+        return res.status(400).json({ error: '遊戲連結不能為空。' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `INSERT INTO games (title, description, play_url, image_url, sort_order, is_active, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+             RETURNING *`,
+            [
+                name.trim(),
+                description ? description.trim() : null,
+                play_url.trim(),
+                image_url ? image_url.trim() : null,
+                sort_order !== undefined ? sort_order : 0,
+                is_active !== undefined ? is_active : true
+            ]
+        );
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[Admin API Error] 新增遊戲時出錯:', err);
+        res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// PUT /api/admin/games/:id - 更新遊戲
+adminRouter.put('/games/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, play_url, image_url, sort_order, is_active } = req.body;
+    
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的遊戲 ID 格式。' }); 
+    }
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: '遊戲名稱不能為空。' });
+    }
+    if (!play_url || !play_url.trim()) {
+        return res.status(400).json({ error: '遊戲連結不能為空。' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `UPDATE games
+             SET title = $1, description = $2, play_url = $3, image_url = $4, 
+                 sort_order = $5, is_active = $6, updated_at = NOW()
+             WHERE id = $7
+             RETURNING *`,
+            [
+                name.trim(),
+                description ? description.trim() : null,
+                play_url.trim(),
+                image_url ? image_url.trim() : null,
+                sort_order !== undefined ? sort_order : 0,
+                is_active !== undefined ? is_active : true,
+                id
+            ]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的遊戲。' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 更新遊戲 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// DELETE /api/admin/games/:id - 刪除遊戲
+adminRouter.delete('/games/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的遊戲 ID 格式。' }); 
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM games WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的遊戲。' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[Admin API Error] 刪除遊戲 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+    }
+});
+
+// GET /api/admin/games/stats/today - 獲取今日遊玩統計
+adminRouter.get('/games/stats/today', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT COUNT(*) AS today_count
+             FROM game_play_logs
+             WHERE DATE(play_date) = CURRENT_DATE`
+        );
+        
+        res.json({ today_count: parseInt(result.rows[0].today_count) });
+    } catch (err) {
+        console.error('[Admin API Error] 獲取今日遊玩統計時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// --- 遊戲路由 ---
+app.get('/games', (req, res) => res.sendFile(path.join(__dirname, 'public', 'games.html')));
+app.get('/games-admin', basicAuthMiddleware, (req, res) => res.sendFile(path.join(__dirname, 'public', 'games-admin.html')));
+
+
+
+
+
+
+
+
+
+
 // --- 受保護的管理頁面和 API Routes ---
 app.use([
     '/admin.html',
@@ -1155,6 +1569,78 @@ console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
 // --- 公開 API Routes (保持不變) ---
 // ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...
 // --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- 遊戲管理 API (將此代碼添加到 server.js) ---
+
+// GET /api/games - 獲取前端遊戲列表
+app.get('/api/games', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, title, description, image_url, play_url, play_count 
+             FROM games 
+             WHERE is_active = TRUE 
+             ORDER BY sort_order ASC, id ASC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取遊戲列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/games/:id/play - 增加遊戲遊玩次數
+app.post('/api/games/:id/play', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的遊戲 ID 格式。' }); 
+    }
+    try {
+        // 增加遊戲遊玩計數
+        const result = await pool.query(
+            'UPDATE games SET play_count = play_count + 1 WHERE id = $1 RETURNING play_count',
+            [id]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要計數的遊戲。' });
+        }
+        
+        // 記錄遊戲遊玩日誌
+        const ip_address = req.ip || 'unknown';
+        await pool.query(
+            'INSERT INTO game_play_logs (game_id, ip_address, play_date) VALUES ($1, $2, NOW())',
+            [id, ip_address]
+        );
+        
+        res.status(200).json({ play_count: result.rows[0].play_count });
+    } catch (err) {
+        console.error(`處理遊戲 ID ${id} 遊玩計數時出錯:`, err);
+        // 靜默處理錯誤，不要阻止使用者繼續遊玩
+        res.status(204).send();
+    }
+});
+
+
+
+
+
+
+
 
 // GET /api/guestbook - 獲取留言列表 (分頁, 最新活動排序)
 app.get('/api/guestbook', async (req, res) => {
