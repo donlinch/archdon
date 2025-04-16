@@ -577,6 +577,36 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Load template button or select dropdown not found!");
   }
 
+
+
+
+
+
+    // --- NEW: Listener to close menu when clicking outside ---
+    // We attach it to the game container, assuming it covers the main clickable area below the menu.
+    if (gameContainer) {
+      gameContainer.addEventListener('click', (event) => {
+          // Check if the menu element exists and is currently visible
+          if (templateMenu && templateMenu.classList.contains('visible')) {
+              // Check if the click originated *inside* the menu itself
+              const isClickInsideMenu = templateMenu.contains(event.target);
+              // Check if the click was on the toggle button (which handles its own state)
+              const isClickOnToggleButton = templateNavToggle && templateNavToggle.contains(event.target);
+
+              // If the click was *not* inside the menu and *not* on the toggle button, close the menu
+              if (!isClickInsideMenu && !isClickOnToggleButton) {
+                  console.log("Click outside menu detected, closing menu."); // Debug log
+                  closeTemplateMenu();
+              }
+          }
+      });
+  } else {
+      console.error("Game container element not found, cannot add outside click listener.");
+  }
+  // --- End NEW Listener ---
+
+
+
   // --- Initialization ---
   async function initializeGame() {
       console.log("Initializing game...");
