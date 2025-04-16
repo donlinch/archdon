@@ -219,5 +219,21 @@ function setupProductAnimation() {
     }
 }
 
+
+
+// 為 Footer 中的回到頂部按鈕添加功能
+document.addEventListener('DOMContentLoaded', function() {
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    
+    if (backToTopBtn) {
+      backToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
+  });
+
 // 如果原 app.js 中存在功能的增強
 // 確保保持與原來 fetchProducts 和 displayProducts 函數的兼容性

@@ -735,16 +735,14 @@
       font-size: 0.85rem;
     }
   }
+/* 精簡型 Footer 樣式 */
 
-
-  /* 移動版 Footer 樣式 */
-
-/* 基本 Footer 調整 */
+/* 基本 Footer 調整 - 更節省空間 */
 @media (max-width: 767px) {
     footer {
-      background-color: #424242;
-      padding: 1.5rem 1rem 1rem;
-      margin-top: 2rem;
+      background-color: #333;
+      padding: 0;
+      margin-top: 1.5rem;
     }
     
     .footer-container {
@@ -752,53 +750,61 @@
       padding: 0;
     }
     
-    /* 改進導航項目排列 */
-    .footer-nav {
+    /* 改為網格布局，更節省空間 */
+    .footer-nav-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr); /* 2列網格 */
-      gap: 1rem 1.5rem;
-      margin-bottom: 1.2rem;
-      padding-bottom: 1.2rem;
-      border-bottom: 1px solid #616161;
+      grid-template-columns: repeat(3, 1fr); /* 三列網格 */
+      width: 100%;
     }
     
     /* 導航項目樣式 */
-    .footer-nav a {
-      display: block;
-      color: #eeeeee;
-      text-decoration: none;
-      font-size: 0.9rem;
-      padding: 0.5rem;
-      text-align: center;
-      border-radius: 5px;
-      transition: background-color 0.2s ease;
-    }
-    
-    .footer-nav a:hover {
-      background-color: #616161;
-      color: #FFB74D;
-    }
-    
-    /* 版權資訊樣式 */
-    .footer-copyright p {
-      font-size: 0.8rem;
-      color: #bdbdbd;
-      text-align: center;
-      margin: 0.5rem 0 0;
-    }
-    
-    /* 社交媒體圖標容器 (如果有) */
-    .footer-social {
+    .footer-nav-grid a {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 1rem;
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 1rem 0.5rem;
+      text-align: center;
+      transition: background-color 0.2s ease;
+      border-bottom: 1px solid #444;
+      border-right: 1px solid #444;
+    }
+    
+    /* 移除最右列的右邊框 */
+    .footer-nav-grid a:nth-child(3n) {
+      border-right: none;
+    }
+    
+    /* 最後一行可能不足三個項目，移除它們的下邊框 */
+    .footer-nav-grid a:nth-last-child(-n+3):nth-child(3n+1),
+    .footer-nav-grid a:nth-last-child(-n+2):nth-child(3n+2),
+    .footer-nav-grid a:nth-last-child(-n+1):nth-child(3n) {
+      border-bottom: none;
+    }
+    
+    .footer-nav-grid a:hover {
+      background-color: #444;
+    }
+    
+    /* 精簡的社交媒體圖標和版權信息行 */
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1rem;
+      background-color: #222;
     }
     
     /* 社交媒體圖標 */
+    .footer-social {
+      display: flex;
+      gap: 1rem;
+    }
+    
     .footer-social a {
-      color: #eeeeee;
+      color: #ccc;
       font-size: 1.2rem;
       transition: color 0.2s ease;
     }
@@ -806,22 +812,53 @@
     .footer-social a:hover {
       color: #FFB74D;
     }
+    
+    /* 版權信息樣式 */
+    .footer-copyright {
+      font-size: 0.75rem;
+      color: #ccc;
+    }
+    
+    /* 回到頂部按鈕 */
+    .back-to-top-footer {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background-color: rgba(255, 183, 77, 0.8);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      border: none;
+      font-size: 1.2rem;
+    }
   }
   
   /* 平板和更大設備的 Footer */
   @media (min-width: 768px) {
-    footer {
-      padding: 2.5rem 1rem 1.5rem;
-    }
-    
-    .footer-nav {
+    .footer-nav-grid {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 1rem 2rem;
+      padding: 1rem 0;
     }
     
-    .footer-nav a {
-      font-size: 0.95rem;
+    .footer-nav-grid a {
+      padding: 0.5rem 1rem;
+      color: #fff;
+      text-decoration: none;
+    }
+    
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
     }
   }
