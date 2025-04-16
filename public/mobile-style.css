@@ -862,3 +862,80 @@
       padding: 1rem;
     }
   }
+
+
+  /* 排序按鈕樣式 - 適用於所有設備 */
+
+/* 排序按鈕容器 */
+.sort-buttons-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    gap: 10px;
+  }
+  
+  /* 基本按鈕樣式 */
+  .sort-button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    text-align: center;
+    min-width: 120px;
+  }
+  
+  /* 非活動按鈕樣式 */
+  .sort-button {
+    background-color: #f0f0f0;
+    color: #555;
+    border: 1px solid #ddd;
+  }
+  
+  /* 懸停效果 */
+  .sort-button:hover {
+    background-color: #e9e9e9;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  /* 活動按鈕樣式 */
+  .sort-button.active {
+    background-color: #0066cc; /* 藍色主題 */
+    color: white;
+    border: 1px solid #0055bb;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  
+  /* 活動按鈕懸停效果 */
+  .sort-button.active:hover {
+    background-color: #0055bb;
+  }
+  
+  /* 活動按鈕點擊效果 */
+  .sort-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  
+  /* 手機版特定樣式調整 */
+  @media (max-width: 767px) {
+    .sort-button {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+      min-width: 100px;
+    }
+    
+    /* 如果您希望在手機上使用橙色方案而不是藍色 */
+    .sort-button.active {
+      background-color: #FFB74D;
+      border-color: #FF9800;
+    }
+    
+    .sort-button.active:hover {
+      background-color: #FF7043;
+    }
+  }
