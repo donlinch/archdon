@@ -200,12 +200,59 @@
     /* ▲▲▲ 新增 Logo 編輯區樣式 ▲▲▲ */
 
 
-
+ /* ▼▼▼ 新增版本控制區樣式 ▼▼▼ */
+ .version-control {
+      background-color: #f0f0f0;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      gap: 15px; /* 元件間距 */
+      flex-wrap: wrap; /* 換行 */
+    }
+    .version-control label {
+      font-weight: bold;
+    }
+    .version-control select,
+    .version-control button {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .version-control button {
+      cursor: pointer;
+      background-color: #e0e0e0;
+      transition: background-color 0.2s;
+    }
+    .version-control button:hover {
+      background-color: #d0d0d0;
+    }
+    .version-control button.save-btn { /* 給儲存按鈕特殊樣式 */
+        background-color: #4CAF50;
+        color: white;
+        border-color: #4CAF50;
+    }
+    .version-control button.save-btn:hover {
+        background-color: #45a049;
+    }
+    /* ▲▲▲ 新增版本控制區樣式 ▲▲▲ */
 
   </style>
 </head>
 <body>
-
+ <!-- ▼▼▼ 新增版本控制區 ▼▼▼ -->
+ <div class="version-control">
+    <label for="template-select">選擇地圖版本:</label>
+    <select id="template-select">
+      <option value="">-- 載入中 --</option>
+    </select>
+    <button id="load-template-btn">載入選定版本</button>
+    <button id="save-template-btn" class="save-btn">💾 儲存目前版本</button>
+    <!-- <button id="create-new-btn">🆕 建立新版本</button> --> <!-- 新建按鈕暫時註解 -->
+  </div>
+  <!-- ▲▲▲ 新增版本控制區 ▲▲▲ -->
   <!-- 主容器，用於設定整體背景和佈局 -->
   <div id="game-container" class="game-container">
 

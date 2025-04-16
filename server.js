@@ -51,27 +51,30 @@ const upload = multer({
   },
   limits: { fileSize: 2 * 1024 * 1024 } // 限制 2MB
 });
-
 app.post('/api/upload', upload.single('image'), async (req, res) => {
-  try {
-    const file = req.file;
-    const imageUrl = '/uploads/' + file.filename;
-
-    // 可選：儲存圖片記錄進資料庫
-    if (pool) {
-      await pool.query(
-        'INSERT INTO uploaded_images (url, original_filename) VALUES ($1, $2)',
-        [imageUrl, file.originalname]
-      );
+    try {
+      const file = req.file;
+      if (!file) { // 增加一個檢查，以防沒有檔案上傳
+          return res.status(400).json({ success: false, error: '沒有上傳檔案' });
+      }
+      const imageUrl = '/uploads/' + file.filename;
+  
+      /* // <--- 開始註解
+      // 可選：儲存圖片記錄進資料庫 (暫時移除，因為 table 不存在)
+      if (pool) {
+        await pool.query(
+          'INSERT INTO uploaded_images (url, original_filename) VALUES ($1, $2)',
+          [imageUrl, file.originalname]
+        );
+      }
+      */ // <--- 結束註解
+  
+      res.json({ success: true, url: imageUrl });
+    } catch (err) {
+      console.error('上傳圖片錯誤:', err); // 這裡的錯誤現在應該不會是 "relation does not exist" 了
+      res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
     }
-
-    res.json({ success: true, url: imageUrl });
-  } catch (err) {
-    console.error('上傳圖片錯誤:', err);
-    res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
-  }
-});
-
+  });
 
 
 
