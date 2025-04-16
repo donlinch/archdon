@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let highlightedCell = null;
   let playerPathIndices = [0, 0, 0]; // Index in the pathCells array for each player
   const STEP_ANIMATION_DELAY = 300;
-  let playerTokens = [];
+  let playerTokenContainers = []; // 追踪玩家令牌容器，而不僅僅是令牌
   const bgColors = { // Player token background color fallback
     1: '#5b9df0', // Blue
     2: '#9270ca', // Purple
@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           // Update the select dropdown to show the loaded template
           if (templateSelect) templateSelect.value = currentTemplateId;
+
+          // 初始化選擇視覺效果
+          updateSelectedPlayerVisuals(selectedPlayer);
 
       } catch (error) {
           console.error(`Error loading template ${templateId}:`, error);
@@ -239,82 +242,122 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Update Player Positions using loaded template data ---
   function updatePlayerPositions() {
-      // Remove previous player tokens
-      document.querySelectorAll('.player-token').forEach(el => el.remove());
-      playerTokens = []; // Clear the array
+    // 移除先前的玩家令牌
+    document.querySelectorAll('.player-token-container').forEach(el => el.remove());
+    playerTokenContainers = []; // 清空數組
 
-      if (!gameBoard || !Array.isArray(pathCells) || pathCells.length === 0) {
-          console.warn("Cannot update player positions: Board or pathCells not ready.");
-          return; // Don't render players if map isn't ready
+    if (!gameBoard || !Array.isArray(pathCells) || pathCells.length === 0) {
+      console.warn("無法更新玩家位置：遊戲板或路徑單元格尚未準備好。");
+      return; // 如果地圖未就緒，不渲染玩家
+    }
+
+    playerPathIndices.forEach((pathIndex, playerArrayIndex) => {
+      // 確保 pathIndex 對當前 pathCells 長度有效
+      const safePathIndex = (pathIndex >= 0 && pathIndex < pathCells.length) ? pathIndex : 0;
+      // 通過 pathCells 中的數組索引查找與玩家當前位置索引對應的單元格數據
+      const cellData = pathCells[safePathIndex]; // 按數組索引獲取單元格數據
+
+      if (!cellData) {
+        console.warn(`無法為 ${playerArrayIndex + 1} 號玩家在 safePathIndex ${safePathIndex} 找到單元格數據`);
+        return; // 如果缺少該位置的單元格數據，則跳過此玩家
       }
 
-      playerPathIndices.forEach((pathIndex, playerArrayIndex) => {
-          // Ensure pathIndex is valid for the current pathCells length
-          const safePathIndex = (pathIndex >= 0 && pathIndex < pathCells.length) ? pathIndex : 0;
-          // Find the cell data corresponding to the player's current position index in pathCells
-          const cellData = pathCells[safePathIndex]; // Get cell data by array index
+      const playerNum = playerArrayIndex + 1;
+      // 從加載的模板數據獲取玩家配置 (currentPlayers)
+      const playerConfig = currentPlayers.find(p => p.player_number === playerNum) || {};
+      
+      // *** 新增：創建一個容器元素來持有令牌和名稱標籤 ***
+      const container = document.createElement('div');
+      container.className = 'player-token-container';
+      container.style.position = 'absolute';
+      container.style.zIndex = '10';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.alignItems = 'center';
+      container.style.transition = 'left 0.3s ease-in-out, top 0.3s ease-in-out'; // 平滑移動
 
-          if (!cellData) {
-               console.warn(`Cannot find cell data for player ${playerArrayIndex + 1} at safePathIndex ${safePathIndex}`);
-               return; // Skip this player if cell data is missing for their position
-           }
+      // *** 創建令牌元素（頭像）***
+      const token = document.createElement('div');
+      token.className = `player-token player${playerNum}-token`; // 應用一般和特定玩家類
+      // 直接應用常見樣式
+      token.style.width = '40px';
+      token.style.height = '40px';
+      token.style.borderRadius = '50%'; // 確保它是圓形的
+      token.style.display = 'flex';
+      token.style.alignItems = 'center';
+      token.style.justifyContent = 'center';
+      token.style.overflow = 'hidden'; // 隱藏圖像/文本的溢出部分
+      token.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+      token.style.border = '2px solid white';
+      token.style.zIndex = '10';
 
-          const playerNum = playerArrayIndex + 1;
-          // Get player config from loaded template data (currentPlayers)
-          const playerConfig = currentPlayers.find(p => p.player_number === playerNum) || {};
+      // 獲取玩家名稱，如果在配置中存在，否則使用 P# 格式
+      const playerName = playerConfig.name || `P${playerNum}`;
 
-          const token = document.createElement('div');
-          token.className = `player-token player${playerNum}-token`; // Apply general and specific player class
-          // Apply common styles directly
-          token.style.position = 'absolute';
-          token.style.width = '40px';
-          token.style.height = '40px';
-          token.style.borderRadius = '50%'; // Ensure it's circular
-          token.style.display = 'flex';
-          token.style.alignItems = 'center';
-          token.style.justifyContent = 'center';
-          token.style.overflow = 'hidden'; // Hide overflowing parts of image/text
-          token.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
-          token.style.border = '2px solid white';
-          token.style.transform = 'translate(-50%, -50%)'; // Center on position
-          token.style.zIndex = '10';
-          token.style.transition = 'left 0.3s ease-in-out, top 0.3s ease-in-out'; // Smooth movement
+      // 使用配置中的頭像或後備
+      if (playerConfig.avatar_url) {
+        token.style.backgroundColor = 'transparent'; // 如果使用圖像，使背景透明
+        token.innerHTML = `<img src="${playerConfig.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="P${playerNum} Avatar" onerror="this.parentElement.style.backgroundColor='${bgColors[playerNum]}'; this.remove(); console.warn('Avatar failed: ${playerConfig.avatar_url}')">`;
+      } else {
+        // 後備到文本（名稱或 P#）和背景顏色
+        token.textContent = playerName.charAt(0); // 只用名稱的第一個字母
+        token.style.backgroundColor = bgColors[playerNum];
+        token.style.fontSize = '14px';
+        token.style.fontWeight = 'bold';
+        token.style.color = 'white';
+        token.style.textShadow = '1px 1px 1px rgba(0,0,0,0.4)';
+      }
 
-          // Use avatar from loaded config or fallback
-          if (playerConfig.avatar_url) {
-               token.style.backgroundColor = 'transparent'; // Make background transparent if image is used
-               token.innerHTML = `<img src="${playerConfig.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="P${playerNum} Avatar" onerror="this.parentElement.style.backgroundColor='${bgColors[playerNum]}'; this.remove(); console.warn('Avatar failed: ${playerConfig.avatar_url}')">`;
-          } else {
-              // Fallback to text (name or P#) and background color
-              token.textContent = playerConfig.name || `P${playerNum}`;
-              token.style.backgroundColor = bgColors[playerNum];
-              token.style.fontSize = '14px';
-              token.style.fontWeight = 'bold';
-              token.style.color = 'white';
-              token.style.textShadow = '1px 1px 1px rgba(0,0,0,0.4)';
-          }
+      // *** 新增：創建名稱標籤 ***
+      const nameLabel = document.createElement('div');
+      nameLabel.className = 'player-name-label';
+      nameLabel.textContent = playerName;
+      nameLabel.style.backgroundColor = bgColors[playerNum];
+      nameLabel.style.color = 'white';
+      nameLabel.style.padding = '2px 6px';
+      nameLabel.style.borderRadius = '10px';
+      nameLabel.style.fontSize = '10px';
+      nameLabel.style.fontWeight = 'bold';
+      nameLabel.style.marginTop = '3px';
+      nameLabel.style.whiteSpace = 'nowrap';
+      nameLabel.style.maxWidth = '70px';
+      nameLabel.style.overflow = 'hidden';
+      nameLabel.style.textOverflow = 'ellipsis';
+      nameLabel.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
+      nameLabel.style.textShadow = '0px 1px 1px rgba(0,0,0,0.2)';
 
-          // --- Positioning Logic ---
-          const x = Number(cellData.x); // Position based on the cell data (x, y grid)
-          const y = Number(cellData.y);
-           if (isNaN(x) || isNaN(y)) {
-               console.warn(`Invalid coordinates for player ${playerNum}'s cell data:`, cellData);
-               return; // Skip positioning if coordinates invalid
-           }
+      // --- 定位邏輯 ---
+      const x = Number(cellData.x); // 基於單元格數據的位置（x, y 網格）
+      const y = Number(cellData.y);
+      
+      if (isNaN(x) || isNaN(y)) {
+        console.warn(`${playerNum} 號玩家的單元格數據坐標無效:`, cellData);
+        return; // 如果坐標無效則跳過定位
+      }
 
-          // Multi-player offset logic
-          const angle = (2 * Math.PI / 3) * playerArrayIndex; // Distribute 3 players
-          const radius = 15; // How far from center
-          const offsetX = Math.cos(angle) * radius;
-          const offsetY = Math.sin(angle) * radius;
-          // Position relative to the center of the cell
-          token.style.left = `${x * cellWidth + cellWidth / 2 + offsetX}px`;
-          token.style.top = `${y * cellHeight + cellHeight / 2 + offsetY}px`;
-          // --- End Positioning Logic ---
+      // 多玩家偏移邏輯
+      const angle = (2 * Math.PI / 3) * playerArrayIndex; // 分配 3 個玩家
+      const radius = 15; // 距離中心多遠
+      const offsetX = Math.cos(angle) * radius;
+      const offsetY = Math.sin(angle) * radius;
+      
+      // 相對於單元格中心的位置
+      container.style.left = `${x * cellWidth + cellWidth / 2 + offsetX}px`;
+      container.style.top = `${y * cellHeight + cellHeight / 2 + offsetY}px`;
+      container.style.transform = 'translate(-50%, -50%)'; // 中心於位置
+      // --- 結束定位邏輯 ---
 
-          gameBoard.appendChild(token);
-          playerTokens.push(token);
-      });
+      // 將令牌和名稱標籤添加到容器中
+      container.appendChild(token);
+      container.appendChild(nameLabel);
+      
+      // 將容器添加到遊戲板中
+      gameBoard.appendChild(container);
+      playerTokenContainers.push(container); // 存儲容器的引用以便將來更新
+    });
+    
+    // 在更新玩家位置後也更新視覺效果
+    updateSelectedPlayerVisuals(selectedPlayer);
   }
 
   // --- Hide Info Panel (shows logo) ---
@@ -376,24 +419,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Finish Movement ---
    function finishMoving(finalIndex) {
-      console.log(`Movement finished at index: ${finalIndex}`);
-      isMoving = false;
-      highlightedCell = finalIndex; // Set the final cell as highlighted
+    console.log(`移動結束於索引: ${finalIndex}`);
+    isMoving = false;
+    highlightedCell = finalIndex; // 將最終單元格設為高亮顯示
 
-      // Apply highlight class to the target cell
-      const targetCellElement = gameBoard.querySelector(`.cell[data-index="${finalIndex}"]`);
-      if (targetCellElement) {
-           // Clear existing highlights first to be safe
-           document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
-           targetCellElement.classList.add('highlighted');
-      } else {
-           console.warn(`Target cell element not found for highlight: index ${finalIndex}`);
-       }
+    // 應用高亮顯示類到目標單元格
+    const targetCellElement = gameBoard.querySelector(`.cell[data-index="${finalIndex}"]`);
+    if (targetCellElement) {
+      // 首先清除現有高亮以確保安全
+      document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
+      targetCellElement.classList.add('highlighted');
+    } else {
+      console.warn(`找不到要高亮顯示的目標單元格元素: 索引 ${finalIndex}`);
+    }
 
-      // Ensure player position is exactly correct (updatePlayerPositions might have slight async delay visual)
-      updatePlayerPositions();
+    // 確保玩家位置完全正確 (updatePlayerPositions 可能有輕微的異步延遲視覺效果)
+    updatePlayerPositions();
 
-      sendGameStateToControllers(); // Send final state update
+    sendGameStateToControllers(); // 發送最終狀態更新
   }
 
   // --- Initialize Player Positions ---
@@ -490,22 +533,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Handle Commands from Controller ---
-   function handleControlCommand(cmd, params) {
-    // Basic validation
+  function handleControlCommand(cmd, params) {
+    // 基本驗證
     const player = params ? parseInt(params.player) : null;
     if (cmd === 'selectPlayer' || cmd === 'movePlayer' || cmd === 'showPlayerInfo') {
-        if (!player || player < 1 || player > 3) {
-             console.warn(`Invalid player number received for command ${cmd}:`, params);
-             return;
-         }
+      if (!player || player < 1 || player > 3) {
+        console.warn(`收到命令 ${cmd} 的玩家編號無效:`, params);
+        return;
+      }
     }
 
     switch (cmd) {
       case 'selectPlayer':
         selectedPlayer = player;
-        console.log("Player selected via controller:", selectedPlayer);
-        sendGameStateToControllers(); // Notify other controllers
-        // Maybe add a visual cue on the game board? (e.g., subtle highlight around token)
+        console.log("通過控制器選擇了玩家:", selectedPlayer);
+        
+        // 更新玩家選擇的視覺提示
+        updateSelectedPlayerVisuals(selectedPlayer);
+        
+        sendGameStateToControllers(); // 通知其他控制器
         break;
       case 'movePlayer':
         if (!isMoving) { // Prevent multiple move commands while already moving
@@ -545,6 +591,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 添加用於更新玩家視覺選擇的新函數
+  function updateSelectedPlayerVisuals(playerNumber) {
+    if (!Array.isArray(playerTokenContainers)) {
+      console.warn("playerTokenContainers 不是數組，無法更新視覺效果");
+      return;
+    }
+    
+    // 從所有玩家容器中移除 selected 類
+    playerTokenContainers.forEach((container, index) => {
+      if (container) {
+        container.classList.toggle('selected', index + 1 === playerNumber);
+      }
+    });
+    
+    // 可以在這裡添加其他視覺提示，如面板顏色變化等
+  }
+
   // --- Menu Toggle Logic ---
   function toggleTemplateMenu() {
       if (templateMenu) templateMenu.classList.toggle('visible');
@@ -565,70 +628,64 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Template menu close button not found!");
   }
   if (loadTemplateBtn && templateSelect) {
+      loadTemplateBtn.addEventListener
       loadTemplateBtn.addEventListener('click', () => {
-          const selectedId = templateSelect.value;
-          if (selectedId) {
-              loadTemplate(selectedId); // Pass the value directly
-          } else {
-              alert("請先選擇一個模板！");
+        const selectedId = templateSelect.value;
+        if (selectedId) {
+            loadTemplate(selectedId); // Pass the value directly
+        } else {
+            alert("請先選擇一個模板！");
+        }
+    });
+} else {
+    console.error("Load template button or select dropdown not found!");
+}
+
+// --- NEW: Listener to close menu when clicking outside ---
+// We attach it to the game container, assuming it covers the main clickable area below the menu.
+if (gameContainer) {
+  gameContainer.addEventListener('click', (event) => {
+      // Check if the menu element exists and is currently visible
+      if (templateMenu && templateMenu.classList.contains('visible')) {
+          // Check if the click originated *inside* the menu itself
+          const isClickInsideMenu = templateMenu.contains(event.target);
+          // Check if the click was on the toggle button (which handles its own state)
+          const isClickOnToggleButton = templateNavToggle && templateNavToggle.contains(event.target);
+
+          // If the click was *not* inside the menu and *not* on the toggle button, close the menu
+          if (!isClickInsideMenu && !isClickOnToggleButton) {
+              console.log("Click outside menu detected, closing menu."); // Debug log
+              closeTemplateMenu();
           }
-      });
-  } else {
-      console.error("Load template button or select dropdown not found!");
-  }
-
-
-
-
-
-
-    // --- NEW: Listener to close menu when clicking outside ---
-    // We attach it to the game container, assuming it covers the main clickable area below the menu.
-    if (gameContainer) {
-      gameContainer.addEventListener('click', (event) => {
-          // Check if the menu element exists and is currently visible
-          if (templateMenu && templateMenu.classList.contains('visible')) {
-              // Check if the click originated *inside* the menu itself
-              const isClickInsideMenu = templateMenu.contains(event.target);
-              // Check if the click was on the toggle button (which handles its own state)
-              const isClickOnToggleButton = templateNavToggle && templateNavToggle.contains(event.target);
-
-              // If the click was *not* inside the menu and *not* on the toggle button, close the menu
-              if (!isClickInsideMenu && !isClickOnToggleButton) {
-                  console.log("Click outside menu detected, closing menu."); // Debug log
-                  closeTemplateMenu();
-              }
-          }
-      });
-  } else {
-      console.error("Game container element not found, cannot add outside click listener.");
-  }
-  // --- End NEW Listener ---
-
-
-
-  // --- Initialization ---
-  async function initializeGame() {
-      console.log("Initializing game...");
-      applyTemplateBackgroundColor(currentBgColor); // Apply default background initially
-      if(gameBoard) gameBoard.innerHTML = '<p style="text-align:center; padding-top: 50px;">正在載入地圖列表...</p>'; // Initial message
-
-      // Fetch the list first to populate the dropdown
-      await fetchTemplateList();
-
-      // Then, attempt to load the first template from the list as default
-      const defaultTemplateId = templateSelect.options.length > 0 && templateSelect.value ? templateSelect.value : null;
-
-      if (defaultTemplateId) {
-           await loadTemplate(defaultTemplateId); // Load the default map
-      } else {
-           console.warn("No default template found or list failed to load.");
-           if(gameBoard) gameBoard.innerHTML = '<p style="text-align:center; padding-top: 50px; color: orange;">沒有找到預設地圖。請從選單載入一個模板。</p>';
-           applyTemplateBackgroundColor('#e0e0e0'); // Grey background
       }
-      connectWebSocket(); // Connect WebSocket after initial setup attempt
-  }
+  });
+} else {
+    console.error("Game container element not found, cannot add outside click listener.");
+}
+// --- End NEW Listener ---
 
-  initializeGame(); // Start the initialization process
+// --- Initialization ---
+async function initializeGame() {
+    console.log("Initializing game...");
+    applyTemplateBackgroundColor(currentBgColor); // Apply default background initially
+    if(gameBoard) gameBoard.innerHTML = '<p style="text-align:center; padding-top: 50px;">正在載入地圖列表...</p>'; // Initial message
+
+    // Fetch the list first to populate the dropdown
+    await fetchTemplateList();
+
+    // Then, attempt to load the first template from the list as default
+    const defaultTemplateId = templateSelect.options.length > 0 && templateSelect.value ? templateSelect.value : null;
+
+    if (defaultTemplateId) {
+         await loadTemplate(defaultTemplateId); // Load the default map
+    } else {
+         console.warn("No default template found or list failed to load.");
+         if(gameBoard) gameBoard.innerHTML = '<p style="text-align:center; padding-top: 50px; color: orange;">沒有找到預設地圖。請從選單載入一個模板。</p>';
+         applyTemplateBackgroundColor('#e0e0e0'); // Grey background
+    }
+    connectWebSocket(); // Connect WebSocket after initial setup attempt
+}
+
+initializeGame(); // Start the initialization process
 
 }); // End DOMContentLoaded

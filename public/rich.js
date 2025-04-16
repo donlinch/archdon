@@ -1,4 +1,4 @@
-// ✅ rich.js (支援模組化格子資料 + 玩家頭像 + 模板選擇器)
+// ✅ rich.js (支援模組化格子資料 + 玩家頭像 + 模板選擇器 + 平滑移動)
 document.addEventListener('DOMContentLoaded', () => {
   const cellWidth = 125;
   const cellHeight = 100;
@@ -27,7 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMoving = false;
   let highlightedCell = null;
   let playerPathIndices = [0, 0, 0]; // Index in the pathCells array for each player
-  const STEP_ANIMATION_DELAY = 300;
+  const STEP_ANIMATION_DELAY = 500;
+  const MOVEMENT_TRANSITION_TIME = '0.4s';
   let playerTokenContainers = []; // 追踪玩家令牌容器，而不僅僅是令牌
   const bgColors = { // Player token background color fallback
     1: '#5b9df0', // Blue
@@ -126,14 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-   // --- Apply Background Color ---
-   function applyTemplateBackgroundColor(color) {
+  // --- Apply Background Color ---
+  function applyTemplateBackgroundColor(color) {
       if (gameContainer) {
           gameContainer.style.backgroundColor = color || '#fff0f5'; // Fallback color
       } else {
           console.error("Game container element not found for background color.");
       }
-   }
+  }
 
   // --- Render Board using template data ---
   function renderBoard() {
@@ -240,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-  // --- Update Player Positions using loaded template data ---
+  // --- updatePlayerPositions with smooth transition ---
   function updatePlayerPositions() {
     // 移除先前的玩家令牌
     document.querySelectorAll('.player-token-container').forEach(el => el.remove());
@@ -266,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 從加載的模板數據獲取玩家配置 (currentPlayers)
       const playerConfig = currentPlayers.find(p => p.player_number === playerNum) || {};
       
-      // *** 新增：創建一個容器元素來持有令牌和名稱標籤 ***
+      // 創建一個容器元素來持有令牌和名稱標籤
       const container = document.createElement('div');
       container.className = 'player-token-container';
       container.style.position = 'absolute';
@@ -274,9 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
       container.style.display = 'flex';
       container.style.flexDirection = 'column';
       container.style.alignItems = 'center';
-      container.style.transition = 'left 0.3s ease-in-out, top 0.3s ease-in-out'; // 平滑移動
+      
+      // 改進過渡動畫 - 增加過渡時間並添加緩動函數
+      container.style.transition = `left ${MOVEMENT_TRANSITION_TIME} ease-out, top ${MOVEMENT_TRANSITION_TIME} ease-out`; 
 
-      // *** 創建令牌元素（頭像）***
+      // 創建令牌元素（頭像）
       const token = document.createElement('div');
       token.className = `player-token player${playerNum}-token`; // 應用一般和特定玩家類
       // 直接應用常見樣式
@@ -308,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         token.style.textShadow = '1px 1px 1px rgba(0,0,0,0.4)';
       }
 
-      // *** 新增：創建名稱標籤 ***
+      // 創建名稱標籤
       const nameLabel = document.createElement('div');
       nameLabel.className = 'player-name-label';
       nameLabel.textContent = playerName;
@@ -326,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
       nameLabel.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
       nameLabel.style.textShadow = '0px 1px 1px rgba(0,0,0,0.2)';
 
-      // --- 定位邏輯 ---
+      // 定位邏輯
       const x = Number(cellData.x); // 基於單元格數據的位置（x, y 網格）
       const y = Number(cellData.y);
       
@@ -345,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
       container.style.left = `${x * cellWidth + cellWidth / 2 + offsetX}px`;
       container.style.top = `${y * cellHeight + cellHeight / 2 + offsetY}px`;
       container.style.transform = 'translate(-50%, -50%)'; // 中心於位置
-      // --- 結束定位邏輯 ---
 
       // 將令牌和名稱標籤添加到容器中
       container.appendChild(token);
@@ -361,67 +363,89 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Hide Info Panel (shows logo) ---
-   function hidePlayerInfo() { // Renamed for clarity, still hides center panel
+  function hidePlayerInfo() { // Renamed for clarity, still hides center panel
       const panel = document.getElementById('center-info');
       if (panel) panel.classList.add('hidden');
       if (logoContainer) logoContainer.classList.remove('hidden'); // Show logo
   }
 
-  // --- Handle Player Movement ---
+  // --- Handle Player Movement with smooth animation ---
   function handleDirectionSelection(isForward, steps, player) {
-      if (isMoving || player < 1 || player > 3) return;
-      if (!Array.isArray(pathCells) || pathCells.length === 0) {
-          console.warn("Cannot move: Map data (pathCells) is not loaded or empty.");
-          return; // Don't move if map isn't ready
+    if (isMoving || player < 1 || player > 3) return;
+    if (!Array.isArray(pathCells) || pathCells.length === 0) {
+      console.warn("Cannot move: Map data (pathCells) is not loaded or empty.");
+      return; // Don't move if map isn't ready
+    }
+
+    isMoving = true;
+    highlightedCell = null; // Clear previous highlight
+    // Clear highlight class from all cells first
+    document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
+
+    let currentPathIndex = playerPathIndices[player - 1];
+    // Validate current index before starting movement
+    if (currentPathIndex < 0 || currentPathIndex >= pathCells.length) {
+      console.warn(`Player ${player} has invalid starting index ${currentPathIndex}, resetting to 0.`);
+      currentPathIndex = 0;
+      playerPathIndices[player - 1] = 0; // Correct the state
+    }
+
+    let targetIndex = currentPathIndex; // Store the final target index
+    let stepsRemaining = steps;
+
+    // 增加移動中視覺效果
+    const playerContainer = playerTokenContainers[player - 1];
+    if (playerContainer) {
+      playerContainer.classList.add('moving');
+    }
+
+    function moveStep() {
+      if (stepsRemaining <= 0) {
+        finishMoving(targetIndex, player);
+        return;
       }
 
-      isMoving = true;
-      highlightedCell = null; // Clear previous highlight
-      // Clear highlight class from all cells first
-      document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
+      // Calculate next index based on direction
+      const nextIndex = isForward
+        ? (currentPathIndex + 1) % pathCells.length
+        : (currentPathIndex - 1 + pathCells.length) % pathCells.length;
 
-      let currentPathIndex = playerPathIndices[player - 1];
-      // Validate current index before starting movement
-      if (currentPathIndex < 0 || currentPathIndex >= pathCells.length) {
-          console.warn(`Player ${player} has invalid starting index ${currentPathIndex}, resetting to 0.`);
-          currentPathIndex = 0;
-          playerPathIndices[player - 1] = 0; // Correct the state
-      }
+      // Update the player's state
+      playerPathIndices[player - 1] = nextIndex;
+      targetIndex = nextIndex;
+      currentPathIndex = nextIndex;
 
-      let targetIndex = currentPathIndex; // Store the final target index
+      // Update visual position
+      updatePlayerPositions(); // This moves the token visually
 
-      function moveStep() {
-          // Calculate next index based on direction
-          currentPathIndex = isForward
-              ? (currentPathIndex + 1) % pathCells.length
-              : (currentPathIndex - 1 + pathCells.length) % pathCells.length;
+      stepsRemaining--; // Decrement remaining steps
 
-          // Update the player's state *immediately*
-          playerPathIndices[player - 1] = currentPathIndex;
-          targetIndex = currentPathIndex; // Keep track of the final index for highlighting
+      // Continue moving after delay
+      setTimeout(moveStep, STEP_ANIMATION_DELAY);
+    }
 
-          // Update visual position
-          updatePlayerPositions(); // This moves the token visually
-
-          steps--; // Decrement remaining steps
-
-          if (steps > 0) {
-               setTimeout(moveStep, STEP_ANIMATION_DELAY); // Continue moving if steps remain
-           } else {
-               finishMoving(targetIndex); // Finish when steps are done
-           }
-      }
-
-      // Start the first step
-      sendGameStateToControllers(); // Notify controllers that movement started
-      moveStep(); // Initiate movement
+    // Start the first step
+    sendGameStateToControllers(); // Notify controllers that movement started
+    moveStep(); // Initiate movement
   }
 
-  // --- Finish Movement ---
-   function finishMoving(finalIndex) {
+  // --- Finish Movement with bounce animation ---
+  function finishMoving(finalIndex, player) {
     console.log(`移動結束於索引: ${finalIndex}`);
     isMoving = false;
     highlightedCell = finalIndex; // 將最終單元格設為高亮顯示
+
+    // 移除移動中類，添加到達類以顯示彈跳效果
+    const playerContainer = playerTokenContainers[player - 1];
+    if (playerContainer) {
+      playerContainer.classList.remove('moving');
+      
+      // 添加到達效果，並稍後移除
+      playerContainer.classList.add('arrived');
+      setTimeout(() => {
+        playerContainer.classList.remove('arrived');
+      }, 500); // 與動畫時間相同
+    }
 
     // 應用高亮顯示類到目標單元格
     const targetCellElement = gameBoard.querySelector(`.cell[data-index="${finalIndex}"]`);
@@ -447,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- WebSocket Connection ---
-   function connectWebSocket() {
+  function connectWebSocket() {
       // Close existing connection if any to prevent multiple connections
       if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
           console.log("Closing existing WebSocket connection before reconnecting.");
@@ -498,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Send Game State to Controllers ---
-   function sendGameStateToControllers() {
+  function sendGameStateToControllers() {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
            // console.warn("Cannot send game state: WebSocket not open."); // Reduce noise, log only on errors/major events
            return;
@@ -607,42 +631,42 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 可以在這裡添加其他視覺提示，如面板顏色變化等
   }
+ 
 
   // --- Menu Toggle Logic ---
   function toggleTemplateMenu() {
-      if (templateMenu) templateMenu.classList.toggle('visible');
-  }
-  function closeTemplateMenu() {
-      if (templateMenu) templateMenu.classList.remove('visible');
-  }
+    if (templateMenu) templateMenu.classList.toggle('visible');
+}
 
-  // --- Event Listeners for Menu ---
-  if (templateNavToggle) {
-      templateNavToggle.addEventListener('click', toggleTemplateMenu);
-  } else {
-      console.error("Template toggle button not found!");
-  }
-  if (templateMenuClose) {
-      templateMenuClose.addEventListener('click', closeTemplateMenu);
-  } else {
-      console.error("Template menu close button not found!");
-  }
-  if (loadTemplateBtn && templateSelect) {
-      loadTemplateBtn.addEventListener
-      loadTemplateBtn.addEventListener('click', () => {
-        const selectedId = templateSelect.value;
-        if (selectedId) {
-            loadTemplate(selectedId); // Pass the value directly
-        } else {
-            alert("請先選擇一個模板！");
-        }
-    });
+function closeTemplateMenu() {
+    if (templateMenu) templateMenu.classList.remove('visible');
+}
+
+// --- Event Listeners for Menu ---
+if (templateNavToggle) {
+    templateNavToggle.addEventListener('click', toggleTemplateMenu);
+} else {
+    console.error("Template toggle button not found!");
+}
+if (templateMenuClose) {
+    templateMenuClose.addEventListener('click', closeTemplateMenu);
+} else {
+    console.error("Template menu close button not found!");
+}
+if (loadTemplateBtn && templateSelect) {
+    loadTemplateBtn.addEventListener('click', () => {
+      const selectedId = templateSelect.value;
+      if (selectedId) {
+          loadTemplate(selectedId); // Pass the value directly
+      } else {
+          alert("請先選擇一個模板！");
+      }
+  });
 } else {
     console.error("Load template button or select dropdown not found!");
 }
 
-// --- NEW: Listener to close menu when clicking outside ---
-// We attach it to the game container, assuming it covers the main clickable area below the menu.
+// --- Listener to close menu when clicking outside ---
 if (gameContainer) {
   gameContainer.addEventListener('click', (event) => {
       // Check if the menu element exists and is currently visible
@@ -662,7 +686,6 @@ if (gameContainer) {
 } else {
     console.error("Game container element not found, cannot add outside click listener.");
 }
-// --- End NEW Listener ---
 
 // --- Initialization ---
 async function initializeGame() {
