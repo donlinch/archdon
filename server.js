@@ -25,10 +25,26 @@ const multer = require('multer');
 const fs = require('fs');
  
 
-const uploadDir = path.join(__dirname, 'public', 'uploads');
+
+
+// --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
+const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
+
+// 確保這個目錄存在 (如果不存在則創建)
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
+  } catch (err) {
+      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
+      // 根據你的需求，這裡可能需要拋出錯誤或有後備方案
+      // 例如，如果無法創建 /data/uploads，可能退回使用臨時目錄？
+      // 但最好的方式是確保 /data 磁碟已正確掛載且應用有權限寫入
+  }
 }
+
+ 
+ 
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -913,6 +929,206 @@ app.delete('/api/card-game/templates/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除模板' });
     }
 });
+
+
+
+
+
+
+
+
+
+// GET /api/admin/files - 獲取檔案列表 (分頁、篩選、排序)
+app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15; // 每頁數量
+    const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || 'newest'; // newest, oldest, name_asc, name_desc, size_asc, size_desc
+    const fileType = req.query.fileType || 'all'; // all, image, pdf, other
+    const search = req.query.search?.trim() || '';
+
+    let orderByClause = 'ORDER BY uploaded_at DESC'; // 預設最新
+    switch (sortBy) {
+        case 'oldest': orderByClause = 'ORDER BY uploaded_at ASC'; break;
+        case 'name_asc': orderByClause = 'ORDER BY original_filename ASC'; break;
+        case 'name_desc': orderByClause = 'ORDER BY original_filename DESC'; break;
+        case 'size_asc': orderByClause = 'ORDER BY size_bytes ASC NULLS FIRST'; break; // NULLS FIRST 讓無大小的排前面
+        case 'size_desc': orderByClause = 'ORDER BY size_bytes DESC NULLS LAST'; break; // NULLS LAST 讓無大小的排後面
+    }
+
+    let whereClauses = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (fileType !== 'all' && ['image', 'pdf', 'other'].includes(fileType)) {
+        whereClauses.push(`file_type = $${paramIndex++}`);
+        queryParams.push(fileType);
+    }
+    if (search) {
+        // 使用 LOWER() 進行不區分大小寫搜尋
+        whereClauses.push(`LOWER(original_filename) LIKE LOWER($${paramIndex++})`);
+        queryParams.push(`%${search}%`);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const client = await pool.connect();
+    try {
+        // 查詢總數
+        const totalResult = await client.query(`SELECT COUNT(*) FROM uploaded_files ${whereSql}`, queryParams);
+        const totalItems = parseInt(totalResult.rows[0].count, 10);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // 查詢當前頁面數據
+        // 添加 limit 和 offset 的參數索引
+        const limitParamIdx = paramIndex++;
+        const offsetParamIdx = paramIndex++;
+        queryParams.push(limit);
+        queryParams.push(offset);
+
+        const filesResult = await client.query(
+            `SELECT id, file_path, original_filename, mimetype, size_bytes, file_type, uploaded_at
+             FROM uploaded_files
+             ${whereSql}
+             ${orderByClause}
+             LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
+            queryParams
+        );
+
+        res.json({
+            files: filesResult.rows,
+            currentPage: page,
+            totalPages: totalPages,
+            totalItems: totalItems,
+            limit: limit,
+            sortBy: sortBy,
+            fileType: req.query.fileType || 'all', // 返回實際使用的 fileType
+            search: req.query.search || ''       // 返回實際使用的 search
+        });
+
+    } catch (err) {
+        console.error('[API GET /admin/files] Error fetching file list:', err);
+        res.status(500).json({ error: '無法獲取檔案列表', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// POST /api/admin/files/upload - 上傳檔案
+app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
+    }
+    const file = req.file;
+    const fileUrlPath = '/uploads/' + file.filename; // ★ 使用 fileUrlPath 作為 URL 路徑 ★
+
+    let fileType = 'other';
+    const lowerExt = path.extname(file.originalname).toLowerCase();
+    if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(lowerExt)) { fileType = 'image'; }
+    else if (lowerExt === '.pdf') { fileType = 'pdf'; }
+    else if (file.mimetype?.startsWith('image/')) { fileType = 'image'; }
+    else if (file.mimetype === 'application/pdf') { fileType = 'pdf'; }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const insertResult = await client.query(
+            `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, file_path, original_filename, mimetype, size_bytes, file_type, uploaded_at`,
+            // ★ 存入資料庫的是 URL 路徑 ★
+            [fileUrlPath, file.originalname, file.mimetype, file.size, fileType]
+        );
+        await client.query('COMMIT');
+        console.log(`檔案 ${file.originalname} 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
+        res.status(201).json({ success: true, file: insertResult.rows[0] });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[API POST /admin/files/upload] Error inserting file record:', err);
+        // 嘗試刪除已上傳但記錄失敗的檔案
+        const fullDiskPath = path.join(uploadDir, file.filename); // ★ 實際磁碟路徑 ★
+        try {
+            if (fs.existsSync(fullDiskPath)) {
+                 await fs.promises.unlink(fullDiskPath);
+                 console.warn(`已刪除記錄失敗的持久化檔案: ${fullDiskPath}`);
+            }
+        } catch (unlinkErr) {
+            console.error(`刪除記錄失敗的檔案時出錯 (${fullDiskPath}):`, unlinkErr);
+        }
+        res.status(500).json({ success: false, error: '儲存檔案記錄失敗', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/admin/files/:id - 刪除檔案
+app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
+    const fileId = parseInt(req.params.id);
+    if (isNaN(fileId)) {
+        return res.status(400).json({ error: '無效的檔案 ID' });
+    }
+
+    console.log(`準備刪除檔案 ID: ${fileId}`); // 修改日誌訊息
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 先從資料庫查詢檔案路徑
+        const fileResult = await client.query(
+            'SELECT file_path FROM uploaded_files WHERE id = $1',
+            [fileId]
+        );
+
+        if (fileResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            client.release();
+            return res.status(404).json({ error: `找不到檔案 ID: ${fileId}` });
+        }
+        const filePath = fileResult.rows[0].file_path; // 例如: /uploads/xyz.png
+
+        // ★★★ 組合出實際的磁碟路徑來刪除 (移到這裡) ★★★
+        const filename = path.basename(filePath); // 從 URL 路徑中提取檔名
+        const fullDiskPath = path.join(uploadDir, filename); // 指向 /data/uploads/xyz.png
+
+        // 2. 刪除資料庫記錄
+        const deleteDbResult = await client.query('DELETE FROM uploaded_files WHERE id = $1', [fileId]);
+         if (deleteDbResult.rowCount === 0) { // 再次檢查以防萬一
+            await client.query('ROLLBACK');
+             client.release();
+            console.warn(`嘗試刪除資料庫記錄時未找到 ID ${fileId} (可能已被刪除)`);
+            return res.status(404).json({ error: `找不到要刪除的檔案記錄 (ID: ${fileId})` });
+        }
+        console.log(`資料庫記錄 ID ${fileId} 已刪除`);
+
+        // 3. 嘗試刪除實際檔案 (保留這一段，移除之前重複的)
+        try {
+            if (fs.existsSync(fullDiskPath)) {
+                 await fs.promises.unlink(fullDiskPath);
+                 console.log(`實際檔案已刪除: ${fullDiskPath}`);
+            } else {
+                console.warn(`嘗試刪除檔案，但檔案不存在: ${fullDiskPath}`);
+            }
+        } catch (unlinkErr) {
+            console.error(`刪除檔案 ID ${fileId} 的實際檔案 (${fullDiskPath}) 時發生錯誤:`, unlinkErr);
+            // 即使檔案刪除失敗，仍然 Commit 資料庫的刪除
+        }
+
+        await client.query('COMMIT');
+        res.status(204).send();
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`刪除檔案 ID ${fileId} 時發生資料庫錯誤:`, err);
+        res.status(500).json({ error: '伺服器錯誤，刪除檔案失敗', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+
+
+
 
 
 // --- 受保護的管理頁面和 API Routes ---
