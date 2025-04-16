@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>互動遊戲集 - SunnyYummy</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="games.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -113,32 +114,6 @@
         
         <div class="games-grid" id="games-container">
             <!-- 遊戲列表將由 JavaScript 動態生成 -->
-            <div class="game-card">
-                <img src="/images/games/card-game.jpg" alt="洞洞樂" class="game-image">
-                <div class="game-info">
-                    <h3 class="game-title">洞洞樂</h3>
-                    <p class="game-description">考驗你的運氣！在這個刺激的洞洞樂遊戲中，找出藏著獎品的洞口，但小心別碰到陷阱！</p>
-                    <a href="/game/card-game.html" class="play-button">立即遊玩</a>
-                </div>
-            </div>
-            
-            <div class="game-card">
-                <img src="/images/games/wheel-game.jpg" alt="命運轉盤" class="game-image">
-                <div class="game-info">
-                    <h3 class="game-title">命運轉盤</h3>
-                    <p class="game-description">輕鬆有趣的轉盤遊戲，讓命運之輪決定你的下一步！適合做決定或進行隨機抽獎。</p>
-                    <a href="/game/wheel-game.html" class="play-button">立即遊玩</a>
-                </div>
-            </div>
-            
-            <div class="game-card">
-                <img src="/images/games/bridge-game.jpg" alt="玻璃橋遊戲" class="game-image">
-                <div class="game-info">
-                    <h3 class="game-title">玻璃橋遊戲</h3>
-                    <p class="game-description">靈感來自熱門影集的玻璃橋挑戰！測試你的記憶力和膽量，看看你能否安全穿越這座危險的橋樑。</p>
-                    <a href="/game/bridge-game.html" class="play-button">立即遊玩</a>
-                </div>
-            </div>
         </div>
     </main>
 
@@ -158,39 +133,7 @@
         </div>
     </footer>
 
-    <script> 
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 未來可以從API獲取遊戲列表
-            // 目前直接在HTML中硬編碼
-            
-            // 示範如何使用API (未來實現)
-            /*
-            try {
-                const response = await fetch('/api/games');
-                if (!response.ok) throw new Error('無法獲取遊戲列表');
-                const games = await response.json();
-                
-                const gamesContainer = document.getElementById('games-container');
-                gamesContainer.innerHTML = '';
-                
-                games.forEach(game => {
-                    const gameCard = document.createElement('div');
-                    gameCard.className = 'game-card';
-                    gameCard.innerHTML = `
-                        <img src="${game.image_url}" alt="${game.title}" class="game-image">
-                        <div class="game-info">
-                            <h3 class="game-title">${game.title}</h3>
-                            <p class="game-description">${game.description}</p>
-                            <a href="${game.play_url}" class="play-button">立即遊玩</a>
-                        </div>
-                    `;
-                    gamesContainer.appendChild(gameCard);
-                });
-            } catch (error) {
-                console.error('載入遊戲列表失敗:', error);
-            }
-            */
-        });
-    </script>
+    <!-- 引入外部 JavaScript 文件 -->
+    <script src="games.js"></script>
 </body>
 </html>
