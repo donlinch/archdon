@@ -4,32 +4,167 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rich 地圖編輯器</title>
-  <!-- 假設你的 CSS 檔案叫做 style.css -->
-  <link rel="stylesheet" href="style.css">
   <style>
     body {
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
-      background-color: #fff0f5; /* 預設背景色 */
+      font-family: 'Noto Sans TC', Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
     }
-    .game-container { /* 這個 class 用於佈局 */
+    
+    /* 頂部版本控制區 */
+    .version-control {
+      background-color: #f0f0f0;
+      padding: 12px 20px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .version-control label {
+      font-weight: bold;
+      color: #444;
+    }
+    
+    .version-control select,
+    .version-control button,
+    .version-control a {
+      padding: 8px 14px;
+      border: 1px solid #bbb;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+    
+    .version-control select {
+      color: #333;
+      background-color: #fff;
+      cursor: pointer;
+    }
+    
+    .version-control select:hover {
+      border-color: #888;
+    }
+    
+    /* 一般按鈕樣式 */
+    .version-control button:not(.save-btn):not(#delete-template-btn) {
+      cursor: pointer;
+      background-color: #e9ecef;
+      color: #333;
+      border-color: #ccc;
+    }
+    
+    .version-control button:not(.save-btn):not(#delete-template-btn):hover {
+      background-color: #dee2e6;
+      border-color: #aaa;
+      color: #000;
+    }
+    
+    /* 特殊按鈕樣式 */
+    .version-control button.save-btn {
+      background-color: #28a745;
+      color: white;
+      border-color: #28a745;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .version-control button.save-btn:hover {
+      background-color: #218838;
+      border-color: #1e7e34;
+    }
+    
+    .version-control button#delete-template-btn {
+      background-color: #dc3545;
+      color: white;
+      border-color: #dc3545;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .version-control button#delete-template-btn:hover {
+      background-color: #c82333;
+      border-color: #bd2130;
+    }
+    
+    /* 連結樣式 */
+    .version-control a {
+      color: #007bff;
+      text-decoration: none;
+      background-color: #fff;
+      border-color: #ccc;
+    }
+    
+    .version-control a:hover {
+      background-color: #e9ecef;
+      color: #0056b3;
+      border-color: #aaa;
+      text-decoration: none;
+    }
+    
+    /* 主要內容區域 */
+    .content-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 20px;
+      gap: 20px;
+    }
+    
+    /* 左側設定區域 */
+    .settings-column {
+      flex: 1;
+      min-width: 300px;
+      max-width: 350px;
+    }
+    
+    /* 右側遊戲板區域 */
+    .game-column {
+      flex: 2;
+      min-width: 600px;
+    }
+    
+    /* 設定區域的卡片樣式 */
+    .settings-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .settings-card h3 {
+      margin-top: 0;
+      color: #444;
+      font-size: 1.2rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    
+    /* 遊戲容器與遊戲板 */
+    .game-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      padding: 2rem;
       transition: background-color 0.5s ease;
+      padding: 20px;
+      border-radius: 12px;
+      background-color: #fff0f5; /* 預設背景色 */
     }
-    .game-board { /* 這是遊戲板本身的樣式 */
+    
+    .game-board {
       position: relative;
-      width: 875px; /* 7 格寬 * 125px */
-      height: 600px; /* 6 格高 * 100px */
-      background-color: #ffecf2; /* 遊戲板背景，可選 */
+      width: 875px;
+      height: 600px;
+      background-color: #ffecf2;
       border: 2px solid #ff80ab;
       border-radius: 12px;
-      /* JavaScript 會在這個 div 裡面動態添加格子 */
     }
+    
+    /* 格子樣式 */
     .cell {
       position: absolute;
       width: 125px;
@@ -45,74 +180,240 @@
       text-align: center;
       cursor: pointer;
       overflow: hidden;
-      box-sizing: border-box; /* 讓 padding 和 border 不會增加尺寸 */
+      box-sizing: border-box;
       padding: 5px;
     }
+    
     .cell img {
       max-width: 80%;
-      max-height: 50%; /* 稍微調整，給文字留空間 */
+      max-height: 50%;
       object-fit: contain;
       margin-bottom: 4px;
       border: 2px solid white;
       border-radius: 8px;
       transition: transform 0.3s ease;
     }
+    
     .cell img:hover {
       transform: scale(1.3);
       z-index: 2;
     }
-    .cell .title { /* 給標題加個 class 方便選取 */
-        font-size: 0.9rem;
-        margin-bottom: 2px;
+    
+    .cell .title {
+      font-size: 0.9rem;
+      margin-bottom: 2px;
     }
-    .cell .description { /* 給描述加個 class */
-        font-size: 0.7rem;
-        line-height: 1.2;
-        font-weight: normal; /* 描述通常不用粗體 */
+    
+    .cell .description {
+      font-size: 0.7rem;
+      line-height: 1.2;
+      font-weight: normal;
     }
-
-    /* --- 編輯面板樣式 --- */
+    
+    .cell .note {
+      font-size: 0.65rem;
+      color: #ff6347;
+      font-style: italic;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    
+    /* 背景顏色編輯區 */
+    .background-editor {
+      margin-bottom: 20px;
+    }
+    
+    .background-color-picker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    
+    .background-color-picker label {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .background-color-picker input[type="color"] {
+      width: 50px;
+      height: 40px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .color-preview-box {
+      width: 100%;
+      height: 40px;
+      margin: 10px 0;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    
+    /* Logo 編輯區 */
+    .logo-editor {
+      padding: 15px;
+      background-color: #e8f0fe;
+      border: 1px solid #a8c7fa;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo-editor input[type="url"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    
+    .logo-editor img {
+      display: block;
+      max-width: 200px;
+      max-height: 100px;
+      margin: 10px auto;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      object-fit: contain;
+    }
+    
+    /* 玩家設定區 */
+    .player-config {
+      margin-bottom: 20px;
+    }
+    
+    .player-config table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .player-config th,
+    .player-config td {
+      border: 1px solid #dee2e6;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    
+    .player-config th {
+      background-color: #e9ecef;
+    }
+    
+    .player-config input[type="text"],
+    .player-config input[type="url"] {
+      width: 95%;
+      padding: 6px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    
+    .player-config img {
+      display: block;
+      width: 40px;
+      height: 40px;
+      margin: 0 auto;
+      border: 1px solid #ced4da;
+      border-radius: 50%;
+      background-color: #fff;
+      object-fit: cover;
+    }
+    
+    /* 備註列表 */
+    .notes-list {
+      padding: 15px;
+      background-color: #fefaf0;
+      border: 1px solid #e0d9c0;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .notes-list h3 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #8b7355;
+    }
+    
+    .notes-container {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: white;
+    }
+    
+    .note-item {
+      padding: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+    
+    .note-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .note-title {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .note-text {
+      color: #666;
+      margin-top: 3px;
+    }
+    
+    /* 編輯面板 */
     .editor-card {
-        position: absolute;
-  top: 50%; /* 使用 top 和 left 50% */
-  left: 50%;
-  transform: translate(-50%, -50%); /* 確保始終居中 */
-  width: 300px;
-  padding: 20px;
-  background-color: white;
-  border: 2px solid #8ab5f3; /* 改成實線邊框，不再使用虛線提示可拖曳 */
-  border-radius: 12px;
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      padding: 20px;
+      background-color: white;
+      border: 2px solid #8ab5f3;
+      border-radius: 12px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
-
+    
     .editor-card input[type="text"],
     .editor-card input[type="url"] {
       padding: 8px;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 6px;
-      width: 100%; /* 寬度佔滿 */
-      box-sizing: border-box; /* padding 不影響寬度 */
+      width: 100%;
+      box-sizing: border-box;
     }
-
+    
     .editor-card label {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-
+    
     .editor-card input[type="color"] {
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        border: none;
-        cursor: pointer;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      cursor: pointer;
     }
-
+    
     .editor-card button {
       background-color: #5b9df0;
       color: white;
@@ -122,508 +423,203 @@
       padding: 10px;
       cursor: pointer;
       transition: background-color 0.2s;
-      align-self: center; /* 按鈕居中 */
+      align-self: center;
     }
-
+    
     .editor-card button:hover {
       background-color: #4178d0;
     }
-
+    
     .editor-header {
-        display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: #5b9df0;
-  margin-bottom: 10px;
-  cursor: default; /* 改為默認游標，不再顯示 grab 游標 */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #5b9df0;
+      margin-bottom: 10px;
+      cursor: default;
     }
-  
-
+    
     .editor-close {
-        cursor: pointer;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: #ff544d;
-  padding: 0 6px;
-  border-radius: 50%;
-  transition: background-color 0.2s;
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      color: #ff544d;
+      padding: 0 6px;
+      border-radius: 50%;
+      transition: background-color 0.2s;
     }
-
+    
     .editor-close:hover {
       background-color: #ffe5e5;
     }
-
+    
     /* 用於隱藏編輯面板 */
     .hidden {
       display: none;
     }
-
-
-
-    /* ▼▼▼ 新增 Logo 編輯區樣式 ▼▼▼ */
-    .logo-editor {
-      margin-top: 20px; /* 與上方遊戲板間距 */
-      padding: 15px;
-      background-color: #e8f0fe; /* 淡藍色背景 */
-      border: 1px solid #a8c7fa;
-      border-radius: 8px;
-      text-align: center;
-      width: 80%; /* 限制寬度 */
-      max-width: 600px; /* 最大寬度 */
-      margin-left: auto;
-      margin-right: auto; /* 水平居中 */
+    
+    /* 格子高亮動畫 */
+    @keyframes cellHighlight {
+      0% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
+      50% { box-shadow: 0 0 0 6px rgba(91, 157, 240, 0.7); }
+      100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0); }
     }
-    .logo-editor label {
-      font-weight: bold;
-      margin-right: 10px;
+    
+    .cell-highlight {
+      animation: cellHighlight 1s ease-out;
+      z-index: 5;
     }
-    .logo-editor input[type="url"] {
-      width: 70%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-bottom: 10px;
+    
+    /* 響應式設計 */
+    @media (max-width: 1200px) {
+      .content-wrapper {
+        flex-direction: column;
+      }
+      
+      .settings-column {
+        max-width: 100%;
+      }
+      
+      .game-board {
+        width: 700px;
+        height: 480px;
+      }
+      
+      .cell {
+        width: 100px;
+        height: 80px;
+        font-size: 0.9rem;
+      }
     }
-    .logo-editor img {
-      display: block;
-      max-width: 200px; /* 限制 Logo 預覽大小 */
-      max-height: 100px;
-      margin: 10px auto; /* 上下間距並居中 */
-      border: 1px solid #ccc;
-      background-color: #fff; /* 白色底，以防透明圖看不清 */
-      object-fit: contain;
+    
+    @media (max-width: 768px) {
+      .version-control {
+        padding: 10px;
+      }
+      
+      .version-control button, 
+      .version-control a {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+      }
+      
+      .game-board {
+        width: 525px;
+        height: 360px;
+      }
+      
+      .cell {
+        width: 75px;
+        height: 60px;
+        font-size: 0.8rem;
+      }
     }
-    /* ▲▲▲ 新增 Logo 編輯區樣式 ▲▲▲ */
-
-
- /* ▼▼▼ 新增版本控制區樣式 ▼▼▼ */
- .version-control {
-      background-color: #f0f0f0;
-      padding: 10px 20px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      align-items: center;
-      gap: 15px; /* 元件間距 */
-      flex-wrap: wrap; /* 換行 */
-    }
-    .version-control label {
-      font-weight: bold;
-    }
-    .version-control select,
-    .version-control button {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-    .version-control button {
-      cursor: pointer;
-      background-color: #e0e0e0;
-      transition: background-color 0.2s;
-    }
-    .version-control button:hover {
-      background-color: #d0d0d0;
-    }
-    .version-control button.save-btn { /* 給儲存按鈕特殊樣式 */
-        background-color: #4CAF50;
-        color: white;
-        border-color: #4CAF50;
-    }
-    .version-control button.save-btn:hover {
-        background-color: #45a049;
-    }
-    /* ▲▲▲ 新增版本控制區樣式 ▲▲▲ */
-
-    /* ▼▼▼ 新增玩家設定區樣式 ▼▼▼ */
-    .player-config {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: #f8f9fa; /* 淺灰色背景 */
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      width: 90%; /* 調整寬度 */
-      max-width: 800px; /* 最大寬度 */
-      margin: 20px auto; /* 上下間距並居中 */
-    }
-    .player-config h3 {
-        text-align: center;
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: #495057;
-    }
-    .player-config table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .player-config th,
-    .player-config td {
-      border: 1px solid #dee2e6;
-      padding: 8px 12px;
-      text-align: center;
-      vertical-align: middle; /* 垂直居中 */
-    }
-    .player-config th {
-      background-color: #e9ecef;
-    }
-    .player-config input[type="text"],
-    .player-config input[type="url"] {
-      width: 95%; /* 給一點內邊距空間 */
-      padding: 6px;
-      border: 1px solid #ced4da;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-    .player-config img {
-      display: block;
-      width: 40px; /* 固定頭像預覽大小 */
-      height: 40px;
-      margin: 0 auto; /* 居中 */
-      border: 1px solid #ced4da;
-      border-radius: 50%; /* 圓形頭像 */
-      background-color: #fff;
-      object-fit: cover; /* 圖片填滿 */
-    }
-    /* ▲▲▲ 新增玩家設定區樣式 ▲▲▲ */
-
-
-
-/* ▼▼▼ 修改或新增版本控制區樣式 ▼▼▼ */
-.version-control {
-      background-color: #f0f0f0;
-      padding: 12px 20px; /* 稍微增加 padding */
-      margin-bottom: 20px;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      align-items: center;
-      gap: 15px; /* 元件間距 */
-      flex-wrap: wrap; /* 換行 */
-    }
-    .version-control label {
-      font-weight: bold;
-      color: #444; /* ★ 深灰色標籤文字 */
-    }
-    .version-control select,
-    .version-control button,
-    .version-control a { /* ★ 統一基本樣式 */
-      padding: 8px 14px; /* 統一 padding */
-      border: 1px solid #bbb; /* 稍微加深邊框 */
-      border-radius: 5px; /* 統一圓角 */
-      font-size: 0.95rem; /* 統一字體大小 */
-      transition: background-color 0.2s, color 0.2s, border-color 0.2s; /* 加入過渡 */
-    }
-    .version-control select {
-        color: #333; /* ★ 下拉選單文字顏色 */
-        background-color: #fff; /* 確保背景白色 */
-        cursor: pointer;
-    }
-    .version-control select:hover {
-        border-color: #888;
-    }
-
-    /* --- 一般按鈕樣式 --- */
-    .version-control button:not(.save-btn):not(#delete-template-btn) {
-      cursor: pointer;
-      background-color: #e9ecef; /* 淺灰背景 */
-      color: #333; /* ★ 深灰色文字 */
-      border-color: #ccc; /* 匹配邊框 */
-    }
-    .version-control button:not(.save-btn):not(#delete-template-btn):hover {
-      background-color: #dee2e6; /* 淺灰 hover */
-      border-color: #aaa;
-      color: #000; /* hover 文字加深 */
-    }
-
-    /* --- 特殊按鈕樣式 (維持白色文字) --- */
-    .version-control button.save-btn {
-        background-color: #28a745; /* 保持綠色 */
-        color: white; /* ★ 維持白色文字 */
-        border-color: #28a745;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .version-control button.save-btn:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
-    }
-    .version-control button#delete-template-btn {
-        background-color: #dc3545; /* 保持紅色 */
-        color: white; /* ★ 維持白色文字 */
-        border-color: #dc3545;
-        font-weight: bold;
-        cursor: pointer;
-    }
-     .version-control button#delete-template-btn:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
-    }
-
-    /* --- 連結樣式 --- */
-     .version-control a {
-        color: #007bff; /* ★ 標準連結藍色 */
-        text-decoration: none; /* 移除底線 */
-        background-color: #fff; /* 白色背景 */
-        border-color: #ccc;
-    }
-    .version-control a:hover {
-        background-color: #e9ecef; /* 淺灰 hover 背景 */
-        color: #0056b3; /* 深藍 hover 文字 */
-        border-color: #aaa;
-        text-decoration: none; /* hover 時也不需要底線 */
-    }
-    /* ▲▲▲ 修改或新增版本控制區樣式 ▲▲▲ */
-
-/* 添加格子高亮动画 */
-@keyframes cellHighlight {
-    0% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
-    50% { box-shadow: 0 0 0 6px rgba(91, 157, 240, 0.7); }
-    100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0); }
-}
-
-.cell-highlight {
-    animation: cellHighlight 1s ease-out;
-    z-index: 5; /* 确保高亮的格子在上层 */
-}
-
-/* 背景顏色編輯區樣式 - 加入到 rich-edit.html 的 style 標籤中 */
-.background-editor {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f0f8ff; /* 淡藍色背景 */
-  border: 1px solid #b0c4de;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 600px;
-  margin: 20px auto;
-  text-align: center;
-}
-
-.background-editor h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #4169e1; /* 皇家藍 */
-  font-size: 1.2rem;
-}
-
-.background-color-picker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.background-color-picker label {
-  font-weight: bold;
-  color: #333;
-}
-
-.background-color-picker input[type="color"] {
-  width: 50px;
-  height: 40px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.background-color-picker span {
-  font-family: monospace;
-  font-size: 1.1rem;
-  padding: 4px 8px;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  min-width: 80px;
-}
-
-.color-preview-box {
-  width: 80%;
-  height: 40px;
-  margin: 0 auto 15px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.hint-text {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-top: 5px;
-  font-style: italic;
-}
-/* 備註列表樣式 */
-.notes-list {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #fefaf0; /* 淺黃色背景 */
-    border: 1px solid #e0d9c0;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 800px;
-    margin: 20px auto;
-}
-
-.notes-list h3 {
-    text-align: center;
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #8b7355;
-}
-
-.notes-container {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    padding: 10px;
-    background-color: white;
-}
-
-.note-item {
-    padding: 8px;
-    border-bottom: 1px solid #f0f0f0;
-    margin-bottom: 5px;
-}
-
-.note-item:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.note-title {
-    font-weight: bold;
-    color: #333;
-}
-
-.note-text {
-    color: #666;
-    margin-top: 3px;
-}
-
-/* 格子中的備註樣式 */
-.cell .note {
-    font-size: 0.65rem;
-    color: #ff6347; /* 番茄紅色 */
-    font-style: italic;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-}
-
-
-
   </style>
 </head>
 <body>
- 
   <!-- 版本控制區 -->
   <div class="version-control">
     <label for="template-select">選擇地圖版本:</label>
-    <select id="template-select">...</select>
+    <select id="template-select">
+      <!-- 選項由 JS 動態生成 -->
+    </select>
     <button id="load-template-btn">載入選定版本</button>
     <button id="save-template-btn" class="save-btn">💾 儲存目前版本</button>
     <button id="save-as-new-btn">另存為新版本...</button>
     <button id="create-new-btn">🆕 新建地圖...</button>
-    <!-- ▼▼▼ 新增刪除按鈕 ▼▼▼ -->
-    <button id="delete-template-btn" style="background-color: #f44336; color: white; border-color:#f44336;">🗑️ 刪除目前版本</button>
-    <!-- ▲▲▲ 新增刪除按鈕 ▲▲▲ -->
-    <a href="/rich.html"  >返回地圖</a>
-
+    <button id="delete-template-btn">🗑️ 刪除目前版本</button>
+    <a href="/rich.html">返回地圖</a>
   </div>
-  <!-- 主容器，用於設定整體背景和佈局 -->
-  <div id="game-container" class="game-container">
-    <div class="background-editor">
+  
+  <!-- 主要內容區域 -->
+  <div class="content-wrapper">
+    <!-- 左側設定區域 -->
+    <div class="settings-column">
+      <!-- 背景顏色設定 -->
+      <div class="settings-card background-editor">
         <h3>🎨 背景顏色設定</h3>
         <div class="background-color-picker">
-         
-         
+          <label for="edit-background-color">選擇顏色:</label>
+          <input type="color" id="edit-background-color" value="#fff0f5">
           <span id="background-color-preview">#fff0f5</span>
-          
         </div>
         <div class="color-preview-box" id="color-preview-box" style="background-color: #fff0f5"></div>
-     
       </div>
-    <!-- 遊戲板，格子會被 JS 繪製在這裡 -->
-    <div class="notes-list">
-            
+      
+      <!-- Logo 編輯區 -->
+      <div class="settings-card logo-editor">
+        <h3>🖼️ 中央 LOGO 設定</h3>
+        <label for="edit-logo-url">LOGO 圖片 URL：</label>
+        <input type="url" id="edit-logo-url" placeholder="請輸入圖片網址">
+        <img id="logo-preview" src="" alt="Logo 預覽">
+      </div>
+      
+      <!-- 玩家設定區 -->
+      <div class="settings-card player-config">
+        <h3>👤 玩家設定</h3>
+        <table id="player-config-table">
+          <thead>
+            <tr>
+              <th>玩家</th>
+              <th>名稱 (選填)</th>
+              <th>頭像網址 (選填)</th>
+              <th>頭像預覽</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 玩家列會由 JavaScript 動態生成 -->
+            <tr><td colspan="4">尚未載入玩家設定...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- 備註列表 -->
+      <div class="settings-card notes-list">
+        <h3>📝 格子備註清單</h3>
         <div id="notes-container" class="notes-container">
-            <!-- 備註將在這裡動態生成 -->
-         
+          <!-- 備註將在這裡動態生成 -->
+        </div>
+      </div>
     </div>
-    <div id="game-board" class="game-board">
-        <!-- 格子內容由 rich-edit.js 生成 -->
+    
+    <!-- 右側遊戲板區域 -->
+    <div class="game-column">
+      <!-- 遊戲容器 -->
+      <div id="game-container" class="game-container">
+        <!-- 遊戲板 -->
+        <div id="game-board" class="game-board">
+          <!-- 格子由 JS 動態生成 -->
+        </div>
+      </div>
     </div>
-   
-
   </div>
-
-
-
-  <!-- ▼▼▼ 新增 Logo 編輯區 ▼▼▼ -->
-  <div class="logo-editor">
-    <label for="edit-logo-url">中央 LOGO 圖片 URL：</label>
-    <input type="url" id="edit-logo-url" placeholder="請輸入圖片網址">
-    <img id="logo-preview" src="" alt="Logo 預覽">
-    </div>
-     <!-- ▼▼▼ 新增玩家設定區 ▼▼▼ -->
-  <div class="player-config">
-    <h3>👤 玩家設定</h3>
-    <table id="player-config-table">
-      <thead>
-        <tr>
-          <th>玩家</th>
-          <th>名稱 (選填)</th>
-          <th>頭像網址 (選填)</th>
-          <th>頭像預覽</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- 玩家列會由 JavaScript 動態生成 -->
-        <tr><td colspan="4">尚未載入玩家設定...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <!-- ▲▲▲ 新增玩家設定區 ▲▲▲ -->
-  <!-- ▲▲▲ 新增 Logo 編輯區 ▲▲▲ -->
-
-
+  
   <!-- 編輯面板 (初始隱藏) -->
   <div id="editor-panel" class="editor-card hidden">
-      <!-- 面板標題和關閉按鈕 -->
-      <div class="editor-header">
-        <span>編輯格子</span>
-        <span class="editor-close" onclick="editorPanel.style.display='none'">×</span>
-      </div>
-      <!-- 輸入欄位 -->
-      <input type="text" id="edit-title" placeholder="標題" />
-      <input type="text" id="edit-description" placeholder="描述" />
-      <input type="text" id="edit-note" placeholder="備註" />
-      <input type="url" id="edit-image" placeholder="圖片網址 (選填)" />
-      <!-- 圖片預覽 -->
-      <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
-     
-     
-  
-     
-      <!-- 顏色選擇 -->
-      <label>
-        顏色：
-        <input type="color" id="edit-color" />
-      </label>
-      <!-- 儲存按鈕 -->
-       <button id="save-cell-btn">保存</button>
+    <!-- 面板標題和關閉按鈕 -->
+    <div class="editor-header">
+      <span>編輯格子</span>
+      <span class="editor-close" onclick="editorPanel.style.display='none'">×</span>
+    </div>
+    <!-- 輸入欄位 -->
+    <input type="text" id="edit-title" placeholder="標題" />
+    <input type="text" id="edit-description" placeholder="描述" />
+    <input type="text" id="edit-note" placeholder="備註" />
+    <input type="url" id="edit-image" placeholder="圖片網址 (選填)" />
+    <!-- 圖片預覽 -->
+    <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
+    <!-- 顏色選擇 -->
+    <label>
+      顏色：
+      <input type="color" id="edit-color" />
+    </label>
+    <!-- 儲存按鈕 -->
+    <button id="save-cell-btn">保存</button>
   </div>
-
-
-
-
-
   
   <!-- 引入 JavaScript 檔案 -->
   <script src="rich-edit.js"></script>
-
 </body>
 </html>
