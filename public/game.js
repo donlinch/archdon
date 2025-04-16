@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    }    
                 }).catch(error => {
                     // 靜默處理錯誤，不阻止用戶遊玩
                     console.error('記錄遊玩次數失敗:', error);
