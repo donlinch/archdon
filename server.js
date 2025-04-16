@@ -467,6 +467,34 @@ app.put('/api/rich-map/templates/:id/full', async (req, res) => {
         // 等待所有格子更新完成
         await Promise.all(cellUpdatePromises);
 
+
+ // ▼▼▼ 加入這段：更新玩家設定資料 ▼▼▼
+ const { players } = req.body; // 從請求體中獲取 players 陣列
+ if (players && Array.isArray(players)) {
+      const playerUpdatePromises = players.map(player => {
+          const playerNumber = parseInt(player.player_number);
+          if (isNaN(playerNumber) || playerNumber < 1 || playerNumber > 3) {
+              console.warn(`更新模板 ${templateId} 時發現無效 player_number:`, player);
+              return Promise.resolve();
+          }
+          const name = (typeof player.name === 'string') ? player.name.trim() : null;
+          const avatarUrl = (typeof player.avatar_url === 'string' && player.avatar_url.trim()) ? player.avatar_url.trim() : null;
+          // 使用 Upsert 更新或插入玩家資料
+          return client.query(
+              `INSERT INTO rich_players_config (template_id, player_number, name, avatar_url)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT (template_id, player_number)
+               DO UPDATE SET name = EXCLUDED.name, avatar_url = EXCLUDED.avatar_url`,
+              [templateId, playerNumber, name, avatarUrl]
+          );
+      });
+      await Promise.all(playerUpdatePromises); // 等待所有玩家設定更新完成
+      console.log(`模板 ID ${templateId} 的玩家設定已更新`);
+  }
+ // ▲▲▲ 加入這段：更新玩家設定資料 ▲▲▲
+
+
+
         await client.query('COMMIT');
         console.log(`模板 ID ${templateId} (含Logo) 已成功更新`); // <-- 更新日誌訊息
         res.status(200).json({ success: true, message: '模板 (含Logo) 已成功更新' }); // <-- 更新回應訊息
