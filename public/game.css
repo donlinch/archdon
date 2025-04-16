@@ -64,7 +64,7 @@
     .game-image {
         height: 150px;
     }
-}
+} 
 
 @media (max-width: 480px) {
     .games-grid {
