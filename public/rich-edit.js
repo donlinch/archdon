@@ -23,6 +23,11 @@ const createNewBtn = document.getElementById('create-new-btn');
 const deleteTemplateBtn = document.getElementById('delete-template-btn');
 
 
+const backgroundColorInput = document.getElementById('edit-background-color');
+const backgroundColorPreview = document.getElementById('background-color-preview');
+const colorPreviewBox = document.getElementById('color-preview-box');
+
+
 // --- 全域變數 ---
 let editingIndex = -1;
 let cells = [];
@@ -42,6 +47,45 @@ function applyTemplateBackgroundColor(color) {
       console.error("無法找到 ID 為 'game-container' 的元素來設定背景色");
   }
 }
+
+
+
+// 初始化背景顏色輸入框
+function initBackgroundColorInput() {
+    if (!backgroundColorInput || !backgroundColorPreview || !colorPreviewBox) {
+      console.warn("背景顏色編輯元素未完全找到");
+      return;
+    }
+  
+    // 設置初始值
+    backgroundColorInput.value = backgroundColor;
+    backgroundColorPreview.textContent = backgroundColor;
+    colorPreviewBox.style.backgroundColor = backgroundColor;
+  
+    // 添加事件監聽器
+    backgroundColorInput.addEventListener('input', handleBackgroundColorChange);
+  }
+  
+  // 處理背景顏色變更
+  function handleBackgroundColorChange(event) {
+    const newColor = event.target.value;
+    
+    // 更新全局變量
+    backgroundColor = newColor;
+    
+    // 更新 UI
+    if (backgroundColorPreview) {
+      backgroundColorPreview.textContent = newColor;
+    }
+    if (colorPreviewBox) {
+      colorPreviewBox.style.backgroundColor = newColor;
+    }
+    
+    // 立即應用背景顏色到遊戲容器
+    applyTemplateBackgroundColor(newColor);
+    
+    console.log(`背景顏色已變更為: ${newColor} (尚未儲存)`);
+  }
 
 // 渲染地圖格子
 function renderBoard() {
@@ -280,11 +324,17 @@ async function loadTemplate(templateId) {
         const data = await response.json();
         console.log("載入的模板資料:", data);
 
-        applyTemplateBackgroundColor(data.background_color);
-        cells = data.cells || [];
-        currentLogoUrl = data.logo_url || '';
-        if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
-        if (logoPreview) logoPreview.src = currentLogoUrl;
+        // 找到類似這樣的代碼段：
+applyTemplateBackgroundColor(data.background_color);
+cells = data.cells || [];
+currentLogoUrl = data.logo_url || '';
+if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
+if (logoPreview) logoPreview.src = currentLogoUrl;
+
+// 在這之後添加：
+if (backgroundColorInput) backgroundColorInput.value = data.background_color || '#fff0f5';
+if (backgroundColorPreview) backgroundColorPreview.textContent = data.background_color || '#fff0f5';
+if (colorPreviewBox) colorPreviewBox.style.backgroundColor = data.background_color || '#fff0f5';
 
         currentPlayers = data.players || []; // 處理玩家資料
         renderPlayerConfigUI(); // 渲染玩家UI
@@ -677,7 +727,6 @@ if (dragPanel && header) {
 }
     */
 
-
 // 保存单个格子的修改
 function saveCellChanges() {
     if (editingIndex < 0 || !cells[editingIndex]) {
@@ -690,12 +739,58 @@ function saveCellChanges() {
     cell.color = colorInput.value;
     cell.image_url = imageInput.value.trim() || null;
 
-    renderBoard(); // 重新渲染地图以显示更改
-    editorPanel.style.display = 'none'; // 隐藏编辑面板
+    // 关闭编辑面板
+    editorPanel.style.display = 'none';
     
-    console.log(`格子 ${editingIndex} 已更新：`, cell);
+    // 重新渲染地图
+    renderBoard();
+    
+    // 高亮刚刚修改的格子，提供视觉反馈
+    highlightCell(editingIndex);
+    
+    console.log(`格子 ${editingIndex} 已更新并保存到内存：`, cell);
+    
+    // 可选：提醒用户需要点击顶部的保存按钮
+    showTemporaryMessage("格子已更新！别忘了点击顶部的「💾 保存目前版本」来永久保存所有更改。");
 }
 
+// 高亮格子的辅助函数
+function highlightCell(index) {
+    const cells = document.querySelectorAll('.cell');
+    if (cells[index]) {
+        // 添加高亮类
+        cells[index].classList.add('cell-highlight');
+        // 1秒后移除高亮
+        setTimeout(() => {
+            cells[index].classList.remove('cell-highlight');
+        }, 1000);
+    }
+}
+
+// 显示临时消息的辅助函数
+function showTemporaryMessage(message) {
+    // 创建一个消息元素
+    const msgEl = document.createElement('div');
+    msgEl.className = 'temp-message';
+    msgEl.textContent = message;
+    msgEl.style.position = 'fixed';
+    msgEl.style.top = '10px';
+    msgEl.style.left = '50%';
+    msgEl.style.transform = 'translateX(-50%)';
+    msgEl.style.padding = '10px 20px';
+    msgEl.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    msgEl.style.color = 'white';
+    msgEl.style.borderRadius = '5px';
+    msgEl.style.zIndex = 1000;
+    
+    // 添加到页面
+    document.body.appendChild(msgEl);
+    
+    // 3秒后删除
+    setTimeout(() => {
+        document.body.removeChild(msgEl);
+    }, 3000);
+}
 
 
 // 在 rich-edit.js 的初始化部分添加
@@ -718,4 +813,5 @@ if (deleteTemplateBtn) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM 已載入，開始初始化...");
     fetchTemplateList(); // 獲取模板列表並自動載入第一個
+    initBackgroundColorInput();
 });
