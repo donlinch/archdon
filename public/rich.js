@@ -1,4 +1,4 @@
-// ✅ rich.js (支援模組化格子資料 + 玩家頭像 + 模板選擇器 + 平滑移動)
+// ✅ rich.js (支援模組化格子資料 + 玩家頭像 + 模板選擇器)
 document.addEventListener('DOMContentLoaded', () => {
   const cellWidth = 125;
   const cellHeight = 100;
@@ -127,14 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-  // --- Apply Background Color ---
-  function applyTemplateBackgroundColor(color) {
+   // --- Apply Background Color ---
+   function applyTemplateBackgroundColor(color) {
       if (gameContainer) {
           gameContainer.style.backgroundColor = color || '#fff0f5'; // Fallback color
       } else {
           console.error("Game container element not found for background color.");
       }
-  }
+   }
 
   // --- Render Board using template data ---
   function renderBoard() {
@@ -241,211 +241,226 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-  // --- updatePlayerPositions with smooth transition ---
-  function updatePlayerPositions() {
-    // 移除先前的玩家令牌
-    document.querySelectorAll('.player-token-container').forEach(el => el.remove());
-    playerTokenContainers = []; // 清空數組
+// 2. 在updatePlayerPositions函數中修改過渡屬性
+function updatePlayerPositions() {
+  // 移除先前的玩家令牌
+  document.querySelectorAll('.player-token-container').forEach(el => el.remove());
+  playerTokenContainers = []; // 清空數組
 
-    if (!gameBoard || !Array.isArray(pathCells) || pathCells.length === 0) {
-      console.warn("無法更新玩家位置：遊戲板或路徑單元格尚未準備好。");
-      return; // 如果地圖未就緒，不渲染玩家
+  if (!gameBoard || !Array.isArray(pathCells) || pathCells.length === 0) {
+    console.warn("無法更新玩家位置：遊戲板或路徑單元格尚未準備好。");
+    return; // 如果地圖未就緒，不渲染玩家
+  }
+
+  playerPathIndices.forEach((pathIndex, playerArrayIndex) => {
+    // 確保 pathIndex 對當前 pathCells 長度有效
+    const safePathIndex = (pathIndex >= 0 && pathIndex < pathCells.length) ? pathIndex : 0;
+    // 通過 pathCells 中的數組索引查找與玩家當前位置索引對應的單元格數據
+    const cellData = pathCells[safePathIndex]; // 按數組索引獲取單元格數據
+
+    if (!cellData) {
+      console.warn(`無法為 ${playerArrayIndex + 1} 號玩家在 safePathIndex ${safePathIndex} 找到單元格數據`);
+      return; // 如果缺少該位置的單元格數據，則跳過此玩家
     }
 
-    playerPathIndices.forEach((pathIndex, playerArrayIndex) => {
-      // 確保 pathIndex 對當前 pathCells 長度有效
-      const safePathIndex = (pathIndex >= 0 && pathIndex < pathCells.length) ? pathIndex : 0;
-      // 通過 pathCells 中的數組索引查找與玩家當前位置索引對應的單元格數據
-      const cellData = pathCells[safePathIndex]; // 按數組索引獲取單元格數據
-
-      if (!cellData) {
-        console.warn(`無法為 ${playerArrayIndex + 1} 號玩家在 safePathIndex ${safePathIndex} 找到單元格數據`);
-        return; // 如果缺少該位置的單元格數據，則跳過此玩家
-      }
-
-      const playerNum = playerArrayIndex + 1;
-      // 從加載的模板數據獲取玩家配置 (currentPlayers)
-      const playerConfig = currentPlayers.find(p => p.player_number === playerNum) || {};
-      
-      // 創建一個容器元素來持有令牌和名稱標籤
-      const container = document.createElement('div');
-      container.className = 'player-token-container';
-      container.style.position = 'absolute';
-      container.style.zIndex = '10';
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      container.style.alignItems = 'center';
-      
-      // 改進過渡動畫 - 增加過渡時間並添加緩動函數
-      container.style.transition = `left ${MOVEMENT_TRANSITION_TIME} ease-out, top ${MOVEMENT_TRANSITION_TIME} ease-out`; 
-
-      // 創建令牌元素（頭像）
-      const token = document.createElement('div');
-      token.className = `player-token player${playerNum}-token`; // 應用一般和特定玩家類
-      // 直接應用常見樣式
-      token.style.width = '40px';
-      token.style.height = '40px';
-      token.style.borderRadius = '50%'; // 確保它是圓形的
-      token.style.display = 'flex';
-      token.style.alignItems = 'center';
-      token.style.justifyContent = 'center';
-      token.style.overflow = 'hidden'; // 隱藏圖像/文本的溢出部分
-      token.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
-      token.style.border = '2px solid white';
-      token.style.zIndex = '10';
-
-      // 獲取玩家名稱，如果在配置中存在，否則使用 P# 格式
-      const playerName = playerConfig.name || `P${playerNum}`;
-
-      // 使用配置中的頭像或後備
-      if (playerConfig.avatar_url) {
-        token.style.backgroundColor = 'transparent'; // 如果使用圖像，使背景透明
-        token.innerHTML = `<img src="${playerConfig.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="P${playerNum} Avatar" onerror="this.parentElement.style.backgroundColor='${bgColors[playerNum]}'; this.remove(); console.warn('Avatar failed: ${playerConfig.avatar_url}')">`;
-      } else {
-        // 後備到文本（名稱或 P#）和背景顏色
-        token.textContent = playerName.charAt(0); // 只用名稱的第一個字母
-        token.style.backgroundColor = bgColors[playerNum];
-        token.style.fontSize = '14px';
-        token.style.fontWeight = 'bold';
-        token.style.color = 'white';
-        token.style.textShadow = '1px 1px 1px rgba(0,0,0,0.4)';
-      }
-
-      // 創建名稱標籤
-      const nameLabel = document.createElement('div');
-      nameLabel.className = 'player-name-label';
-      nameLabel.textContent = playerName;
-      nameLabel.style.backgroundColor = bgColors[playerNum];
-      nameLabel.style.color = 'white';
-      nameLabel.style.padding = '2px 6px';
-      nameLabel.style.borderRadius = '10px';
-      nameLabel.style.fontSize = '10px';
-      nameLabel.style.fontWeight = 'bold';
-      nameLabel.style.marginTop = '3px';
-      nameLabel.style.whiteSpace = 'nowrap';
-      nameLabel.style.maxWidth = '70px';
-      nameLabel.style.overflow = 'hidden';
-      nameLabel.style.textOverflow = 'ellipsis';
-      nameLabel.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
-      nameLabel.style.textShadow = '0px 1px 1px rgba(0,0,0,0.2)';
-
-      // 定位邏輯
-      const x = Number(cellData.x); // 基於單元格數據的位置（x, y 網格）
-      const y = Number(cellData.y);
-      
-      if (isNaN(x) || isNaN(y)) {
-        console.warn(`${playerNum} 號玩家的單元格數據坐標無效:`, cellData);
-        return; // 如果坐標無效則跳過定位
-      }
-
-      // 多玩家偏移邏輯
-      const angle = (2 * Math.PI / 3) * playerArrayIndex; // 分配 3 個玩家
-      const radius = 15; // 距離中心多遠
-      const offsetX = Math.cos(angle) * radius;
-      const offsetY = Math.sin(angle) * radius;
-      
-      // 相對於單元格中心的位置
-      container.style.left = `${x * cellWidth + cellWidth / 2 + offsetX}px`;
-      container.style.top = `${y * cellHeight + cellHeight / 2 + offsetY}px`;
-      container.style.transform = 'translate(-50%, -50%)'; // 中心於位置
-
-      // 將令牌和名稱標籤添加到容器中
-      container.appendChild(token);
-      container.appendChild(nameLabel);
-      
-      // 將容器添加到遊戲板中
-      gameBoard.appendChild(container);
-      playerTokenContainers.push(container); // 存儲容器的引用以便將來更新
-    });
+    const playerNum = playerArrayIndex + 1;
+    // 從加載的模板數據獲取玩家配置 (currentPlayers)
+    const playerConfig = currentPlayers.find(p => p.player_number === playerNum) || {};
     
-    // 在更新玩家位置後也更新視覺效果
-    updateSelectedPlayerVisuals(selectedPlayer);
-  }
+    // 創建一個容器元素來持有令牌和名稱標籤
+    const container = document.createElement('div');
+    container.className = 'player-token-container';
+    container.style.position = 'absolute';
+    container.style.zIndex = '10';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'center';
+    
+    // 改進過渡動畫 - 增加過渡時間並添加緩動函數
+    container.style.transition = `left ${MOVEMENT_TRANSITION_TIME} ease-out, top ${MOVEMENT_TRANSITION_TIME} ease-out`; 
 
-  // --- Hide Info Panel (shows logo) ---
-  function hidePlayerInfo() { // Renamed for clarity, still hides center panel
-      const panel = document.getElementById('center-info');
-      if (panel) panel.classList.add('hidden');
-      if (logoContainer) logoContainer.classList.remove('hidden'); // Show logo
-  }
+    // 創建令牌元素（頭像）
+    const token = document.createElement('div');
+    token.className = `player-token player${playerNum}-token`; // 應用一般和特定玩家類
+    // 直接應用常見樣式
+    token.style.width = '40px';
+    token.style.height = '40px';
+    token.style.borderRadius = '50%'; // 確保它是圓形的
+    token.style.display = 'flex';
+    token.style.alignItems = 'center';
+    token.style.justifyContent = 'center';
+    token.style.overflow = 'hidden'; // 隱藏圖像/文本的溢出部分
+    token.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.3)';
+    token.style.border = '2px solid white';
+    token.style.zIndex = '10';
 
-  // --- Handle Player Movement with smooth animation ---
-  function handleDirectionSelection(isForward, steps, player) {
-    if (isMoving || player < 1 || player > 3) return;
-    if (!Array.isArray(pathCells) || pathCells.length === 0) {
-      console.warn("Cannot move: Map data (pathCells) is not loaded or empty.");
-      return; // Don't move if map isn't ready
+    // 獲取玩家名稱，如果在配置中存在，否則使用 P# 格式
+    const playerName = playerConfig.name || `P${playerNum}`;
+
+    // 使用配置中的頭像或後備
+    if (playerConfig.avatar_url) {
+      token.style.backgroundColor = 'transparent'; // 如果使用圖像，使背景透明
+      token.innerHTML = `<img src="${playerConfig.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="P${playerNum} Avatar" onerror="this.parentElement.style.backgroundColor='${bgColors[playerNum]}'; this.remove(); console.warn('Avatar failed: ${playerConfig.avatar_url}')">`;
+    } else {
+      // 後備到文本（名稱或 P#）和背景顏色
+      token.textContent = playerName.charAt(0); // 只用名稱的第一個字母
+      token.style.backgroundColor = bgColors[playerNum];
+      token.style.fontSize = '14px';
+      token.style.fontWeight = 'bold';
+      token.style.color = 'white';
+      token.style.textShadow = '1px 1px 1px rgba(0,0,0,0.4)';
     }
 
-    isMoving = true;
-    highlightedCell = null; // Clear previous highlight
-    // Clear highlight class from all cells first
+    // 創建名稱標籤
+    const nameLabel = document.createElement('div');
+    nameLabel.className = 'player-name-label';
+    nameLabel.textContent = playerName;
+    nameLabel.style.backgroundColor = bgColors[playerNum];
+    nameLabel.style.color = 'white';
+    nameLabel.style.padding = '2px 6px';
+    nameLabel.style.borderRadius = '10px';
+    nameLabel.style.fontSize = '10px';
+    nameLabel.style.fontWeight = 'bold';
+    nameLabel.style.marginTop = '3px';
+    nameLabel.style.whiteSpace = 'nowrap';
+    nameLabel.style.maxWidth = '70px';
+    nameLabel.style.overflow = 'hidden';
+    nameLabel.style.textOverflow = 'ellipsis';
+    nameLabel.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
+    nameLabel.style.textShadow = '0px 1px 1px rgba(0,0,0,0.2)';
+
+    // 定位邏輯
+    const x = Number(cellData.x); // 基於單元格數據的位置（x, y 網格）
+    const y = Number(cellData.y);
+    
+    if (isNaN(x) || isNaN(y)) {
+      console.warn(`${playerNum} 號玩家的單元格數據坐標無效:`, cellData);
+      return; // 如果坐標無效則跳過定位
+    }
+
+    // 多玩家偏移邏輯
+    const angle = (2 * Math.PI / 3) * playerArrayIndex; // 分配 3 個玩家
+    const radius = 15; // 距離中心多遠
+    const offsetX = Math.cos(angle) * radius;
+    const offsetY = Math.sin(angle) * radius;
+    
+    // 相對於單元格中心的位置
+    container.style.left = `${x * cellWidth + cellWidth / 2 + offsetX}px`;
+    container.style.top = `${y * cellHeight + cellHeight / 2 + offsetY}px`;
+    container.style.transform = 'translate(-50%, -50%)'; // 中心於位置
+
+    // 將令牌和名稱標籤添加到容器中
+    container.appendChild(token);
+    container.appendChild(nameLabel);
+    
+    // 將容器添加到遊戲板中
+    gameBoard.appendChild(container);
+    playerTokenContainers.push(container); // 存儲容器的引用以便將來更新
+  });
+  
+  // 在更新玩家位置後也更新視覺效果
+  updateSelectedPlayerVisuals(selectedPlayer);
+}
+// --- 只保留這個版本的 handleDirectionSelection ---
+function handleDirectionSelection(isForward, steps, player) {
+  if (isMoving || player < 1 || player > 3) return;
+  if (!Array.isArray(pathCells) || pathCells.length === 0) {
+    console.warn("Cannot move: Map data (pathCells) is not loaded or empty.");
+    return; // Don't move if map isn't ready
+  }
+
+  isMoving = true;
+  highlightedCell = null; // Clear previous highlight
+  // Clear highlight class from all cells first
+  document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
+
+  let currentPathIndex = playerPathIndices[player - 1];
+  // Validate current index before starting movement
+  if (currentPathIndex < 0 || currentPathIndex >= pathCells.length) {
+    console.warn(`Player ${player} has invalid starting index ${currentPathIndex}, resetting to 0.`);
+    currentPathIndex = 0;
+    playerPathIndices[player - 1] = 0; // Correct the state
+  }
+
+  let targetIndex = currentPathIndex; // Store the final target index
+  let stepsRemaining = steps;
+
+  // 增加移動中視覺效果
+  const playerContainer = playerTokenContainers[player - 1];
+  if (playerContainer) {
+    playerContainer.classList.add('moving');
+  }
+
+  function moveStep() {
+    if (stepsRemaining <= 0) {
+      finishMoving(targetIndex, player);
+      return;
+    }
+
+    // Calculate next index based on direction
+    const nextIndex = isForward
+      ? (currentPathIndex + 1) % pathCells.length
+      : (currentPathIndex - 1 + pathCells.length) % pathCells.length;
+
+    // Update the player's state
+    playerPathIndices[player - 1] = nextIndex;
+    targetIndex = nextIndex;
+    currentPathIndex = nextIndex;
+
+    // Update visual position
+    updatePlayerPositions(); // This moves the token visually
+
+    stepsRemaining--; // Decrement remaining steps
+
+    // Continue moving after delay
+    setTimeout(moveStep, STEP_ANIMATION_DELAY);
+  }
+
+  // Start the first step
+  sendGameStateToControllers(); // Notify controllers that movement started
+  moveStep(); // Initiate movement
+}
+
+// --- 更新 finishMoving 函數，添加到達動畫 ---
+function finishMoving(finalIndex, player) {
+  console.log(`移動結束於索引: ${finalIndex}`);
+  isMoving = false;
+  highlightedCell = finalIndex; // 將最終單元格設為高亮顯示
+
+  // 移除移動中類，添加到達類以顯示彈跳效果
+  const playerContainer = playerTokenContainers[player - 1];
+  if (playerContainer) {
+    playerContainer.classList.remove('moving');
+    
+    // 添加到達效果，並稍後移除
+    playerContainer.classList.add('arrived');
+    setTimeout(() => {
+      playerContainer.classList.remove('arrived');
+    }, 500); // 與動畫時間相同
+  }
+
+  // 應用高亮顯示類到目標單元格
+  const targetCellElement = gameBoard.querySelector(`.cell[data-index="${finalIndex}"]`);
+  if (targetCellElement) {
+    // 首先清除現有高亮以確保安全
     document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
-
-    let currentPathIndex = playerPathIndices[player - 1];
-    // Validate current index before starting movement
-    if (currentPathIndex < 0 || currentPathIndex >= pathCells.length) {
-      console.warn(`Player ${player} has invalid starting index ${currentPathIndex}, resetting to 0.`);
-      currentPathIndex = 0;
-      playerPathIndices[player - 1] = 0; // Correct the state
-    }
-
-    let targetIndex = currentPathIndex; // Store the final target index
-    let stepsRemaining = steps;
-
-    // 增加移動中視覺效果
-    const playerContainer = playerTokenContainers[player - 1];
-    if (playerContainer) {
-      playerContainer.classList.add('moving');
-    }
-
-    function moveStep() {
-      if (stepsRemaining <= 0) {
-        finishMoving(targetIndex, player);
-        return;
-      }
-
-      // Calculate next index based on direction
-      const nextIndex = isForward
-        ? (currentPathIndex + 1) % pathCells.length
-        : (currentPathIndex - 1 + pathCells.length) % pathCells.length;
-
-      // Update the player's state
-      playerPathIndices[player - 1] = nextIndex;
-      targetIndex = nextIndex;
-      currentPathIndex = nextIndex;
-
-      // Update visual position
-      updatePlayerPositions(); // This moves the token visually
-
-      stepsRemaining--; // Decrement remaining steps
-
-      // Continue moving after delay
-      setTimeout(moveStep, STEP_ANIMATION_DELAY);
-    }
-
-    // Start the first step
-    sendGameStateToControllers(); // Notify controllers that movement started
-    moveStep(); // Initiate movement
+    targetCellElement.classList.add('highlighted');
+  } else {
+    console.warn(`找不到要高亮顯示的目標單元格元素: 索引 ${finalIndex}`);
   }
 
-  // --- Finish Movement with bounce animation ---
-  function finishMoving(finalIndex, player) {
+  // 確保玩家位置完全正確 (updatePlayerPositions 可能有輕微的異步延遲視覺效果)
+  updatePlayerPositions();
+
+  sendGameStateToControllers(); // 發送最終狀態更新
+}
+
+
+  // --- Finish Movement ---
+   function finishMoving(finalIndex) {
     console.log(`移動結束於索引: ${finalIndex}`);
     isMoving = false;
     highlightedCell = finalIndex; // 將最終單元格設為高亮顯示
-
-    // 移除移動中類，添加到達類以顯示彈跳效果
-    const playerContainer = playerTokenContainers[player - 1];
-    if (playerContainer) {
-      playerContainer.classList.remove('moving');
-      
-      // 添加到達效果，並稍後移除
-      playerContainer.classList.add('arrived');
-      setTimeout(() => {
-        playerContainer.classList.remove('arrived');
-      }, 500); // 與動畫時間相同
-    }
 
     // 應用高亮顯示類到目標單元格
     const targetCellElement = gameBoard.querySelector(`.cell[data-index="${finalIndex}"]`);
@@ -471,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- WebSocket Connection ---
-  function connectWebSocket() {
+   function connectWebSocket() {
       // Close existing connection if any to prevent multiple connections
       if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
           console.log("Closing existing WebSocket connection before reconnecting.");
@@ -522,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Send Game State to Controllers ---
-  function sendGameStateToControllers() {
+   function sendGameStateToControllers() {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
            // console.warn("Cannot send game state: WebSocket not open."); // Reduce noise, log only on errors/major events
            return;
@@ -631,42 +646,42 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 可以在這裡添加其他視覺提示，如面板顏色變化等
   }
- 
 
   // --- Menu Toggle Logic ---
   function toggleTemplateMenu() {
-    if (templateMenu) templateMenu.classList.toggle('visible');
-}
+      if (templateMenu) templateMenu.classList.toggle('visible');
+  }
+  function closeTemplateMenu() {
+      if (templateMenu) templateMenu.classList.remove('visible');
+  }
 
-function closeTemplateMenu() {
-    if (templateMenu) templateMenu.classList.remove('visible');
-}
-
-// --- Event Listeners for Menu ---
-if (templateNavToggle) {
-    templateNavToggle.addEventListener('click', toggleTemplateMenu);
-} else {
-    console.error("Template toggle button not found!");
-}
-if (templateMenuClose) {
-    templateMenuClose.addEventListener('click', closeTemplateMenu);
-} else {
-    console.error("Template menu close button not found!");
-}
-if (loadTemplateBtn && templateSelect) {
-    loadTemplateBtn.addEventListener('click', () => {
-      const selectedId = templateSelect.value;
-      if (selectedId) {
-          loadTemplate(selectedId); // Pass the value directly
-      } else {
-          alert("請先選擇一個模板！");
-      }
-  });
+  // --- Event Listeners for Menu ---
+  if (templateNavToggle) {
+      templateNavToggle.addEventListener('click', toggleTemplateMenu);
+  } else {
+      console.error("Template toggle button not found!");
+  }
+  if (templateMenuClose) {
+      templateMenuClose.addEventListener('click', closeTemplateMenu);
+  } else {
+      console.error("Template menu close button not found!");
+  }
+  if (loadTemplateBtn && templateSelect) {
+      loadTemplateBtn.addEventListener
+      loadTemplateBtn.addEventListener('click', () => {
+        const selectedId = templateSelect.value;
+        if (selectedId) {
+            loadTemplate(selectedId); // Pass the value directly
+        } else {
+            alert("請先選擇一個模板！");
+        }
+    });
 } else {
     console.error("Load template button or select dropdown not found!");
 }
 
-// --- Listener to close menu when clicking outside ---
+// --- NEW: Listener to close menu when clicking outside ---
+// We attach it to the game container, assuming it covers the main clickable area below the menu.
 if (gameContainer) {
   gameContainer.addEventListener('click', (event) => {
       // Check if the menu element exists and is currently visible
@@ -686,6 +701,7 @@ if (gameContainer) {
 } else {
     console.error("Game container element not found, cannot add outside click listener.");
 }
+// --- End NEW Listener ---
 
 // --- Initialization ---
 async function initializeGame() {
