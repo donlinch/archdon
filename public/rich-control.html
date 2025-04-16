@@ -434,69 +434,97 @@
         const allControlButtons = document.querySelectorAll('.controller-container button');
 
 
-        function connectWebSocket() {
-          const wsUrl = `wss://${window.location.host}?clientType=controller`;
-           // --- WebSocket 連接代碼 (保持不變) ---
-          ws = new WebSocket(wsUrl);
+        // 修改 rich-control.html 中的 WebSocket 處理邏輯
+function connectWebSocket() {
+  const wsUrl = `wss://${window.location.host}?clientType=controller`;
+  ws = new WebSocket(wsUrl);
 
-          ws.onopen = () => {
-            console.log("Controller WebSocket Connected");
-            setControlsEnabled(false); // Initially disable until game state received
-            updateConnectionStatusUI();
-            // Request initial state when connected
-            sendCommand('getGameState');
-          };
+  ws.onopen = () => {
+    console.log("Controller WebSocket Connected");
+    // 連接成功後，先顯示為連接中狀態
+    connectionStatusDiv.className = 'connection-status connecting';
+    connectionStatusDiv.textContent = '等待遊戲連接...';
+    // 立即請求遊戲狀態
+    sendCommand('getGameState');
+  };
 
-          ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                 console.log("Message from game:", message); // Debugging log
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      console.log("Message from game:", message); // 調試日誌
 
-                if (message.type === 'gameStateUpdate') {
-                    updateGameInfo(message.data); // Update general button states
-                    if (message.data.players) {
-                         // ★★★ 調用更新 UI 的函數 ★★★
-                         updatePlayerUI(message.data.players);
-                    }
-                    // Enable controls ONLY after receiving the first valid game state
-                    if (!gameIsConnected && message.data) {
-                        setControlsEnabled(true);
-                    }
-                } else if (message.type === 'error') { // Handle errors from server
-                    console.error("Error message from server:", message.message);
-                    // Optionally display error to user
-                    // Example: connectionStatusDiv.textContent = `錯誤: ${message.message}`;
-                } else if (message.type === 'gameStatus') { // Handle game connection status sent by server.js
-                     console.log("Received gameStatus:", message.status);
-                     // If game disconnects, disable controls, otherwise wait for gameStateUpdate
-                     if(message.status === 'disconnected') {
-                         setControlsEnabled(false);
-                     }
-                     // Update UI based on explicit status from server
-                     updateConnectionStatusUI(message.status === 'connected');
-                 }
-
-            } catch (e) {
-                console.error("Failed to parse message or update UI:", e);
-            }
-          };
-
-          ws.onclose = () => {
-             console.log("Controller WebSocket Closed");
-            setControlsEnabled(false);
-            gameIsConnected = false; // Explicitly set game as disconnected
-            updateConnectionStatusUI();
-            ws = null; // Clear reference
-            // Attempt to reconnect after a delay
-            setTimeout(connectWebSocket, 5000); // Use a longer delay
-          };
-
-           ws.onerror = (error) => {
-               console.error("Controller WebSocket Error:", error);
-               // onclose will usually follow, triggering reconnection logic
-           }
+      if (message.type === 'gameStateUpdate') {
+        // 收到遊戲狀態更新，表示遊戲已連接
+        gameIsConnected = true;
+        updateGameInfo(message.data); // 更新按鈕狀態
+        if (message.data.players) {
+          updatePlayerUI(message.data.players);
         }
+        // 更新連接狀態 UI
+        updateConnectionStatusUI(true);
+        // 啟用控制按鈕
+        setControlsEnabled(true);
+      } else if (message.type === 'error') {
+        console.error("Error message from server:", message.message);
+      } else if (message.type === 'gameStatus') {
+        console.log("Received gameStatus:", message.status);
+        // 根據伺服器明確的狀態更新 UI
+        const isConnected = message.status === 'connected';
+        gameIsConnected = isConnected; // 更新全局連接狀態
+        updateConnectionStatusUI(isConnected);
+        setControlsEnabled(isConnected);
+      }
+    } catch (e) {
+      console.error("Failed to parse message or update UI:", e);
+    }
+  };
 
+  ws.onclose = () => {
+    console.log("Controller WebSocket Closed");
+    gameIsConnected = false;
+    setControlsEnabled(false);
+    updateConnectionStatusUI(false);
+    ws = null;
+    // 延遲重連
+    setTimeout(connectWebSocket, 5000);
+  };
+
+  ws.onerror = (error) => {
+    console.error("Controller WebSocket Error:", error);
+    // onclose 通常會在錯誤後觸發，啟動重連邏輯
+  }
+}
+
+// 修改控制按鈕啟用/禁用邏輯
+function setControlsEnabled(enabled) {
+  allControlButtons.forEach(el => {
+    // 允許玩家選擇按鈕始終可用
+    if (!el.classList.contains('player-btn')) {
+      el.disabled = !enabled;
+    }
+  });
+  gameIsConnected = enabled; // 確保狀態變量保持一致
+}
+
+// 修改更新遊戲信息函數，確保按鈕狀態正確
+function updateGameInfo(data) {
+  if (!data) return;
+  
+  // 選擇由遊戲狀態指示的玩家
+  selectPlayerUI(data.selectedPlayer || 1, false); // 不發送命令回去
+
+  // 只有在遊戲報告移動中或未連接時禁用按鈕
+  const disableActions = data.isMoving || !gameIsConnected;
+  
+  // 統一更新所有控制按鈕
+  if (forwardBtn) forwardBtn.disabled = disableActions;
+  if (backwardBtn) backwardBtn.disabled = disableActions;
+  if (showPlayerInfoBtn) showPlayerInfoBtn.disabled = disableActions;
+  if (hidePlayerInfoBtn) hidePlayerInfoBtn.disabled = disableActions;
+
+  // 確保連接狀態反映實際情況
+  updateConnectionStatusUI(gameIsConnected);
+}
         function setControlsEnabled(enabled) {
           allControlButtons.forEach(el => {
                // Don't disable player selection buttons, allow switching anytime
