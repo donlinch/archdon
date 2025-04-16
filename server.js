@@ -76,11 +76,161 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+// --- 基本認證中間件函數定義 ---
+const basicAuthMiddleware = (req, res, next) => {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('需要認證才能訪問管理區域。');
+    }
+
+    try {
+        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+        const user = auth[0];
+        const pass = auth[1];
+
+        if (user === adminUser && pass === adminPass) {
+            next(); // 認證成功，繼續下一個中間件或路由處理
+        } else {
+            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
+            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+            return res.status(401).send('認證失敗。');
+        }
+    } catch (error) {
+        console.error("認證標頭解析錯誤:", error);
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('認證失敗 (格式錯誤)。');
+    }
+};
+
+// --- JSON 請求體解析中間件 ---
+// 必須放在所有需要讀取 req.body 的路由之前
+app.use(express.json());
+
+// --- 記錄 Page View 中間件 ---
+app.use(async (req, res, next) => {
+    const pathsToLog = [
+        '/', '/index.html', '/music.html', '/news.html', '/scores.html',
+        '/guestbook.html', '/message-detail.html',
+        '/game/card-game.html', // <-- 新增
+        '/game/wheel-game.html', // <-- 新增
+        '/game/brige-game.html',  // <-- 新增
+        '/rich.html', // <-- Log rich.html
+        '/rich-control.html' // <-- Log rich-control.html
+
+
+
+    ]; // 添加 scores.html
+    // 確保只記錄 'GET' 請求且路徑在列表中
+    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
+
+    if (shouldLog) {
+        const pagePath = req.path;
+        try {
+            const sql = `
+                INSERT INTO page_views (page, view_date, view_count)
+                VALUES ($1, CURRENT_DATE, 1)
+                ON CONFLICT (page, view_date)
+                DO UPDATE SET view_count = page_views.view_count + 1;
+            `;
+            const params = [pagePath];
+            await pool.query(sql, params);
+        } catch (err) {
+            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
+                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
+            } else {
+                console.error('[PV Mid] Error logging page view:', err.stack || err);
+            }
+        }
+    }
+    next(); // 確保總是調用 next()
+});
+
+
+
+
+
+
+
+
+
+
 app.get("/api/rich-map/templates", async (req, res) => {
     // 這邊你要從資料庫撈出 rich_map_templates 的 template_name
     const result = await pool.query("SELECT id, template_name FROM rich_map_templates");
     res.json(result.rows);
   });
+
+
+
+
+app.get('/api/rich-map/templates/:id/full', async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
+  
+    try {
+      const client = await pool.connect();
+  
+      const templateQuery = `
+        SELECT id, template_name, logo_url, background_color
+        FROM rich_map_templates
+        WHERE id = $1
+      `;
+      const { rows: templateRows } = await client.query(templateQuery, [templateId]);
+      if (templateRows.length === 0) {
+        client.release();
+        return res.status(404).json({ error: 'Template not found' });
+      }
+  
+      const cellQuery = `
+        SELECT position, x, y, title, description, color, image_url
+        FROM rich_map_cells
+        WHERE template_id = $1
+        ORDER BY position ASC
+      `;
+      const playerQuery = `
+        SELECT player_number, name, avatar_url
+        FROM rich_players_config
+        WHERE template_id = $1
+        ORDER BY player_number ASC
+      `;
+  
+      const [cellResult, playerResult] = await Promise.all([
+        client.query(cellQuery, [templateId]),
+        client.query(playerQuery, [templateId])
+      ]);
+  
+      client.release();
+  
+      res.json({
+        ...templateRows[0],
+        players: playerResult.rows,
+        cells: cellResult.rows
+      });
+    } catch (err) {
+      console.error('Error fetching template:', err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+  
+
+
+
+
+
+
+
+
   
 
 // --- 在它後面加上這段新的 PUT 路由 ---
@@ -166,78 +316,7 @@ app.put('/api/rich-map/templates/:id/full', async (req, res) => {
 
 
 
-// --- 基本認證中間件函數定義 ---
-const basicAuthMiddleware = (req, res, next) => {
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
-    const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('需要認證才能訪問管理區域。');
-    }
-
-    try {
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-
-        if (user === adminUser && pass === adminPass) {
-            next(); // 認證成功，繼續下一個中間件或路由處理
-        } else {
-            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
-            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-            return res.status(401).send('認證失敗。');
-        }
-    } catch (error) {
-        console.error("認證標頭解析錯誤:", error);
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('認證失敗 (格式錯誤)。');
-    }
-};
-
-// --- JSON 請求體解析中間件 ---
-// 必須放在所有需要讀取 req.body 的路由之前
-app.use(express.json());
-
-// --- 記錄 Page View 中間件 ---
-app.use(async (req, res, next) => {
-    const pathsToLog = [
-        '/', '/index.html', '/music.html', '/news.html', '/scores.html',
-        '/guestbook.html', '/message-detail.html',
-        '/game/card-game.html', // <-- 新增
-        '/game/wheel-game.html', // <-- 新增
-        '/game/brige-game.html',  // <-- 新增
-        '/rich.html', // <-- Log rich.html
-        '/rich-control.html' // <-- Log rich-control.html
-
-
-
-    ]; // 添加 scores.html
-    // 確保只記錄 'GET' 請求且路徑在列表中
-    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
-    if (shouldLog) {
-        const pagePath = req.path;
-        try {
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date)
-                DO UPDATE SET view_count = page_views.view_count + 1;
-            `;
-            const params = [pagePath];
-            await pool.query(sql, params);
-        } catch (err) {
-            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
-            } else {
-                console.error('[PV Mid] Error logging page view:', err.stack || err);
-            }
-        }
-    }
-    next(); // 確保總是調用 next()
-});
 
 
 // --- 玻璃橋遊戲排行榜 API ---
@@ -418,64 +497,6 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-app.get('/api/rich-map/templates/:id/full', async (req, res) => {
-    const templateId = parseInt(req.params.id);
-    if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
-  
-    try {
-      const client = await pool.connect();
-  
-      const templateQuery = `
-        SELECT id, template_name, logo_url, background_color
-        FROM rich_map_templates
-        WHERE id = $1
-      `;
-      const { rows: templateRows } = await client.query(templateQuery, [templateId]);
-      if (templateRows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Template not found' });
-      }
-  
-      const cellQuery = `
-        SELECT position, x, y, title, description, color, image_url
-        FROM rich_map_cells
-        WHERE template_id = $1
-        ORDER BY position ASC
-      `;
-      const playerQuery = `
-        SELECT player_number, name, avatar_url
-        FROM rich_players_config
-        WHERE template_id = $1
-        ORDER BY player_number ASC
-      `;
-  
-      const [cellResult, playerResult] = await Promise.all([
-        client.query(cellQuery, [templateId]),
-        client.query(playerQuery, [templateId])
-      ]);
-  
-      client.release();
-  
-      res.json({
-        ...templateRows[0],
-        players: playerResult.rows,
-        cells: cellResult.rows
-      });
-    } catch (err) {
-      console.error('Error fetching template:', err);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
 
 
 
