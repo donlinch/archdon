@@ -641,6 +641,178 @@ body {
   border-width: 3px !important;
 }
 
+
+
+/* 簡化的模板選單樣式 - 所有元素同一排 */
+.template-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 15px 20px;
+    transform: translateY(-120%);
+    transition: transform 0.4s ease-out;
+}
+
+.template-menu.visible {
+    transform: translateY(0);
+}
+
+/* 單排控制區域 */
+.template-menu-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.template-menu-header {
+    font-weight: bold;
+    color: #5b9df0;
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.template-menu-close {
+    font-size: 24px;
+    color: #ff544d;
+    cursor: pointer;
+    padding: 0 10px;
+    margin-left: 10px;
+}
+
+.template-menu-close:hover {
+    opacity: 0.7;
+}
+
+/* 選擇器樣式 */
+.template-select-wrapper {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.template-select-wrapper label {
+    font-weight: bold;
+    margin-right: 8px;
+    color: #555;
+    white-space: nowrap;
+}
+
+.template-select-wrapper select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 150px;
+    font-size: 0.95rem;
+}
+
+/* 按鈕樣式 */
+.template-menu button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.template-menu button#loadTemplateBtn {
+    background-color: #0cd8b6;
+    color: white;
+}
+
+.template-menu button#loadTemplateBtn:hover:not(:disabled) {
+    background-color: #09b699;
+}
+
+.template-menu button#loadTemplateBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* 導航連結 */
+.template-menu a {
+    padding: 8px 15px;
+    background-color: #9270ca;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.template-menu a:hover {
+    background-color: #7d5fb3;
+}
+
+/* 導航切換按鈕 */
+.template-nav-toggle {
+    position: fixed;
+    top: 15px;
+    right: 30px; /* 往內移一點，更容易點擊 */
+    z-index: 1001;
+    background-color: #5b9df0;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.template-nav-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* 確保遊戲板與固定菜單不重疊 */
+.game-container {
+    padding-top: 70px;
+}
+
+/* 加載旋轉圖示樣式 */
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #5b9df0;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: none;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .template-menu-content {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .template-select-wrapper select {
+        min-width: 120px;
+    }
+}
+
 </style>
 
 
@@ -648,39 +820,41 @@ body {
 
 
 </head><body>
-    <!-- Template Toggle Button -->
-    <button class="template-nav-toggle" id="templateNavToggle">≡</button>
+  
+<!-- 簡化的導航菜單HTML結構 - 所有元素在同一排 -->
 
-    <!-- Template Menu Panel -->
-    <div class="template-menu" id="templateMenu">
-        <div class="template-menu-header">
-            <span>選擇地圖模板</span>
-            <span class="template-menu-close" id="templateMenuClose">×</span>
+<!-- 導航切換按鈕 -->
+<button class="template-nav-toggle" id="templateNavToggle">≡</button>
+
+<!-- 模板選單面板 -->
+<div class="template-menu" id="templateMenu">
+    <div class="template-menu-content">
+        <span class="template-menu-header">選擇地圖</span>
+        
+        <div class="template-select-wrapper">
+            <label for="templateSelect">模板:</label>
+            <select id="templateSelect">
+                <option value="">載入中...</option>
+            </select>
         </div>
-        <div style="display: flex; align-items: center; width: 100%; max-width: 450px;">
-             <label for="templateSelect">模板:</label>
-             <select id="templateSelect">
-                 <option value="">載入中...</option>
-             </select>
-             <button id="loadTemplateBtn" disabled>載入</button>
-             <nav class="category-nav">
-               
-                <a href="/rich-control.html" >控制器</a>
-                <a href="/rich-edit.html" >編輯器</a>
-               
+        
+        <button id="loadTemplateBtn" disabled>載入</button>
+        <div id="loadingSpinner" class="loader"></div>
+        
+        <a href="/rich-control.html">控制器</a>
+        <a href="/rich-edit.html">編輯器</a>
+        
+        <span class="template-menu-close" id="templateMenuClose">×</span>
+    </div>
+</div>
 
-                
-            </nav>
-             <div id="loadingSpinner" class="loader"></div>
+<!-- 遊戲容器 -->
+<div id="game-container" class="game-container">
+    <div id="game-board" class="game-board">
+        <div id="logo-container" class="logo-container">
         </div>
     </div>
-
-    <div id="game-container" class="game-container">  
-        <div id="game-board" class="game-board">
-             <div id="logo-container" class="logo-container">
-             </div>
-         </div>
-     </div>
+</div>
 
     
     <script src="rich.js"></script>
