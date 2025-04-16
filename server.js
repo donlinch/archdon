@@ -280,6 +280,57 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
 
 
 
+app.get('/api/rich-map/templates/:id/full', async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
+  
+    try {
+      const client = await pool.connect();
+  
+      const templateQuery = `
+        SELECT id, template_name, logo_url, background_color
+        FROM rich_map_templates
+        WHERE id = $1
+      `;
+      const { rows: templateRows } = await client.query(templateQuery, [templateId]);
+      if (templateRows.length === 0) {
+        client.release();
+        return res.status(404).json({ error: 'Template not found' });
+      }
+  
+      const cellQuery = `
+        SELECT position, x, y, title, description, color, image_url
+        FROM rich_map_cells
+        WHERE template_id = $1
+        ORDER BY position ASC
+      `;
+      const playerQuery = `
+        SELECT player_number, name, avatar_url
+        FROM rich_players_config
+        WHERE template_id = $1
+        ORDER BY player_number ASC
+      `;
+  
+      const [cellResult, playerResult] = await Promise.all([
+        client.query(cellQuery, [templateId]),
+        client.query(playerQuery, [templateId])
+      ]);
+  
+      client.release();
+  
+      res.json({
+        ...templateRows[0],
+        players: playerResult.rows,
+        cells: cellResult.rows
+      });
+    } catch (err) {
+      console.error('Error fetching template:', err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+  
+
+
 
 
 
