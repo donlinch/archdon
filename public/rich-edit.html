@@ -239,6 +239,56 @@
     }
     /* ▲▲▲ 新增版本控制區樣式 ▲▲▲ */
 
+    /* ▼▼▼ 新增玩家設定區樣式 ▼▼▼ */
+    .player-config {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa; /* 淺灰色背景 */
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      width: 90%; /* 調整寬度 */
+      max-width: 800px; /* 最大寬度 */
+      margin: 20px auto; /* 上下間距並居中 */
+    }
+    .player-config h3 {
+        text-align: center;
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #495057;
+    }
+    .player-config table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .player-config th,
+    .player-config td {
+      border: 1px solid #dee2e6;
+      padding: 8px 12px;
+      text-align: center;
+      vertical-align: middle; /* 垂直居中 */
+    }
+    .player-config th {
+      background-color: #e9ecef;
+    }
+    .player-config input[type="text"],
+    .player-config input[type="url"] {
+      width: 95%; /* 給一點內邊距空間 */
+      padding: 6px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .player-config img {
+      display: block;
+      width: 40px; /* 固定頭像預覽大小 */
+      height: 40px;
+      margin: 0 auto; /* 居中 */
+      border: 1px solid #ced4da;
+      border-radius: 50%; /* 圓形頭像 */
+      background-color: #fff;
+      object-fit: cover; /* 圖片填滿 */
+    }
+    /* ▲▲▲ 新增玩家設定區樣式 ▲▲▲ */
   </style>
 </head>
 <body>
@@ -289,6 +339,25 @@
       <img id="preview-image" src="" alt="圖片預覽" style="max-width: 90%; max-height: 100px; border-radius: 6px; margin-top: 5px; display: block; margin-left: auto; margin-right: auto; border: 1px solid #eee; object-fit: contain;" />
      
      
+  <!-- ▼▼▼ 新增玩家設定區 ▼▼▼ -->
+  <div class="player-config">
+    <h3>👤 玩家設定</h3>
+    <table id="player-config-table">
+      <thead>
+        <tr>
+          <th>玩家</th>
+          <th>名稱 (選填)</th>
+          <th>頭像網址 (選填)</th>
+          <th>頭像預覽</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 玩家列會由 JavaScript 動態生成 -->
+        <tr><td colspan="4">尚未載入玩家設定...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- ▲▲▲ 新增玩家設定區 ▲▲▲ -->
 <!-- ▼▼▼ 加入檔案選擇和上傳按鈕 ▼▼▼ -->
 <div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
     <input type="file" id="panel-image-file" accept="image/*" style="flex-grow: 1;">

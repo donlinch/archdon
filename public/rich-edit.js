@@ -16,6 +16,8 @@ const logoPreview = document.getElementById('logo-preview');
 const templateSelect = document.getElementById('template-select');
 const loadTemplateBtn = document.getElementById('load-template-btn');
 const saveTemplateBtn = document.getElementById('save-template-btn');
+// (玩家設定表格)
+const playerConfigTableBody = document.querySelector('#player-config-table tbody');
 
 // --- 全域變數 ---
 let editingIndex = -1;
@@ -23,15 +25,13 @@ let cells = [];
 let currentTemplateId = null; // 初始設為 null，表示尚未載入
 let backgroundColor = '#fff0f5';
 let currentLogoUrl = '';
-// (玩家設定變數，先預留)
-// let currentPlayers = [];
+let currentPlayers = []; // 儲存玩家設定
 
 // --- 函數定義 ---
 
 // 套用背景顏色
 function applyTemplateBackgroundColor(color) {
   backgroundColor = color || '#fff0f5';
-  // 確保 container 存在才操作
   if (container) {
       container.style.backgroundColor = backgroundColor;
   } else {
@@ -41,7 +41,6 @@ function applyTemplateBackgroundColor(color) {
 
 // 渲染地圖格子
 function renderBoard() {
-    // 確保 board 存在才操作
     if (!board) {
         console.error("無法找到 ID 為 'game-board' 的元素來渲染格子");
         return;
@@ -50,7 +49,6 @@ function renderBoard() {
   cells.forEach((cell, i) => {
     const div = document.createElement('div');
     div.className = 'cell';
-    // 確保 x, y 是有效的數字
     const x = Number(cell.x);
     const y = Number(cell.y);
     if (!isNaN(x) && !isNaN(y)) {
@@ -59,32 +57,30 @@ function renderBoard() {
     } else {
         console.warn(`格子 ${i} 的 x 或 y 座標無效:`, cell);
     }
-    div.style.backgroundColor = cell.color || '#cccccc'; // 提供預設顏色
+    div.style.backgroundColor = cell.color || '#cccccc';
 
     if (cell.image_url) {
       const img = document.createElement('img');
       img.src = cell.image_url;
-      img.alt = cell.title || '格子圖片'; // 提供預設 alt
-      img.onerror = () => { img.style.display = 'none'; }; // 圖片載入失敗時隱藏
+      img.alt = cell.title || '格子圖片';
+      img.onerror = () => { img.style.display = 'none'; };
       div.appendChild(img);
     }
 
-    // 使用 class 方便 CSS 控制樣式
     const titleDiv = document.createElement('div');
-    titleDiv.className = 'title'; // <--- 加入 class
-    titleDiv.textContent = cell.title || ''; // 確保有預設值
+    titleDiv.className = 'title';
+    titleDiv.textContent = cell.title || '';
     div.appendChild(titleDiv);
 
     const descDiv = document.createElement('div');
-    descDiv.className = 'description'; // <--- 加入 class
-    descDiv.textContent = cell.description || ''; // 確保有預設值
+    descDiv.className = 'description';
+    descDiv.textContent = cell.description || '';
     div.appendChild(descDiv);
 
     div.onclick = () => openEditor(i);
     board.appendChild(div);
   });
 }
-
 
 // 打開編輯器
 function openEditor(index) {
@@ -102,7 +98,6 @@ function openEditor(index) {
   descInput.value = cell.description || '';
   colorInput.value = cell.color || '#ffffff';
   imageInput.value = cell.image_url || '';
-  // 更新圖片預覽
   const previewImage = document.getElementById('preview-image');
   if (previewImage) {
     previewImage.src = cell.image_url || '';
@@ -120,11 +115,11 @@ function saveCellChanges() {
     cell.title = titleInput.value.trim();
     cell.description = descInput.value.trim();
     cell.color = colorInput.value;
-    cell.image_url = imageInput.value.trim() || null; // 空字串存為 null
+    cell.image_url = imageInput.value.trim() || null;
 
-    renderBoard(); // 重新渲染以顯示變更
+    renderBoard();
     if (editorPanel) {
-        editorPanel.style.display = 'none'; // 關閉面板
+        editorPanel.style.display = 'none';
     }
 }
 
@@ -140,33 +135,31 @@ async function fetchTemplateList() {
             throw new Error(`獲取模板列表失敗: ${response.status} ${response.statusText}`);
         }
         const templates = await response.json();
-
-        templateSelect.innerHTML = ''; // 清空
+        templateSelect.innerHTML = '';
 
         if (!Array.isArray(templates) || templates.length === 0) {
             templateSelect.innerHTML = '<option value="">-- 沒有可用模板 --</option>';
             loadTemplateBtn.disabled = true;
-            saveTemplateBtn.disabled = true; // 沒有模板也不能儲存
-             // 清空畫面
+            saveTemplateBtn.disabled = true;
              if (board) board.innerHTML = '';
              if (logoUrlInput) logoUrlInput.value = '';
              if (logoPreview) logoPreview.src = '';
-             applyTemplateBackgroundColor('#fff0f5'); // 重設背景
+             applyTemplateBackgroundColor('#fff0f5');
+             if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請先建立模板</td></tr>'; // 清空玩家表格
             return;
         }
 
         templates.forEach(template => {
             const option = document.createElement('option');
             option.value = template.id;
-            option.textContent = `${template.template_name} (ID: ${template.id})`; // 顯示名稱和 ID
+            option.textContent = `${template.template_name} (ID: ${template.id})`;
             templateSelect.appendChild(option);
         });
 
-        // 預設選中第一個並載入
         templateSelect.value = templates[0].id;
         loadTemplateBtn.disabled = false;
-        saveTemplateBtn.disabled = true; // 初始載入時先禁用儲存，等待載入完成
-        await loadTemplate(templates[0].id); // 自動載入第一個
+        saveTemplateBtn.disabled = true;
+        await loadTemplate(templates[0].id);
 
     } catch (err) {
         console.error('❌ 獲取模板列表時出錯:', err);
@@ -187,13 +180,13 @@ async function loadTemplate(templateId) {
     console.log(`正在載入模板 ID: ${templateId}...`);
     currentTemplateId = templateId;
 
-    // 顯示載入中狀態
     if (board) board.innerHTML = '<p style="text-align: center;">載入中...</p>';
     if (logoUrlInput) logoUrlInput.value = '';
     if (logoPreview) logoPreview.src = '';
     backgroundColor = '#fff0f5';
     applyTemplateBackgroundColor(backgroundColor);
-    saveTemplateBtn.disabled = true; // 載入過程中禁用儲存
+    saveTemplateBtn.disabled = true;
+    if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">載入中...</td></tr>'; // 清空舊玩家表格
 
     try {
         const response = await fetch(`/api/rich-map/templates/${currentTemplateId}/full`);
@@ -210,12 +203,11 @@ async function loadTemplate(templateId) {
         if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
         if (logoPreview) logoPreview.src = currentLogoUrl;
 
-        // (預留載入玩家資料)
-        // currentPlayers = data.players || [];
-        // renderPlayerConfigUI();
+        currentPlayers = data.players || []; // 處理玩家資料
+        renderPlayerConfigUI(); // 渲染玩家UI
 
         renderBoard();
-        saveTemplateBtn.disabled = false; // 載入成功，啟用儲存
+        saveTemplateBtn.disabled = false;
 
     } catch (err) {
         console.error('❌ 載入模板失敗:', err);
@@ -225,10 +217,101 @@ async function loadTemplate(templateId) {
         currentLogoUrl = '';
         if (logoUrlInput) logoUrlInput.value = '';
         if (logoPreview) logoPreview.src = '';
+        currentPlayers = []; // 清空玩家
+        if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4" style="color:red;">載入玩家設定失敗</td></tr>';
         saveTemplateBtn.disabled = true;
-        currentTemplateId = null; // 重設 ID
+        currentTemplateId = null;
     }
 }
+
+// 渲染玩家設定 UI
+function renderPlayerConfigUI() {
+    if (!playerConfigTableBody) {
+        console.error("找不到玩家設定表格的 tbody！");
+        return;
+    }
+    playerConfigTableBody.innerHTML = '';
+
+    // 確保至少有基本結構，即使 API 沒返回 players
+    const playersToRender = currentPlayers.length > 0 ? currentPlayers : [
+        { player_number: 1, name: null, avatar_url: null },
+        { player_number: 2, name: null, avatar_url: null },
+        { player_number: 3, name: null, avatar_url: null } // 假設最多3個玩家
+    ];
+    // 如果 API 返回的玩家數不足 3，補足到 3 個
+    while (playersToRender.length < 3) {
+        playersToRender.push({ player_number: playersToRender.length + 1, name: null, avatar_url: null });
+    }
+    // 只保留前 3 個玩家的設定
+    const finalPlayers = playersToRender.slice(0, 3);
+    currentPlayers = finalPlayers; // 更新全域變數
+
+    finalPlayers.forEach((player, index) => {
+        const row = document.createElement('tr');
+
+        const cellNum = document.createElement('td');
+        cellNum.textContent = `P${player.player_number}`;
+        row.appendChild(cellNum);
+
+        const cellName = document.createElement('td');
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = player.name || '';
+        nameInput.placeholder = `玩家 ${player.player_number} 名稱`;
+        nameInput.dataset.playerIndex = index;
+        nameInput.addEventListener('input', handlePlayerInputChange);
+        cellName.appendChild(nameInput);
+        row.appendChild(cellName);
+
+        const cellAvatarUrl = document.createElement('td');
+        const avatarUrlInput = document.createElement('input');
+        avatarUrlInput.type = 'url';
+        avatarUrlInput.value = player.avatar_url || '';
+        avatarUrlInput.placeholder = `玩家 ${player.player_number} 頭像 URL`;
+        avatarUrlInput.dataset.playerIndex = index;
+        avatarUrlInput.addEventListener('input', handlePlayerInputChange);
+        cellAvatarUrl.appendChild(avatarUrlInput);
+        row.appendChild(cellAvatarUrl);
+
+        const cellAvatarPreview = document.createElement('td');
+        const avatarPreviewImg = document.createElement('img');
+        avatarPreviewImg.src = player.avatar_url || `https://via.placeholder.com/40?text=P${player.player_number}`;
+        avatarPreviewImg.alt = `玩家 ${player.player_number} 頭像預覽`;
+        avatarPreviewImg.onerror = () => { avatarPreviewImg.src = 'https://via.placeholder.com/40?text=X'; }; // 改成顯示 X
+        avatarPreviewImg.id = `player-avatar-preview-${index}`;
+        cellAvatarPreview.appendChild(avatarPreviewImg);
+        row.appendChild(cellAvatarPreview);
+
+        playerConfigTableBody.appendChild(row);
+    });
+}
+
+// 處理玩家輸入框變更
+function handlePlayerInputChange(event) {
+    const inputElement = event.target;
+    const playerIndex = parseInt(inputElement.dataset.playerIndex);
+
+    // 確保索引有效且 currentPlayers[playerIndex] 存在
+    if (isNaN(playerIndex) || playerIndex < 0 || playerIndex >= currentPlayers.length || !currentPlayers[playerIndex]) {
+        console.error(`處理玩家輸入時索引無效或玩家資料不存在: index=${playerIndex}`);
+        return;
+    }
+    const player = currentPlayers[playerIndex];
+
+
+    if (inputElement.type === 'text') {
+        player.name = inputElement.value.trim() || null; // 空字串存為 null
+    } else if (inputElement.type === 'url') {
+        const newUrl = inputElement.value.trim();
+        player.avatar_url = newUrl || null;
+        const previewImg = document.getElementById(`player-avatar-preview-${playerIndex}`);
+        if (previewImg) {
+            previewImg.src = newUrl || `https://via.placeholder.com/40?text=P${player.player_number}`;
+        }
+    }
+    // console.log("玩家資料已更新 (前端):", currentPlayers);
+}
+
 
 // 儲存目前編輯的模板資料到後端
 function saveAllChanges() {
@@ -237,13 +320,12 @@ function saveAllChanges() {
         return;
     }
 
-    console.log(`準備儲存模板 ID: ${currentTemplateId}`, { backgroundColor, currentLogoUrl, cells });
+    console.log(`準備儲存模板 ID: ${currentTemplateId}`, { backgroundColor, currentLogoUrl, cells, players: currentPlayers });
     const body = JSON.stringify({
         background_color: backgroundColor,
         logo_url: currentLogoUrl,
-        cells: cells, // cells 陣列已經透過 saveCellChanges 更新了
-        // (預留傳送玩家資料)
-        // players: currentPlayers
+        cells: cells,
+        players: currentPlayers // 包含更新後的玩家資料
     });
 
     saveTemplateBtn.disabled = true;
@@ -268,6 +350,8 @@ function saveAllChanges() {
     .then(data => {
         console.log("儲存成功回應:", data);
         alert(`✅ 儲存成功！ (${data.message || ''})`);
+        // 儲存成功後可以考慮重新載入一次，確保資料是最新狀態
+        // loadTemplate(currentTemplateId);
     })
     .catch(err => {
         console.error('❌ 儲存失敗:', err);
@@ -289,7 +373,7 @@ function uploadImage(file, callback) {
       body: formData
     })
     .then(res => {
-        if (!res.ok) { // 增加錯誤處理
+        if (!res.ok) {
              return res.json().then(errData => {
                  throw new Error(`圖片上傳失敗 ${res.status}: ${errData.error || '伺服器錯誤'}`);
              }).catch(() => {
@@ -300,7 +384,7 @@ function uploadImage(file, callback) {
     })
     .then(data => {
         if (data.success && data.url) {
-            callback(data.url); // 成功才回調 URL
+            callback(data.url);
         } else {
             throw new Error(data.error || '上傳成功但未返回 URL');
         }
@@ -308,7 +392,7 @@ function uploadImage(file, callback) {
     .catch(err => {
         alert(`❌ 圖片上傳失敗：\n${err.message}`);
         console.error(err);
-        callback(null); // 失敗回調 null
+        callback(null);
     });
 }
 
@@ -319,18 +403,16 @@ if (uploadPanelImageBtn && panelImageFile && imageInput) {
     uploadPanelImageBtn.addEventListener('click', () => {
       if (panelImageFile.files.length > 0) {
         const file = panelImageFile.files[0];
-        uploadPanelImageBtn.textContent = '上傳中..'; // 增加提示
+        uploadPanelImageBtn.textContent = '上傳中..';
         uploadPanelImageBtn.disabled = true;
         uploadImage(file, (uploadedUrl) => {
-          uploadPanelImageBtn.textContent = '上傳'; // 恢復按鈕文字
+          uploadPanelImageBtn.textContent = '上傳';
           uploadPanelImageBtn.disabled = false;
           if (uploadedUrl) {
             imageInput.value = uploadedUrl;
             const previewImage = document.getElementById('preview-image');
             if (previewImage) previewImage.src = uploadedUrl;
-            // alert('圖片上傳成功！URL 已填入。'); // 可選：成功提示已在 uploadImage 中
           }
-          // 失敗提示已在 uploadImage 中處理
         });
       } else {
         alert('請先選擇要上傳的圖片檔案。');
@@ -354,7 +436,6 @@ if (loadTemplateBtn && templateSelect) {
     console.warn("載入模板按鈕或下拉選單未找到。");
 }
 
-
 // 儲存模板按鈕
 if (saveTemplateBtn) {
     saveTemplateBtn.addEventListener('click', () => {
@@ -363,7 +444,6 @@ if (saveTemplateBtn) {
 } else {
     console.warn("儲存模板按鈕未找到。");
 }
-
 
 // Logo URL 輸入框即時預覽
 if (logoUrlInput && logoPreview) {
@@ -377,16 +457,15 @@ if (logoUrlInput && logoPreview) {
 
 // Ctrl+S 儲存快捷鍵
 document.addEventListener('keydown', e => {
-    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { // 兼容大小寫 S
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         console.log("偵測到 Ctrl+S，觸發儲存...");
-        // 確保有模板已載入且儲存按鈕是啟用的
-        if (currentTemplateId && !saveTemplateBtn.disabled) {
+        if (currentTemplateId && saveTemplateBtn && !saveTemplateBtn.disabled) { // 檢查按鈕是否可用
             saveAllChanges();
         } else if (!currentTemplateId) {
             console.warn("Ctrl+S 儲存失敗：沒有載入模板。");
         } else {
-            console.warn("Ctrl+S 儲存失敗：儲存按鈕目前被禁用。");
+            console.warn("Ctrl+S 儲存失敗：儲存按鈕目前被禁用(可能正在儲存中)。");
         }
     }
 });
@@ -397,37 +476,56 @@ const header = dragPanel ? dragPanel.querySelector('.editor-header') : null;
 
 if (dragPanel && header) {
     let isDragging = false;
-    let offsetX, offsetY;
+    let startX, startY, initialX, initialY;
 
     header.addEventListener('mousedown', e => {
-        // 防止在輸入框上觸發拖曳
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') {
             return;
         }
         isDragging = true;
-        // 計算滑鼠相對於面板左上角的位置
-        const rect = dragPanel.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-        header.style.cursor = 'grabbing'; // 改變滑鼠樣式
-        // 移除可能存在的 transform 以便 left/top 定位生效
-        dragPanel.style.transform = 'translate(0, 0)';
+        startX = e.clientX;
+        startY = e.clientY;
+        // 獲取當前面板的 left 和 top 值 (需要處理 'px')
+        initialX = parseInt(dragPanel.style.left || 0, 10);
+        initialY = parseInt(dragPanel.style.top || 0, 10);
+        // 如果一開始是用 transform 置中，需要先計算出 left/top
+        if (dragPanel.style.transform.includes('translate')) {
+             const rect = dragPanel.getBoundingClientRect();
+             // 獲取相對於 viewport 的位置，減去可能的父容器偏移（如果有的話）
+             const parentRect = dragPanel.offsetParent ? dragPanel.offsetParent.getBoundingClientRect() : {top: 0, left: 0};
+             initialX = rect.left - parentRect.left;
+             initialY = rect.top - parentRect.top;
+             dragPanel.style.transform = 'none'; // 清除 transform
+             dragPanel.style.left = `${initialX}px`;
+             dragPanel.style.top = `${initialY}px`;
+        }
+
+
+        header.style.cursor = 'grabbing';
+        document.addEventListener('mousemove', onMouseMove); // 只在拖曳開始時添加 move 監聽
+        document.addEventListener('mouseup', onMouseUp); // 只在拖曳開始時添加 up 監聽
     });
 
-    document.addEventListener('mouseup', () => {
+    function onMouseMove(e) {
+        if (isDragging) {
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const dx = currentX - startX;
+            const dy = currentY - startY;
+            dragPanel.style.left = `${initialX + dx}px`;
+            dragPanel.style.top = `${initialY + dy}px`;
+        }
+    }
+
+    function onMouseUp() {
         if (isDragging) {
             isDragging = false;
-            header.style.cursor = 'grab'; // 恢復滑鼠樣式
+            header.style.cursor = 'grab';
+            document.removeEventListener('mousemove', onMouseMove); // 拖曳結束時移除監聽
+            document.removeEventListener('mouseup', onMouseUp); // 拖曳結束時移除監聽
         }
-    });
+    }
 
-    document.addEventListener('mousemove', e => {
-        if (isDragging) {
-            // 設定面板的新位置 (滑鼠位置 - 偏移量)
-            dragPanel.style.left = `${e.clientX - offsetX}px`;
-            dragPanel.style.top = `${e.clientY - offsetY}px`;
-        }
-    });
 } else {
     console.warn("編輯面板或其標題頭未找到，拖曳功能將無法使用。");
 }
@@ -436,6 +534,5 @@ if (dragPanel && header) {
 // --- 初始化 ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM 已載入，開始初始化...");
-    // 確保 DOM 完全載入後再執行初始化邏輯
     fetchTemplateList(); // 獲取模板列表並自動載入第一個
 });
