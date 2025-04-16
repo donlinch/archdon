@@ -10,85 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-    <style>
-        /* 遊戲導覽頁面特定樣式 */
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-        .game-card {
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        .game-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        .game-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-bottom: 1px solid #eee;
-        }
-        .game-info {
-            padding: 1.5rem;
-        }
-        .game-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-        .game-description {
-            color: #666;
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
-        }
-        .play-button {
-            display: inline-block;
-            padding: 0.7rem 1.5rem;
-            background-color: #ff6b6b;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 700;
-            transition: background-color 0.3s;
-        }
-        .play-button:hover {
-            background-color: #ff5252;
-        }
-        .page-intro {
-            background-color: #fff0f5;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .page-intro h2 {
-            color: #ff6b6b;
-            margin-top: 0;
-        }
-        .section-title {
-            position: relative;
-            display: inline-block;
-            margin-bottom: 1.5rem;
-        }
-        .section-title::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -6px;
-            width: 100%;
-            height: 3px;
-            background-color: #ff6b6b;
-            border-radius: 3px;
-        }
-    </style>
 </head>
 <body>
     <header class="page-title-header">
@@ -109,8 +30,6 @@
             <h2>專屬於 SunnyYummy 的互動樂園</h2>
             <p>歡迎來到遊戲世界！在這裡，你可以透過有趣的互動遊戲更加了解 SunnyYummy。無論你喜歡策略、運氣還是反應類型的遊戲，這裡都有適合你的選擇。選擇一款你喜歡的遊戲，開始你的冒險吧！</p>
         </div>
-        
-        <h2 class="section-title">精選遊戲</h2>
         
         <div class="games-grid" id="games-container">
             <!-- 遊戲列表將由 JavaScript 動態生成 -->

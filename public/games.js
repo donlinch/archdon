@@ -25,22 +25,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         games.forEach(game => {
             const gameCard = document.createElement('div');
             gameCard.className = 'game-card';
+            gameCard.setAttribute('data-game-id', game.id);
+            gameCard.setAttribute('data-game-url', game.play_url);
+            
             gameCard.innerHTML = `
                 <img src="${game.image_url || '/images/placeholder.png'}" alt="${game.title}" class="game-image">
                 <div class="game-info">
                     <h3 class="game-title">${game.title}</h3>
                     <p class="game-description">${game.description || '暫無描述'}</p>
-                    <a href="${game.play_url}" class="play-button" data-game-id="${game.id}">立即遊玩</a>
                 </div>
             `;
+            
             gamesContainer.appendChild(gameCard);
         });
         
-        // 為所有遊戲按鈕添加點擊事件以記錄遊玩次數
-        document.querySelectorAll('.play-button').forEach(button => {
-            button.addEventListener('click', function(e) {
-                // 獲取遊戲ID
+        // 為所有遊戲卡片添加點擊事件
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // 獲取遊戲ID和URL
                 const gameId = this.getAttribute('data-game-id');
+                const gameUrl = this.getAttribute('data-game-url');
                 
                 // 記錄遊玩次數 (使用非阻塞方式)
                 fetch(`/api/games/${gameId}/play`, {
@@ -53,8 +57,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error('記錄遊玩次數失敗:', error);
                 });
                 
-                // 不阻止默認行為，讓用戶跳轉到遊戲頁面
+                // 跳轉到遊戲頁面
+                window.location.href = gameUrl;
             });
+            
+            // 添加指針游標樣式，表示可點擊
+            card.style.cursor = 'pointer';
         }); 
         
     } catch (error) {
