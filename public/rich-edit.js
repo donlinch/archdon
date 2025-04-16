@@ -8,7 +8,6 @@ const descInput = document.getElementById('edit-description');
 const colorInput = document.getElementById('edit-color');
 const imageInput = document.getElementById('edit-image');
 
-
 // (Logo 元素)
 const logoUrlInput = document.getElementById('edit-logo-url');
 const logoPreview = document.getElementById('logo-preview');
@@ -22,11 +21,10 @@ const saveAsNewBtn = document.getElementById('save-as-new-btn');
 const createNewBtn = document.getElementById('create-new-btn');
 const deleteTemplateBtn = document.getElementById('delete-template-btn');
 
-
+// 背景顏色相關元素
 const backgroundColorInput = document.getElementById('edit-background-color');
 const backgroundColorPreview = document.getElementById('background-color-preview');
 const colorPreviewBox = document.getElementById('color-preview-box');
-
 
 // --- 全域變數 ---
 let editingIndex = -1;
@@ -37,10 +35,6 @@ let currentLogoUrl = '';
 let currentPlayers = []; // 儲存玩家設定
 
 // --- 函數定義 ---
-
-
-
-
 
 // 更新備註列表
 function updateNotesList() {
@@ -80,48 +74,28 @@ function updateNotesList() {
             const index = cells.indexOf(cell);
             if (index !== -1) {
                 openEditor(index);
+                // 可選：高亮顯示對應的格子
+                highlightCell(index);
             }
         });
     });
 }
 
-// 修改 renderBoard 函數最後添加
-function renderBoard() {
-    // 現有代碼保持不變
-    
-    // 渲染完格子後更新備註列表
-    updateNotesList();
-}
-
-// 同樣在 saveCellChanges 函數最後也添加更新備註列表
-function saveCellChanges() {
-    // 現有代碼保持不變
-    
-    // 保存格子後更新備註列表
-    updateNotesList();
-}
-
-
-
-
-
 // 套用背景顏色
 function applyTemplateBackgroundColor(color) {
-  backgroundColor = color || '#fff0f5';
-  if (container) {
-      container.style.backgroundColor = backgroundColor;
-  } else {
-      console.error("無法找到 ID 為 'game-container' 的元素來設定背景色");
-  }
+    backgroundColor = color || '#fff0f5';
+    if (container) {
+        container.style.backgroundColor = backgroundColor;
+    } else {
+        console.error("無法找到 ID 為 'game-container' 的元素來設定背景色");
+    }
 }
-
-
 
 // 初始化背景顏色輸入框
 function initBackgroundColorInput() {
     if (!backgroundColorInput || !backgroundColorPreview || !colorPreviewBox) {
-      console.warn("背景顏色編輯元素未完全找到");
-      return;
+        console.warn("背景顏色編輯元素未完全找到");
+        return;
     }
   
     // 設置初始值
@@ -131,10 +105,10 @@ function initBackgroundColorInput() {
   
     // 添加事件監聽器
     backgroundColorInput.addEventListener('input', handleBackgroundColorChange);
-  }
+}
   
-  // 處理背景顏色變更
-  function handleBackgroundColorChange(event) {
+// 處理背景顏色變更
+function handleBackgroundColorChange(event) {
     const newColor = event.target.value;
     
     // 更新全局變量
@@ -142,25 +116,41 @@ function initBackgroundColorInput() {
     
     // 更新 UI
     if (backgroundColorPreview) {
-      backgroundColorPreview.textContent = newColor;
+        backgroundColorPreview.textContent = newColor;
     }
     if (colorPreviewBox) {
-      colorPreviewBox.style.backgroundColor = newColor;
+        colorPreviewBox.style.backgroundColor = newColor;
     }
     
     // 立即應用背景顏色到遊戲容器
     applyTemplateBackgroundColor(newColor);
     
     console.log(`背景顏色已變更為: ${newColor} (尚未儲存)`);
-  }
-  function renderBoard() {
-    // 前面部分保持不變
+}
+
+// 渲染遊戲板
+function renderBoard() {
+    if (!board) {
+        console.error("找不到遊戲板元素！");
+        return;
+    }
     
+    // 清空遊戲板
+    board.innerHTML = '';
+    
+    // 渲染每個格子
     cells.forEach((cell, i) => {
         const div = document.createElement('div');
         div.className = 'cell';
-        // 位置設定等代碼保持不變
         
+        // 位置設定
+        div.style.left = `${(i % 7) * 125}px`;
+        div.style.top = `${Math.floor(i / 7) * 100}px`;
+        
+        // 顏色設定
+        div.style.backgroundColor = cell.color || '#f0f0f0';
+        
+        // 如果有圖片，添加圖片
         if (cell.image_url) {
             const img = document.createElement('img');
             img.src = cell.image_url;
@@ -169,11 +159,13 @@ function initBackgroundColorInput() {
             div.appendChild(img);
         }
 
+        // 添加標題
         const titleDiv = document.createElement('div');
         titleDiv.className = 'title';
         titleDiv.textContent = cell.title || '';
         div.appendChild(titleDiv);
 
+        // 添加描述
         const descDiv = document.createElement('div');
         descDiv.className = 'description';
         descDiv.textContent = cell.description || '';
@@ -187,15 +179,16 @@ function initBackgroundColorInput() {
             div.appendChild(noteDiv);
         }
 
+        // 添加點擊事件
         div.onclick = () => openEditor(i);
         board.appendChild(div);
     });
+    
+    // 渲染完格子後更新備註列表
+    updateNotesList();
 }
 
-
-
-
-// ▼▼▼ 新增：處理刪除模板的函數 ▼▼▼
+// 處理刪除模板的函數
 async function deleteCurrentTemplate() {
     if (!currentTemplateId) {
         alert("錯誤：尚未載入任何模板，無法刪除！");
@@ -204,10 +197,9 @@ async function deleteCurrentTemplate() {
 
     // 增加保護，不允許刪除 ID=1
     if (currentTemplateId === 1) {
-         alert("錯誤：不允許刪除預設模板 (ID=1)！");
-         return;
-     }
-
+        alert("錯誤：不允許刪除預設模板 (ID=1)！");
+        return;
+    }
 
     const templateName = templateSelect.options[templateSelect.selectedIndex]?.text || `ID: ${currentTemplateId}`; // 獲取當前選中模板的名稱
     if (!confirm(`確定要永久刪除模板 "${templateName}" 嗎？\n這個操作無法復原！`)) {
@@ -238,40 +230,24 @@ async function deleteCurrentTemplate() {
             saveTemplateBtn.disabled = true; // 禁用儲存
             await fetchTemplateList(); // 刷新下拉選單 (會自動載入第一個)
         } else {
-             // 如果伺服器回傳錯誤 (例如 404, 500)
-             const errData = await response.json().catch(() => ({}));
-             throw new Error(`刪除失敗 ${response.status}: ${errData.error || response.statusText}`);
+            // 如果伺服器回傳錯誤 (例如 404, 500)
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(`刪除失敗 ${response.status}: ${errData.error || response.statusText}`);
         }
-
     } catch (err) {
         console.error('❌ 刪除模板失敗:', err);
         alert(`刪除模板失敗：\n${err.message}`);
     } finally {
         // 恢復按鈕狀態 (如果按鈕還存在的話)
         if (deleteTemplateBtn) {
-             deleteTemplateBtn.disabled = false;
-             deleteTemplateBtn.textContent = '🗑️ 刪除目前版本';
+            deleteTemplateBtn.disabled = false;
+            deleteTemplateBtn.textContent = '🗑️ 刪除目前版本';
         }
     }
 }
-// ▲▲▲ 新增：處理刪除模板的函數 ▲▲▲
 
-
-// --- 修改 openEditor 函數，確保每次打開編輯器時都居中 ---
-// 修改 openEditor 函數
+// 開啟編輯器函數
 function openEditor(index) {
-    // 前面部分保持不變
-    titleInput.value = cell.title || '';
-    descInput.value = cell.description || '';
-    colorInput.value = cell.color || '#ffffff';
-    imageInput.value = cell.image_url || '';
-    
-    // 添加備註值設定
-    const noteInput = document.getElementById('edit-note');
-    if (noteInput) {
-        noteInput.value = cell.note || '';
-    }
-    
     editingIndex = index;
     const cell = cells[editingIndex];
     if (!cell) {
@@ -284,6 +260,12 @@ function openEditor(index) {
     descInput.value = cell.description || '';
     colorInput.value = cell.color || '#ffffff';
     imageInput.value = cell.image_url || '';
+    
+    // 添加備註值設定
+    const noteInput = document.getElementById('edit-note');
+    if (noteInput) {
+        noteInput.value = cell.note || '';
+    }
     
     const previewImage = document.getElementById('preview-image');
     if (previewImage) {
@@ -301,9 +283,31 @@ function openEditor(index) {
     editorPanel.style.display = 'flex';
 }
 
+// 保存格子變更
+function saveCellChanges() {
+    if (editingIndex < 0 || !cells[editingIndex]) {
+        console.error("保存格子時編輯索引無效");
+        return;
+    }
+    
+    const cell = cells[editingIndex];
+    cell.title = titleInput.value.trim();
+    cell.description = descInput.value.trim();
+    cell.color = colorInput.value;
+    cell.image_url = imageInput.value.trim() || null;
+    
+    // 添加備註保存
+    const noteInput = document.getElementById('edit-note');
+    if (noteInput) {
+        cell.note = noteInput.value.trim();
+    }
+
+    renderBoard();
+    editorPanel.style.display = 'none';
+}
 
 // 獲取並填充模板列表
-async function fetchTemplateList(selectId = null) { // <-- 增加可選參數
+async function fetchTemplateList(selectId = null) {
     if (!templateSelect || !loadTemplateBtn) {
         console.error("模板選擇器的 DOM 元素未找到！");
         return;
@@ -320,11 +324,11 @@ async function fetchTemplateList(selectId = null) { // <-- 增加可選參數
             templateSelect.innerHTML = '<option value="">-- 沒有可用模板 --</option>';
             loadTemplateBtn.disabled = true;
             saveTemplateBtn.disabled = true;
-             if (board) board.innerHTML = '';
-             if (logoUrlInput) logoUrlInput.value = '';
-             if (logoPreview) logoPreview.src = '';
-             applyTemplateBackgroundColor('#fff0f5');
-             if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請先建立模板</td></tr>'; // 清空玩家表格
+            if (board) board.innerHTML = '';
+            if (logoUrlInput) logoUrlInput.value = '';
+            if (logoPreview) logoPreview.src = '';
+            applyTemplateBackgroundColor('#fff0f5');
+            if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請先建立模板</td></tr>'; // 清空玩家表格
             return;
         }
 
@@ -334,30 +338,30 @@ async function fetchTemplateList(selectId = null) { // <-- 增加可選參數
             option.textContent = `${template.template_name} (ID: ${template.id})`;
             templateSelect.appendChild(option);
         });
-  // 決定要選中哪個 ID
-  let idToSelect = selectId; // 優先使用傳入的 ID
-  if (!idToSelect && templates.length > 0) {
-      idToSelect = templates[0].id; // 否則選中第一個
-  }
+        
+        // 決定要選中哪個 ID
+        let idToSelect = selectId; // 優先使用傳入的 ID
+        if (!idToSelect && templates.length > 0) {
+            idToSelect = templates[0].id; // 否則選中第一個
+        }
 
-  if (idToSelect) {
-      templateSelect.value = idToSelect; // 設置選中項
-      loadTemplateBtn.disabled = false;
-      // 如果是新建或另存後刷新，則自動載入新選中的模板
-      if (selectId) {
-           await loadTemplate(idToSelect);
-      } else if (templates.length > 0 && templateSelect.value == templates[0].id){
-           // 如果是頁面首次載入，且有模板，自動載入第一個
-           await loadTemplate(templates[0].id);
-      } else {
-           // 否則，只更新下拉選單，不自動載入 (例如，只是刷新列表)
-           saveTemplateBtn.disabled = true; // 需要手動載入後才能儲存
-      }
-  } else {
-      loadTemplateBtn.disabled = true;
-      saveTemplateBtn.disabled = true;
-  }
-
+        if (idToSelect) {
+            templateSelect.value = idToSelect; // 設置選中項
+            loadTemplateBtn.disabled = false;
+            // 如果是新建或另存後刷新，則自動載入新選中的模板
+            if (selectId) {
+                await loadTemplate(idToSelect);
+            } else if (templates.length > 0 && templateSelect.value == templates[0].id){
+                // 如果是頁面首次載入，且有模板，自動載入第一個
+                await loadTemplate(templates[0].id);
+            } else {
+                // 否則，只更新下拉選單，不自動載入 (例如，只是刷新列表)
+                saveTemplateBtn.disabled = true; // 需要手動載入後才能儲存
+            }
+        } else {
+            loadTemplateBtn.disabled = true;
+            saveTemplateBtn.disabled = true;
+        }
     } catch (err) {
         console.error('❌ 獲取模板列表時出錯:', err);
         alert(`獲取模板列表失敗：\n${err.message}`);
@@ -394,24 +398,23 @@ async function loadTemplate(templateId) {
         const data = await response.json();
         console.log("載入的模板資料:", data);
 
-        // 找到類似這樣的代碼段：
-applyTemplateBackgroundColor(data.background_color);
-cells = data.cells || [];
-currentLogoUrl = data.logo_url || '';
-if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
-if (logoPreview) logoPreview.src = currentLogoUrl;
+        // 套用背景顏色
+        applyTemplateBackgroundColor(data.background_color);
+        cells = data.cells || [];
+        currentLogoUrl = data.logo_url || '';
+        if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
+        if (logoPreview) logoPreview.src = currentLogoUrl;
 
-// 在這之後添加：
-if (backgroundColorInput) backgroundColorInput.value = data.background_color || '#fff0f5';
-if (backgroundColorPreview) backgroundColorPreview.textContent = data.background_color || '#fff0f5';
-if (colorPreviewBox) colorPreviewBox.style.backgroundColor = data.background_color || '#fff0f5';
+        // 更新背景顏色輸入框
+        if (backgroundColorInput) backgroundColorInput.value = data.background_color || '#fff0f5';
+        if (backgroundColorPreview) backgroundColorPreview.textContent = data.background_color || '#fff0f5';
+        if (colorPreviewBox) colorPreviewBox.style.backgroundColor = data.background_color || '#fff0f5';
 
         currentPlayers = data.players || []; // 處理玩家資料
         renderPlayerConfigUI(); // 渲染玩家UI
 
         renderBoard();
         saveTemplateBtn.disabled = false;
-
     } catch (err) {
         console.error('❌ 載入模板失敗:', err);
         alert(`無法載入模板資料 (ID: ${currentTemplateId})：\n${err.message}\n請檢查後端 API 是否正常運作，以及模板 ID 是否存在。`);
@@ -427,9 +430,7 @@ if (colorPreviewBox) colorPreviewBox.style.backgroundColor = data.background_col
     }
 }
 
-
-
-// ▼▼▼ 新增：處理新建/另存的核心 API 呼叫函數 ▼▼▼
+// 處理新建/另存的核心 API 呼叫函數
 async function createNewTemplateInAPI(payload) {
     console.log("準備發送 POST 請求創建模板:", payload);
     try {
@@ -450,17 +451,11 @@ async function createNewTemplateInAPI(payload) {
 
         // 刷新模板列表並選中新創建的模板
         await fetchTemplateList(result.newTemplate.id); // 將新 ID 傳過去
-
     } catch (err) {
         console.error('❌ 創建/另存模板失敗:', err);
         alert(`操作失敗：\n${err.message}`);
-        // 可以選擇在這裡恢復按鈕狀態，如果有的話
     }
 }
-// ▲▲▲ 新增：處理新建/另存的核心 API 呼叫函數 ▲▲▲
-
-
-
 
 // 渲染玩家設定 UI
 function renderPlayerConfigUI() {
@@ -536,7 +531,6 @@ function handlePlayerInputChange(event) {
     }
     const player = currentPlayers[playerIndex];
 
-
     if (inputElement.type === 'text') {
         player.name = inputElement.value.trim() || null; // 空字串存為 null
     } else if (inputElement.type === 'url') {
@@ -547,12 +541,15 @@ function handlePlayerInputChange(event) {
             previewImg.src = newUrl || `https://via.placeholder.com/40?text=P${player.player_number}`;
         }
     }
-    // console.log("玩家資料已更新 (前端):", currentPlayers);
 }
 
-
+// 保存所有變更到伺服器
 function saveAllChanges() {
-    // 現有代碼保持不變
+    if (!currentTemplateId) {
+        console.error("儲存時沒有當前模板 ID");
+        alert("錯誤：沒有載入模板，無法儲存！");
+        return;
+    }
     
     // 確保 cells 資料包含 note 欄位
     const cellsToSave = cells.map(cell => ({
@@ -589,8 +586,6 @@ function saveAllChanges() {
     .then(data => {
         console.log("儲存成功回應:", data);
         alert(`✅ 儲存成功！ (${data.message || ''})`);
-        // 儲存成功後可以考慮重新載入一次，確保資料是最新狀態
-        // loadTemplate(currentTemplateId);
     })
     .catch(err => {
         console.error('❌ 儲存失敗:', err);
@@ -613,11 +608,11 @@ function uploadImage(file, callback) {
     })
     .then(res => {
         if (!res.ok) {
-             return res.json().then(errData => {
-                 throw new Error(`圖片上傳失敗 ${res.status}: ${errData.error || '伺服器錯誤'}`);
-             }).catch(() => {
-                 throw new Error(`圖片上傳失敗 ${res.status}`);
-             });
+            return res.json().then(errData => {
+                throw new Error(`圖片上傳失敗 ${res.status}: ${errData.error || '伺服器錯誤'}`);
+            }).catch(() => {
+                throw new Error(`圖片上傳失敗 ${res.status}`);
+            });
         }
         return res.json();
     })
@@ -635,8 +630,45 @@ function uploadImage(file, callback) {
     });
 }
 
-// --- 事件監聽器 ---
+// 高亮格子的輔助函數
+function highlightCell(index) {
+    const cells = document.querySelectorAll('.cell');
+    if (cells[index]) {
+        // 添加高亮类
+        cells[index].classList.add('cell-highlight');
+        // 1秒后移除高亮
+        setTimeout(() => {
+            cells[index].classList.remove('cell-highlight');
+        }, 1000);
+    }
+}
 
+// 顯示臨時消息的輔助函數
+function showTemporaryMessage(message) {
+    // 创建一个消息元素
+    const msgEl = document.createElement('div');
+    msgEl.className = 'temp-message';
+    msgEl.textContent = message;
+    msgEl.style.position = 'fixed';
+    msgEl.style.top = '10px';
+    msgEl.style.left = '50%';
+    msgEl.style.transform = 'translateX(-50%)';
+    msgEl.style.padding = '10px 20px';
+    msgEl.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    msgEl.style.color = 'white';
+    msgEl.style.borderRadius = '5px';
+    msgEl.style.zIndex = 1000;
+    
+    // 添加到页面
+    document.body.appendChild(msgEl);
+    
+    // 3秒后删除
+    setTimeout(() => {
+        document.body.removeChild(msgEl);
+    }, 3000);
+}
+
+// --- 事件監聽器設定 ---
 
 // 載入模板按鈕
 if (loadTemplateBtn && templateSelect) {
@@ -686,11 +718,6 @@ document.addEventListener('keydown', e => {
     }
 });
 
-
-
-
-
-// ▼▼▼ 新增按鈕的事件監聽 ▼▼▼
 // "另存為新版本..." 按鈕
 if (saveAsNewBtn) {
     saveAsNewBtn.addEventListener('click', () => {
@@ -732,148 +759,21 @@ if (createNewBtn) {
 } else {
     console.warn("新建地圖按鈕未找到。");
 }
-// ▲▲▲ 新增按鈕的事件監聽 ▲▲▲
 
-
-/*
-
-// 拖曳編輯面板
-const dragPanel = document.getElementById('editor-panel');
-const header = dragPanel ? dragPanel.querySelector('.editor-header') : null;
-
-if (dragPanel && header) {
-    let isDragging = false;
-    let startX, startY, initialX, initialY;
-
-    header.addEventListener('mousedown', e => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'LABEL') {
-            return;
-        }
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        // 獲取當前面板的 left 和 top 值 (需要處理 'px')
-        initialX = parseInt(dragPanel.style.left || 0, 10);
-        initialY = parseInt(dragPanel.style.top || 0, 10);
-        // 如果一開始是用 transform 置中，需要先計算出 left/top
-        if (dragPanel.style.transform.includes('translate')) {
-             const rect = dragPanel.getBoundingClientRect();
-             // 獲取相對於 viewport 的位置，減去可能的父容器偏移（如果有的話）
-             const parentRect = dragPanel.offsetParent ? dragPanel.offsetParent.getBoundingClientRect() : {top: 0, left: 0};
-             initialX = rect.left - parentRect.left;
-             initialY = rect.top - parentRect.top;
-             dragPanel.style.transform = 'none'; // 清除 transform
-             dragPanel.style.left = `${initialX}px`;
-             dragPanel.style.top = `${initialY}px`;
-        }
-
-
-        header.style.cursor = 'grabbing';
-        document.addEventListener('mousemove', onMouseMove); // 只在拖曳開始時添加 move 監聽
-        document.addEventListener('mouseup', onMouseUp); // 只在拖曳開始時添加 up 監聽
-    });
-
-    function onMouseMove(e) {
-        if (isDragging) {
-            const currentX = e.clientX;
-            const currentY = e.clientY;
-            const dx = currentX - startX;
-            const dy = currentY - startY;
-            dragPanel.style.left = `${initialX + dx}px`;
-            dragPanel.style.top = `${initialY + dy}px`;
-        }
-    }
-
-    function onMouseUp() {
-        if (isDragging) {
-            isDragging = false;
-            header.style.cursor = 'grab';
-            document.removeEventListener('mousemove', onMouseMove); // 拖曳結束時移除監聽
-            document.removeEventListener('mouseup', onMouseUp); // 拖曳結束時移除監聽
-        }
-    }
-
-} else {
-    console.warn("編輯面板或其標題頭未找到，拖曳功能將無法使用。");
-}
-    */
-
-// 修改 saveCellChanges 函數
-function saveCellChanges() {
-    if (editingIndex < 0 || !cells[editingIndex]) {
-        console.error("保存格子時編輯索引無效");
-        return;
-    }
-    const cell = cells[editingIndex];
-    cell.title = titleInput.value.trim();
-    cell.description = descInput.value.trim();
-    cell.color = colorInput.value;
-    cell.image_url = imageInput.value.trim() || null;
-    
-    // 添加備註保存
-    const noteInput = document.getElementById('edit-note');
-    if (noteInput) {
-        cell.note = noteInput.value.trim();
-    }
-
-    renderBoard();
-    editorPanel.style.display = 'none';
-}
-
-// 高亮格子的辅助函数
-function highlightCell(index) {
-    const cells = document.querySelectorAll('.cell');
-    if (cells[index]) {
-        // 添加高亮类
-        cells[index].classList.add('cell-highlight');
-        // 1秒后移除高亮
-        setTimeout(() => {
-            cells[index].classList.remove('cell-highlight');
-        }, 1000);
-    }
-}
-
-// 显示临时消息的辅助函数
-function showTemporaryMessage(message) {
-    // 创建一个消息元素
-    const msgEl = document.createElement('div');
-    msgEl.className = 'temp-message';
-    msgEl.textContent = message;
-    msgEl.style.position = 'fixed';
-    msgEl.style.top = '10px';
-    msgEl.style.left = '50%';
-    msgEl.style.transform = 'translateX(-50%)';
-    msgEl.style.padding = '10px 20px';
-    msgEl.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    msgEl.style.color = 'white';
-    msgEl.style.borderRadius = '5px';
-    msgEl.style.zIndex = 1000;
-    
-    // 添加到页面
-    document.body.appendChild(msgEl);
-    
-    // 3秒后删除
-    setTimeout(() => {
-        document.body.removeChild(msgEl);
-    }, 3000);
-}
-
-
-// 在 rich-edit.js 的初始化部分添加
-const saveCellBtn = document.getElementById('save-cell-btn');
-if (saveCellBtn) {
-    saveCellBtn.addEventListener('click', saveCellChanges);
-} else {
-    console.warn("保存格子按钮未找到");
-}
-
-// ▼▼▼ 新增刪除按鈕的事件監聽 ▼▼▼
+// 刪除模板按鈕
 if (deleteTemplateBtn) {
     deleteTemplateBtn.addEventListener('click', deleteCurrentTemplate);
 } else {
     console.warn("刪除模板按鈕未找到。");
 }
 
+// 保存格子按鈕
+const saveCellBtn = document.getElementById('save-cell-btn');
+if (saveCellBtn) {
+    saveCellBtn.addEventListener('click', saveCellChanges);
+} else {
+    console.warn("保存格子按鈕未找到");
+}
 
 // --- 初始化 ---
 document.addEventListener('DOMContentLoaded', () => {
