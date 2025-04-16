@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmUploadBtn = document.getElementById('confirm-upload-btn');
     const uploadModalCancelBtns = uploadModal ? uploadModal.querySelectorAll('.close-modal-btn') : [];
 
-
     // --- 狀態變數 ---
     let currentPage = 1;
     let totalPages = 1;
@@ -40,34 +39,91 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideError = () => { if(fileError) fileError.style.display = 'none'; };
     const openModal = (modal) => { if(modal) modal.style.display = 'flex'; };
     const closeModal = (modal) => { if(modal) modal.style.display = 'none'; };
-    function formatBytes(bytes, decimals = 2) { /* ... 省略，稍後添加 ... */ }
-    function escapeHtml(unsafe) { /* ... 省略，稍後添加 ... */ }
 
-    // --- 主要功能函數 (待填充) ---
-    async function fetchFiles() {
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes'; // Handle 0 or invalid input
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return unsafe
+             .toString()
+             .replace(/&/g, "&")
+             .replace(/</g, "<")
+             .replace(/>/g, ">")
+            // " 轉成 & q u o t ;
+            .replace(/"/g, '&quot;')
+        
+            // ' 轉成 & # 3 9 ;  (數字實體)
+            .replace(/'/g, '&#39;');
+    }
+
+    // --- 主要功能函數 ---
+    async function fetchFiles(page = currentPage) {
         showLoading(true);
         hideError();
-        if (currentView === 'list' && listTableBody) listTableBody.innerHTML = '';
-        if (currentView === 'grid' && fileGridView) fileGridView.innerHTML = '';
+        // 清空當前視圖的內容
+        if (currentView === 'list' && listTableBody) listTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">正在載入...</td></tr>`;
+        if (currentView === 'grid' && fileGridView) fileGridView.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">正在載入...</p>';
         if (paginationControls) paginationControls.innerHTML = '';
+
+        currentPage = page; // 更新當前頁碼狀態
+
         console.log(`Fetching page ${currentPage}, filter: ${currentFileType}, sort: ${currentSortBy}, search: ${currentSearch}`);
 
-        // TODO: 呼叫 GET /api/admin/files API
-        // TODO: 處理回應
-        // TODO: 呼叫 renderFiles
-        // TODO: 呼叫 renderPagination
-        // TODO: 錯誤處理
-        // TODO: 隱藏 Loading
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: 15, // 每頁數量 (可以設為變數)
+            sortBy: currentSortBy,
+            fileType: currentFileType,
+            search: currentSearch
+        });
 
-        // 模擬載入
-        await new Promise(resolve => setTimeout(resolve, 500));
-        showLoading(false);
-        if (currentView === 'list' && listTableBody) listTableBody.innerHTML = '<tr><td colspan="6">尚未載入資料</td></tr>';
-         if (currentView === 'grid' && fileGridView) fileGridView.innerHTML = '<p>尚未載入資料</p>';
-        console.warn("fetchFiles 尚未完全實作！");
+        try {
+            const response = await fetch(`/api/admin/files?${params.toString()}`);
+            if (!response.ok) {
+                let errorMsg = `HTTP 錯誤 ${response.status}`;
+                try { const errData = await response.json(); errorMsg = errData.error || errorMsg; } catch {}
+                throw new Error(`無法獲取檔案列表 (${errorMsg})`);
+            }
+            const data = await response.json();
+
+            console.log("API Response Data:", data); // 檢查返回的數據
+
+            renderFiles(data.files || []); // 渲染檔案列表
+            renderPagination(data.totalPages || 1, data.currentPage || 1); // 渲染分頁
+
+        } catch (err) {
+            console.error('❌ 獲取檔案列表失敗:', err);
+            showError(`無法載入檔案列表：${err.message}`);
+            // 清空兩個視圖的內容
+            if (listTableBody) listTableBody.innerHTML = `<tr><td colspan="6" style="color:red; text-align: center;">載入失敗</td></tr>`;
+            if (fileGridView) fileGridView.innerHTML = `<p style="color:red; text-align: center; grid-column: 1 / -1;">載入失敗</p>`;
+        } finally {
+            showLoading(false);
+        }
     }
 
     function renderFiles(files) {
+        // 先清空，確保舊數據被移除
+        if (listTableBody) listTableBody.innerHTML = '';
+        if (fileGridView) fileGridView.innerHTML = '';
+
+        if (!Array.isArray(files) || files.length === 0) {
+             if (currentView === 'list' && listTableBody) listTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">找不到符合條件的檔案。</td></tr>';
+             if (currentView === 'grid' && fileGridView) fileGridView.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">找不到符合條件的檔案。</p>';
+            return;
+        }
+
+        // 根據當前視圖渲染
         if (currentView === 'list') {
             renderListView(files);
         } else {
@@ -79,24 +135,159 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderListView(files) {
         console.log("Rendering list view...");
         if (!listTableBody) return;
-        // TODO: 填充表格內容
-         listTableBody.innerHTML = '<tr><td colspan="6">列表視圖待實作...</td></tr>';
+        listTableBody.innerHTML = ''; // 確保再次清空
+
+        files.forEach(file => {
+            const row = listTableBody.insertRow();
+            row.dataset.fileId = file.id;
+
+            // 預覽
+            const cellPreview = row.insertCell();
+            cellPreview.style.textAlign = 'center';
+            if (file.file_type === 'image' && file.file_path) {
+                cellPreview.innerHTML = `<img src="${escapeHtml(file.file_path)}" alt="預覽" class="preview-icon" style="max-width: 60px; max-height: 40px;">`; // 限制大小
+            } else if (file.file_type === 'pdf') {
+                cellPreview.innerHTML = '<span class="preview-icon" style="font-size: 1.5rem; color: #dc3545;">📄</span>'; // PDF 圖示
+            } else {
+                cellPreview.innerHTML = '<span class="preview-icon" style="font-size: 1.5rem; color: #6c757d;">❓</span>'; // 其他檔案圖示
+            }
+
+            // 原始檔名
+            const cellOrigName = row.insertCell();
+            cellOrigName.textContent = file.original_filename;
+            cellOrigName.title = file.original_filename;
+
+            // 檔案路徑 (URL) + 複製按鈕
+            const cellPath = row.insertCell();
+            cellPath.style.wordBreak = 'break-all';
+            cellPath.style.whiteSpace = 'normal';
+            const pathSpan = document.createElement('span');
+            pathSpan.textContent = file.file_path;
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-url-btn btn btn-sm btn-outline-secondary'; // 使用 Bootstrap-like class
+            copyBtn.textContent = '複製';
+            copyBtn.dataset.filePath = file.file_path;
+            cellPath.appendChild(pathSpan);
+            cellPath.appendChild(copyBtn);
+
+            // 類型
+            row.insertCell().textContent = file.file_type || '未知';
+
+            // 大小
+            const cellSize = row.insertCell();
+            cellSize.textContent = formatBytes(file.size_bytes);
+            cellSize.style.textAlign = 'right';
+
+            // 操作
+            const cellActions = row.insertCell();
+            cellActions.style.textAlign = 'center';
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-file-btn btn btn-sm btn-danger'; // 使用 Bootstrap-like class
+            deleteBtn.textContent = '刪除';
+            deleteBtn.dataset.fileId = file.id;
+            deleteBtn.dataset.fileName = file.original_filename;
+            cellActions.appendChild(deleteBtn);
+        });
     }
 
     function renderGridView(files) {
         console.log("Rendering grid view...");
         if (!fileGridView) return;
-        // TODO: 填充卡片內容
-        fileGridView.innerHTML = '<p>格狀視圖待實作...</p>';
+        fileGridView.innerHTML = ''; // 清空
+
+        files.forEach(file => {
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.dataset.fileId = file.id;
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'preview';
+            if (file.file_type === 'image' && file.file_path) {
+                previewDiv.innerHTML = `<img src="${escapeHtml(file.file_path)}" alt="預覽">`;
+            } else if (file.file_type === 'pdf') {
+                previewDiv.innerHTML = '<span style="font-size: 2.5rem; color: #dc3545;">📄</span>';
+            } else {
+                previewDiv.innerHTML = '<span style="font-size: 2.5rem; color: #6c757d;">❓</span>';
+            }
+
+            const filenameDiv = document.createElement('div');
+            filenameDiv.className = 'filename';
+            filenameDiv.textContent = file.original_filename;
+            filenameDiv.title = file.original_filename;
+
+            const urlLineDiv = document.createElement('div');
+            urlLineDiv.className = 'url-line';
+            const urlSpan = document.createElement('span');
+            urlSpan.className = 'url-path';
+            urlSpan.textContent = file.file_path;
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-url-btn-grid';
+            copyBtn.textContent = '複製';
+            copyBtn.dataset.filePath = file.file_path;
+            urlLineDiv.appendChild(urlSpan);
+            urlLineDiv.appendChild(copyBtn);
+
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'meta';
+            metaDiv.textContent = `類型: ${file.file_type || '未知'} | 大小: ${formatBytes(file.size_bytes)}`;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-file-btn-grid btn btn-sm btn-danger'; // 添加 btn class
+            deleteBtn.textContent = '刪除';
+            deleteBtn.dataset.fileId = file.id;
+            deleteBtn.dataset.fileName = file.original_filename;
+
+            card.appendChild(previewDiv);
+            card.appendChild(filenameDiv);
+            card.appendChild(urlLineDiv);
+            card.appendChild(metaDiv);
+            card.appendChild(deleteBtn);
+
+            fileGridView.appendChild(card);
+        });
     }
 
     function renderPagination(totalPagesReceived, currentPageReceived) {
         totalPages = totalPagesReceived;
         currentPage = currentPageReceived;
         console.log(`Rendering pagination: Total ${totalPages}, Current ${currentPage}`);
-        if (!paginationControls) return;
-        // TODO: 實作分頁按鈕
-        paginationControls.innerHTML = `<span>分頁待實作 (總 ${totalPages} 頁)</span>`;
+        if (!paginationControls || totalPages <= 1) {
+            if (paginationControls) paginationControls.innerHTML = '';
+            return;
+        }
+        paginationControls.innerHTML = '';
+
+        const createButton = (page, text, isDisabled = false, isActive = false) => {
+            const button = document.createElement('button');
+            button.dataset.page = page;
+            button.textContent = text;
+            button.disabled = isDisabled;
+            button.className = 'page-btn'; // 基礎 class
+            if (isActive) button.classList.add('active'); // 當前頁
+            if (isDisabled) button.classList.add('disabled'); // 禁用狀態
+            return button;
+        };
+
+        paginationControls.appendChild(createButton(currentPage - 1, '<< 上一頁', currentPage === 1));
+
+        const maxPagesToShow = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+        if (endPage - startPage + 1 < maxPagesToShow) { startPage = Math.max(1, endPage - maxPagesToShow + 1); }
+
+        if (startPage > 1) {
+            paginationControls.appendChild(createButton(1, '1'));
+            if (startPage > 2) { const ellipsis = document.createElement('span'); ellipsis.textContent = '...'; paginationControls.appendChild(ellipsis); }
+        }
+        for (let i = startPage; i <= endPage; i++) {
+            paginationControls.appendChild(createButton(i, i.toString(), false, i === currentPage));
+        }
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) { const ellipsis = document.createElement('span'); ellipsis.textContent = '...'; paginationControls.appendChild(ellipsis); }
+            paginationControls.appendChild(createButton(totalPages, totalPages.toString()));
+        }
+
+        paginationControls.appendChild(createButton(currentPage + 1, '下一頁 >>', currentPage === totalPages));
     }
 
     function switchView(view) {
@@ -106,8 +297,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewListBtn) viewListBtn.classList.toggle('active', currentView === 'list');
         if (viewGridBtn) viewGridBtn.classList.toggle('active', currentView === 'grid');
         if (fileListView) fileListView.style.display = currentView === 'list' ? 'block' : 'none';
-        if (fileGridView) fileGridView.style.display = currentView === 'grid' ? 'grid' : 'none'; // grid 使用 grid 佈局
-        // 通常切換視圖後需要重新獲取數據並渲染，因為元素結構不同
+        if (fileGridView) fileGridView.style.display = currentView === 'grid' ? 'grid' : 'none';
+        // 重新渲染，因為 DOM 結構不同，但不需要重新 fetch
+        // 需要一個變數來儲存上次 fetch 的結果
+        // 為了簡化，我們還是重新 fetch
         fetchFiles();
     }
 
@@ -117,8 +310,17 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadStatus.textContent = '請先選擇一個檔案！'; uploadStatus.style.color = 'orange'; return;
         }
         const file = fileInput.files[0];
+        // 可以在此處添加檔案大小或類型的客戶端驗證
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+             uploadStatus.textContent = '不支援的檔案類型！'; uploadStatus.style.color = 'red'; return;
+        }
+        if (file.size > 2 * 1024 * 1024) { // 2MB
+             uploadStatus.textContent = '檔案大小超過 2MB 限制！'; uploadStatus.style.color = 'red'; return;
+        }
+
         const formData = new FormData();
-        formData.append('file', file); // 確保欄位名是 'file'
+        formData.append('file', file);
 
         confirmUploadBtn.disabled = true; uploadStatus.textContent = '上傳中...'; uploadStatus.style.color = 'blue';
 
@@ -131,6 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
              uploadStatus.textContent = '上傳成功！正在刷新列表...'; uploadStatus.style.color = 'green';
              setTimeout(() => {
                  closeModal(uploadModal);
+                 currentPage = 1; // 上傳後跳回第一頁
+                 currentSortBy = 'newest'; // 按最新排序
+                 sortBySelect.value = 'newest'; // 更新下拉選單
                  fetchFiles(); // 上傳成功後刷新列表
              }, 1000);
         } catch (error) {
@@ -142,22 +347,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleCopyUrl(event) {
-        const button = event.target.closest('.copy-url-btn, .copy-url-btn-grid'); // 處理兩種按鈕
+        const button = event.target.closest('.copy-url-btn, .copy-url-btn-grid');
         if (!button) return;
         const filePath = button.dataset.filePath;
         if (!filePath) return;
 
         navigator.clipboard.writeText(filePath).then(() => {
             const originalText = button.textContent;
-            button.textContent = '已複製!';
+            button.textContent = '✓'; // 用打勾符號
             button.classList.add('copy-success-indicator');
+            button.disabled = true; // 複製後禁用一段時間
             setTimeout(() => {
                 button.textContent = originalText;
                 button.classList.remove('copy-success-indicator');
+                button.disabled = false;
             }, 1500);
         }).catch(err => {
             console.error('複製 URL 失敗:', err);
-            alert('複製 URL 失敗，請手動複製。');
+            alert('複製 URL 失敗，請手動複製。\n可能需要瀏覽器允許剪貼簿權限。');
         });
     }
 
@@ -168,16 +375,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileName = button.dataset.fileName || `檔案ID ${fileId}`;
         if (!fileId) return;
 
-        if (!confirm(`確定要刪除檔案 "${fileName}" 嗎？\n此操作將從伺服器永久刪除檔案且無法復原！`)) {
+        if (!confirm(`確定要刪除檔案 "${escapeHtml(fileName)}" 嗎？\n此操作將從伺服器永久刪除檔案且無法復原！`)) {
             return;
         }
 
         try {
-             button.disabled = true; // 禁用按鈕防止重複點擊
+             button.disabled = true;
+             button.textContent = '刪除中...';
              const response = await fetch(`/api/admin/files/${fileId}`, { method: 'DELETE' });
              if (response.status === 204 || response.ok) {
-                 alert(`檔案 "${fileName}" 已成功刪除。`);
-                 fetchFiles(); // 刪除成功後刷新
+                 alert(`檔案 "${escapeHtml(fileName)}" 已成功刪除。`);
+                 // 刪除成功後留在當前頁刷新
+                 fetchFiles();
              } else {
                  const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
                  throw new Error(errorData.error || `刪除失敗 (${response.status})`);
@@ -186,63 +395,81 @@ document.addEventListener('DOMContentLoaded', () => {
              console.error('刪除檔案失敗:', error);
              alert(`刪除檔案失敗: ${error.message}`);
              button.disabled = false; // 恢復按鈕
+             button.textContent = '刪除'; // 恢復文字
         }
     }
 
     function addActionButtonListeners() {
-        // 使用事件委派來處理複製和刪除
         const displayArea = document.getElementById('file-display-area');
         if (displayArea) {
-            // 先移除舊監聽器，避免重複綁定
-            displayArea.removeEventListener('click', handleCopyUrl);
-            displayArea.removeEventListener('click', handleDeleteFile);
-            // 再添加新的
-            displayArea.addEventListener('click', handleCopyUrl);
-            displayArea.addEventListener('click', handleDeleteFile);
+            // 使用事件委派處理動態生成的按鈕
+            displayArea.removeEventListener('click', handleDynamicButtonClick); // 移除舊監聽器
+            displayArea.addEventListener('click', handleDynamicButtonClick); // 添加新監聽器
         }
     }
 
+    // 統一處理動態按鈕點擊的函數
+    function handleDynamicButtonClick(event) {
+        if (event.target.closest('.copy-url-btn, .copy-url-btn-grid')) {
+            handleCopyUrl(event);
+        } else if (event.target.closest('.delete-file-btn, .delete-file-btn-grid')) {
+            handleDeleteFile(event);
+        }
+    }
+
+
     // --- 事件監聽器綁定 ---
     if (uploadBtn) uploadBtn.addEventListener('click', () => {
-         uploadForm.reset(); uploadPreview.innerHTML = ''; uploadStatus.textContent = '';
+         if(uploadForm) uploadForm.reset();
+         if(uploadPreview) uploadPreview.innerHTML = '';
+         if(uploadStatus) uploadStatus.textContent = '';
          openModal(uploadModal);
     });
     if (closeUploadModalBtn) closeUploadModalBtn.addEventListener('click', () => closeModal(uploadModal));
     if (uploadModal) uploadModal.addEventListener('click', (e) => { if (e.target === uploadModal) closeModal(uploadModal); });
     if (uploadForm) uploadForm.addEventListener('submit', handleUpload);
-    if (fileInput) fileInput.addEventListener('change', () => { // 檔案選擇預覽
-        uploadPreview.innerHTML = ''; uploadStatus.textContent = '';
+    if (fileInput) fileInput.addEventListener('change', () => {
+        if(uploadPreview) uploadPreview.innerHTML = '';
+        if(uploadStatus) uploadStatus.textContent = '';
         if (fileInput.files && fileInput.files[0]) {
              const file = fileInput.files[0];
              if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
-                 reader.onload = (e) => { uploadPreview.innerHTML = `<img src="${e.target.result}" alt="預覽" style="max-width: 100%; max-height: 150px; object-fit: contain;">`; }
+                 reader.onload = (e) => { if(uploadPreview) uploadPreview.innerHTML = `<img src="${e.target.result}" alt="預覽" style="max-width: 100%; max-height: 150px; object-fit: contain;">`; }
                  reader.readAsDataURL(file);
              } else if (file.type === 'application/pdf') {
-                 uploadPreview.innerHTML = '<span>📄 PDF 檔案已選擇</span>';
+                 if(uploadPreview) uploadPreview.innerHTML = '<span>📄 PDF 檔案已選擇</span>';
              } else {
-                 uploadPreview.innerHTML = `<span>其他檔案: ${escapeHtml(file.name)}</span>`;
+                 if(uploadPreview) uploadPreview.innerHTML = `<span>其他檔案: ${escapeHtml(file.name)}</span>`;
              }
         }
     });
      uploadModalCancelBtns.forEach(btn => btn.addEventListener('click', () => closeModal(uploadModal)));
 
-
+    // 篩選和排序控制
     if (searchInput) searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') { currentSearch = searchInput.value.trim(); currentPage = 1; fetchFiles(); } });
     if (typeFilter) typeFilter.addEventListener('change', () => { currentFileType = typeFilter.value; currentPage = 1; fetchFiles(); });
     if (sortBySelect) sortBySelect.addEventListener('change', () => { currentSortBy = sortBySelect.value; currentPage = 1; fetchFiles(); });
-    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchFiles());
+    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchFiles()); // 刷新使用當前參數
+
+    // 視圖切換
     if (viewListBtn) viewListBtn.addEventListener('click', () => switchView('list'));
     if (viewGridBtn) viewGridBtn.addEventListener('click', () => switchView('grid'));
-    if (paginationControls) paginationControls.addEventListener('click', (e) => {
-        if (e.target.matches('button') && !e.target.disabled) {
-            const page = parseInt(e.target.dataset.page);
-            if (!isNaN(page) && page !== currentPage) { fetchFiles(page); }
-        }
-    });
+
+    // 分頁控制 (事件委派)
+    if (paginationControls) {
+        paginationControls.addEventListener('click', (e) => {
+            if (e.target.matches('button.page-btn') && !e.target.disabled) { // 使用 .page-btn class
+                const page = parseInt(e.target.dataset.page);
+                if (!isNaN(page) && page !== currentPage) {
+                    fetchFiles(page); // Fetch the requested page
+                }
+            }
+        });
+    }
 
     // --- 初始化 ---
     console.log("Initializing File Admin Page...");
     fetchFiles(); // 初始載入第一頁
 
-});
+}); // End of DOMContentLoaded
