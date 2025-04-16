@@ -7,8 +7,8 @@ const titleInput = document.getElementById('edit-title');
 const descInput = document.getElementById('edit-description');
 const colorInput = document.getElementById('edit-color');
 const imageInput = document.getElementById('edit-image');
-const panelImageFile = document.getElementById('panel-image-file');
-const uploadPanelImageBtn = document.getElementById('upload-panel-image-btn');
+
+
 // (Logo 元素)
 const logoUrlInput = document.getElementById('edit-logo-url');
 const logoPreview = document.getElementById('logo-preview');
@@ -521,29 +521,6 @@ function uploadImage(file, callback) {
 
 // --- 事件監聽器 ---
 
-// 編輯面板內的圖片上傳按鈕
-if (uploadPanelImageBtn && panelImageFile && imageInput) {
-    uploadPanelImageBtn.addEventListener('click', () => {
-      if (panelImageFile.files.length > 0) {
-        const file = panelImageFile.files[0];
-        uploadPanelImageBtn.textContent = '上傳中..';
-        uploadPanelImageBtn.disabled = true;
-        uploadImage(file, (uploadedUrl) => {
-          uploadPanelImageBtn.textContent = '上傳';
-          uploadPanelImageBtn.disabled = false;
-          if (uploadedUrl) {
-            imageInput.value = uploadedUrl;
-            const previewImage = document.getElementById('preview-image');
-            if (previewImage) previewImage.src = uploadedUrl;
-          }
-        });
-      } else {
-        alert('請先選擇要上傳的圖片檔案。');
-      }
-    });
-} else {
-    console.warn("編輯面板的上傳相關 DOM 元素未完全找到，上傳功能可能異常。");
-}
 
 // 載入模板按鈕
 if (loadTemplateBtn && templateSelect) {
