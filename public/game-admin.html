@@ -567,7 +567,7 @@ function updateStatistics(data) {
         const totalGames = data.length;
         const totalPlays = data.reduce((sum, game) => sum + game.play_count, 0);
         const mostPopular = data.sort((a, b) => b.play_count - a.play_count)[0];
-        
+         
         document.getElementById('total-games-count').textContent = totalGames;
         document.getElementById('total-plays-count').textContent = totalPlays;
         document.getElementById('most-popular-game').textContent = mostPopular ? mostPopular.title : '-';
@@ -595,5 +595,9 @@ window.onclick = function(event) {
     } else if (event.target === editModal) {
         closeModal();
     }
-};</script></body>
+};</script>
+
+<script src="game-admin.js"></script>
+
+</body>
                </html>
