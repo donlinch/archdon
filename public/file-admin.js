@@ -190,62 +190,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderGridView(files) {
-        console.log("Rendering grid view...");
-        if (!fileGridView) return;
-        fileGridView.innerHTML = ''; // 清空
+   // --- ★★★ 替換 renderGridView 函數 ★★★ ---
+function renderGridView(files) {
+    console.log("Rendering grid view...");
+    if (!fileGridView) return;
+    fileGridView.innerHTML = ''; // 清空
 
-        files.forEach(file => {
-            const card = document.createElement('div');
-            card.className = 'file-card';
-            card.dataset.fileId = file.id;
-
-            const previewDiv = document.createElement('div');
-            previewDiv.className = 'preview';
-            if (file.file_type === 'image' && file.file_path) {
-                previewDiv.innerHTML = `<img src="${escapeHtml(file.file_path)}" alt="預覽">`;
-            } else if (file.file_type === 'pdf') {
-                previewDiv.innerHTML = '<span style="font-size: 2.5rem; color: #dc3545;">📄</span>';
-            } else {
-                previewDiv.innerHTML = '<span style="font-size: 2.5rem; color: #6c757d;">❓</span>';
-            }
-
-            const filenameDiv = document.createElement('div');
-            filenameDiv.className = 'filename';
-            filenameDiv.textContent = file.original_filename;
-            filenameDiv.title = file.original_filename;
-
-            const urlLineDiv = document.createElement('div');
-            urlLineDiv.className = 'url-line';
-            const urlSpan = document.createElement('span');
-            urlSpan.className = 'url-path';
-            urlSpan.textContent = file.file_path;
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-url-btn-grid';
-            copyBtn.textContent = '複製';
-            copyBtn.dataset.filePath = file.file_path;
-            urlLineDiv.appendChild(urlSpan);
-            urlLineDiv.appendChild(copyBtn);
-
-            const metaDiv = document.createElement('div');
-            metaDiv.className = 'meta';
-            metaDiv.textContent = `類型: ${file.file_type || '未知'} | 大小: ${formatBytes(file.size_bytes)}`;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-file-btn-grid btn btn-sm btn-danger'; // 添加 btn class
-            deleteBtn.textContent = '刪除';
-            deleteBtn.dataset.fileId = file.id;
-            deleteBtn.dataset.fileName = file.original_filename;
-
-            card.appendChild(previewDiv);
-            card.appendChild(filenameDiv);
-            card.appendChild(urlLineDiv);
-            card.appendChild(metaDiv);
-            card.appendChild(deleteBtn);
-
-            fileGridView.appendChild(card);
-        });
+    if (!Array.isArray(files) || files.length === 0) {
+        fileGridView.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">找不到符合條件的檔案。</p>';
+        return;
     }
+
+    files.forEach(file => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+        card.dataset.fileId = file.id;
+
+        // 預覽區
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'preview';
+
+        if (file.file_type === 'image' && file.file_path) {
+            // --- ▼▼▼ 修改開始 ▼▼▼ ---
+            const img = document.createElement('img');
+            img.src = file.file_path; // ★ 直接使用 file_path，不要 escapeHtml
+            img.alt = `預覽: ${escapeHtml(file.original_filename)}`; // Alt text 還是需要 escape
+            // ★ 添加 onerror 處理 ★
+            img.onerror = () => {
+                console.warn(`圖片預覽載入失敗: ${file.file_path}`);
+                previewDiv.innerHTML = '<span title="圖片載入失敗" style="font-size: 2.5rem; color: #ffc107;">⚠️</span>'; // 顯示警告圖示
+            };
+            previewDiv.appendChild(img); // 將 img 元素加入 previewDiv
+            // --- ▲▲▲ 修改結束 ▲▲▲ ---
+        } else if (file.file_type === 'pdf') {
+            previewDiv.innerHTML = '<span title="PDF 文件" style="font-size: 2.5rem; color: #dc3545;">📄</span>';
+        } else {
+            previewDiv.innerHTML = '<span title="其他檔案" style="font-size: 2.5rem; color: #6c757d;">❓</span>';
+        }
+        card.appendChild(previewDiv); // 添加預覽區
+
+        // --- 檔名、URL、Meta、刪除按鈕 (保持不變) ---
+        const filenameDiv = document.createElement('div');
+        filenameDiv.className = 'filename';
+        filenameDiv.textContent = file.original_filename;
+        filenameDiv.title = file.original_filename;
+
+        const urlLineDiv = document.createElement('div');
+        urlLineDiv.className = 'url-line';
+        const urlSpan = document.createElement('span');
+        urlSpan.className = 'url-path';
+        urlSpan.textContent = file.file_path;
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-url-btn-grid';
+        copyBtn.textContent = '複製';
+        copyBtn.dataset.filePath = file.file_path;
+        urlLineDiv.appendChild(urlSpan);
+        urlLineDiv.appendChild(copyBtn);
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'meta';
+        metaDiv.textContent = `類型: ${file.file_type || '未知'} | 大小: ${formatBytes(file.size_bytes)}`;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-file-btn-grid btn btn-sm btn-danger'; // 添加 btn class
+        deleteBtn.textContent = '刪除';
+        deleteBtn.dataset.fileId = file.id;
+        deleteBtn.dataset.fileName = file.original_filename;
+
+        card.appendChild(filenameDiv);
+        card.appendChild(urlLineDiv);
+        card.appendChild(metaDiv);
+        card.appendChild(deleteBtn);
+        // --- (保持不變的部分結束) ---
+
+        fileGridView.appendChild(card);
+    });
+}
+// --- ★★★ renderGridView 函數結束 ★★★ ---
 
     function renderPagination(totalPagesReceived, currentPageReceived) {
         totalPages = totalPagesReceived;

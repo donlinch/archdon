@@ -36,15 +36,36 @@
         /* 格狀視圖 */
         #file-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
         .file-card { background-color: #fff; border: 1px solid #eee; border-radius: 5px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .file-card .preview { height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; background-color: #f8f9fa; border-radius: 3px; }
-        .file-card .preview img, .file-card .preview span { max-width: 90%; max-height: 90%; object-fit: contain; font-size: 2.5rem; color: #aaa; } /* 放大圖示 */
-        .file-card .filename { font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-card .preview {
+    height: 100px; /* 或你想要的高度 */
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    background-color: #f8f9fa;
+    border-radius: 3px;
+    overflow: hidden; /* 很重要，確保圖片不超出 */
+}
+/* 預覽區內的圖片 */
+.file-card .preview img {
+    display: block; /* 移除圖片下方的空隙 */
+    max-width: 100%; /* 最大寬度為容器寬度 */
+    max-height: 100%;/* 最大高度為容器高度 */
+    width: auto; /* 寬度自動，保持比例 */
+    height: auto; /* 高度自動，保持比例 */
+    object-fit: contain; /* 確保圖片完整顯示，可能會留白 */
+    /* 如果希望圖片填滿，即使被裁剪，可以用 object-fit: cover; */
+}.file-card .filename { font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .file-card .url-line { font-size: 0.8em; color: #666; margin-bottom: 8px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .file-card .url-path { flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis;}
         .file-card .copy-url-btn-grid { padding: 1px 4px; font-size: 0.7em; background-color: #f0f0f0; border: 1px solid #ccc; cursor: pointer; flex-shrink: 0; }
         .file-card .meta { font-size: 0.75em; color: #888; margin-bottom: 10px; }
         .file-card .delete-file-btn-grid { padding: 4px 8px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; cursor: pointer; border-radius: 3px; margin-top: auto; /* 推到底部 */ }
-
+        .file-card .preview span {
+    font-size: 2.5rem;
+    color: #aaa;
+}
         /* 複製成功提示 */
         .copy-success-indicator { background-color: #28a745 !important; color: white !important; border-color: #28a745 !important; }
 
