@@ -538,20 +538,21 @@
     <div class="background-editor">
         <h3>🎨 背景顏色設定</h3>
         <div class="background-color-picker">
-          <label for="edit-background-color">地圖背景顏色：</label>
-          <input type="color" id="edit-background-color" value="#fff0f5">
+         
+         
           <span id="background-color-preview">#fff0f5</span>
-          <div class="notes-list">
-            <h3>📋 格子備註列表</h3>
-            <div id="notes-container" class="notes-container">
-                <!-- 備註將在這裡動態生成 -->
-            </div>
-        </div>
+          
         </div>
         <div class="color-preview-box" id="color-preview-box" style="background-color: #fff0f5"></div>
      
       </div>
     <!-- 遊戲板，格子會被 JS 繪製在這裡 -->
+    <div class="notes-list">
+            
+        <div id="notes-container" class="notes-container">
+            <!-- 備註將在這裡動態生成 -->
+         
+    </div>
     <div id="game-board" class="game-board">
         <!-- 格子內容由 rich-edit.js 生成 -->
     </div>
