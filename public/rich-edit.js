@@ -128,29 +128,26 @@ function handleBackgroundColorChange(event) {
     console.log(`背景顏色已變更為: ${newColor} (尚未儲存)`);
 }
 
-// 渲染遊戲板
+// 渲染地圖格子
 function renderBoard() {
     if (!board) {
-        console.error("找不到遊戲板元素！");
+        console.error("無法找到 ID 為 'game-board' 的元素來渲染格子");
         return;
     }
-    
-    // 清空遊戲板
-    board.innerHTML = '';
-    
-    // 渲染每個格子
+    board.innerHTML = ''; // 清空格子
     cells.forEach((cell, i) => {
         const div = document.createElement('div');
         div.className = 'cell';
-        
-        // 位置設定
-        div.style.left = `${(i % 7) * 125}px`;
-        div.style.top = `${Math.floor(i / 7) * 100}px`;
-        
-        // 顏色設定
-        div.style.backgroundColor = cell.color || '#f0f0f0';
-        
-        // 如果有圖片，添加圖片
+        const x = Number(cell.x);
+        const y = Number(cell.y);
+        if (!isNaN(x) && !isNaN(y)) {
+            div.style.left = `${x * 125}px`;
+            div.style.top = `${y * 100}px`;
+        } else {
+            console.warn(`格子 ${i} 的 x 或 y 座標無效:`, cell);
+        }
+        div.style.backgroundColor = cell.color || '#cccccc';
+
         if (cell.image_url) {
             const img = document.createElement('img');
             img.src = cell.image_url;
@@ -159,13 +156,11 @@ function renderBoard() {
             div.appendChild(img);
         }
 
-        // 添加標題
         const titleDiv = document.createElement('div');
         titleDiv.className = 'title';
         titleDiv.textContent = cell.title || '';
         div.appendChild(titleDiv);
 
-        // 添加描述
         const descDiv = document.createElement('div');
         descDiv.className = 'description';
         descDiv.textContent = cell.description || '';
@@ -179,7 +174,6 @@ function renderBoard() {
             div.appendChild(noteDiv);
         }
 
-        // 添加點擊事件
         div.onclick = () => openEditor(i);
         board.appendChild(div);
     });
@@ -400,15 +394,56 @@ async function loadTemplate(templateId) {
 
         // 套用背景顏色
         applyTemplateBackgroundColor(data.background_color);
+        backgroundColor = data.background_color || '#fff0f5';
+        
+        // 確保每個格子都有 x 和 y 座標
+        // 如果服務器返回的數據中沒有座標，就為它們分配座標
+        if (data.cells && Array.isArray(data.cells)) {
+            // 檢查是否有格子缺少 x 和 y 座標
+            const needCoordinates = data.cells.some(cell => (
+                cell.x === undefined || cell.y === undefined || 
+                cell.x === null || cell.y === null ||
+                isNaN(Number(cell.x)) || isNaN(Number(cell.y))
+            ));
+            
+            if (needCoordinates) {
+                console.log("有些格子缺少座標，重新分配座標...");
+                // 重新分配座標 - 遊戲板外圍的格子佈局
+                // 假設最多 21 個格子 (7x3)，製作一個圍繞中央的棋盤佈局
+                const totalCells = data.cells.length;
+                
+                for (let i = 0; i < totalCells; i++) {
+                    if (i < 7) {
+                        // 頂部一排 (從左到右)
+                        data.cells[i].x = i;
+                        data.cells[i].y = 0;
+                    } else if (i < 14) {
+                        // 底部一排 (從左到右)
+                        data.cells[i].x = i - 7;
+                        data.cells[i].y = 5;
+                    } else if (i < 18) {
+                        // 左側 (從上到下)
+                        data.cells[i].x = 0;
+                        data.cells[i].y = i - 13; // 1, 2, 3, 4
+                    } else {
+                        // 右側 (從上到下)
+                        data.cells[i].x = 6;
+                        data.cells[i].y = i - 17; // 1, 2, 3, 4
+                    }
+                }
+            }
+        }
+        
         cells = data.cells || [];
         currentLogoUrl = data.logo_url || '';
+        
         if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
         if (logoPreview) logoPreview.src = currentLogoUrl;
 
         // 更新背景顏色輸入框
-        if (backgroundColorInput) backgroundColorInput.value = data.background_color || '#fff0f5';
-        if (backgroundColorPreview) backgroundColorPreview.textContent = data.background_color || '#fff0f5';
-        if (colorPreviewBox) colorPreviewBox.style.backgroundColor = data.background_color || '#fff0f5';
+        if (backgroundColorInput) backgroundColorInput.value = backgroundColor;
+        if (backgroundColorPreview) backgroundColorPreview.textContent = backgroundColor;
+        if (colorPreviewBox) colorPreviewBox.style.backgroundColor = backgroundColor;
 
         currentPlayers = data.players || []; // 處理玩家資料
         renderPlayerConfigUI(); // 渲染玩家UI
