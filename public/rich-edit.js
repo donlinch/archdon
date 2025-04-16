@@ -678,6 +678,33 @@ if (dragPanel && header) {
     */
 
 
+// 保存单个格子的修改
+function saveCellChanges() {
+    if (editingIndex < 0 || !cells[editingIndex]) {
+        console.error("保存格子时编辑索引无效");
+        return;
+    }
+    const cell = cells[editingIndex];
+    cell.title = titleInput.value.trim();
+    cell.description = descInput.value.trim();
+    cell.color = colorInput.value;
+    cell.image_url = imageInput.value.trim() || null;
+
+    renderBoard(); // 重新渲染地图以显示更改
+    editorPanel.style.display = 'none'; // 隐藏编辑面板
+    
+    console.log(`格子 ${editingIndex} 已更新：`, cell);
+}
+
+
+
+// 在 rich-edit.js 的初始化部分添加
+const saveCellBtn = document.getElementById('save-cell-btn');
+if (saveCellBtn) {
+    saveCellBtn.addEventListener('click', saveCellChanges);
+} else {
+    console.warn("保存格子按钮未找到");
+}
 
 // ▼▼▼ 新增刪除按鈕的事件監聽 ▼▼▼
 if (deleteTemplateBtn) {

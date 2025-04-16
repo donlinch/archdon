@@ -375,7 +375,17 @@
     }
     /* ▲▲▲ 修改或新增版本控制區樣式 ▲▲▲ */
 
+/* 添加格子高亮动画 */
+@keyframes cellHighlight {
+    0% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
+    50% { box-shadow: 0 0 0 6px rgba(91, 157, 240, 0.7); }
+    100% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0); }
+}
 
+.cell-highlight {
+    animation: cellHighlight 1s ease-out;
+    z-index: 5; /* 确保高亮的格子在上层 */
+}
 
 
 
@@ -460,9 +470,14 @@
         <input type="color" id="edit-color" />
       </label>
       <!-- 儲存按鈕 -->
-      <button onclick="saveCellChanges()">儲存</button>
+       <button id="save-cell-btn">保存</button>
   </div>
 
+
+
+
+
+  
   <!-- 引入 JavaScript 檔案 -->
   <script src="rich-edit.js"></script>
 
