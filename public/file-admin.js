@@ -162,7 +162,18 @@ document.addEventListener('DOMContentLoaded', () => {
             cellPath.style.wordBreak = 'break-all';
             cellPath.style.whiteSpace = 'normal';
             const pathSpan = document.createElement('span');
-            pathSpan.textContent = file.file_path;
+
+
+            // --- ▼▼▼ 修改這裡 ▼▼▼ ---
+            const siteUrl = window.location.origin; // 獲取基礎 URL (例如 https://sunnyyummy.onrender.com)
+            const relativePath = file.file_path || ''; // 確保有值
+            const fullUrl = siteUrl + relativePath; // 拼接完整 URL
+            pathSpan.textContent = fullUrl; // 顯示完整 URL
+            // --- ▲▲▲ 修改結束 ▲▲▲ ---
+           
+           
+           
+           
             const copyBtn = document.createElement('button');
             copyBtn.className = 'copy-url-btn btn btn-sm btn-outline-secondary'; // 使用 Bootstrap-like class
             copyBtn.textContent = '複製';
@@ -239,7 +250,18 @@ function renderGridView(files) {
         urlLineDiv.className = 'url-line';
         const urlSpan = document.createElement('span');
         urlSpan.className = 'url-path';
-        urlSpan.textContent = file.file_path;
+
+
+  // --- ▼▼▼ 修改這裡 ▼▼▼ ---
+  const siteUrl = window.location.origin; // 獲取基礎 URL
+  const relativePath = file.file_path || ''; // 確保有值
+  const fullUrl = siteUrl + relativePath; // 拼接完整 URL
+  urlSpan.textContent = fullUrl; // 顯示完整 URL
+  // --- ▲▲▲ 修改結束 ▲▲▲ ---
+
+
+
+
         const copyBtn = document.createElement('button');
         copyBtn.className = 'copy-url-btn-grid';
         copyBtn.textContent = '複製';
@@ -370,12 +392,15 @@ function renderGridView(files) {
     function handleCopyUrl(event) {
         const button = event.target.closest('.copy-url-btn, .copy-url-btn-grid');
         if (!button) return;
-        const filePath = button.dataset.filePath;
-        if (!filePath) return;
- // ▼▼▼ 拼接成完整的 URL ▼▼▼
- const siteUrl = window.location.origin; // 獲取當前網站的基礎 URL (https://sunnyyummy.onrender.com)
- const fullUrl = siteUrl + relativePath; // 拼接成 https://sunnyyummy.onrender.com/uploads/xyz.png
- // ▲▲▲ 拼接成完整的 URL ▲▲▲
+
+
+  // --- ▼▼▼ 修改/添加這裡 ▼▼▼ ---
+  const relativePath = button.dataset.filePath; // 從 data-* 獲取相對路徑
+  if (!relativePath) return; // 如果沒有路徑，不執行
+
+  const siteUrl = window.location.origin; // 獲取基礎 URL
+  const fullUrl = siteUrl + relativePath; // 拼接成完整 URL
+  // --- ▲▲▲ 修改/添加結束 ▲▲▲ ---
         navigator.clipboard.writeText(filePath).then(() => {
             const originalText = button.textContent;
             button.textContent = '✓'; // 用打勾符號
