@@ -69,11 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     content.classList.add('active');
                 }
             });
-            // 如果切換到UI元素標籤，加載UI元素
-            if (target === 'ui-elements' && !window.uiElementsLoaded) {
-                fetchAndDisplayUIElements();
-                window.uiElementsLoaded = true;
+             // --- 修改開始 ---
+            // 如果切換到UI元素標籤，加載UI元素 (移除 !window.uiElementsLoaded 判斷)
+            if (target === 'ui-elements') {
+                fetchAndDisplayUIElements(); // <--- 每次點擊都調用
+                // window.uiElementsLoaded = true; // <--- 刪除或註解掉這一行
             }
+            // --- 修改結束 ---
         });
     });
 
