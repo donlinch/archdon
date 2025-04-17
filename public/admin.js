@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingMessage) loadingMessage.style.display = 'block'; 
             if (productTable) productTable.style.display = 'none'; 
             
-            const response = await fetch('/api/admin/products'); 
+            const response = await fetch('/api/products'); 
             if (!response.ok) { 
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`); 
             } 
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editImagePreview.src = ''; 
         
         try { 
-            const response = await fetch(`/api/admin/products/${id}`); 
+            const response = await fetch(`/api/products/${id}`); 
             if (!response.ok) { 
                 if (response.status === 404) throw new Error('找不到該商品。'); 
                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); 
@@ -178,29 +178,29 @@ document.addEventListener('DOMContentLoaded', () => {
         openEditModal(id); 
     };
 
-    // --- Attach Delete Function to Global Scope ---
-    window.deleteProduct = async function(id) {
-        if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { 
-            try { 
-                const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' }); 
-                if (response.status === 204 || response.ok) { 
-                    await fetchAndDisplayProducts(); 
-                } else { 
-                    let errorMsg = `刪除失敗 (HTTP ${response.status})`; 
-                    try { 
-                        const errorData = await response.json(); 
-                        errorMsg = errorData.error || errorMsg; 
-                    } catch (e) { 
-                        errorMsg = `${errorMsg}: ${response.statusText}`; 
-                    } 
-                    throw new Error(errorMsg); 
+// --- 修改刪除商品功能 ---
+window.deleteProduct = async function(id) { 
+    if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { 
+        try { 
+            // 修改這一行：從 /api/products/${id} 改為 /api/admin/products/${id}
+            const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' }); 
+            if (response.status === 204 || response.ok) { 
+                await fetchAndDisplayProducts(); 
+            } else { 
+                let errorMsg = `刪除失敗 (HTTP ${response.status})`; 
+                try { 
+                    const errorData = await response.json(); 
+                    errorMsg = errorData.error || errorMsg; 
+                } catch (e) { 
+                    errorMsg = `${errorMsg}: ${response.statusText}`; 
                 } 
-            } catch (error) { 
-                alert(`刪除時發生錯誤：${error.message}`); 
+                throw new Error(errorMsg); 
             } 
-        }
-    };
-
+        } catch (error) { 
+            alert(`刪除時發生錯誤：${error.message}`); 
+        } 
+    }
+};
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddForm = function() {
         const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError]; 
@@ -292,68 +292,68 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("編輯表單元素未找到。"); 
     }
 
-    // --- Add Form Submission Listener ---
-    if (addForm) {
-        addForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); 
-            addFormError.textContent = ''; 
+    // --- 修改新增商品表單提交邏輯 ---
+if (addForm) {
+    addForm.addEventListener('submit', async (event) => {
+        event.preventDefault(); 
+        addFormError.textContent = ''; 
+        
+        let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value); 
+        const newProductData = { 
+            name: addProductName.value.trim(), 
+            description: addProductDescription.value.trim(), 
+            price: priceValue, 
+            image_url: addProductImageUrl.value.trim() || null, 
+            seven_eleven_url: addProductSevenElevenUrl.value.trim() || null 
+        }; 
+        
+        if (!newProductData.name) { 
+            addFormError.textContent = '商品名稱不能為空。'; 
+            return; 
+        } 
+        
+        if (newProductData.price !== null && isNaN(newProductData.price)) { 
+            addFormError.textContent = '價格必須是有效的數字。'; 
+            return; 
+        } 
+        
+        if (newProductData.price !== null && newProductData.price < 0) { 
+            addFormError.textContent = '價格不能是負數。'; 
+            return; 
+        } 
+        
+        const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); 
+        if (!isBasicUrlValid(newProductData.seven_eleven_url)) { 
+            addFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; 
+            return; 
+        } 
+        
+        try { 
+            // 修改這一行：從 /api/products 改為 /api/admin/products
+            const response = await fetch(`/api/admin/products`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(newProductData) 
+            }); 
             
-            let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value); 
-            const newProductData = { 
-                name: addProductName.value.trim(), 
-                description: addProductDescription.value.trim(), 
-                price: priceValue, 
-                image_url: addProductImageUrl.value.trim() || null, 
-                seven_eleven_url: addProductSevenElevenUrl.value.trim() || null 
-            }; 
-            
-            if (!newProductData.name) { 
-                addFormError.textContent = '商品名稱不能為空。'; 
-                return; 
+            if (!response.ok) { 
+                let errorMsg = `新增失敗 (HTTP ${response.status})`; 
+                try { 
+                    const errorData = await response.json(); 
+                    errorMsg = errorData.error || errorMsg; 
+                } catch (e) {} 
+                throw new Error(errorMsg); 
             } 
             
-            if (newProductData.price !== null && isNaN(newProductData.price)) { 
-                addFormError.textContent = '價格必須是有效的數字。'; 
-                return; 
-            } 
-            
-            if (newProductData.price !== null && newProductData.price < 0) { 
-                addFormError.textContent = '價格不能是負數。'; 
-                return; 
-            } 
-            
-            const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); 
-            if (!isBasicUrlValid(newProductData.seven_eleven_url)) { 
-                addFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; 
-                return; 
-            } 
-            
-            try { 
-                const response = await fetch(`/api/admin/products`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(newProductData) 
-                }); 
-                
-                if (!response.ok) { 
-                    let errorMsg = `新增失敗 (HTTP ${response.status})`; 
-                    try { 
-                        const errorData = await response.json(); 
-                        errorMsg = errorData.error || errorMsg; 
-                    } catch (e) {} 
-                    throw new Error(errorMsg); 
-                } 
-                
-                closeAddModal(); 
-                await fetchAndDisplayProducts(); 
-            } catch (error) { 
-                addFormError.textContent = `新增錯誤：${error.message}`; 
-            }
-        });
-    } else { 
-        console.error("新增表單元素未找到。"); 
-    }
-
+            closeAddModal(); 
+            await fetchAndDisplayProducts(); 
+        } catch (error) { 
+            addFormError.textContent = `新增錯誤：${error.message}`; 
+        }
+    });
+} else { 
+    console.error("新增表單元素未找到。"); 
+}
     // --- *** 圖表相關邏輯 *** ---
 
     // 統一刷新所有圖表的函數
