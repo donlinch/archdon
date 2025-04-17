@@ -1,190 +1,335 @@
-// public/music.js
+// music.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM 元素引用 ---
-    const artistFilterNav = document.getElementById('artist-filter');
+    // 獲取DOM元素
     const musicListContainer = document.getElementById('music-list');
+    const artistFilterNav = document.getElementById('artist-filter');
+    const sortLinks = document.querySelectorAll('.sort-link');
+    const backToTopButton = document.getElementById('back-to-top');
+    
+    // 當前狀態
     let currentArtistFilter = null;
-
-    // --- 輪播圖相關元素 ---
-    const randomBannerWrapper = document.querySelector('#random-banner-carousel .swiper-wrapper');
-    let randomBannerSwiper = null;
-
-    // --- 函數定義 ---
-
-    /**
-     * 獲取並顯示隨機輪播圖
-     */
-
-
-
-    async function fetchAndDisplayBanners() {
-        const bannerWrapper = document.querySelector('#music-banner-carousel .swiper-wrapper');
-        try {
-            const response = await fetch('/api/banners?page=music'); // 使用音樂頁面的圖片
-            if (!response.ok) {
-                throw new Error('獲取輪播圖失敗');
-            }
-            const banners = await response.json();
+    let currentSortBy = 'music'; // 預設為音樂專輯
     
-            bannerWrapper.innerHTML = '';
-
-            if (banners.length === 0) {
-            
-                bannerWrapper.innerHTML = '<div class="swiper-slide">無圖片可顯示</div>';
-            
-            } else {
-            
-                banners.forEach(banner => {
-                    const slide = document.createElement('div');
-                    slide.classList.add('swiper-slide');
-                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">`;
-                    bannerWrapper.appendChild(slide);
+    // 初始化各功能
+    initSwiper();
+    fetchAndDisplayArtists();
+    fetchAndDisplayAlbums();
+    setupSortLinks();
+    setupBackToTop();
+    setupCharacterInteractions();
+    
+    /**
+     * 初始化Swiper輪播
+     */
+    function initSwiper() {
+        // 獲取banner數據
+        fetch('/api/banners?page=music')
+            .then(response => response.json())
+            .then(banners => {
+                const swiperWrapper = document.querySelector('.swiper-wrapper');
+                
+                // 清空現有內容
+                swiperWrapper.innerHTML = '';
+                
+                // 添加輪播項
+                if (banners.length === 0) {
+                    // 如果沒有banner，顯示默認
+                    swiperWrapper.innerHTML = `
+                        <div class="swiper-slide">
+                            <img src="/images/SunnyYummy.png" alt="SunnyYummy">
+                        </div>
+                    `;
+                } else {
+                    // 創建每個輪播項
+                    banners.forEach(banner => {
+                        const slide = document.createElement('div');
+                        slide.className = 'swiper-slide';
+                        
+                        if (banner.link_url) {
+                            slide.innerHTML = `
+                                <a href="${banner.link_url}" target="_blank" rel="noopener noreferrer">
+                                    <img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">
+                                </a>
+                            `;
+                        } else {
+                            slide.innerHTML = `
+                                <img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">
+                            `;
+                        }
+                        
+                        swiperWrapper.appendChild(slide);
+                    });
+                }
+                
+                // 初始化Swiper
+                new Swiper('#music-banner-carousel', {
+                    loop: true,
+                    autoplay: {
+                        delay: 5000,
+                        disableOnInteraction: false,
+                    },
+                    effect: 'fade',
+                    fadeEffect: {
+                        crossFade: true
+                    },
+                    pagination: {
+                        el: '.swiper-pagination',
+                        clickable: true,
+                    },
+                    navigation: {
+                        nextEl: '.swiper-button-next',
+                        prevEl: '.swiper-button-prev',
+                    },
                 });
-            }
-    
-            
-            new Swiper('#music-banner-carousel', {
-            
-                direction: 'horizontal', // 水平輪播
-                loop: banners.length > 1, // 只有一張以上圖片時才循環
-                autoplay: {
-                    delay: 12000, // 自動播放間隔 (毫秒)
-                    disableOnInteraction: false, // 用戶操作後是否停止自動播放 (false=不停止)
-                },
-                slidesPerView: 1, // 每次顯示一張
-                spaceBetween: 0, // Slide 之間的間距
-                grabCursor: true, // 顯示抓取手勢
-
-
-
-                 // --- ★★★ 加入這兩行 ★★★ ---
-                 effect: 'fade', // 設定效果為淡入淡出
-                 fadeEffect: {   // 淡入淡出效果的選項
-                   crossFade: true // 啟用交叉淡入淡出
-                 },
- 
-                // If we need pagination
-                pagination: {
-                    el: '#banner-carousel .swiper-pagination',
-                    clickable: true, // 分頁點可點擊
-                },
-
-                // Navigation arrows
-                navigation: {
-                    nextEl: '#banner-carousel .swiper-button-next',
-                    prevEl: '#banner-carousel .swiper-button-prev',
-                },
-
-                // And if we need scrollbar (可選)
-                // scrollbar: {
-                //   el: '.swiper-scrollbar',
-                // },
-
-                // Enable swiping on touch devices (預設啟用)
-                touchEventsTarget: 'container', // 在容器上觸發滑動
-            
+            })
+            .catch(error => {
+                console.error('獲取Banner時出錯:', error);
+                const swiperWrapper = document.querySelector('.swiper-wrapper');
+                swiperWrapper.innerHTML = `
+                    <div class="swiper-slide">
+                        <img src="/images/SunnyYummy.png" alt="SunnyYummy">
+                    </div>
+                `;
+                
+                // 即使出錯也初始化Swiper
+                new Swiper('#music-banner-carousel', {
+                    loop: false,
+                    pagination: {
+                        el: '.swiper-pagination',
+                        clickable: true,
+                    },
+                });
             });
-        } catch (error) {
-            console.error('載入輪播圖時出錯:', error);
+    }
+    
+    /**
+     * 專輯卡片漸入動畫
+     */
+    function animateAlbumsIn() {
+        const cards = document.querySelectorAll('.album-card');
+        cards.forEach((card, index) => {
+            // 設置初始狀態
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            // 設置延遲動畫以產生級聯效果
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s, transform 0.5s';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 50 * index); // 每張卡片延遲 50ms
+        });
+    }
+    
+    /**
+     * 設置排序連結事件
+     */
+    function setupSortLinks() {
+        if (sortLinks.length > 0) {
+            sortLinks.forEach(link => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    
+                    // 移除所有連結的 active 類
+                    sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
+                    // 為當前點擊的連結添加 active 類
+                    link.classList.add('active');
+                    
+                    // 獲取排序方式
+                    const sortBy = link.dataset.sort;
+                    
+                    if (sortBy) {
+                        currentSortBy = sortBy;
+                        // 在這裡實現對不同類型內容的處理
+                        if (sortBy === 'scores') {
+                            loadScores(); // 載入樂譜
+                        } else {
+                            fetchAndDisplayAlbums(currentArtistFilter); // 載入音樂專輯
+                        }
+                    }
+                });
+            });
         }
     }
     
-    document.addEventListener('DOMContentLoaded', fetchAndDisplayBanners);
-
-
-
- 
-
-   
     /**
-     * 從音樂頁輪播圖中隨機選擇
+     * 載入樂譜內容（示例函數）
      */
-    function getRandomBanners(sourceBanners) {
-        if (sourceBanners.length === 0) return [];
+    async function loadScores() {
+        if (!musicListContainer) return;
         
-        // Fisher-Yates 洗牌算法
-        const shuffled = [...sourceBanners];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-
-        return shuffled.slice(0, 5); // 返回最多5個隨機項目
-    }
-
-    /**
-     * 初始化隨機輪播圖的 Swiper
-     */
-    function initRandomSwiper(bannerCount) {
-        if (randomBannerSwiper) {
-            randomBannerSwiper.destroy(true, true);
-            randomBannerSwiper = null;
-        }
-
-        if (randomBannerWrapper.children.length > 0) {
-            randomBannerSwiper = new Swiper('#random-banner-carousel', {
-                loop: bannerCount > 1,
-                autoplay: {
-                    delay: 8000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true
-                },
-                pagination: {
-                    el: '.swiper-pagination',
-                    clickable: true
-                },
-                slidesPerView: 1,
-                spaceBetween: 0,
-                effect: 'slide'
+        musicListContainer.innerHTML = '<p class="loading-text">正在加載樂譜資料...</p>';
+        
+        try {
+            // 這裡可以替換為實際的樂譜 API 調用
+            const response = await fetch('/api/scores');
+            if (!response.ok) {
+                throw new Error(`獲取樂譜失敗 (HTTP ${response.status})`);
+            }
+            
+            const scores = await response.json();
+            
+            if (!scores || scores.length === 0) {
+                musicListContainer.innerHTML = '<p class="no-products">目前沒有樂譜可顯示。</p>';
+                return;
+            }
+            
+            // 創建樂譜格線容器
+            const scoresGrid = document.createElement('div');
+            scoresGrid.className = 'album-grid'; // 使用相同的格線佈局
+            
+            // 填充樂譜卡片
+            scores.forEach(score => {
+                const scoreCard = document.createElement('a');
+                scoreCard.className = 'album-card';
+                scoreCard.href = score.download_url || '#';
+                
+                if (score.download_url) {
+                    scoreCard.target = '_blank';
+                    scoreCard.rel = 'noopener noreferrer';
+                }
+                
+                // 樂譜封面
+                const coverDiv = document.createElement('div');
+                coverDiv.className = 'cover-image';
+                const coverImg = document.createElement('img');
+                coverImg.src = score.image_url || '/images/score-placeholder.png';
+                coverImg.alt = score.title || '樂譜封面';
+                coverDiv.appendChild(coverImg);
+                
+                // 樂譜資訊
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'album-info';
+                
+                const title = document.createElement('h3');
+                title.textContent = score.title || '未知樂譜';
+                
+                const composer = document.createElement('p');
+                composer.className = 'artist';
+                composer.textContent = score.composer || '未知作曲家';
+                
+                const description = document.createElement('p');
+                description.className = 'release-date';
+                description.textContent = score.description || '點擊下載樂譜';
+                
+                infoDiv.appendChild(title);
+                infoDiv.appendChild(composer);
+                infoDiv.appendChild(description);
+                
+                scoreCard.appendChild(coverDiv);
+                scoreCard.appendChild(infoDiv);
+                scoresGrid.appendChild(scoreCard);
             });
+            
+            musicListContainer.innerHTML = '';
+            musicListContainer.appendChild(scoresGrid);
+            
+            // 使用漸入效果顯示樂譜
+            animateAlbumsIn();
+            
+        } catch (error) {
+            console.error('載入樂譜失敗:', error);
+            musicListContainer.innerHTML = '<p class="error-text">無法加載樂譜，請稍後再試。</p>';
+            
+            // 如果 API 尚未實現，顯示提示信息
+            musicListContainer.innerHTML = '<p class="info-text">樂譜功能即將推出，敬請期待！</p>';
         }
     }
-
+    
     /**
-     * 創建輪播圖幻燈片
+     * 設置回到頂部按鈕
      */
-    function createBannerSlide(banner, wrapper) {
-        const slide = document.createElement('div');
-        slide.className = 'swiper-slide';
-
-        const content = banner.link_url 
-            ? `<a href="${banner.link_url}" target="_blank" rel="noopener noreferrer">
-                 <img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">
-               </a>`
-            : `<img src="${banner.image_url}" alt="${banner.alt_text || '輪播圖'}" class="banner-image">`;
-
-        slide.innerHTML = content;
-        wrapper.appendChild(slide);
-    }
-
-    /**
-     * 顯示預設輪播圖
-     */
-    function showDefaultBanner(wrapper, altText) {
-        const defaultSlide = document.createElement('div');
-        defaultSlide.className = 'swiper-slide';
-        defaultSlide.innerHTML = `
-            <img src="/images/music-default-banner.jpg" 
-                 alt="${altText}" 
-                 class="banner-image"
-                 style="object-fit:contain; background-color:#f8f9fa;">
-        `;
-        wrapper.appendChild(defaultSlide);
-    }
-
-    /**
-     * 處理輪播圖錯誤
-     */
-    function handleBannerError() {
-        if (randomBannerWrapper) {
-            randomBannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#fdd; color:#d33;">輪播圖載入失敗</div>';
+    function setupBackToTop() {
+        if (!backToTopButton) {
+            console.error("返回頂部按鈕元素未找到！");
+            return;
         }
+        
+        // 監聽滾動事件
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+        
+        // 點擊回到頂部
+        backToTopButton.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
     }
-
-
-
-
-
+    
+    /**
+     * 設置角色互動效果
+     */
+    function setupCharacterInteractions() {
+        const characters = document.querySelectorAll('.floating-character');
+        
+        // 定義每個角色的對話內容
+        const speeches = {
+            'pink-character': ['哈囉！', '喜歡音樂嗎？', '試聽新歌了嗎？'],
+            'blue-character': ['嗨！你好！', '有新歌啦！', '聽聽我的新專輯吧！'],
+            'yellow-character': ['耶！找到我了！', '來聽音樂吧！', '超級開心！']
+        };
+        
+        // 為每個角色創建對話氣泡元素
+        characters.forEach(character => {
+            // 創建對話氣泡
+            const speechBubble = document.createElement('div');
+            speechBubble.className = 'character-speech';
+            character.appendChild(speechBubble);
+            
+            // 獲取角色類型
+            const characterType = Array.from(character.classList)
+                .find(cls => cls.includes('-character') && cls !== 'floating-character');
+            
+            // 觸摸/點擊事件處理
+            character.addEventListener('touchstart', handleInteraction, { passive: true });
+            character.addEventListener('click', handleInteraction);
+            
+            function handleInteraction(e) {
+                // 防止事件冒泡和默認行為
+                e.stopPropagation();
+                if (e.type === 'click') e.preventDefault();
+                
+                // 已經被觸摸，忽略
+                if (character.classList.contains('touched') || 
+                    character.classList.contains('bounce-back')) return;
+                
+                // 添加觸摸效果
+                character.classList.add('touched');
+                
+                // 隨機選擇一句對話
+                const possibleSpeeches = speeches[characterType] || ['嗨！'];
+                const randomSpeech = possibleSpeeches[Math.floor(Math.random() * possibleSpeeches.length)];
+                
+                // 顯示對話氣泡
+                speechBubble.textContent = randomSpeech;
+                speechBubble.classList.add('visible');
+                
+                // 1秒後移除觸摸效果，添加彈回動畫
+                setTimeout(() => {
+                    character.classList.remove('touched');
+                    character.classList.add('bounce-back');
+                    
+                    // 1.5秒後隱藏對話氣泡
+                    setTimeout(() => {
+                        speechBubble.classList.remove('visible');
+                    }, 1500);
+                    
+                    // 動畫結束後移除彈回類
+                    setTimeout(() => {
+                        character.classList.remove('bounce-back');
+                    }, 800);
+                }, 1000);
+            }
+        });
+    }
+    
     /**
      * 獲取並顯示歌手列表
      */
@@ -264,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        musicListContainer.innerHTML = '<p>正在加載音樂列表...</p>';
+        musicListContainer.innerHTML = '<p class="loading-text">正在加載音樂列表...</p>';
 
         try {
             let apiUrl = '/api/music';
@@ -278,10 +423,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const musicList = await response.json();
-            musicListContainer.innerHTML = '';
-
+            
             if (musicList.length === 0) {
-                musicListContainer.innerHTML = '<p>找不到相關的音樂項目</p>';
+                musicListContainer.innerHTML = '<p class="no-products">找不到相關的音樂項目</p>';
                 return;
             }
 
@@ -336,30 +480,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 albumGrid.appendChild(albumCard);
             });
 
+            musicListContainer.innerHTML = '';
             musicListContainer.appendChild(albumGrid);
+            
+            // 使用漸入效果顯示專輯
+            animateAlbumsIn();
 
         } catch (error) {
             console.error("[Music] Fetch albums error:", error);
             if (musicListContainer) {
-                musicListContainer.innerHTML = `<p>無法加載音樂列表: ${error.message}</p>`;
+                musicListContainer.innerHTML = `<p class="error-text">無法加載音樂列表: ${error.message}</p>`;
             }
         }
     }
 
-    // --- 頁面初始化 ---
-    async function initializePage() {
-        console.log("[Music] Initializing page");
-        try {
-            await Promise.all([
-                fetchAndDisplayBanners(), // 只需初始化一個輪播
-                fetchAndDisplayArtists()
-            ]);
-            await fetchAndDisplayAlbums();
-            console.log("[Music] Page initialized");
-        } catch (error) {
-            console.error("[Music] Initialization error:", error);
-        }
+    /**
+     * 檢測設備類型並適配
+     */
+    function detectDevice() {
+        const isMobile = window.innerWidth <= 767;
+        document.body.classList.toggle('is-mobile', isMobile);
     }
-
-    initializePage();
+    
+    // 初始化檢測設備類型
+    detectDevice();
+    
+    // 窗口尺寸改變時重新檢測
+    window.addEventListener('resize', detectDevice);
 });
