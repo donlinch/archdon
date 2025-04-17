@@ -748,34 +748,42 @@ async function fetchAndDisplayArtists() {
         }
     }
     
-    /**
-     * 獲取並顯示有樂譜的歌手列表
-     */
-    async function fetchArtists() {
-        try {
-            const artists = await fetchApi('/api/scores/artists', 'Error fetching artists');
-            return artists;
-        } catch (error) {
-            console.error('獲取樂譜歌手列表失敗:', error);
-            // 返回預設歌手列表作為後備方案
-            return ['Paula', 'SunnyYummy樂團', '亞米媽媽', '林莉C亞米', '皓皓justin'];
-        }
-    }
     
-    /**
-     * 載入樂譜歌手篩選彈窗內容
-     */async function loadScoresFilterArtists() {
+   async function fetchArtists() {
+    try {
+        const artists = await fetchApi('/api/scores/artists', 'Error fetching artists');
+        console.log('API 返回的歌手列表:', artists); // 增加日誌輸出
+        return artists; // 確保這裡返回數組
+    } catch (error) {
+        console.error('獲取樂譜歌手列表失敗:', error);
+        // 返回預設歌手列表作為後備方案
+        return ['Paula', 'SunnyYummy樂團', '亞米媽媽', '林莉C亞米', '皓皓justin'];
+    }
+}
+    
+    
+    
+    async function loadScoresFilterArtists() {
+    // 檢查元素存在性
+    const scoresFilterArtists = document.getElementById('scores-filter-artists');
     if (!scoresFilterArtists) {
-        console.error('scoresFilterArtists element not found');
+        console.error('scores-filter-artists 元素不存在!');
         return;
     }
-
-    // 顯示加載狀態
+    
+    // 顯示加載中狀態
     scoresFilterArtists.innerHTML = '<button class="scores-filter-btn active">全部歌手</button><button class="scores-filter-btn">載入中...</button>';
     
     try {
+        // 確保等待 Promise 完成
         const artists = await fetchArtists();
-        console.log('獲取的歌手列表:', artists); // 確認數據
+        console.log('獲取的歌手列表:', artists); // 調試日誌
+        
+        // 再次檢查元素是否仍然存在（DOM 可能在等待期間變化）
+        if (!document.getElementById('scores-filter-artists')) {
+            console.error('處理數據時 scores-filter-artists 元素已不存在!');
+            return;
+        }
         
         // 清空現有內容
         scoresFilterArtists.innerHTML = '';
@@ -816,6 +824,10 @@ async function fetchAndDisplayArtists() {
         }
     } catch (error) {
         console.error('載入樂譜歌手篩選內容失敗:', error);
+        
+        // 再次檢查元素
+        if (!document.getElementById('scores-filter-artists')) return;
+        
         // 顯示錯誤信息
         scoresFilterArtists.innerHTML = '';
         const errorMsg = document.createElement('p');
@@ -825,7 +837,6 @@ async function fetchAndDisplayArtists() {
         scoresFilterArtists.appendChild(errorMsg);
     }
 }
-    
     /**
      * 設置活躍的樂譜歌手篩選按鈕
      */
