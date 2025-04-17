@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 音樂作品 | 最新專輯、MV 收藏與幕後花絮</title>
-    <meta name="description" content="SunnyYummy 官方音樂專區｜完整收藏最新發行專輯、熱門單曲與獨家 MV 幕後花絮，立即線上聆聽！">
+    <title>SunnyYummy 音樂與樂譜 | 最新專輯、MV 收藏與樂譜下載</title>
+    <meta name="description" content="SunnyYummy 官方音樂專區｜完整收藏最新發行專輯、熱門單曲與獨家 MV 幕後花絮，並提供樂譜下載！">
     
     <!-- Open Graph 標籤 -->
-    <meta property="og:title" content="SunnyYummy 音樂作品 | 專輯與 MV 收藏">
-    <meta property="og:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲與獨家幕後花絮！">
+    <meta property="og:title" content="SunnyYummy 音樂與樂譜 | 專輯與樂譜收藏">
+    <meta property="og:description" content="探索 SunnyYummy 最新音樂作品，包含完整專輯、單曲、獨家幕後花絮與樂譜下載！">
     <meta property="og:url" content="https://sunnyyummy.onrender.com/music.html">
     <meta property="og:type" content="website">
     
@@ -20,15 +20,17 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="music-style.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
     
     <!-- 字體 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-    
+
+
+
 <style>
-    
 
 
 
@@ -600,6 +602,85 @@ body {
     font-size: 0.9rem;
 }
 
+/* --- 內容視圖切換 --- */
+.content-view {
+    width: 100%;
+    padding: 10px 16px;
+}
+
+/* --- 樂譜相關樣式 --- */
+#song-list-container {
+    margin-top: 15px;
+}
+
+#song-list-container h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#song-list {
+    list-style: none;
+    padding: 0;
+}
+
+#song-list li {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+#song-list li:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.song-list-info {
+    padding: 15px;
+}
+
+.song-title {
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.song-artist {
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.song-list-scores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.list-score-btn {
+    background-color: #90CAF9; /* 藍色 */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.list-score-btn:hover {
+    background-color: #42A5F5;
+    transform: translateY(-2px);
+}
+
 /* --- 響應式設計 --- */
 @media (max-width: 767px) {
     .album-grid {
@@ -669,9 +750,11 @@ body {
 
 
 
-
-
 </style>
+
+
+
+
 </head>
 <body>
     <!-- Banner -->
@@ -708,15 +791,7 @@ body {
         <div id="artist-drawer-content" class="artist-drawer-content">
             <!-- 歌手按鈕將由 JavaScript 動態載入 -->
             <button class="artist-drawer-btn active">全部歌手</button>
-            <button class="artist-drawer-btn">Paula</button>
-            <button class="artist-drawer-btn">SunnyYummy樂團</button>
-            <button class="artist-drawer-btn">亞米媽媽</button>
-            <button class="artist-drawer-btn">亞米爸爸</button>
-            <button class="artist-drawer-btn">恬恬</button>
-            <button class="artist-drawer-btn">林莉C亞米</button>
-            <button class="artist-drawer-btn">皓皓justin</button>
-            <button class="artist-drawer-btn">盒盒</button>
-            <button class="artist-drawer-btn">雪球軟糖</button>
+            <button class="artist-drawer-btn">載入中...</button>
         </div>
     </div>
     
@@ -724,9 +799,20 @@ body {
     <div id="drawer-overlay" class="drawer-overlay"></div>
     
     <!-- 音樂專輯列表 -->
-    <div id="music-list">
+    <div id="music-list" class="content-view">
         <!-- 專輯將由 JavaScript 動態載入 -->
         <p>正在加載音樂列表...</p>
+    </div>
+
+    <!-- 樂譜列表 -->
+    <div id="scores-list" class="content-view" style="display: none;">
+        <div id="song-list-container">   
+            <h2>歌曲樂譜列表</h2>
+            <ul id="song-list">
+                <p>載入樂譜中...</p>
+                <!-- 歌曲項目會由 JS 生成 -->
+            </ul>
+        </div>
     </div>
     
     <!-- 返回頂部按鈕 -->
@@ -767,6 +853,6 @@ body {
     
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="music.js"></script>
+    <script src="music拷貝.js"></script>
 </body>
 </html>

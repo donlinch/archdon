@@ -1,7 +1,9 @@
-// music.js
+// music.js - 整合樂譜功能
 document.addEventListener('DOMContentLoaded', () => {
-    // 獲取DOM元素
+    // --- DOM元素獲取 ---
     const musicListContainer = document.getElementById('music-list');
+    const scoresListContainer = document.getElementById('scores-list');
+    const songList = document.getElementById('song-list');
     const artistDrawerContent = document.getElementById('artist-drawer-content');
     const artistDrawerBtn = document.getElementById('artist-drawer-btn');
     const artistDrawer = document.getElementById('artist-drawer');
@@ -10,21 +12,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const sortLinks = document.querySelectorAll('.sort-link');
     const backToTopButton = document.getElementById('back-to-top');
     
-    // 當前狀態
+    // --- 當前狀態 ---
     let currentArtistFilter = null;
     let currentSortBy = 'music'; // 預設為音樂專輯
+    let allSongsData = []; // 儲存樂譜的歌曲數據
     
-    // 檢查是否為移動設備
+    // --- 檢查是否為移動設備 ---
     const isMobileDevice = () => window.innerWidth <= 767;
     
-    // 初始化各功能
+    // --- 初始化各功能 ---
     initSwiper();
-    fetchAndDisplayArtists();
-    fetchAndDisplayAlbums();
     setupSortLinks();
     setupDrawer();
     setupBackToTop();
     setupCharacterInteractions();
+    
+    // 初始加載音樂專輯
+    fetchAndDisplayAlbums();
+    // 預加載樂譜歌手列表（但不顯示）
+    fetchArtists();
     
     /**
      * 初始化Swiper輪播
@@ -129,20 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
             closeDrawer();
         });
         
-        // 打開抽屜函數
-        function openDrawer() {
-            artistDrawer.classList.add('open');
-            drawerOverlay.classList.add('visible');
-            document.body.style.overflow = 'hidden'; // 防止背景滾動
-        }
-        
-        // 關閉抽屜函數
-        function closeDrawer() {
-            artistDrawer.classList.remove('open');
-            drawerOverlay.classList.remove('visible');
-            document.body.style.overflow = ''; // 恢復滾動
-        }
-        
         // ESC 鍵關閉抽屜
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && artistDrawer.classList.contains('open')) {
@@ -150,6 +142,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // 打開抽屜函數
+    function openDrawer() {
+        artistDrawer.classList.add('open');
+        drawerOverlay.classList.add('visible');
+        document.body.style.overflow = 'hidden'; // 防止背景滾動
+    }
+    
+    // 關閉抽屜函數
+    function closeDrawer() {
+        artistDrawer.classList.remove('open');
+        drawerOverlay.classList.remove('visible');
+        document.body.style.overflow = ''; // 恢復滾動
+    }
+    
     /**
      * 專輯卡片漸入動畫
      */
@@ -166,6 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
             }, 50 * index); // 每張卡片延遲 50ms
+        });
+    }
+    
+    /**
+     * 樂譜列表漸入動畫
+     */
+    function animateSongsIn() {
+        const items = document.querySelectorAll('#song-list li');
+        items.forEach((item, index) => {
+            // 設置初始狀態
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            
+            // 設置延遲動畫
+            setTimeout(() => {
+                item.style.transition = 'opacity 0.5s, transform 0.5s';
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0)';
+            }, 50 * index);
         });
     }
     
@@ -188,11 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (sortBy) {
                         currentSortBy = sortBy;
+                        
                         // 在這裡實現對不同類型內容的處理
                         if (sortBy === 'scores') {
-                            loadScores(); // 載入樂譜
+                            updateArtistButtonForScores(); // 更新歌手按鈕文字和功能為樂譜歌手
+                            showScoresList(); // 顯示樂譜列表
                         } else {
-                            fetchAndDisplayAlbums(currentArtistFilter); // 載入音樂專輯
+                            updateArtistButtonForMusic(); // 更新歌手按鈕文字和功能為音樂專輯的歌手
+                            showMusicAlbums(); // 顯示音樂專輯
                         }
                     }
                 });
@@ -201,86 +230,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * 載入樂譜內容（示例函數）
+     * 更新歌手按鈕為音樂專輯模式
      */
-    async function loadScores() {
-        if (!musicListContainer) return;
+    function updateArtistButtonForMusic() {
+        artistDrawerBtn.textContent = '歌手列表';
         
-        musicListContainer.innerHTML = '<p class="loading-text">正在加載樂譜資料...</p>';
+        // 重新載入音樂專輯歌手列表
+        fetchAndDisplayArtists();
+    }
+    
+    /**
+     * 更新歌手按鈕為樂譜模式
+     */
+    function updateArtistButtonForScores() {
+        artistDrawerBtn.textContent = '歌手篩選';
         
-        try {
-            // 這裡可以替換為實際的樂譜 API 調用
-            const response = await fetch('/api/scores');
-            if (!response.ok) {
-                throw new Error(`獲取樂譜失敗 (HTTP ${response.status})`);
-            }
-            
-            const scores = await response.json();
-            
-            if (!scores || scores.length === 0) {
-                musicListContainer.innerHTML = '<p class="no-products">目前沒有樂譜可顯示。</p>';
-                return;
-            }
-            
-            // 創建樂譜格線容器
-            const scoresGrid = document.createElement('div');
-            scoresGrid.className = 'album-grid'; // 使用相同的格線佈局
-            
-            // 填充樂譜卡片
-            scores.forEach(score => {
-                const scoreCard = document.createElement('a');
-                scoreCard.className = 'album-card';
-                scoreCard.href = score.download_url || '#';
-                
-                if (score.download_url) {
-                    scoreCard.target = '_blank';
-                    scoreCard.rel = 'noopener noreferrer';
-                }
-                
-                // 樂譜封面
-                const coverDiv = document.createElement('div');
-                coverDiv.className = 'cover-image';
-                const coverImg = document.createElement('img');
-                coverImg.src = score.image_url || '/images/score-placeholder.png';
-                coverImg.alt = score.title || '樂譜封面';
-                coverDiv.appendChild(coverImg);
-                
-                // 樂譜資訊
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'album-info';
-                
-                const title = document.createElement('h3');
-                title.textContent = score.title || '未知樂譜';
-                
-                const composer = document.createElement('p');
-                composer.className = 'artist';
-                composer.textContent = score.composer || '未知作曲家';
-                
-                const description = document.createElement('p');
-                description.className = 'release-date';
-                description.textContent = score.description || '點擊下載樂譜';
-                
-                infoDiv.appendChild(title);
-                infoDiv.appendChild(composer);
-                infoDiv.appendChild(description);
-                
-                scoreCard.appendChild(coverDiv);
-                scoreCard.appendChild(infoDiv);
-                scoresGrid.appendChild(scoreCard);
-            });
-            
-            musicListContainer.innerHTML = '';
-            musicListContainer.appendChild(scoresGrid);
-            
-            // 使用漸入效果顯示樂譜
-            animateAlbumsIn();
-            
-        } catch (error) {
-            console.error('載入樂譜失敗:', error);
-            musicListContainer.innerHTML = '<p class="error-text">無法加載樂譜，請稍後再試。</p>';
-            
-            // 如果 API 尚未實現，顯示提示信息
-            musicListContainer.innerHTML = '<p class="info-text">樂譜功能即將推出，敬請期待！</p>';
+        // 載入有樂譜的歌手列表
+        loadScoresArtistDrawer();
+    }
+    
+    /**
+     * 顯示音樂專輯列表
+     */
+    function showMusicAlbums() {
+        if (musicListContainer) musicListContainer.style.display = 'block';
+        if (scoresListContainer) scoresListContainer.style.display = 'none';
+        
+        // 如果還沒加載過音樂專輯，則加載
+        if (musicListContainer.innerHTML === '' || musicListContainer.innerHTML === '<p>正在加載音樂列表...</p>') {
+            fetchAndDisplayAlbums(currentArtistFilter);
+        }
+    }
+    
+    /**
+     * 顯示樂譜列表
+     */
+    function showScoresList() {
+        if (musicListContainer) musicListContainer.style.display = 'none';
+        if (scoresListContainer) scoresListContainer.style.display = 'block';
+        
+        // 如果還沒加載過樂譜，則加載
+        if (songList.innerHTML === '' || songList.innerHTML === '<p>載入樂譜中...</p>') {
+            fetchSongs(currentArtistFilter || 'All');
         }
     }
     
@@ -378,8 +369,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- 音樂專輯相關功能 ---
+    
     /**
-     * 獲取並顯示歌手列表
+     * 獲取並顯示歌手列表（音樂專輯）
      */
     async function fetchAndDisplayArtists() {
         if (!artistDrawerContent) {
@@ -388,8 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 清除之前內容並顯示加載中
-        // 保留原始的靜態按鈕
-        const existingButtons = Array.from(artistDrawerContent.querySelectorAll('.artist-drawer-btn'));
+        artistDrawerContent.innerHTML = '<button class="artist-drawer-btn active">全部歌手</button><button class="artist-drawer-btn">載入中...</button>';
         
         try {
             const response = await fetch('/api/artists');
@@ -487,15 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeButton) {
             activeButton.classList.add('active');
         }
-    }
-    
-    /**
-     * 關閉抽屜函數
-     */
-    function closeDrawer() {
-        artistDrawer.classList.remove('open');
-        drawerOverlay.classList.remove('visible');
-        document.body.style.overflow = ''; // 恢復滾動
     }
 
     /**
@@ -698,6 +681,189 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 使用漸入效果顯示專輯
         animateAlbumsIn();
+    }
+
+    // --- 樂譜相關功能 ---
+    
+    /**
+     * 獲取並顯示有樂譜的歌手列表
+     */
+    async function fetchArtists() {
+        try {
+            const response = await fetch('/api/scores/artists');
+            if (!response.ok) {
+                throw new Error('Error fetching artists');
+            }
+            const artists = await response.json();
+            // 暫時先不顯示，等待切換到樂譜頁面時使用
+            return artists;
+        } catch (error) {
+            console.error('獲取樂譜歌手列表失敗:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 載入樂譜歌手抽屜內容
+     */
+    async function loadScoresArtistDrawer() {
+        if (!artistDrawerContent) return;
+        
+        artistDrawerContent.innerHTML = '<button class="artist-drawer-btn active">全部歌手</button><button class="artist-drawer-btn">載入中...</button>';
+        
+        try {
+            const artists = await fetchArtists();
+            
+            // 清空現有內容
+            artistDrawerContent.innerHTML = '';
+            
+            // 添加「全部歌手」按鈕
+            const allButton = document.createElement('button');
+            allButton.textContent = '全部歌手';
+            allButton.classList.add('artist-drawer-btn', 'active');
+            allButton.addEventListener('click', () => {
+                // 選擇全部歌手
+                setActiveArtistButton(allButton);
+                currentArtistFilter = 'All';
+                fetchSongs('All');
+                closeDrawer();
+            });
+            artistDrawerContent.appendChild(allButton);
+            
+            // 添加各歌手按鈕
+            artists.forEach(artist => {
+                const button = document.createElement('button');
+                button.textContent = artist;
+                button.classList.add('artist-drawer-btn');
+                button.addEventListener('click', () => {
+                    setActiveArtistButton(button);
+                    currentArtistFilter = artist;
+                    fetchSongs(encodeURIComponent(artist));
+                    closeDrawer();
+                });
+                artistDrawerContent.appendChild(button);
+            });
+            
+        } catch (error) {
+            console.error('載入樂譜歌手抽屜內容失敗:', error);
+            
+            // 失敗時顯示默認內容
+            artistDrawerContent.innerHTML = '';
+            const defaultButton = document.createElement('button');
+            defaultButton.textContent = '全部歌手';
+            defaultButton.classList.add('artist-drawer-btn', 'active');
+            artistDrawerContent.appendChild(defaultButton);
+            
+            const errorMsg = document.createElement('p');
+            errorMsg.textContent = '無法載入歌手列表';
+            errorMsg.style.color = 'red';
+            errorMsg.style.padding = '10px';
+            artistDrawerContent.appendChild(errorMsg);
+        }
+    }
+
+    /**
+     * 獲取並顯示樂譜歌曲列表
+     */
+    async function fetchSongs(artist = 'All') {
+        if (!songList) return;
+        
+        songList.innerHTML = '<p>載入歌曲中...</p>';
+        
+        try {
+            const decodedArtist = decodeURIComponent(artist);
+            const url = decodedArtist === 'All' ? '/api/scores/songs' : `/api/scores/songs?artist=${artist}`;
+            allSongsData = await fetch(url).then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error fetching songs for artist ${decodedArtist}`);
+                }
+                return response.json();
+            });
+            
+            renderSongList(allSongsData);
+        } catch (error) {
+            console.error('獲取樂譜歌曲列表失敗:', error);
+            songList.innerHTML = '<p style="color: red;">無法載入歌曲列表。</p>';
+            allSongsData = []; // 出錯時清空
+        }
+    }
+
+    /**
+     * 渲染樂譜歌曲列表
+     */
+    function renderSongList(songs) {
+        if (!songList) return;
+        
+        if (!songs || !Array.isArray(songs) || songs.length === 0) {
+            songList.innerHTML = '<p>此分類下沒有包含樂譜的歌曲。</p>';
+            return;
+        }
+        
+        let html = '';
+        songs.forEach(song => {
+            // 確保有樂譜數據
+            if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
+                let scoreButtonsHTML = '';
+                
+                // 創建各種樂譜按鈕
+                song.scores.forEach(score => {
+                    if (score.type && score.id) {
+                        scoreButtonsHTML += `
+                            <button class="list-score-btn"
+                                data-song-id="${song.id}"
+                                data-score-id="${score.id}" 
+                                title="查看 ${song.title} - ${score.type}">
+                                ${score.type}
+                            </button>
+                        `;
+                    }
+                });
+                
+                // 只有有樂譜的歌曲才顯示
+                if (scoreButtonsHTML) {
+                    html += `
+                        <li data-song-id="${song.id}">
+                            <div class="song-list-info">
+                                <span class="song-title">${song.title || '未知標題'}</span>
+                                <span class="song-artist">${song.artist || '未知歌手'}</span>
+                                <div class="song-list-scores">
+                                    ${scoreButtonsHTML}
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                }
+            }
+        });
+        
+        if (html === '') {
+            songList.innerHTML = '<p>找不到包含樂譜的歌曲。</p>';
+        } else {
+            songList.innerHTML = html;
+            
+            // 為樂譜按鈕添加事件監聽
+            document.querySelectorAll('.list-score-btn').forEach(button => {
+                button.addEventListener('click', handleScoreButtonClick);
+            });
+            
+            // 應用動畫效果
+            animateSongsIn();
+        }
+    }
+    
+    /**
+     * 處理樂譜按鈕點擊事件
+     */
+    function handleScoreButtonClick(event) {
+        const songId = event.target.dataset.songId;
+        const scoreId = event.target.dataset.scoreId;
+        
+        if (songId && scoreId) {
+            // 跳轉到樂譜查看頁面
+            window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
+        } else {
+            console.warn('無法處理樂譜按鈕點擊：缺少 songId 或 scoreId。');
+        }
     }
 
     /**
