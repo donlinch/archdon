@@ -1131,81 +1131,6 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
 
 
 
-
-
-
-
-// GET /api/floating-characters - 獲取所有浮動角色 (專門為前端頁面提供的API)
-app.get('/api/floating-characters', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT id, element_type AS character_type, is_visible, image_url, alt_text, 
-                   position_top, position_left, position_right, 
-                   animation_type, speech_phrases 
-            FROM ui_elements
-            WHERE element_type IN ('pink', 'blue', 'yellow')
-            ORDER BY element_type
-        `);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取浮動角色列表失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-
-
-
-
-
-
-
-
-
-// --- 受保護的管理頁面和 API Routes ---
-app.use([
-    '/admin.html',
-    '/music-admin.html',
-    '/news-admin.html',
-    '/banner-admin.html',
-    '/sales-report.html',
-    '/figures-admin.html',
-    '/guestbook-admin.html',
-    '/admin-identities.html',
-    '/admin-message-detail.html',
-    '/inventory-admin.html'
-], basicAuthMiddleware);
-// 保護所有 /api/admin 和 /api/analytics 開頭的 API
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
-
-// --- 靜態文件服務 ---
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/uploads', express.static(uploadDir)); // uploadDir 的值是 '/data/uploads'
-console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
-
-// --- 公開 API Routes (保持不變) ---
-// ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...
-// --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // --- UI元素管理API ---
 
 // GET /api/ui-elements - 獲取所有UI元素
@@ -1478,6 +1403,81 @@ app.delete('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+// --- 受保護的管理頁面和 API Routes ---
+app.use([
+    '/admin.html',
+    '/music-admin.html',
+    '/news-admin.html',
+    '/banner-admin.html',
+    '/sales-report.html',
+    '/figures-admin.html',
+    '/guestbook-admin.html',
+    '/admin-identities.html',
+    '/admin-message-detail.html',
+    '/inventory-admin.html'
+], basicAuthMiddleware);
+// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+
+// --- 靜態文件服務 ---
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/uploads', express.static(uploadDir)); // uploadDir 的值是 '/data/uploads'
+console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
+
+// --- 公開 API Routes (保持不變) ---
+// ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...
+// --- ★★★ 留言板公開 API (Public Guestbook API) ★★★ ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// GET /api/floating-characters - 獲取所有浮動角色 (專門為前端頁面提供的API)
+app.get('/api/floating-characters', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type AS character_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases 
+            FROM ui_elements
+            WHERE element_type IN ('pink', 'blue', 'yellow')
+            ORDER BY element_type
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取浮動角色列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
 
 
 
