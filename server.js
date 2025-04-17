@@ -2097,6 +2097,188 @@ app.post('/api/news/:id/like', async (req, res) => {
 });
 
 
+
+
+
+
+
+
+
+
+
+
+// 在 server.js 中添加以下代碼，放在適當的位置（比如在留言板 API 相關程式碼後面）
+
+// --- 產品 API 路徑 ---
+app.get('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
+    }
+    try {
+        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
+        if (result.rows.length === 0) { 
+            return res.status(404).json({ error: '找不到商品。' }); 
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取商品 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// --- 頁面分析相關的 API ---
+app.get('/api/analytics/page-list', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DISTINCT page 
+            FROM page_views 
+            ORDER BY page ASC
+        `);
+        const pages = result.rows.map(row => row.page);
+        res.json(pages);
+    } catch (err) {
+        console.error('獲取頁面列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/page-views', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT page, view_date, SUM(view_count)::int AS count 
+            FROM page_views 
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY page, view_date 
+            ORDER BY view_date ASC, page ASC
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01', 
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取頁面訪問數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/page-views/ranking', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        let query = `
+            SELECT page, SUM(view_count)::int AS total_count 
+            FROM page_views 
+        `;
+        
+        const queryParams = [];
+        if (startDate && endDate) {
+            query += `WHERE view_date BETWEEN $1 AND $2 `;
+            queryParams.push(startDate, endDate);
+        }
+        
+        query += `GROUP BY page ORDER BY total_count DESC`;
+        
+        const result = await pool.query(query, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取頁面排名數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// --- 流量分析 API 修正 ---
+app.get('/api/analytics/traffic', async (req, res) => {
+    // 添加日期範圍參數支持
+    const { startDate, endDate } = req.query;
+    
+    let queryText = `
+        SELECT view_date AS date, SUM(view_count)::bigint AS count 
+        FROM page_views
+    `;
+    
+    const queryParams = [];
+    if (startDate && endDate) {
+        queryText += ` WHERE view_date BETWEEN $1 AND $2`;
+        queryParams.push(startDate, endDate);
+    } else {
+        // 默認返回最近30天
+        const daysToFetch = 30;
+        const defaultStartDate = new Date();
+        defaultStartDate.setDate(defaultStartDate.getDate() - daysToFetch);
+        const startDateString = defaultStartDate.toISOString().split('T')[0];
+        
+        queryText += ` WHERE view_date >= $1`;
+        queryParams.push(startDateString);
+    }
+    
+    queryText += ` GROUP BY view_date ORDER BY view_date ASC`;
+    
+    try {
+        const result = await pool.query(queryText, queryParams);
+        const trafficData = result.rows.map(row => ({ 
+            date: new Date(row.date).toISOString().split('T')[0], 
+            count: parseInt(row.count) 
+        }));
+        res.status(200).json(trafficData);
+    } catch (err) { 
+        console.error('獲取流量數據時發生錯誤:', err); 
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); 
+    }
+});
+
+app.get('/api/analytics/monthly-traffic', async (req, res) => {
+    // 添加日期範圍參數支持
+    const { startDate, endDate, year } = req.query;
+    const targetYear = year ? parseInt(year) : null;
+    
+    let queryText = `
+        SELECT to_char(date_trunc('month', view_date), 'YYYY-MM') AS month, 
+               SUM(view_count)::bigint AS count 
+        FROM page_views
+    `;
+    
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    // 條件邏輯
+    if (startDate && endDate) {
+        queryText += ` WHERE view_date BETWEEN $${paramIndex++} AND $${paramIndex++}`;
+        queryParams.push(startDate, endDate);
+    } else if (targetYear && !isNaN(targetYear)) {
+        queryText += ` WHERE date_part('year', view_date) = $${paramIndex++}`;
+        queryParams.push(targetYear);
+    }
+    
+    queryText += ` GROUP BY month ORDER BY month ASC`;
+    
+    try {
+        const result = await pool.query(queryText, queryParams);
+        const monthlyTrafficData = result.rows.map(row => ({ 
+            month: row.month, 
+            count: parseInt(row.count) 
+        }));
+        res.status(200).json(monthlyTrafficData);
+    } catch (err) { 
+        console.error('獲取月度流量數據時發生錯誤:', err); 
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取月度流量數據。' }); 
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
 const adminRouter = express.Router();
 
