@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 初始加載音樂專輯
     fetchAndDisplayAlbums();
+
+      // 加載歌手列表 - 確保這行代碼被執行
+      fetchAndDisplayArtists();
     
     /**
      * 初始化Swiper輪播
@@ -416,100 +419,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- 音樂專輯相關功能 ---
-    
     /**
-     * 獲取並顯示歌手列表（音樂專輯）
-     */
-    async function fetchAndDisplayArtists() {
-        if (!artistDrawerContent) {
-            console.error("Artist drawer content element not found");
-            return;
+ * 獲取並顯示歌手列表（音樂專輯）
+ */
+async function fetchAndDisplayArtists() {
+    if (!artistDrawerContent) {
+        console.error("Artist drawer content element not found");
+        return;
+    }
+
+    // 清除之前內容並顯示加載中
+    artistDrawerContent.innerHTML = '<button class="artist-drawer-btn active">全部歌手</button><button class="artist-drawer-btn">載入中...</button>';
+    
+    try {
+        const response = await fetch('/api/artists');
+        if (!response.ok) {
+            throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`);
         }
 
-        // 清除之前內容並顯示加載中
-        artistDrawerContent.innerHTML = '<button class="artist-drawer-btn active">全部歌手</button><button class="artist-drawer-btn">載入中...</button>';
+        const artists = await response.json();
         
-        try {
-            const response = await fetch('/api/artists');
-            if (!response.ok) {
-                throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`);
-            }
+        // 清除現有按鈕
+        artistDrawerContent.innerHTML = '';
 
-            const artists = await response.json();
-            
-            // 清除現有按鈕但保留「全部歌手」
-            artistDrawerContent.innerHTML = '';
+        // 全部歌手按鈕
+        const allButton = document.createElement('button');
+        allButton.textContent = '全部歌手';
+        allButton.classList.add('artist-drawer-btn', 'active');
+        allButton.addEventListener('click', () => {
+            setActiveArtistButton(allButton);
+            currentArtistFilter = null;
+            fetchAndDisplayAlbums(currentArtistFilter);
+            closeDrawer(); // 點擊後關閉抽屜
+        });
+        artistDrawerContent.appendChild(allButton);
 
-            // 全部歌手按鈕
-            const allButton = document.createElement('button');
-            allButton.textContent = '全部歌手';
-            allButton.classList.add('artist-drawer-btn', 'active');
-            allButton.addEventListener('click', () => {
-                setActiveArtistButton(allButton);
-                currentArtistFilter = null;
+        // 各歌手按鈕
+        artists.forEach(artist => {
+            const button = document.createElement('button');
+            button.textContent = artist;
+            button.classList.add('artist-drawer-btn');
+            button.addEventListener('click', () => {
+                setActiveArtistButton(button);
+                currentArtistFilter = artist;
                 fetchAndDisplayAlbums(currentArtistFilter);
                 closeDrawer(); // 點擊後關閉抽屜
             });
-            artistDrawerContent.appendChild(allButton);
+            artistDrawerContent.appendChild(button);
+        });
 
-            // 各歌手按鈕
-            artists.forEach(artist => {
-                const button = document.createElement('button');
-                button.textContent = artist;
-                button.classList.add('artist-drawer-btn');
-                button.addEventListener('click', () => {
-                    setActiveArtistButton(button);
-                    currentArtistFilter = artist;
-                    fetchAndDisplayAlbums(currentArtistFilter);
-                    closeDrawer(); // 點擊後關閉抽屜
-                });
-                artistDrawerContent.appendChild(button);
-            });
+        console.log("歌手列表加載成功：", artists);
 
-        } catch (error) {
-            console.error("[Music] Fetch artists error:", error);
-            // API 失敗時顯示靜態按鈕
-            artistDrawerContent.innerHTML = '';
+    } catch (error) {
+        console.error("[Music] Fetch artists error:", error);
+        // API 失敗時顯示靜態按鈕
+        artistDrawerContent.innerHTML = '';
+        
+        // 添加靜態歌手列表按鈕並設置點擊事件
+        const staticArtists = [
+            '全部歌手', 'Paula', 'SunnyYummy樂團', '亞米媽媽', 
+            '亞米爸爸', '恬恬', '林莉C亞米', '皓皓justin', 
+            '盒盒', '雪球軟糖'
+        ];
+        
+        staticArtists.forEach((artist, index) => {
+            const button = document.createElement('button');
+            button.textContent = artist;
+            button.classList.add('artist-drawer-btn');
+            if (index === 0) {
+                button.classList.add('active');
+            }
             
-            // 添加靜態歌手列表按鈕並設置點擊事件
-            const staticArtists = [
-                '全部歌手', 'Paula', 'SunnyYummy樂團', '亞米媽媽', 
-                '亞米爸爸', '恬恬', '林莉C亞米', '皓皓justin', 
-                '盒盒', '雪球軟糖'
-            ];
-            
-            staticArtists.forEach((artist, index) => {
-                const button = document.createElement('button');
-                button.textContent = artist;
-                button.classList.add('artist-drawer-btn');
-                if (index === 0) {
-                    button.classList.add('active');
-                }
-                
-                button.addEventListener('click', () => {
-                    // 移除所有按鈕的active類
-                    artistDrawerContent.querySelectorAll('.artist-drawer-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    
-                    // 添加active類到當前按鈕
-                    button.classList.add('active');
-                    
-                    // 設置過濾條件
-                    currentArtistFilter = index === 0 ? null : artist;
-                    
-                    // 更新專輯列表
-                    fetchAndDisplayAlbums(currentArtistFilter);
-                    
-                    // 關閉抽屜
-                    closeDrawer();
+            button.addEventListener('click', () => {
+                // 移除所有按鈕的active類
+                artistDrawerContent.querySelectorAll('.artist-drawer-btn').forEach(btn => {
+                    btn.classList.remove('active');
                 });
                 
-                artistDrawerContent.appendChild(button);
+                // 添加active類到當前按鈕
+                button.classList.add('active');
+                
+                // 設置過濾條件
+                currentArtistFilter = index === 0 ? null : artist;
+                
+                // 更新專輯列表
+                fetchAndDisplayAlbums(currentArtistFilter);
+                
+                // 關閉抽屜
+                closeDrawer();
             });
-        }
+            
+            artistDrawerContent.appendChild(button);
+        });
     }
-
+}
     /**
      * 設置當前選中的歌手按鈕
      */
