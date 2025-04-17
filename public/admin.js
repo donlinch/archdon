@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingMessage) loadingMessage.style.display = 'block'; 
             if (productTable) productTable.style.display = 'none'; 
             
-            const response = await fetch('/api/products'); 
+            const response = await fetch('/api/admin/products'); 
             if (!response.ok) { 
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`); 
             } 
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editImagePreview.src = ''; 
         
         try { 
-            const response = await fetch(`/api/products/${id}`); 
+            const response = await fetch(`/api/admin/products/${id}`); 
             if (!response.ok) { 
                 if (response.status === 404) throw new Error('找不到該商品。'); 
                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); 
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteProduct = async function(id) {
         if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { 
             try { 
-                const response = await fetch(`/api/products/${id}`, { method: 'DELETE' }); 
+                const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' }); 
                 if (response.status === 204 || response.ok) { 
                     await fetchAndDisplayProducts(); 
                 } else { 
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } 
             
             try { 
-                const response = await fetch(`/api/products`, { 
+                const response = await fetch(`/api/admin/products`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(newProductData) 
