@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoresFilterOverlay = document.getElementById('scores-filter-overlay');
     const scoresFilterArtists = document.getElementById('scores-filter-artists');
     
+    
+
+
+
+    
     const sortLinks = document.querySelectorAll('.sort-link');
     const backToTopButton = document.getElementById('back-to-top');
     
@@ -45,7 +50,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // 加載歌手列表 - 確保這行代碼被執行
       fetchAndDisplayArtists();
     
+
+
+      function updateArtistButtonForScores() {
+        artistDrawerBtn.textContent = '歌手篩選';
+        
+        // 載入有樂譜的歌手列表
+        loadScoresArtistDrawer(); // 確保這個函數可以正確工作
+    }
+      
     /**
+     * 
+     * 
+     * 
+     * 
      * 初始化Swiper輪播
      */
     function initSwiper() {
@@ -746,33 +764,36 @@ async function fetchAndDisplayArtists() {
     
     /**
      * 載入樂譜歌手篩選彈窗內容
-     */
-    async function loadScoresFilterArtists() {
-        if (!scoresFilterArtists) return;
+     */async function loadScoresFilterArtists() {
+    if (!scoresFilterArtists) {
+        console.error('scoresFilterArtists element not found');
+        return;
+    }
+
+    // 顯示加載狀態
+    scoresFilterArtists.innerHTML = '<button class="scores-filter-btn active">全部歌手</button><button class="scores-filter-btn">載入中...</button>';
+    
+    try {
+        const artists = await fetchArtists();
+        console.log('獲取的歌手列表:', artists); // 確認數據
         
-        // 清空現有內容並顯示加載中
-        scoresFilterArtists.innerHTML = '<button class="scores-filter-btn active">全部歌手</button><button class="scores-filter-btn">載入中...</button>';
+        // 清空現有內容
+        scoresFilterArtists.innerHTML = '';
         
-        try {
-            const artists = await fetchArtists();
-            
-            // 清空現有內容
-            scoresFilterArtists.innerHTML = '';
-            
-            // 添加「全部歌手」按鈕
-            const allButton = document.createElement('button');
-            allButton.textContent = '全部歌手';
-            allButton.classList.add('scores-filter-btn', 'active');
-            allButton.addEventListener('click', () => {
-                // 選擇全部歌手
-                setActiveScoresFilterButton(allButton);
-                currentScoresArtistFilter = 'All';
-                fetchSongs('All');
-                closeScoresFilter();
-            });
-            scoresFilterArtists.appendChild(allButton);
-            
-            // 添加各歌手按鈕
+        // 添加「全部歌手」按鈕
+        const allButton = document.createElement('button');
+        allButton.textContent = '全部歌手';
+        allButton.classList.add('scores-filter-btn', 'active');
+        allButton.addEventListener('click', () => {
+            setActiveScoresFilterButton(allButton);
+            currentScoresArtistFilter = 'All';
+            fetchSongs('All');
+            closeScoresFilter();
+        });
+        scoresFilterArtists.appendChild(allButton);
+        
+        // 添加各歌手按鈕
+        if (artists && artists.length > 0) {
             artists.forEach(artist => {
                 const button = document.createElement('button');
                 button.textContent = artist;
@@ -785,25 +806,25 @@ async function fetchAndDisplayArtists() {
                 });
                 scoresFilterArtists.appendChild(button);
             });
-            
-        } catch (error) {
-            console.error('載入樂譜歌手篩選內容失敗:', error);
-            
-            // 失敗時顯示默認內容
-            scoresFilterArtists.innerHTML = '';
-            const defaultButton = document.createElement('button');
-            defaultButton.textContent = '全部歌手';
-            defaultButton.classList.add('scores-filter-btn', 'active');
-            scoresFilterArtists.appendChild(defaultButton);
-            
-            const errorMsg = document.createElement('p');
-            errorMsg.textContent = '無法載入歌手列表';
-            errorMsg.style.color = 'red';
-            errorMsg.style.padding = '10px';
-            errorMsg.style.textAlign = 'center';
-            scoresFilterArtists.appendChild(errorMsg);
+        } else {
+            // 如果沒有歌手數據，顯示提示
+            const noArtistsMsg = document.createElement('p');
+            noArtistsMsg.textContent = '暫無歌手數據';
+            noArtistsMsg.style.padding = '10px';
+            noArtistsMsg.style.color = '#666';
+            scoresFilterArtists.appendChild(noArtistsMsg);
         }
+    } catch (error) {
+        console.error('載入樂譜歌手篩選內容失敗:', error);
+        // 顯示錯誤信息
+        scoresFilterArtists.innerHTML = '';
+        const errorMsg = document.createElement('p');
+        errorMsg.textContent = '載入歌手列表失敗';
+        errorMsg.style.color = 'red';
+        errorMsg.style.padding = '10px';
+        scoresFilterArtists.appendChild(errorMsg);
     }
+}
     
     /**
      * 設置活躍的樂譜歌手篩選按鈕
