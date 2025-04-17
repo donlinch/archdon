@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentArtistFilter = null;
     let currentSortBy = 'music'; // 預設為音樂專輯
     
+    // 檢查是否為移動設備
+    const isMobileDevice = () => window.innerWidth <= 767;
+    
     // 初始化各功能
     initSwiper();
     fetchAndDisplayArtists();
