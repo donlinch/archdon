@@ -379,13 +379,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * 獲取並顯示歌手列表
      */
     async function fetchAndDisplayArtists() {
-        if (!artistFilterNav) {
-            console.error("Artist filter nav element not found");
+        if (!artistDrawerContent) {
+            console.error("Artist drawer content element not found");
             return;
         }
 
-        artistFilterNav.innerHTML = '<p>正在加載歌手列表...</p>';
-
+        // 清除之前內容並顯示加載中
+        // 保留原始的靜態按鈕
+        const existingButtons = Array.from(artistDrawerContent.querySelectorAll('.artist-drawer-btn'));
+        
         try {
             const response = await fetch('/api/artists');
             if (!response.ok) {
@@ -393,38 +395,77 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const artists = await response.json();
-            artistFilterNav.innerHTML = '';
+            
+            // 清除現有按鈕但保留「全部歌手」
+            artistDrawerContent.innerHTML = '';
 
             // 全部歌手按鈕
             const allButton = document.createElement('button');
             allButton.textContent = '全部歌手';
-            allButton.classList.add('artist-filter-btn', 'active');
+            allButton.classList.add('artist-drawer-btn', 'active');
             allButton.addEventListener('click', () => {
                 setActiveArtistButton(allButton);
                 currentArtistFilter = null;
                 fetchAndDisplayAlbums(currentArtistFilter);
+                closeDrawer(); // 點擊後關閉抽屜
             });
-            artistFilterNav.appendChild(allButton);
+            artistDrawerContent.appendChild(allButton);
 
             // 各歌手按鈕
             artists.forEach(artist => {
                 const button = document.createElement('button');
                 button.textContent = artist;
-                button.classList.add('artist-filter-btn');
-                button.dataset.artist = artist;
+                button.classList.add('artist-drawer-btn');
                 button.addEventListener('click', () => {
                     setActiveArtistButton(button);
                     currentArtistFilter = artist;
                     fetchAndDisplayAlbums(currentArtistFilter);
+                    closeDrawer(); // 點擊後關閉抽屜
                 });
-                artistFilterNav.appendChild(button);
+                artistDrawerContent.appendChild(button);
             });
 
         } catch (error) {
             console.error("[Music] Fetch artists error:", error);
-            if (artistFilterNav) {
-                artistFilterNav.innerHTML = '<p>無法加載歌手列表</p>';
-            }
+            // API 失敗時顯示靜態按鈕
+            artistDrawerContent.innerHTML = '';
+            
+            // 添加靜態歌手列表按鈕並設置點擊事件
+            const staticArtists = [
+                '全部歌手', 'Paula', 'SunnyYummy樂團', '亞米媽媽', 
+                '亞米爸爸', '恬恬', '林莉C亞米', '皓皓justin', 
+                '盒盒', '雪球軟糖'
+            ];
+            
+            staticArtists.forEach((artist, index) => {
+                const button = document.createElement('button');
+                button.textContent = artist;
+                button.classList.add('artist-drawer-btn');
+                if (index === 0) {
+                    button.classList.add('active');
+                }
+                
+                button.addEventListener('click', () => {
+                    // 移除所有按鈕的active類
+                    artistDrawerContent.querySelectorAll('.artist-drawer-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // 添加active類到當前按鈕
+                    button.classList.add('active');
+                    
+                    // 設置過濾條件
+                    currentArtistFilter = index === 0 ? null : artist;
+                    
+                    // 更新專輯列表
+                    fetchAndDisplayAlbums(currentArtistFilter);
+                    
+                    // 關閉抽屜
+                    closeDrawer();
+                });
+                
+                artistDrawerContent.appendChild(button);
+            });
         }
     }
 
@@ -432,10 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * 設置當前選中的歌手按鈕
      */
     function setActiveArtistButton(activeButton) {
-        if (!artistFilterNav) return;
+        if (!artistDrawerContent) return;
         
         // 移除所有按鈕的 active 類
-        artistFilterNav.querySelectorAll('button').forEach(btn => {
+        artistDrawerContent.querySelectorAll('.artist-drawer-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
@@ -443,6 +484,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeButton) {
             activeButton.classList.add('active');
         }
+    }
+    
+    /**
+     * 關閉抽屜函數
+     */
+    function closeDrawer() {
+        artistDrawer.classList.remove('open');
+        drawerOverlay.classList.remove('visible');
+        document.body.style.overflow = ''; // 恢復滾動
     }
 
     /**
@@ -535,8 +585,116 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("[Music] Fetch albums error:", error);
             if (musicListContainer) {
                 musicListContainer.innerHTML = `<p class="error-text">無法加載音樂列表: ${error.message}</p>`;
+                
+                // 如果API不可用，顯示模擬數據
+                displayMockAlbums(artist);
             }
         }
+    }
+    
+    /**
+     * 顯示模擬專輯數據（API不可用時）
+     */
+    function displayMockAlbums(artist = null) {
+        // 模擬數據
+        const mockAlbums = [
+            {
+                title: '陽光美味',
+                artist: 'SunnyYummy樂團',
+                cover_art_url: '/images/album1.jpg',
+                release_date: '2023-05-15',
+                platform_url: '#'
+            },
+            {
+                title: '快樂星球',
+                artist: 'Paula',
+                cover_art_url: '/images/album2.jpg',
+                release_date: '2023-02-20',
+                platform_url: '#'
+            },
+            {
+                title: '童話世界',
+                artist: '亞米媽媽',
+                cover_art_url: '/images/album3.jpg',
+                release_date: '2022-12-10',
+                platform_url: '#'
+            },
+            {
+                title: '彩虹之歌',
+                artist: '盒盒',
+                cover_art_url: '/images/album4.jpg',
+                release_date: '2022-10-05',
+                platform_url: '#'
+            }
+        ];
+        
+        // 依據歌手過濾
+        let filteredAlbums = mockAlbums;
+        if (artist) {
+            filteredAlbums = mockAlbums.filter(album => album.artist === artist);
+        }
+        
+        if (filteredAlbums.length === 0) {
+            musicListContainer.innerHTML = '<p class="no-products">找不到相關的音樂項目</p>';
+            return;
+        }
+        
+        // 創建專輯格線容器
+        const albumGrid = document.createElement('div');
+        albumGrid.className = 'album-grid';
+        
+        // 填充專輯卡片
+        filteredAlbums.forEach(music => {
+            const albumCard = document.createElement('a');
+            albumCard.className = 'album-card';
+            albumCard.href = music.platform_url || '#';
+            
+            if (music.platform_url) {
+                albumCard.target = '_blank';
+                albumCard.rel = 'noopener noreferrer';
+            } else {
+                albumCard.onclick = (e) => e.preventDefault();
+            }
+            
+            // 封面圖片
+            const coverDiv = document.createElement('div');
+            coverDiv.className = 'cover-image';
+            const coverImg = document.createElement('img');
+            coverImg.src = music.cover_art_url || '/images/placeholder.png';
+            coverImg.alt = music.title || '專輯封面';
+            coverDiv.appendChild(coverImg);
+            
+            // 專輯資訊
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'album-info';
+            
+            const title = document.createElement('h3');
+            title.textContent = music.title || '未知專輯';
+            
+            const artistElem = document.createElement('p');
+            artistElem.className = 'artist';
+            artistElem.textContent = music.artist || '未知歌手';
+            
+            const date = document.createElement('p');
+            date.className = 'release-date';
+            date.textContent = music.release_date 
+                ? new Date(music.release_date).toLocaleDateString('zh-TW') 
+                : '發行日期未知';
+            
+            infoDiv.appendChild(title);
+            infoDiv.appendChild(artistElem);
+            infoDiv.appendChild(date);
+            
+            albumCard.appendChild(coverDiv);
+            albumCard.appendChild(infoDiv);
+            albumGrid.appendChild(albumCard);
+        });
+        
+        musicListContainer.innerHTML = '<p class="info-text">使用示範數據顯示（API連接失敗）</p>';
+        musicListContainer.appendChild(albumGrid);
+        
+        // 使用漸入效果顯示專輯
+        animateAlbumsIn();
     }
 
     /**
