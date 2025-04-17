@@ -2101,7 +2101,51 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
+// --- 更新商品 API (這應該要放在你的 server.js 中) ---
+app.put('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
+    }
+    
+    // 驗證必填欄位
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '商品名稱不能為空。' });
+    }
 
+    try {
+        const result = await pool.query(
+            `UPDATE products 
+             SET name = $1, 
+                 description = $2, 
+                 price = $3, 
+                 image_url = $4, 
+                 seven_eleven_url = $5, 
+                 updated_at = NOW() 
+             WHERE id = $6 
+             RETURNING *`,
+            [
+                name.trim(), 
+                description || null, 
+                price, 
+                image_url || null, 
+                seven_eleven_url || null, 
+                id
+            ]
+        );
+        
+        if (result.rowCount === 0) { 
+            return res.status(404).json({ error: '找不到商品，無法更新。' }); 
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新商品 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
 
 
