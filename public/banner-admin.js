@@ -367,14 +367,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         滾動速度: ${settings.scroll_speed || 'smooth'}
                     `;
                 } else {
-                    const speechPhrases = element.speech_phrases || []; // 如果 element.speech_phrases 是 null 或 undefined，給一個空陣列
-                    const speechPhrasesCount = speechPhrases.length; // 直接獲取陣列長度
-                    // 角色描述
-                    descriptionContent = `
-                        位置: ${element.position_top || 'auto'} ${element.position_left ? `left: ${element.position_left}` : ''} ${element.position_right ? `right: ${element.position_right}` : ''}<br>
-                        動畫: ${element.animation_type || 'float1'}<br>
-                        對話數量: ${element.speech_phrases ? JSON.parse(element.speech_phrases).length : 0}條
-                    `;
+                 // 安全解析 speech_phrases
+let speechPhrases = [];
+try {
+    if (element.speech_phrases) {
+        if (typeof element.speech_phrases === 'string') {
+            speechPhrases = JSON.parse(element.speech_phrases);
+        } else if (Array.isArray(element.speech_phrases)) {
+            speechPhrases = element.speech_phrases;
+        }
+    }
+} catch (e) {
+    console.error("解析 speech_phrases 失敗:", e);
+    speechPhrases = [];
+}
+
+// 角色描述
+descriptionContent = `
+    位置: ${element.position_top || 'auto'} ${element.position_left ? `left: ${element.position_left}` : ''} ${element.position_right ? `right: ${element.position_right}` : ''}<br>
+    動畫: ${element.animation_type || 'float1'}<br>
+    對話數量: ${Array.isArray(speechPhrases) ? speechPhrases.length : 0}條
+`;
                 }
                 
                 row.innerHTML = `
@@ -490,8 +503,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('edit-ui-animation-type').value = element.animation_type || 'float1';
                 
                 // 處理對話短語
-                const speechPhrases = element.speech_phrases || [];
-                document.getElementById('edit-ui-speech-phrases').value = speechPhrases.join(',');
+                // 處理對話短語 - 安全解析
+let speechPhrases = [];
+try {
+    if (element.speech_phrases) {
+        if (typeof element.speech_phrases === 'string') {
+            speechPhrases = JSON.parse(element.speech_phrases);
+        } else if (Array.isArray(element.speech_phrases)) {
+            speechPhrases = element.speech_phrases;
+        }
+    }
+} catch (e) {
+    console.error("解析 speech_phrases 失敗:", e);
+    speechPhrases = [];
+}
+document.getElementById('edit-ui-speech-phrases').value = Array.isArray(speechPhrases) ? speechPhrases.join(',') : '';
             }
 
             // 顯示Modal
