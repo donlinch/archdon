@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 留言板 </title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+    <header class="page-title-header"> <!-- 添加 class -->
+        <h1 class="page-title">SunnyYummy 留言板</h1> <!-- 添加 class -->
+    </header>
+
+
+    
+    <main class="guestbook-container">
+         
+        <nav class="category-nav">
+            <a href="/">週邊商品</a>
+            <a href="/music.html">音樂專輯</a>
+            <a href="/news.html">最新消息</a>
+            <a href="/scores.html">樂譜與舞蹈</a>
+            <a href="/games.html" >互動遊戲</a>
+            <a href="/guestbook.html" class="active">留言板</a>
+          
+            
+        </nav>
+    
+
+    
+        <div class="guestbook-header">
+            <small>歡迎留言分享！ 無論是你的樂譜 Cover 演奏、精彩的舞蹈教學影片，或是任何想和大家交流的想法，都可以在這裡分享喔！(發表前請留意留言規範)</small>
+
+
+             
+         
+            <button id="new-post-btn" class="btn btn-primary">發表留言</button> <!-- 【★ 修改 ★】按鈕 -->
+     
+        </div>
+
+        <!-- 排序按鈕 -->
+        <div class="sort-controls" style="margin-bottom: 0.7rem; text-align: right;">
+            
+            <button class="sort-btn active" data-sort="latest">最新活動</button>
+            <button class="sort-btn" data-sort="popular">熱門討論</button>
+            <button class="sort-btn" data-sort="most_replies">最多回覆</button>
+        </div>
+
+        <hr>
+
+        <section class="message-list-section">
+            <h3>最新留言</h3>
+            <div id="message-list-container">
+                <p>正在載入留言...</p>
+            </div>
+            <div id="pagination-container" class="pagination-controls"></div>
+        </section>
+
+        <!-- 【★ 新增 ★】發表新留言的 Modal 視窗 -->
+        <div id="post-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" id="close-post-modal-btn">×</span> <!-- 關閉按鈕 -->
+                <h2>發表新留言</h2>
+                <form id="post-message-form"> <!-- ID 不變 -->
+                    <div class="form-group">
+                        <label for="modal-author-name">您的名稱 (選填，預設為匿名):</label>
+                        <input type="text" id="modal-author-name" name="author_name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-message-content">留言內容 (必填):</label>
+                        <textarea id="modal-message-content" name="content" rows="5" required></textarea>
+                    </div>
+
+
+ 
+
+                    
+                    <div class="form-actions">
+                        <p id="post-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                        <button type="submit" id="submit-message-btn" class="btn btn-success">送出留言</button>
+                        <button type="button" class="btn btn-secondary close-modal-btn">取消</button> <!-- 用於關閉 Modal -->
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 【★ 新增 ★】查看詳情 Modal 的 HTML 骨架 -->
+        <div id="message-detail-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" id="close-detail-modal-btn">×</span>
+                <h2>留言詳情</h2>
+                <div id="modal-message-detail-main">
+                    <!-- 主留言詳情將載入這裡 -->
+                    <p>載入中...</p>
+                </div>
+                <hr>
+                 <div id="modal-reply-list-container">
+                    <!-- 回覆列表將載入這裡 -->
+                    <p>載入中...</p>
+                </div>
+                <hr>
+                 <form id="modal-reply-form"> <!-- Modal 內的回覆表單 -->
+                     <input type="hidden" id="modal-reply-parent-id" name="parent_reply_id">
+                    <div class="form-group">
+                        <label for="modal-reply-author-name">您的名稱 (選填):</label>
+                        <input type="text" id="modal-reply-author-name" name="reply_author_name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-reply-content" id="modal-reply-form-label">回覆內容 (必填):</label>
+                        <textarea id="modal-reply-content" name="reply_content" rows="3" required></textarea>
+                    </div>
+
+
+ 
+
+                    
+                    <div class="form-actions">
+                         <p id="modal-reply-status" class="status-message" style="text-align: left; flex-grow: 1; margin: 0;"></p>
+                        <button type="submit" id="modal-submit-reply-btn" class="btn btn-primary">送出回覆</button>
+                         <button type="button" class="btn btn-secondary close-modal-btn">關閉</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <div class="contribution-info">
+            請理性討論，友善發言，禁止發表不實資訊、人身攻擊或廣告內容。
+            管理員有權刪除不當留言。發言請遵守相關法律法規。
+ 
+ 
+        
+        </div>
+
+
+    </main>
+
+    <footer>
+      
+     
+         <div class="footer-container">
+            <nav class="footer-nav">
+               <a href="/">週邊商品</a>
+               <a href="/music.html">音樂專輯</a>
+               <a href="/news.html">最新消息</a>
+               <a href="/scores.html"  >樂譜中心</a>
+               <a href="/games.html" >互動遊戲</a>
+               <a href="/guestbook.html" class="active">留言板</a>
+            </nav>
+           <div class="footer-copyright">
+               <p>© 2024 SunnyYummy. All rights reserved.</p>
+           </div>
+       </div> 
+        
+    
+    </footer>
+
+   
+    <script src="guestbook.js"></script>
+</body>
+</html>
