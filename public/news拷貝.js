@@ -1,4 +1,4 @@
-// public/news22.js (完整替換版本)
+// news.js 更新版本
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM 元素引用 ---
     const newsListContainer = document.getElementById('news-list');
@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailTitle = document.getElementById('detail-title');
     const detailMeta = document.getElementById('detail-meta');
     const detailBody = document.getElementById('detail-body');
+    const backToTopButton = document.getElementById('back-to-top');
+    const sortLinks = document.querySelectorAll('.sort-link');
 
     // --- Banner 相關元素 ---
     const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
@@ -16,10 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 分頁變數 ---
     let currentPage = 1;
     const itemsPerPage = 10; // 每頁顯示數量
+    let currentSortType = 'latest'; // 當前排序
 
     // --- 函數定義 ---
 
-    /**  
+    /**
      * 獲取並顯示 News 類型輪播圖
      */
     async function fetchAndDisplayBanners() {
@@ -30,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (carouselElement) carouselElement.style.display = 'none';
             return;
         }
-        // ... (fetchAndDisplayBanners 函數的其他內容保持不變) ...
+        
         bannerWrapper.innerHTML = '<div class="swiper-slide" style="display:flex; align-items:center; justify-content:center; background-color:#f0f0f0;">載入輪播圖中...</div>';
 
         try {
@@ -97,12 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 獲取並顯示指定頁數的消息
      */
-    async function fetchNews(page = 1) {
-        console.log(`[News] Fetching news page ${page}`);
+    async function fetchNews(page = 1, sortType = 'latest') {
+        console.log(`[News] Fetching news page ${page} with sort: ${sortType}`);
         if (!newsListContainer || !paginationControls) { console.error("Missing required elements"); return; }
         currentPage = page;
+        currentSortType = sortType;
         newsListContainer.innerHTML = '<p>正在加載最新消息...</p>';
         paginationControls.innerHTML = '';
+        
         try {
             const response = await fetch(`/api/news?page=${page}&limit=${itemsPerPage}`);
             if (!response.ok) {
@@ -112,7 +117,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             console.log(`[News] Received ${data.news.length} news items`);
-            displayNews(data.news); // <--- 調用修改後的 displayNews
+            
+            // 依據排序類型過濾結果
+            let filteredNews = data.news;
+            
+            // 如果是活動預告，只顯示未來的事件
+            if (sortType === 'upcoming') {
+                const now = new Date();
+                filteredNews = data.news.filter(item => {
+                    if (!item.event_date) return false;
+                    const eventDate = new Date(item.event_date);
+                    return eventDate > now;
+                });
+            } 
+            // 如果是合作推廣，只顯示含有特定標籤或關鍵字的項目（假設標題或摘要中含有「合作」、「推廣」等字樣）
+            else if (sortType === 'promotion') {
+                const keywords = ['合作', '推廣', '聯名', '限定'];
+                filteredNews = data.news.filter(item => {
+                    return keywords.some(keyword => 
+                        (item.title && item.title.includes(keyword)) || 
+                        (item.summary && item.summary.includes(keyword))
+                    );
+                });
+            }
+            
+            displayNews(filteredNews);
             renderPagination(data.totalPages, data.currentPage);
         } catch (error) {
             console.error("[News] Fetch news error:", error);
@@ -120,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- *** 這裡是被替換的 displayNews 函數 *** ---
     /**
      * 渲染消息列表 (新佈局)
      */
@@ -128,85 +156,91 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!newsListContainer) return;
         newsListContainer.innerHTML = '';
         if (!newsList || newsList.length === 0) {
-            newsListContainer.innerHTML = '<p>目前沒有最新消息。</p>';
+            newsListContainer.innerHTML = '<p>沒有符合條件的消息。</p>';
             return;
         }
+        
         newsList.forEach(newsItem => {
+            // 創建卡片容器
             const card = document.createElement('div');
-            card.className = 'news-card'; // 卡片容器 class 不變
-
-            // --- 新佈局邏輯 ---
-
-            // 1. 創建左側容器 (包含縮圖和日期)
-            const leftColumn = document.createElement('div');
-            leftColumn.className = 'news-card-left'; // 使用新的 CSS class
-
-            // 2. 縮圖 (放入左側容器)
-            const thumbnailDiv = document.createElement('div');
-            thumbnailDiv.className = 'thumbnail';
-            const thumbnailImg = document.createElement('img');
-            thumbnailImg.src = newsItem.thumbnail_url || '/images/placeholder.png';
-            thumbnailImg.alt = newsItem.title || '縮圖';
-            thumbnailDiv.appendChild(thumbnailImg);
-            leftColumn.appendChild(thumbnailDiv); // 將縮圖放入左欄
-
-            // 3. 創建並格式化新日期元素
-            const dateSpan = document.createElement('span');
-            dateSpan.className = 'news-card-date'; // 使用新的 CSS class
-            // 優先使用 event_date，若無或無效則用 updated_at
-            let displayDate;
-            if (newsItem.event_date && !isNaN(new Date(newsItem.event_date))) {
-                displayDate = new Date(newsItem.event_date);
-            } else if (newsItem.updated_at && !isNaN(new Date(newsItem.updated_at))) {
-                displayDate = new Date(newsItem.updated_at);
-            } else {
-                displayDate = new Date(); // 後備使用當前日期
-                console.warn(`News item ID ${newsItem.id} has invalid date, using current date.`);
-            }
-            const month = displayDate.getMonth() + 1;
-            const day = displayDate.getDate();
-            const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-            const weekDay = dayNames[displayDate.getDay()];
-            dateSpan.textContent = `${month}/${day} (${weekDay})`;
-            leftColumn.appendChild(dateSpan); // 將日期放入左欄，在縮圖下方
-
-            // 4. 創建右側內容容器
-            const contentWrapper = document.createElement('div');
-            contentWrapper.className = 'content-wrapper';
-            // 將點擊事件綁定到整個卡片上
+            card.className = 'product-card'; // 使用與商品卡片相同的樣式基礎
             card.onclick = () => openNewsDetailModal(newsItem.id);
-            card.style.cursor = 'pointer'; // 給整個卡片加手型指標
-
-            const titleH3 = document.createElement('h3');
-            titleH3.className = 'news-title';
-            titleH3.textContent = newsItem.title || '無標題';
-
-            const summaryP = document.createElement('p');
-            summaryP.className = 'news-summary';
-            summaryP.textContent = newsItem.summary || '';
-
-            contentWrapper.appendChild(titleH3);
-            contentWrapper.appendChild(summaryP);
-
-            // 5. （已移除）舊的 dateTag 和 actionsDiv 的創建代碼
-
-            // 6. 將新的左右欄添加到卡片中
-            card.appendChild(leftColumn);   // 添加左欄
-            card.appendChild(contentWrapper); // 添加右欄 (內容區)
-
-            // --- 佈局邏輯結束 ---
-
+            card.style.cursor = 'pointer';
+            
+            // 創建圖片容器
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'image-container';
+            const imageElement = document.createElement('img');
+            imageElement.src = newsItem.thumbnail_url || '/images/placeholder.png';
+            imageElement.alt = newsItem.title || '新聞縮圖';
+            imageContainer.appendChild(imageElement);
+            
+            // 創建內容區域
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'card-content';
+            
+            // 添加標題
+            const titleElement = document.createElement('h3');
+            titleElement.textContent = newsItem.title || '無標題';
+            
+            // 添加日期
+            const dateParagraph = document.createElement('p');
+            dateParagraph.className = 'news-date';
+            
+            // 格式化日期
+            let displayDate = '日期未知';
+            if (newsItem.event_date && !isNaN(new Date(newsItem.event_date))) {
+                displayDate = new Date(newsItem.event_date).toLocaleDateString('zh-TW');
+            } else if (newsItem.updated_at && !isNaN(new Date(newsItem.updated_at))) {
+                displayDate = new Date(newsItem.updated_at).toLocaleDateString('zh-TW');
+            }
+            dateParagraph.textContent = displayDate;
+            
+            // 添加摘要
+            const summaryParagraph = document.createElement('p');
+            summaryParagraph.className = 'news-summary';
+            summaryParagraph.textContent = newsItem.summary || '';
+            
+            // 組裝內容
+            contentDiv.appendChild(titleElement);
+            contentDiv.appendChild(dateParagraph);
+            contentDiv.appendChild(summaryParagraph);
+            
+            // 組裝卡片
+            card.appendChild(imageContainer);
+            card.appendChild(contentDiv);
+            
+            // 添加到容器
             newsListContainer.appendChild(card);
         });
+        
+        // 添加卡片動畫
+        animateNewsCardsIn();
     }
-    // --- *** displayNews 函數替換結束 *** ---
 
+    /**
+     * 新聞卡片漸入動畫
+     */
+    function animateNewsCardsIn() {
+        const cards = document.querySelectorAll('.product-card');
+        cards.forEach((card, index) => {
+            // 設置初始狀態
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            // 設置延遲動畫以產生級聯效果
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s, transform 0.5s';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 50 * index); // 每張卡片延遲 50ms
+        });
+    }
 
     /**
      * 渲染分頁控制按鈕
      */
     function renderPagination(totalPages, currentPage) {
-        // ... (renderPagination 函數內容保持不變) ...
         if (!paginationControls || totalPages <= 1) {
              if (paginationControls) paginationControls.innerHTML = ''; // 清空以防萬一
              return;
@@ -217,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             button.textContent = text;
             button.disabled = isDisabled;
             if (isActive) button.classList.add('active');
-            if (!isDisabled && !isActive) { button.addEventListener('click', () => fetchNews(page)); }
+            if (!isDisabled && !isActive) { button.addEventListener('click', () => fetchNews(page, currentSortType)); }
             return button;
         };
         paginationControls.appendChild(createButton(currentPage - 1, '上一頁', false, currentPage === 1));
@@ -238,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * 打開並填充消息詳情 Modal
      */
     async function openNewsDetailModal(newsId) {
-        // ... (openNewsDetailModal 函數內容保持不變) ...
         if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) {
             console.error("Missing modal elements");
             return;
@@ -289,19 +322,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             detailMeta.textContent = metaText.trim().endsWith('|') ? metaText.trim().slice(0, -1).trim() : metaText.trim(); // 移除結尾多餘的 |
 
-
-            // --- 處理內文中的網址轉換為連結 ---
+            // 處理內文中的網址轉換為連結
             if (newsItem.content) {
-                // 1. HTML Escape (非常重要，防止 XSS)
+                // 1. HTML Escape (防止 XSS)
                 const escapedContent = newsItem.content
-                    .replace(/&/g, "&")
-                    .replace(/</g, "<")
-                    .replace(/>/g, ">")
-                         // " 轉成 & q u o t ;
-                .replace(/"/g, '&quot;')
-        
-                // ' 轉成 & # 3 9 ;  (數字實體)
-                .replace(/'/g, '&#39;');
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
 
                 // 2. 將換行符 (\n) 替換成 <br>
                 let formattedContent = escapedContent.replace(/\n/g, '<br>');
@@ -327,38 +356,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 處理按讚請求 (雖然移除了按鈕，但函數保留以防萬一)
+     * 設置返回頂部按鈕
      */
-    async function likeNews(newsId, likeButtonElement, countElement) {
-       console.log("Like button clicked for", newsId, "but functionality is removed.");
-        // 由於按鈕已移除，此函數理論上不會被觸發
-        // 但保留基本結構以防未來重新啟用
-        /*
-        const isLiked = likeButtonElement.classList.contains('liked');
-        const currentCount = parseInt(countElement.textContent) || 0;
-        if (isLiked) { console.log("Already liked"); return; }
-        // ... (原來的按讚請求邏輯) ...
-        */
+    function setupBackToTop() {
+        if (!backToTopButton) {
+            console.error("返回頂部按鈕元素未找到！");
+            return;
+        }
+        
+        // 監聽滾動事件
+        window.addEventListener('scroll', function() {
+            const scrollTrigger = 300;
+            if (window.scrollY > scrollTrigger) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+        
+        // 點擊回到頂部
+        backToTopButton.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    /**
+     * 設置排序連結事件
+     */
+    function setupSortLinks() {
+        if (sortLinks.length > 0) {
+            sortLinks.forEach(link => {
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    
+                    // 移除所有連結的 active 類
+                    sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
+                    // 為當前點擊的連結添加 active 類
+                    link.classList.add('active');
+                    
+                    // 獲取排序方式
+                    const sortBy = link.dataset.sort;
+                    
+                    if (sortBy) {
+                        fetchNews(1, sortBy);
+                    } else {
+                        console.warn("排序連結缺少 data-sort 屬性:", link);
+                        fetchNews(1, 'latest');
+                    }
+                });
+            });
+        }
     }
 
     // --- 全局函數 ---
-    window.closeNewsDetailModal = function() { if (detailModal) { detailModal.style.display = 'none'; } };
-    window.onclick = function(event) { if (event.target === detailModal) { closeNewsDetailModal(); } };
+    window.closeNewsDetailModal = function() { 
+        if (detailModal) { detailModal.style.display = 'none'; } 
+    };
+    
+    window.onclick = function(event) { 
+        if (event.target === detailModal) { closeNewsDetailModal(); } 
+    };
 
     // --- 頁面初始化 ---
     async function initializePage() {
         console.log("[News] Initializing page with new layout");
         if (!newsListContainer || !paginationControls || !detailModal || !bannerWrapper) {
-            console.error("頁面初始化失敗：缺少必要的 HTML 元素。請檢查 news2.html 的 ID。");
+            console.error("頁面初始化失敗：缺少必要的 HTML 元素。");
             // 可以在頁面上顯示更明顯的錯誤提示
             document.body.innerHTML = '<p style="color:red; text-align:center; padding: 2rem;">頁面載入錯誤，請聯繫管理員。</p>';
             return;
         }
+        
+        // 設置返回頂部按鈕
+        setupBackToTop();
+        
+        // 設置排序連結事件
+        setupSortLinks();
+        
         try {
-            // 同時開始獲取 Banner 和第一頁新聞
+            // 同時獲取 Banner 和第一頁新聞
             await Promise.all([
                 fetchAndDisplayBanners(),
-                fetchNews(1)
+                fetchNews(1, 'latest')
             ]);
             console.log("[News] Page initialized successfully");
         } catch (error) {

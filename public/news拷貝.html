@@ -15,7 +15,6 @@
   <!-- Open Graph 社群標籤 -->
   <meta property="og:title" content="SunnyYummy 最新消息 | 活動公告與演唱會資訊">
   <meta property="og:description" content="掌握 SunnyYummy 最新演唱會日期、周邊商品發售與粉絲見面會資訊！">
- 
   <meta property="og:url" content="https://sunnyyummy.onrender.com/news.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="SunnyYummy">
@@ -24,11 +23,9 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="SunnyYummy 最新消息 | 活動公告與演唱會資訊">
   <meta name="twitter:description" content="掌握 SunnyYummy 最新演唱會日期、周邊商品發售與粉絲見面會資訊！">
-   
   
   <!-- 預載關鍵資源 -->
   <link rel="preload" href="style.css" as="style">
-  
   
   <!-- 共用 CSS -->
   <link rel="stylesheet" href="style.css">
@@ -39,289 +36,222 @@
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#FFB74D">
   
-  <!-- (可選) 消息頁專用字體 -->
+  <!-- 字體 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- 可選: Google Fonts -->
-    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
-    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-
-    <!-- <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet"> -->
-    <style>
-        /* --- News Page Specific Styles --- */
-        .news-list {
-            margin-top: 1.5rem;
-            /* 移除 grid 相關樣式 */
-        }
-        .news-card {
-            display: flex;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            margin-bottom: 1.5rem;
-            overflow: hidden; /* 確保圓角生效 */
-            cursor: pointer; /* 提示整個卡片可點擊 */
-            transition: box-shadow 0.2s ease;
-        }
-         .news-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        }
-
-        /* 日期標籤 */
-        .news-card .date-tag {
-            flex-shrink: 0;
-            background-color: #E57373; /* Coral Red */
-            color: white;
-            padding: 1.5rem 1rem;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-width: 70px; /* 最小寬度 */
-        }
-        .news-card .date-tag .month {
-            font-size: 0.8rem;
-            display: block;
-            margin-bottom: 0.2rem;
-            text-transform: uppercase; /* 月份大寫 (可選) */
-        }
-        .news-card .date-tag .day {
-            font-size: 1.8rem;
-            font-weight: bold;
-            line-height: 1;
-            display: block;
-        }
-         .news-card .date-tag .weekday { /* 星期幾 (可選) */
-            font-size: 0.7rem;
-            display: block;
-            margin-top: 0.2rem;
-         }
-
-        /* 縮圖 */
-        .news-card .thumbnail {
-            flex-shrink: 0;
-            width: 120px; /* 縮圖寬度 */
-            height: 100px; /* 縮圖高度 */
-            overflow: hidden;
-        }
-         @media (max-width: 600px) { /* 手機上縮小縮圖 */
-             .news-card .thumbnail { width: 90px; height: 75px; }
-         }
-        .news-card .thumbnail img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* 主要內容區 */
-        .news-card .content-wrapper {
-            flex-grow: 1;
-            padding: 0.8rem 1rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between; /* 將標題/摘要和底部動作分開 */
-            overflow: hidden; /* 防止內容溢出 */
-        }
-        .news-card .news-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 0.4rem;
-            /* 限制標題最多顯示 2 行 */
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.4; /* 確保行高 */
-            max-height: calc(1.1rem * 1.4 * 2); /* 計算最大高度 */
-        }
-        .news-card .news-summary {
-            font-size: 0.85rem;
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 0.5rem;
-            /* 限制摘要最多顯示 2 行 */
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-             min-height: calc(0.85rem * 1.5 * 2); /* 保留最小高度 */
-        }
-
-        /* 底部互動區 */
-        .news-card .actions {
-            display: flex;
-            justify-content: flex-end; /* 按鈕靠右 */
-            align-items: center;
-            margin-top: auto; /* 將其推到底部 */
-        }
-        .news-card .like-button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            display: inline-flex;
-            align-items: center;
-            color: #aaa; /* 預設灰色 */
-            font-size: 0.9rem;
-        }
-        .news-card .like-button.liked { /* 按讚後的樣式 (JS 會添加) */
-             color: #E57373; /* Coral Red */
-             font-weight: bold;
-        }
-        .news-card .like-button .heart-icon { /* 愛心圖標 */
-            margin-right: 4px;
-            font-size: 1.2em; /* 相對父元素放大 */
-             transition: transform 0.2s ease;
-        }
-        .news-card .like-button:hover .heart-icon {
-            transform: scale(1.2);
-        }
-        .news-card .like-count {
-            margin-left: 5px;
-            font-size: 0.9rem;
-            color: #aaa;
-            min-width: 20px; /* 給數字留點寬度 */
-            text-align: right;
-        }
-
-        /* --- 分頁控制 --- */
-        #pagination-controls {
-            text-align: center;
-            margin-top: 2rem;
-        }
-        #pagination-controls button {
-            padding: 8px 12px;
-            margin: 0 3px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            color: #555;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        #pagination-controls button:hover {
-            background-color: #eee;
-        }
-        #pagination-controls button.active {
-            background-color: #FFB74D; /* Warm Orange */
-            color: white;
-            border-color: #FFB74D;
-            font-weight: bold;
-            cursor: default;
-        }
-         #pagination-controls button:disabled {
-             opacity: 0.6;
-             cursor: not-allowed;
-         }
-        #pagination-controls span { /* 用於頁碼省略號 */
-            padding: 8px 5px;
-        }
+  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
 
 
-        /* --- 消息詳情 Modal --- */
-        #news-detail-modal { /* 複用 .modal 樣式，並添加特定樣式 */
-           /* padding-top: 30px;  */
-        }
-        #news-detail-modal .modal-content {
-            max-width: 700px; /* 可以寬一點 */
-            padding: 0; /* 移除內邊距，讓圖片填滿頂部 */
-            overflow: hidden; /* 確保圓角生效 */
-        }
-        #news-detail-modal .detail-image {
-            width: 100%;
-            max-height: 400px; /* 限制圖片最大高度 */
-            object-fit: cover; /* 圖片填滿容器 */
-            display: block; /* 移除圖片下方空隙 */
-        }
-        #news-detail-modal .detail-content {
-            padding: 1.5rem 2rem 2rem 2rem; /* Modal 內容 padding */
-        }
-        #news-detail-modal .detail-title {
-            font-size: 1.6rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-        #news-detail-modal .detail-meta {
-            font-size: 0.9rem;
-            color: #888;
-            margin-bottom: 1.5rem;
-        }
-        #news-detail-modal .detail-body {
-            font-size: 1rem;
-            line-height: 1.7;
-            color: #555;
-            white-space: pre-wrap; /* 保留換行和空格 */
-        }
-        /* Modal 關閉按鈕樣式調整 */
-        #news-detail-modal .close-btn {
-            top: 15px;
-            right: 15px;
-            background-color: rgba(0,0,0,0.3); /* 加個背景增加可見性 */
-            color: white;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            line-height: 1;
-            padding: 0;
-            text-align: center;
-        }
-         #news-detail-modal .close-btn:hover {
-            background-color: rgba(0,0,0,0.6);
-         }
 
-    </style>
+<style>
+
+
+/* News card styling based on product-card */
+.news-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    padding: 20px;
+}
+
+@media (min-width: 600px) {
+    .news-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (min-width: 900px) {
+    .news-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+}
+
+/* News date style */
+.news-date {
+    color: #E57373;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+/* News summary style */
+.news-summary {
+    font-size: 0.8rem;
+    color: #757575;
+    line-height: 1.5;
+    margin: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    min-height: calc(0.8rem * 1.5 * 2);
+}
+
+/* Modal customization for news */
+#news-detail-modal .modal-content {
+    max-width: 700px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+#news-detail-modal .detail-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+}
+
+#news-detail-modal .detail-content {
+    padding: 20px;
+}
+
+#news-detail-modal .detail-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #424242;
+}
+
+#news-detail-modal .detail-meta {
+    font-size: 0.9rem;
+    color: #757575;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#news-detail-modal .detail-body {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #555;
+}
+
+/* Pagination controls enhancement */
+#pagination-controls {
+    margin: 30px 0;
+    text-align: center;
+}
+
+#pagination-controls button {
+    padding: 8px 12px;
+    margin: 0 3px;
+    border: 1px solid #ddd;
+    background-color: white;
+    color: #555;
+    cursor: pointer;
+    border-radius: 20px;
+    transition: all 0.3s;
+}
+
+#pagination-controls button:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+#pagination-controls button.active {
+    background-color: #FFB74D;
+    color: white;
+    border-color: #FFB74D;
+    font-weight: bold;
+}
+
+
+
+
+
+</style>
+
+
+
+
+
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
-            <!-- Additional required wrapper -->
+    <!-- Banner -->
+    <div class="banner-container">
+        <div class="swiper-container" id="banner-carousel">
             <div class="swiper-wrapper" id="banner-wrapper">
-                <!-- Slides 會由 JavaScript 動態載入 -->
+                <!-- Banner slides 將由JavaScript動態插入 -->
+                <div class="swiper-slide"><img src="/images/loading-banner.png" alt="載入中..."></div>
             </div>
-            <!-- If we need pagination -->
             <div class="swiper-pagination"></div>
-     
-            <!-- If we need navigation buttons -->
             <div class="swiper-button-prev"></div>
             <div class="swiper-button-next"></div>
         </div>
-    </header>
-
-    <main>
+    </div>
     
-
-        <nav class="category-nav">
-            <a href="/" >週邊商品</a>  <!-- Current page, marked active -->
-            <a href="/music.html" >音樂專輯</a>        <!-- Placeholder -->
-            <a href="/news.html" class="active" >最新消息</a>  
-            <a href="/scores.html" >樂譜與舞蹈</a>
-            <a href="/games.html" >互動遊戲</a>
-            <a href="/guestbook.html" >留言板</a>
-</nav>
-
-<div class="news-list" id="news-list">
-    <p>正在加載最新消息...</p>
-</div>
-
-
-
-        <!-- 分頁控制容器 -->
-        <div id="pagination-controls">
-            <!-- 分頁按鈕將由 JS 生成 -->
+    <!-- 分類導航 (與index.html相似但標籤不同) -->
+    <div class="category-tabs">
+        <a href="#latest" class="sort-link active" data-sort="latest">最新消息</a>
+        <a href="#upcoming" class="sort-link" data-sort="upcoming">活動預告</a>
+        <a href="#promotion" class="sort-link" data-sort="promotion">合作推廣</a>
+    </div>
+    
+    <!-- 浮動角色 -->
+    <div class="floating-character pink-character"></div>
+    <div class="floating-character blue-character"></div>
+    <div class="floating-character yellow-character"></div>
+    
+    <!-- 新聞列表 -->
+    <div id="news-list" class="news-list">
+        <p>正在加載最新消息...</p>
+    </div>
+    
+    <!-- 分頁控制容器 -->
+    <div id="pagination-controls">
+        <!-- 分頁按鈕將由 JS 生成 -->
+    </div>
+    
+    <!-- 蝦皮推廣 -->
+    <div class="contribution-info">
+        <p>
+            <a href="https://shopee.tw/shop/43397905" target="_blank" rel="noopener noreferrer" class="shopee-link">
+                <span>習慣使用蝦皮？點此前往</span> 
+                <img src="/images/shopee.png" alt="蝦皮"> 
+                <span>蝦皮賣場選購</span>
+            </a>
+        </p>
+    </div>
+    
+    <!-- 返回頂部吉祥物按鈕 -->
+    <button id="back-to-top" class="back-to-top">
+        <div class="logo-circle">
+            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy" />
         </div>
-    </main>
-
+    </button>
+    
+    <!-- 底部導航 -->
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
+            <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
+            <li><a href="/news.html" class="active"><span class="icon">📢</span><span>消息</span></a></li>
+            <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
+            <li><a href="/games.html"><span class="icon">🎮</span><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><span class="icon">💬</span><span>留言</span></a></li>
+        </ul>
+    </nav>
+    
+    <!-- 頁腳 - 在大屏幕設備上顯示 -->
+    <footer class="desktop-footer">
+        <div class="footer-container">
+            <nav class="footer-nav">
+                <a href="/">週邊商品</a>
+                <a href="/music.html">音樂專輯</a>
+                <a href="/news.html" class="active">最新消息</a>
+                <a href="/scores.html">樂譜與舞蹈</a>
+                <a href="/games.html">互動遊戲</a>
+                <a href="/guestbook.html">留言板</a>
+            </nav>
+            <div class="footer-copyright">
+                <p>© 2023 SunnyYummy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+   
    <!-- 消息詳情 Modal -->
    <div id="news-detail-modal" class="modal">
        <div class="modal-content">
@@ -329,36 +259,15 @@
            <img src="" alt="消息圖片" id="detail-image" class="detail-image">
            <div class="detail-content">
                <h2 id="detail-title" class="detail-title"></h2>
-               <p id="detail-meta" class="detail-meta"></p> <!-- 用於顯示日期等元信息 -->
-               <div id="detail-body" class="detail-body"></div> <!-- 用於顯示完整內容 -->
+               <p id="detail-meta" class="detail-meta"></p>
+               <div id="detail-body" class="detail-body"></div>
            </div>
        </div>
    </div>
 
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html" class="active">最新消息</a>
-                <a href="/scores.html" >樂譜與舞蹈</a>
-                <a href="/games.html" >互動遊戲</a>
-                <a href="/guestbook.html" >留言板</a>
-                
-                 
-               <!-- 新增消息管理連結 -->
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2023 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- 先引入 Swiper JS -->
+    <!-- Swiper JS -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <!-- 再引入你自己的 JS -->
+    <script src="app.js"></script>
     <script src="news拷貝.js"></script>
 </body>
 </html>
