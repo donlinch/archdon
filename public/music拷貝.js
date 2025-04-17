@@ -684,22 +684,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 樂譜相關功能 ---
+
+
+
+    async function fetchApi(url, errorMessage) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                let errorDetails = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorDetails += `, message: ${errorData.error || response.statusText}`;
+                } catch (parseError) {
+                    errorDetails += `, message: ${response.statusText}`;
+                }
+                throw new Error(errorDetails);
+            }
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                return await response.json();
+            } else {
+                console.warn(`API ${url} did not return JSON. Content-Type: ${contentType}`);
+                return {};
+            }
+        } catch (error) {
+            console.error(`${errorMessage}:`, error);
+            throw error;
+        }
+    }
+
+
+
+
+
     
     /**
      * 獲取並顯示有樂譜的歌手列表
      */
     async function fetchArtists() {
         try {
-            const response = await fetch('/api/scores/artists');
-            if (!response.ok) {
-                throw new Error('Error fetching artists');
-            }
-            const artists = await response.json();
-            // 暫時先不顯示，等待切換到樂譜頁面時使用
+            const artists = await fetchApi('/api/scores/artists', 'Error fetching artists');
             return artists;
         } catch (error) {
             console.error('獲取樂譜歌手列表失敗:', error);
-            return [];
+            // 返回預設歌手列表作為後備方案
+            return ['Paula', 'SunnyYummy樂團', '亞米媽媽', '林莉C亞米', '皓皓justin'];
         }
     }
 
