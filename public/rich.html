@@ -813,6 +813,34 @@ body {
     }
 }
 
+
+
+
+.player-token-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  z-index: 15;
+  transition: left 0.4s ease-out, top 0.4s ease-out;
+  pointer-events: none;
+}
+
+.player-token-container.moving {
+  z-index: 20; /* 移動時置於頂層 */
+}
+
+@keyframes bounce {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.15); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.player-token-container.arrived {
+  animation: bounce 0.5s ease-out;
+}
+
 </style>
 
 

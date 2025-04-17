@@ -58,7 +58,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.pdf'];
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif','.html', '.pdf'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (!allowed.includes(ext)) {
         return cb(new Error('只允許上傳圖片 (png, jpg, gif) 或 PDF 檔案！'));
@@ -745,13 +745,6 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
-
-
-
-
-
-
-
 
 
 
