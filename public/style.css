@@ -50,14 +50,25 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn {
 @media (min-width: 1200px) { .product-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; } }
 
 /* Individual Product Card Styles (For index.html) */
-.product-card, .product-card:link, .product-card:visited { background-color: #fff; border: 1px solid #ECEFF1; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; display: flex; flex-direction: column; height: 100%; /*100% */ text-align: center; text-decoration: none; color: inherit; position: relative; }
-.product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
-.product-card .image-container { width: 100%; height: 100px; /*160px*/ overflow: hidden; margin-bottom: 0.4rem; padding: 0.4rem 0.4rem 0 0.4rem; }
-.product-card img { display: block; width: 100%; height: 100%; object-fit: contain; margin: 0 auto; }
-.product-card .card-content { padding: 0 0.8rem 0.8rem 0.8rem; flex-grow: 1; display: flex; flex-direction: column; }
-.product-card h3 { font-size: 0.9rem; margin-bottom: 0.2rem; color: #424242; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
-.product-card .price { font-weight: bold; font-size: 1rem; color: #E57373; margin-top: auto; padding-top: 0.4rem; }
+.product-card, .product-card:link, .product-card:visited
+ { background-color: #fff; 
+    border: 1px solid #ECEFF1; 
+    border-radius: 6px; 
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); 
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; 
+    display: flex; flex-direction: column; 
+    height: 100%; /*100% */ 
+    text-align: center;
+     text-decoration: none; 
+     color: inherit; 
+     position: relative; }
+     .product-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); z-index: 10; border-color: #B0BEC5; }
+     .product-card .image-container { width: 100%; height: 120px; /*原來是100px*/ overflow: hidden; margin-bottom: 0.6rem; /*增加了間距*/ padding: 0.4rem 0.4rem 0 0.4rem; }
+     .product-card img { display: block; width: 100%; height: 100%; object-fit: contain; margin: 0 auto; }
+     .product-card .card-content { padding: 0 0.8rem 1rem 0.8rem; /*增加了底部填充*/ flex-grow: 1; display: flex; flex-direction: column; }
+     .product-card h3 { font-size: 1rem; /*字體大小增加*/ margin-bottom: 0.4rem; /*增加底部邊距*/ color: #424242; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; /*增加行高*/ padding: 3px 0; /*增加上下內邊距*/ }
+     .product-card p { font-size: 0.75rem; color: #757575; line-height: 1.4; margin-bottom: 0.5rem; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: calc(0.75rem * 1.4 * 2); }
+     .product-card .price { font-weight: bold; font-size: 1.1rem; /*增加字體大小*/ color: #E57373; margin-top: auto; padding-top: 0.6rem; /*增加上內邊距*/ padding-bottom: 0.3rem; /*增加下內邊距*/ line-height: 1.4; /*增加行高*/ }
 
 /* --- Music Page Styles (music.html & scores.html) --- */
 /* 歌手篩選樣式 */
