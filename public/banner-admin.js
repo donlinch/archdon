@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let previewContent = '';
                 if (element.element_type === 'back_to_top') {
                     // 返回頂部按鈕預覽
-                    previewContent = `<img src="${element.image_url || '/images/logo-icon.png'}" alt="${element.alt_text || '返回頂部'}" class="preview-image">`;
+            const settings = element.settings || {}; // 如果 element.settings 是 null 或 undefined，給一個空物件
                 } else {
                     // 角色預覽（背景圖片）
                     previewContent = `<div class="character-preview" style="background-image: url('${element.image_url || `/images/${element.element_type}-character.png`}')"></div>`;
@@ -361,12 +361,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 let descriptionContent = '';
                 if (element.element_type === 'back_to_top') {
                     // 返回頂部按鈕描述
-                    const settings = element.settings ? JSON.parse(element.settings) : {};
+                    const settings = element.settings || {}; // 如果 element.settings 是 null 或 undefined，給一個空物件
                     descriptionContent = `
                         顯示觸發: ${settings.scroll_trigger || 300}px<br>
                         滾動速度: ${settings.scroll_speed || 'smooth'}
                     `;
                 } else {
+                    const speechPhrases = element.speech_phrases || []; // 如果 element.speech_phrases 是 null 或 undefined，給一個空陣列
+                    const speechPhrasesCount = speechPhrases.length; // 直接獲取陣列長度
                     // 角色描述
                     descriptionContent = `
                         位置: ${element.position_top || 'auto'} ${element.position_left ? `left: ${element.position_left}` : ''} ${element.position_right ? `right: ${element.position_right}` : ''}<br>
@@ -477,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (element.element_type === 'back_to_top') {
                 // 返回頂部按鈕特定欄位
-                const settings = element.settings ? JSON.parse(element.settings) : {};
+                const settings = element.settings || {};
                 document.getElementById('edit-ui-scroll-trigger').value = settings.scroll_trigger || 300;
                 document.getElementById('edit-ui-scroll-speed').value = settings.scroll_speed || 'smooth';
             } else {
@@ -488,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('edit-ui-animation-type').value = element.animation_type || 'float1';
                 
                 // 處理對話短語
-                const speechPhrases = element.speech_phrases ? JSON.parse(element.speech_phrases) : [];
+                const speechPhrases = element.speech_phrases || [];
                 document.getElementById('edit-ui-speech-phrases').value = speechPhrases.join(',');
             }
 
