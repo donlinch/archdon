@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>輪播圖管理 - SunnyYummy</title>
+    <title>輪播圖與UI元素管理 - SunnyYummy</title>
     <link rel="stylesheet" href="style.css">
     <style>
         /* 管理頁面通用樣式 */
@@ -11,10 +11,20 @@
         .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
         /* 特定表格樣式 */
-        #banner-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
-        #banner-list-table th, #banner-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
-        #banner-list-table th { background-color: #e9ecef; }
-        /* 列寬調整 */
+        #banner-list-table, #ui-elements-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
+        #banner-list-table th, #banner-list-table td, 
+        #ui-elements-table th, #ui-elements-table td { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            text-align: left; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+            vertical-align: middle; 
+        }
+        #banner-list-table th, #ui-elements-table th { background-color: #e9ecef; }
+
+        /* Banner表格列寬調整 */
         #banner-list-table th:nth-child(1), #banner-list-table td:nth-child(1) { width: 6%; }  /* ID */
         #banner-list-table th:nth-child(2), #banner-list-table td:nth-child(2) { width: 18%; text-align: center;} /* 圖片預覽 */
         #banner-list-table th:nth-child(3), #banner-list-table td:nth-child(3) { width: 25%; } /* 圖片網址 */
@@ -23,30 +33,227 @@
         #banner-list-table th:nth-child(6), #banner-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 排序 */
         #banner-list-table th:nth-child(7), #banner-list-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
 
-        #banner-list-table td img.preview-image { max-width: 150px; max-height: 50px; height: auto; display: inline-block; border: 1px solid #eee; vertical-align: middle;}
+        /* UI元素表格列寬調整 */
+        #ui-elements-table th:nth-child(1), #ui-elements-table td:nth-child(1) { width: 5%; }  /* ID */
+        #ui-elements-table th:nth-child(2), #ui-elements-table td:nth-child(2) { width: 12%; } /* 元素類型 */
+        #ui-elements-table th:nth-child(3), #ui-elements-table td:nth-child(3) { width: 10%; text-align: center;} /* 預覽 */
+        #ui-elements-table th:nth-child(4), #ui-elements-table td:nth-child(4) { width: 10%; text-align: center;} /* 顯示狀態 */
+        #ui-elements-table th:nth-child(5), #ui-elements-table td:nth-child(5) { width: 22%; } /* 圖片網址 */
+        #ui-elements-table th:nth-child(6), #ui-elements-table td:nth-child(6) { width: 25%; } /* 描述/選項 */
+        #ui-elements-table th:nth-child(7), #ui-elements-table td:nth-child(7) { width: 16%; text-align: center;} /* 操作 */
+
+        #banner-list-table td img.preview-image,
+        #ui-elements-table td img.preview-image { 
+            max-width: 150px; 
+            max-height: 50px; 
+            height: auto; 
+            display: inline-block; 
+            border: 1px solid #eee; 
+            vertical-align: middle;
+        }
+
+        /* 浮動角色預覽 */
+        #ui-elements-table .character-preview {
+            width: 40px;
+            height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline-block;
+            border: 1px solid #eee;
+        }
+
+        /* 開關按鈕樣式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #4CAF50;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
 
         /* Modal 圖片預覽 */
-         #edit-banner-preview, #add-banner-preview { max-width: 200px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; object-fit: contain; }
-         #edit-banner-preview[src], #add-banner-preview[src] { display: block; }
+        #edit-banner-preview, #add-banner-preview, 
+        #edit-ui-preview, #add-ui-preview { 
+            max-width: 200px; 
+            max-height: 100px; 
+            display: none; 
+            margin-top: 5px; 
+            border: 1px solid #eee; 
+            object-fit: contain; 
+        }
+        #edit-banner-preview[src], #add-banner-preview[src],
+        #edit-ui-preview[src], #add-ui-preview[src] { 
+            display: block; 
+        }
 
-        /* 其他 Modal 樣式可以從 style.css 或其他 admin 頁面複製 */
-         .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
-         .modal[style*="display: flex"] { display: flex !important; }
-         .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-         .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
-         .close-btn:hover { color: #333; }
-         .modal h2 { margin-top: 0; margin-bottom: 1.5rem; color: #333; }
-         .form-group { margin-bottom: 1rem; }
-         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
-         .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 1rem;} /* 統一表單樣式 */
-         .form-group textarea { resize: vertical; min-height: 80px; }
-         .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
-         .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; cursor: pointer;}
-         .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
-         .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-         .form-group small { color: #888; display: block; margin-top: 4px; font-size: 0.8em; }
-         p[id$="-form-error"] { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; } /* 統一錯誤訊息樣式 */
+        /* 標籤切換樣式 */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
 
+        /* 其他 Modal 樣式 */
+        .modal { 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.5); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            padding-top: 50px; 
+        }
+        .modal[style*="display: flex"] { 
+            display: flex !important; 
+        }
+        .modal-content { 
+            background-color: #fff; 
+            padding: 25px; 
+            border-radius: 8px; 
+            max-width: 600px; 
+            width: 90%; 
+            margin: auto; 
+            position: relative; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        .close-btn { 
+            position: absolute; 
+            top: 10px; 
+            right: 15px; 
+            cursor: pointer; 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #aaa; 
+            line-height: 1; 
+        }
+        .close-btn:hover { 
+            color: #333; 
+        }
+        .modal h2 { 
+            margin-top: 0; 
+            margin-bottom: 1.5rem; 
+            color: #333; 
+        }
+        .form-group { 
+            margin-bottom: 1rem; 
+        }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            font-weight: bold; 
+            color: #555; 
+        }
+        .form-group input[type="text"], 
+        .form-group input[type="number"], 
+        .form-group input[type="url"], 
+        .form-group input[type="date"], 
+        .form-group textarea, 
+        .form-group select { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            box-sizing: border-box; 
+            font-family: inherit; 
+            font-size: 1rem;
+        } 
+        .form-group textarea { 
+            resize: vertical; 
+            min-height: 80px; 
+        }
+        .form-actions { 
+            margin-top: 1.5rem; 
+            text-align: right; 
+            padding-top: 1rem; 
+            border-top: 1px solid #eee; 
+        }
+        .form-actions .action-btn { 
+            padding: 10px 15px; 
+            margin-left: 10px; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        .form-actions .save-btn { 
+            background-color: #28a745; 
+            border-color: #28a745; 
+            color: white; 
+        }
+        .form-actions .cancel-btn { 
+            background-color: #6c757d; 
+            border-color: #6c757d; 
+            color: white; 
+        }
+        .form-group small { 
+            color: #888; 
+            display: block; 
+            margin-top: 4px; 
+            font-size: 0.8em; 
+        }
+        p[id$="-form-error"] { 
+            color: red; 
+            margin-top: 10px; 
+            font-size: 0.9em; 
+            min-height: 1.2em; 
+        }
     </style>
 </head>
 <body>
@@ -55,37 +262,72 @@
         <a href="/admin.html">商品管理</a>
         <a href="/music-admin.html">音樂管理</a>
         <a href="/news-admin.html">消息管理</a>
-        <a href="/banner-admin.html" class="active">輪播圖管理</a>
-        <a href="/figures-admin.html" >庫存管理</a> 
-        <a href="/games-admin.html" >遊戲管理</a>
-
-        <a href="/sales-report.html"  >銷售報告</a>
+        <a href="/banner-admin.html" class="active">輪播圖與UI管理</a>
+        <a href="/figures-admin.html">庫存管理</a> 
+        <a href="/games-admin.html">遊戲管理</a>
+        <a href="/sales-report.html">銷售報告</a>
     </nav>
 
     <div class="admin-container">
-        <h1>輪播圖管理</h1>
+        <h1>輪播圖與UI元素管理</h1>
         <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button class="add-news-btn" style="background-color: #fd7e14; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;" onclick="showAddBannerForm()">新增輪播圖</button>
+        
+        <!-- 標籤切換 -->
+        <div class="tabs">
+            <div class="tab active" data-tab="banners">輪播圖管理</div>
+            <div class="tab" data-tab="ui-elements">UI元素管理</div>
+        </div>
+        
+        <!-- 輪播圖管理區塊 -->
+        <div id="banners-tab" class="tab-content active">
+            <button class="add-news-btn" style="background-color: #fd7e14; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;" onclick="showAddBannerForm()">新增輪播圖</button>
 
-        <h2>現有輪播圖列表</h2>
-        <div id="banner-list-container">
-            <p>正在加載輪播圖...</p>
-            <table id="banner-list-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>圖片預覽</th>
-                        <th>圖片網址</th>
-                        <th>連結網址</th>
-                        <th>所屬頁面</th> <!-- *** 確認這個標頭存在 *** -->
-                        <th>排序</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Banner 列將由 JavaScript 動態填入 -->
-                </tbody>
-            </table>
+            <h2>現有輪播圖列表</h2>
+            <div id="banner-list-container">
+                <p>正在加載輪播圖...</p>
+                <table id="banner-list-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>圖片預覽</th>
+                            <th>圖片網址</th>
+                            <th>連結網址</th>
+                            <th>所屬頁面</th>
+                            <th>排序</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Banner 列將由 JavaScript 動態填入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- UI元素管理區塊 -->
+        <div id="ui-elements-tab" class="tab-content">
+            <button class="add-ui-btn" style="background-color: #fd7e14; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-bottom: 1rem;" onclick="showAddUIElementForm()">新增UI元素</button>
+            
+            <h2>UI元素列表</h2>
+            <div id="ui-elements-container">
+                <p>正在加載UI元素...</p>
+                <table id="ui-elements-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>元素類型</th>
+                            <th>預覽</th>
+                            <th>顯示狀態</th>
+                            <th>圖片網址</th>
+                            <th>描述/選項</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- UI元素列將由JavaScript動態填入 -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div> <!-- End of admin-container -->
 
@@ -110,8 +352,6 @@
                     <label for="add-banner-link-url">連結網址 (可選):</label>
                     <input type="url" id="add-banner-link-url" name="link_url" placeholder="https://...">
                 </div>
-
-                <!-- *** 確認這個下拉選單存在 *** -->
                 <div class="form-group">
                     <label for="add-banner-page-location">顯示於頁面:</label>
                     <select id="add-banner-page-location" name="page_location" required>
@@ -120,7 +360,6 @@
                         <option value="news">最新消息頁</option>
                     </select>
                 </div>
-
                  <div class="form-group">
                     <label for="add-banner-display-order">排序 (數字越小越前面):</label>
                     <input type="number" id="add-banner-display-order" name="display_order" value="0" required>
@@ -155,8 +394,6 @@
                     <label for="edit-banner-link-url">連結網址 (可選):</label>
                     <input type="url" id="edit-banner-link-url" name="link_url">
                 </div>
-
-                <!-- *** 確認這個下拉選單存在 *** -->
                 <div class="form-group">
                     <label for="edit-banner-page-location">顯示於頁面:</label>
                     <select id="edit-banner-page-location" name="page_location" required>
@@ -165,7 +402,6 @@
                         <option value="news">最新消息頁</option>
                     </select>
                 </div>
-
                  <div class="form-group">
                     <label for="edit-banner-display-order">排序 (數字越小越前面):</label>
                     <input type="number" id="edit-banner-display-order" name="display_order" required>
@@ -175,6 +411,175 @@
                     <button type="button" class="action-btn cancel-btn" onclick="closeEditBannerModal()">取消</button>
                 </div>
                 <p id="edit-banner-form-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add UI Element Modal -->
+    <div id="add-ui-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeAddUIModal()">×</span>
+            <h2>新增UI元素</h2>
+            <form id="add-ui-form">
+                <div class="form-group">
+                    <label for="add-ui-element-type">元素類型:</label>
+                    <select id="add-ui-element-type" name="element_type" required onchange="handleUITypeChange('add')">
+                        <option value="">-- 請選擇元素類型 --</option>
+                        <option value="back_to_top">返回頂部按鈕</option>
+                        <option value="pink_character">粉紅角色</option>
+                        <option value="blue_character">藍色角色</option>
+                        <option value="yellow_character">黃色角色</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="add-ui-is-visible">是否顯示:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="add-ui-is-visible" name="is_visible" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="add-ui-image-url">圖片網址:</label>
+                    <input type="text" id="add-ui-image-url" name="image_url">
+                    <img id="add-ui-preview" src="" alt="圖片預覽">
+                </div>
+                <div class="form-group">
+                    <label for="add-ui-alt-text">替代文字:</label>
+                    <input type="text" id="add-ui-alt-text" name="alt_text">
+                </div>
+                <!-- 角色特有欄位 - 初始隱藏 -->
+                <div id="add-character-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="add-ui-position-top">頂部位置 (CSS值):</label>
+                        <input type="text" id="add-ui-position-top" name="position_top" placeholder="例如: 100px 或 40%">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-ui-position-left">左側位置 (CSS值):</label>
+                        <input type="text" id="add-ui-position-left" name="position_left" placeholder="例如: 10%">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-ui-position-right">右側位置 (CSS值，優先於左側):</label>
+                        <input type="text" id="add-ui-position-right" name="position_right" placeholder="例如: 5%">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-ui-animation-type">動畫類型:</label>
+                        <select id="add-ui-animation-type" name="animation_type">
+                            <option value="float1">浮動動畫 1</option>
+                            <option value="float2">浮動動畫 2</option>
+                            <option value="float3">浮動動畫 3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-ui-speech-phrases">對話內容 (以逗號分隔):</label>
+                        <textarea id="add-ui-speech-phrases" name="speech_phrases" placeholder="例如: 哈囉！,點我有獎勵哦！,好可愛～"></textarea>
+                        <small>輸入多個對話短語，用逗號分隔。角色點擊時會隨機顯示其中一條。</small>
+                    </div>
+                </div>
+                <!-- 返回頂部按鈕特有欄位 - 初始隱藏 -->
+                <div id="add-backtotop-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="add-ui-scroll-trigger">顯示觸發距離 (像素):</label>
+                        <input type="number" id="add-ui-scroll-trigger" name="scroll_trigger" value="300">
+                        <small>當用戶向下滾動多少像素時顯示按鈕</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="add-ui-scroll-speed">滾動速度:</label>
+                        <select id="add-ui-scroll-speed" name="scroll_speed">
+                            <option value="auto">即時跳轉 (auto)</option>
+                            <option value="smooth" selected>平滑滾動 (smooth)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="action-btn save-btn">確認新增</button>
+                    <button type="button" class="action-btn cancel-btn" onclick="closeAddUIModal()">取消</button>
+                </div>
+                <p id="add-ui-form-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit UI Element Modal -->
+    <div id="edit-ui-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditUIModal()">×</span>
+            <h2>編輯UI元素</h2>
+            <form id="edit-ui-form">
+                <input type="hidden" id="edit-ui-id">
+                <input type="hidden" id="edit-ui-element-type">
+                
+                <div class="form-group">
+                    <label for="edit-ui-element-type-display">元素類型:</label>
+                    <input type="text" id="edit-ui-element-type-display" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ui-is-visible">是否顯示:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="edit-ui-is-visible" name="is_visible">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="edit-ui-image-url">圖片網址:</label>
+                    <input type="text" id="edit-ui-image-url" name="image_url">
+                    <img id="edit-ui-preview" src="" alt="圖片預覽">
+                </div>
+                <div class="form-group">
+                    <label for="edit-ui-alt-text">替代文字:</label>
+                    <input type="text" id="edit-ui-alt-text" name="alt_text">
+                </div>
+                <!-- 角色特有欄位 -->
+                <div id="edit-character-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="edit-ui-position-top">頂部位置 (CSS值):</label>
+                        <input type="text" id="edit-ui-position-top" name="position_top" placeholder="例如: 100px 或 40%">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ui-position-left">左側位置 (CSS值):</label>
+                        <input type="text" id="edit-ui-position-left" name="position_left" placeholder="例如: 10%">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ui-position-right">右側位置 (CSS值，優先於左側):</label>
+                        <input type="text" id="edit-ui-position-right" name="position_right" placeholder="例如: 5%">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ui-animation-type">動畫類型:</label>
+                        <select id="edit-ui-animation-type" name="animation_type">
+                            <option value="float1">浮動動畫 1</option>
+                            <option value="float2">浮動動畫 2</option>
+                            <option value="float3">浮動動畫 3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ui-speech-phrases">對話內容 (以逗號分隔):</label>
+                        <textarea id="edit-ui-speech-phrases" name="speech_phrases" placeholder="例如: 哈囉！,點我有獎勵哦！,好可愛～"></textarea>
+                        <small>輸入多個對話短語，用逗號分隔。角色點擊時會隨機顯示其中一條。</small>
+                    </div>
+                </div>
+                <!-- 返回頂部按鈕特有欄位 -->
+                <div id="edit-backtotop-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="edit-ui-scroll-trigger">顯示觸發距離 (像素):</label>
+                        <input type="number" id="edit-ui-scroll-trigger" name="scroll_trigger" value="300">
+                        <small>當用戶向下滾動多少像素時顯示按鈕</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-ui-scroll-speed">滾動速度:</label>
+                        <select id="edit-ui-scroll-speed" name="scroll_speed">
+                            <option value="auto">即時跳轉 (auto)</option>
+                            <option value="smooth">平滑滾動 (smooth)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="action-btn save-btn">儲存變更</button>
+                    <button type="button" class="action-btn cancel-btn" onclick="closeEditUIModal()">取消</button>
+
+
+
+
+                </div>
+                <p id="edit-ui-form-error"></p>
             </form>
         </div>
     </div>
