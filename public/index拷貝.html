@@ -30,8 +30,6 @@
     <meta name="theme-color" content="#FFB74D">
 
 <style>
-
-
 /* --- 基本樣式 --- */
 * {
     margin: 0;
@@ -137,21 +135,21 @@ body {
 .pink-character {
     top: 100px;
     left: 10%;
-    background-image: url('https://sunnyyummy.onrender.com/uploads/1744875184954-36224.png'); /* 粉紅角色圖片 */
+    background-image: url('/images/pink-character.png'); /* 粉紅角色圖片 */
     animation: float1 15s ease-in-out infinite;
 }
 
 .blue-character {
     top: 40%;
     right: 5%;
-    background-image: url('https://sunnyyummy.onrender.com/uploads/1744875177880-30033.png'); /* 藍色角色圖片 */
+    background-image: url('/images/blue-character.png'); /* 藍色角色圖片 */
     animation: float2 18s ease-in-out infinite;
 }
 
 .yellow-character {
     top: 60%;
     left: 15%;
-    background-image: url('https://sunnyyummy.onrender.com/uploads/1744875191661-9152.png'); /* 黃色角色圖片 */
+    background-image: url('/images/yellow-character.png'); /* 黃色角色圖片 */
     animation: float3 20s ease-in-out infinite;
 }
 
@@ -616,83 +614,7 @@ body {
         background-color: white;
     }
 }
-
-
-
-/* --- 底部導航 --- */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: white; /* 改為白色背景 */
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    z-index: 1000;
-    padding: 5px 0;
-}
-
-.bottom-nav ul {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.bottom-nav li {
-    text-align: center;
-}
-
-.bottom-nav a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 5px;
-    text-decoration: none;
-    color: #777; /* 淺灰色文字 */
-    font-size: 0.7rem;
-    transition: all 0.3s;
-}
-
-.bottom-nav a.active {
-    color: #FFB74D; /* 橙色高亮 */
-    background-color: rgba(255, 183, 77, 0.1);
-    border-radius: 20px;
-    animation: pulse 2s infinite;
-}
-
-.bottom-nav .icon {
-    font-size: 1.5rem;
-    margin-bottom: 3px;
-}
-
-/* 確保即使在黑暗模式下也保持底部導航為白色 */
-@media (prefers-color-scheme: dark) {
-    .bottom-nav {
-        background-color: white;
-    }
-    
-    .bottom-nav a {
-        color: #777;
-    }
-    
-    .bottom-nav a.active {
-        color: #FFB74D;
-    }
-}
-
-
 </style>
-
-
-
-
-
-
-
 
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
@@ -742,7 +664,7 @@ body {
     <!-- 返回頂部吉祥物按鈕 -->
     <button id="back-to-top" class="back-to-top">
         <div class="logo-circle">
-            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy" />
+            <img src="/images/logo-icon.png" alt="SunnyYummy" />
         </div>
     </button>
     
@@ -777,6 +699,6 @@ body {
     
     <!-- Swiper JS -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="app拷貝.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-// public/banner-admin.js (完整替換)
+// banner-admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References --- (保持不變)
+    // --- DOM Element References - Banner 部分 ---
     const bannerListBody = document.querySelector('#banner-list-table tbody');
     const bannerListContainer = document.getElementById('banner-list-container');
     const bannerTable = document.getElementById('banner-list-table');
@@ -25,7 +25,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const addFormError = document.getElementById('add-banner-form-error');
     const addBannerPageLocation = document.getElementById('add-banner-page-location');
 
-    // --- Helper Function for Display Name --- (保持不變)
+    // --- DOM Element References - UI元素部分 ---
+    const uiElementsListBody = document.querySelector('#ui-elements-table tbody');
+    const uiElementsContainer = document.getElementById('ui-elements-container');
+    const uiElementsTable = document.getElementById('ui-elements-table');
+    const uiElementsLoadingMessage = uiElementsContainer ? uiElementsContainer.querySelector('p') : null;
+    const addUIModal = document.getElementById('add-ui-modal');
+    const addUIForm = document.getElementById('add-ui-form');
+    const addUIType = document.getElementById('add-ui-element-type');
+    const addUIImageUrl = document.getElementById('add-ui-image-url');
+    const addUIAltText = document.getElementById('add-ui-alt-text');
+    const addUIIsVisible = document.getElementById('add-ui-is-visible');
+    const addUIPreview = document.getElementById('add-ui-preview');
+    const addUIFormError = document.getElementById('add-ui-form-error');
+    const addCharacterFields = document.getElementById('add-character-fields');
+    const addBackToTopFields = document.getElementById('add-backtotop-fields');
+    const editUIModal = document.getElementById('edit-ui-modal');
+    const editUIForm = document.getElementById('edit-ui-form');
+    const editUIId = document.getElementById('edit-ui-id');
+    const editUIType = document.getElementById('edit-ui-element-type');
+    const editUITypeDisplay = document.getElementById('edit-ui-element-type-display');
+    const editUIImageUrl = document.getElementById('edit-ui-image-url');
+    const editUIAltText = document.getElementById('edit-ui-alt-text');
+    const editUIIsVisible = document.getElementById('edit-ui-is-visible');
+    const editUIPreview = document.getElementById('edit-ui-preview');
+    const editUIFormError = document.getElementById('edit-ui-form-error');
+    const editCharacterFields = document.getElementById('edit-character-fields');
+    const editBackToTopFields = document.getElementById('edit-backtotop-fields');
+
+    // --- 標籤切換 ---
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            // 激活當前標籤
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            // 顯示對應內容
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${target}-tab`) {
+                    content.classList.add('active');
+                }
+            });
+            // 如果切換到UI元素標籤，加載UI元素
+            if (target === 'ui-elements' && !window.uiElementsLoaded) {
+                fetchAndDisplayUIElements();
+                window.uiElementsLoaded = true;
+            }
+        });
+    });
+
+    // --- Helper Functions ---
+    
+    // 獲取位置顯示名稱
     const getLocationDisplayName = (locationKey) => {
         switch(locationKey) {
             case 'home': return '首頁';
@@ -35,7 +89,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- *** 修改這個函數來實現分組和排序渲染 *** ---
+    // 獲取元素類型顯示名稱
+    const getElementTypeDisplayName = (typeKey) => {
+        switch(typeKey) {
+            case 'back_to_top': return '返回頂部按鈕';
+            case 'pink_character': return '粉紅角色';
+            case 'blue_character': return '藍色角色';
+            case 'yellow_character': return '黃色角色';
+            default: return typeKey || '未知元素';
+        }
+    };
+
+    // 元素類型簡化映射（用於API交互）
+    const elementTypeMapping = {
+        'back_to_top': 'back_to_top',
+        'pink_character': 'pink',
+        'blue_character': 'blue',
+        'yellow_character': 'yellow'
+    };
+
+    // 反向元素類型映射
+    const reverseElementTypeMapping = {
+        'back_to_top': 'back_to_top',
+        'pink': 'pink_character',
+        'blue': 'blue_character',
+        'yellow': 'yellow_character'
+    };
+
+    // --- Banner相關函數 ---
+    
+    // 獲取並顯示Banner
     async function fetchAndDisplayBanners() {
         console.log("fetchAndDisplayBanners called for grouping");
         if (!bannerListBody || !bannerListContainer || !bannerTable) {
@@ -49,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bannerTable) bannerTable.style.display = 'none';
 
         try {
-            const response = await fetch('/api/admin/banners'); // 獲取所有 admin banners
+            const response = await fetch('/api/admin/banners');
             console.log("API Response Status:", response.status);
 
             if (!response.ok) {
@@ -154,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Function to Open and Populate the Edit Banner Modal ---
+    // 開啟編輯Banner表單
     async function openEditBannerModal(id) {
         console.log(`openEditBannerModal called for ID: ${id}`);
 
@@ -189,10 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
             editBannerId.value = banner.id;
             editBannerImageUrl.value = banner.image_url || '';
             editBannerLinkUrl.value = banner.link_url || '';
-             // *** 確保 display_order 被正確處理 ***
+            // *** 確保 display_order 被正確處理 ***
             editBannerDisplayOrder.value = banner.display_order !== null ? banner.display_order : 0;
             editBannerAltText.value = banner.alt_text || '';
-             // *** 確保 page_location 被正確處理 ***
+            // *** 確保 page_location 被正確處理 ***
             editBannerPageLocation.value = banner.page_location || 'home'; // 設置 select 的值
 
             if (banner.image_url) {
@@ -209,76 +292,383 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Function to Close Modals ---
-    window.closeEditBannerModal = function() { if (editModal) editModal.style.display = 'none'; };
-    window.closeAddBannerModal = function() { if (addModal) addModal.style.display = 'none'; };
-
-    // --- Attach Edit/Delete/ShowAddForm Functions to window scope ---
-    window.editBanner = function(id) { openEditBannerModal(id); };
-
-    window.deleteBanner = async function(id) {
-        console.log(`準備刪除 Banner ID: ${id}`);
-        if (confirm(`確定要刪除輪播圖 ID: ${id} 嗎？`)) {
-            try {
-                // *** API 路徑正確 ***
-                const response = await fetch(`/api/admin/banners/${id}`, { method: 'DELETE' });
-
-                if (response.status === 204 || response.ok) {
-                    console.log(`Banner ID: ${id} 刪除成功。`);
-                    await fetchAndDisplayBanners(); // 刷新列表
-                } else {
-                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
-            } catch (error) {
-                console.error(`刪除 Banner ID ${id} 時發生錯誤:`, error);
-                alert(`刪除時發生錯誤：${error.message}`);
-            }
-        }
-    };
-
-    window.showAddBannerForm = function() {
-        console.log("顯示新增 Banner 表單");
-        const requiredAddElements = [addModal, addForm, addBannerImageUrl, addBannerLinkUrl,
-                                    addBannerDisplayOrder, addBannerAltText, addBannerPreview,
-                                    addFormError, addBannerPageLocation];
-
-        if (requiredAddElements.some(el => !el)) {
-            console.error("新增視窗元件錯誤:", requiredAddElements.map((el, i) => el ? '' : i).filter(String));
-            alert("新增視窗元件錯誤，請檢查 HTML。");
+    // --- UI元素相關函數 ---
+    
+    // 獲取並顯示UI元素
+    async function fetchAndDisplayUIElements() {
+        console.log("fetchAndDisplayUIElements called");
+        if (!uiElementsListBody || !uiElementsContainer || !uiElementsTable) {
+            if(uiElementsLoadingMessage) uiElementsLoadingMessage.textContent='頁面元素缺失 (表格)';
+            console.error("UI Elements table elements missing!");
             return;
         }
 
-        addFormError.textContent = '';
-        addForm.reset();
-        addBannerPreview.style.display = 'none';
-        addBannerPreview.src = '';
-        addBannerDisplayOrder.value = 0; // 預設值
-        addBannerPageLocation.value = 'home'; // 預設值
-        addModal.style.display = 'flex';
-    };
+        uiElementsListBody.innerHTML = ''; // 清空舊內容
+        if (uiElementsLoadingMessage) uiElementsLoadingMessage.style.display = 'block';
+        if (uiElementsTable) uiElementsTable.style.display = 'none';
 
-    // --- setupImagePreview ---
+        try {
+            const response = await fetch('/api/ui-elements');
+            console.log("UI Elements API Response Status:", response.status);
+
+            if (!response.ok) {
+                let errorText = `HTTP 錯誤！狀態: ${response.status}`;
+                try { 
+                    const data = await response.json(); 
+                    errorText += `: ${data.error || response.statusText}`; 
+                } catch (e) {}
+                throw new Error(errorText);
+            }
+
+            const uiElements = await response.json();
+            console.log("UI Elements Fetched:", uiElements);
+
+            if (uiElementsLoadingMessage) uiElementsLoadingMessage.style.display = 'none';
+            if (uiElementsTable) uiElementsTable.style.display = 'table';
+
+            // 如果沒有UI元素
+            if (!uiElements || uiElements.length === 0) {
+                uiElementsListBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">沒有找到UI元素。請新增一些元素。</td></tr>`;
+                return;
+            }
+
+            // 渲染UI元素列表
+            uiElements.forEach(element => {
+                const row = document.createElement('tr');
+                row.dataset.elementId = element.id;
+                
+                // 預覽欄位的內容
+                let previewContent = '';
+                if (element.element_type === 'back_to_top') {
+                    // 返回頂部按鈕預覽
+                    previewContent = `<img src="${element.image_url || '/images/logo-icon.png'}" alt="${element.alt_text || '返回頂部'}" class="preview-image">`;
+                } else {
+                    // 角色預覽（背景圖片）
+                    previewContent = `<div class="character-preview" style="background-image: url('${element.image_url || `/images/${element.element_type}-character.png`}')"></div>`;
+                }
+                
+                // 顯示狀態開關
+                const visibilitySwitch = `
+                    <label class="switch">
+                        <input type="checkbox" ${element.is_visible ? 'checked' : ''} onchange="toggleUIElementVisibility(${element.id}, this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                `;
+                
+                // 描述/選項欄位
+                let descriptionContent = '';
+                if (element.element_type === 'back_to_top') {
+                    // 返回頂部按鈕描述
+                    const settings = element.settings ? JSON.parse(element.settings) : {};
+                    descriptionContent = `
+                        顯示觸發: ${settings.scroll_trigger || 300}px<br>
+                        滾動速度: ${settings.scroll_speed || 'smooth'}
+                    `;
+                } else {
+                    // 角色描述
+                    descriptionContent = `
+                        位置: ${element.position_top || 'auto'} ${element.position_left ? `left: ${element.position_left}` : ''} ${element.position_right ? `right: ${element.position_right}` : ''}<br>
+                        動畫: ${element.animation_type || 'float1'}<br>
+                        對話數量: ${element.speech_phrases ? JSON.parse(element.speech_phrases).length : 0}條
+                    `;
+                }
+                
+                row.innerHTML = `
+                    <td>${element.id || 'N/A'}</td>
+                    <td>${getElementTypeDisplayName(reverseElementTypeMapping[element.element_type] || element.element_type)}</td>
+                    <td>${previewContent}</td>
+                    <td>${visibilitySwitch}</td>
+                    <td style="white-space: normal; word-break: break-all;">${element.image_url || 'N/A'}</td>
+                    <td style="white-space: normal; word-break: break-all;">${descriptionContent}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="editUIElement(${element.id})">編輯</button>
+                        <button class="action-btn delete-btn" onclick="deleteUIElement(${element.id})">刪除</button>
+                    </td>
+                `;
+                uiElementsListBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("獲取或處理UI元素列表失敗:", error);
+            if (uiElementsLoadingMessage) uiElementsLoadingMessage.textContent = `無法載入UI元素列表: ${error.message}`;
+            if (uiElementsTable) uiElementsTable.style.display = 'none';
+        }
+    }
+
+    // 根據UI元素類型顯示不同的表單欄位
+    function handleUITypeChange(mode) {
+        const elementType = mode === 'add' ? addUIType.value : 
+                           (editUIType.value || editUITypeDisplay.dataset.originalType);
+        
+        const characterFields = mode === 'add' ? addCharacterFields : editCharacterFields;
+        const backToTopFields = mode === 'add' ? addBackToTopFields : editBackToTopFields;
+        
+        // 隱藏所有特殊欄位
+        characterFields.style.display = 'none';
+        backToTopFields.style.display = 'none';
+        
+        // 顯示對應的欄位
+        if (elementType === 'pink_character' || elementType === 'blue_character' || elementType === 'yellow_character' ||
+            elementType === 'pink' || elementType === 'blue' || elementType === 'yellow') {
+            characterFields.style.display = 'block';
+        } else if (elementType === 'back_to_top') {
+            backToTopFields.style.display = 'block';
+        }
+    }
+
+    // 開啟編輯UI元素表單
+    async function openEditUIElementModal(id) {
+        console.log(`openEditUIElementModal called for ID: ${id}`);
+
+        const requiredEditElements = [
+            editUIModal, editUIForm, editUIId, editUIType, 
+            editUIImageUrl, editUIAltText, editUIIsVisible, 
+            editUIPreview, editUIFormError, editUITypeDisplay
+        ];
+
+        if (requiredEditElements.some(el => !el)) {
+            console.error("編輯UI Modal元件缺失:", requiredEditElements.map((el, i) => el ? '' : i).filter(String));
+            alert("編輯UI視窗元件錯誤，請檢查HTML。");
+            return;
+        }
+
+        editUIFormError.textContent = '';
+        editUIForm.reset();
+        editUIPreview.style.display = 'none';
+        editUIPreview.src = '';
+
+        try {
+            const response = await fetch(`/api/ui-elements/${id}`);
+            if (!response.ok) {
+                let errorText = `無法獲取UI元素資料 (HTTP ${response.status})`;
+                if (response.status === 404) errorText = '找不到指定的UI元素。';
+                else { 
+                    try { 
+                        const data = await response.json(); 
+                        errorText += `: ${data.error || response.statusText}`; 
+                    } catch (e) {} 
+                }
+                throw new Error(errorText);
+            }
+
+            const element = await response.json();
+            console.log("找到要編輯的UI元素:", element);
+
+            // 設置通用欄位
+            editUIId.value = element.id;
+            const mappedType = reverseElementTypeMapping[element.element_type] || element.element_type;
+            editUIType.value = mappedType;
+            editUITypeDisplay.value = getElementTypeDisplayName(mappedType);
+            editUITypeDisplay.dataset.originalType = mappedType;
+            editUIImageUrl.value = element.image_url || '';
+            editUIAltText.value = element.alt_text || '';
+            editUIIsVisible.checked = element.is_visible;
+
+            // 顯示預覽
+            if (element.image_url) {
+                editUIPreview.src = element.image_url;
+                editUIPreview.style.display = 'block';
+            }
+
+            // 根據元素類型設置特定欄位
+            handleUITypeChange('edit');
+
+            if (element.element_type === 'back_to_top') {
+                // 返回頂部按鈕特定欄位
+                const settings = element.settings ? JSON.parse(element.settings) : {};
+                document.getElementById('edit-ui-scroll-trigger').value = settings.scroll_trigger || 300;
+                document.getElementById('edit-ui-scroll-speed').value = settings.scroll_speed || 'smooth';
+            } else {
+                // 角色特定欄位
+                document.getElementById('edit-ui-position-top').value = element.position_top || '';
+                document.getElementById('edit-ui-position-left').value = element.position_left || '';
+                document.getElementById('edit-ui-position-right').value = element.position_right || '';
+                document.getElementById('edit-ui-animation-type').value = element.animation_type || 'float1';
+                
+                // 處理對話短語
+                const speechPhrases = element.speech_phrases ? JSON.parse(element.speech_phrases) : [];
+                document.getElementById('edit-ui-speech-phrases').value = speechPhrases.join(',');
+            }
+
+            // 顯示Modal
+            editUIModal.style.display = 'flex';
+        } catch (error) {
+            console.error(`獲取UI元素 ${id} 進行編輯時出錯:`, error);
+            alert(`無法載入編輯資料： ${error.message}`);
+        }
+    }
+
+    // --- 設置圖片預覽 ---
     function setupImagePreview(urlInput, previewImg) {
         if (urlInput && previewImg) {
             urlInput.addEventListener('input', () => {
                 const url = urlInput.value.trim();
-                previewImg.src = url || ''; // 設置 src，即使是空的
-                previewImg.style.display = url ? 'block' : 'none'; // 根據是否有 url 決定顯示
-                // 可以移除 onerror，因為即使 url 無效，img 標籤也會顯示一個破損圖標
+                previewImg.src = url || '';
+                previewImg.style.display = url ? 'block' : 'none';
             });
         }
     }
 
     setupImagePreview(addBannerImageUrl, addBannerPreview);
     setupImagePreview(editBannerImageUrl, editBannerPreview);
+    setupImagePreview(addUIImageUrl, addUIPreview);
+    setupImagePreview(editUIImageUrl, editUIPreview);
 
     // --- Close Modals on Click Outside ---
     window.onclick = function(event) {
         if (event.target == editModal) closeEditBannerModal();
         else if (event.target == addModal) closeAddBannerModal();
+        else if (event.target == editUIModal) closeEditUIModal();
+        else if (event.target == addUIModal) closeAddUIModal();
     };
+
+    // --- 設置UI元素類型改變時的處理函數 ---
+    if (addUIType) {
+        addUIType.addEventListener('change', () => handleUITypeChange('add'));
+    }
+
+    // --- 新增UI元素表單提交 ---
+    if (addUIForm) {
+        addUIForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            addUIFormError.textContent = '';
+
+            const elementType = addUIType.value;
+            if (!elementType) {
+                addUIFormError.textContent = '請選擇元素類型。';
+                return;
+            }
+
+            // 準備通用數據
+            const newElementData = {
+                element_type: elementTypeMapping[elementType] || elementType,
+                is_visible: addUIIsVisible.checked,
+                image_url: addUIImageUrl.value.trim() || null,
+                alt_text: addUIAltText.value.trim() || null
+            };
+
+            // 根據元素類型添加特定數據
+            if (elementType === 'back_to_top') {
+                // 返回頂部按鈕
+                const scrollTrigger = document.getElementById('add-ui-scroll-trigger').value;
+                const scrollSpeed = document.getElementById('add-ui-scroll-speed').value;
+                newElementData.settings = JSON.stringify({
+                    scroll_trigger: isNaN(parseInt(scrollTrigger)) ? 300 : parseInt(scrollTrigger),
+                    scroll_speed: scrollSpeed || 'smooth'
+                });
+            } else {
+                // 角色
+                newElementData.position_top = document.getElementById('add-ui-position-top').value.trim() || null;
+                newElementData.position_left = document.getElementById('add-ui-position-left').value.trim() || null;
+                newElementData.position_right = document.getElementById('add-ui-position-right').value.trim() || null;
+                newElementData.animation_type = document.getElementById('add-ui-animation-type').value || 'float1';
+                
+                // 處理對話短語
+                const speechPhrasesInput = document.getElementById('add-ui-speech-phrases').value.trim();
+                if (speechPhrasesInput) {
+                    const phrases = speechPhrasesInput.split(',').map(phrase => phrase.trim()).filter(Boolean);
+                    newElementData.speech_phrases = JSON.stringify(phrases);
+                } else {
+                    newElementData.speech_phrases = JSON.stringify(['嗨！']);
+                }
+            }
+
+            console.log("準備新增UI元素:", JSON.stringify(newElementData, null, 2));
+
+            try {
+                const response = await fetch('/api/ui-elements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newElementData)
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `新增失敗 (HTTP ${response.status})`;
+                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+
+                console.log("UI元素新增成功，關閉Modal並刷新列表。");
+                closeAddUIModal();
+                await fetchAndDisplayUIElements(); // 重新載入列表
+            } catch (error) {
+                console.error("新增UI元素時發生錯誤:", error);
+                addUIFormError.textContent = `新增錯誤：${error.message}`;
+            }
+        });
+    }
+
+    // --- 編輯UI元素表單提交 ---
+    if (editUIForm) {
+        editUIForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            editUIFormError.textContent = '';
+
+            const elementId = editUIId.value;
+            if (!elementId) {
+                editUIFormError.textContent = '錯誤：找不到元素ID。';
+                return;
+            }
+
+            const elementType = editUIType.value;
+            
+            // 準備更新數據
+            const updatedData = {
+                is_visible: editUIIsVisible.checked,
+                image_url: editUIImageUrl.value.trim() || null,
+                alt_text: editUIAltText.value.trim() || null
+            };
+
+            // 根據元素類型添加特定數據
+            if (elementType === 'back_to_top') {
+                // 返回頂部按鈕
+                const scrollTrigger = document.getElementById('edit-ui-scroll-trigger').value;
+                const scrollSpeed = document.getElementById('edit-ui-scroll-speed').value;
+                updatedData.settings = JSON.stringify({
+                    scroll_trigger: isNaN(parseInt(scrollTrigger)) ? 300 : parseInt(scrollTrigger),
+                    scroll_speed: scrollSpeed || 'smooth'
+                });
+            } else {
+                // 角色
+                updatedData.position_top = document.getElementById('edit-ui-position-top').value.trim() || null;
+                updatedData.position_left = document.getElementById('edit-ui-position-left').value.trim() || null;
+                updatedData.position_right = document.getElementById('edit-ui-position-right').value.trim() || null;
+                updatedData.animation_type = document.getElementById('edit-ui-animation-type').value || 'float1';
+                
+                // 處理對話短語
+                const speechPhrasesInput = document.getElementById('edit-ui-speech-phrases').value.trim();
+                if (speechPhrasesInput) {
+                    const phrases = speechPhrasesInput.split(',').map(phrase => phrase.trim()).filter(Boolean);
+                    updatedData.speech_phrases = JSON.stringify(phrases);
+                } else {
+                    updatedData.speech_phrases = JSON.stringify(['嗨！']);
+                }
+            }
+
+            console.log("準備更新UI元素:", elementId, JSON.stringify(updatedData, null, 2));
+
+            try {
+                const response = await fetch(`/api/ui-elements/${elementId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `更新失敗 (HTTP ${response.status})`;
+                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+
+                console.log("UI元素更新成功，關閉Modal並刷新列表。");
+                closeEditUIModal();
+                await fetchAndDisplayUIElements(); // 重新載入列表
+            } catch (error) {
+                console.error("更新UI元素時發生錯誤:", error);
+                editUIFormError.textContent = `更新錯誤：${error.message}`;
+            }
+        });
+    }
 
     // --- Edit Banner Form Submission Listener ---
     if (editForm) {
@@ -389,7 +779,145 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("新增 Banner 表單元素 (#add-banner-form) 未找到。");
     }
 
-    // --- Initial Load ---
-    console.log("Banner Admin JS: Initializing page...");
-    fetchAndDisplayBanners(); // 初始載入列表
+    // --- 公開給全局的函數 ---
+    
+    // 關閉Modal函數
+    window.closeEditBannerModal = function() { if (editModal) editModal.style.display = 'none'; };
+    window.closeAddBannerModal = function() { if (addModal) addModal.style.display = 'none'; };
+    window.closeEditUIModal = function() { if (editUIModal) editUIModal.style.display = 'none'; };
+    window.closeAddUIModal = function() { if (addUIModal) addUIModal.style.display = 'none'; };
+
+    // 編輯Banner函數
+    window.editBanner = function(id) { openEditBannerModal(id); };
+
+    // 刪除Banner函數
+    window.deleteBanner = async function(id) {
+        console.log(`準備刪除 Banner ID: ${id}`);
+        if (confirm(`確定要刪除輪播圖 ID: ${id} 嗎？`)) {
+            try {
+                const response = await fetch(`/api/admin/banners/${id}`, { method: 'DELETE' });
+
+                if (response.status === 204 || response.ok) {
+                    console.log(`Banner ID: ${id} 刪除成功。`);
+                    await fetchAndDisplayBanners(); // 刷新列表
+                } else {
+                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
+                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                console.error(`刪除 Banner ID ${id} 時發生錯誤:`, error);
+                alert(`刪除時發生錯誤：${error.message}`);
+            }
+        }
+    };
+
+    // 編輯UI元素函數
+    window.editUIElement = function(id) { openEditUIElementModal(id); };
+
+    // 刪除UI元素函數
+    window.deleteUIElement = async function(id) {
+        console.log(`準備刪除 UI元素 ID: ${id}`);
+        if (confirm(`確定要刪除此UI元素嗎？`)) {
+            try {
+                const response = await fetch(`/api/ui-elements/${id}`, { method: 'DELETE' });
+
+                if (response.status === 204 || response.ok) {
+                    console.log(`UI元素 ID: ${id} 刪除成功。`);
+                    await fetchAndDisplayUIElements(); // 刷新列表
+                } else {
+                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
+                    try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                console.error(`刪除 UI元素 ID ${id} 時發生錯誤:`, error);
+                alert(`刪除時發生錯誤：${error.message}`);
+            }
+        }
+    };
+
+    // 切換UI元素顯示/隱藏狀態
+    window.toggleUIElementVisibility = async function(id, isVisible) {
+        console.log(`切換 UI元素 ID: ${id} 可見性為: ${isVisible}`);
+        try {
+            const response = await fetch(`/api/ui-elements/${id}/visibility`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_visible: isVisible })
+            });
+
+            if (!response.ok) {
+                let errorMsg = `更新失敗 (HTTP ${response.status})`;
+                try { const errorData = await response.json(); errorMsg = `${errorMsg}: ${errorData.error || 'No error message provided.'}`; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+
+            console.log(`UI元素 ID: ${id} 可見性更新成功。`);
+            // 不需要刷新整個列表，UI已經通過checkbox實時更新
+        } catch (error) {
+            console.error(`更新 UI元素 ID ${id} 可見性時發生錯誤:`, error);
+            alert(`更新可見性時發生錯誤：${error.message}`);
+            await fetchAndDisplayUIElements(); // 在出錯時刷新列表以還原UI狀態
+        }
+    };
+
+    // 顯示新增Banner表單
+    window.showAddBannerForm = function() {
+        console.log("顯示新增 Banner 表單");
+        const requiredAddElements = [addModal, addForm, addBannerImageUrl, addBannerLinkUrl,
+                                    addBannerDisplayOrder, addBannerAltText, addBannerPreview,
+                                    addFormError, addBannerPageLocation];
+
+        if (requiredAddElements.some(el => !el)) {
+            console.error("新增視窗元件錯誤:", requiredAddElements.map((el, i) => el ? '' : i).filter(String));
+            alert("新增視窗元件錯誤，請檢查 HTML。");
+            return;
+        }
+
+        addFormError.textContent = '';
+        addForm.reset();
+        addBannerPreview.style.display = 'none';
+        addBannerPreview.src = '';
+        addBannerDisplayOrder.value = 0; // 預設值
+        addBannerPageLocation.value = 'home'; // 預設值
+        addModal.style.display = 'flex';
+    };
+
+    // 顯示新增UI元素表單
+    window.showAddUIElementForm = function() {
+        console.log("顯示新增 UI元素表單");
+        const requiredAddElements = [
+            addUIModal, addUIForm, addUIType, addUIImageUrl, 
+            addUIAltText, addUIIsVisible, addUIPreview, addUIFormError
+        ];
+
+        if (requiredAddElements.some(el => !el)) {
+            console.error("新增UI視窗元件錯誤:", requiredAddElements.map((el, i) => el ? '' : i).filter(String));
+            alert("新增UI視窗元件錯誤，請檢查HTML。");
+            return;
+        }
+
+        addUIFormError.textContent = '';
+        addUIForm.reset();
+        addUIPreview.style.display = 'none';
+        addUIPreview.src = '';
+        addUIIsVisible.checked = true; // 預設顯示
+        addUIType.value = ''; // 清空選擇
+        
+        // 隱藏所有特定欄位
+        addCharacterFields.style.display = 'none';
+        addBackToTopFields.style.display = 'none';
+
+        // 顯示UI元素新增Modal
+        addUIModal.style.display = 'flex';
+    };
+
+    // --- 初始載入 ---
+    console.log("Banner & UI Elements Admin JS: Initializing page...");
+    fetchAndDisplayBanners(); // 初始載入輪播圖列表
 });
+
+                    
+
+

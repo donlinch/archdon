@@ -1135,6 +1135,26 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
 
 
 
+// GET /api/floating-characters - 獲取所有浮動角色 (專門為前端頁面提供的API)
+app.get('/api/floating-characters', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type AS character_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases 
+            FROM ui_elements
+            WHERE element_type IN ('pink', 'blue', 'yellow')
+            ORDER BY element_type
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取浮動角色列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
 
 
 
@@ -1170,6 +1190,294 @@ console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- UI元素管理API ---
+
+// GET /api/ui-elements - 獲取所有UI元素
+app.get('/api/ui-elements', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases, settings, 
+                   created_at, updated_at
+            FROM ui_elements
+            ORDER BY element_type, id
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取UI元素列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/ui-elements?type=back_to_top - 獲取指定類型的UI元素
+app.get('/api/ui-elements/type/:type', async (req, res) => {
+    const { type } = req.params;
+    if (!type) {
+        return res.status(400).json({ error: '未指定元素類型' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `SELECT id, element_type, is_visible, image_url, alt_text, 
+                    position_top, position_left, position_right, 
+                    animation_type, speech_phrases, settings, 
+                    created_at, updated_at
+             FROM ui_elements
+             WHERE element_type = $1
+             LIMIT 1`,
+            [type]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定類型的UI元素' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取UI元素類型 ${type} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/ui-elements/:id - 獲取特定ID的UI元素
+app.get('/api/ui-elements/:id', async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) {
+        return res.status(400).json({ error: '無效的UI元素ID格式' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `SELECT id, element_type, is_visible, image_url, alt_text, 
+                    position_top, position_left, position_right, 
+                    animation_type, speech_phrases, settings, 
+                    created_at, updated_at
+             FROM ui_elements
+             WHERE id = $1`,
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的UI元素' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取UI元素ID ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/ui-elements - 創建新UI元素
+app.post('/api/ui-elements', basicAuthMiddleware, async (req, res) => {
+    const { 
+        element_type, is_visible, image_url, alt_text,
+        position_top, position_left, position_right,
+        animation_type, speech_phrases, settings,
+        custom_css
+    } = req.body;
+    
+    if (!element_type) {
+        return res.status(400).json({ error: '元素類型為必填項' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `INSERT INTO ui_elements 
+             (element_type, is_visible, image_url, alt_text, 
+              position_top, position_left, position_right, 
+              animation_type, speech_phrases, settings, custom_css)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             RETURNING *`,
+            [
+                element_type, 
+                is_visible !== undefined ? is_visible : true, 
+                image_url || null, 
+                alt_text || null,
+                position_top || null, 
+                position_left || null, 
+                position_right || null,
+                animation_type || null, 
+                speech_phrases || null, 
+                settings || null,
+                custom_css || null
+            ]
+        );
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('新增UI元素失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
+    }
+});
+
+// PUT /api/ui-elements/:id - 更新UI元素
+app.put('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) {
+        return res.status(400).json({ error: '無效的UI元素ID格式' });
+    }
+    
+    const { 
+        is_visible, image_url, alt_text,
+        position_top, position_left, position_right,
+        animation_type, speech_phrases, settings,
+        custom_css
+    } = req.body;
+    
+    // 生成動態更新欄位
+    const updateFields = [];
+    const queryParams = [id]; // 先放入ID
+    let paramIndex = 2;
+    
+    if (is_visible !== undefined) {
+        updateFields.push(`is_visible = $${paramIndex++}`);
+        queryParams.push(is_visible);
+    }
+    
+    if (image_url !== undefined) {
+        updateFields.push(`image_url = $${paramIndex++}`);
+        queryParams.push(image_url);
+    }
+    
+    if (alt_text !== undefined) {
+        updateFields.push(`alt_text = $${paramIndex++}`);
+        queryParams.push(alt_text);
+    }
+    
+    if (position_top !== undefined) {
+        updateFields.push(`position_top = $${paramIndex++}`);
+        queryParams.push(position_top);
+    }
+    
+    if (position_left !== undefined) {
+        updateFields.push(`position_left = $${paramIndex++}`);
+        queryParams.push(position_left);
+    }
+    
+    if (position_right !== undefined) {
+        updateFields.push(`position_right = $${paramIndex++}`);
+        queryParams.push(position_right);
+    }
+    
+    if (animation_type !== undefined) {
+        updateFields.push(`animation_type = $${paramIndex++}`);
+        queryParams.push(animation_type);
+    }
+    
+    if (speech_phrases !== undefined) {
+        updateFields.push(`speech_phrases = $${paramIndex++}`);
+        queryParams.push(speech_phrases);
+    }
+    
+    if (settings !== undefined) {
+        updateFields.push(`settings = $${paramIndex++}`);
+        queryParams.push(settings);
+    }
+    
+    if (custom_css !== undefined) {
+        updateFields.push(`custom_css = $${paramIndex++}`);
+        queryParams.push(custom_css);
+    }
+    
+    // 添加更新時間
+    updateFields.push(`updated_at = NOW()`);
+    
+    if (updateFields.length === 0) {
+        return res.status(400).json({ error: '沒有提供任何要更新的欄位' });
+    }
+    
+    try {
+        const query = `
+            UPDATE ui_elements 
+            SET ${updateFields.join(', ')}
+            WHERE id = $1
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, queryParams);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的UI元素' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新UI元素ID ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
+    }
+});
+
+// PUT /api/ui-elements/:id/visibility - 更新UI元素顯示狀態
+app.put('/api/ui-elements/:id/visibility', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { is_visible } = req.body;
+    
+    if (isNaN(parseInt(id))) {
+        return res.status(400).json({ error: '無效的UI元素ID格式' });
+    }
+    
+    if (typeof is_visible !== 'boolean') {
+        return res.status(400).json({ error: 'is_visible必須是布爾值' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `UPDATE ui_elements 
+             SET is_visible = $1, updated_at = NOW()
+             WHERE id = $2
+             RETURNING id, element_type, is_visible`,
+            [is_visible, id]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的UI元素' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新UI元素ID ${id} 顯示狀態失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
+    }
+});
+
+// DELETE /api/ui-elements/:id - 刪除UI元素
+app.delete('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    if (isNaN(parseInt(id))) {
+        return res.status(400).json({ error: '無效的UI元素ID格式' });
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM ui_elements WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的UI元素' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除UI元素ID ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤', detail: err.message });
+    }
+});
 
 
 

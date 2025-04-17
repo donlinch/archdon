@@ -226,7 +226,70 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 設置回到頂部按鈕
      */
-    function setupBackToTop() {
+    async function setupBackToTop() {
+        try {
+            // 從API獲取設定
+            const response = await fetch('/api/ui-elements?type=back_to_top');
+            if (!response.ok) {
+                throw new Error(`獲取UI元素失敗: HTTP ${response.status}`);
+            }
+            
+            const settings = await response.json();
+            
+            if (!backToTopButton) {
+                console.error("返回頂部按鈕元素未找到！");
+                return;
+            }
+            
+            // 如果設定為不顯示，則直接返回
+            if (!settings.is_visible) {
+                backToTopButton.style.display = 'none';
+                return;
+            }
+            
+            // 更新圖片（如果有設定）
+            const logoImg = backToTopButton.querySelector('img');
+            if (logoImg && settings.image_url) {
+                logoImg.src = settings.image_url;
+                logoImg.alt = settings.alt_text || 'Back to top';
+            }
+            
+            // 應用自定義CSS（如果有設定）
+            if (settings.custom_css) {
+                try {
+                    Object.assign(backToTopButton.style, JSON.parse(settings.custom_css));
+                } catch (e) {
+                    console.warn("解析自定義CSS時出錯:", e);
+                }
+            }
+            
+            // 監聽滾動事件
+            window.addEventListener('scroll', function() {
+                const scrollTrigger = settings.settings?.scroll_trigger || 300;
+                if (window.scrollY > scrollTrigger) {
+                    backToTopButton.classList.add('visible');
+                } else {
+                    backToTopButton.classList.remove('visible');
+                }
+            });
+            
+            // 點擊回到頂部
+            backToTopButton.addEventListener('click', function() {
+                // 使用設定中的滾動速度
+                window.scrollTo({
+                    top: 0,
+                    behavior: settings.settings?.scroll_speed || 'smooth'
+                });
+            });
+        } catch (err) {
+            console.error('獲取返回頂部按鈕設定時出錯:', err);
+            // 使用默認行為作為備份
+            setupDefaultBackToTop();
+        }
+    }
+
+    // 默認行為作為備份
+    function setupDefaultBackToTop() {
         if (backToTopButton) {
             // 監聽滾動事件
             window.addEventListener('scroll', function() {
@@ -251,7 +314,131 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 設置角色互動效果
      */
-    function setupCharacterInteractions() {
+    async function setupCharacterInteractions() {
+        try {
+            // 從API獲取角色設定
+            const response = await fetch('/api/floating-characters');
+            if (!response.ok) {
+                throw new Error(`獲取浮動角色失敗: HTTP ${response.status}`);
+            }
+            
+            const charactersData = await response.json();
+            
+            // 獲取DOM中的角色元素
+            const pinkCharacter = document.querySelector('.pink-character');
+            const blueCharacter = document.querySelector('.blue-character');
+            const yellowCharacter = document.querySelector('.yellow-character');
+            
+            // 設定角色顯示/隱藏
+            charactersData.forEach(character => {
+                let characterElement;
+                
+                switch(character.character_type) {
+                    case 'pink':
+                        characterElement = pinkCharacter;
+                        break;
+                    case 'blue':
+                        characterElement = blueCharacter;
+                        break;
+                    case 'yellow':
+                        characterElement = yellowCharacter;
+                        break;
+                }
+                
+                if (characterElement) {
+                    // 設置顯示/隱藏
+                    characterElement.style.display = character.is_visible ? 'block' : 'none';
+                    
+                    // 更新圖片
+                    if (character.image_url) {
+                        characterElement.style.backgroundImage = `url('${character.image_url}')`;
+                    }
+                    
+                    // 設置位置
+                    if (character.position_top) characterElement.style.top = character.position_top;
+                    if (character.position_left) characterElement.style.left = character.position_left;
+                    if (character.position_right) characterElement.style.right = character.position_right;
+                    
+                    // 設置動畫
+                    if (character.animation_type) {
+                        // 移除所有動畫類
+                        characterElement.classList.remove('float1', 'float2', 'float3');
+                        // 添加新動畫類
+                        characterElement.classList.add(character.animation_type);
+                    }
+                    
+                    // 如果角色可見，設置交互功能
+                    if (character.is_visible) {
+                        // 創建對話氣泡
+                        const speechBubble = document.createElement('div');
+                        speechBubble.className = 'character-speech';
+                        characterElement.appendChild(speechBubble);
+                        
+                        // 設置對話內容
+                        let speeches = ['嗨！']; // 默認對話
+                        try {
+                            if (character.speech_phrases) {
+                                speeches = JSON.parse(character.speech_phrases);
+                                if (!Array.isArray(speeches)) speeches = ['嗨！'];
+                            }
+                        } catch (e) {
+                            console.warn(`解析角色對話內容時出錯:`, e);
+                        }
+                        
+                        // 觸摸/點擊事件處理
+                        characterElement.addEventListener('touchstart', handleInteraction, { passive: true });
+                        characterElement.addEventListener('click', handleInteraction);
+                        
+                        function handleInteraction(e) {
+                            // 防止事件冒泡和默認行為
+                            e.stopPropagation();
+                            if (e.type === 'click') e.preventDefault();
+                            
+                            // 已經被觸摸，忽略
+                            if (characterElement.classList.contains('touched') || 
+                                characterElement.classList.contains('bounce-back')) return;
+                            
+                            // 添加觸摸效果
+                            characterElement.classList.add('touched');
+                            
+                            // 隨機選擇一句對話
+                            const randomSpeech = speeches[Math.floor(Math.random() * speeches.length)];
+                            
+                            // 顯示對話氣泡
+                            speechBubble.textContent = randomSpeech;
+                            speechBubble.classList.add('visible');
+                            
+                            // 1秒後移除觸摸效果，添加彈回動畫
+                            setTimeout(() => {
+                                characterElement.classList.remove('touched');
+                                characterElement.classList.add('bounce-back');
+                                
+                                // 1.5秒後隱藏對話氣泡
+                                setTimeout(() => {
+                                    speechBubble.classList.remove('visible');
+                                }, 1500);
+                                
+                                // 動畫結束後移除彈回類
+                                setTimeout(() => {
+                                    characterElement.classList.remove('bounce-back');
+                                }, 800);
+                            }, 1000);
+                        }
+                    }
+                }
+            });
+            
+        } catch (err) {
+            console.error('獲取浮動角色設定時出錯:', err);
+            // 使用預設設定作為備份
+            setupDefaultCharacterInteractions();
+        }
+    }
+    
+    /**
+     * 預設角色互動設定
+     */
+    function setupDefaultCharacterInteractions() {
         const characters = document.querySelectorAll('.floating-character');
         
         // 定義每個角色的對話內容
@@ -288,9 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 添加觸摸效果
                 character.classList.add('touched');
                 
-                // 播放音效 (可選)
-                playSound(characterType);
-                
                 // 隨機選擇一句對話
                 const possibleSpeeches = speeches[characterType] || ['嗨！'];
                 const randomSpeech = possibleSpeeches[Math.floor(Math.random() * possibleSpeeches.length)];
@@ -316,28 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 1000);
             }
         });
-    }
-    
-    /**
-     * 播放角色音效 (如果需要)
-     */
-    function playSound(characterType) {
-        // 這是一個可選功能，如果你想添加音效，可以實現這個函數
-        // 例如:
-        /*
-        const sounds = {
-            'pink-character': '/sounds/pink.mp3',
-            'blue-character': '/sounds/blue.mp3',
-            'yellow-character': '/sounds/yellow.mp3'
-        };
-        
-        const soundUrl = sounds[characterType];
-        if (soundUrl) {
-            const audio = new Audio(soundUrl);
-            audio.volume = 0.5; // 設置音量
-            audio.play().catch(e => console.log('播放音效失敗:', e));
-        }
-        */
     }
     
     /**
