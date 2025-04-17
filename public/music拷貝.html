@@ -87,7 +87,7 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.category-tabs a {
+.category-tabs a, .category-tabs button {
     padding: 8px 16px;
     margin: 0 6px;
     border-radius: 20px;
@@ -95,25 +95,24 @@ body {
     font-weight: bold;
     font-size: 14px;
     transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    background-color: #90CAF9; /* 藍色 */
+    color: white;
 }
 
-.category-tabs a.active {
+.category-tabs a.active, .category-tabs button.active {
     background-color: #FFB74D; /* 黃色 */
     color: white;
     box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
 }
 
-.category-tabs a:not(.active) {
-    background-color: #90CAF9; /* 藍色 */
-    color: white;
-}
-
-.category-tabs a:hover {
+.category-tabs a:hover, .category-tabs button:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.category-tabs a:active {
+.category-tabs a:active, .category-tabs button:active {
     transform: translateY(1px);
 }
 
@@ -371,39 +370,105 @@ body {
     object-fit: cover;
 }
 
-/* 歌手篩選 */
-.artist-filter-nav {
+/* 歌手導航抽屜 */
+.artist-drawer {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100%;
+    background-color: white;
+    z-index: 1050;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    transition: left 0.3s ease;
+    padding: 20px 15px;
+    overflow-y: auto;
+}
+
+.artist-drawer.open {
+    left: 0;
+}
+
+.artist-drawer-header {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    padding: 15px;
-    background-color: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
 }
 
-.artist-filter-btn {
-    background-color: #90CAF9;
-    color: white;
+.artist-drawer-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.artist-drawer-close {
+    background: none;
     border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 24px;
+    color: #777;
     cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.artist-drawer-close:hover {
+    background-color: #f0f0f0;
+}
+
+.artist-drawer-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.artist-drawer-btn {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
     transition: all 0.3s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    text-align: center;
 }
 
-.artist-filter-btn:hover {
+.artist-drawer-btn:hover {
+    background-color: #e0e0e0;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.artist-filter-btn.active {
+.artist-drawer-btn.active {
     background-color: #FFB74D;
-    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.4);
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(255, 183, 77, 0.3);
+}
+
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.drawer-overlay.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* 專輯卡片樣式 */
@@ -546,9 +611,18 @@ body {
         padding: 15px 20px;
     }
     
-    .category-tabs a {
+    .category-tabs a, .category-tabs button {
         font-size: 16px;
         padding: 10px 20px;
+    }
+    
+    .artist-drawer {
+        width: 350px;
+        max-width: 350px;
+    }
+    
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -560,6 +634,10 @@ body {
     .floating-character {
         width: 80px; /* 電腦版放大浮動角色 */
         height: 80px;
+    }
+    
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 </style>
@@ -582,6 +660,7 @@ body {
     <div class="category-tabs">
         <a href="#music" class="sort-link active" data-sort="music">音樂專輯</a>
         <a href="#scores" class="sort-link" data-sort="scores">樂譜</a>
+        <button id="artist-drawer-btn" class="artist-btn">歌手列表</button>
     </div>
     
     <!-- 浮動角色 -->
@@ -589,16 +668,26 @@ body {
     <div class="floating-character blue-character"></div>
     <div class="floating-character yellow-character"></div>
     
-    <!-- 歌手篩選導覽列 -->
-    <nav class="artist-filter-nav" id="artist-filter">
-        <p>正在加載歌手列表...</p>
-    </nav>
-    
     <!-- 音樂專輯列表 -->
     <div id="music-list">
         <!-- 專輯將由 JavaScript 動態載入 -->
         <p>正在加載音樂列表...</p>
     </div>
+    
+    <!-- 歌手導航抽屜 -->
+    <div id="artist-drawer" class="artist-drawer">
+        <div class="artist-drawer-header">
+            <div class="artist-drawer-title">歌手列表</div>
+            <button id="artist-drawer-close" class="artist-drawer-close">×</button>
+        </div>
+        <div id="artist-drawer-content" class="artist-drawer-content">
+            <!-- 歌手按鈕將由 JavaScript 動態載入 -->
+            <p>正在加載歌手列表...</p>
+        </div>
+    </div>
+    
+    <!-- 抽屜背景遮罩 -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
     
     <!-- 返回頂部按鈕 -->
     <button id="back-to-top" class="back-to-top">
@@ -607,7 +696,7 @@ body {
         </div>
     </button>
     
-    <!-- 底部導航 --> 
+    <!-- 底部導航 -->
     <nav class="bottom-nav">
         <ul>
             <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
@@ -638,6 +727,6 @@ body {
     
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="music.js"></script>
+    <script src="music拷貝.js"></script>
 </body>
 </html>
