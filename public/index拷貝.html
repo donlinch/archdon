@@ -1,217 +1,707 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="探索 SunnyYummy 官方週邊商品！尋找最新的 T-shirt、鑰匙圈以及更多來自你喜愛創作者的獨家商品。">
-        <title>SunnyYummy 週邊商品 | 最新限定款 T-shirt、鑰匙圈</title>
-        
-        <!-- Canonical URL -->
-        <link rel="canonical" href="https://sunnyyummy.onrender.com/" />
-        
-        <!-- Open Graph 社群標籤 -->
-        <meta property="og:title" content="SunnyYummy 週邊商品 | 最新限定款">
-        <meta property="og:description" content="探索 SunnyYummy 官方週邊商品！限量 T-shirt、鑰匙圈，立即選購！">
-        <meta property="og:url" content="https://sunnyyummy.onrender.com/">
-        <meta property="og:type" content="website">
-        
-        <!-- 關鍵 CSS 優先 -->
-        <link rel="stylesheet" href="style.css">
-        
-        <!-- 非關鍵資源 -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-        
-        <!-- Favicon -->
-        <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
-        <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-        <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#FFB74D">
-
-       
- 
-
-<!-- Swiper CSS -->
-<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
-
-<!-- Swiper JS -->
-<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-<script>
-    // --- 取得並顯示隨機 Banner 圖片 ---
-    async function fetchAndDisplayBanners() {
-        const bannerWrapper = document.querySelector('#banner-carousel .swiper-wrapper');
-        try {
-            const response = await fetch('/api/banners?page=home'); // 從後端獲取頁面為 "home" 的 banner 資料
-            if (!response.ok) {
-                throw new Error('獲取輪播圖失敗');
-            }
-            const banners = await response.json();
-            
-            // 清空現有的輪播圖片
-            bannerWrapper.innerHTML = '';
-            if (banners.length === 0) {
-                bannerWrapper.innerHTML = '<div class="swiper-slide">無圖片可顯示</div>';
-            } else {
-                // 隨機選擇部分圖片來顯示
-                banners.sort(() => Math.random() - 0.5);  // 隨機排序圖片
-                banners.slice(0, 5).forEach(banner => {   // 最多顯示 5 張圖片
-                    const slide = document.createElement('div');
-                    slide.classList.add('swiper-slide');
-                    slide.innerHTML = `<img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">`;
-                    bannerWrapper.appendChild(slide);
-                });
-            }
-            
-            // 初始化 Swiper
-         //   new Swiper('#banner-carousel', {
-           //     loop: true,
-           //     autoplay: { delay: 8000 },
-           //     pagination: { el: '.swiper-pagination' },
-           // });
-        } catch (error) {
-            console.error('載入輪播圖時出錯:', error);
-            bannerWrapper.innerHTML = '<div class="swiper-slide">載入失敗</div>';
-        }
-    }
-
-    const images = document.querySelectorAll('.swiper-slide img');
-
-images.forEach(img => {
-    img.onload = function() {
-        if (img.naturalWidth > 1200) {
-            img.style.maxWidth = '500px';  // 設定圖片最大寬度
-        }
-        if (img.naturalHeight > 370) {
-            img.style.maxHeight = '370px';  // 設定圖片最大高度
-        }
-    };
-});
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="探索 SunnyYummy 官方週邊商品！尋找最新的 T-shirt、鑰匙圈以及更多來自你喜愛創作者的獨家商品。">
+    <title>SunnyYummy 週邊商品 | 最新限定款 T-shirt、鑰匙圈</title>
     
-    // 頁面加載後執行
-    document.addEventListener('DOMContentLoaded', () => {
-        fetchAndDisplayBanners(); // 呼叫函數顯示隨機圖片
-    });
-    </script>
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://sunnyyummy.onrender.com/" />
+    
+    <!-- Open Graph 社群標籤 -->
+    <meta property="og:title" content="SunnyYummy 週邊商品 | 最新限定款">
+    <meta property="og:description" content="探索 SunnyYummy 官方週邊商品！限量 T-shirt、鑰匙圈，立即選購！">
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/">
+    <meta property="og:type" content="website">
+    
+    <!-- 關鍵 CSS 優先 -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- 非關鍵資源 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FFB74D">
+
+<style>
 
 
-    </head>
+
+
+/* --- 基本樣式 --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: #fff5f7; /* 淡粉色背景 */
+    color: #333;
+    padding-bottom: 70px; /* 為底部導航留出空間 */
+    overflow-x: hidden; /* 防止水平滾動 */
+}
+
+/* --- Banner 樣式 --- */
+.banner-container {
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 比例 */
+    position: relative;
+    overflow: hidden;
+}
+
+.swiper-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.swiper-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.swiper-pagination-bullet-active {
+    background-color: #FFB74D !important; /* 黃色分頁點 */
+}
+
+.swiper-button-prev,
+.swiper-button-next {
+    color: #FFB74D !important; /* 黃色導航箭頭 */
+}
+
+/* --- 分類標籤樣式 --- */
+.category-tabs {
+    display: flex;
+    justify-content: center;
+    padding: 12px 16px;
+    background-color: rgba(255, 255, 255, 0.95);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.category-tabs a {
+    padding: 8px 16px;
+    margin: 0 6px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.category-tabs a.active {
+    background-color: #FFB74D; /* 黃色 */
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+}
+
+.category-tabs a:not(.active) {
+    background-color: #90CAF9; /* 藍色 */
+    color: white;
+}
+
+.category-tabs a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.category-tabs a:active {
+    transform: translateY(1px);
+}
+
+/* --- 浮動角色 --- */
+.floating-character {
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 10;
+    pointer-events: auto; /* 允許點擊 */
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.pink-character {
+    top: 100px;
+    left: 10%;
+    background-image: url('/images/pink-character.png'); /* 粉紅角色圖片 */
+    animation: float1 15s ease-in-out infinite;
+}
+
+.blue-character {
+    top: 40%;
+    right: 5%;
+    background-image: url('/images/blue-character.png'); /* 藍色角色圖片 */
+    animation: float2 18s ease-in-out infinite;
+}
+
+.yellow-character {
+    top: 60%;
+    left: 15%;
+    background-image: url('/images/yellow-character.png'); /* 黃色角色圖片 */
+    animation: float3 20s ease-in-out infinite;
+}
+
+/* 浮動動畫 */
+@keyframes float1 {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(20px, 15px) rotate(5deg); }
+    50% { transform: translate(0px, 30px) rotate(-5deg); }
+    75% { transform: translate(-20px, 15px) rotate(5deg); }
+}
+
+@keyframes float2 {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(-15px, 15px) rotate(-5deg); }
+    50% { transform: translate(-25px, -5px) rotate(5deg); }
+    75% { transform: translate(-10px, -20px) rotate(-5deg); }
+}
+
+@keyframes float3 {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(15px, -10px) rotate(5deg); }
+    50% { transform: translate(25px, 10px) rotate(-8deg); }
+    75% { transform: translate(10px, 20px) rotate(3deg); }
+}
+
+/* 角色點擊效果 */
+.floating-character.touched {
+    transform: scale(1.3) rotate(15deg) !important;
+    filter: brightness(1.2) drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+    z-index: 20;
+}
+
+.pink-character.touched {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(255, 182, 193, 0.8));
+}
+
+.blue-character.touched {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(135, 206, 235, 0.8));
+}
+
+.yellow-character.touched {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes bounce-rotation {
+    0% { transform: scale(1.3) rotate(15deg); }
+    25% { transform: scale(1.1) rotate(-10deg); }
+    50% { transform: scale(1.2) rotate(5deg); }
+    75% { transform: scale(1.1) rotate(-5deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.floating-character.bounce-back {
+    animation: bounce-rotation 0.8s forwards;
+    z-index: 15;
+}
+
+/* 角色對話泡泡 */
+.character-speech {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background-color: white;
+    border-radius: 15px;
+    padding: 6px 10px;
+    font-size: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    text-align: center;
+    min-width: 80px;
+    z-index: 25;
+    white-space: nowrap;
+}
+
+.character-speech:after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background-color: white;
+}
+
+.character-speech.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+/* --- 商品網格 --- */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+}
+
+.product-card {
+    background-color: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.product-card:active {
+    transform: scale(0.95);
+}
+
+.product-card .image-container {
+    height: 120px;
+    background: linear-gradient(to right, #FFF9C4, #BBDEFB);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.product-card .image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s;
+}
+
+.product-card:hover .image-container img {
+    transform: scale(1.1);
+}
+
+.product-card .card-content {
+    padding: 12px;
+}
+
+.product-card h3 {
+    font-size: 14px;
+    margin-bottom: 4px;
+    min-height: 20px;
+}
+
+.product-card .price {
+    color: #FFB74D;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* --- 蝦皮推廣 --- */
+.contribution-info {
+    text-align: center;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.shopee-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    color: inherit;
+    padding: 8px 15px;
+    background-color: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.shopee-link:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.shopee-link:active {
+    transform: translateY(0);
+}
+
+.shopee-link img {
+    height: 20px;
+    width: auto;
+}
+
+/* --- 返回頂部按鈕 --- */
+.back-to-top {
+    position: fixed;
+    right: 16px;
+    bottom: 76px;
+    background: white;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+    transition: all 0.3s;
+    z-index: 999;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.back-to-top:hover {
+    transform: scale(1.1);
+}
+
+.back-to-top:active {
+    transform: scale(0.95);
+}
+
+.logo-circle {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #FFD54F, #FFB74D);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -2px 5px rgba(0,0,0,0.1);
+}
+
+.logo-circle img {
+    width: 65%;
+    height: 65%;
+    object-fit: contain;
+}
+
+/* --- 底部導航 --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 1000;
+    padding: 5px 0;
+}
+
+.bottom-nav ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bottom-nav li {
+    text-align: center;
+}
+
+.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px;
+    text-decoration: none;
+    color: #777;
+    font-size: 0.7rem;
+    transition: all 0.3s;
+}
+
+.bottom-nav a.active {
+    color: #FFB74D;
+    background-color: rgba(255, 183, 77, 0.1);
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+}
+
+.bottom-nav .icon {
+    font-size: 1.5rem;
+    margin-bottom: 3px;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* --- 頁腳（桌面版） --- */
+.desktop-footer {
+    background-color: #f8f8f8;
+    padding: 20px 0;
+    margin-top: 30px;
+    display: none; /* 默認隱藏 */
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.footer-nav a {
+    color: #555;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-nav a:hover {
+    color: #FFB74D;
+}
+
+.footer-copyright {
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* --- 響應式設計 --- */
+@media (max-width: 767px) {
+    .product-card .card-content p:not(.price) {
+        display: none; /* 隱藏描述，只保留標題和價格 */
+    }
+    
+    .desktop-footer {
+        display: none; /* 手機版隱藏桌面頁腳 */
+    }
+}
+
+@media (min-width: 768px) {
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr); /* 平板3列 */
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    body {
+        padding-bottom: 0; /* 取消底部填充 */
+    }
+    
+    .bottom-nav {
+        display: none; /* 隱藏底部導航 */
+    }
+    
+    .back-to-top {
+        bottom: 20px; /* 調整位置 */
+    }
+    
+    .desktop-footer {
+        display: block; /* 顯示桌面頁腳 */
+    }
+    
+    .category-tabs {
+        padding: 15px 20px;
+    }
+    
+    .category-tabs a {
+        font-size: 16px;
+        padding: 10px 20px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
+    }
+    
+    .floating-character {
+        width: 80px; /* 電腦版放大浮動角色 */
+        height: 80px;
+    }
+    
+    .banner-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+}
+
+/* 針對黑暗模式的優化 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #222;
+        color: #f0f0f0;
+    }
+    
+    .category-tabs {
+        background-color: rgba(40, 40, 40, 0.95);
+    }
+    
+    .product-card {
+        background-color: #333;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    
+    .product-card h3 {
+        color: #f0f0f0;
+    }
+    
+    .shopee-link {
+        background-color: #333;
+        color: #f0f0f0;
+    }
+    
+    .bottom-nav {
+        background-color: #2a2a2a;
+    }
+    
+    .bottom-nav a {
+        color: #aaa;
+    }
+    
+    .desktop-footer {
+        background-color: #2a2a2a;
+    }
+    
+    .footer-nav a {
+        color: #ccc;
+    }
+    
+    .footer-copyright {
+        color: #aaa;
+    }
+    
+    .character-speech {
+        background-color: #333;
+        color: #f0f0f0;
+    }
+    
+    .character-speech:after {
+        background-color: #333;
+    }
+}
+
+
+
+
+
+
+</style>
+
+
+
+
+
+
+
+
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+</head>
 <body>
-
-    <header>
-       <!-- *** 這裡就是替換後的 Swiper 結構 *** -->
-        <!-- Slider main container -->
-        <div id="banner-carousel" class="swiper banner-swiper"> <!-- 確保最外層有 ID banner-carousel -->
-            <!-- Additional required wrapper -->
-            <div class="swiper-wrapper" id="banner-wrapper">
-                <!-- Slides 會由 JavaScript 動態載入 -->
-                <!-- 初始可以留空，或放一個 loading slide -->
-                <!-- <div class="swiper-slide"><img src="/images/placeholder-banner.jpg" alt="Banner Loading..."></div> -->
+    <!-- 16:9 比例的 Banner -->
+    <div class="banner-container">
+        <div class="swiper-container" id="banner-carousel">
+            <div class="swiper-wrapper">
+                <!-- Banner slides 將由JavaScript動態插入 -->
+                <div class="swiper-slide"><img src="/images/loading-banner.png" alt="載入中..."></div>
             </div>
-            <!-- If we need pagination -->
             <div class="swiper-pagination"></div>
-
-            <!-- If we need navigation buttons -->
             <div class="swiper-button-prev"></div>
             <div class="swiper-button-next"></div>
         </div>
-
-</header>
- 
-    <main>
-        
-        <!-- This div will hold the product cards -->
-        <nav class="category-nav">
-            <a href="/" class="active">週邊商品</a>  <!-- Current page, marked active -->
-            <a href="/music.html">音樂專輯</a>        <!-- Placeholder -->
-            <a href="/news.html">最新消息</a>   
-            <a href="/scores.html" >樂譜與舞蹈</a> 
-            <a href="/games.html" >互動遊戲</a>
-            <a href="/guestbook.html" >留言板</a>
-            <!-- Placeholder -->
-            
-          
-        </nav>
-
-        <nav class="sort-nav category-nav"> <!-- 可以保留 category-nav 樣式，或新增 sort-nav -->
-            <a href="#latest" class="sort-link active" data-sort="latest">最新商品</a>
-            <a href="#popular" class="sort-link" data-sort="popular">熱門商品</a>
-
-            
-            <!-- 可以把之前的分類放回來，但先專注排序 -->
-            <!-- <a href="#">音樂專輯</a> -->
-            <!-- <a href="#">關於我們</a> -->
-            <!-- <a href="#">最新消息</a> -->
-            <!-- <a href="#">活動回顧</a> -->
-        </nav>
+    </div>
     
-       
-               
-            <!-- 你原本的賣貨便連結或說明 -->
-
-
-
+    <!-- 分類導航 -->
+    <div class="category-tabs">
+        <a href="#latest" class="sort-link active" data-sort="latest">最新商品</a>
+        <a href="#popular" class="sort-link" data-sort="popular">熱門商品</a>
+    </div>
     
-   
-        <!-- This div will hold the product cards -->
-        <div id="product-grid" class="product-grid">
-            <!-- Product cards will be loaded here by JavaScript -->
-            <p>正在加載商品...</p>
+    <!-- 浮動角色 -->
+    <div class="floating-character pink-character"></div>
+    <div class="floating-character blue-character"></div>
+    <div class="floating-character yellow-character"></div>
+    
+    <!-- 商品列表 -->
+    <div id="product-grid" class="product-grid">
+        <!-- 商品卡片將由JavaScript動態插入 -->
+        <p>正在加載商品...</p>
+    </div>
+    
+    <!-- 蝦皮推廣 -->
+    <div class="contribution-info">
+        <p>
+            <a href="https://shopee.tw/shop/43397905" target="_blank" rel="noopener noreferrer" class="shopee-link">
+                <span>習慣使用蝦皮？點此前往</span> 
+                <img src="/images/shopee.png" alt="蝦皮"> 
+                <span>蝦皮賣場選購</span>
+            </a>
+        </p>
+    </div>
+    
+    <!-- 返回頂部吉祥物按鈕 -->
+    <button id="back-to-top" class="back-to-top">
+        <div class="logo-circle">
+            <img src="/images/logo-icon.png" alt="SunnyYummy" />
         </div>
-
-        
-
-
-      
-
-
-        <div class="contribution-info">
-            <p style="margin-top: 10px;">
-                <a href="https://shopee.tw/shop/43397905" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px;">
-                    <span>習慣使用蝦皮？點此前往</span> 
-                    <img src="/images/shopee.png" alt="蝦皮" style="height: 20px; width: auto;"> 
-                    <span>蝦皮賣場選購</span>
-                </a>
-            </p>
-
-        </div>
-
-
-    </main>
-
-    <footer>
-      
+    </button>
+    
+    <!-- 底部導航 -->
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="/" class="active"><span class="icon">🛍️</span><span>商品</span></a></li>
+            <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
+            <li><a href="/news.html"><span class="icon">📢</span><span>消息</span></a></li>
+            <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
+            <li><a href="/games.html"><span class="icon">🎮</span><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><span class="icon">💬</span><span>留言</span></a></li>
+        </ul>
+    </nav>
+    
+    <!-- 頁腳 - 在大屏幕設備上顯示 -->
+    <footer class="desktop-footer">
         <div class="footer-container">
             <nav class="footer-nav">
-                <!-- Current page link -->
                 <a href="/">週邊商品</a>
-                <!-- Placeholder links -->
                 <a href="/music.html">音樂專輯</a>
-                
                 <a href="/news.html">最新消息</a>
-                <a href="/scores.html" >樂譜與舞蹈</a>
-                <a href="/games.html" >互動遊戲</a>
-                <a href="/guestbook.html" >留言板</a>
-                
-                
-                <!-- Link to the new admin page -->
-                
-                
+                <a href="/scores.html">樂譜與舞蹈</a>
+                <a href="/games.html">互動遊戲</a>
+                <a href="/guestbook.html">留言板</a>
             </nav>
-            <div class="footer-social">
-                <!-- 這裡可以放社群媒體圖示連結 (暫時留空或放文字) -->
-                <!-- 例如: <a href="#">FB</a> <a href="#">IG</a> -->
-            </div>
             <div class="footer-copyright">
-                <!-- 使用你原本的 copyright 或更新 -->
                 <p>© 2023 SunnyYummy. All rights reserved.</p>
             </div>
         </div>
-
-
     </footer>
-
-    <!-- Link to your JavaScript file -->
-    <script src="app.js"></script>
+    
+    <!-- Swiper JS -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="app拷貝.js"></script>
 </body>
 </html>
