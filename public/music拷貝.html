@@ -370,37 +370,67 @@ body {
     object-fit: cover;
 }
 
-/* 歌手下拉面板 */
-.artist-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
+/* 歌手導航抽屜 */
+.artist-drawer {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100%;
     background-color: white;
-    padding: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    z-index: 25;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-    max-height: 70vh;
+    z-index: 1050;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    transition: left 0.3s ease;
+    padding: 20px 15px;
     overflow-y: auto;
 }
 
-.artist-dropdown.open {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
+.artist-drawer.open {
+    left: 0;
 }
 
-.artist-grid {
+.artist-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.artist-drawer-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.artist-drawer-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #777;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.artist-drawer-close:hover {
+    background-color: #f0f0f0;
+}
+
+.artist-drawer-content {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
 }
 
-.artist-btn {
+.artist-drawer-btn {
     background-color: #f0f0f0;
     border: none;
     padding: 10px;
@@ -411,32 +441,32 @@ body {
     text-align: center;
 }
 
-.artist-btn:hover {
+.artist-drawer-btn:hover {
     background-color: #e0e0e0;
     transform: translateY(-2px);
 }
 
-.artist-btn.active {
+.artist-drawer-btn.active {
     background-color: #FFB74D;
     color: white;
     font-weight: bold;
     box-shadow: 0 2px 5px rgba(255, 183, 77, 0.3);
 }
 
-.dropdown-overlay {
+.drawer-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
-    z-index: 20;
+    z-index: 1040;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
 }
 
-.dropdown-overlay.visible {
+.drawer-overlay.visible {
     opacity: 1;
     visibility: visible;
 }
@@ -553,10 +583,6 @@ body {
     .desktop-footer {
         display: none; /* 手機版隱藏桌面頁腳 */
     }
-    
-    .artist-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 @media (min-width: 768px) {
@@ -590,8 +616,13 @@ body {
         padding: 10px 20px;
     }
     
-    .artist-grid {
-        grid-template-columns: repeat(4, 1fr);
+    .artist-drawer {
+        width: 350px;
+        max-width: 350px;
+    }
+    
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -605,8 +636,8 @@ body {
         height: 80px;
     }
     
-    .artist-grid {
-        grid-template-columns: repeat(5, 1fr);
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 </style>
@@ -629,33 +660,37 @@ body {
     <div class="category-tabs">
         <a href="#music" class="sort-link active" data-sort="music">音樂專輯</a>
         <a href="#scores" class="sort-link" data-sort="scores">樂譜</a>
-        <button id="artist-dropdown-btn" class="artist-btn">歌手列表</button>
+        <button id="artist-drawer-btn" class="artist-btn">歌手列表</button>
     </div>
-    
-    <!-- 歌手下拉面板 -->
-    <div id="artist-dropdown" class="artist-dropdown">
-        <div class="artist-grid" id="artist-grid">
-            <!-- 歌手按鈕將由 JavaScript 動態載入 -->
-            <button class="artist-btn active">全部歌手</button>
-            <button class="artist-btn">Paula</button>
-            <button class="artist-btn">SunnyYummy樂團</button>
-            <button class="artist-btn">亞米媽媽</button>
-            <button class="artist-btn">亞米爸爸</button>
-            <button class="artist-btn">恬恬</button>
-            <button class="artist-btn">林莉C亞米</button>
-            <button class="artist-btn">皓皓justin</button>
-            <button class="artist-btn">盒盒</button>
-            <button class="artist-btn">雪球軟糖</button>
-        </div>
-    </div>
-    
-    <!-- 下拉面板背景遮罩 -->
-    <div id="dropdown-overlay" class="dropdown-overlay"></div>
     
     <!-- 浮動角色 -->
     <div class="floating-character pink-character"></div>
     <div class="floating-character blue-character"></div>
     <div class="floating-character yellow-character"></div>
+    
+    <!-- 歌手導航抽屜 -->
+    <div id="artist-drawer" class="artist-drawer">
+        <div class="artist-drawer-header">
+            <div class="artist-drawer-title">歌手列表</div>
+            <button id="artist-drawer-close" class="artist-drawer-close">×</button>
+        </div>
+        <div id="artist-drawer-content" class="artist-drawer-content">
+            <!-- 歌手按鈕將由 JavaScript 動態載入 -->
+            <button class="artist-drawer-btn active">全部歌手</button>
+            <button class="artist-drawer-btn">Paula</button>
+            <button class="artist-drawer-btn">SunnyYummy樂團</button>
+            <button class="artist-drawer-btn">亞米媽媽</button>
+            <button class="artist-drawer-btn">亞米爸爸</button>
+            <button class="artist-drawer-btn">恬恬</button>
+            <button class="artist-drawer-btn">林莉C亞米</button>
+            <button class="artist-drawer-btn">皓皓justin</button>
+            <button class="artist-drawer-btn">盒盒</button>
+            <button class="artist-drawer-btn">雪球軟糖</button>
+        </div>
+    </div>
+    
+    <!-- 抽屜背景遮罩 -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
     
     <!-- 音樂專輯列表 -->
     <div id="music-list">
