@@ -228,65 +228,82 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function setupBackToTop() {
         try {
-            // 從API獲取設定
-            const response = await fetch('/api/ui-elements?type=back_to_top');
-            if (!response.ok) {
-                throw new Error(`獲取UI元素失敗: HTTP ${response.status}`);
-            }
-            
-            const settings = await response.json();
-            
-            if (!backToTopButton) {
-                console.error("返回頂部按鈕元素未找到！");
-                return;
-            }
-            
-            // 如果設定為不顯示，則直接返回
-            if (!settings.is_visible) {
-                backToTopButton.style.display = 'none';
-                return;
-            }
-            
-            // 更新圖片（如果有設定）
-            const logoImg = backToTopButton.querySelector('img');
-            if (logoImg && settings.image_url) {
-                logoImg.src = settings.image_url;
-                logoImg.alt = settings.alt_text || 'Back to top';
-            }
-            
-            // 應用自定義CSS（如果有設定）
-            if (settings.custom_css) {
-                try {
-                    Object.assign(backToTopButton.style, JSON.parse(settings.custom_css));
-                } catch (e) {
-                    console.warn("解析自定義CSS時出錯:", e);
-                }
-            }
-            
-            // 監聽滾動事件
-            window.addEventListener('scroll', function() {
-                const scrollTrigger = settings.settings?.scroll_trigger || 300;
-                if (window.scrollY > scrollTrigger) {
-                    backToTopButton.classList.add('visible');
-                } else {
-                    backToTopButton.classList.remove('visible');
-                }
-            });
-            
-            // 點擊回到頂部
-            backToTopButton.addEventListener('click', function() {
-                // 使用設定中的滾動速度
-                window.scrollTo({
-                    top: 0,
-                    behavior: settings.settings?.scroll_speed || 'smooth'
-                });
-            });
-        } catch (err) {
-            console.error('獲取返回頂部按鈕設定時出錯:', err);
-            // 使用默認行為作為備份
-            setupDefaultBackToTop();
+          // 修正 API 路徑
+        const response = await fetch('/api/ui-elements/type/back_to_top');
+        if (!response.ok) {
+            throw new Error(`獲取UI元素失敗: HTTP ${response.status}`);
         }
-    }
+        
+        const element = await response.json();
+        
+        if (!backToTopButton) {
+            console.error("返回頂部按鈕元素未找到！");
+            return;
+        }
+        
+        // 如果設定為不顯示，則直接返回
+        if (!element.is_visible) {
+            backToTopButton.style.display = 'none';
+            return;
+        }
+        
+        // 更新圖片（如果有設定）
+        const logoImg = backToTopButton.querySelector('img');
+        if (logoImg && element.image_url) {
+            logoImg.src = element.image_url;
+            logoImg.alt = element.alt_text || 'Back to top';
+        }
+          // 安全解析 settings
+          let settings = { scroll_trigger: 300, scroll_speed: 'smooth' };
+          try {
+              if (element.settings) {
+                  if (typeof element.settings === 'string') {
+                      settings = {...settings, ...JSON.parse(element.settings)};
+                  } else if (typeof element.settings === 'object') {
+                      settings = {...settings, ...element.settings};
+                  }
+              }
+          } catch (e) {
+              console.warn("解析 settings 時出錯:", e);
+          }
+          
+          // 應用自定義CSS（如果有設定）
+          if (element.custom_css) {
+              try {
+                  Object.assign(backToTopButton.style, JSON.parse(element.custom_css));
+              } catch (e) {
+                  console.warn("解析自定義CSS時出錯:", e);
+              }
+          }
+          
+          // 監聽滾動事件
+          window.addEventListener('scroll', function() {
+              const scrollTrigger = settings.scroll_trigger || 300;
+              if (window.scrollY > scrollTrigger) {
+                  backToTopButton.classList.add('visible');
+              } else {
+                  backToTopButton.classList.remove('visible');
+              }
+          });
+          
+          // 點擊回到頂部
+          backToTopButton.addEventListener('click', function() {
+              // 使用設定中的滾動速度
+              window.scrollTo({
+                  top: 0,
+                  behavior: settings.scroll_speed || 'smooth'
+              });
+          });
+          
+          // 確保按鈕可見
+          backToTopButton.style.display = '';
+          
+      } catch (err) {
+          console.error('獲取返回頂部按鈕設定時出錯:', err);
+          // 使用默認行為作為備份
+          setupDefaultBackToTop();
+      }
+  }
 
     // 默認行為作為備份
     function setupDefaultBackToTop() {
