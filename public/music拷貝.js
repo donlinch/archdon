@@ -5,7 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const artistFilterNav = document.getElementById('artist-filter');
     const sortLinks = document.querySelectorAll('.sort-link');
     const backToTopButton = document.getElementById('back-to-top');
-    
+     // 獲取DOM元素
+     const artistDrawerContent = document.getElementById('artist-drawer-content');
+    const artistDrawerBtn = document.getElementById('artist-drawer-btn');
+    const artistDrawer = document.getElementById('artist-drawer');
+    const artistDrawerClose = document.getElementById('artist-drawer-close');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+     
     // 當前狀態
     let currentArtistFilter = null;
     let currentSortBy = 'music'; // 預設為音樂專輯
@@ -17,7 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSortLinks();
     setupBackToTop();
     setupCharacterInteractions();
-    
+
+     
+      setupDrawer();
+      
     /**
      * 初始化Swiper輪播
      */
@@ -102,6 +111,46 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
     
+    /**
+     * 設置歌手導航抽屜
+     */
+    function setupDrawer() {
+        // 點擊按鈕打開抽屜
+        artistDrawerBtn.addEventListener('click', () => {
+            openDrawer();
+        });
+        
+        // 點擊關閉按鈕關閉抽屜
+        artistDrawerClose.addEventListener('click', () => {
+            closeDrawer();
+        });
+        
+        // 點擊遮罩關閉抽屜
+        drawerOverlay.addEventListener('click', () => {
+            closeDrawer();
+        });
+        
+        // 打開抽屜函數
+        function openDrawer() {
+            artistDrawer.classList.add('open');
+            drawerOverlay.classList.add('visible');
+            document.body.style.overflow = 'hidden'; // 防止背景滾動
+        }
+        
+        // 關閉抽屜函數
+        function closeDrawer() {
+            artistDrawer.classList.remove('open');
+            drawerOverlay.classList.remove('visible');
+            document.body.style.overflow = ''; // 恢復滾動
+        }
+        
+        // ESC 鍵關閉抽屜
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && artistDrawer.classList.contains('open')) {
+                closeDrawer();
+            }
+        });
+    }
     /**
      * 專輯卡片漸入動畫
      */
