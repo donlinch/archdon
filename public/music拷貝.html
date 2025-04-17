@@ -15,8 +15,7 @@
     <!-- Favicon -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#FFB74D">
+     <meta name="theme-color" content="#FFB74D">
     
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
@@ -30,9 +29,6 @@
 
 
 <style>
-
-
-
 /* --- 基本樣式 --- */
 * {
     margin: 0;
@@ -435,6 +431,191 @@ body {
     gap: 10px;
 }
 
+.scores-filter-btn {
+    background-color: #f9beaa;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s;
+    cursor: pointer;
+    text-align: center;
+}
+
+.scores-filter-btn:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-2px);
+}
+
+.scores-filter-btn.active {
+    background-color: #FFB74D;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(255, 183, 77, 0.3);
+}
+
+.scores-filter-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1055;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.scores-filter-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+#song-list-container {
+    margin-top: 10px;
+}
+
+#song-list {
+    list-style: none;
+    padding: 0;
+}
+
+#song-list li {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+#song-list li:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.song-list-info {
+    padding: 15px;
+}
+
+.song-title {
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.song-artist {
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.song-list-scores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.list-score-btn {
+    background-color: #90CAF9; /* 藍色 */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.list-score-btn:hover {
+    background-color: #42A5F5;
+    transform: translateY(-2px);
+}
+
+/* --- 響應式設計 --- */
+@media (max-width: 767px) {
+    .album-grid {
+        gap: 12px;
+    }
+    
+    .desktop-footer {
+        display: none; /* 手機版隱藏桌面頁腳 */
+    }
+}
+
+@media (min-width: 768px) {
+    .album-grid {
+        grid-template-columns: repeat(3, 1fr); /* 平板3列 */
+        gap: 20px;
+    }
+    
+    body {
+        padding-bottom: 0; /* 取消底部填充 */
+    }
+    
+    .bottom-nav {
+        display: none; /* 隱藏底部導航 */
+    }
+    
+    .back-to-top {
+        bottom: 20px; /* 調整位置 */
+    }
+    
+    .desktop-footer {
+        display: block; /* 顯示桌面頁腳 */
+    }
+    
+    .category-tabs {
+        padding: 15px 20px;
+    }
+    
+    .category-tabs a, .category-tabs button {
+        font-size: 16px;
+        padding: 10px 20px;
+    }
+    
+    .artist-drawer {
+        width: 350px;
+        max-width: 350px;
+    }
+    
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .scores-filter-artists {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .album-grid {
+        grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
+    }
+    
+    .floating-character {
+        width: 80px; /* 電腦版放大浮動角色 */
+        height: 80px;
+    }
+    
+    .artist-drawer-content {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .scores-filter-modal {
+        max-width: 500px;
+    }
+    
+    .scores-filter-artists {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
 .artist-drawer-btn {
     background-color: #f9beaa;
     border: none;
@@ -608,147 +789,114 @@ body {
 }
 
 /* --- 樂譜相關樣式 --- */
-#song-list-container {
-    margin-top: 15px;
+.scores-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0 5px;
 }
 
-#song-list-container h2 {
+.scores-header h2 {
     font-size: 1.5rem;
     color: #333;
-    margin-bottom: 15px;
-    text-align: center;
+    margin: 0;
 }
 
-#song-list {
-    list-style: none;
-    padding: 0;
-}
-
-#song-list li {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-bottom: 16px;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-#song-list li:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.song-list-info {
-    padding: 15px;
-}
-
-.song-title {
-    display: block;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #333;
-}
-
-.song-artist {
-    display: block;
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 10px;
-}
-
-.song-list-scores {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.list-score-btn {
-    background-color: #90CAF9; /* 藍色 */
+.scores-filter-btn {
+    background-color: #90CAF9;
     color: white;
     border: none;
     border-radius: 20px;
-    font-size: 12px;
-    padding: 5px 10px;
+    padding: 8px 15px;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.list-score-btn:hover {
+.scores-filter-btn:hover {
     background-color: #42A5F5;
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* --- 響應式設計 --- */
-@media (max-width: 767px) {
-    .album-grid {
-        gap: 12px;
-    }
-    
-    .desktop-footer {
-        display: none; /* 手機版隱藏桌面頁腳 */
-    }
+.scores-filter-btn:active {
+    transform: translateY(1px);
 }
 
-@media (min-width: 768px) {
-    .album-grid {
-        grid-template-columns: repeat(3, 1fr); /* 平板3列 */
-        gap: 20px;
-    }
-    
-    body {
-        padding-bottom: 0; /* 取消底部填充 */
-    }
-    
-    .bottom-nav {
-        display: none; /* 隱藏底部導航 */
-    }
-    
-    .back-to-top {
-        bottom: 20px; /* 調整位置 */
-    }
-    
-    .desktop-footer {
-        display: block; /* 顯示桌面頁腳 */
-    }
-    
-    .category-tabs {
-        padding: 15px 20px;
-    }
-    
-    .category-tabs a, .category-tabs button {
-        font-size: 16px;
-        padding: 10px 20px;
-    }
-    
-    .artist-drawer {
-        width: 350px;
-        max-width: 350px;
-    }
-    
-    .artist-drawer-content {
-        grid-template-columns: repeat(3, 1fr);
-    }
+/* 樂譜歌手篩選彈窗 */
+.scores-filter-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 90%;
+    max-width: 350px;
+    background-color: white;
+    border-radius: 15px;
+    z-index: 1060;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    overflow: hidden;
 }
 
-@media (min-width: 1024px) {
-    .album-grid {
-        grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
-    }
-    
-    .floating-character {
-        width: 80px; /* 電腦版放大浮動角色 */
-        height: 80px;
-    }
-    
-    .artist-drawer-content {
-        grid-template-columns: repeat(3, 1fr);
-    }
+.scores-filter-modal.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
 }
 
+.scores-filter-content {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
 
+.scores-filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
 
+.scores-filter-header h3 {
+    font-size: 18px;
+    color: #333;
+    margin: 0;
+}
+
+.scores-filter-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #777;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.scores-filter-close:hover {
+    background-color: #f0f0f0;
+}
+
+.scores-filter-artists {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
 </style>
 
 
@@ -805,14 +953,36 @@ body {
 
     <!-- 樂譜列表 -->
     <div id="scores-list" class="content-view" style="display: none;">
-        <div id="song-list-container">   
+        <div class="scores-header">
             <h2>歌曲樂譜列表</h2>
+            <button id="scores-filter-btn" class="scores-filter-btn">歌手篩選</button>
+        </div>
+        
+        <div id="song-list-container">   
             <ul id="song-list">
                 <p>載入樂譜中...</p>
                 <!-- 歌曲項目會由 JS 生成 -->
             </ul>
         </div>
     </div>
+    
+    <!-- 樂譜歌手篩選彈窗 -->
+    <div id="scores-filter-modal" class="scores-filter-modal">
+        <div class="scores-filter-content">
+            <div class="scores-filter-header">
+                <h3>按歌手篩選樂譜</h3>
+                <button id="scores-filter-close" class="scores-filter-close">×</button>
+            </div>
+            <div id="scores-filter-artists" class="scores-filter-artists">
+                <!-- 歌手篩選按鈕將由 JavaScript 動態載入 -->
+                <button class="scores-filter-btn active">全部歌手</button>
+                <button class="scores-filter-btn">載入中...</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 樂譜篩選背景遮罩 -->
+    <div id="scores-filter-overlay" class="scores-filter-overlay"></div>
     
     <!-- 返回頂部按鈕 -->
     <button id="back-to-top" class="back-to-top">
@@ -852,6 +1022,6 @@ body {
     
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="music拷貝.js"></script>
+    <script src="music拷貝.js" type="module"></script>
 </body>
 </html>
