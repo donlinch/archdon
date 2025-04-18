@@ -622,70 +622,86 @@
                 transform: translateY(0);
             }
         }
+      
 
-        /* --- 響應式設計 --- */
-        @media (max-width: 767px) {
-            .songs-grid {
-                gap: 12px;
-            }
-            
-            .desktop-footer {
-                display: none; /* 手機版隱藏桌面頁腳 */
-            }
+/* --- 響應式設計 --- */
+@media (max-width: 767px) {
+    .songs-grid {
+        gap: 12px;
+    }
+    
+    .desktop-footer {
+        display: none; /* 手機版隱藏桌面頁腳 */
+    }
 
-            .song-list-item {
-                flex-direction: column;
-            }
+    /* 移除這裡的樣式，讓窄螢幕布局跟寬螢幕一樣 */
+    /*
+    .song-list-item {
+        flex-direction: column;
+    }
 
-            .song-list-icon {
-                margin-bottom: 10px;
-            }
-        }
+    .song-list-icon {
+        margin-bottom: 10px;
+    }
+    */
+    
+    /* 保持布局一致 */
+    .song-list-item {
+        flex-direction: row;
+        align-items: center;
+        padding: 10px;
+    }
+    
+    .song-list-icon {
+        margin-bottom: 0;
+    }
+}
 
-        @media (min-width: 768px) {
-            .songs-grid {
-                grid-template-columns: repeat(3, 1fr); /* 平板3列 */
-                gap: 20px;
-            }
-            
-            body {
-                padding-bottom: 0; /* 取消底部填充 */
-            }
-            
-            .bottom-nav {
-                display: none; /* 隱藏底部導航 */
-            }
-            
-            .back-to-top {
-                bottom: 20px; /* 調整位置 */
-            }
-            
-            .desktop-footer {
-                display: block; /* 顯示桌面頁腳 */
-            }
-            
-            .category-tabs {
-                padding: 15px 20px;
-            }
-            
-            .category-tabs a, .category-tabs button {
-                font-size: 16px;
-                padding: 10px 20px;
-            }
+@media (min-width: 768px) {
+    .songs-grid {
+        grid-template-columns: repeat(3, 1fr); /* 平板3列 */
+        gap: 20px;
+    }
+    
+    body {
+        padding-bottom: 0; /* 取消底部填充 */
+    }
+    
+    .bottom-nav {
+        display: none; /* 隱藏底部導航 */
+    }
+    
+    .back-to-top {
+        bottom: 20px; /* 調整位置 */
+    }
+    
+    .desktop-footer {
+        display: block; /* 顯示桌面頁腳 */
+    }
+    
+    .category-tabs {
+        padding: 15px 20px;
+    }
+    
+    .category-tabs a, .category-tabs button {
+        font-size: 16px;
+        padding: 10px 20px;
+    }
 
-            .song-list-item {
-                flex-direction: row;
-                align-items: center;
-            }
-        }
+    /* 這一行是多餘的，因為我們希望窄屏和寬屏都保持一樣的布局 */
+    /*
+    .song-list-item {
+        flex-direction: row;
+        align-items: center;
+    }
+    */
+}
 
-        @media (min-width: 1024px) {
-            .songs-grid {
-                grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
-            }
-        }
- 
-
+@media (min-width: 1024px) {
+    .songs-grid {
+        grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
+    }
+}
 /* --- 歌曲列表視圖 --- */
 .songs-list {
     display: flex;
