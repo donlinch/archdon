@@ -3383,68 +3383,134 @@ function handleWebSocketMessage(ws, message) {
 
 // 定義保存所有遊戲房間的Map
 const gameRooms = new Map();
-// 在server.js中添加
+
+
+
+
+
+// --- ★★★ 使用這個修正後的 wss.on('connection') ★★★ ---
 wss.on('connection', (ws, req) => {
     // 解析URL參數
-    const url = new URL(req.url, 'http://localhost');
+    const url = new URL(req.url, `http://${req.headers.host}`); // 使用 host 比較保險
     const clientType = url.searchParams.get('clientType');
-    const roomId = url.searchParams.get('roomId') || 'default';
-    
-    // 儲存客戶端類型和房間ID
+    const roomId = url.searchParams.get('roomId'); // 直接獲取，如果沒有就是 null
+
+    // 基本驗證
+    if (!roomId || !clientType) {
+        console.warn(`[WS] Connection attempt without roomId or clientType. URL: ${req.url}`);
+        ws.close(1008, "Room ID and Client Type are required.");
+        return;
+    }
+
+    // 儲存客戶端類型和房間ID 到 ws 物件上
     ws.clientType = clientType;
     ws.roomId = roomId;
-    
+
     console.log(`[WS] New connection: ${clientType} in room ${roomId}`);
-    
-    // 如果房間不存在，創建房間
-    if (!gameRooms.has(roomId)) {
-        gameRooms.set(roomId, {
-            roomName: `房間 ${roomId}`,
-            state: {
-                currentTemplateId: null,
-                selectedPlayer: 1,
-                playerPathIndices: [0, 0, 0],
-                highlightedCell: null,
-                isMoving: false,
-                players: {}
-            },
-            gameClient: null,
-            controllerClients: new Set(),
-            createdAt: new Date().toISOString(),
-            lastActive: Date.now()
-        });
-    }
-    
-    // 獲取該房間
+
+    // --- 獲取該房間 ---
+    // *** 非常重要：確保在連接時房間已經被創建 ***
+    // *** 遊戲客戶端或控制器不應該負責在連接時創建房間 ***
     const room = gameRooms.get(roomId);
+
+    // 如果房間不存在，直接關閉連接
+    if (!room) {
+        console.warn(`[WS] Room ${roomId} not found for connecting client ${clientType}. Terminating.`);
+        ws.close(1011, "Room not found or has been closed.");
+        return;
+    }
+
+    // 更新房間最後活動時間
     room.lastActive = Date.now();
-    
-    // 根據客戶端類型處理連接
+
+    // --- 根據客戶端類型處理連接 ---
     if (clientType === 'game') {
+        // (可選) 處理重複的遊戲客戶端連接 (例如踢掉舊的)
+        if (room.gameClient && room.gameClient !== ws && room.gameClient.readyState === WebSocket.OPEN) {
+            console.warn(`[WS] Room ${roomId} already has a game client. Disconnecting the old one.`);
+            room.gameClient.close(1001, "New game client connected, replacing old one.");
+        }
+
+        // 設置新的遊戲客戶端
         room.gameClient = ws;
-        broadcastToControllers(roomId, { 
-            type: 'gameStatus', 
+        console.log(`[WS] Game client assigned for room ${roomId}.`);
+
+        // --->>> ★★★ 核心修正：發送初始狀態給這個剛連接的遊戲客戶端 ★★★ <<<---
+        console.log(`[WS Debug] Preparing to send initial state to game client in room ${roomId}.`);
+        try {
+            // 確保 room.state 存在且是可序列化的物件
+            if (!room.state || typeof room.state !== 'object') {
+                 console.error(`[WS Error] Room ${roomId} state is invalid or missing! Cannot send initial state.`);
+                 // 可以考慮發送一個錯誤訊息給客戶端或直接關閉連接
+                 ws.send(JSON.stringify({ type: 'error', message: 'Server error: Invalid room state.' }));
+            } else {
+                const initialStateMessage = JSON.stringify({
+                    type: 'gameStateUpdate',
+                    data: room.state // 發送伺服器上這個房間的當前狀態
+                });
+                ws.send(initialStateMessage);
+                console.log(`[WS Debug] Successfully sent initial state to game client in room ${roomId}. State:`, room.state);
+            }
+        } catch (sendError) {
+            console.error(`[WS Error] Failed to send initial state to game client in room ${roomId}:`, sendError);
+            // 這裡出錯通常表示 ws 連接剛建立就立刻出問題了
+        }
+        // --->>> ★★★ 修正結束 ★★★ <<<---
+
+        // 通知所有控制器：遊戲客戶端已連接
+        broadcastToControllers(roomId, {
+            type: 'gameStatus',
             status: 'connected',
             roomId: roomId
         });
+
     } else if (clientType === 'controller') {
+        // 添加控制器到房間
         room.controllerClients.add(ws);
+        console.log(`[WS] Controller added to room ${roomId}. Total controllers: ${room.controllerClients.size}`);
+
+        // 發送當前的遊戲狀態 (遊戲是否已連接) 給這個剛連接的控制器
         ws.send(JSON.stringify({
             type: 'gameStatus',
-            status: room.gameClient ? 'connected' : 'disconnected',
+            status: room.gameClient && room.gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected',
             roomId: roomId
         }));
+
+        // 同時也發送完整的遊戲狀態給這個剛連接的控制器，讓它能同步UI
+        console.log(`[WS Debug] Sending initial state to newly connected controller in room ${roomId}.`);
+        try {
+             if (!room.state || typeof room.state !== 'object') {
+                  console.error(`[WS Error] Room ${roomId} state is invalid or missing! Cannot send initial state to controller.`);
+                  ws.send(JSON.stringify({ type: 'error', message: 'Server error: Invalid room state.' }));
+             } else {
+                 const initialStateMessage = JSON.stringify({
+                     type: 'gameStateUpdate',
+                     data: room.state
+                 });
+                 ws.send(initialStateMessage);
+                 console.log(`[WS Debug] Successfully sent initial state to controller in room ${roomId}.`);
+             }
+        } catch(sendError) {
+             console.error(`[WS Error] Failed to send initial state to controller in room ${roomId}:`, sendError);
+        }
+
+    } else {
+         console.warn(`[WS] Unknown clientType: ${clientType}. Closing connection.`);
+         ws.close(1008, "Invalid client type.");
+         return; // 結束處理
     }
-    
-    // 設置消息處理器
+
+    // --- 為這個新的連接設置消息、關閉、錯誤處理器 ---
     ws.on('message', (message) => handleWebSocketMessage(ws, message));
-    
-    // 設置關閉處理器
     ws.on('close', () => handleWebSocketClose(ws));
-    
-    // 設置錯誤處理器
     ws.on('error', (error) => handleWebSocketError(ws, error));
 });
+
+
+
+
+
+
 
 function broadcastToControllers(roomId, message) {
     const room = gameRooms.get(roomId);
