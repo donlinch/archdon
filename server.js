@@ -3393,45 +3393,6 @@ function broadcastToControllers(roomId, message) {
 
 
  
-app.post('/api/game-rooms', (req, res) => {
-    const { roomName, templateId } = req.body;
-    
-    // 簡單驗證
-    if (!roomName || !roomName.trim()) {
-        return res.status(400).json({ error: '房間名稱為必填項' });
-    }
-    if (!templateId) {
-        return res.status(400).json({ error: '必須選擇一個遊戲模板' });
-    }
-    
-    // 生成唯一ID
-    const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    
-    // 創建新房間
-    gameRooms.set(roomId, {
-        roomName: roomName.trim(),
-        state: {
-            currentTemplateId: templateId,
-            selectedPlayer: 1,
-            playerPathIndices: [0, 0, 0],
-            highlightedCell: null,
-            isMoving: false,
-            players: {}
-        },
-        gameClient: null,
-        controllerClients: new Set(),
-        createdAt: new Date().toISOString(),
-        lastActive: Date.now()
-    });
-    
-    res.status(201).json({ 
-        id: roomId, 
-        roomName: roomName.trim(), 
-        templateId: templateId
-    });
-});
-
-
 
 
 
@@ -3466,23 +3427,19 @@ app.get('/api/game-rooms', (req, res) => {
     }
     res.json(roomsArray);
 });
-
 // 創建新房間
 app.post('/api/game-rooms', (req, res) => {
     const { roomName, templateId } = req.body;
-    
-    // 簡單驗證
+
     if (!roomName || !roomName.trim()) {
         return res.status(400).json({ error: '房間名稱為必填項' });
     }
     if (!templateId) {
         return res.status(400).json({ error: '必須選擇一個遊戲模板' });
     }
-    
-    // 生成唯一ID
+
     const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    
-    // 創建新房間
+
     gameRooms.set(roomId, {
         roomName: roomName.trim(),
         state: {
@@ -3498,7 +3455,7 @@ app.post('/api/game-rooms', (req, res) => {
         createdAt: new Date().toISOString(),
         lastActive: Date.now()
     });
-    
+
     res.status(201).json({ 
         id: roomId, 
         roomName: roomName.trim(), 
