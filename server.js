@@ -3425,14 +3425,11 @@ wss.on('connection', (ws, req) => {
 
     // --- 根據客戶端類型處理連接 ---
     if (clientType === 'game') {
-        // (可選) 處理重複的遊戲客戶端連接 (例如踢掉舊的)
-        if (room.gameClient && room.gameClient !== ws && room.gameClient.readyState === WebSocket.OPEN) {
-            console.warn(`[WS] Room ${roomId} already has a game client. Disconnecting the old one.`);
-            room.gameClient.close(1001, "New game client connected, replacing old one.");
-        }
-
-        // 設置新的遊戲客戶端
-        room.gameClient = ws;
+        // --->>> 簡化邏輯：直接覆蓋舊的 gameClient <<<---
+        // 移除之前的 if 判斷和 room.gameClient.close()
+        console.log(`[WS] Assigning new game client for room ${roomId}. Previous client (if any) will be implicitly replaced.`);
+        room.gameClient = ws; // <--- 無論如何都用新的 ws 覆蓋
+        // --->>> 簡化結束 <<<---
         console.log(`[WS] Game client assigned for room ${roomId}.`);
 
         // --->>> ★★★ 核心修正：發送初始狀態給這個剛連接的遊戲客戶端 ★★★ <<<---
