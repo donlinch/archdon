@@ -684,8 +684,7 @@
                 grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
             }
         }
-
-
+ 
 
 /* --- 歌曲列表視圖 --- */
 .songs-list {
@@ -717,17 +716,18 @@
 }
 
 .song-list-icon {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 32px;
     color: #FFB74D;
-    margin-right: 12px;
+    margin-right: 15px;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
 .song-list-icon img {
@@ -740,19 +740,20 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: center;
 }
 
-.song-list-title-row {
+.song-list-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     margin-bottom: 8px;
 }
 
 .song-list-title {
     font-size: 16px;
+    font-weight: bold;
     margin: 0;
-    margin-right: 8px;
+    margin-right: 12px;
     color: #333;
 }
 
@@ -765,22 +766,6 @@
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
-}
-
-/* 在手機裝置上調整布局 */
-@media (max-width: 576px) {
-    .song-list-title-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .song-list-title {
-        margin-bottom: 4px;
-    }
-    
-    .song-list-scores {
-        margin-top: 5px;
-    }
 }
 
 

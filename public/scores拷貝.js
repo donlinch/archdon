@@ -267,6 +267,13 @@ function renderSongsGrid(songs) {
         });
     }, 100);
 }
+
+
+
+
+
+
+/* 更新的 renderSongsList 函數 */
 function renderSongsList(songs) {
     if (!songsContainer) return;
     
@@ -311,7 +318,7 @@ function renderSongsList(songs) {
                     ${coverImage || '🎵'}
                 </div>
                 <div class="song-list-info">
-                    <div class="song-list-title-row">
+                    <div class="song-list-header">
                         <h3 class="song-list-title">${song.title || '未知標題'}</h3>
                         <span class="song-list-artist">${song.artist || '未知歌手'}</span>
                     </div>
@@ -335,6 +342,14 @@ function renderSongsList(songs) {
         });
     }, 100);
 }
+
+
+
+
+
+
+
+
 function renderSongDetail(song) {
     if (!songInfo || !youtubePlayerContainer || !songDetailContainer) return;
 
