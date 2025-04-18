@@ -231,138 +231,214 @@
         </div>
     </div>
     
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const roomNameInput = document.getElementById('room-name');
-            const templateSelect = document.getElementById('template-select');
-            const createRoomBtn = document.getElementById('create-room-btn');
-            const roomsList = document.getElementById('rooms-list');
-            
-            // 載入模板列表
-            async function loadTemplates() {
-                try {
-                    const response = await fetch('/api/rich-map/templates');
-                    if (!response.ok) throw new Error(`Failed to fetch templates list: ${response.status}`);
-                    const templates = await response.json();
-                    
-                    templateSelect.innerHTML = ''; // 清除載入中選項
-                    if (templates.length === 0) {
-                        templateSelect.innerHTML = '<option value="">無可用模板</option>';
-                        createRoomBtn.disabled = true;
-                    } else {
-                        templates.forEach(template => {
-                            const option = document.createElement('option');
-                            option.value = template.id;
-                            option.textContent = template.template_name;
-                            templateSelect.appendChild(option);
-                        });
-                    }
-                } catch (error) {
-                    console.error("Error loading templates:", error);
-                    templateSelect.innerHTML = '<option value="">載入模板失敗</option>';
-                    createRoomBtn.disabled = true;
+    <script>    document.addEventListener('DOMContentLoaded', () => {
+        const roomNameInput = document.getElementById('room-name');
+        const templateSelect = document.getElementById('template-select');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const roomsListDiv = document.getElementById('rooms-list'); // 修改變數名稱以清晰
+
+        // --- 1. 載入遊戲模板列表 ---
+        async function loadTemplates() {
+            console.log('[Templates] Fetching template list...');
+            templateSelect.innerHTML = '<option value="">載入中...</option>'; // 顯示載入中
+            createRoomBtn.disabled = true; // 禁用創建按鈕直到模板載入
+
+            try {
+                const response = await fetch('/api/rich-map/templates');
+                if (!response.ok) {
+                    throw new Error(`獲取模板列表失敗: ${response.status}`);
                 }
-            }
-            
-            // 載入房間列表
-            async function loadRooms() {
-                try {
-                    const response = await fetch('/api/game-rooms');
-                    if (!response.ok) throw new Error(`Failed to fetch rooms: ${response.status}`);
-                    const rooms = await response.json();
-                    
-                    roomsList.innerHTML = ''; // 清除之前的列表
-                    
-                    if (rooms.length === 0) {
-                        roomsList.innerHTML = '<div class="no-rooms">目前沒有活動的房間，創建一個新房間開始玩吧！</div>';
-                        return;
-                    }
-                    
-                    rooms.forEach(room => {
-                        const roomCard = document.createElement('div');
-                        roomCard.className = 'room-card';
-                        
-                        const playersCount = Object.keys(room.players || {}).length;
-                        const templateName = room.templateName || '未知模板';
-                        
-                        roomCard.innerHTML = `
-                            <div class="room-name">${room.roomName || '匿名房間'}</div>
-                            <div class="room-details">
-                                <div>模板: ${templateName}</div>
-                                <div>玩家: ${playersCount}/3</div>
-                                <div>創建時間: ${new Date(room.createdAt).toLocaleString()}</div>
-                            </div>
-                            <div class="room-actions">
-                                <a href="/rich.html?roomId=${room.id}" class="join-btn">加入遊戲</a>
-                                <a href="/rich-control.html?roomId=${room.id}" class="control-btn">控制器</a>
-                            </div>
-                        `;
-                        
-                        roomsList.appendChild(roomCard);
+                const templates = await response.json();
+                console.log('[Templates] Templates received:', templates);
+
+                templateSelect.innerHTML = ''; // 清除載入中
+                if (templates.length === 0) {
+                    templateSelect.innerHTML = '<option value="">無可用模板</option>';
+                    // 維持禁用創建按鈕
+                } else {
+                    templates.forEach(template => {
+                        const option = document.createElement('option');
+                        option.value = template.id;
+                        option.textContent = `${template.template_name} (ID: ${template.id})`; // 顯示名稱和ID
+                        templateSelect.appendChild(option);
                     });
-                } catch (error) {
-                    console.error("Error loading rooms:", error);
-                    roomsList.innerHTML = '<div class="no-rooms" style="color: #cc0000;">載入房間列表失敗，請稍後再試</div>';
+                    createRoomBtn.disabled = false; // 啟用創建按鈕
                 }
+            } catch (error) {
+                console.error("[Templates] Error loading templates:", error);
+                templateSelect.innerHTML = `<option value="">載入模板失敗 (${error.message})</option>`;
+                // 維持禁用創建按鈕
+            }
+        }
+
+
+
+ 
+
+
+
+// 定期清理不活躍的房間(每10分鐘)
+setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [roomId, room] of gameRooms.entries()) {
+        // 如果房間30分鐘沒有活動，清除它
+        if (now - room.lastActive > 30 * 60 * 1000) {
+            // 先關閉所有連接
+            if (room.gameClient && room.gameClient.readyState === WebSocket.OPEN) {
+                room.gameClient.close(1000, "Room inactive for too long");
             }
             
-            // 創建新房間
-            async function createRoom() {
-                const roomName = roomNameInput.value.trim();
-                const templateId = templateSelect.value;
-                
-                if (!roomName) {
-                    alert('請輸入房間名稱');
+            room.controllerClients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.close(1000, "Room inactive for too long");
+                }
+            });
+            
+            // 從Map中移除
+            gameRooms.delete(roomId);
+            cleanedCount++;
+        }
+    }
+    
+    if (cleanedCount > 0) {
+        console.log(`[Cleanup] Removed ${cleanedCount} inactive rooms. Current rooms: ${gameRooms.size}`);
+    }
+}, 10 * 60 * 1000);
+
+
+
+        // --- 2. 載入並渲染活躍房間列表 ---
+        async function loadRooms() {
+            console.log('[Rooms] Fetching active room list...');
+            // 可以先顯示一個載入提示
+            roomsListDiv.innerHTML = '<div class="no-rooms">正在載入房間列表...</div>'; 
+
+            try {
+                const response = await fetch('/api/game-rooms'); // 調用新的 API
+                if (!response.ok) {
+                    throw new Error(`獲取房間列表失敗: ${response.status}`);
+                }
+                const rooms = await response.json();
+                console.log('[Rooms] Rooms received:', rooms);
+
+                roomsListDiv.innerHTML = ''; // 清除載入提示或舊列表
+
+                if (rooms.length === 0) {
+                    roomsListDiv.innerHTML = '<div class="no-rooms">目前沒有活動的房間，創建一個新房間開始玩吧！</div>';
                     return;
                 }
-                
-                if (!templateId) {
-                    alert('請選擇遊戲模板');
-                    return;
-                }
-                
-                createRoomBtn.disabled = true;
-                createRoomBtn.textContent = '創建中...';
-                
-                try {
-                    const response = await fetch('/api/game-rooms', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            roomName,
-                            templateId
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error || `Failed to create room: ${response.status}`);
+
+                // 根據 createdAt 排序，最新的在前面 (可選)
+                rooms.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                rooms.forEach(room => {
+                    const roomCard = document.createElement('div');
+                    roomCard.className = 'room-card';
+
+                    // 處理創建時間顯示
+                    let createdAtStr = '未知';
+                    if (room.createdAt) {
+                        try {
+                            createdAtStr = new Date(room.createdAt).toLocaleString('zh-TW'); // 台灣時間格式
+                        } catch (e) {
+                            console.warn(`Invalid date format for room ${room.id}:`, room.createdAt);
+                        }
                     }
-                    
-                    const room = await response.json();
-                    
-                    // 創建成功後跳轉到遊戲頁面
-                    window.location.href = `/rich.html?roomId=${room.id}`;
-                } catch (error) {
-                    console.error("Error creating room:", error);
-                    alert(`創建房間失敗: ${error.message}`);
-                    createRoomBtn.disabled = false;
-                    createRoomBtn.textContent = '創建房間';
-                }
+
+                    roomCard.innerHTML = `
+                        <div class="room-name">${room.roomName || `房間 ${room.id}`}</div>
+                        <div class="room-details">
+                            <div>模板: ${room.templateName || '未知'} (ID: ${room.templateId || 'N/A'})</div>
+                            <div>在線玩家: ${room.playersCount || 0}</div>
+                            <div>遊戲狀態: ${room.hasGameClient ? '<span style="color: green;">進行中</span>' : '<span style="color: orange;">等待遊戲加入</span>'}</div>
+                            <div>創建時間: ${createdAtStr}</div>
+                        </div>
+                        <div class="room-actions">
+                            <!-- ★★★ 確保連結包含 roomId ★★★ -->
+                            <a href="/rich.html?roomId=${room.id}" class="join-btn">加入遊戲</a>
+                            <a href="/rich-control.html?roomId=${room.id}" class="control-btn">控制器</a>
+                        </div>
+                    `;
+                    roomsListDiv.appendChild(roomCard);
+                });
+
+            } catch (error) {
+                console.error("[Rooms] Error loading rooms:", error);
+                roomsListDiv.innerHTML = `<div class="no-rooms" style="color: #cc0000;">載入房間列表失敗 (${error.message})，請稍後再試</div>`;
             }
-            
-            // 設置事件監聽器
-            createRoomBtn.addEventListener('click', createRoom);
-            
-            // 初始化頁面
-            loadTemplates();
-            loadRooms();
-            
-            // 定期更新房間列表
-            setInterval(loadRooms, 30000); // 每30秒更新一次
-        });
+        }
+
+        // --- 3. 創建新房間 ---
+        async function createRoom() {
+            const roomName = roomNameInput.value.trim();
+            const templateId = templateSelect.value;
+
+            // 前端驗證
+            if (!roomName) {
+                alert('請輸入房間名稱！');
+                roomNameInput.focus();
+                return;
+            }
+            if (!templateId) {
+                alert('請選擇一個遊戲模板！');
+                templateSelect.focus();
+                return;
+            }
+
+            createRoomBtn.disabled = true;
+            createRoomBtn.textContent = '創建中...';
+
+            try {
+                const response = await fetch('/api/game-rooms', { // 調用新的 API
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        roomName: roomName,      // 確保鍵名與後端一致
+                        templateId: templateId   // 確保鍵名與後端一致
+                    })
+                });
+
+                const result = await response.json(); // 嘗試解析 JSON
+
+                if (!response.ok) {
+                    // 顯示後端返回的錯誤訊息
+                    throw new Error(result.error || `創建失敗 (${response.status})`);
+                }
+
+                console.log('[Rooms] Room created successfully:', result);
+                alert(`房間 "${result.roomName}" 已創建！正在加入遊戲...`);
+
+                // --- 成功創建後，直接跳轉到該房間的遊戲頁面 ---
+                window.location.href = `/rich.html?roomId=${result.id}`; 
+                // 或者你可以選擇只刷新房間列表:
+                // roomNameInput.value = ''; // 清空輸入框
+                // loadRooms(); 
+
+            } catch (error) {
+                console.error("[Rooms] Error creating room:", error);
+                alert(`創建房間失敗：\n${error.message}`);
+            } finally {
+                // 無論成功或失敗，恢復按鈕狀態
+                createRoomBtn.disabled = false;
+                createRoomBtn.textContent = '創建房間';
+            }
+        }
+
+        // --- 4. 綁定事件監聽器 ---
+        createRoomBtn.addEventListener('click', createRoom);
+
+        // --- 5. 初始化頁面 ---
+        loadTemplates(); // 載入模板選項
+        loadRooms();     // 載入現有房間
+
+        // --- 6. (可選) 定期刷新房間列表 ---
+        setInterval(loadRooms, 20000); // 例如每 20 秒刷新一次
+
+    });
     </script>
 </body>
 </html>

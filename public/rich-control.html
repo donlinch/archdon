@@ -412,258 +412,305 @@
 
 
     </div>
-    <script> document.addEventListener('DOMContentLoaded', () => {
-        const player1Btn = document.getElementById('player1-btn');
-        const player2Btn = document.getElementById('player2-btn');
-        const player3Btn = document.getElementById('player3-btn');
-        // --- ★★★ 新增：獲取名稱元素 ★★★ ---
-        const player1NameEl = document.getElementById('player1-name');
-        const player2NameEl = document.getElementById('player2-name');
-        const player3NameEl = document.getElementById('player3-name');
-        // --- ★★★ 新增結束 ★★★ ---
-        const forwardBtn = document.getElementById('forward-btn');
-        const backwardBtn = document.getElementById('backward-btn');
-        const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
-        const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
-        const connectionStatusDiv = document.getElementById('connection-status');
-
-        let selectedPlayer = 1;
-        let ws = null;
-        let gameIsConnected = false;
-        // ★★★ 確保選取所有按鈕，以便禁用/啟用 ★★★
-        const allControlButtons = document.querySelectorAll('.controller-container button');
-
-
-
-// 控制器的 WebSocket 連接改進 (rich-control.js)
-function connectWebSocket() {
-    // 從URL獲取房間ID
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('roomId') || 'default';
+    <script> 
     
-    const wsUrl = `wss://${window.location.host}?clientType=controller&roomId=${roomId}`;
-    ws = new WebSocket(wsUrl);
 
 
- 
 
-  ws.onopen = () => {
-    console.log("Controller WebSocket Connected");
-    // 連接成功後，先顯示為連接中狀態
-    connectionStatusDiv.className = 'connection-status connecting';
-    connectionStatusDiv.textContent = '等待遊戲連接...';
-    // 立即請求遊戲狀態
-    sendCommand('getGameState');
-  };
 
-  ws.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      console.log("Message from game:", message); // 調試日誌
+// ✅ rich-control.js (支援多房間 + 伺服器狀態同步)
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM 元素獲取 ---
+    const player1Btn = document.getElementById('player1-btn');
+    const player2Btn = document.getElementById('player2-btn');
+    const player3Btn = document.getElementById('player3-btn');
+    const player1NameEl = document.getElementById('player1-name');
+    const player2NameEl = document.getElementById('player2-name');
+    const player3NameEl = document.getElementById('player3-name');
+    const forwardBtn = document.getElementById('forward-btn');
+    const backwardBtn = document.getElementById('backward-btn');
+    const showPlayerInfoBtn = document.getElementById('show-player-info-btn');
+    const hidePlayerInfoBtn = document.getElementById('hide-player-info-btn');
+    const connectionStatusDiv = document.getElementById('connection-status');
+    const allControlButtons = document.querySelectorAll('.controller-container button'); // 用於啟用/禁用
 
-      if (message.type === 'gameStateUpdate') {
-        // 收到遊戲狀態更新，表示遊戲已連接
-        gameIsConnected = true;
-        updateGameInfo(message.data); // 更新按鈕狀態
-        if (message.data.players) {
-          updatePlayerUI(message.data.players);
-        }
-        // 更新連接狀態 UI
-        updateConnectionStatusUI(true);
-        // 啟用控制按鈕
-        setControlsEnabled(true);
-      } else if (message.type === 'error') {
-        console.error("Error message from server:", message.message);
-      } else if (message.type === 'gameStatus') {
-        console.log("Received gameStatus:", message.status);
-        // 根據伺服器明確的狀態更新 UI
-        const isConnected = message.status === 'connected';
-        gameIsConnected = isConnected; // 更新全局連接狀態
-        updateConnectionStatusUI(isConnected);
-        setControlsEnabled(isConnected);
-      }
-    } catch (e) {
-      console.error("Failed to parse message or update UI:", e);
+    // --- ★★★ 1. 獲取 roomId ★★★ ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+
+    if (!roomId) {
+        updateConnectionStatusUI(false, '錯誤：缺少房間 ID！');
+        // 禁用所有按鈕
+        setControlsEnabled(false, true); // 禁用所有按鈕，包括玩家選擇
+        alert('錯誤：缺少房間 ID！請從房間列表頁面進入。');
+        // 可以考慮跳轉回房間列表
+        // window.location.href = '/rich-room.html'; 
+        return; // 停止執行
     }
-  };
+    console.log(`[Controller] Joining room: ${roomId}`);
+    // --- ★★★ 獲取 roomId 結束 ★★★ ---
 
-  ws.onclose = () => {
-    console.log("Controller WebSocket Closed");
-    gameIsConnected = false;
-    setControlsEnabled(false);
-    updateConnectionStatusUI(false);
-    ws = null;
-    // 延遲重連
-    setTimeout(connectWebSocket, 5000);
-  };
 
-  ws.onerror = (error) => {
-    console.error("Controller WebSocket Error:", error);
-    // onclose 通常會在錯誤後觸發，啟動重連邏輯
-  }
-}
+    // --- 本地狀態 ---
+    let localSelectedPlayer = 1; // 控制器本地選擇的玩家，會發送給伺服器
+    let ws = null;
+    let gameIsConnected = false; // 遊戲客戶端是否連接到此房間
+    let serverIsConnected = false; // 控制器是否連接到伺服器
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_DELAY = 5000;
 
-// 修改控制按鈕啟用/禁用邏輯
-function setControlsEnabled(enabled) {
-  allControlButtons.forEach(el => {
-    // 允許玩家選擇按鈕始終可用
-    if (!el.classList.contains('player-btn')) {
-      el.disabled = !enabled;
-    }
-  });
-  gameIsConnected = enabled; // 確保狀態變量保持一致
-}
+    // ================================================
+    //          函數定義區域
+    // ================================================
 
-// 修改更新遊戲信息函數，確保按鈕狀態正確
-function updateGameInfo(data) {
-  if (!data) return;
-  
-  // 選擇由遊戲狀態指示的玩家
-  selectPlayerUI(data.selectedPlayer || 1, false); // 不發送命令回去
+    // --- WebSocket 連線 (加入 roomId) ---
+    function connectWebSocket() {
+        if (ws && ws.readyState === WebSocket.OPEN) return;
 
-  // 只有在遊戲報告移動中或未連接時禁用按鈕
-  const disableActions = data.isMoving || !gameIsConnected;
-  
-  // 統一更新所有控制按鈕
-  if (forwardBtn) forwardBtn.disabled = disableActions;
-  if (backwardBtn) backwardBtn.disabled = disableActions;
-  if (showPlayerInfoBtn) showPlayerInfoBtn.disabled = disableActions;
-  if (hidePlayerInfoBtn) hidePlayerInfoBtn.disabled = disableActions;
+        // ★★★ 使用 roomId 構建 URL ★★★
+        const wsFullUrl = `wss://${window.location.host}?clientType=controller&roomId=${roomId}`; 
+        console.log(`[WS] Attempting to connect to: ${wsFullUrl}`);
+        updateConnectionStatusUI(false, '正在連接伺服器...'); // 連接中狀態
 
-  // 確保連接狀態反映實際情況
-  updateConnectionStatusUI(gameIsConnected);
-}
-        function setControlsEnabled(enabled) {
-          allControlButtons.forEach(el => {
-               // Don't disable player selection buttons, allow switching anytime
-               if (!el.classList.contains('player-btn')) {
-                   el.disabled = !enabled;
-               }
-           });
-          // We track gameIsConnected separately now based on messages
+        ws = new WebSocket(wsFullUrl);
+
+        ws.onopen = () => {
+            console.log("[WS] Controller WebSocket Connected");
+            serverIsConnected = true;
+            reconnectAttempts = 0; 
+            // 連接成功後，狀態取決於 gameStatus 訊息
+            updateConnectionStatusUI(false, '已連接伺服器，等待遊戲客戶端...'); 
+            // --- 連接後主動請求一次狀態 ---
+            sendCommand('getGameState'); 
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                console.log("[WS] Message from server:", message); 
+
+                // --- ★★★ 核心處理邏輯 ★★★ ---
+                if (message.type === 'gameStateUpdate') {
+                    // 收到遊戲狀態更新，表示遊戲已連接
+                    gameIsConnected = true;
+                    updateControllerUI(message.data); // 用伺服器狀態更新 UI
+                    // 如果狀態更新表示遊戲已連接，則更新連接狀態
+                    if (serverIsConnected) { // 只有在伺服器也連接的情況下才顯示遊戲已連接
+                         updateConnectionStatusUI(true); 
+                    }
+                } else if (message.type === 'gameStatus') {
+                    console.log("[WS] Received gameStatus:", message.status);
+                    gameIsConnected = message.status === 'connected';
+                    updateConnectionStatusUI(gameIsConnected);
+                    setControlsEnabled(gameIsConnected); // 根據遊戲連接狀態啟用/禁用控制
+                } else if (message.type === 'error') {
+                    console.error("[WS] Error message from server:", message.message);
+                    // 可以在界面上顯示錯誤提示
+                     updateConnectionStatusUI(gameIsConnected, `伺服器錯誤: ${message.message}`); // 保持遊戲連接狀態，但顯示錯誤
+                     alert(`伺服器錯誤: ${message.message}`);
+                } else {
+                     console.warn("[WS] Unknown message type received:", message.type);
+                }
+                // --- ★★★ 處理邏輯結束 ★★★ ---
+
+            } catch (e) {
+                console.error("[WS] Failed to parse message or update UI:", e, "Raw data:", event.data);
+            }
+        };
+
+        ws.onclose = (event) => {
+            console.log(`[WS] Controller WebSocket Closed. Code: ${event.code}, Reason: '${event.reason}'. Reconnecting attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}...`);
+            ws = null;
+            serverIsConnected = false;
+            gameIsConnected = false; // 伺服器斷線，遊戲肯定也斷了
+            setControlsEnabled(false, true); // 禁用所有按鈕
+            updateConnectionStatusUI(false, '與伺服器斷線，嘗試重連...');
+
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, RECONNECT_DELAY);
+            } else {
+                console.error("[WS] Max reconnection attempts reached.");
+                updateConnectionStatusUI(false, "與伺服器斷線，無法重新連接。");
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error("[WS] Controller WebSocket Error:", error);
+            // onerror 通常會觸發 onclose，讓 onclose 處理重連和 UI 更新
         }
+    }
 
-        // Modified to accept an explicit connection status
-        function updateConnectionStatusUI(isConnected = gameIsConnected) {
-          if (isConnected) {
+    // --- ★★★ 修改 setControlsEnabled ★★★ ---
+    // 新增一個參數 forceDisableAll，用於在伺服器斷線時禁用所有按鈕
+    function setControlsEnabled(enabled, forceDisableAll = false) {
+        allControlButtons.forEach(el => {
+            if (forceDisableAll) {
+                 el.disabled = true; // 強制禁用所有按鈕
+            } else {
+                 // 允許玩家選擇按鈕始終可用 (除非強制禁用)
+                 if (!el.classList.contains('player-btn')) {
+                     el.disabled = !enabled; // 根據遊戲連接狀態禁用操作按鈕
+                 } else {
+                     el.disabled = false; // 玩家按鈕始終啟用 (除非 forceDisableAll)
+                 }
+            }
+        });
+    }
+    // --- ★★★ setControlsEnabled 結束 ★★★ ---
+
+
+    // --- 更新連接狀態顯示 ---
+    function updateConnectionStatusUI(isGameConnected, customMessage = null) {
+        if (customMessage) {
+            connectionStatusDiv.textContent = customMessage;
+            // 根據是否有自定義消息決定樣式，或者基於 serverIsConnected
+            connectionStatusDiv.className = serverIsConnected ? 'connection-status connecting' : 'connection-status disconnected'; // 假設自定義消息表示非完全就緒
+        } else if (serverIsConnected && isGameConnected) {
             connectionStatusDiv.className = 'connection-status connected';
-            connectionStatusDiv.textContent = '已連接遊戲';
-          } else {
+            connectionStatusDiv.textContent = `已連接房間 ${roomId} (遊戲進行中)`;
+        } else if (serverIsConnected && !isGameConnected) {
+            connectionStatusDiv.className = 'connection-status connecting'; // 用 connecting 樣式表示等待遊戲加入
+            connectionStatusDiv.textContent = `已連接房間 ${roomId} (等待遊戲加入...)`;
+        } else { // !serverIsConnected
             connectionStatusDiv.className = 'connection-status disconnected';
-            connectionStatusDiv.textContent = ws ? '等待遊戲連接...' : '未連接遊戲'; // More informative
-          }
+            connectionStatusDiv.textContent = '未連接伺服器';
+        }
+    }
+
+    // --- ★★★ 修改 sendCommand ★★★ ---
+    function sendCommand(command, params = {}) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            console.warn("[WS] Cannot send command, WebSocket not open:", command);
+            alert("指令傳送失敗：未連接到伺服器。");
+            return;
+        }
+        // ★★★ 確保消息格式符合伺服器預期 ★★★
+        const message = { 
+            type: 'controlCommand', // <--- 指定類型為控制指令
+            command: command,       // <--- 指令名稱
+            params: params,         // <--- 指令參數
+            roomId: roomId          // <--- 包含房間 ID (伺服器端其實不需要，但帶著沒壞處)
+        };
+        console.log("[WS] Sending command:", message);
+        ws.send(JSON.stringify(message));
+    }
+    // --- ★★★ sendCommand 結束 ★★★ ---
+
+
+    // --- ★★★ 修改 updateControllerUI (替代舊的 updateGameInfo) ★★★ ---
+    function updateControllerUI(gameStateData) {
+        if (!gameStateData) return;
+        console.log("[UI] Updating controller UI based on gameState:", gameStateData);
+
+        // 1. 更新玩家頭像和名稱
+        if (gameStateData.players) {
+            updatePlayerUI(gameStateData.players);
         }
 
-        function sendCommand(command, params = {}) {
-          if (!ws || ws.readyState !== WebSocket.OPEN) {
-               console.warn("Cannot send command, WebSocket not open:", command);
-               // Optionally inform the user
-               // connectionStatusDiv.textContent = '指令傳送失敗: 未連接';
-               return;
-          }
-          const message = { type: 'controlCommand', command, params };
-          console.log("Sending command:", message); // Log sent commands
-          ws.send(JSON.stringify(message));
-        }
+        // 2. 更新本地選擇的玩家 (視覺效果) - 不要發送命令回去
+        selectPlayerUI(gameStateData.selectedPlayer || 1, false); 
 
-        // Updates button disabled states based on game state
-        function updateGameInfo(data) {
-          if (!data) return;
-          // Select the player indicated by the game state
-          selectPlayerUI(data.selectedPlayer || 1, false); // Don't send command back
+        // 3. 更新按鈕禁用狀態 (只在伺服器報告 isMoving=true 或遊戲未連接時禁用)
+        const disableActions = gameStateData.isMoving || !gameIsConnected;
+        setControlsEnabled(!disableActions); // 傳入是否啟用
 
-          // Disable movement/action buttons if game reports moving or is disconnected
-           const disableActions = data.isMoving || !gameIsConnected;
-           // console.log(`Updating button states: isMoving=${data.isMoving}, gameIsConnected=${gameIsConnected}, disableActions=${disableActions}`);
-
-           if (forwardBtn) forwardBtn.disabled = disableActions;
-           if (backwardBtn) backwardBtn.disabled = disableActions;
-           if (showPlayerInfoBtn) showPlayerInfoBtn.disabled = disableActions;
-           if (hidePlayerInfoBtn) hidePlayerInfoBtn.disabled = disableActions;
-
-           // Ensure connection status reflects reality
-           updateConnectionStatusUI(gameIsConnected);
-        }
+        // 4. 確保連接狀態顯示正確
+        updateConnectionStatusUI(gameIsConnected); 
+    }
+    // --- ★★★ updateControllerUI 結束 ★★★ ---
 
 
-        // --- ★★★ 修改：更新頭像和名稱 (重命名函數) ★★★ ---
-        function updatePlayerUI(playersData) {
-          const buttons = [player1Btn, player2Btn, player3Btn];
-          const nameElements = [player1NameEl, player2NameEl, player3NameEl]; // Name elements array
+    // --- 更新玩家頭像和名稱 (基本不變) ---
+    function updatePlayerUI(playersData) {
+        const buttons = [player1Btn, player2Btn, player3Btn];
+        const nameElements = [player1NameEl, player2NameEl, player3NameEl]; 
 
-          buttons.forEach((btn, i) => {
+        buttons.forEach((btn, i) => {
             const num = i + 1;
-            const nameElement = nameElements[i]; // Get the corresponding name element
+            const nameElement = nameElements[i]; 
+            const playerData = playersData[num] || { avatarUrl: null, name: `P${num}` }; // 提供預設
 
-            // Default player data if not provided
-             const playerData = playersData[num] || { avatarUrl: null, name: null };
-
-            // --- 更新頭像 ---
+            // 更新頭像
             const avatar = (playerData.avatarUrl || '').trim();
             const currentAvatar = (btn.dataset.avatarUrl || '').trim();
-
-            if (avatar !== currentAvatar || !btn.innerHTML.includes('img')) { // Update if different or if currently text
-              if (avatar) {
-                btn.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="P${num}頭像" onerror="this.parentElement.innerHTML='P${num}';">`; // Added onerror fallback
-                btn.dataset.avatarUrl = avatar;
-              } else {
-                btn.innerHTML = `P${num}`; // Fallback to P# if no avatar
-                delete btn.dataset.avatarUrl;
-              }
+            if (avatar !== currentAvatar || !btn.innerHTML.includes('img')) {
+                if (avatar) {
+                  btn.innerHTML = `<img src="${avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="P${num}頭像" onerror="this.parentElement.innerHTML='P${num}';">`; 
+                  btn.dataset.avatarUrl = avatar;
+                } else {
+                  btn.innerHTML = `P${num}`; 
+                  delete btn.dataset.avatarUrl;
+                }
             }
-
-            // --- 更新名稱 ---
-            if (nameElement) { // Check if the element exists
-                const playerName = playerData.name || `玩家 ${num}`; // Use name or fallback
-                nameElement.textContent = playerName;
+            // 更新名稱
+            if (nameElement) {
+                nameElement.textContent = playerData.name || `玩家 ${num}`;
             }
-          });
-        }
-        // --- ★★★ 修改結束 ★★★ ---
-
-
-        function selectPlayerUI(num, send = true) {
-          selectedPlayer = num;
-          // Toggle 'selected' class for border effect
-          player1Btn.classList.toggle('selected', num === 1);
-          player2Btn.classList.toggle('selected', num === 2);
-          player3Btn.classList.toggle('selected', num === 3);
-          if (send) {
-               console.log(`UI selected player ${num}, sending command...`);
-               sendCommand('selectPlayer', { player: num });
-           }
-        }
-
-        function movePlayer(direction) {
-          // Ensure controls are enabled before sending move command
-           if (forwardBtn.disabled) {
-               console.warn("Attempted to move while controls are disabled.");
-               return;
-           }
-          console.log(`Move button clicked: ${direction}`);
-          sendCommand('movePlayer', { player: selectedPlayer, direction: direction, steps: 1 });
-        }
-
-        // --- 事件監聽器 (保持不變，除了移動按鈕調用) ---
-        showPlayerInfoBtn.addEventListener('click', () => {
-          sendCommand('showPlayerInfo', { player: selectedPlayer });
         });
+    }
 
-        hidePlayerInfoBtn.addEventListener('click', () => {
-          sendCommand('hidePlayerInfo'); // No player needed for hide usually
-        });
 
-        player1Btn.addEventListener('click', () => selectPlayerUI(1, true));
-        player2Btn.addEventListener('click', () => selectPlayerUI(2, true));
-        player3Btn.addEventListener('click', () => selectPlayerUI(3, true));
+    // --- 更新控制器本地選擇的玩家 (UI + 發送指令) ---
+    function selectPlayerUI(num, send = true) {
+        localSelectedPlayer = num; // 更新本地選擇狀態
 
-        // --- ★★★ 修改：確保調用 movePlayer ★★★ ---
-        forwardBtn.addEventListener('click', () => movePlayer('forward'));
-        backwardBtn.addEventListener('click', () => movePlayer('backward'));
-        // --- ★★★ 修改結束 ★★★ ---
+        // 更新視覺效果 (按鈕邊框)
+        player1Btn.classList.toggle('selected', num === 1);
+        player2Btn.classList.toggle('selected', num === 2);
+        player3Btn.classList.toggle('selected', num === 3);
+        
+        // 如果是手動點擊觸發的，才需要發送指令給伺服器
+        if (send) {
+             console.log(`[UI] Player ${num} selected locally, sending command...`);
+             sendCommand('selectPlayer', { player: num }); // ★★★ 發送指令 ★★★
+         }
+    }
 
-        connectWebSocket(); // Start connection attempt
-      });
+    // --- 發送移動指令 ---
+    function movePlayer(direction) {
+        // ★★★ 現在只檢查按鈕是否被禁用 (由伺服器狀態決定) ★★★
+        if (forwardBtn.disabled) { // 檢查任意一個操作按鈕即可
+             console.warn("[UI] Attempted to move while controls are disabled.");
+             return;
+         }
+        console.log(`[UI] Move button clicked: ${direction}`);
+        // ★★★ 將 localSelectedPlayer 和 direction/steps 作為參數發送 ★★★
+        sendCommand('movePlayer', { player: localSelectedPlayer, direction: direction, steps: 1 }); 
+    }
+
+    // --- 事件監聽器 ---
+    showPlayerInfoBtn.addEventListener('click', () => {
+        // ★★★ 使用 localSelectedPlayer 發送指令 ★★★
+        sendCommand('showPlayerInfo', { player: localSelectedPlayer });
+    });
+
+    hidePlayerInfoBtn.addEventListener('click', () => {
+        sendCommand('hidePlayerInfo'); // 不需要玩家參數
+    });
+
+    // 玩家按鈕只更新本地 UI 並發送指令
+    player1Btn.addEventListener('click', () => selectPlayerUI(1, true));
+    player2Btn.addEventListener('click', () => selectPlayerUI(2, true));
+    player3Btn.addEventListener('click', () => selectPlayerUI(3, true));
+
+    // 移動按鈕調用 movePlayer
+    forwardBtn.addEventListener('click', () => movePlayer('forward'));
+    backwardBtn.addEventListener('click', () => movePlayer('backward'));
+
+    // --- 初始化 ---
+    // 初始化時禁用操作按鈕，直到收到遊戲連接狀態
+    setControlsEnabled(false); 
+    connectWebSocket(); // 開始連接 WebSocket
+
+}); // End DOMContentLoaded
+
+
+
+
+
+
         </script>
         
 

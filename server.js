@@ -3206,134 +3206,8 @@ const wss = new WebSocket.Server({ server });
 let gameClient = null;
 const controllerClients = new Set();
 
-wss.on('connection', (ws, req) => {
-    console.log('WebSocket client connected');
-
-    let clientType = 'unknown'; // Default client type
-    try {
-        // Extract clientType from URL query parameter, handle potential errors
-        const requestUrl = new URL(req.url, `ws://${req.headers.host}`); // Need a base URL
-        clientType = requestUrl.searchParams.get('clientType') || 'unknown';
-    } catch (e) {
-        console.error('Error parsing client connection URL:', e);
-        // Keep clientType as 'unknown' or handle appropriately
-    }
-
-    console.log(`Identified client type: ${clientType}`); // Log identified type
-
-    ws.clientType = clientType; // Assign type to the WebSocket object
-
-    if (clientType === 'game') {
-        console.log('Game client identified');
-        if (gameClient && gameClient.readyState === WebSocket.OPEN) {
-            console.log('Existing game client found, terminating previous.');
-            try { gameClient.terminate(); } catch (e) { console.error("Error terminating previous game client:", e); }
-        }
-        gameClient = ws;
-        broadcastToControllers({ type: 'gameStatus', status: 'connected' });
-    } else if (clientType === 'controller') {
-        console.log('Controller client identified');
-        controllerClients.add(ws);
-        // Send current game status to the new controller immediately
-        try {
-             ws.send(JSON.stringify({ type: 'gameStatus', status: gameClient && gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected' }));
-         } catch (e) { console.error("Error sending initial status to controller:", e); }
-    } else {
-        console.log('Unknown client type connected');
-    }
-
-    ws.on('message', (message) => {
-        let messageString;
-        // --- START: Buffer Handling ---
-        if (message instanceof Buffer) {
-            messageString = message.toString('utf8'); // Convert Buffer to UTF-8 string
-// console.log('Controller sent message, but game is not connected.');        } else if (typeof message === 'string') {
-            messageString = message; // Already a string
-           // console.log(`Received string message: ${messageString}`);
-        } else {
-            // Handle or ignore other types if necessary (e.g., ArrayBuffer)
-// console.log(`Received string message: ${messageString}`);     
-//        return; // Ignore non-string/buffer messages for now
-        }
-        // --- END: Buffer Handling ---
-
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(messageString); // Parse the string version
-        } catch (e) {
-            // Log the string that failed parsing for debugging
-
-            // Optionally notify the sender about the error
-            // ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON format received' }));
-            return; // Stop processing this invalid message
-        }
-
-        // Route messages using parsedMessage
-        if (ws.clientType === 'controller' && gameClient && gameClient.readyState === WebSocket.OPEN) {
- 
-            try {
-                 gameClient.send(JSON.stringify(parsedMessage)); // Forward the valid JSON object
-             } catch (e) { console.error("Error sending message to game client:", e); }
-        } else if (ws.clientType === 'game') {
 
 
-            broadcastToControllers(parsedMessage); // Broadcast the valid JSON object
-        } else if (ws.clientType === 'controller' && (!gameClient || gameClient.readyState !== WebSocket.OPEN)) {
-
-            try {
-                 ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
-             } catch (e) { console.error("Error sending 'game not connected' to controller:", e); }
-        }
-    });
-
-    ws.on('close', () => {
-        console.log(`WebSocket client disconnected (Type: ${ws.clientType})`);
-        if (ws === gameClient) {
-            gameClient = null;
-            console.log('Game client disconnected');
-            broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
-        } else if (controllerClients.has(ws)) {
-            controllerClients.delete(ws);
-            console.log('Controller client disconnected');
-        }
-    });
-
-    ws.on('error', (error) => {
-        console.error(`WebSocket error (Client Type: ${ws.clientType}):`, error);
-        // Clean up resources if an error occurs
-        if (ws === gameClient) {
-            gameClient = null;
-             broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
-        } else if (controllerClients.has(ws)) {
-            controllerClients.delete(ws);
-        }
-        // Optionally try to close the connection if it's still open
-        try { if (ws.readyState === WebSocket.OPEN) ws.close(); } catch (e) {}
-    });
-});
-
-function broadcastToControllers(message) {
-    if (controllerClients.size === 0) return; // No controllers connected
-
-    try {
-        const messageString = JSON.stringify(message);
-         // ↓↓↓ 找到這一行 (或類似的) ↓↓↓
-         // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
-         // ↓↓↓ 將其刪除或在前面加上 // 註解掉 ↓↓↓
-         // // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
-         controllerClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                 try {
-                     client.send(messageString);
-                 } catch (e) {
-                     console.error("Error sending message to a controller:", e);
-                 }
-            }
-        });
-    } catch (e) {
-         console.error("Error stringifying message for broadcast:", e, message);
-     }
-}
 
 
 // --- 404 Handler ---
@@ -3358,3 +3232,313 @@ server.listen(PORT, () => { // <--- Use server.listen instead of app.listen
 });
 
 // --- END OF FILE server.js ---
+
+function handleWebSocketMessage(ws, message) {
+    if (!ws.roomId) {
+        console.warn('[WS Message] Received message from client without roomId. Ignoring.');
+        return;
+    }
+    const roomId = ws.roomId;
+    const clientType = ws.clientType;
+
+    let messageString;
+    if (message instanceof Buffer) {
+        messageString = message.toString('utf8');
+    } else if (typeof message === 'string') {
+        messageString = message;
+    } else {
+        console.warn(`[WS Message] Received non-string/buffer message type in room ${roomId}. Ignoring.`);
+        return;
+    }
+
+    let parsedMessage;
+    try {
+        parsedMessage = JSON.parse(messageString);
+    } catch (e) {
+        console.error(`[WS Message] Invalid JSON received in room ${roomId} from ${clientType}:`, messageString, e);
+        return;
+    }
+
+    const room = gameRooms.get(roomId);
+    if (!room) {
+        console.warn(`[WS Message] Received message for non-existent room ${roomId} from ${clientType}. Client might be outdated.`);
+        return;
+    }
+
+    room.lastActive = Date.now();
+    console.log(`[WS Message] Processing message in room ${roomId} from ${clientType}:`, parsedMessage);
+
+    if (clientType === 'controller') {
+        if (room.gameClient && room.gameClient.readyState === WebSocket.OPEN) {
+            try {
+                console.log(`[WS Message] Forwarding controller command to game client in room ${roomId}.`);
+                room.gameClient.send(messageString);
+            } catch (sendError) {
+                console.error(`[WS Message] Error forwarding message to game client in room ${roomId}:`, sendError);
+            }
+        } else {
+            console.warn(`[WS Message] Controller in room ${roomId} sent command, but game client is not connected.`);
+            try {
+                ws.send(JSON.stringify({ type: 'error', message: 'Game client is not connected in this room.' }));
+            } catch (sendError) {
+                console.error(`[WS Message] Error sending 'game not connected' error to controller in room ${roomId}:`, sendError);
+            }
+        }
+    } else if (clientType === 'game') {
+        if (parsedMessage.type === 'gameStateUpdate' && parsedMessage.data) {
+            console.log(`[WS Message] Game client in room ${roomId} sent gameStateUpdate. Updating server state.`);
+            for (const key in parsedMessage.data) {
+                if (room.state && room.state.hasOwnProperty(key)) {
+                    room.state[key] = parsedMessage.data[key];
+                } else if (room.state) {
+                    console.warn(`[WS State Update] Room ${roomId} received unknown state key: ${key}`);
+                } else {
+                    console.error(`[WS State Update] Critical error: room.state is undefined for room ${roomId}`);
+                }
+            }
+            if (room.state && parsedMessage.data.players) {
+                room.state.players = { ...parsedMessage.data.players };
+            }
+            if (room.state) {
+                console.log(`[WS State Update] Room ${roomId} state updated:`, room.state);
+            }
+        }
+        console.log(`[WS Message] Broadcasting message from game client to controllers in room ${roomId}.`);
+        broadcastToControllers(roomId, parsedMessage);
+    } else {
+        console.warn(`[WS Message] Received message from unknown client type '${clientType}' in room ${roomId}. Ignoring.`);
+    }
+}
+
+
+
+
+// 定義保存所有遊戲房間的Map
+const gameRooms = new Map();
+// 在server.js中添加
+wss.on('connection', (ws, req) => {
+    // 解析URL參數
+    const url = new URL(req.url, 'http://localhost');
+    const clientType = url.searchParams.get('clientType');
+    const roomId = url.searchParams.get('roomId') || 'default';
+    
+    // 儲存客戶端類型和房間ID
+    ws.clientType = clientType;
+    ws.roomId = roomId;
+    
+    console.log(`[WS] New connection: ${clientType} in room ${roomId}`);
+    
+    // 如果房間不存在，創建房間
+    if (!gameRooms.has(roomId)) {
+        gameRooms.set(roomId, {
+            roomName: `房間 ${roomId}`,
+            state: {
+                currentTemplateId: null,
+                selectedPlayer: 1,
+                playerPathIndices: [0, 0, 0],
+                highlightedCell: null,
+                isMoving: false,
+                players: {}
+            },
+            gameClient: null,
+            controllerClients: new Set(),
+            createdAt: new Date().toISOString(),
+            lastActive: Date.now()
+        });
+    }
+    
+    // 獲取該房間
+    const room = gameRooms.get(roomId);
+    room.lastActive = Date.now();
+    
+    // 根據客戶端類型處理連接
+    if (clientType === 'game') {
+        room.gameClient = ws;
+        broadcastToControllers(roomId, { 
+            type: 'gameStatus', 
+            status: 'connected',
+            roomId: roomId
+        });
+    } else if (clientType === 'controller') {
+        room.controllerClients.add(ws);
+        ws.send(JSON.stringify({
+            type: 'gameStatus',
+            status: room.gameClient ? 'connected' : 'disconnected',
+            roomId: roomId
+        }));
+    }
+    
+    // 設置消息處理器
+    ws.on('message', (message) => handleWebSocketMessage(ws, message));
+    
+    // 設置關閉處理器
+    ws.on('close', () => handleWebSocketClose(ws));
+    
+    // 設置錯誤處理器
+    ws.on('error', (error) => handleWebSocketError(ws, error));
+});
+
+function broadcastToControllers(roomId, message) {
+    const room = gameRooms.get(roomId);
+    if (!room) return;
+    
+    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+    
+    room.controllerClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(messageStr);
+        }
+    });
+}
+
+
+
+
+// 這些API應放在server.js中，而不是rich-room.html中
+app.get('/api/game-rooms', (req, res) => {
+    const roomsArray = [];
+    for (const [id, room] of gameRooms.entries()) {
+        // 只顯示活躍的房間(最近30分鐘有活動)
+        const isActive = (Date.now() - room.lastActive) < 30 * 60 * 1000;
+        if (!isActive) continue;
+        
+        // 從room.state中獲取templateId
+        const templateId = room.state?.currentTemplateId;
+        
+        roomsArray.push({
+            id,
+            roomName: room.roomName || `房間 ${id}`,
+            templateId,
+            templateName: templateId ? `模板 ${templateId}` : '未知模板',
+            playersCount: room.controllerClients.size,
+            hasGameClient: !!room.gameClient && room.gameClient.readyState === WebSocket.OPEN,
+            createdAt: room.createdAt
+        });
+    }
+    res.json(roomsArray);
+});
+
+app.post('/api/game-rooms', (req, res) => {
+    const { roomName, templateId } = req.body;
+    
+    // 簡單驗證
+    if (!roomName || !roomName.trim()) {
+        return res.status(400).json({ error: '房間名稱為必填項' });
+    }
+    if (!templateId) {
+        return res.status(400).json({ error: '必須選擇一個遊戲模板' });
+    }
+    
+    // 生成唯一ID
+    const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    
+    // 創建新房間
+    gameRooms.set(roomId, {
+        roomName: roomName.trim(),
+        state: {
+            currentTemplateId: templateId,
+            selectedPlayer: 1,
+            playerPathIndices: [0, 0, 0],
+            highlightedCell: null,
+            isMoving: false,
+            players: {}
+        },
+        gameClient: null,
+        controllerClients: new Set(),
+        createdAt: new Date().toISOString(),
+        lastActive: Date.now()
+    });
+    
+    res.status(201).json({ 
+        id: roomId, 
+        roomName: roomName.trim(), 
+        templateId: templateId
+    });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- WebSocket 斷線處理 (支援多房間) ---
+function handleWebSocketClose(ws) {
+    if (!ws.roomId || !ws.clientType) {
+        console.warn('[WS Close] Client disconnected without roomId or clientType. Cannot process cleanup properly.');
+        return; 
+    }
+
+    const roomId = ws.roomId;
+    const clientType = ws.clientType;
+
+    console.log(`[WS Close] Client disconnected. Type: ${clientType}, Room: ${roomId}`);
+
+    const room = gameRooms.get(roomId);
+    if (!room) {
+        console.warn(`[WS Close] Room ${roomId} not found during client disconnect cleanup.`);
+        return;
+    }
+
+    if (clientType === 'game') {
+        if (room.gameClient === ws) {
+            room.gameClient = null;
+            console.log(`[WS Close] Game client removed from room ${roomId}.`);
+            broadcastToControllers(roomId, { type: 'gameStatus', status: 'disconnected', roomId: roomId });
+            console.log(`[WS Close] Notified controllers in room ${roomId} about game disconnection.`);
+        } else {
+            console.warn(`[WS Close] A game client disconnected from room ${roomId}, but it wasn't the currently registered one.`);
+        }
+    } else if (clientType === 'controller') {
+        if (room.controllerClients.has(ws)) {
+            room.controllerClients.delete(ws);
+            console.log(`[WS Close] Controller client removed from room ${roomId}. Remaining controllers: ${room.controllerClients.size}`);
+        } else {
+            console.warn(`[WS Close] A controller disconnected from room ${roomId}, but it wasn't found in the room's set.`);
+        }
+    } else {
+        console.warn(`[WS Close] Unknown client type '${clientType}' disconnected from room ${roomId}.`);
+    }
+
+    if (!room.gameClient && room.controllerClients.size === 0) {
+        console.log(`[WS Close] Room ${roomId} is now empty. Removing from gameRooms.`);
+        gameRooms.delete(roomId);
+    } else {
+        room.lastActive = Date.now();
+    }
+
+    console.log(`[WS Close] Current active rooms count: ${gameRooms.size}`);
+}
+
+// --- WebSocket 錯誤處理 ---
+function handleWebSocketError(ws, error) {
+    const roomId = ws.roomId || 'unknown';
+    const clientType = ws.clientType || 'unknown';
+    
+    console.error(`[WS Error] WebSocket error occurred. Type: ${clientType}, Room: ${roomId}:`, error);
+    
+    handleWebSocketClose(ws);
+}
