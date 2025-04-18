@@ -684,6 +684,107 @@
                 grid-template-columns: repeat(4, 1fr); /* 桌面4列 */
             }
         }
+
+
+
+/* --- 歌曲列表視圖 --- */
+.songs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+}
+
+.song-list-item {
+    display: flex;
+    background-color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+    opacity: 0;
+    transform: translateX(-20px);
+    padding: 12px;
+}
+
+.song-list-item.animate {
+    animation: listItemFadeIn 0.5s forwards;
+}
+
+.song-list-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+}
+
+.song-list-icon {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #FFB74D;
+    margin-right: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.song-list-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.song-list-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.song-list-title-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.song-list-title {
+    font-size: 16px;
+    margin: 0;
+    margin-right: 8px;
+    color: #333;
+}
+
+.song-list-artist {
+    font-size: 14px;
+    color: #666;
+}
+
+.song-list-scores {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* 在手機裝置上調整布局 */
+@media (max-width: 576px) {
+    .song-list-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .song-list-title {
+        margin-bottom: 4px;
+    }
+    
+    .song-list-scores {
+        margin-top: 5px;
+    }
+}
+
+
+
     </style>
 </head>
 

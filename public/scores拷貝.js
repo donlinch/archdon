@@ -267,7 +267,6 @@ function renderSongsGrid(songs) {
         });
     }, 100);
 }
-
 function renderSongsList(songs) {
     if (!songsContainer) return;
     
@@ -297,12 +296,25 @@ function renderSongsList(songs) {
                 `).join('');
         }
         
+        // 查找歌曲封面圖片
+        let coverImage = '';
+        if (song.artist) {
+            const coverUrl = findAlbumCover(song.artist, song.title);
+            if (coverUrl) {
+                coverImage = `<img src="${coverUrl}" alt="${song.title || '歌曲封面'}" />`;
+            }
+        }
+        
         htmlContent += `
             <div class="song-list-item" data-song-id="${song.id}" data-index="${index}">
-                <div class="song-list-icon">🎵</div>
+                <div class="song-list-icon">
+                    ${coverImage || '🎵'}
+                </div>
                 <div class="song-list-info">
-                    <h3 class="song-list-title">${song.title || '未知標題'}</h3>
-                    <p class="song-list-artist">${song.artist || '未知歌手'}</p>
+                    <div class="song-list-title-row">
+                        <h3 class="song-list-title">${song.title || '未知標題'}</h3>
+                        <span class="song-list-artist">${song.artist || '未知歌手'}</span>
+                    </div>
                     <div class="song-list-scores">
                         ${scoreButtonsHTML}
                     </div>
@@ -323,7 +335,6 @@ function renderSongsList(songs) {
         });
     }, 100);
 }
-
 function renderSongDetail(song) {
     if (!songInfo || !youtubePlayerContainer || !songDetailContainer) return;
 
