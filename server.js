@@ -18,7 +18,8 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
-
+const cors = require('cors');
+app.use(cors());
 
    
 const multer = require('multer');
@@ -177,7 +178,25 @@ app.use(async (req, res, next) => {
 
 
 
+// --- 建立新房間 ---
+app.post('/api/game-rooms', async (req, res) => {
+    const { roomName, templateId } = req.body;
+    if (!roomName || !templateId) {
+        return res.status(400).json({ error: '房間名稱與模板 ID 為必填' });
+    }
 
+    try {
+        const roomId = generateUniqueRoomId();
+        await db.query(
+            `INSERT INTO game_rooms (room_id, room_name, template_id) VALUES ($1, $2, $3)`,
+            [roomId, roomName, templateId]
+        );
+        res.json({ roomId });
+    } catch (err) {
+        console.error('[Create Room Error]', err);
+        res.status(500).json({ error: '建立房間失敗' });
+    }
+});
 
 
 
