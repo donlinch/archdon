@@ -3469,7 +3469,97 @@ app.post('/api/game-rooms', (req, res) => {
 
 
 
+// 在server.js中添加這些API端點
 
+// 獲取所有活躍房間
+app.get('/api/game-rooms', (req, res) => {
+    const roomsArray = [];
+    for (const [id, room] of gameRooms.entries()) {
+        // 只顯示活躍的房間(最近30分鐘有活動)
+        const isActive = (Date.now() - room.lastActive) < 30 * 60 * 1000;
+        if (!isActive) continue;
+        
+        roomsArray.push({
+            id,
+            roomName: room.roomName || `房間 ${id}`,
+            templateId: room.state?.currentTemplateId,
+            templateName: room.state?.currentTemplateId ? `模板 ${room.state.currentTemplateId}` : '未知模板',
+            playersCount: room.controllerClients.size,
+            hasGameClient: !!room.gameClient && room.gameClient.readyState === WebSocket.OPEN,
+            createdAt: room.createdAt
+        });
+    }
+    res.json(roomsArray);
+});
+
+// 創建新房間
+app.post('/api/game-rooms', (req, res) => {
+    const { roomName, templateId } = req.body;
+    
+    // 簡單驗證
+    if (!roomName || !roomName.trim()) {
+        return res.status(400).json({ error: '房間名稱為必填項' });
+    }
+    if (!templateId) {
+        return res.status(400).json({ error: '必須選擇一個遊戲模板' });
+    }
+    
+    // 生成唯一ID
+    const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    
+    // 創建新房間
+    gameRooms.set(roomId, {
+        roomName: roomName.trim(),
+        state: {
+            currentTemplateId: templateId,
+            selectedPlayer: 1,
+            playerPathIndices: [0, 0, 0],
+            highlightedCell: null,
+            isMoving: false,
+            players: {}
+        },
+        gameClient: null,
+        controllerClients: new Set(),
+        createdAt: new Date().toISOString(),
+        lastActive: Date.now()
+    });
+    
+    res.status(201).json({ 
+        id: roomId, 
+        roomName: roomName.trim(), 
+        templateId: templateId
+    });
+});
+
+// 定期清理不活躍的房間(每10分鐘)
+setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [roomId, room] of gameRooms.entries()) {
+        // 如果房間30分鐘沒有活動，清除它
+        if (now - room.lastActive > 30 * 60 * 1000) {
+            // 先關閉所有連接
+            if (room.gameClient && room.gameClient.readyState === WebSocket.OPEN) {
+                room.gameClient.close(1000, "Room inactive for too long");
+            }
+            
+            room.controllerClients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.close(1000, "Room inactive for too long");
+                }
+            });
+            
+            // 從Map中移除
+            gameRooms.delete(roomId);
+            cleanedCount++;
+        }
+    }
+    
+    if (cleanedCount > 0) {
+        console.log(`[Cleanup] Removed ${cleanedCount} inactive rooms. Current rooms: ${gameRooms.size}`);
+    }
+}, 10 * 60 * 1000);
 
 
 
