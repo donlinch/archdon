@@ -1,4 +1,4 @@
-// scores-redesigned.js - 樂譜頁面 JavaScript 代碼
+// scores.js - 樂譜頁面 JavaScript 代碼
 
 // 引入 pdf.js 函式庫 (ES Module 方式)
 import * as pdfjsLib from '//mozilla.github.io/pdf.js/build/pdf.mjs';
@@ -11,7 +11,8 @@ let currentSongId = null;
 let currentArtist = 'All'; // 預設顯示全部
 let pdfPageRendering = false;
 let pageNumPending = null;
-let currentViewMode = 'grid'; // 預設格狀視圖
+let currentViewMode = 'list'; // 修改預設為列表視圖
+let albumCovers = {}; // 儲存歌曲封面圖片的對應關係
 
 // 設定 PDF.js worker 的來源路徑
 if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
@@ -79,6 +80,50 @@ async function fetchApi(url, errorMessage) {
         console.error(`${errorMessage}:`, error);
         throw error;
     }
+}
+
+// 預先獲取專輯封面
+async function fetchAlbumCovers() {
+    try {
+        const albumsData = await fetchApi('/api/music', 'Error fetching album covers');
+        // 建立歌手/歌曲與封面的映射
+        albumsData.forEach(album => {
+            if (album.artist && album.cover_art_url) {
+                if (!albumCovers[album.artist]) {
+                    albumCovers[album.artist] = [];
+                }
+                albumCovers[album.artist].push({
+                    title: album.title,
+                    cover_url: album.cover_art_url
+                });
+            }
+        });
+        console.log('專輯封面資料已載入:', Object.keys(albumCovers).length, '位歌手');
+    } catch (error) {
+        console.error('無法獲取專輯封面:', error);
+        // 失敗時不中斷程序
+    }
+}
+
+// 根據歌手和標題查找封面
+function findAlbumCover(artist, title) {
+    if (!albumCovers[artist]) return null;
+    
+    // 嘗試找到完全匹配的標題
+    const exactMatch = albumCovers[artist].find(album => 
+        album.title.toLowerCase() === title.toLowerCase()
+    );
+    if (exactMatch) return exactMatch.cover_url;
+    
+    // 如果沒有完全匹配，嘗試找包含相同關鍵字的標題
+    const partialMatch = albumCovers[artist].find(album => 
+        title.toLowerCase().includes(album.title.toLowerCase()) || 
+        album.title.toLowerCase().includes(title.toLowerCase())
+    );
+    if (partialMatch) return partialMatch.cover_url;
+    
+    // 如果都沒有，返回該歌手的第一張封面
+    return albumCovers[artist][0].cover_url;
 }
 
 async function fetchArtists() {
@@ -164,6 +209,23 @@ function renderSongsGrid(songs) {
     let htmlContent = '';
     
     songs.forEach((song, index) => {
+        // 嘗試查找該歌曲的封面圖片
+        let coverImage = '';
+        let hasCover = false;
+        
+        if (song.artist) {
+            const coverUrl = findAlbumCover(song.artist, song.title);
+            if (coverUrl) {
+                coverImage = `<img src="${coverUrl}" alt="${song.title || '歌曲封面'}" />`;
+                hasCover = true;
+            }
+        }
+        
+        // 如果沒有找到封面，則使用音符圖示
+        if (!hasCover) {
+            coverImage = '🎵';
+        }
+        
         // 建立樂譜按鈕
         let scoreButtonsHTML = '';
         if (song.scores && Array.isArray(song.scores) && song.scores.length > 0) {
@@ -181,7 +243,7 @@ function renderSongsGrid(songs) {
         
         htmlContent += `
             <div class="song-card" data-song-id="${song.id}" data-index="${index}">
-                <div class="song-image">🎵</div>
+                <div class="song-image">${coverImage}</div>
                 <div class="song-info">
                     <h3 class="song-title">${song.title || '未知標題'}</h3>
                     <p class="song-artist">${song.artist || '未知歌手'}</p>
@@ -728,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化功能
     setupBackToTop();
     fetchArtists();
+    fetchAlbumCovers(); // 獲取專輯封面資訊
     fetchSongs('All'); // 預設載入所有歌曲
     
     // 綁定事件監聽器
