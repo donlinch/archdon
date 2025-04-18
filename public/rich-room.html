@@ -336,7 +336,9 @@ setInterval(() => {
                 rooms.forEach(room => {
                     const roomCard = document.createElement('div');
                     roomCard.className = 'room-card';
-
+  // --->>> 添加調試日誌 <<<---
+  console.log('Generating link for room ID:', room.id);
+    // --->>> 結束調試日誌 <<<---
                     // 處理創建時間顯示
                     let createdAtStr = '未知';
                     if (room.createdAt) {
