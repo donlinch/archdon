@@ -82,10 +82,116 @@ async function fetchApi(url, errorMessage) {
     }
 }
 
+
+
+
+
+
+// 在 scores.js 中的初始化函數末尾添加以下代碼修改
+
+// --- 初始化 ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 檢查必要元素
+    const essentialElements = [
+        songsContainer, 
+        pdfPrevBtn, 
+        pdfNextBtn, 
+        pdfPagination, 
+        pdfCanvas, 
+        pdfViewerContainer, 
+        pdfLoading, 
+        pdfError, 
+        pdfPageNum, 
+        pdfPageCount, 
+        songDetailContainer, 
+        songInfo, 
+        youtubePlayerContainer
+    ];
+    
+    if (essentialElements.some(el => !el)) {
+        console.error("頁面初始化失敗：缺少必要的 DOM 元素。請檢查 HTML 結構和 ID 是否正確。");
+        if(document.body) {
+            document.body.innerHTML = '<p style="color:red; padding: 2rem; text-align: center;">頁面載入錯誤，缺少必要的元件。</p>';
+        }
+        return;
+    }
+    
+    // 初始化功能
+    setupBackToTop();
+    
+    // 先獲取專輯封面資訊，再獲取歌手和歌曲
+    // 這樣可以確保在首次顯示列表時就能正確顯示封面圖片
+    fetchAlbumCovers().then(() => {
+        fetchArtists();
+        fetchSongs('All'); // 預設載入所有歌曲
+    }).catch(error => {
+        console.error("獲取專輯封面時出錯:", error);
+        // 即使獲取封面失敗，也繼續載入歌手和歌曲
+        fetchArtists();
+        fetchSongs('All');
+    });
+    
+    // 綁定事件監聽器
+    
+    // 視圖模式切換
+    document.querySelectorAll('.view-mode-link').forEach(link => {
+        link.addEventListener('click', handleViewModeClick);
+    });
+    
+    // 歌手過濾面板
+    if (filterToggleBtn) {
+        filterToggleBtn.addEventListener('click', toggleArtistFilterPanel);
+    }
+    
+    if (artistFilterPanel) {
+        artistFilterPanel.addEventListener('click', handleArtistFilterClick);
+    }
+    
+    // 歌曲列表點擊
+    if (songsContainer) {
+        songsContainer.addEventListener('click', handleSongCardClick);
+    }
+    
+    // 樂譜選擇
+    if (scoreSelectorContainer) {
+        scoreSelectorContainer.addEventListener('click', handleScoreButtonClick);
+    }
+    
+    // PDF 翻頁控制
+    if (pdfPrevBtn) {
+        pdfPrevBtn.addEventListener('click', onPrevPage);
+    }
+    
+    if (pdfNextBtn) {
+        pdfNextBtn.addEventListener('click', onNextPage);
+    }
+    
+    // 初始隱藏詳情容器
+    if (songDetailContainer) {
+        songDetailContainer.style.display = 'none';
+    }
+    
+    // 監聽窗口大小變化
+    window.addEventListener('resize', function() {
+        // 如果當前正在查看PDF，重新渲染以適應新大小
+        if (currentPdfDoc && currentPageNum) {
+            queueRenderPage(currentPageNum);
+        }
+    });
+});
+
+
+
+
+
+// 修改 fetchAlbumCovers 函數，使其返回 Promise
+
 // 預先獲取專輯封面
 async function fetchAlbumCovers() {
     try {
+        console.log('開始載入專輯封面資料...');
         const albumsData = await fetchApi('/api/music', 'Error fetching album covers');
+        
         // 建立歌手/歌曲與封面的映射
         albumsData.forEach(album => {
             if (album.artist && album.cover_art_url) {
@@ -98,12 +204,19 @@ async function fetchAlbumCovers() {
                 });
             }
         });
+        
         console.log('專輯封面資料已載入:', Object.keys(albumCovers).length, '位歌手');
+        return albumCovers; // 返回封面資料
     } catch (error) {
         console.error('無法獲取專輯封面:', error);
-        // 失敗時不中斷程序
+        // 返回空對象，但不中斷程序
+        return {};
     }
 }
+
+
+
+
 
 // 根據歌手和標題查找封面
 function findAlbumCover(artist, title) {
