@@ -1,55 +1,50 @@
-// server.js    
+// --- START OF FILE server.js ---
+ 
+// server.js
 require('dotenv').config();
-const http = require('http');
+const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
+const http = require('http'); // <--- Need http module
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
-const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
-
-
-const multer = require('multer');
-
-const fs = require('fs').promises;
-const fsSync = require('fs');
+const WebSocket = require('ws'); // <--- Import the ws library
+// const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- 資料庫連接池設定 ---
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
 
-// 创建HTTP服务器，并将Express应用挂载到其上
-const server = http.createServer(app);
-// 创建WebSocket服务器，并将其附加到HTTP服务器
-const wss = new WebSocket.Server({ server });
 
-// --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
+   
+const multer = require('multer');
+const fs = require('fs');
  
 
-const UPLOADS_FOLDER = 'uploads';
-
-const uploadDir = path.join(process.env.UPLOADS_DIR || '/data', UPLOADS_FOLDER);
 
 
+// --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
+const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
 
-
-
-if (!fsSync.existsSync(uploadDir)) {
-    try {
-        fsSync.mkdirSync(uploadDir, { recursive: true });
-        console.log(`持久化上傳目錄已創建: ${uploadDir}`);
-    } catch (err) {
-        console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
-    }
+// 確保這個目錄存在 (如果不存在則創建)
+if (!fs.existsSync(uploadDir)) {
+  try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
+  } catch (err) {
+      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
+      // 根據你的需求，這裡可能需要拋出錯誤或有後備方案
+      // 例如，如果無法創建 /data/uploads，可能退回使用臨時目錄？
+      // 但最好的方式是確保 /data 磁碟已正確掛載且應用有權限寫入
   }
+}
 
-const gameRooms = new Map(); // 用於存儲遊戲房間const gameRooms = {};
-const roomCleanupTimeout = 6 * 60 * 60 * 1000; // 6小時無活動後清理房間
-
+ 
+ 
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -72,965 +67,6 @@ const upload = multer({
   },
   limits: { fileSize: 2 * 1024 * 1024 } // 限制 2MB
 });
-
-// 靜態文件服務
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-app.use('/uploads', express.static(uploadDir));
-
-// --- 基本認證中間件函數定義 ---
-const basicAuthMiddleware = (req, res, next) => {
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'password';
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('需要認證才能訪問管理區域。');
-    }
-
-    try {
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-
-        if (user === adminUser && pass === adminPass) {
-            next();
-        } else {
-            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
-            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-            return res.status(401).send('認證失敗。');
-        }
-    } catch (error) {
-        console.error("認證標頭解析錯誤:", error);
-        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
-        return res.status(401).send('認證失敗 (格式錯誤)。');
-    }
-};
-
-
-
-
-
-
-// --- 記錄 Page View 中間件 ---
-app.use(async (req, res, next) => {
-    const pathsToLog = [
-        '/', '/index.html', '/music.html', '/news.html', '/scores.html',
-        '/guestbook.html', '/message-detail.html',
-        '/game/card-game.html',
-        '/game/wheel-game.html',
-        '/game/brige-game.html',
-        '/rich.html',
-        '/rich-control.html',
-        '/games.html'
-    ];
-    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
-    if (shouldLog) {
-        const pagePath = req.path;
-        try {
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date)
-                DO UPDATE SET view_count = page_views.view_count + 1;
-            `;
-            const params = [pagePath];
-            await pool.query(sql, params);
-        } catch (err) {
-            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
-            } else {
-                console.error('[PV Mid] Error logging page view:', err.stack || err);
-            }
-        }
-    }
-    next();
-});
-
-
-
-
-
-
-
-
-
-// 獲取所有遊戲房間
-app.get('/api/game-rooms', async (req, res) => {
-    try {
-        // 將 Map 轉換為數組並返回
-        const rooms = Array.from(gameRooms.values()).map(room => ({
-            id: room.id,
-            roomName: room.roomName,
-            templateId: room.templateId,
-            templateName: room.templateName,
-            createdAt: room.createdAt,
-            players: room.players
-        }));
-        res.json(rooms);
-    } catch (err) {
-        console.error('獲取遊戲房間列表失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-
-
-
-
-
-
-
-// 創建新的遊戲房間
-app.post('/api/game-rooms', async (req, res) => {
-    const { roomName, templateId } = req.body;
-    
-    if (!roomName || !templateId) {
-        return res.status(400).json({ error: '房間名稱和模板 ID 為必填項' });
-    }
-    
-    try {
-        // 獲取模板詳情以儲存模板名稱
-        const templateResult = await pool.query(
-            'SELECT template_name FROM rich_map_templates WHERE id = $1',
-            [templateId]
-        );
-        
-        if (templateResult.rows.length === 0) {
-            return res.status(404).json({ error: '找不到指定的模板' });
-        }
-        
-        const templateName = templateResult.rows[0].template_name;
-        
-        // 生成唯一的房間 ID
-        const roomId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-        
-        // 創建新房間
-        const newRoom = {
-            id: roomId,
-            roomName: roomName,
-            templateId: templateId,
-            templateName: templateName,
-            createdAt: new Date(),
-            players: {} // 初始化為空的玩家列表
-        };
-        
-        // 儲存房間
-        gameRooms.set(roomId, newRoom);
-        
-        console.log(`創建了新的遊戲房間: ${roomName} (ID: ${roomId}, 模板: ${templateName})`);
-        res.status(201).json(newRoom);
-    } catch (err) {
-        console.error('創建遊戲房間失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-
-
-
-// 獲取特定遊戲房間
-app.get('/api/game-rooms/:id', (req, res) => {
-    const { id } = req.params;
-    
-    if (!gameRooms.has(id)) {
-        return res.status(404).json({ error: '找不到指定的遊戲房間' });
-    }
-    
-    res.json(gameRooms.get(id));
-});
-
-
-
-
-
-// 加入房間
-app.post('/api/game-rooms/:id/join', (req, res) => {
-    const { id } = req.params;
-    const { playerName, playerNumber } = req.body;
-    
-    if (!gameRooms.has(id)) {
-        return res.status(404).json({ error: '找不到指定的遊戲房間' });
-    }
-    
-    const room = gameRooms.get(id);
-    
-    // 檢查玩家編號是否已被佔用
-    if (room.players[playerNumber]) {
-        return res.status(400).json({ error: '該玩家位置已被佔用' });
-    }
-    
-    // 加入房間
-    room.players[playerNumber] = {
-        name: playerName,
-        joinedAt: new Date()
-    };
-    
-    res.json({ success: true, room: room });
-});
-
-// 離開房間
-app.post('/api/game-rooms/:id/leave', (req, res) => {
-    const { id } = req.params;
-    const { playerNumber } = req.body;
-    
-    if (!gameRooms.has(id) || !playerNumber) {
-        return res.status(404).json({ error: '找不到指定的遊戲房間或玩家編號' });
-    }
-    
-    const room = gameRooms.get(id);
-    
-    // 離開房間
-    if (room.players[playerNumber]) {
-        delete room.players[playerNumber];
-    }
-    
-    // 如果房間沒有玩家了，可以考慮刪除房間
-    if (Object.keys(room.players).length === 0) {
-        // 可選：設置一個計時器，在一段時間後刪除空房間
-        setTimeout(() => {
-            if (gameRooms.has(id) && Object.keys(gameRooms.get(id).players).length === 0) {
-                gameRooms.delete(id);
-                console.log(`刪除空房間: ${id}`);
-            }
-        }, 30 * 60 * 1000); // 30分鐘後刪除
-    }
-    
-    res.json({ success: true });
-});
-
-
-
-
-
-
-
-// 模板緩存，避免重複讀取數據庫或文件
-const templateCache = {};
-
-// 遊戲房間狀態管理 (統一定義)
-
-
-// 創建或獲取遊戲房間
-function getGameRoom(roomId) {
-    if (!gameRooms[roomId]) {
-        // 創建新房間
-        gameRooms[roomId] = {
-            id: roomId,
-            roomName: `房間 ${roomId.substring(0, 8)}`,
-            currentTemplateId: null,
-            templateName: null,
-            players: {},
-            playerPositions: [0, 0, 0],
-            activePlayer: 1,
-            isMoving: false,
-            highlightedCell: null,
-            connectedClients: [],
-            createdAt: Date.now(),
-            lastActivityTime: Date.now()
-        };
-        
-        // 設置房間清理定時器
-        setTimeout(() => checkRoomActivity(roomId), roomCleanupTimeout);
-    }
-    
-    // 更新最後活動時間
-    gameRooms[roomId].lastActivityTime = Date.now();
-    
-    return gameRooms[roomId];
-}
-
-// 檢查房間活動並清理不活躍的房間
-function checkRoomActivity(roomId) {
-    const room = gameRooms[roomId];
-    if (!room) return;
-    
-    const currentTime = Date.now();
-    const timeSinceLastActivity = currentTime - room.lastActivityTime;
-    
-    if (timeSinceLastActivity >= roomCleanupTimeout) {
-        console.log(`清理不活躍房間: ${roomId}`);
-        
-        // 關閉所有連接的WebSocket
-        room.connectedClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.close(1000, '房間因不活躍而關閉');
-            }
-        });
-        
-        // 刪除房間
-        delete gameRooms[roomId];
-    } else {
-        // 重新檢查
-        setTimeout(() => checkRoomActivity(roomId), roomCleanupTimeout);
-    }
-}
-
-// 更新遊戲狀態並向所有客戶端廣播
-function updateGameState(roomId, updates = {}) {
-    const gameRoom = getGameRoom(roomId);
-    
-    // 應用更新
-    Object.assign(gameRoom, updates);
-    gameRoom.lastActivityTime = Date.now();
-    
-    // 創建更新消息
-    const updateMessage = JSON.stringify({
-        type: 'gameStateUpdate',
-        data: {
-            currentTemplateId: gameRoom.currentTemplateId,
-            selectedPlayer: gameRoom.activePlayer,
-            playerPathIndices: gameRoom.playerPositions,
-            highlightedCell: gameRoom.highlightedCell,
-            isMoving: gameRoom.isMoving,
-            players: gameRoom.players
-        }
-    });
-    
-    // 廣播給所有連接的客戶端
-    gameRoom.connectedClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(updateMessage);
-        }
-    });
-}
-
-// 處理控制命令
-function handleControlCommand(roomId, command, params) {
-    const gameRoom = getGameRoom(roomId);
-    
-    console.log(`處理房間 ${roomId} 的命令: ${command}`, params);
-    
-    switch (command) {
-        case 'selectPlayer':
-            if (params && params.player >= 1 && params.player <= 3) {
-                gameRoom.activePlayer = params.player;
-            }
-            break;
-            
-        case 'movePlayer':
-            if (gameRoom.isMoving) return; // 防止重複移動
-            
-            const player = params.player || gameRoom.activePlayer;
-            if (player < 1 || player > 3) return;
-            
-            const steps = params.steps || 1;
-            const isForward = params.direction === 'forward';
-            
-            // 開始移動
-            gameRoom.isMoving = true;
-            
-            // 模擬移動動畫的時間
-            const moveTime = steps * 500; // 每步500毫秒
-            
-            // 計算最終位置 (這裡需要知道地圖的格子總數)
-            // 暫時設定為一個示例值，實際應該從模板數據中獲取
-            const maxPosition = 24; // 示例值，應該從模板中讀取
-            let currentPos = gameRoom.playerPositions[player - 1];
-            let newPos;
-            
-            if (isForward) {
-                newPos = (currentPos + steps) % maxPosition;
-            } else {
-                newPos = (currentPos - steps + maxPosition) % maxPosition;
-            }
-            
-            // 立即更新狀態為移動中
-            updateGameState(roomId);
-            
-            // 延遲後更新為最終位置
-            setTimeout(() => {
-                gameRoom.playerPositions[player - 1] = newPos;
-                gameRoom.isMoving = false;
-                gameRoom.highlightedCell = newPos;
-                
-                updateGameState(roomId);
-            }, moveTime);
-            break;
-            
-        case 'showPlayerInfo':
-            // 發送特定玩家所在格子的信息
-            if (params && params.player >= 1 && params.player <= 3) {
-                // 實際邏輯取決於你的UI設計
-                // 此處僅設置高亮細胞為玩家的當前位置
-                gameRoom.highlightedCell = gameRoom.playerPositions[params.player - 1];
-                
-                // 更新遊戲狀態
-                updateGameState(roomId);
-            }
-            break;
-            
-        case 'hidePlayerInfo':
-            // 隱藏信息面板
-            gameRoom.highlightedCell = null;
-            updateGameState(roomId);
-            break;
-            
-        case 'getGameState':
-            // 這個命令已經在 WebSocket 連接處理中處理了，
-            // 這裡不需要做任何事情，因為我們會自動發送最新狀態
-            break;
-            
-        default:
-            console.warn(`未知命令: ${command}`);
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 為房間加載模板
-async function loadTemplateForRoom(roomId, templateId) {
-    const gameRoom = getGameRoom(roomId);
-    
-    try {
-        // 嘗試從緩存中獲取模板
-        let template = templateCache[templateId];
-        
-        if (!template) {
-            // 如果緩存中沒有，從數據源獲取
-            const templateData = await fetchTemplateData(templateId);
-            templateCache[templateId] = templateData;
-            template = templateData;
-        }
-        
-        // 更新房間模板信息
-        gameRoom.currentTemplateId = templateId;
-        gameRoom.templateName = template.template_name || '未命名模板';
-        gameRoom.maxPosition = (template.cells || []).length;
-        gameRoom.playerPositions = [0, 0, 0]; // 重置玩家位置
-        gameRoom.highlightedCell = null;
-        gameRoom.isMoving = false;
-        
-        // 通知所有客戶端
-        updateGameState(roomId);
-        
-        return true;
-    } catch (error) {
-        console.error(`載入模板失敗 (ID: ${templateId}):`, error);
-        return false;
-    }
-}
-
-// 從數據源獲取模板數據
-async function fetchTemplateData(templateId) {
-    try {
-        // 從資料庫獲取模板資料
-        const templateQuery = `
-            SELECT id, template_name, logo_url, background_color
-            FROM rich_map_templates
-            WHERE id = $1
-        `;
-        const client = await pool.connect();
-        const { rows: templateRows } = await client.query(templateQuery, [templateId]);
-        
-        if (templateRows.length === 0) {
-            client.release();
-            throw new Error('Template not found');
-        }
-
-        const cellQuery = `
-            SELECT position, x, y, title, description, color, image_url
-            FROM rich_map_cells
-            WHERE template_id = $1
-            ORDER BY position ASC
-        `;
-        const playerQuery = `
-            SELECT player_number, name, avatar_url
-            FROM rich_players_config
-            WHERE template_id = $1
-            ORDER BY player_number ASC
-        `;
-
-        const [cellResult, playerResult] = await Promise.all([
-            client.query(cellQuery, [templateId]),
-            client.query(playerQuery, [templateId])
-        ]);
-
-        client.release();
-
-        return {
-            ...templateRows[0],
-            players: playerResult.rows,
-            cells: cellResult.rows
-        };
-    } catch (error) {
-        console.error(`無法獲取模板 ${templateId}:`, error);
-        throw new Error(`Template not found: ${templateId}`);
-    }
-}
-
-// WebSocket連接處理
-wss.on('connection', (ws, request) => {
-    // 解析URL查詢參數
-    let clientType = 'unknown';
-    let roomId = 'default'; // 默認房間ID
-    
-    try {
-        const url = new URL(request.url, `http://${request.headers.host}`);
-        clientType = url.searchParams.get('clientType') || 'unknown';
-        roomId = url.searchParams.get('roomId') || 'default';
-    } catch (e) {
-        console.error('Error parsing client connection URL:', e);
-    }
-    
-    console.log(`新的 ${clientType} 連接到房間 ${roomId}`);
-    
-    ws.clientType = clientType;
-    ws.roomId = roomId;
-    
-    // 獲取或創建房間
-    const gameRoom = getGameRoom(roomId);
-    
-    // 將客戶端添加到房間的連接列表
-    gameRoom.connectedClients.push(ws);
-    
-    // 為新連接的客戶端發送當前遊戲狀態
-    ws.send(JSON.stringify({
-        type: 'gameStateUpdate',
-        data: {
-            currentTemplateId: gameRoom.currentTemplateId,
-            selectedPlayer: gameRoom.activePlayer,
-            playerPathIndices: gameRoom.playerPositions,
-            highlightedCell: gameRoom.highlightedCell,
-            isMoving: gameRoom.isMoving,
-            players: gameRoom.players
-        }
-    }));
-    
-    // 如果是控制器，發送遊戲狀態信息
-    if (clientType === 'controller') {
-        ws.send(JSON.stringify({
-            type: 'gameStatus',
-            status: 'connected',
-            roomId: roomId
-        }));
-    }
-    
-    // 處理來自客戶端的消息
-    ws.on('message', (message) => {
-        gameRoom.lastActivityTime = Date.now(); // 更新房間活動時間
-        
-        // 解析消息字符串
-        let messageString;
-        if (message instanceof Buffer) {
-            messageString = message.toString('utf8');
-        } else if (typeof message === 'string') {
-            messageString = message;
-        } else {
-            console.error("Received unsupported message type:", typeof message);
-            return;
-        }
-        
-        try {
-            const msgData = JSON.parse(messageString);
-            
-            if (msgData.type === 'controlCommand') {
-                // 處理控制命令並更新遊戲狀態
-                handleControlCommand(roomId, msgData.command, msgData.params);
-                // 更新後的遊戲狀態會自動發送給所有客戶端
-            } else if (msgData.type === 'loadTemplate') {
-                // 處理載入新模板的請求
-                loadTemplateForRoom(roomId, msgData.templateId);
-            } else if (msgData.type === 'requestGameState') {
-                // 向請求的客戶端發送當前遊戲狀態
-                const gameState = {
-                    type: 'gameStateUpdate',
-                    data: {
-                        currentTemplateId: gameRoom.currentTemplateId,
-                        selectedPlayer: gameRoom.activePlayer,
-                        playerPathIndices: gameRoom.playerPositions,
-                        highlightedCell: gameRoom.highlightedCell,
-                        isMoving: gameRoom.isMoving,
-                        players: gameRoom.players
-                    }
-                };
-                ws.send(JSON.stringify(gameState));
-            } else if (msgData.type === 'gameStateUpdate') {
-                // 從遊戲客戶端收到狀態更新，保存並廣播
-                if (clientType === 'game') {
-                    // 更新房間狀態
-                    if (msgData.data) {
-                        if (msgData.data.playerPathIndices) gameRoom.playerPositions = msgData.data.playerPathIndices;
-                        if (msgData.data.selectedPlayer) gameRoom.activePlayer = msgData.data.selectedPlayer;
-                        if (msgData.data.highlightedCell !== undefined) gameRoom.highlightedCell = msgData.data.highlightedCell;
-                        if (msgData.data.isMoving !== undefined) gameRoom.isMoving = msgData.data.isMoving;
-                        if (msgData.data.players) gameRoom.players = msgData.data.players;
-                    }
-                    
-                    // 廣播更新給所有客戶端
-                    updateGameState(roomId);
-                }
-            }
-        } catch (error) {
-            console.error('處理消息時出錯:', error);
-            try {
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: '處理請求時出錯'
-                }));
-            } catch (e) {
-                console.error("Error sending error message back to client:", e);
-            }
-        }
-    });
-    
-    // 處理連接關閉
-    ws.on('close', () => {
-        // 從房間的客戶端列表中移除
-        const index = gameRoom.connectedClients.indexOf(ws);
-        if (index !== -1) {
-            gameRoom.connectedClients.splice(index, 1);
-        }
-        
-        console.log(`${clientType} 從房間 ${roomId} 斷開連接`);
-    });
-    
-    // 處理連接錯誤
-    ws.on('error', (error) => {
-        console.error(`WebSocket 錯誤 (客戶端類型: ${clientType}, 房間: ${roomId}):`, error);
-        
-        // 從房間的客戶端列表中移除
-        const index = gameRoom.connectedClients.indexOf(ws);
-        if (index !== -1) {
-            gameRoom.connectedClients.splice(index, 1);
-        }
-    });
-});
-
-// API端點：獲取房間列表
-app.get('/api/game-rooms', (req, res) => {
-    try {
-        const roomsList = Object.values(gameRooms).map(room => ({
-            id: room.id,
-            roomName: room.roomName,
-            templateId: room.currentTemplateId,
-            templateName: room.templateName,
-            players: room.players,
-            activePlayersCount: room.connectedClients.length,
-            createdAt: room.createdAt
-        }));
-        
-        res.json(roomsList);
-    } catch (error) {
-        console.error('獲取房間列表失敗:', error);
-        res.status(500).json({ error: '獲取房間列表失敗' });
-    }
-});
-
-// API端點：創建新房間
-app.post('/api/game-rooms', async (req, res) => {
-    try {
-        const { roomName, templateId } = req.body;
-        
-        if (!roomName || !templateId) {
-            return res.status(400).json({ error: '房間名稱和模板ID是必須的' });
-        }
-        
-        // 創建新房間ID
-        const roomId = uuidv4();
-        const gameRoom = getGameRoom(roomId);
-        
-        // 更新房間信息
-        gameRoom.roomName = roomName;
-        
-        // 加載模板
-        const success = await loadTemplateForRoom(roomId, templateId);
-        
-        if (!success) {
-            delete gameRooms[roomId];
-            return res.status(500).json({ error: '載入模板失敗' });
-        }
-        
-        res.json({
-            id: roomId,
-            roomName: gameRoom.roomName,
-            templateId: gameRoom.currentTemplateId,
-            templateName: gameRoom.templateName,
-            createdAt: gameRoom.createdAt
-        });
-    } catch (error) {
-        console.error('創建房間失敗:', error);
-        res.status(500).json({ error: '創建房間失敗' });
-    }
-});
-
-// 上傳檔案API
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-    try {
-      const file = req.file;
-      if (!file) {
-          return res.status(400).json({ success: false, error: '沒有上傳檔案' });
-      }
-      const imageUrl = '/uploads/' + file.filename;
-  
-      res.json({ success: true, url: imageUrl });
-    } catch (err) {
-      console.error('上傳圖片錯誤:', err);
-      res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
-    }
-});
-
-// Rich Map API
-app.get("/api/rich-map/templates", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT id, template_name FROM rich_map_templates");
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取模板列表失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-app.get('/api/rich-map/templates/:id/full', async (req, res) => {
-    const templateId = parseInt(req.params.id);
-    if (isNaN(templateId)) return res.status(400).json({ error: 'Invalid template ID' });
-  
-    try {
-      const client = await pool.connect();
-  
-      const templateQuery = `
-        SELECT id, template_name, logo_url, background_color
-        FROM rich_map_templates
-        WHERE id = $1
-      `;
-      const { rows: templateRows } = await client.query(templateQuery, [templateId]);
-      if (templateRows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Template not found' });
-      }
-  
-      const cellQuery = `
-        SELECT position, x, y, title, description, color, image_url
-        FROM rich_map_cells
-        WHERE template_id = $1
-        ORDER BY position ASC
-      `;
-      const playerQuery = `
-        SELECT player_number, name, avatar_url
-        FROM rich_players_config
-        WHERE template_id = $1
-        ORDER BY player_number ASC
-      `;
-  
-      const [cellResult, playerResult] = await Promise.all([
-        client.query(cellQuery, [templateId]),
-        client.query(playerQuery, [templateId])
-      ]);
-  
-      client.release();
-  
-      res.json({
-        ...templateRows[0],
-        players: playerResult.rows,
-        cells: cellResult.rows
-      });
-    } catch (err) {
-      console.error('Error fetching template:', err);
-      res.status(500).json({ error: 'Server error' });
-    }
-});
-// 新增模板API
-
-
-
-
-app.post('/api/rich-map/templates', async (req, res) => {
-    const { template_name, background_color, logo_url, cells, players } = req.body;
-    const DEFAULT_TEMPLATE_ID = 1; // 假設 ID=1 是你的預設模板 (例如 "美食地圖1")
-
-    // 1. 驗證必要欄位
-    if (!template_name || !template_name.trim()) {
-        return res.status(400).json({ error: '模板名稱不能為空' });
-    }
-    const trimmedName = template_name.trim();
-
-    const client = await pool.connect();
-    try {
-        // 2. 檢查名稱是否重複
-        const checkResult = await client.query(
-            'SELECT 1 FROM rich_map_templates WHERE template_name = $1',
-            [trimmedName]
-        );
-        if (checkResult.rowCount > 0) {
-            client.release();
-            return res.status(409).json({ error: `模板名稱 "${trimmedName}" 已存在` });
-        }
-
-        await client.query('BEGIN'); // --- 開始事務 ---
-
-        let bgColorToUse = '#fff0f5'; // 預設背景色
-        let logoUrlToUse = null;
-        let cellsToUse = [];
-        let playersToUse = [ // 預設玩家結構 (如果預設模板沒有玩家資料)
-            { player_number: 1, name: null, avatar_url: null },
-            { player_number: 2, name: null, avatar_url: null },
-            { player_number: 3, name: null, avatar_url: null },
-        ];
-
-        // 3. 判斷是 "新建" 還是 "另存"
-        if (cells && Array.isArray(cells)) {
-            // --- 情況：另存為新版本 (使用請求 body 中的資料) ---
-            console.log(`正在處理 "另存為" 請求: ${trimmedName}`);
-            bgColorToUse = (typeof background_color === 'string' && background_color.trim()) ? background_color.trim() : '#fff0f5';
-            logoUrlToUse = (typeof logo_url === 'string' && logo_url.trim()) ? logo_url.trim() : null;
-            cellsToUse = cells; // 直接使用傳入的格子資料
-            // 處理傳入的玩家資料，如果沒有或格式不對，使用預設值
-            if (players && Array.isArray(players) && players.length > 0) {
-                 playersToUse = players.slice(0, 3).map((p, i) => ({ // 最多取3個
-                     player_number: p.player_number || (i + 1), // 確保有 player_number
-                     name: (typeof p.name === 'string') ? p.name.trim() : null,
-                     avatar_url: (typeof p.avatar_url === 'string' && p.avatar_url.trim()) ? p.avatar_url.trim() : null
-                 }));
-                 // 補足到 3 個 (如果需要)
-                 while (playersToUse.length < 3) {
-                     playersToUse.push({ player_number: playersToUse.length + 1, name: null, avatar_url: null });
-                 }
-            }
-        } else {
-            // --- 情況：新建地圖 (從預設模板 ID=1 複製資料) ---
-            console.log(`正在處理 "新建" 請求: ${trimmedName} (基於模板 ID ${DEFAULT_TEMPLATE_ID})`);
-            // 獲取預設模板的基本資料
-            const defaultTemplateResult = await client.query(
-                'SELECT background_color, logo_url FROM rich_map_templates WHERE id = $1',
-                [DEFAULT_TEMPLATE_ID]
-            );
-            if (defaultTemplateResult.rowCount > 0) {
-                bgColorToUse = defaultTemplateResult.rows[0].background_color || bgColorToUse;
-                logoUrlToUse = defaultTemplateResult.rows[0].logo_url || logoUrlToUse;
-            } else {
-                console.warn(`預設模板 ID ${DEFAULT_TEMPLATE_ID} 未找到，將使用硬編碼的預設值。`);
-                // 如果預設模板不存在，可以使用硬編碼的預設值
-                 bgColorToUse = '#fff0f5';
-                 logoUrlToUse = null;
-                 // 也可以在這裡生成一個標準的空白地圖格子結構
-                 // cellsToUse = generateStandardEmptyCells();
-                 // 目前 cellsToUse 保持空陣列，需要手動編輯
-            }
-
-            // 獲取預設模板的格子資料
-            const defaultCellsResult = await client.query(
-                'SELECT position, x, y, title, description, color, image_url FROM rich_map_cells WHERE template_id = $1 ORDER BY position ASC',
-                [DEFAULT_TEMPLATE_ID]
-            );
-            // 移除 id 和 template_id，因為要插入新的
-            cellsToUse = defaultCellsResult.rows.map(({ id, template_id, ...cellData }) => cellData);
-
-             // 獲取預設模板的玩家資料
-             const defaultPlayersResult = await client.query(
-                 'SELECT player_number, name, avatar_url FROM rich_players_config WHERE template_id = $1 ORDER BY player_number ASC',
-                 [DEFAULT_TEMPLATE_ID]
-             );
-              // 移除 id 和 template_id
-             if (defaultPlayersResult.rowCount > 0) {
-                 playersToUse = defaultPlayersResult.rows.map(({ id, template_id, ...playerData }) => playerData);
-                 // 確保有 3 個玩家記錄
-                 while (playersToUse.length < 3) {
-                     playersToUse.push({ player_number: playersToUse.length + 1, name: null, avatar_url: null });
-                 }
-                 playersToUse = playersToUse.slice(0, 3); // 最多取3個
-             }
-             // 如果預設模板沒有玩家資料，playersToUse 會保持上面的預設值
-        }
-        
-        // 4. 插入新模板基礎資料
-        const newTemplateResult = await client.query(
-            `INSERT INTO rich_map_templates (template_name, background_color, logo_url)
-             VALUES ($1, $2, $3) RETURNING id`, // <-- 只插入需要的欄位，不指定 id
-            [trimmedName, bgColorToUse, logoUrlToUse] // <-- 參數列表也不包含 id
-        );
-        const newTemplateId = newTemplateResult.rows[0].id; // <-- 正確獲取自動生成的 ID
-        
-        console.log(`新模板基礎資料已插入，ID: ${newTemplateId}`);
-
-        // 5. 插入格子資料 (如果有)
-        if (cellsToUse.length > 0) {
-            const cellInsertPromises = cellsToUse.map(cell => {
-                const position = parseInt(cell.position);
-                if (isNaN(position)) return Promise.resolve();
-                return client.query(
-                    `INSERT INTO rich_map_cells (template_id, position, x, y, title, description, color, image_url)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [
-                        newTemplateId, // <-- 使用新 ID
-                        position,
-                        cell.x, cell.y,
-                        cell.title || '',
-                        cell.description || '',
-                        (cell.color && cell.color.startsWith('#')) ? cell.color : '#ffffff',
-                        cell.image_url || null
-                    ]
-                );
-            });
-            await Promise.all(cellInsertPromises);
-            console.log(`為模板 ID ${newTemplateId} 插入了 ${cellsToUse.length} 個格子`);
-        }
-
-        // 6. 插入玩家設定資料
-        if (playersToUse.length > 0) {
-             const playerInsertPromises = playersToUse.map(player => {
-                 return client.query(
-                     `INSERT INTO rich_players_config (template_id, player_number, name, avatar_url)
-                      VALUES ($1, $2, $3, $4)`, // 這裡不需要 ON CONFLICT，因為是全新插入
-                     [newTemplateId, player.player_number, player.name, player.avatar_url]
-                 );
-             });
-             await Promise.all(playerInsertPromises);
-             console.log(`為模板 ID ${newTemplateId} 插入了 ${playersToUse.length} 個玩家設定`);
-         }
-
-        await client.query('COMMIT'); // --- 提交事務 ---
-        console.log(`模板 "${trimmedName}" (ID: ${newTemplateId}) 已成功創建/另存`);
-        res.status(201).json({
-            success: true,
-            message: `模板 "${trimmedName}" 已成功創建/另存`,
-            newTemplate: { // 回傳新模板的 ID 和名稱，方便前端使用
-                id: newTemplateId,
-                template_name: trimmedName
-            }
-        });
-
-    } catch (err) {
-        await client.query('ROLLBACK'); // --- 出錯時回滾事務 ---
-        console.error(`創建/另存模板 "${trimmedName}" 時發生錯誤:`, err);
-        res.status(500).json({ error: '伺服器錯誤，操作失敗', detail: err.message });
-    } finally {
-        client.release(); // --- 確保釋放連接 ---
-    }
-});
-
-
-
-
-// --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
- 
-// 確保這個目錄存在 (如果不存在則創建)
-if (!fs.existsSync(uploadDir)) {
-  try {
-      fs.mkdirSync(uploadDir, { recursive: true });
-      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
-  } catch (err) {
-      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
-      // 根據你的需求，這裡可能需要拋出錯誤或有後備方案
-      // 例如，如果無法創建 /data/uploads，可能退回使用臨時目錄？
-      // 但最好的方式是確保 /data 磁碟已正確掛載且應用有權限寫入
-  }
-}
-
- 
- 
- 
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
       const file = req.file;
@@ -1063,9 +99,38 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
 
 
- 
 
 
+
+// --- 基本認證中間件函數定義 ---
+const basicAuthMiddleware = (req, res, next) => {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'password'; // *** 強烈建議在 .env 中設定一個強密碼 ***
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('需要認證才能訪問管理區域。');
+    }
+
+    try {
+        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+        const user = auth[0];
+        const pass = auth[1];
+
+        if (user === adminUser && pass === adminPass) {
+            next(); // 認證成功，繼續下一個中間件或路由處理
+        } else {
+            console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
+            res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+            return res.status(401).send('認證失敗。');
+        }
+    } catch (error) {
+        console.error("認證標頭解析錯誤:", error);
+        res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
+        return res.status(401).send('認證失敗 (格式錯誤)。');
+    }
+};
 
 // --- JSON 請求體解析中間件 ---
 // 必須放在所有需要讀取 req.body 的路由之前
@@ -1544,7 +609,21 @@ app.post('/api/bridge-game/submit-score', async (req, res) => {
 
 
 
- 
+
+
+// --- 命運轉輪主題 API ---
+// GET /api/wheel-game/themes - 獲取所有主題
+app.get('/api/wheel-game/themes', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name, created_at FROM wheel_themes ORDER BY created_at DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取轉輪主題失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
 // GET /api/wheel-game/themes/:id - 獲取特定主題
 app.get('/api/wheel-game/themes/:id', async (req, res) => {
@@ -2086,7 +1165,46 @@ console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
 
 
 
+// 伺服器端示例代碼
+const gameStates = {}; // 存儲不同遊戲房間的狀態
 
+// 創建或獲取遊戲房間
+function getGameRoom(roomId) {
+    if (!gameStates[roomId]) {
+        gameStates[roomId] = {
+            currentTemplateId: null,
+            players: {},
+            playerPositions: [0, 0, 0],
+            activePlayer: 1,
+            isMoving: false,
+            highlightedCell: null,
+            connectedClients: [],
+            lastUpdateTime: Date.now()
+        };
+    }
+    return gameStates[roomId];
+}
+
+// 更新遊戲狀態並通知所有連接的客戶端
+function updateGameState(roomId, updates) {
+    const gameState = getGameRoom(roomId);
+    
+    // 應用更新
+    Object.assign(gameState, updates);
+    gameState.lastUpdateTime = Date.now();
+    
+    // 通知所有連接的客戶端
+    const updateMessage = JSON.stringify({
+        type: 'gameStateUpdate',
+        data: gameState
+    });
+    
+    gameState.connectedClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(updateMessage);
+        }
+    });
+}
 
 
 
@@ -4079,284 +3197,143 @@ app.get('/message-detail.html', (req, res) => res.sendFile(path.join(__dirname, 
 app.get('/rich.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich.html')));
 app.get('/rich-control.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich-control.html')));
 
-
-
-
-
- 
+// --- Create HTTP Server ---
+const server = http.createServer(app);
 
 // --- WebSocket Server Setup ---
- 
+const wss = new WebSocket.Server({ server });
 
-// 替換單一遊戲客戶端和控制器集合，使用房間映射
-  
-
-// 定期清理房間（可選）
- 
-// 房間管理
-
-
-
-
-
-
-
-
-
-
+let gameClient = null;
+const controllerClients = new Set();
 
 wss.on('connection', (ws, req) => {
     console.log('WebSocket client connected');
-    
-    let clientType = 'unknown';
-    let roomId = 'default'; // 默認房間ID
-    
+
+    let clientType = 'unknown'; // Default client type
     try {
-        const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+        // Extract clientType from URL query parameter, handle potential errors
+        const requestUrl = new URL(req.url, `ws://${req.headers.host}`); // Need a base URL
         clientType = requestUrl.searchParams.get('clientType') || 'unknown';
-        roomId = requestUrl.searchParams.get('roomId') || 'default';
     } catch (e) {
         console.error('Error parsing client connection URL:', e);
+        // Keep clientType as 'unknown' or handle appropriately
     }
-    
-    console.log(`Identified client type: ${clientType} for room: ${roomId}`);
-    
-    ws.clientType = clientType;
-    ws.roomId = roomId;
-    
-    // 確保房間存在
-    if (!gameRooms[roomId]) {
-        gameRooms[roomId] = {
-            id: roomId,
-            roomName: `房間 ${roomId.substring(0, 8)}`,
-            currentTemplateId: null,
-            templateName: null,
-            players: {},
-            playerPositions: [0, 0, 0],
-            activePlayer: 1,
-            isMoving: false,
-            highlightedCell: null,
-            connectedClients: [],
-            createdAt: Date.now(),
-            lastActivityTime: Date.now()
-        };
-        
-        // 設置房間清理定時器
-        setTimeout(() => checkRoomActivity(roomId), roomCleanupTimeout);
-    }
-    
-    const room = gameRooms[roomId];
-    
-    // 將客戶端添加到房間的連接列表
-    room.connectedClients.push(ws);
-    room.lastActivityTime = Date.now();
-    
-    // 為新連接的客戶端發送當前遊戲狀態
-    ws.send(JSON.stringify({
-        type: 'gameStateUpdate',
-        data: {
-            currentTemplateId: room.currentTemplateId,
-            selectedPlayer: room.activePlayer,
-            playerPathIndices: room.playerPositions,
-            highlightedCell: room.highlightedCell,
-            isMoving: room.isMoving,
-            players: room.players
+
+    console.log(`Identified client type: ${clientType}`); // Log identified type
+
+    ws.clientType = clientType; // Assign type to the WebSocket object
+
+    if (clientType === 'game') {
+        console.log('Game client identified');
+        if (gameClient && gameClient.readyState === WebSocket.OPEN) {
+            console.log('Existing game client found, terminating previous.');
+            try { gameClient.terminate(); } catch (e) { console.error("Error terminating previous game client:", e); }
         }
-    }));
-    
-    // 如果是控制器，發送遊戲狀態信息
-    if (clientType === 'controller') {
-        ws.send(JSON.stringify({
-            type: 'gameStatus',
-            status: 'connected',
-            roomId: roomId
-        }));
-    }
-    
-    // 處理來自客戶端的消息
-    ws.on('message', (message) => {
-        room.lastActivityTime = Date.now(); // 更新房間活動時間
-        
-        // 解析消息字符串
-        let messageString;
-        if (message instanceof Buffer) {
-            messageString = message.toString('utf8');
-        } else if (typeof message === 'string') {
-            messageString = message;
-        } else {
-            console.error("Received unsupported message type:", typeof message);
-            return;
-        }
-        
-
-
- 
-
-
+        gameClient = ws;
+        broadcastToControllers({ type: 'gameStatus', status: 'connected' });
+    } else if (clientType === 'controller') {
+        console.log('Controller client identified');
+        controllerClients.add(ws);
+        // Send current game status to the new controller immediately
         try {
-            const msgData = JSON.parse(messageString);
-            
-            if (msgData.type === 'controlCommand') {
-                // 處理控制命令並更新遊戲狀態
-                handleControlCommand(roomId, msgData.command, msgData.params);
-                // 更新後的遊戲狀態會自動發送給所有客戶端
-            } else if (msgData.type === 'loadTemplate') {
-                // 處理載入新模板的請求
-                loadTemplateForRoom(roomId, msgData.templateId);
-            } else if (msgData.type === 'requestGameState') {
-                // 向請求的客戶端發送當前遊戲狀態
-                const gameState = {
-                    type: 'gameStateUpdate',
-                    data: {
-                        currentTemplateId: room.currentTemplateId,
-                        selectedPlayer: room.activePlayer,
-                        playerPathIndices: room.playerPositions,
-                        highlightedCell: room.highlightedCell,
-                        isMoving: room.isMoving,
-                        players: room.players
-                    }
-                };
-                ws.send(JSON.stringify(gameState));
-            } else if (msgData.type === 'gameStateUpdate') {
-                // 從遊戲客戶端收到狀態更新，保存並廣播
-                if (clientType === 'game') {
-                    // 更新房間狀態
-                    if (msgData.data) {
-                        if (msgData.data.playerPathIndices) room.playerPositions = msgData.data.playerPathIndices;
-                        if (msgData.data.selectedPlayer) room.activePlayer = msgData.data.selectedPlayer;
-                        if (msgData.data.highlightedCell !== undefined) room.highlightedCell = msgData.data.highlightedCell;
-                        if (msgData.data.isMoving !== undefined) room.isMoving = msgData.data.isMoving;
-                        if (msgData.data.players) room.players = msgData.data.players;
-                    }
-                    
-                    // 廣播更新給所有客戶端
-                    updateGameState(roomId);
-                }
-            }
-        } catch (error) {
-            console.error('處理消息時出錯:', error);
-            try {
-                ws.send(JSON.stringify({
-                    type: 'error',
-                    message: '處理請求時出錯'
-                }));
-            } catch (e) {
-                console.error("Error sending error message back to client:", e);
-            }
-        }
-    });
-    
-    // 處理連接關閉
-    ws.on('close', () => {
-        // 從房間的客戶端列表中移除
-        const index = room.connectedClients.indexOf(ws);
-        if (index !== -1) {
-            room.connectedClients.splice(index, 1);
-        }
-        
-        console.log(`${clientType} 從房間 ${roomId} 斷開連接`);
-    });
-    
-    // 處理連接錯誤
-    ws.on('error', (error) => {
-        console.error(`WebSocket 錯誤 (客戶端類型: ${clientType}, 房間: ${roomId}):`, error);
-        
-        // 從房間的客戶端列表中移除
-        const index = room.connectedClients.indexOf(ws);
-        if (index !== -1) {
-            room.connectedClients.splice(index, 1);
-        }
-    });
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-// 房間列表API
-app.get('/api/game-rooms', (req, res) => {
-    const rooms = [];
-    gameRooms.forEach((room, roomId) => {
-        rooms.push({
-            id: roomId,
-            playersCount: room.controllerClients.size,
-            hasGame: room.gameClient && room.gameClient.readyState === WebSocket.OPEN
-        });
-    });
-    res.json(rooms);
-});
-
-
-
-
-
-
-
-
-// 創建房間API
-app.post('/api/game-rooms', (req, res) => {
-    const { roomName, templateId } = req.body;
-    
-    if (!roomName) {
-        return res.status(400).json({ error: '房間名稱是必須的' });
-    }
-    
-    // 創建新房間ID - 使用 uuidv4() 而非 generateUniqueId()
-    const roomId = uuidv4();
-    const gameRoom = getGameRoom(roomId);
-    
-    // 更新房間信息
-    gameRoom.roomName = roomName;
-    
-    // 如果提供了模板ID，加載它
-    if (templateId) {
-        loadTemplateForRoom(roomId, templateId)
-            .then(success => {
-                if (!success) {
-                    delete gameRooms[roomId];
-                    return res.status(500).json({ error: '載入模板失敗' });
-                }
-                res.json({
-                    id: roomId,
-                    roomName: gameRoom.roomName,
-                    templateId: gameRoom.currentTemplateId,
-                    templateName: gameRoom.templateName,
-                    createdAt: gameRoom.createdAt
-                });
-            });
+             ws.send(JSON.stringify({ type: 'gameStatus', status: gameClient && gameClient.readyState === WebSocket.OPEN ? 'connected' : 'disconnected' }));
+         } catch (e) { console.error("Error sending initial status to controller:", e); }
     } else {
-        res.json({
-            id: roomId,
-            roomName: gameRoom.roomName,
-            createdAt: gameRoom.createdAt
-        });
+        console.log('Unknown client type connected');
     }
+
+    ws.on('message', (message) => {
+        let messageString;
+        // --- START: Buffer Handling ---
+        if (message instanceof Buffer) {
+            messageString = message.toString('utf8'); // Convert Buffer to UTF-8 string
+// console.log('Controller sent message, but game is not connected.');        } else if (typeof message === 'string') {
+            messageString = message; // Already a string
+           // console.log(`Received string message: ${messageString}`);
+        } else {
+            // Handle or ignore other types if necessary (e.g., ArrayBuffer)
+// console.log(`Received string message: ${messageString}`);     
+//        return; // Ignore non-string/buffer messages for now
+        }
+        // --- END: Buffer Handling ---
+
+        let parsedMessage;
+        try {
+            parsedMessage = JSON.parse(messageString); // Parse the string version
+        } catch (e) {
+            // Log the string that failed parsing for debugging
+
+            // Optionally notify the sender about the error
+            // ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON format received' }));
+            return; // Stop processing this invalid message
+        }
+
+        // Route messages using parsedMessage
+        if (ws.clientType === 'controller' && gameClient && gameClient.readyState === WebSocket.OPEN) {
+ 
+            try {
+                 gameClient.send(JSON.stringify(parsedMessage)); // Forward the valid JSON object
+             } catch (e) { console.error("Error sending message to game client:", e); }
+        } else if (ws.clientType === 'game') {
+
+
+            broadcastToControllers(parsedMessage); // Broadcast the valid JSON object
+        } else if (ws.clientType === 'controller' && (!gameClient || gameClient.readyState !== WebSocket.OPEN)) {
+
+            try {
+                 ws.send(JSON.stringify({ type: 'error', message: 'Game is not connected.' }));
+             } catch (e) { console.error("Error sending 'game not connected' to controller:", e); }
+        }
+    });
+
+    ws.on('close', () => {
+        console.log(`WebSocket client disconnected (Type: ${ws.clientType})`);
+        if (ws === gameClient) {
+            gameClient = null;
+            console.log('Game client disconnected');
+            broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
+        } else if (controllerClients.has(ws)) {
+            controllerClients.delete(ws);
+            console.log('Controller client disconnected');
+        }
+    });
+
+    ws.on('error', (error) => {
+        console.error(`WebSocket error (Client Type: ${ws.clientType}):`, error);
+        // Clean up resources if an error occurs
+        if (ws === gameClient) {
+            gameClient = null;
+             broadcastToControllers({ type: 'gameStatus', status: 'disconnected' });
+        } else if (controllerClients.has(ws)) {
+            controllerClients.delete(ws);
+        }
+        // Optionally try to close the connection if it's still open
+        try { if (ws.readyState === WebSocket.OPEN) ws.close(); } catch (e) {}
+    });
 });
 
+function broadcastToControllers(message) {
+    if (controllerClients.size === 0) return; // No controllers connected
 
-
-
-
-
- 
-
-
-
-
- 
+    try {
+        const messageString = JSON.stringify(message);
+         // ↓↓↓ 找到這一行 (或類似的) ↓↓↓
+         // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
+         // ↓↓↓ 將其刪除或在前面加上 // 註解掉 ↓↓↓
+         // // console.log(`Broadcasting to ${controllerClients.size} controllers: ${messageString}`);
+         controllerClients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                 try {
+                     client.send(messageString);
+                 } catch (e) {
+                     console.error("Error sending message to a controller:", e);
+                 }
+            }
+        });
+    } catch (e) {
+         console.error("Error stringifying message for broadcast:", e, message);
+     }
+}
 
 
 // --- 404 Handler ---
@@ -4380,4 +3357,4 @@ server.listen(PORT, () => { // <--- Use server.listen instead of app.listen
         .catch(err => console.error('資料庫連接錯誤:', err.stack || err));
 });
 
-// - 
+// --- END OF FILE server.js ---
