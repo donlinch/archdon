@@ -28,17 +28,15 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
-const uploadDir = '/data/uploads';
+ 
 
-// 確保上傳目錄存在
-if (!fsSync.existsSync(uploadDir)) {
-  try {
-      fsSync.mkdirSync(uploadDir, { recursive: true });
-      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
-  } catch (err) {
-      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
-  }
-}
+const UPLOADS_FOLDER = 'uploads';
+
+const uploadDir = path.join(process.env.UPLOADS_DIR || '/data', UPLOADS_FOLDER);
+
+
+
+
 
 if (!fsSync.existsSync(uploadDir)) {
     try {
