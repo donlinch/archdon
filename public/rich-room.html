@@ -391,15 +391,11 @@ setInterval(() => {
             createRoomBtn.textContent = '創建中...';
 
             try {
-                const response = await fetch('/api/game-rooms', { // 調用新的 API
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        roomName: roomName,      // 確保鍵名與後端一致
-                        templateId: templateId   // 確保鍵名與後端一致
-                    })
+                const response = awaitfetch('https://sunnyyummy.onrender.com/api/game-rooms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roomName, templateId })
+
                 });
 
                 const result = await response.json(); // 嘗試解析 JSON
