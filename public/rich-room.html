@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁遊戲房間</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #fff0f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #5b9df0;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            color: #666;
+        }
+        
+        .rooms-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        .create-room {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(91, 157, 240, 0.2);
+            padding: 1.5rem;
+            border: 1px solid #d1e6ff;
+        }
+        
+        .create-room h2 {
+            color: #5b9df0;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .room-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .form-group input, .form-group select {
+            padding: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .create-btn {
+            background-color: #0cd8b6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .create-btn:hover {
+            background-color: #09b699;
+        }
+        
+        .active-rooms {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(91, 157, 240, 0.2);
+            padding: 1.5rem;
+            border: 1px solid #d1e6ff;
+        }
+        
+        .active-rooms h2 {
+            color: #5b9df0;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .rooms-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .room-card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #eee;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .room-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .room-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .room-details {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .room-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .join-btn {
+            flex: 1;
+            background-color: #5b9df0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+        
+        .join-btn:hover {
+            background-color: #4a8cdf;
+        }
+        
+        .control-btn {
+            flex: 1;
+            background-color: #9270ca;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+        
+        .control-btn:hover {
+            background-color: #7d5fb3;
+        }
+        
+        .no-rooms {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-style: italic;
+        }
+        
+        @media (max-width: 600px) {
+            .rooms-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>大富翁遊戲房間</h1>
+        <p>創建新房間或加入現有房間開始遊戲</p>
+    </div>
+    
+    <div class="rooms-container">
+        <div class="create-room">
+            <h2>創建新房間</h2>
+            <div class="room-form">
+                <div class="form-group">
+                    <label for="room-name">房間名稱</label>
+                    <input type="text" id="room-name" placeholder="輸入房間名稱...">
+                </div>
+                <div class="form-group">
+                    <label for="template-select">遊戲模板</label>
+                    <select id="template-select">
+                        <option value="">載入中...</option>
+                    </select>
+                </div>
+                <button id="create-room-btn" class="create-btn">創建房間</button>
+            </div>
+        </div>
+        
+        <div class="active-rooms">
+            <h2>活動房間</h2>
+            <div id="rooms-list" class="rooms-list">
+                <div class="no-rooms">目前沒有活動的房間，創建一個新房間開始玩吧！</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const roomNameInput = document.getElementById('room-name');
+            const templateSelect = document.getElementById('template-select');
+            const createRoomBtn = document.getElementById('create-room-btn');
+            const roomsList = document.getElementById('rooms-list');
+            
+            // 載入模板列表
+            async function loadTemplates() {
+                try {
+                    const response = await fetch('/api/rich-map/templates');
+                    if (!response.ok) throw new Error(`Failed to fetch templates list: ${response.status}`);
+                    const templates = await response.json();
+                    
+                    templateSelect.innerHTML = ''; // 清除載入中選項
+                    if (templates.length === 0) {
+                        templateSelect.innerHTML = '<option value="">無可用模板</option>';
+                        createRoomBtn.disabled = true;
+                    } else {
+                        templates.forEach(template => {
+                            const option = document.createElement('option');
+                            option.value = template.id;
+                            option.textContent = template.template_name;
+                            templateSelect.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error loading templates:", error);
+                    templateSelect.innerHTML = '<option value="">載入模板失敗</option>';
+                    createRoomBtn.disabled = true;
+                }
+            }
+            
+            // 載入房間列表
+            async function loadRooms() {
+                try {
+                    const response = await fetch('/api/game-rooms');
+                    if (!response.ok) throw new Error(`Failed to fetch rooms: ${response.status}`);
+                    const rooms = await response.json();
+                    
+                    roomsList.innerHTML = ''; // 清除之前的列表
+                    
+                    if (rooms.length === 0) {
+                        roomsList.innerHTML = '<div class="no-rooms">目前沒有活動的房間，創建一個新房間開始玩吧！</div>';
+                        return;
+                    }
+                    
+                    rooms.forEach(room => {
+                        const roomCard = document.createElement('div');
+                        roomCard.className = 'room-card';
+                        
+                        const playersCount = Object.keys(room.players || {}).length;
+                        const templateName = room.templateName || '未知模板';
+                        
+                        roomCard.innerHTML = `
+                            <div class="room-name">${room.roomName || '匿名房間'}</div>
+                            <div class="room-details">
+                                <div>模板: ${templateName}</div>
+                                <div>玩家: ${playersCount}/3</div>
+                                <div>創建時間: ${new Date(room.createdAt).toLocaleString()}</div>
+                            </div>
+                            <div class="room-actions">
+                                <a href="/rich.html?roomId=${room.id}" class="join-btn">加入遊戲</a>
+                                <a href="/rich-control.html?roomId=${room.id}" class="control-btn">控制器</a>
+                            </div>
+                        `;
+                        
+                        roomsList.appendChild(roomCard);
+                    });
+                } catch (error) {
+                    console.error("Error loading rooms:", error);
+                    roomsList.innerHTML = '<div class="no-rooms" style="color: #cc0000;">載入房間列表失敗，請稍後再試</div>';
+                }
+            }
+            
+            // 創建新房間
+            async function createRoom() {
+                const roomName = roomNameInput.value.trim();
+                const templateId = templateSelect.value;
+                
+                if (!roomName) {
+                    alert('請輸入房間名稱');
+                    return;
+                }
+                
+                if (!templateId) {
+                    alert('請選擇遊戲模板');
+                    return;
+                }
+                
+                createRoomBtn.disabled = true;
+                createRoomBtn.textContent = '創建中...';
+                
+                try {
+                    const response = await fetch('/api/game-rooms', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            roomName,
+                            templateId
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `Failed to create room: ${response.status}`);
+                    }
+                    
+                    const room = await response.json();
+                    
+                    // 創建成功後跳轉到遊戲頁面
+                    window.location.href = `/rich.html?roomId=${room.id}`;
+                } catch (error) {
+                    console.error("Error creating room:", error);
+                    alert(`創建房間失敗: ${error.message}`);
+                    createRoomBtn.disabled = false;
+                    createRoomBtn.textContent = '創建房間';
+                }
+            }
+            
+            // 設置事件監聽器
+            createRoomBtn.addEventListener('click', createRoom);
+            
+            // 初始化頁面
+            loadTemplates();
+            loadRooms();
+            
+            // 定期更新房間列表
+            setInterval(loadRooms, 30000); // 每30秒更新一次
+        });
+    </script>
+</body>
+</html>

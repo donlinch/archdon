@@ -485,45 +485,41 @@ function finishMoving(finalIndex, player) {
       console.log("Player positions initialized to:", playerPathIndices);
   }
 
+
+
+
+
+
+
+
+
+  
   // --- WebSocket Connection ---
-   function connectWebSocket() {
-      // Close existing connection if any to prevent multiple connections
-      if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-          console.log("Closing existing WebSocket connection before reconnecting.");
-          ws.close();
-      } else {
-           console.log("No existing WebSocket connection or already closed.");
-       }
-
-      ws = new WebSocket(wsUrl);
-      console.log("Attempting WebSocket connection...");
-
-      ws.onopen = () => {
-           console.log("WebSocket Connected");
-           // Send initial state ONLY if a map has been successfully loaded
-           if (currentTemplateId) {
-                console.log("Sending initial game state as map is loaded.");
-                sendGameStateToControllers();
-           } else {
-                console.log("WebSocket open, but no map loaded yet. Waiting for map load.");
+  function connectWebSocket() {
+    // 獲取或生成房間ID（可以從URL參數獲取）
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId') || 'default';
+    
+    const wsUrl = `wss://${window.location.host}?clientType=game&roomId=${roomId}`;
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        console.log(`WebSocket Connected to room ${roomId}`);
+        // 連接後請求最新遊戲狀態
+        requestGameState();
+    };
+    
+    ws.onmessage = ({ data }) => {
+        try {
+            const msg = JSON.parse(data);
+            if (msg.type === 'gameStateUpdate') {
+                // 更新本地遊戲狀態
+                updateLocalGameState(msg.data);
             }
-       };
-
-      ws.onmessage = ({ data }) => {
-          try {
-               console.log("WebSocket Message Received:", data);
-              const msg = JSON.parse(data);
-              if (msg.type === 'controlCommand') {
-                   console.log("Handling control command:", msg.command, msg.params);
-                  handleControlCommand(msg.command, msg.params);
-              } else if (msg.type === 'requestGameState') { // Handle requests from controller
-                  console.log("Received requestGameState from controller");
-                  sendGameStateToControllers();
-              }
-          } catch (err) {
-              console.error('WS message processing error:', err);
-          }
-      };
+        } catch (err) {
+            console.error('WS message processing error:', err);
+        }
+    };
       ws.onclose = (event) => {
            console.log(`WebSocket Closed. Code: ${event.code}, Reason: ${event.reason}. Reconnecting...`);
            ws = null; // Ensure ws is nullified
@@ -535,6 +531,40 @@ function finishMoving(finalIndex, player) {
            // onclose will likely fire after an error, triggering reconnection
        };
   }
+
+
+
+
+
+
+
+// 更新本地遊戲狀態的新函數
+function updateLocalGameState(serverState) {
+  // 檢查模板是否需要更新
+  if (currentTemplateId !== serverState.currentTemplateId) {
+      // 如果需要載入新模板
+      loadTemplate(serverState.currentTemplateId);
+  }
+  
+  // 更新玩家位置和選中狀態
+  selectedPlayer = serverState.activePlayer;
+  playerPathIndices = serverState.playerPositions;
+  isMoving = serverState.isMoving;
+  highlightedCell = serverState.highlightedCell;
+  
+  // 更新玩家位置視覺效果
+  updatePlayerPositions();
+  
+  // 更新高亮單元格
+  updateCellHighlight();
+  
+  // 更新選中玩家視覺效果
+  updateSelectedPlayerVisuals(selectedPlayer);
+}
+
+
+
+
 
   // --- Send Game State to Controllers ---
    function sendGameStateToControllers() {

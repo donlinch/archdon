@@ -434,10 +434,18 @@
         const allControlButtons = document.querySelectorAll('.controller-container button');
 
 
-        // 修改 rich-control.html 中的 WebSocket 處理邏輯
+
+// 控制器的 WebSocket 連接改進 (rich-control.js)
 function connectWebSocket() {
-  const wsUrl = `wss://${window.location.host}?clientType=controller`;
-  ws = new WebSocket(wsUrl);
+    // 從URL獲取房間ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId') || 'default';
+    
+    const wsUrl = `wss://${window.location.host}?clientType=controller&roomId=${roomId}`;
+    ws = new WebSocket(wsUrl);
+
+
+ 
 
   ws.onopen = () => {
     console.log("Controller WebSocket Connected");
