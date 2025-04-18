@@ -392,10 +392,10 @@ setInterval(() => {
     try {
         // 使用 fetch 而不是 awaitfetch
         const response = await fetch('/api/game-rooms', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roomName, templateId })
-        });
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roomName, templateId })
+});
 
         const result = await response.json();
 

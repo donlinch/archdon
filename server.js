@@ -176,27 +176,58 @@ app.use(async (req, res, next) => {
 });
 
 
-
-// --- 建立新房間 ---
+// 修正後的創建房間API
 app.post('/api/game-rooms', async (req, res) => {
     const { roomName, templateId } = req.body;
-    if (!roomName || !templateId) {
+    
+    if (!roomName || !roomName.trim()) {
         return res.status(400).json({ error: '房間名稱與模板 ID 為必填' });
+    }
+    if (!templateId) {
+        return res.status(400).json({ error: '必須選擇遊戲模板' });
     }
 
     try {
-        const roomId = generateUniqueRoomId();
-        await db.query(
-            `INSERT INTO game_rooms (room_id, room_name, template_id) VALUES ($1, $2, $3)`,
-            [roomId, roomName, templateId]
-        );
-        res.json({ roomId });
+        // 生成唯一房間ID
+        const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        
+        // 創建房間對象
+        const newRoom = {
+            id: roomId,
+            roomName: roomName.trim(),
+            templateId,
+            createdAt: new Date().toISOString(),
+            lastActive: Date.now(),
+            state: {
+                currentTemplateId: templateId,
+                players: {},
+                playerPositions: [0, 0, 0],
+                activePlayer: 1,
+                isMoving: false,
+                highlightedCell: null
+            },
+            gameClient: null,
+            controllerClients: new Set()
+        };
+
+        // 將房間存入記憶體中的Map
+        gameRooms.set(roomId, newRoom);
+        
+        console.log(`[Room Created] New room created: ${roomId}`);
+        res.status(201).json({
+            id: roomId,
+            roomName: newRoom.roomName,
+            templateId: newRoom.templateId,
+            createdAt: newRoom.createdAt
+        });
     } catch (err) {
         console.error('[Create Room Error]', err);
-        res.status(500).json({ error: '建立房間失敗' });
+        res.status(500).json({ 
+            error: '建立房間失敗',
+            detail: err.message 
+        });
     }
 });
-
 
 
 
