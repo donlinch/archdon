@@ -6,8 +6,11 @@ const path = require('path');
 const { Pool } = require('pg');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs').promises;
+
+
 const multer = require('multer');
+
+const fs = require('fs').promises;
 const fsSync = require('fs');
 
 const app = express();
@@ -37,7 +40,14 @@ if (!fsSync.existsSync(uploadDir)) {
   }
 }
 
-
+if (!fsSync.existsSync(uploadDir)) {
+    try {
+        fsSync.mkdirSync(uploadDir, { recursive: true });
+        console.log(`持久化上傳目錄已創建: ${uploadDir}`);
+    } catch (err) {
+        console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
+    }
+  }
 
 const gameRooms = new Map(); // 用於存儲遊戲房間const gameRooms = {};
 const roomCleanupTimeout = 6 * 60 * 60 * 1000; // 6小時無活動後清理房間
