@@ -751,7 +751,26 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
 
 
 
-
+// 獲取所有活躍房間
+app.get('/api/game-rooms', (req, res) => {
+    const roomsArray = [];
+    for (const [id, room] of gameRooms.entries()) {
+        // 只顯示活躍的房間(最近30分鐘有活動)
+        const isActive = (Date.now() - room.lastActive) < 30 * 60 * 1000;
+        if (!isActive) continue;
+        
+        roomsArray.push({
+            id,
+            roomName: room.roomName || `房間 ${id}`,
+            templateId: room.state?.currentTemplateId,
+            templateName: room.state?.currentTemplateId ? `模板 ${room.state.currentTemplateId}` : '未知模板',
+            playersCount: room.controllerClients.size,
+            hasGameClient: !!room.gameClient && room.gameClient.readyState === WebSocket.OPEN,
+            createdAt: room.createdAt
+        });
+    }
+    res.json(roomsArray);
+});
 
 
 
@@ -3407,26 +3426,10 @@ function broadcastToControllers(roomId, message) {
 
 // 在server.js中添加這些API端點
 
-// 獲取所有活躍房間
-app.get('/api/game-rooms', (req, res) => {
-    const roomsArray = [];
-    for (const [id, room] of gameRooms.entries()) {
-        // 只顯示活躍的房間(最近30分鐘有活動)
-        const isActive = (Date.now() - room.lastActive) < 30 * 60 * 1000;
-        if (!isActive) continue;
-        
-        roomsArray.push({
-            id,
-            roomName: room.roomName || `房間 ${id}`,
-            templateId: room.state?.currentTemplateId,
-            templateName: room.state?.currentTemplateId ? `模板 ${room.state.currentTemplateId}` : '未知模板',
-            playersCount: room.controllerClients.size,
-            hasGameClient: !!room.gameClient && room.gameClient.readyState === WebSocket.OPEN,
-            createdAt: room.createdAt
-        });
-    }
-    res.json(roomsArray);
-});
+
+
+
+
 // 創建新房間
 app.post('/api/game-rooms', (req, res) => {
     const { roomName, templateId } = req.body;
@@ -3462,6 +3465,13 @@ app.post('/api/game-rooms', (req, res) => {
         templateId: templateId
     });
 });
+
+
+
+
+
+
+
 
 // 定期清理不活躍的房間(每10分鐘)
 setInterval(() => {
