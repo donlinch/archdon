@@ -18,8 +18,7 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
-const cors = require('cors');
-app.use(cors());
+
 
    
 const multer = require('multer');
