@@ -391,7 +391,7 @@ setInterval(() => {
             createRoomBtn.textContent = '創建中...';
 
             try {
-                const response = awaitfetch('https://sunnyyummy.onrender.com/api/game-rooms', {
+                const response = await fetch('https://sunnyyummy.onrender.com/api/game-rooms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ roomName, templateId })
