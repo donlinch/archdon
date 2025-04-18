@@ -271,9 +271,6 @@ function renderSongsGrid(songs) {
 
 
 
-
-
-/* 更新的 renderSongsList 函數 */
 function renderSongsList(songs) {
     if (!songsContainer) return;
     
