@@ -370,59 +370,52 @@ setInterval(() => {
             }
         }
 
-        // --- 3. 創建新房間 ---
         async function createRoom() {
-            const roomName = roomNameInput.value.trim();
-            const templateId = templateSelect.value;
+    const roomName = roomNameInput.value.trim();
+    const templateId = templateSelect.value;
 
-            // 前端驗證
-            if (!roomName) {
-                alert('請輸入房間名稱！');
-                roomNameInput.focus();
-                return;
-            }
-            if (!templateId) {
-                alert('請選擇一個遊戲模板！');
-                templateSelect.focus();
-                return;
-            }
+    // 前端驗證
+    if (!roomName) {
+        alert('請輸入房間名稱！');
+        roomNameInput.focus();
+        return;
+    }
+    if (!templateId) {
+        alert('請選擇一個遊戲模板！');
+        templateSelect.focus();
+        return;
+    }
 
-            createRoomBtn.disabled = true;
-            createRoomBtn.textContent = '創建中...';
+    createRoomBtn.disabled = true;
+    createRoomBtn.textContent = '創建中...';
 
-            try {
-                const response = await fetch('https://sunnyyummy.onrender.com/api/game-rooms', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ roomName, templateId })
+    try {
+        // 使用 fetch 而不是 awaitfetch
+        const response = await fetch('/api/game-rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomName, templateId })
+        });
 
-                });
+        const result = await response.json();
 
-                const result = await response.json(); // 嘗試解析 JSON
-
-                if (!response.ok) {
-                    // 顯示後端返回的錯誤訊息
-                    throw new Error(result.error || `創建失敗 (${response.status})`);
-                }
-
-                console.log('[Rooms] Room created successfully:', result);
-                alert(`房間 "${result.roomName}" 已創建！正在加入遊戲...`);
-
-                // --- 成功創建後，直接跳轉到該房間的遊戲頁面 ---
-                window.location.href = `/rich.html?roomId=${result.id}`; 
-                // 或者你可以選擇只刷新房間列表:
-                // roomNameInput.value = ''; // 清空輸入框
-                // loadRooms(); 
-
-            } catch (error) {
-                console.error("[Rooms] Error creating room:", error);
-                alert(`創建房間失敗：\n${error.message}`);
-            } finally {
-                // 無論成功或失敗，恢復按鈕狀態
-                createRoomBtn.disabled = false;
-                createRoomBtn.textContent = '創建房間';
-            }
+        if (!response.ok) {
+            throw new Error(result.error || `創建失敗 (${response.status})`);
         }
+
+        console.log('[Rooms] Room created successfully:', result);
+        alert(`房間 "${result.roomName}" 已創建！正在加入遊戲...`);
+
+        window.location.href = `/rich.html?roomId=${result.id}`;
+
+    } catch (error) {
+        console.error("[Rooms] Error creating room:", error);
+        alert(`創建房間失敗：\n${error.message}`);
+    } finally {
+        createRoomBtn.disabled = false;
+        createRoomBtn.textContent = '創建房間';
+    }
+}
 
         // --- 4. 綁定事件監聽器 ---
         createRoomBtn.addEventListener('click', createRoom);
