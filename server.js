@@ -3392,32 +3392,7 @@ function broadcastToControllers(roomId, message) {
 }
 
 
-
-
-// 這些API應放在server.js中，而不是rich-room.html中
-app.get('/api/game-rooms', (req, res) => {
-    const roomsArray = [];
-    for (const [id, room] of gameRooms.entries()) {
-        // 只顯示活躍的房間(最近30分鐘有活動)
-        const isActive = (Date.now() - room.lastActive) < 30 * 60 * 1000;
-        if (!isActive) continue;
-        
-        // 從room.state中獲取templateId
-        const templateId = room.state?.currentTemplateId;
-        
-        roomsArray.push({
-            id,
-            roomName: room.roomName || `房間 ${id}`,
-            templateId,
-            templateName: templateId ? `模板 ${templateId}` : '未知模板',
-            playersCount: room.controllerClients.size,
-            hasGameClient: !!room.gameClient && room.gameClient.readyState === WebSocket.OPEN,
-            createdAt: room.createdAt
-        });
-    }
-    res.json(roomsArray);
-});
-
+ 
 app.post('/api/game-rooms', (req, res) => {
     const { roomName, templateId } = req.body;
     
