@@ -27,6 +27,8 @@
 }
 
 .map-cell {
+    width: 12vmin;
+    height: 12vmin;
     /* width: 50px; */ /* 確保與 grid 或 JS 設置匹配 */
     /* height: 50px; */
     border: 1px solid #ccc;
@@ -62,8 +64,8 @@
 
 .player-marker {
     position: absolute;
-    width: 30px;  /* ★★★ 必須與 JS 中的 markerSize 匹配 ★★★ */
-    height: 30px; /* ★★★ 必須與 JS 中的 markerSize 匹配 ★★★ */
+    width: 8vmin;  /* 視窗較小尺寸的 8% */
+    height: 8vmin;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -87,4 +89,39 @@
 
 .player-moving {
     transform: scale(1.1);
+}
+
+.rectangle-map-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 默認為7列，會被JS覆蓋 */
+    grid-template-rows: repeat(6, 1fr); /* 默認為6行，會被JS覆蓋 */
+    gap: 1px;
+    background-color: #ccc;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1; /* 保持寬高比 */
+    max-width: 500px; /* 設定最大寬度 */
+    margin: 0 auto;
+}
+
+.map-cell {
+    background-color: white;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    aspect-ratio: 1; /* 使格子保持正方形 */
+}
+
+.player-marker {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    z-index: 10;
 }
