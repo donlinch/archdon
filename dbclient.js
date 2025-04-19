@@ -23,11 +23,39 @@ async function getClient() {
  * @param {string} roomId 房間 ID
  * @param {string} roomName 房間名稱
  * @param {number} maxPlayers 最大玩家數
+ * @param {string} [mapType='circle'] 地圖類型 ('circle' or 'rectangle')
+ * @param {number} [mapRows=6] 矩形地圖的行數 (if mapType is 'rectangle')
+ * @param {number} [mapCols=7] 矩形地圖的列數 (if mapType is 'rectangle')
  * @returns {Promise<Object>} 創建的房間資訊
  */
-async function createRoom(roomId, roomName, maxPlayers = 5) {
+async function createRoom(roomId, roomName, maxPlayers = 5, mapType = 'circle', mapRows = 6, mapCols = 7) {
+    // ★★★ START: Map configuration logic ★★★
+    let validatedMapType = mapType === 'rectangle' ? 'rectangle' : 'circle';
+    let validatedMapRows = 6;
+    let validatedMapCols = 7;
+    let mapLoopSize = 10; // Default for circle
+
+    if (validatedMapType === 'rectangle') {
+        // Validate and clamp dimensions (e.g., between 2 and 8 as per reference)
+        validatedMapRows = Math.min(Math.max(2, parseInt(mapRows) || 6), 8);
+        validatedMapCols = Math.min(Math.max(2, parseInt(mapCols) || 7), 8);
+        // Calculate rectangular loop size: 2 * cols + 2 * (rows - 2)
+        mapLoopSize = 2 * validatedMapCols + 2 * (validatedMapRows - 2);
+    } else {
+        // Ensure rows/cols are null or default for circle type if needed downstream
+        validatedMapRows = null;
+        validatedMapCols = null;
+        mapLoopSize = 10; // Explicitly set circle size
+    }
+    // ★★★ END: Map configuration logic ★★★
+
     const gameState = {
-        mapLoopSize: 10,
+        // ★★★ Add map info to gameState ★★★
+        mapType: validatedMapType,
+        mapRows: validatedMapRows,
+        mapCols: validatedMapCols,
+        mapLoopSize: mapLoopSize,
+        // --- Existing state ---
         maxPlayers: parseInt(maxPlayers),
         players: {},
         gameStarted: false
@@ -39,9 +67,11 @@ async function createRoom(roomId, roomName, maxPlayers = 5) {
         RETURNING room_id, room_name, created_at, last_active, game_state
     `;
 
+    // Store the complete gameState, including map info
     const { rows } = await pool.query(query, [roomId, roomName, JSON.stringify(gameState)]);
-    return rows[0];
+    return rows[0]; // This now returns the game_state with map info
 }
+
 
 /**
  * 獲取房間信息
@@ -51,6 +81,7 @@ async function createRoom(roomId, roomName, maxPlayers = 5) {
 async function getRoom(roomId) {
     const query = 'SELECT * FROM game_rooms WHERE room_id = $1';
     const { rows } = await pool.query(query, [roomId]);
+    // The returned row will have the game_state including map details
     return rows.length > 0 ? rows[0] : null;
 }
 
@@ -68,6 +99,7 @@ async function getActiveRooms(minutes = 30) {
         ORDER BY last_active DESC
     `;
     const { rows } = await pool.query(query);
+    // gameState will contain map info if needed for display
     return rows;
 }
 
@@ -82,6 +114,7 @@ async function getAllRooms() {
         ORDER BY last_active DESC
     `;
     const { rows } = await pool.query(query);
+    // gameState will contain map info
     return rows;
 }
 
@@ -100,6 +133,7 @@ async function updateRoomState(roomId, gameState) {
         RETURNING room_id, room_name, game_state
     `;
     // Ensure gameState is stringified correctly, especially if it might be null/undefined
+    // The gameState passed here should already contain the map info if it came from getRoom
     const gameStateString = JSON.stringify(gameState || {});
     const { rows } = await pool.query(query, [gameStateString, roomId]);
     return rows.length > 0 ? rows[0] : null;
@@ -116,10 +150,10 @@ async function addPlayerToRoom(roomId, playerId, playerName) {
     const room = await getRoom(roomId);
     if (!room) return null;
 
-    const gameState = room.game_state;
+    const gameState = room.game_state; // This gameState includes map info
 
-    // 檢查人數是否已滿
-    if (Object.keys(gameState.players || {}).length >= gameState.maxPlayers) { // Safe access to players
+    // 檢查人數是否已滿 (Uses maxPlayers from gameState)
+    if (Object.keys(gameState.players || {}).length >= gameState.maxPlayers) {
         throw new Error('房間已滿');
     }
 
@@ -138,10 +172,10 @@ async function addPlayerToRoom(roomId, playerId, playerName) {
     // 添加玩家
     gameState.players[playerId] = {
         name: playerName,
-        position: 0 // 初始位置
+        position: 0 // 初始位置 always 0
     };
 
-    // 更新房間狀態
+    // 更新房間狀態 (the gameState object still holds the map info)
     return await updateRoomState(roomId, gameState);
 }
 
@@ -166,7 +200,7 @@ async function removePlayerFromRoom(roomId, playerId) {
     // 移除玩家
     delete gameState.players[playerId];
 
-    // 更新房間狀態
+    // 更新房間狀態 (the gameState object still holds the map info)
     return await updateRoomState(roomId, gameState);
 }
 
@@ -177,27 +211,32 @@ async function removePlayerFromRoom(roomId, playerId) {
  * @param {number} newPosition 新位置
  * @returns {Promise<Object|null>} 更新後的房間信息
  */
-
-
-
-// 更新玩家位置
 async function updatePlayerPosition(roomId, playerId, newPosition) {
     const room = await getRoom(roomId);
     if (!room) return null;
 
-    const gameState = room.game_state;
+    const gameState = room.game_state; // Includes map info
 
     // 檢查玩家是否存在
     if (!gameState.players || !gameState.players[playerId]) {
         throw new Error('玩家不存在');
     }
 
+    // ★★★ Optional: Validate position against mapLoopSize ★★★
+    if (newPosition < 0 || newPosition >= gameState.mapLoopSize) {
+        console.warn(`Attempted to set invalid position ${newPosition} for player ${playerId} in room ${roomId} (map size ${gameState.mapLoopSize}). Resetting to 0.`);
+        newPosition = 0; // Or handle error differently
+    }
+    // ★★★ End Optional Validation ★★★
+
+
     // 更新位置
     gameState.players[playerId].position = newPosition;
 
-    // 更新房間狀態
+    // 更新房間狀態 (the gameState object still holds the map info)
     return await updateRoomState(roomId, gameState);
 }
+
 
 /**
  * 清理不活躍的房間

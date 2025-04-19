@@ -1,300 +1,194 @@
-/* 通用樣式 */
-* {
+/* --- Add to style.css --- */
+
+/* Map Options in index.html */
+.map-options {
+    margin-top: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.map-size-controls {
+    display: flex;
+    gap: 20px; /* Increased gap */
+    margin-top: 10px;
+    align-items: flex-end; /* Align bottom */
+}
+.map-size-controls div {
+    display: flex;
+    flex-direction: column;
+}
+.map-size-controls label {
+    margin-bottom: 5px; /* Increased space */
+    font-size: 0.9em;
+    color: #555;
+}
+.map-size-controls input[type="number"] {
+    width: 70px; /* Slightly wider */
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.map-preview {
+    margin-top: 15px; /* Increased space */
+    padding: 10px;
+    background-color: #f8f9fa; /* Lighter background */
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+.map-preview p {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: #333;
+}
+#map-preview-container {
+    display: grid; /* Set dynamically by JS */
+    gap: 2px;      /* Small gap between preview cells */
+    margin-top: 5px;
+    max-width: 240px; /* Limit preview size */
+    border: 1px solid #ccc;
+    background-color: #fff; /* White background for the grid area */
+    padding: 2px; /* Small padding around cells */
+    overflow: hidden; /* Hide overflow if grid too big */
+}
+#map-preview-container div {
+    width: 18px; /* Slightly larger preview cells */
+    height: 18px;
+    background-color: #e9ecef; /* Default empty cell color */
+    border: 1px solid #ced4da;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
-
-body {
-    font-family: 'Microsoft JhengHei', Arial, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
-    line-height: 1.6;
-}
-
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-h1, h2, h3 {
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* 按鈕樣式 */
-.btn {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s, transform 0.1s;
-    margin: 5px;
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
-.btn-primary {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #3e8e41;
-}
-
-.btn-secondary {
-    background-color: #f1f1f1;
-    color: #333;
-}
-
-.btn-secondary:hover {
-    background-color: #ddd;
-}
-
-.btn-control {
-    font-size: 18px;
-    padding: 15px 25px;
-    margin: 10px;
-}
-
-/* 面板樣式 */
-.panel {
-    background-color: white;
-    border-radius: 10px;
-    padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
+#map-preview-container div.path-cell {
+    background-color: #cfe2ff; /* Bootstrap info-bg-subtle */
+    border-color: #9ec5fe; /* Bootstrap info-border-subtle */
+    color: #0a58ca; /* Darker blue for text */
     font-weight: bold;
 }
 
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-#error-message {
-    color: #d9534f;
-    padding: 10px;
-    margin-top: 15px;
-    background-color: #fdf7f7;
-    border-left: 3px solid #d9534f;
-    border-radius: 3px;
-}
-
-/* 房間列表樣式 */
-#room-list {
-    margin-top: 20px;
-}
-
-#active-rooms-list {
-    list-style-type: none;
-}
-
-#active-rooms-list li {
-    padding: 10px;
-    background-color: #f9f9f9;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-#active-rooms-list li:hover {
-    background-color: #e9e9e9;
-}
-
-/* 遊戲頁面樣式 */
-.game-container {
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}
-
-.game-section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-#controller-area {
-    text-align: center;
-}
-
-.controller-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-}
-
-#game-area {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
+/* Game Map Styles in game.html */
 #game-map {
-    flex-grow: 1;
-    position: relative;
-    min-height: 300px;
-    margin-top: 15px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-#map-container {
-    display: flex;
-    justify-content: space-evenly;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-/* 地圖格子樣式 */
-.map-cell {
+    position: relative; /* Needed for absolute positioning of players */
+    width: 90%;
+    max-width: 600px; /* Adjust max width */
+    margin: 20px auto;
+    padding: 20px;
     border: 1px solid #ccc;
-    background-color: #f9f9f9;
-    width: 8%;
-    height: 40px;
-    margin: 30px 0;
-    position: relative;
-    display: flex;
+    background-color: #fdfdfd;
+    min-height: 300px; /* Ensure space for map */
+    display: flex; /* Use flex to center content if needed */
     justify-content: center;
     align-items: center;
 }
 
-.map-cell-number {
-    position: absolute;
-    bottom: -20px;
-    font-size: 12px;
+#map-container {
+    position: relative; /* Relative for absolute cells if circle */
+    width: 100%;
+    height: 100%;
 }
 
-/* 玩家標記樣式 */
-#players-container {
+/* Styling for Rectangle Map */
+.rectangle-map-container {
+    display: grid; /* JS sets grid details */
+    gap: 3px; /* Gap between cells */
+    padding: 5px;
+    border: 1px solid #e0e0e0;
+    background-color: #f5f5f5;
+}
+
+.map-cell {
+    border: 1px solid #b0bec5; /* Blue-grey border */
+    background-color: #eceff1; /* Light blue-grey background */
+    min-width: 50px; /* Ensure minimum size */
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* For cell number positioning */
+    box-sizing: border-box;
+    font-size: 1em;
+    font-weight: bold;
+    color: #37474f; /* Darker blue-grey text */
+}
+
+.map-cell.empty {
+    background-color: #fafafa; /* Very light grey for empty */
+    border: 1px dashed #e0e0e0; /* Dashed border for empty */
+    color: #ccc;
+    font-weight: normal;
+}
+.map-cell.empty .map-cell-number {
+    display: none; /* Hide number in empty cells */
+}
+.map-cell.error {
+    background-color: #ffdddd;
+    border-color: red;
+}
+
+.map-cell-number {
     position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 0.7em;
+    color: #78909c; /* Lighter blue-grey for number */
+    line-height: 1;
+}
+
+/* Styling for Player Markers (adjust size if needed) */
+#players-container {
+    position: absolute; /* Overlay on map container */
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
+    pointer-events: none; /* Don't interfere with map interaction */
 }
 
 .player-marker {
     position: absolute;
-    width: 30px;
+    width: 30px; /* Adjust size as needed */
     height: 30px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
+    font-weight: bold;
     color: white;
-    font-weight: bold;
-    transition: all 0.5s ease;
+    font-size: 1em;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+    transition: left 0.4s ease-in-out, top 0.4s ease-in-out; /* Smooth movement */
 }
 
-/* 玩家顏色 */
-.player-color-1 { background-color: #e74c3c; }
-.player-color-2 { background-color: #3498db; }
-.player-color-3 { background-color: #2ecc71; }
-.player-color-4 { background-color: #f39c12; }
-.player-color-5 { background-color: #9b59b6; }
+/* Add distinct colors using classes */
+.player-color-1 { background-color: #e74c3c; } /* Red */
+.player-color-2 { background-color: #3498db; } /* Blue */
+.player-color-3 { background-color: #2ecc71; } /* Green */
+.player-color-4 { background-color: #f1c40f; } /* Yellow */
+.player-color-5 { background-color: #9b59b6; } /* Purple */
 
-/* 信息區域樣式 */
-#info-area {
-    display: flex;
-    flex-direction: column;
+.player-moving {
+    /* Optional: add animation effect */
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 
-.info-panel {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-}
-
-#players-list {
-    list-style-type: none;
-    max-height: 150px;
-    overflow-y: auto;
-}
-
+/* Player List Styling */
 #players-list li {
-    padding: 5px;
-    margin-bottom: 3px;
-    border-left: 3px solid;
-    padding-left: 10px;
-}
-
-/* 連接狀態指示器 */
-#connection-status {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
     padding: 5px 10px;
+    margin-bottom: 5px;
     border-radius: 3px;
-    font-size: 12px;
-    font-weight: bold;
+    background-color: #f8f9fa;
+    border-left: 5px solid #ccc; /* Default border, JS sets color */
+}
+#players-list li.current-player {
+    background-color: #e9f5ff; /* Highlight current player */
 }
 
-#connection-status.online {
-    background-color: #dff0d8;
-    color: #3c763d;
-}
-
-#connection-status.offline {
-    background-color: #f2dede;
-    color: #a94442;
-}
-
-#connection-status.connecting {
-    background-color: #fcf8e3;
-    color: #8a6d3b;
-}
-  
-/* 響應式設計 */
-@media (min-width: 768px) {
-    .game-container {
-        flex-direction: column;
-    }
-    
-    #game-map {
-        min-height: 400px;
-    }
-    
-    .map-cell {
-        height: 60px;
-    }
-}
-
-/* 按鈕冷卻樣式 */
+/* Button Cooldown */
 .btn-cooldown {
     opacity: 0.6;
     cursor: not-allowed;

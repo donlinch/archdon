@@ -1,14 +1,19 @@
+// --- START OF FILE game.js ---
+
 // game.js - Simple Walker 遊戲頁面腳本
 
-// 遊戲狀態
+// ★★★ Default Game State Structure (Now includes map info) ★★★
 let gameState = {
-    mapLoopSize: 10,
+    mapType: 'circle', // Default type
+    mapRows: null,
+    mapCols: null,
+    mapLoopSize: 10,   // Default size
     maxPlayers: 5,
     players: {},
     gameStarted: false
 };
 
-// 玩家資訊
+// Player資訊
 let playerName = '';
 let roomId = '';
 let roomName = '';
@@ -26,7 +31,7 @@ const playerCountDisplay = document.getElementById('player-count');
 const maxPlayersDisplay = document.getElementById('max-players');
 const playersList = document.getElementById('players-list');
 const mapContainer = document.getElementById('map-container');
-const playersContainer = document.getElementById('players-container');
+const playersContainer = document.getElementById('players-container'); // For player markers
 const connectionStatus = document.getElementById('connection-status');
 const statusText = document.getElementById('status-text');
 const moveForwardBtn = document.getElementById('move-forward');
@@ -35,163 +40,231 @@ const leaveGameBtn = document.getElementById('leave-game');
 
 // 在頁面加載時，檢查 URL 中是否有房間 ID 和玩家名稱
 document.addEventListener('DOMContentLoaded', function() {
-    // 獲取 URL 參數
     const urlParams = new URLSearchParams(window.location.search);
     roomId = urlParams.get('roomId');
     playerName = urlParams.get('playerName');
-    
+
     if (!roomId || !playerName) {
         alert('缺少必要參數，即將返回首頁');
         window.location.href = 'index.html';
         return;
     }
-    
-    // 設置顯示玩家名稱和房間 ID
+
+    // Set initial display info
     playerNameDisplay.textContent = playerName;
     roomIdDisplay.textContent = roomId;
-    
-    // 創建遊戲地圖
-    createGameMap();
-    
+    roomNameDisplay.textContent = '載入中...'; // Set initial room name
+    maxPlayersDisplay.textContent = gameState.maxPlayers; // Show default max players
+
+    // ★★★ Delay map creation until gamestate received ★★★
+    // createGameMap(); // Don't create map here initially
+
     // 連接到 WebSocket
     connectWebSocket();
-    
+
     // 設置按鈕事件
     setupEventListeners();
-    
-    // 向伺服器請求玩家位置
-    requestPlayerPositionFromServer();
+
+    // Request initial position (optional, WS gameState update handles this too)
+    // requestPlayerPositionFromServer(); // Commented out as WS provides state
 });
 
-// 請求玩家位置
-function requestPlayerPositionFromServer() {
-    if (!roomId || !playerName) {
-        console.error('無法請求玩家位置，缺少房間 ID 或玩家名稱');
-        return;
-    }
+// Function to request player position (optional, WS handles state)
+// function requestPlayerPositionFromServer() { ... }
 
-    // 假設你的伺服器有一個 API 來返回玩家的最後位置
-    fetch(`/api/player-position?roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updatePlayerPosition(data.position); // 更新玩家的位置
-            } else {
-                console.error('無法獲取玩家位置');
-            }
-        })
-        .catch(error => console.error('請求錯誤:', error));
-}
-
-// 更新玩家位置
-function updatePlayerPosition(position) {
-    const playerMarker = document.getElementById(`player-${playerId}`);
-    const cell = document.getElementById(`cell-${position}`);
-    const cellRect = cell.getBoundingClientRect();
-    
-    // 更新玩家標記的位置
-    playerMarker.style.left = `${cellRect.left + (cell.offsetWidth / 2) - 15}px`;
-    playerMarker.style.top = `${cellRect.top + (cell.offsetHeight / 2) - 15}px`;
-}
+// Function to update player position based on gameState (called by updatePlayerMarkers)
+// function updatePlayerPosition(position) { ... } // Not needed directly, marker logic handles it
 
 // 設置按鈕事件
 function setupEventListeners() {
-    // 移動按鈕
     moveForwardBtn.addEventListener('click', function() {
-        if (!isConnected || moveForwardBtn.classList.contains('btn-cooldown')) return;
-        
+        if (!isConnected || moveForwardBtn.disabled || moveForwardBtn.classList.contains('btn-cooldown')) return;
         sendMoveCommand('forward');
         applyButtonCooldown(moveForwardBtn);
     });
-    
+
     moveBackwardBtn.addEventListener('click', function() {
-        if (!isConnected || moveBackwardBtn.classList.contains('btn-cooldown')) return;
-        
+        if (!isConnected || moveBackwardBtn.disabled || moveBackwardBtn.classList.contains('btn-cooldown')) return;
         sendMoveCommand('backward');
         applyButtonCooldown(moveBackwardBtn);
     });
-    
-    // 離開遊戲按鈕
+
     leaveGameBtn.addEventListener('click', function() {
         if (confirm('確定要離開遊戲嗎？')) {
-            // 清除保存的會話信息
             sessionStorage.removeItem('currentRoom');
             sessionStorage.removeItem('playerName');
-            
-            // 關閉WebSocket連接
-            if (ws) {
-                ws.close();
-            }
-            
-            // 返回首頁
+            if (ws) ws.close();
             window.location.href = 'index.html';
         }
     });
-    
-    // 窗口關閉時清理
+
     window.addEventListener('beforeunload', function() {
-        if (ws) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
             ws.close();
         }
     });
 }
 
-// 創建遊戲地圖
+// ★★★ Master function to create map based on gameState ★★★
 function createGameMap() {
-    mapContainer.innerHTML = '';
-    
-    // 創建10個格子的環形地圖
-    for (let i = 0; i < 10; i++) {
+    mapContainer.innerHTML = ''; // Clear previous map
+    playersContainer.innerHTML = ''; // Clear player markers
+
+    console.log('Creating map based on gameState:', gameState);
+
+    if (!gameState || !gameState.mapType) {
+        console.error("Cannot create map: gameState or mapType missing.");
+        mapContainer.innerHTML = '<p style="color:red;">地圖加載失敗</p>';
+        return;
+    }
+
+    if (gameState.mapType === 'rectangle' && gameState.mapRows && gameState.mapCols) {
+        createRectangleMap(gameState.mapRows, gameState.mapCols);
+    } else {
+        // Default to circle or handle explicitly
+        createCircleMap(gameState.mapLoopSize || 10); // Use mapLoopSize for circle too
+    }
+
+     // After map is created, update player markers based on current gameState
+     updatePlayerMarkers(null); // Pass null as oldState on initial creation
+}
+
+// ★★★ Create Circle Map Function ★★★
+function createCircleMap(size) {
+    mapContainer.className = 'circle-map-container'; // Add class for potential specific styling
+    for (let i = 0; i < size; i++) {
         const cell = document.createElement('div');
-        cell.className = 'map-cell';
+        cell.className = 'map-cell'; // Standard class for path cells
         cell.id = `cell-${i}`;
-        
+
         const cellNumber = document.createElement('span');
         cellNumber.className = 'map-cell-number';
         cellNumber.textContent = i;
-        
+
         cell.appendChild(cellNumber);
         mapContainer.appendChild(cell);
+    }
+    // Position circle cells (Example - requires specific CSS or JS positioning logic)
+    // This part might need refinement based on your desired circle layout CSS
+    const cells = mapContainer.querySelectorAll('.map-cell');
+    const radius = 120; // Adjust as needed
+    const centerX = mapContainer.offsetWidth / 2;
+    const centerY = mapContainer.offsetHeight / 2;
+    cells.forEach((cell, index) => {
+        const angle = (index / size) * 2 * Math.PI - (Math.PI / 2); // Start from top
+        const x = centerX + radius * Math.cos(angle) - cell.offsetWidth / 2;
+        const y = centerY + radius * Math.sin(angle) - cell.offsetHeight / 2;
+        cell.style.position = 'absolute'; // Required for positioning
+        cell.style.left = `${x}px`;
+        cell.style.top = `${y}px`;
+    });
+
+}
+
+// ★★★ Create Rectangle Map Function (Adapted from reference) ★★★
+function createRectangleMap(mapRows, mapCols) {
+     mapContainer.className = 'rectangle-map-container'; // Add class for potential specific styling
+     // Set grid styles directly on the mapContainer
+     mapContainer.style.display = 'grid';
+     mapContainer.style.gridTemplateColumns = `repeat(${mapCols}, auto)`; // Adjust column width as needed
+     mapContainer.style.gridTemplateRows = `repeat(${mapRows}, auto)`;    // Adjust row height as needed
+     mapContainer.style.maxWidth = `${mapCols * 60}px`; // Example max width based on cell size
+     mapContainer.style.margin = '0 auto'; // Center the grid
+
+     // Calculate loop size to ensure indices are correct
+     const mapLoopSize = 2 * mapCols + 2 * (mapRows - 2);
+
+    for (let r = 0; r < mapRows; r++) {
+        for (let c = 0; c < mapCols; c++) {
+            const cell = document.createElement('div');
+            const isPathCell = r === 0 || r === mapRows - 1 || c === 0 || c === mapCols - 1;
+
+            cell.className = isPathCell ? 'map-cell' : 'map-cell empty'; // Add 'empty' class for non-path cells
+
+            if (isPathCell) {
+                // Calculate the path index (Sequential loop index)
+                let pathIndex = -1;
+                if (r === 0) { // Top edge (left to right)
+                    pathIndex = c;
+                } else if (c === mapCols - 1 && r > 0 && r < mapRows - 1) { // Right edge (top to bottom)
+                    pathIndex = mapCols + (r - 1);
+                } else if (r === mapRows - 1) { // Bottom edge (right to left)
+                    pathIndex = mapCols + (mapRows - 2) + (mapCols - 1 - c);
+                } else if (c === 0 && r > 0 && r < mapRows - 1) { // Left edge (bottom to top)
+                    pathIndex = 2 * mapCols + mapRows - 3 + (mapRows - 1 - r); // Corrected based on re-check
+                    // Alternative calculation: start from end index and go backwards
+                    // pathIndex = mapLoopSize - (rows - 1 - r); -> Not quite right
+                }
+
+                // Validate index calculation - should be 0 to mapLoopSize-1
+                if (pathIndex >= 0 && pathIndex < mapLoopSize) {
+                    cell.id = `cell-${pathIndex}`; // Assign ID only to valid path cells
+                    const cellNumber = document.createElement('span');
+                    cellNumber.className = 'map-cell-number';
+                    cellNumber.textContent = pathIndex;
+                    cell.appendChild(cellNumber);
+                } else {
+                     console.error(`Calculated invalid pathIndex: ${pathIndex} for cell (${r},${c})`);
+                     cell.classList.add('error'); // Mark cells with bad index calculation
+                     cell.textContent = 'E';
+                }
+
+            } else {
+                 // Style empty cells differently (e.g., make them less prominent)
+                 // The 'empty' class can be used in CSS
+            }
+            mapContainer.appendChild(cell);
+        }
     }
 }
 
 // 連接到WebSocket
 function connectWebSocket() {
     updateConnectionStatus('connecting', '連接中...');
-    
-    // 確定WebSocket URL (支援HTTPS)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Pass player name correctly encoded
     const wsUrl = `${protocol}//${window.location.host}?clientType=controller&roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`;
-    
-    // 創建WebSocket連接
+
     ws = new WebSocket(wsUrl);
-    
-    // 連接打開時
+
     ws.onopen = function() {
         console.log('WebSocket連接已建立');
         isConnected = true;
         updateConnectionStatus('online', '已連接');
+        // No longer need to request state explicitly, server sends on connect
     };
-    
-    // 收到消息時
+
     ws.onmessage = function(event) {
         handleWebSocketMessage(event.data);
     };
-    
-    // 連接關閉時
+
     ws.onclose = function(event) {
         console.log('WebSocket連接已關閉', event.code, event.reason);
         isConnected = false;
-        updateConnectionStatus('offline', '已斷線');
-        
-        // 嘗試重新連接
-        setTimeout(connectWebSocket, 3000);
+        updateConnectionStatus('offline', `已斷線 (${event.code})`);
+        // Handle specific close codes (e.g., room full, name taken)
+        if (event.code === 4001) { // Example: Room Full code from server
+            alert('無法重新連接：房間已滿。');
+            window.location.href = 'index.html';
+        } else if (event.code === 1011 && event.reason.includes("找不到房間")) {
+             alert('房間不存在或已被關閉。');
+             window.location.href = 'index.html';
+        } else if (event.code >= 4000) { // General application errors
+             alert(`連接錯誤: ${event.reason || '未知錯誤'}`);
+             // Maybe allow retry or redirect
+             // setTimeout(connectWebSocket, 5000); // Retry after 5s
+             window.location.href = 'index.html'; // Or just redirect
+        } else if (event.code !== 1000 && event.code !== 1001 && event.code !== 1005) { // Don't retry on normal close or no status
+            // Attempt to reconnect on unexpected closures
+            console.log('Attempting to reconnect in 5 seconds...');
+            setTimeout(connectWebSocket, 5000);
+        }
     };
-    
-    // 連接錯誤時
+
     ws.onerror = function(error) {
         console.error('WebSocket錯誤:', error);
         updateConnectionStatus('offline', '連接錯誤');
+        // Error event often precedes close event, let onclose handle reconnect logic
     };
 }
 
@@ -199,25 +272,42 @@ function connectWebSocket() {
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
-        
+        // console.log("Received WS message:", message.type);
+
         switch (message.type) {
             case 'gameStateUpdate':
-                // 更新遊戲狀態
-                updateGameState(message);
+                // ★★★ Store the received state ★★★
+                const oldState = { ...gameState }; // Keep copy for comparison
+                gameState = message.gameState; // OVERWRITE local state with server state
+                // ★★★ Update room name from message ★★★
+                if (message.roomName && roomName !== message.roomName) {
+                    roomName = message.roomName;
+                    roomNameDisplay.textContent = roomName;
+                }
+                // ★★★ Re-create map ONLY if map config changes (or first time) ★★★
+                if (!oldState || oldState.mapLoopSize !== gameState.mapLoopSize || oldState.mapType !== gameState.mapType) {
+                     console.log("Map configuration changed or initial load, recreating map.");
+                     createGameMap(); // This will now use the new gameState
+                 }
+                updateGameDisplay(oldState); // Update player list, counts, markers
                 break;
-            
+
             case 'playerInfo':
-                // 接收玩家ID和名稱確認
-                playerId = message.playerId;
-                console.log(`收到玩家ID: ${playerId}`);
+                playerId = message.playerId; // Store our own ID
+                console.log(`Received player ID: ${playerId}`);
+                // Initial gameStateUpdate usually follows, so no need to update display here
                 break;
-            
+
             case 'error':
-                // 處理錯誤消息
                 console.error('伺服器錯誤:', message.message);
                 alert(`伺服器錯誤: ${message.message}`);
+                 // Consider closing WS or redirecting based on error severity
+                 if (message.message === "房間已滿" || message.message === "玩家名稱已被使用") {
+                     if(ws) ws.close();
+                     window.location.href = 'index.html';
+                 }
                 break;
-            
+
             default:
                 console.log('收到未知類型消息:', message);
         }
@@ -226,187 +316,192 @@ function handleWebSocketMessage(data) {
     }
 }
 
-// 更新遊戲狀態
-function updateGameState(message) {
-    const oldState = { ...gameState };
-    
-    // 更新房間資訊
-    if (message.roomName && roomName !== message.roomName) {
-        roomName = message.roomName;
-        roomNameDisplay.textContent = roomName;
-    }
-    
-    // 更新遊戲狀態
-    gameState = message.gameState;
-    
-    // 更新最大玩家數顯示
-    maxPlayersDisplay.textContent = gameState.maxPlayers;
-    
-    // 更新玩家數量顯示
-    const playerCount = Object.keys(gameState.players).length;
+// ★★★ Update Game Display (Separated from state update) ★★★
+function updateGameDisplay(oldState) {
+    // Update max players display (from current gameState)
+    maxPlayersDisplay.textContent = gameState.maxPlayers || 5;
+
+    // Update player count display
+    const playerCount = Object.keys(gameState.players || {}).length;
     playerCountDisplay.textContent = playerCount;
-    
-    // 更新玩家列表
+
+    // Update players list in UI
     updatePlayersList();
-    
-    // 更新玩家位置標記
-    updatePlayerMarkers(oldState);
+
+    // Update player markers on the map
+    updatePlayerMarkers(oldState); // Pass oldState for animation check
 }
+
 
 // 更新玩家列表
 function updatePlayersList() {
     playersList.innerHTML = '';
-    
-    const playerIds = Object.keys(gameState.players);
+    const playerIds = Object.keys(gameState.players || {}); // Use current gameState
+
     if (playerIds.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = '沒有玩家連接';
-        playersList.appendChild(li);
+        playersList.innerHTML = '<li>沒有玩家連接</li>';
         return;
     }
-    
-    // 為每個玩家創建一個列表項
+
     let colorIndex = 1;
+    playerIds.sort((a, b) => gameState.players[a].name.localeCompare(gameState.players[b].name)); // Sort alphabetically
+
     playerIds.forEach(id => {
         const player = gameState.players[id];
         const li = document.createElement('li');
+        // Use textContent for security
         li.textContent = `${player.name} (位置: ${player.position})`;
-        li.style.borderColor = getPlayerColor(colorIndex);
-        
-        // 標記當前玩家
+        li.style.borderLeft = `5px solid ${getPlayerColor(colorIndex)}`; // Style with color
+
         if (id === playerId) {
             li.textContent += ' (你)';
             li.style.fontWeight = 'bold';
+            li.classList.add('current-player');
         }
-        
+
         playersList.appendChild(li);
         colorIndex++;
+        if (colorIndex > 5) colorIndex = 1; // Cycle through 5 colors
     });
 }
 
 // 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
-    // 清空玩家容器
+     // Ensure map elements exist before trying to place markers
+     if (!mapContainer.firstChild) {
+          console.warn("Map container is empty, cannot update player markers yet.");
+          return;
+      }
+
+    // Clear only the players container
     playersContainer.innerHTML = '';
-    
-    // 獲取格子位置信息
-    const cells = document.querySelectorAll('.map-cell');
-    
-    // 為每個玩家創建標記
+
+    // For each player in the current gameState
     let colorIndex = 1;
-    for (const id in gameState.players) {
+    const playerIds = Object.keys(gameState.players || {});
+
+    playerIds.forEach(id => {
         const player = gameState.players[id];
-        const oldPlayer = oldState.players && oldState.players[id];
-        
-        // 創建玩家標記元素
-        const marker = document.createElement('div');
-        marker.className = `player-marker player-color-${colorIndex}`;
-        marker.id = `player-${id}`;
-        marker.textContent = player.name.charAt(0).toUpperCase();
-        marker.title = player.name;
-        
-        // 設置標記位置
-        const cellIndex = player.position;
-        const cellElement = cells[cellIndex];
+        const oldPlayer = oldState?.players?.[id]; // Safely access old player data
+
+        // Get the map cell element corresponding to the player's position
+        const cellElement = document.getElementById(`cell-${player.position}`);
+
         if (cellElement) {
+            // Create player marker element
+            const marker = document.createElement('div');
+            marker.className = `player-marker player-color-${colorIndex}`; // Use CSS for color
+            marker.id = `player-${id}`;
+            // Use first initial, handle potential empty names
+            marker.textContent = player.name ? player.name.charAt(0).toUpperCase() : '?';
+            marker.title = player.name || '未知玩家'; // Tooltip
+
+            // Calculate position RELATIVE TO THE MAP CONTAINER
+            // This works for both circle and rectangle layouts as long as cells have correct IDs
+            const markerSize = 30; // Match CSS marker size
             const cellRect = cellElement.getBoundingClientRect();
-            const containerRect = playersContainer.getBoundingClientRect();
-            
-            // 計算相對於容器的位置
-            const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - 15;
-            const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - 15;
-            
+            const containerRect = mapContainer.getBoundingClientRect(); // Use map container as reference
+
+            // Position marker center over cell center
+             // Use offsetLeft/Top relative to the mapContainer's offsetParent
+             const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - (markerSize / 2);
+             const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - (markerSize / 2);
+
+            marker.style.position = 'absolute'; // Essential for left/top positioning
             marker.style.left = `${left}px`;
             marker.style.top = `${top}px`;
-            
-            // 如果位置變化了，添加動畫效果
+
+            // Animate if position changed
             if (oldPlayer && oldPlayer.position !== player.position) {
                 marker.classList.add('player-moving');
+                // Remove class after animation duration (match CSS)
                 setTimeout(() => {
                     marker.classList.remove('player-moving');
                 }, 500);
             }
+
+            playersContainer.appendChild(marker);
+
+        } else {
+            console.warn(`Could not find cell element for ID: cell-${player.position} for player ${player.name}`);
         }
-        
-        playersContainer.appendChild(marker);
+
+        // Increment color index
         colorIndex++;
-        
-        // 最多支持5個玩家顏色
         if (colorIndex > 5) colorIndex = 1;
-    }
+    });
 }
 
-// 玩家移動時更新位置
+
+// Send move command via WebSocket
 function sendMoveCommand(direction) {
-    if (!isConnected || !ws) return;
+    if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) {
+         console.warn("WebSocket not connected, cannot send move command.");
+         return;
+     }
 
     const moveCommand = {
         type: 'moveCommand',
         direction: direction
     };
 
-    ws.send(JSON.stringify(moveCommand));
-    console.log(`發送移動命令: ${direction}`);
-    
-    // 更新玩家位置到資料庫
-    updatePlayerPositionInServer(direction);
+    try {
+        ws.send(JSON.stringify(moveCommand));
+        console.log(`發送移動命令: ${direction}`);
+    } catch (error) {
+         console.error("Failed to send move command via WebSocket:", error);
+         // Maybe update UI to indicate error or attempt reconnect
+         updateConnectionStatus('offline', '發送錯誤');
+    }
+
+    // ★★★ Remove direct call to update server position via HTTP POST ★★★
+    // The WebSocket message handler on the server should now handle the DB update.
+    // updatePlayerPositionInServer(direction); // REMOVE THIS LINE
 }
 
-// 更新伺服器中的玩家位置
-function updatePlayerPositionInServer(direction) {
-    const position = gameState.players[playerId].position;
-    
-    // 向伺服器發送更新位置請求
-    fetch(`/api/update-player-position`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            roomId: roomId,
-            playerName: playerName,
-            newPosition: position
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (!data.success) {
-            console.error('無法更新玩家位置');
-        }
-    })
-    .catch(error => console.error('請求錯誤:', error));
-}
+// ★★★ Remove updatePlayerPositionInServer function ★★★
+// function updatePlayerPositionInServer(direction) { ... } // REMOVE THIS FUNCTION
+
 
 // 應用按鈕冷卻時間
 function applyButtonCooldown(button) {
+    button.disabled = true; // Disable immediately
     button.classList.add('btn-cooldown');
-    button.disabled = true;
-    
+
     setTimeout(() => {
+        // Only re-enable if still connected
+        if (isConnected) {
+            button.disabled = false;
+        }
         button.classList.remove('btn-cooldown');
-        button.disabled = false;
-    }, 500); // 500ms 冷卻時間
-}
-  
-// 更新連接狀態顯示
-function updateConnectionStatus(status, message) {
-    connectionStatus.className = status;
-    statusText.textContent = message;
+    }, 500); // 500ms cooldown
 }
 
-// 獲取玩家顏色
+// 更新連接狀態顯示
+function updateConnectionStatus(status, message) {
+    connectionStatus.className = status; // CSS class: 'online', 'offline', 'connecting'
+    statusText.textContent = message;
+
+     // Disable/Enable movement buttons based on connection status
+     const isOnline = status === 'online';
+     moveForwardBtn.disabled = !isOnline;
+     moveBackwardBtn.disabled = !isOnline;
+     if (!isOnline) {
+         moveForwardBtn.classList.remove('btn-cooldown'); // Remove cooldown if disconnected
+         moveBackwardBtn.classList.remove('btn-cooldown');
+     }
+}
+
+// 獲取玩家顏色 (Based on index)
 function getPlayerColor(index) {
     const colors = [
-        '#e74c3c', // 紅色
-        '#3498db', // 藍色
-        '#2ecc71', // 綠色
-        '#f39c12', // 橙色
-        '#9b59b6'  // 紫色
+        '#e74c3c', // Red
+        '#3498db', // Blue
+        '#2ecc71', // Green
+        '#f1c40f', // Yellow (Changed from orange for better contrast maybe)
+        '#9b59b6'  // Purple
     ];
-    
-    // 確保索引在範圍內
-    index = (index - 1) % colors.length;
-    if (index < 0) index = 0;
-    
-    return colors[index];
+    return colors[(index - 1) % colors.length]; // Use modulo for cycling
 }
+
+// --- END OF FILE game.js ---
