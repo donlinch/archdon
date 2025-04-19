@@ -419,6 +419,285 @@ app.post('/api/update-player-position', async (req, res) => {
 
 
 
+// GET /api/admin/walker-maps/templates - 列出所有模板
+adminRouter.get('/walker-maps/templates', async (req, res) => {
+    try {
+        // 查詢 walker_map_templates 資料表
+        const result = await pool.query('SELECT * FROM walker_map_templates ORDER BY map_loop_size, name');
+        res.json(result.rows);
+    } catch (err) { console.error('[Admin API Error] 獲取 walker 模板列表時出錯:', err); res.status(500).json({ error: '獲取模板列表失敗' }); }
+});
+
+// POST /api/admin/walker-maps/templates - 建立新模板 (僅元數據)
+adminRouter.post('/walker-maps/templates', async (req, res) => {
+    const { name, description, map_loop_size, is_public } = req.body;
+    if (!name || !map_loop_size) return res.status(400).json({ error: '必須提供模板名稱和適用格子數 (map_loop_size)' });
+    try {
+        // 插入到 walker_map_templates 資料表
+        const result = await pool.query(
+            'INSERT INTO walker_map_templates (name, description, map_loop_size, is_public, creator_ip) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [name, description, map_loop_size, is_public !== undefined ? is_public : true, req.ip]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[Admin API Error] 新增 walker 模板時出錯:', err);
+        if (err.code === '23505') { // Unique constraint violation
+             return res.status(409).json({ error: '模板名稱已存在' });
+         }
+        res.status(500).json({ error: '新增模板失敗' });
+     }
+});
+
+// GET /api/admin/walker-maps/templates/:templateId - 獲取模板詳情及其格子內容
+adminRouter.get('/walker-maps/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+     const templateIdInt = parseInt(templateId);
+     if (isNaN(templateIdInt)) return res.status(400).json({ error: '無效的模板 ID' });
+    try {
+        // 查詢 walker_map_templates
+        const templateRes = await pool.query('SELECT * FROM walker_map_templates WHERE id = $1', [templateIdInt]);
+        if (templateRes.rowCount === 0) return res.status(404).json({ error: '找不到模板' });
+
+        // 查詢 walker_map_cells
+        const cellsRes = await pool.query('SELECT * FROM walker_map_cells WHERE template_id = $1 ORDER BY cell_index', [templateIdInt]);
+
+        const template = templateRes.rows[0];
+        template.cells = cellsRes.rows; // 附加格子資料
+        res.json(template);
+    } catch (err) { console.error(`[Admin API Error] 獲取 walker 模板 ${templateId} 詳情時出錯:`, err); res.status(500).json({ error: '獲取模板詳情失敗' }); }
+});
+
+// PUT /api/admin/walker-maps/templates/:templateId - 更新模板及其格子內容
+adminRouter.put('/walker-maps/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+     const templateIdInt = parseInt(templateId);
+     if (isNaN(templateIdInt)) return res.status(400).json({ error: '無效的模板 ID' });
+    const { name, description, map_loop_size, is_public, cells } = req.body; // cells 陣列: [{cell_index, title, content, image_url, id?}, ...]
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 更新 walker_map_templates
+        const templateUpdateRes = await client.query(
+            'UPDATE walker_map_templates SET name=$1, description=$2, map_loop_size=$3, is_public=$4, updated_at=NOW() WHERE id=$5 RETURNING *',
+            [name, description, map_loop_size, is_public, templateIdInt]
+        );
+        if (templateUpdateRes.rowCount === 0) {
+             await client.query('ROLLBACK');
+             return res.status(404).json({ error: '找不到要更新的模板' });
+        }
+        const updatedTemplate = templateUpdateRes.rows[0];
+
+        // 2. 處理 walker_map_cells
+        const incomingCells = cells || [];
+        const incomingCellMap = new Map(); // Map<cell_index, cellData>
+        const incomingCellIds = new Set(); // Set<cell_id>
+
+        for (const cell of incomingCells) {
+            if (cell.cell_index === undefined || cell.cell_index === null) throw new Error('格子資料缺少 cell_index');
+            if (!cell.title) throw new Error(`索引 ${cell.cell_index} 的格子缺少標題`);
+            incomingCellMap.set(cell.cell_index, cell);
+            if (cell.id) incomingCellIds.add(cell.id);
+        }
+
+        // 獲取現有的 cells
+        const existingCellsRes = await client.query('SELECT id, cell_index FROM walker_map_cells WHERE template_id = $1', [templateIdInt]);
+        const existingCellMap = new Map(); // Map<cell_index, cell_id>
+        const existingCellIds = new Set(); // Set<cell_id>
+        for (const row of existingCellsRes.rows) {
+             existingCellMap.set(row.cell_index, row.id);
+             existingCellIds.add(row.id);
+        }
+
+        const cellsToDeleteIds = [];
+        const cellsToUpdate = [];
+        const cellsToInsert = [];
+
+        // 找出要刪除的 (存在於 DB，不存在於請求中)
+        existingCellMap.forEach((cellId, cellIndex) => {
+             if (!incomingCellMap.has(cellIndex)) {
+                 cellsToDeleteIds.push(cellId);
+             }
+        });
+
+        // 找出要更新或插入的
+        incomingCellMap.forEach((cellData, cellIndex) => {
+            if (existingCellMap.has(cellIndex)) {
+                // 更新
+                cellData.id = existingCellMap.get(cellIndex); // 確保 ID 正確
+                cellsToUpdate.push(cellData);
+            } else {
+                // 插入
+                cellsToInsert.push(cellData);
+            }
+        });
+
+        // 執行刪除
+        if (cellsToDeleteIds.length > 0) {
+             await client.query('DELETE FROM walker_map_cells WHERE id = ANY($1::int[])', [cellsToDeleteIds]);
+        }
+        // 執行更新
+        for (const cell of cellsToUpdate) {
+             await client.query(
+                 'UPDATE walker_map_cells SET title=$1, content=$2, image_url=$3, updated_at=NOW() WHERE id=$4 AND template_id=$5',
+                 [cell.title, cell.content, cell.image_url, cell.id, templateIdInt]
+             );
+        }
+        // 執行插入
+        for (const cell of cellsToInsert) {
+             await client.query(
+                 'INSERT INTO walker_map_cells (template_id, cell_index, title, content, image_url) VALUES ($1, $2, $3, $4, $5)',
+                 [templateIdInt, cell.cell_index, cell.title, cell.content, cell.image_url]
+             );
+        }
+
+        await client.query('COMMIT');
+
+        // 獲取最終的格子數據返回
+        const finalCellsRes = await client.query('SELECT * FROM walker_map_cells WHERE template_id = $1 ORDER BY cell_index', [templateIdInt]);
+        updatedTemplate.cells = finalCellsRes.rows;
+        res.json(updatedTemplate);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[Admin API Error] 更新 walker 模板 ${templateId} 時出錯:`, err);
+        if (err.code === '23505' && err.constraint === 'walker_map_cells_template_id_cell_index_key') {
+            res.status(409).json({ error: '更新失敗：同一個模板下不能有重複的格子索引 (cell_index)。' });
+        } else {
+            res.status(500).json({ error: `更新模板過程中發生錯誤: ${err.message}` });
+        }
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/admin/walker-maps/templates/:templateId - 刪除模板
+adminRouter.delete('/walker-maps/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    const templateIdInt = parseInt(templateId);
+    if (isNaN(templateIdInt)) return res.status(400).json({ error: '無效的模板 ID' });
+    try {
+        // 使用 walker_map_templates
+        const result = await pool.query('DELETE FROM walker_map_templates WHERE id = $1', [templateIdInt]);
+        if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的模板' });
+        res.status(204).send();
+    } catch (err) { console.error(`[Admin API Error] 刪除 walker 模板 ${templateId} 時出錯:`, err); res.status(500).json({ error: '刪除模板失敗' }); }
+});
+
+
+
+
+
+
+// GET /api/game-rooms/:roomId/map-templates - 列出此房間大小可用的模板 (查詢 walker_map_templates)
+app.get('/api/game-rooms/:roomId/map-templates', async (req, res) => {
+    const { roomId } = req.params;
+    try {
+        const room = await dbClient.getRoom(roomId);
+        if (!room || !room.game_state || room.game_state.mapLoopSize === undefined) {
+            return res.status(404).json({ error: '找不到房間或地圖大小不可用' });
+        }
+        const mapSize = room.game_state.mapLoopSize;
+
+        // 從 walker_map_templates 查詢
+        const templatesRes = await pool.query(
+            'SELECT id, name, description FROM walker_map_templates WHERE map_loop_size = $1 AND is_public = TRUE ORDER BY name',
+            [mapSize]
+        );
+        res.json(templatesRes.rows);
+
+    } catch (err) {
+        console.error(`[API /map-templates] 獲取房間 ${roomId} 的 walker 地圖模板時發生錯誤:`, err);
+        res.status(500).json({ error: '獲取地圖模板失敗' });
+    }
+});
+
+// POST /api/game-rooms/:roomId/select-template - 玩家選擇一個模板 (驗證 walker_map_templates)
+app.post('/api/game-rooms/:roomId/select-template', async (req, res) => {
+    const { roomId } = req.params;
+    const { templateId } = req.body;
+
+    if (templateId === undefined) {
+        return res.status(400).json({ error: '必須提供 templateId (可以是 null)' });
+    }
+
+    try {
+        const room = await dbClient.getRoom(roomId);
+        if (!room || !room.game_state) {
+            return res.status(404).json({ error: '找不到房間' });
+        }
+
+        const currentGameState = room.game_state;
+        let selectedTemplateId = null;
+
+        if (templateId !== null) {
+            const templateIdInt = parseInt(templateId);
+            if (isNaN(templateIdInt)) {
+                 return res.status(400).json({ error: '無效的 templateId 格式' });
+            }
+
+            // 驗證 walker_map_templates 中的模板
+            const templateRes = await pool.query(
+                'SELECT id, map_loop_size FROM walker_map_templates WHERE id = $1 AND is_public = TRUE',
+                [templateIdInt]
+            );
+            if (templateRes.rowCount === 0) {
+                return res.status(400).json({ error: '選擇了無效或非公開的模板' });
+            }
+            if (templateRes.rows[0].map_loop_size !== currentGameState.mapLoopSize) {
+                return res.status(400).json({ error: '模板地圖大小與房間地圖大小不匹配' });
+            }
+            selectedTemplateId = templateRes.rows[0].id;
+        }
+
+        // 更新 game_state 中的 activeMapTemplateId
+        currentGameState.activeMapTemplateId = selectedTemplateId;
+        const updatedRoom = await dbClient.updateRoomState(roomId, currentGameState);
+
+        if (!updatedRoom || !updatedRoom.game_state) {
+             throw new Error('在資料庫中更新房間狀態失敗');
+        }
+
+        // 廣播更新後的遊戲狀態
+        broadcastToSimpleWalkerRoom(roomId, {
+             type: 'gameStateUpdate',
+             roomName: updatedRoom.room_name,
+             gameState: updatedRoom.game_state
+         });
+
+        res.json({ success: true, activeMapTemplateId: selectedTemplateId });
+
+    } catch (err) {
+        console.error(`[API /select-template] 為房間 ${roomId} 選擇 walker 模板時發生錯誤:`, err);
+        res.status(500).json({ error: '選擇地圖模板失敗' });
+    }
+});
+
+// GET /api/game-rooms/:roomId/active-map-content - 獲取活動模板的內容 (查詢 walker_map_cells)
+app.get('/api/game-rooms/:roomId/active-map-content', async (req, res) => {
+    const { roomId } = req.params;
+    try {
+        const room = await dbClient.getRoom(roomId);
+        if (!room || !room.game_state || !room.game_state.activeMapTemplateId) {
+             return res.json([]); // 沒有活動模板，返回空陣列
+        }
+        const activeTemplateId = room.game_state.activeMapTemplateId;
+
+        // 從 walker_map_cells 查詢
+        const cellsRes = await pool.query(
+             'SELECT cell_index, title, content, image_url FROM walker_map_cells WHERE template_id = $1 ORDER BY cell_index',
+             [activeTemplateId]
+         );
+        res.json(cellsRes.rows);
+
+    } catch (err) {
+        console.error(`[API /active-map-content] 獲取房間 ${roomId} 的活動 walker 地圖內容時發生錯誤:`, err);
+        res.status(500).json({ error: '獲取活動地圖內容失敗' });
+    }
+});
+
+
 
 
 
