@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Walker - 遊戲頁面</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- 控制器區域 (手機版顯示在上方) -->
+        <div id="controller-area" class="game-section">
+            <h2 id="player-info">玩家: <span id="player-name-display">...</span></h2>
+            <div class="controller-buttons">
+                <button id="move-backward" class="btn btn-control">← 後退</button>
+                <button id="move-forward" class="btn btn-control">前進 →</button>
+            </div>
+        </div>
+
+        <!-- 遊戲地圖區域 (顯示在中間) -->
+        <div id="game-area" class="game-section">
+            <h2 id="room-info">房間: <span id="room-name-display">...</span></h2>
+            <div id="game-map">
+                <div id="map-container">
+                    <!-- 地圖格子將由 JS 動態生成 -->
+                </div>
+                <div id="players-container">
+                    <!-- 玩家標記將由 JS 動態生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 遊戲資訊區域 (顯示在下方) -->
+        <div id="info-area" class="game-section">
+            <div class="info-panel">
+                <div id="players-info">
+                    <h3>玩家列表</h3>
+                    <ul id="players-list">
+                        <!-- 玩家清單由 JS 動態生成 -->
+                    </ul>
+                </div>
+                <div id="game-status">
+                    <p>房間人數: <span id="player-count">0</span>/<span id="max-players">5</span></p>
+                    <p>房間代碼: <span id="room-id-display">...</span></p>
+                </div>
+            </div>
+            <button id="leave-game" class="btn btn-secondary">離開遊戲</button>
+        </div>
+
+        <!-- 連接狀態指示器 -->
+        <div id="connection-status" class="offline">
+            <span id="status-text">連接中...</span>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

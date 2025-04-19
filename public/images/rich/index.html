@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Walker - 多人環形路徑遊戲</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Walker</h1>
+        <div id="welcome-panel" class="panel">
+            <h2>歡迎</h2>
+            <div class="form-group">
+                <button id="create-room-btn" class="btn btn-primary">創建房間</button>
+                <button id="join-room-btn" class="btn btn-secondary">加入房間</button>
+            </div>
+        </div>
+
+        <div id="create-room-panel" class="panel hidden">
+            <h2>創建新房間</h2>
+            <div class="form-group">
+                <label for="room-name">房間名稱:</label>
+                <input type="text" id="room-name" maxlength="20" placeholder="請輸入房間名稱">
+            </div>
+            <div class="form-group">
+                <label for="max-players">最大玩家數:</label>
+                <select id="max-players">
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button id="create-room-submit" class="btn btn-primary">創建</button>
+                <button id="create-room-back" class="btn btn-secondary">返回</button>
+            </div>
+        </div>
+
+        <div id="join-room-panel" class="panel hidden">
+            <h2>加入房間</h2>
+            <div class="form-group">
+                <label for="join-room-id">房間代碼:</label>
+                <input type="text" id="join-room-id" placeholder="請輸入房間代碼">
+            </div>
+            <div class="form-group">
+                <button id="join-room-submit" class="btn btn-primary">查詢</button>
+                <button id="join-room-back" class="btn btn-secondary">返回</button>
+            </div>
+            <div id="room-list" class="hidden">
+                <h3>活躍房間:</h3>
+                <ul id="active-rooms-list"></ul>
+            </div>
+        </div>
+
+        <div id="player-name-panel" class="panel hidden">
+            <h2 id="player-name-title">加入房間</h2>
+            <div class="form-group">
+                <label for="player-name">玩家名稱:</label>
+                <input type="text" id="player-name" maxlength="10" placeholder="請輸入你的名稱 (最多10字元)">
+            </div>
+            <p id="player-name-room-info">房間資訊載入中...</p>
+            <div class="form-group">
+                <button id="player-name-submit" class="btn btn-primary">開始遊戲</button>
+                <button id="player-name-back" class="btn btn-secondary">返回</button>
+            </div>
+        </div>
+
+        <div id="error-message" class="hidden"></div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>
