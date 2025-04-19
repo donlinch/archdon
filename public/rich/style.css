@@ -1,215 +1,70 @@
-/* --- Add to style.css --- */
+/* style.css 相關部分 */
 
-/* Map Options in index.html */
-.map-options {
-    margin-top: 15px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
-}
-.map-size-controls {
-    display: flex;
-    gap: 20px; /* Increased gap */
-    margin-top: 10px;
-    align-items: flex-end; /* Align bottom */
-}
-.map-size-controls div {
-    display: flex;
-    flex-direction: column;
-}
-.map-size-controls label {
-    margin-bottom: 5px; /* Increased space */
-    font-size: 0.9em;
-    color: #555;
-}
-.map-size-controls input[type="number"] {
-    width: 70px; /* Slightly wider */
-    padding: 5px 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-}
-.map-preview {
-    margin-top: 15px; /* Increased space */
-    padding: 10px;
-    background-color: #f8f9fa; /* Lighter background */
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-}
-.map-preview p {
-    margin-bottom: 8px;
-    font-size: 0.9em;
-    color: #333;
-}
-#map-preview-container {
-    display: grid; /* Set dynamically by JS */
-    gap: 2px;      /* Small gap between preview cells */
-    margin-top: 5px;
-    max-width: 240px; /* Limit preview size */
-    border: 1px solid #ccc;
-    background-color: #fff; /* White background for the grid area */
-    padding: 2px; /* Small padding around cells */
-    overflow: hidden; /* Hide overflow if grid too big */
-}
-#map-preview-container div {
-    width: 18px; /* Slightly larger preview cells */
-    height: 18px;
-    background-color: #e9ecef; /* Default empty cell color */
-    border: 1px solid #ced4da;
-    font-size: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #adb5bd;
-    box-sizing: border-box;
-}
-#map-preview-container div.path-cell {
-    background-color: #cfe2ff; /* Bootstrap info-bg-subtle */
-    border-color: #9ec5fe; /* Bootstrap info-border-subtle */
-    color: #0a58ca; /* Darker blue for text */
-    font-weight: bold;
-}
-
-/* Game Map Styles in game.html */
 #game-map {
-    position: relative; /* Needed for absolute positioning of players */
-    width: 90%;
-    max-width: 600px; /* Adjust max width */
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    background-color: #fdfdfd;
-    min-height: 300px; /* Ensure space for map */
-    display: flex; /* Use flex to center content if needed */
-    justify-content: center;
-    align-items: center;
+    position: relative; /* 重要：為了 players-container 的絕對定位 */
+    /* ... 其他樣式 ... */
+    /* 例如 width, height, border, margin 等 */
 }
 
 #map-container {
-    position: relative; /* Relative for absolute cells if circle */
-    width: 100%;
-    height: 100%;
-}
+    /* 如果是 grid 佈局 */
+    display: grid;
+    /* grid-template-columns: repeat(7, 50px); */
+    /* grid-template-rows: repeat(6, 50px); */
+    /* gap: 1px; */
+    /* background-color: #ccc; */
+    /* border: 1px solid #aaa; */
+    /* padding: 5px; */
+    /* width: fit-content; */
+    /* margin: 20px auto; */
 
-/* Styling for Rectangle Map */
-.rectangle-map-container {
-    display: grid; /* JS sets grid details */
-    gap: 3px; /* Gap between cells */
-    padding: 5px;
-    border: 1px solid #e0e0e0;
-    background-color: #f5f5f5;
+    /* 如果是圓形佈局，這裡可能是空的，由 JS 控制 cell 位置 */
+    /* 但 map-container 自身仍建議設置 position: relative */
+    position: relative; /* 確保 */
+    /* width: 300px; */
+    /* height: 300px; */
+    /* margin: 20px auto; */
 }
 
 .map-cell {
-    border: 1px solid #b0bec5; /* Blue-grey border */
-    background-color: #eceff1; /* Light blue-grey background */
-    min-width: 50px; /* Ensure minimum size */
-    height: 50px;
+    /* width: 50px; */ /* 確保與 grid 或 JS 設置匹配 */
+    /* height: 50px; */
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    box-sizing: border-box; /* 推薦 */
+
+    /* 居中格子數字 */
     display: flex;
-    justify-content: center;
     align-items: center;
-    position: relative; /* For cell number positioning */
-    box-sizing: border-box;
-    font-size: 1em;
-    font-weight: bold;
-    color: #37474f; /* Darker blue-grey text */
+    justify-content: center;
 }
 
 .map-cell.empty {
-    background-color: #fafafa; /* Very light grey for empty */
-    border: 1px dashed #e0e0e0; /* Dashed border for empty */
-    color: #ccc;
-    font-weight: normal;
-}
-.map-cell.empty .map-cell-number {
-    display: none; /* Hide number in empty cells */
-}
-.map-cell.error {
-    background-color: #ffdddd;
-    border-color: red;
+    background-color: #ffffff;
+    border-color: #e0e0e0;
 }
 
 .map-cell-number {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    font-size: 0.7em;
-    color: #78909c; /* Lighter blue-grey for number */
-    line-height: 1;
-}
-
-/* Styling for Player Markers (adjust size if needed) */
-#players-container {
-    position: absolute; /* Overlay on map container */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none; /* Don't interfere with map interaction */
-}
-
-.player-marker {
-    position: absolute;
-    width: 30px; /* Adjust size as needed */
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-size: 14px;
+    color: #555;
     font-weight: bold;
-    color: white;
-    font-size: 1em;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 10;
-    transition: left 0.4s ease-in-out, top 0.4s ease-in-out; /* Smooth movement */
 }
-
-/* Add distinct colors using classes */
-.player-color-1 { background-color: #e74c3c; } /* Red */
-.player-color-2 { background-color: #3498db; } /* Blue */
-.player-color-3 { background-color: #2ecc71; } /* Green */
-.player-color-4 { background-color: #f1c40f; } /* Yellow */
-.player-color-5 { background-color: #9b59b6; } /* Purple */
-
-.player-moving {
-    /* Optional: add animation effect */
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-/* Player List Styling */
-#players-list li {
-    padding: 5px 10px;
-    margin-bottom: 5px;
-    border-radius: 3px;
-    background-color: #f8f9fa;
-    border-left: 5px solid #ccc; /* Default border, JS sets color */
-}
-#players-list li.current-player {
-    background-color: #e9f5ff; /* Highlight current player */
-}
-
-/* Button Cooldown */
-.btn-cooldown {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
 
 #players-container {
-    position: absolute; /* 相對於 #game-map 定位 */
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* 允許點擊穿透到地圖格子 */
-    z-index: 10; /* 確保標記在格子數字之上 */
+    pointer-events: none;
+    z-index: 10;
 }
 
 .player-marker {
-    position: absolute; /* 必須是 absolute */
-    width: 30px;        /* 設置標記寬度 */
-    height: 30px;       /* 設置標記高度 */
-    border-radius: 50%; /* 圓形標記 */
+    position: absolute;
+    width: 30px;  /* ★★★ 必須與 JS 中的 markerSize 匹配 ★★★ */
+    height: 30px; /* ★★★ 必須與 JS 中的 markerSize 匹配 ★★★ */
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -218,26 +73,18 @@
     font-size: 16px;
     border: 2px solid rgba(0, 0, 0, 0.3);
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    transition: left 0.4s ease-in-out, top 0.4s ease-in-out; /* 動畫效果 */
-    z-index: 11; /* 比格子數字高 */
-}
-
-/* 定義不同玩家的顏色 */
-.player-color-1 { background-color: #e74c3c; } /* Red */
-.player-color-2 { background-color: #3498db; } /* Blue */
-.player-color-3 { background-color: #2ecc71; } /* Green */
-.player-color-4 { background-color: #f1c40f; } /* Yellow */
-.player-color-5 { background-color: #9b59b6; } /* Purple */
-
-/* 移動動畫效果 */
-.player-moving {
-    /* 可以添加例如 transform: scale(1.2); 來強調移動 */
     transition: left 0.4s ease-in-out, top 0.4s ease-in-out, transform 0.2s ease-out;
-    transform: scale(1.1); /* 稍微放大一點 */
+    z-index: 11;
+    box-sizing: border-box; /* 推薦 */
 }
 
-/* 修正：確保地圖容器是相對定位的，這樣標記容器才能相對於它定位 */
-#game-map {
-    position: relative;
-    /* 其他樣式... */
+/* ... 顏色和動畫樣式 ... */
+.player-color-1 { background-color: #e74c3c; }
+.player-color-2 { background-color: #3498db; }
+.player-color-3 { background-color: #2ecc71; }
+.player-color-4 { background-color: #f1c40f; }
+.player-color-5 { background-color: #9b59b6; }
+
+.player-moving {
+    transform: scale(1.1);
 }
