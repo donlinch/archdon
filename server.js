@@ -3851,15 +3851,7 @@ app.use((err, req, res, next) => {
     if (res.headersSent) { return next(err); }
     res.status(err.status || 500).send(process.env.NODE_ENV === 'production' ? '伺服器發生了一些問題！' : `伺服器錯誤: ${err.message}`);
 });
-
-// --- Start Server ---
-server.listen(PORT, () => { // <--- Use server.listen instead of app.listen
-    console.log(`伺服器 (HTTP + WebSocket) 正在監聽 port ${PORT}`);
-    pool.query('SELECT NOW()')
-        .then(result => console.log('資料庫連接成功於', result.rows[0].now))
-        .catch(err => console.error('資料庫連接錯誤:', err.stack || err));
-});
-
+ 
 // --- END OF FILE server.js ---
 
 
