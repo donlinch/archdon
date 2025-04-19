@@ -366,6 +366,98 @@ wss.on('connection', async (ws, req) => {
 
 
 
+
+
+
+    async function handleSimpleWalkerMessage(ws, message) {
+        if (!ws.roomId || !ws.playerId || !ws.clientType || ws.clientType !== 'controller') {
+          console.warn(`[WS Simple Walker Msg] Received message from invalid connection. Ignoring.`);
+          return;
+        }
+        const roomId = ws.roomId;
+        const playerId = ws.playerId;
+        const playerName = ws.playerName || playerId;
+      
+        try {
+          let parsedMessage;
+          try {
+            parsedMessage = JSON.parse(message);
+          } catch (parseError) {
+            console.error(`[WS Simple Walker Msg] Failed to parse message from ${playerName} (${playerId}):`, parseError);
+            return;
+          }
+      
+          console.log(`[WS Simple Walker Msg] Received from ${playerName} (${playerId}) in ${roomId}:`, parsedMessage.type);
+      
+          if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
+            const direction = parsedMessage.direction;
+            
+            // 获取最新房间数据
+            const roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state || !roomData.game_state.players) {
+              console.warn(`[WS Simple Walker Move] Invalid room state for ${roomId}. Cannot process move.`);
+              return;
+            }
+            
+            const gameState = roomData.game_state;
+            const mapSize = gameState.mapLoopSize || 10;
+      
+            // 检查玩家是否存在
+            if (!gameState.players[playerId]) {
+              console.warn(`[WS Simple Walker Move] Player ${playerName} (${playerId}) not found in current state for room ${roomId}.`);
+              ws.send(JSON.stringify({ type: 'error', message: '服务器状态错误，找不到您的数据，请尝试重新加入' }));
+              return;
+            }
+      
+            // 计算新位置
+            let currentPosition = gameState.players[playerId].position;
+            let newPosition;
+            if (direction === 'forward') {
+              newPosition = (currentPosition + 1) % mapSize;
+            } else if (direction === 'backward') {
+              newPosition = (currentPosition - 1 + mapSize) % mapSize;
+            } else {
+              console.warn(`[WS Simple Walker Move] Invalid direction received: ${direction}`);
+              return;
+            }
+      
+            // 更新数据库中的玩家位置
+            const updatedRoomResult = await dbClient.updatePlayerPosition(roomId, playerId, newPosition);
+            
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+              console.error(`[WS Simple Walker Move] Failed to update position in DB for ${playerName} (${playerId})`);
+              ws.send(JSON.stringify({ type: 'error', message: '更新位置时服务器发生错误' }));
+              return;
+            }
+      
+            // 广播最新状态
+            broadcastToSimpleWalkerRoom(roomId, {
+              type: 'gameStateUpdate',
+              roomName: updatedRoomResult.room_name,
+              gameState: updatedRoomResult.game_state
+            });
+          }
+        } catch (error) {
+          console.error(`[WS Simple Walker Msg] Error processing message from ${playerName} (${playerId}):`, error);
+          try {
+            ws.send(JSON.stringify({ type: 'error', message: '处理您的请求时服务器发生错误' }));
+          } catch (sendErr) {
+            console.error(`[WS Simple Walker Msg] Failed to send error message to ${playerName} (${playerId}):`, sendErr);
+          }
+        }
+      }
+    
+    
+    
+
+
+
+
+
+
+
+
+
     if (clientType === 'controller') {
         let roomData;
         let gameState;
@@ -471,8 +563,7 @@ wss.on('connection', async (ws, req) => {
 
             // 為這個 ws 連接綁定事件處理器 (無論是新連還是重連)
             ws.on('message', (message) => handleSimpleWalkerMessage(ws, message));
-            ws.on('close', () => handleSimpleWalkerClose(ws));
-            ws.on('error', (error) => handleSimpleWalkerError(ws, error));
+             ws.on('error', (error) => handleSimpleWalkerError(ws, error));
 
         } catch (error) {
             console.error(`[WS Simple Walker] Error during connection setup for player ${playerName} in room ${roomId}:`, error.message);
@@ -500,6 +591,14 @@ wss.on('connection', async (ws, req) => {
         ws.close(1003, "不支持的客戶端類型");
     }
 });
+
+
+
+
+
+
+
+
 async function handleSimpleWalkerClose(ws) {
     const roomId = ws.roomId;
     const playerId = ws.playerId;
@@ -578,26 +677,7 @@ async function handleSimpleWalkerClose(ws) {
     } catch (error) {
         console.error(`[WS Simple Walker Close] Error handling disconnect for player ${playerName} (${playerId}):`, error);
     }
-}async function handleSimpleWalkerClose(ws) {
-    const roomId = ws.roomId;
-    const playerId = ws.playerId;
-    const clientType = ws.clientType;
-    const playerName = ws.playerName || playerId;
-
-    if (!roomId || !playerId || !clientType || clientType !== 'controller') {
-        return;
-    }
-    console.log(`[WS Simple Walker Close] Player ${playerName} (${playerId}) disconnected from room ${roomId}.`);
-
-    const connections = simpleWalkerConnections.get(roomId);
-    if (connections) {
-        connections.delete(ws); // 从内存连接池中移除
-        console.log(`[WS Simple Walker Close] Connection removed from memory map. Room ${roomId} remaining: ${connections.size}`);
-        if (connections.size === 0) {
-            simpleWalkerConnections.delete(roomId);
-            console.log(`[WS Simple Walker Close] Room ${roomId} removed from active connections map as it's empty.`);
-        }
-    }
+} 
 
     // 获取当前游戏状态以保存玩家位置
     try {
@@ -656,7 +736,7 @@ async function handleSimpleWalkerClose(ws) {
     } catch (error) {
         console.error(`[WS Simple Walker Close] Error handling disconnect for player ${playerName} (${playerId}):`, error);
     }
-}
+
 
 
 function handleSimpleWalkerError(ws, error) {
