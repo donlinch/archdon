@@ -325,7 +325,7 @@ function applyButtonCooldown(button) {
         button.disabled = false;
     }, 500); // 500ms 冷卻時間
 }
- 
+  
 // 更新連接狀態顯示
 function updateConnectionStatus(status, message) {
     connectionStatus.className = status;

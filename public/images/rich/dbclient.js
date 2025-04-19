@@ -186,7 +186,7 @@ async function cleanInactiveRooms(hours = 1) {
     return result.rowCount;
 }
  
-/**
+/** 
  * 關閉所有資料庫連接
  */
 async function close() {

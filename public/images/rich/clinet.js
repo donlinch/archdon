@@ -195,7 +195,7 @@ async function handleStartGame() {
         showError('玩家名稱不能超過10個字元');
         return;
     } 
-    
+     
     try {
         // 在實際加入之前先檢查房間是否有空間
         const response = await fetch(`/api/game-rooms/${roomId}/join`, {
