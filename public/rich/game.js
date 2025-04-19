@@ -460,9 +460,9 @@ function updatePlayerMarkers(oldState) {
             const finalTop = baseTop + offset.y;
 
             marker.style.position = 'absolute';
-            marker.style.left = `${finalLeft}px`;
-            marker.style.top = `${finalTop}px`;
-            marker.style.zIndex = indexInCell + 1;
+marker.style.left = `${baseLeft + offset.x}px`;
+marker.style.top = `${baseTop + offset.y}px`;
+marker.style.transform = 'translate(-50%, -50%)';
 
             // 處理移動動畫
             if (oldPlayer && oldPlayer.position !== player.position) {
@@ -480,8 +480,8 @@ function updatePlayerMarkers(oldState) {
 // ★★★ 輔助函數：根據格子上的玩家數量計算偏移量數組 ★★★
 function getPlayerOffsets(count) {
     const offsets = [];
-    const baseOffset = 10; // 基礎偏移量 (用於 >= 5 玩家)
-    const smallOffset = 8; // 較小偏移量 (用於 2-4 玩家)
+    const cellSize = document.querySelector('.map-cell').offsetWidth;
+    const baseOffset = cellSize * 0.25; // 格子寬度的 25%
 
     switch (count) {
         case 1:
