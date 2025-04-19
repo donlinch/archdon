@@ -33,9 +33,9 @@ const moveForwardBtn = document.getElementById('move-forward');
 const moveBackwardBtn = document.getElementById('move-backward');
 const leaveGameBtn = document.getElementById('leave-game');
 
-// 頁面載入時執行
+// 在頁面加載時，檢查 URL 中是否有房間 ID 和玩家名稱
 document.addEventListener('DOMContentLoaded', function() {
-    // 獲取URL參數
+    // 獲取 URL 參數
     const urlParams = new URLSearchParams(window.location.search);
     roomId = urlParams.get('roomId');
     playerName = urlParams.get('playerName');
@@ -46,19 +46,53 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // 設置基本顯示
+    // 設置顯示玩家名稱和房間 ID
     playerNameDisplay.textContent = playerName;
     roomIdDisplay.textContent = roomId;
     
-    // 創建地圖
+    // 創建遊戲地圖
     createGameMap();
     
-    // 連接到WebSocket
+    // 連接到 WebSocket
     connectWebSocket();
     
     // 設置按鈕事件
     setupEventListeners();
+    
+    // 向伺服器請求玩家位置
+    requestPlayerPositionFromServer();
 });
+
+// 請求玩家位置
+function requestPlayerPositionFromServer() {
+    if (!roomId || !playerName) {
+        console.error('無法請求玩家位置，缺少房間 ID 或玩家名稱');
+        return;
+    }
+
+    // 假設你的伺服器有一個 API 來返回玩家的最後位置
+    fetch(`/api/player-position?roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePlayerPosition(data.position); // 更新玩家的位置
+            } else {
+                console.error('無法獲取玩家位置');
+            }
+        })
+        .catch(error => console.error('請求錯誤:', error));
+}
+
+// 更新玩家位置
+function updatePlayerPosition(position) {
+    const playerMarker = document.getElementById(`player-${playerId}`);
+    const cell = document.getElementById(`cell-${position}`);
+    const cellRect = cell.getBoundingClientRect();
+    
+    // 更新玩家標記的位置
+    playerMarker.style.left = `${cellRect.left + (cell.offsetWidth / 2) - 15}px`;
+    playerMarker.style.top = `${cellRect.top + (cell.offsetHeight / 2) - 15}px`;
+}
 
 // 設置按鈕事件
 function setupEventListeners() {
@@ -302,17 +336,45 @@ function updatePlayerMarkers(oldState) {
     }
 }
 
-// 發送移動命令
+// 玩家移動時更新位置
 function sendMoveCommand(direction) {
     if (!isConnected || !ws) return;
-    
+
     const moveCommand = {
         type: 'moveCommand',
         direction: direction
     };
-    
+
     ws.send(JSON.stringify(moveCommand));
     console.log(`發送移動命令: ${direction}`);
+    
+    // 更新玩家位置到資料庫
+    updatePlayerPositionInServer(direction);
+}
+
+// 更新伺服器中的玩家位置
+function updatePlayerPositionInServer(direction) {
+    const position = gameState.players[playerId].position;
+    
+    // 向伺服器發送更新位置請求
+    fetch(`/api/update-player-position`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            roomId: roomId,
+            playerName: playerName,
+            newPosition: position
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('無法更新玩家位置');
+        }
+    })
+    .catch(error => console.error('請求錯誤:', error));
 }
 
 // 應用按鈕冷卻時間
