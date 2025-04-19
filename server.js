@@ -555,6 +555,43 @@ async function handleSimpleWalkerClose(ws) {
     
 
 
+
+// 新增: 獲取玩家位置
+app.get('/api/player-position', async (req, res) => {
+    const { roomId, playerName } = req.query;
+
+    if (!roomId || !playerName) {
+        return res.status(400).json({ error: '缺少房間ID或玩家名稱' });
+    }
+
+    try {
+        const room = await dbClient.getRoom(roomId);
+        if (!room) {
+            return res.status(404).json({ error: '找不到房間' });
+        }
+
+        const player = room.game_state.players && Object.values(room.game_state.players).find(player => player.name === playerName);
+        if (!player) {
+            return res.status(404).json({ error: '玩家未找到' });
+        }
+
+        res.json({ success: true, position: player.position });
+    } catch (err) {
+        console.error('獲取玩家位置錯誤:', err);
+        res.status(500).json({ error: '伺服器錯誤' });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
 // --- WebSocket Message/Close/Error Handlers (Keep your existing handlers) ---
 // Make sure handleSimpleWalkerMessage uses dbClient.updatePlayerPosition
 // Make sure handleSimpleWalkerClose uses dbClient.removePlayerFromRoom

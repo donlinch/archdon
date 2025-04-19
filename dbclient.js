@@ -177,6 +177,10 @@ async function removePlayerFromRoom(roomId, playerId) {
  * @param {number} newPosition 新位置
  * @returns {Promise<Object|null>} 更新後的房間信息
  */
+
+
+
+// 更新玩家位置
 async function updatePlayerPosition(roomId, playerId, newPosition) {
     const room = await getRoom(roomId);
     if (!room) return null;
@@ -184,7 +188,7 @@ async function updatePlayerPosition(roomId, playerId, newPosition) {
     const gameState = room.game_state;
 
     // 檢查玩家是否存在
-    if (!gameState.players || !gameState.players[playerId]) { // Safe access
+    if (!gameState.players || !gameState.players[playerId]) {
         throw new Error('玩家不存在');
     }
 
