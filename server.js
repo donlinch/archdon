@@ -46,8 +46,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 // --- 遊戲房間 WebSocket 相關 ---
-const activeGameRooms = new Map(); // 只存儲活躍的 WebSocket 連接，不存儲遊戲狀態
-
+ 
 const simpleWalkerConnections = new Map();
 
 
@@ -343,269 +342,243 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     }
 });
 
-// --- ★★★ 原有的 handleWebSocketMessage, handleWebSocketClose, handleWebSocketError 可能需要保留給 Rich Map 使用，或重命名 ---
-// function handleWebSocketMessage(ws, message) { ... } // 可能改名為 handleRichMapMessage
-// function handleWebSocketClose(ws) { ... }           // 可能改名為 handleRichMapClose
-// function handleWebSocketError(ws, error) { ... }    // 可能改名為 handleRichMapError
 
-// --- 處理 WebSocket 消息 ---
-async function handleWebSocketMessage(ws, message) {
-    try {
-        // 確保連接屬性存在
-        if (!ws.roomId || !ws.clientType) {
-            console.warn(`[WS] 收到沒有正確屬性的客戶端消息`);
-            return;
-        }
-        
-        // 解析消息
-        const parsedMessage = JSON.parse(message);
-        const roomId = ws.roomId;
-        
-        // 更新房間最後活動時間
-        await pool.query(
-            'UPDATE game_rooms SET last_active = NOW() WHERE room_id = $1',
-            [roomId]
-        );
-        
-        // 處理不同類型的消息
-        if (ws.clientType === 'controller') {
-            // 處理控制器的移動命令
-            if (parsedMessage.type === 'moveCommand') {
-                handleMoveCommand(ws, parsedMessage);
-            }
-        } else if (ws.clientType === 'game') {
-            // 遊戲客戶端的特定消息
-            if (parsedMessage.type === 'requestGameState') {
-                sendGameState(roomId, ws);
-            }
-        }
-    } catch (err) {
-        console.error('[WS ERROR] 處理消息時出錯:', err);
-    }
-}
 
-// --- 處理控制器的移動命令 ---
-async function handleMoveCommand(ws, command) {
-    const { direction } = command; // 'forward' 或 'backward'
-    const roomId = ws.roomId;
-    const playerId = ws.playerId;
-    
-    if (!direction || !playerId) {
-        console.warn(`[WS] 移動命令缺少必要參數`);
+
+
+
+
+
+/**
+ * 處理來自 Simple Walker 客戶端 (控制器) 的消息
+ * @param {WebSocket} ws WebSocket 連接對象
+ * @param {string} message 收到的消息 (JSON 字串)
+ */
+async function handleSimpleWalkerMessage(ws, message) {
+    // 確保連接有必要的屬性
+    if (!ws.roomId || !ws.playerId || !ws.clientType || ws.clientType !== 'controller') {
+        console.warn(`[WS Simple Walker] 收到來自無效連接的消息，忽略。`);
         return;
     }
-    
+
+    const roomId = ws.roomId;
+    const playerId = ws.playerId;
+    // 獲取玩家名稱以便日誌記錄 (如果需要，可以在連接時保存 ws.playerName = playerName)
+    // const playerName = ws.playerName || playerId; // 假設連接時保存了 playerName
+
     try {
-        // 獲取當前遊戲狀態
-        const { rows } = await pool.query(
-            'SELECT game_state FROM game_rooms WHERE room_id = $1',
-            [roomId]
-        );
-        
-        if (rows.length === 0) {
-            console.warn(`[WS] 處理移動命令時找不到房間: ${roomId}`);
-            return;
+        const parsedMessage = JSON.parse(message);
+        console.log(`[WS Simple Walker] Received message from ${playerId} in room ${roomId}:`, parsedMessage);
+
+        // 只處理 'moveCommand' 類型的消息
+        if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
+            const direction = parsedMessage.direction; // 'forward' 或 'backward'
+
+            // --- 執行移動邏輯 ---
+            // 1. 獲取當前遊戲狀態
+            const roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state) {
+                console.warn(`[WS Simple Walker Move] 找不到房間 ${roomId} 的狀態`);
+                return;
+            }
+            const gameState = roomData.game_state;
+            const mapSize = gameState.mapLoopSize || 10; // 獲取地圖大小
+
+            // 2. 確保玩家存在於狀態中
+            if (!gameState.players || !gameState.players[playerId]) {
+                console.warn(`[WS Simple Walker Move] 玩家 ${playerId} 不在房間 ${roomId} 的狀態中`);
+                // 可能需要關閉這個無效的連接或發送錯誤
+                ws.send(JSON.stringify({ type: 'error', message: '伺服器狀態錯誤，找不到您的玩家資料' }));
+                ws.close(1011, "玩家資料不同步");
+                return;
+            }
+
+            // 3. 計算新位置
+            let currentPosition = gameState.players[playerId].position;
+            let newPosition;
+            if (direction === 'forward') {
+                newPosition = (currentPosition + 1) % mapSize;
+            } else if (direction === 'backward') {
+                newPosition = (currentPosition - 1 + mapSize) % mapSize;
+            } else {
+                console.warn(`[WS Simple Walker Move] 無效的移動方向: ${direction}`);
+                return; // 忽略無效方向
+            }
+
+            // 4. 更新資料庫中的玩家位置
+            console.log(`[WS Simple Walker Move] Updating position for ${playerId} in ${roomId} from ${currentPosition} to ${newPosition}`);
+            const updatedRoomResult = await dbClient.updatePlayerPosition(roomId, playerId, newPosition);
+
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                console.error(`[WS Simple Walker Move] 更新玩家 ${playerId} 位置失敗`);
+                ws.send(JSON.stringify({ type: 'error', message: '更新位置失敗' }));
+                return;
+            }
+
+            // 5. 獲取更新後的完整狀態並廣播
+            const latestGameState = updatedRoomResult.game_state;
+            const latestRoomName = updatedRoomResult.room_name; // 確保返回了 room_name
+
+            console.log(`[WS Simple Walker Move] Player ${playerId} moved to ${newPosition}. Broadcasting update.`);
+            broadcastToSimpleWalkerRoom(roomId, {
+                type: 'gameStateUpdate',
+                roomName: latestRoomName,
+                gameState: latestGameState
+            }); // 廣播給所有人 (包括自己，以便確認)
+
+        } else {
+            console.warn(`[WS Simple Walker] 收到未知類型的消息，忽略: ${parsedMessage.type}`);
         }
-        
-        const gameState = rows[0].game_state;
-        const mapSize = gameState.mapLoopSize || 10;
-        
-        // 確保玩家存在
-        if (!gameState.players[playerId]) {
-            console.warn(`[WS] 找不到玩家 ${playerId} 在房間 ${roomId}`);
-            return;
-        }
-        
-        // 計算新位置
-        let newPosition = gameState.players[playerId].position;
-        if (direction === 'forward') {
-            newPosition = (newPosition + 1) % mapSize;
-        } else if (direction === 'backward') {
-            newPosition = (newPosition - 1 + mapSize) % mapSize;
-        }
-        
-        // 更新玩家位置
-        gameState.players[playerId].position = newPosition;
-        
-        // 保存更新後的遊戲狀態到資料庫
-        await pool.query(
-            'UPDATE game_rooms SET game_state = $1 WHERE room_id = $2',
-            [JSON.stringify(gameState), roomId]
-        );
-        
-        console.log(`[WS] 玩家 ${ws.playerName} (${playerId}) 在房間 ${roomId} 移動到位置 ${newPosition}`);
-        
-        // 將更新後的遊戲狀態廣播給所有客戶端
-        broadcastGameState(roomId);
-    } catch (err) {
-        console.error('[WS ERROR] 處理移動命令時出錯:', err);
+
+    } catch (error) {
+        console.error(`[WS Simple Walker] 處理來自 ${playerId} 的消息時出錯:`, error.stack || error);
+        try {
+            ws.send(JSON.stringify({ type: 'error', message: '處理您的請求時發生錯誤' }));
+        } catch (sendErr) { /* 忽略 */}
     }
 }
 
-// --- WebSocket 斷開連接處理 ---
-async function handleWebSocketClose(ws) {
+/**
+ * 處理 Simple Walker 客戶端 (控制器) 的斷開連接
+ * @param {WebSocket} ws 斷開的 WebSocket 連接對象
+ */
+async function handleSimpleWalkerClose(ws) {
+    const roomId = ws.roomId;
+    const playerId = ws.playerId;
+    const clientType = ws.clientType;
+
+    // 確保是 Simple Walker 的連接
+    if (!roomId || !playerId || !clientType || clientType !== 'controller') {
+        console.warn(`[WS Simple Walker Close] 無效連接斷開，無法清理。`);
+        return;
+    }
+
+    console.log(`[WS Simple Walker Close] Player ${playerId} disconnected from room ${roomId}.`);
+
+    // 1. 從 simpleWalkerConnections 中移除此連接
+    const connections = simpleWalkerConnections.get(roomId);
+    if (connections) {
+        connections.delete(ws);
+        console.log(`[WS Simple Walker Close] Connection removed. Room ${roomId} remaining connections: ${connections.size}`);
+        // 如果房間沒有連接了，從 Map 中移除這個房間的 Set
+        if (connections.size === 0) {
+            simpleWalkerConnections.delete(roomId);
+            console.log(`[WS Simple Walker Close] Room ${roomId} removed from active connections map as it's empty.`);
+            // 注意：這裡不刪除資料庫中的房間，讓定期清理任務去做
+        }
+    } else {
+         console.warn(`[WS Simple Walker Close] Room ${roomId} not found in active connections map during cleanup.`);
+    }
+
+
     try {
-        const roomId = ws.roomId;
-        const clientType = ws.clientType;
-        
-        if (!roomId || !clientType) {
-            console.warn(`[WS] 斷開連接時缺少屬性`);
-            return;
+        // 2. 從資料庫的遊戲狀態中移除玩家
+        console.log(`[WS Simple Walker Close] Attempting to remove player ${playerId} from DB state in room ${roomId}...`);
+        const updatedRoomResult = await dbClient.removePlayerFromRoom(roomId, playerId);
+
+        if (updatedRoomResult && updatedRoomResult.game_state) {
+            console.log(`[WS Simple Walker Close] Player ${playerId} removed from DB state. Broadcasting update.`);
+            // 3. 廣播最新的遊戲狀態給剩餘的玩家
+             if (simpleWalkerConnections.has(roomId) && simpleWalkerConnections.get(roomId).size > 0) {
+                 broadcastToSimpleWalkerRoom(roomId, {
+                     type: 'gameStateUpdate',
+                     roomName: updatedRoomResult.room_name, // 確保返回了 room_name
+                     gameState: updatedRoomResult.game_state
+                 });
+             }
+        } else if (updatedRoomResult === null) {
+            console.warn(`[WS Simple Walker Close] Room ${roomId} not found in DB when trying to remove player ${playerId}.`);
+        } else {
+             console.warn(`[WS Simple Walker Close] Player ${playerId} might not have been in the DB state or removal failed.`);
         }
-        
-        console.log(`[WS] 客戶端斷開連接: ${clientType} 從房間 ${roomId}`);
-        
-        // 從活躍房間映射中移除此連接
-        const room = activeGameRooms.get(roomId);
-        if (room) {
-            if (clientType === 'game') {
-                room.gameClients.delete(ws);
-            } else if (clientType === 'controller') {
-                room.controllerClients.delete(ws);
-                
-                // 如果是控制器，從遊戲狀態中移除玩家
-                const playerId = ws.playerId;
-                if (playerId) {
-                    try {
-                        // 獲取當前遊戲狀態
-                        const { rows } = await pool.query(
-                            'SELECT game_state FROM game_rooms WHERE room_id = $1',
-                            [roomId]
-                        );
-                        
-                        if (rows.length > 0) {
-                            const gameState = rows[0].game_state;
-                            
-                            // 移除玩家
-                            if (gameState.players && gameState.players[playerId]) {
-                                delete gameState.players[playerId];
-                                
-                                // 更新資料庫
-                                await pool.query(
-                                    'UPDATE game_rooms SET game_state = $1 WHERE room_id = $2',
-                                    [JSON.stringify(gameState), roomId]
-                                );
-                                
-                                console.log(`[WS] 玩家 ${ws.playerName} (${playerId}) 已從房間 ${roomId} 移除`);
-                                
-                                // 廣播更新後的遊戲狀態
-                                broadcastGameState(roomId);
-                            }
-                        }
-                    } catch (err) {
-                        console.error('[WS ERROR] 移除玩家時出錯:', err);
-                    }
-                }
-            }
-            
-            // 如果房間空了，從記憶體中移除
-            if (room.gameClients.size === 0 && room.controllerClients.size === 0) {
-                activeGameRooms.delete(roomId);
-                console.log(`[WS] 房間 ${roomId} 已從記憶體中移除`);
-            }
-        }
-    } catch (err) {
-        console.error('[WS ERROR] 處理斷開連接時出錯:', err);
+
+    } catch (error) {
+        console.error(`[WS Simple Walker Close] 移除玩家 ${playerId} 或廣播更新時出錯:`, error.stack || error);
     }
 }
 
-// --- 發送遊戲狀態給特定客戶端 ---
-async function sendGameState(roomId, ws) {
-    try {
-        // 從資料庫獲取最新遊戲狀態
-        const { rows } = await pool.query(
-            'SELECT room_name, game_state FROM game_rooms WHERE room_id = $1',
-            [roomId]
-        );
-        
-        if (rows.length === 0) {
-            console.warn(`[WS] 發送遊戲狀態時找不到房間: ${roomId}`);
-            return;
-        }
-        
-        const { room_name, game_state } = rows[0];
-        
-        // 準備消息
-        const stateMessage = JSON.stringify({
-            type: 'gameStateUpdate',
-            roomId,
-            roomName: room_name,
-            gameState: game_state
-        });
-        
-        // 發送消息
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(stateMessage);
-        }
-    } catch (err) {
-        console.error('[WS ERROR] 發送遊戲狀態時出錯:', err);
+/**
+ * 處理 Simple Walker 客戶端 (控制器) 的 WebSocket 錯誤
+ * @param {WebSocket} ws 發生錯誤的 WebSocket 連接對象
+ * @param {Error} error 錯誤對象
+ */
+function handleSimpleWalkerError(ws, error) {
+    const roomId = ws.roomId || '未知房間';
+    const playerId = ws.playerId || '未知玩家';
+    const clientType = ws.clientType || '未知類型';
+
+    console.error(`[WS Simple Walker Error] WebSocket error for ${clientType} ${playerId} in room ${roomId}:`, error.message);
+
+    // 錯誤發生時，通常連接也會關閉，確保執行清理邏輯
+    // handleSimpleWalkerClose(ws); // onclose 會自動調用，這裡調用可能重複
+
+    // 強制終止可能卡住的連接
+    if (ws.readyState !== WebSocket.CLOSED) {
+        ws.terminate();
     }
 }
 
-// --- 廣播遊戲狀態給房間所有客戶端 ---
-async function broadcastGameState(roomId) {
-    try {
-        // 檢查房間是否在活躍映射中
-        const room = activeGameRooms.get(roomId);
-        if (!room) {
-            console.warn(`[WS] 廣播時找不到活躍房間: ${roomId}`);
-            return;
-        }
-        
-        // 從資料庫獲取最新遊戲狀態
-        const { rows } = await pool.query(
-            'SELECT room_name, game_state FROM game_rooms WHERE room_id = $1',
-            [roomId]
-        );
-        
-        if (rows.length === 0) {
-            console.warn(`[WS] 廣播時找不到房間在資料庫中: ${roomId}`);
-            return;
-        }
-        
-        const { room_name, game_state } = rows[0];
-        
-        // 準備消息
-        const stateMessage = JSON.stringify({
-            type: 'gameStateUpdate',
-            roomId,
-            roomName: room_name,
-            gameState: game_state
-        });
-        
-        // 廣播給所有遊戲客戶端
-        room.gameClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(stateMessage);
+
+
+
+
+
+
+
+
+
+/**
+ * 向指定 Simple Walker 房間內的所有客戶端廣播消息
+ * @param {string} roomId 房間 ID
+ * @param {object} message 要發送的消息對象 (會被 JSON.stringify)
+ * @param {WebSocket} [senderWs=null] 可選，要排除的發送者連接，避免發送給自己
+ */
+function broadcastToSimpleWalkerRoom(roomId, message, senderWs = null) {
+    const connections = simpleWalkerConnections.get(roomId);
+
+    if (!connections || connections.size === 0) {
+        // console.log(`[WS Broadcast] Room ${roomId} has no active connections to broadcast to.`);
+        return; // 沒有連接，無需廣播
+    }
+
+    const messageString = JSON.stringify(message);
+    let broadcastCount = 0;
+
+    connections.forEach(client => {
+        // 檢查是否要排除發送者，以及連接是否開啟
+        if (client !== senderWs && client.readyState === WebSocket.OPEN) {
+            try {
+                client.send(messageString);
+                broadcastCount++;
+            } catch (sendError) {
+                console.error(`[WS Broadcast Error] Failed to send message to client ${client.playerId || ''} in room ${roomId}:`, sendError.message);
+                // 如果發送失敗，可能需要從 Set 中移除這個客戶端並關閉它
+                connections.delete(client);
+                client.terminate();
             }
-        });
-        
-        // 廣播給所有控制器客戶端
-        room.controllerClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(stateMessage);
-            }
-        });
-        
-        console.log(`[WS] 已廣播最新遊戲狀態到房間 ${roomId} (${room.gameClients.size} 遊戲, ${room.controllerClients.size} 控制器)`);
-    } catch (err) {
-        console.error('[WS ERROR] 廣播遊戲狀態時出錯:', err);
+        }
+    });
+
+    if (broadcastCount > 0 || (connections.size === 1 && senderWs === null)) { // 如果只有一人且沒排除發送者，也算廣播成功
+         const excludingSender = senderWs ? ` (excluding sender ${senderWs.playerId})` : '';
+         console.log(`[WS Broadcast] Broadcasted message to ${broadcastCount} client(s) in room ${roomId}${excludingSender}. Message type: ${message.type}`);
     }
 }
 
-// --- 啟動服務器 ---
-server.listen(PORT, () => {
-    console.log(`伺服器正在監聽 port ${PORT}`);
-    
-    // 測試資料庫連接
-    pool.query('SELECT NOW()')
-        .then(result => console.log('資料庫連接成功於', result.rows[0].now))
-        .catch(err => console.error('資料庫連接錯誤:', err));
-});
 
 
 
 
+
+
+
+
+
+
+
+
+
+ 
 
 
 
@@ -760,66 +733,7 @@ app.use(async (req, res, next) => {
     next(); // 確保總是調用 next()
 });
 
-
-// 修正後的創建房間API
-app.post('/api/game-rooms', async (req, res) => {
-    const { roomName, templateId } = req.body;
-    
-    if (!roomName || !roomName.trim()) {
-        return res.status(400).json({ error: '房間名稱與模板 ID 為必填' });
-    }
-    if (!templateId) {
-        return res.status(400).json({ error: '必須選擇遊戲模板' });
-    }
-
-
-
-
-
-
-
-    try {
-        const roomId = `room_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const newRoom = {
-            id: roomId,
-            roomName: roomName.trim(),
-            // templateId, // templateId 應該只存在於 state 中
-            createdAt: new Date().toISOString(),
-            lastActive: Date.now(),
-            state: { // <--- 確保初始狀態在這裡設定
-                currentTemplateId: templateId, // 初始模板 ID
-                players: {}, // 初始玩家數據 (可以稍後從模板加載)
-                playerPositions: [0, 0, 0], // 初始位置
-                activePlayer: 1, // 初始活動玩家
-                isMoving: false,
-                highlightedCell: null,
-                // 可以考慮在這裡加入背景色、Logo 等從模板讀取的狀態
-                 currentBgColor: '#fff0f5', // 預設值
-                 currentLogoUrl: null,
-            },
-            // gameClient: null, // <--- 移除單一客戶端
-            gameClients: new Set(),   // <--- 使用 Set 存儲多個遊戲客戶端
-            controllerClients: new Set()
-        };
-
-        gameRooms.set(roomId, newRoom);
-        console.log(`[Room Created] New room created: ${roomId}`);
-        res.status(201).json({
-            id: roomId,
-            roomName: newRoom.roomName,
-            templateId: newRoom.state.currentTemplateId, // 從 state 返回
-            createdAt: newRoom.createdAt
-        });
-    } catch (err) {
-        console.error('[Create Room Error]', err);
-        res.status(500).json({ 
-            error: '建立房間失敗',
-            detail: err.message 
-        });
-    }
-});
-
-
+ 
 
 
 
@@ -3880,82 +3794,9 @@ app.use((err, req, res, next) => {
  
 // --- END OF FILE server.js ---
 
+ 
 
-// --- 修改 handleWebSocketMessage ---
-function handleWebSocketMessage(ws, message) {
-    // ... (解析 message, 獲取 room) ...
-    if (!room) return;
-
-    if (clientType === 'controller') {
-        // --->>> 將指令廣播給所有遊戲客戶端 <<<---
-        console.log(`[WS Message] Forwarding controller command to ALL game clients in room ${roomId}.`);
-        broadcastToGames(roomId, parsedMessage); // <--- 使用新的廣播函數
-
-    } else if (clientType === 'game') {
-        // 處理來自遊戲客戶端的狀態更新
-        if (parsedMessage.type === 'gameStateUpdate' && parsedMessage.data) {
-            console.log(`[WS Message] Game client (one of ${room.gameClients.size}) in room ${roomId} sent gameStateUpdate. Updating server state.`);
-            // --->>> 更新伺服器權威狀態 <<<---
-            // 簡單合併，或者根據需要做更複雜的合併邏輯
-             Object.assign(room.state, parsedMessage.data);
-            // 確保 playerPositions 總是數組
-            if (!Array.isArray(room.state.playerPositions)) { room.state.playerPositions = [0,0,0];}
-            // 確保 players 是物件
-             if (typeof room.state.players !== 'object' || room.state.players === null) { room.state.players = {};}
-
-            console.log(`[WS State Update] Room ${roomId} state updated:`, room.state);
-
-            // --->>> 將更新後的權威狀態廣播給所有客戶端 (控制器 + 其他遊戲客戶端) <<<---
-            const authoritativeUpdate = { type: 'gameStateUpdate', data: room.state };
-            broadcastToControllers(roomId, authoritativeUpdate);
-            // 也廣播給所有遊戲客戶端 (包括發送者)，確保同步
-            broadcastToGames(roomId, authoritativeUpdate);
-
-        } else if (parsedMessage.type === 'controlCommand' && parsedMessage.command === 'getGameState') {
-             // 遊戲客戶端請求狀態，直接回覆它
-             console.log(`[WS Message] Game client in room ${roomId} requested game state.`);
-             try {
-                 if (room.state) ws.send(JSON.stringify({ type: 'gameStateUpdate', data: room.state }));
-             } catch (e) { console.error("Error sending state back to game client:", e); }
-        } else {
-             // 其他來自遊戲客戶端的訊息 (如果有的話)
-              console.log(`[WS Message] Broadcasting message from game client to controllers in room ${roomId}.`);
-              broadcastToControllers(roomId, parsedMessage); // 仍然可以廣播非狀態更新訊息給控制器
-        }
-    } else {
-        console.warn(`[WS Message] Received message from unknown client type '${clientType}' in room ${roomId}. Ignoring.`);
-    }
-}
-
-
-
-
-
-
-// --- 新增：廣播給所有遊戲客戶端的函數 ---
-function broadcastToGames(roomId, message) {
-    const room = gameRooms.get(roomId);
-    if (!room || room.gameClients.size === 0) return; // 如果沒有遊戲客戶端，就不廣播
-
-    const messageStr = JSON.stringify(message);
-
-    room.gameClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            try {
-                client.send(messageStr);
-            } catch (sendError) {
-                console.error(`[WS Broadcast Games] Error sending message to game client in room ${roomId}:`, sendError);
-                // 出錯時可以考慮將此客戶端移除
-                // room.gameClients.delete(client); // 直接移除，斷線處理會再次嘗試移除也沒關係
-            }
-        } else {
-             // 如果發現有非 OPEN 狀態的客戶端，可以順便清理
-             // console.log(`[WS Broadcast Games] Removing non-open game client from room ${roomId}.`);
-             // room.gameClients.delete(client);
-        }
-    });
-}
-
+ 
 
 
 
@@ -3964,35 +3805,7 @@ function broadcastToGames(roomId, message) {
 
  
 
-
-
-
-
-// --- 修改 broadcastToControllers (確保總是 stringify) ---
-function broadcastToControllers(roomId, message) {
-    const room = gameRooms.get(roomId);
-    if (!room || room.controllerClients.size === 0) return;
-
-    const messageStr = JSON.stringify(message); // <--- 確保 stringify
-
-    room.controllerClients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            try {
-                client.send(messageStr);
-            } catch (sendError) {
-                console.error(`[WS Broadcast Controllers] Error sending message to controller in room ${roomId}:`, sendError);
-                 // room.controllerClients.delete(client);
-            }
-        } else {
-             // room.controllerClients.delete(client);
-        }
-    });
-}
  
-
-
-
-
 
 
 
@@ -4010,37 +3823,7 @@ function broadcastToControllers(roomId, message) {
 
 
 
-
-
-// 定期清理不活躍的房間(每10分鐘)
-setInterval(() => {
-    const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const [roomId, room] of gameRooms.entries()) {
-        // 如果房間30分鐘沒有活動，清除它
-        if (now - room.lastActive > 30 * 60 * 1000) {
-            // 先關閉所有連接
-            if (room.gameClient && room.gameClient.readyState === WebSocket.OPEN) {
-                room.gameClient.close(1000, "Room inactive for too long");
-            }
-            
-            room.controllerClients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.close(1000, "Room inactive for too long");
-                }
-            });
-            
-            // 從Map中移除
-            gameRooms.delete(roomId);
-            cleanedCount++;
-        }
-    }
-    
-    if (cleanedCount > 0) {
-        console.log(`[Cleanup] Removed ${cleanedCount} inactive rooms. Current rooms: ${gameRooms.size}`);
-    }
-}, 10 * 60 * 1000);
+ 
 
 
 
@@ -4053,61 +3836,4 @@ setInterval(() => {
 
 
 
-
-
-
-// --- WebSocket 斷線處理 (支援多房間) ---
-
-function handleWebSocketClose(ws) {
-    if (!ws.roomId || !ws.clientType) {
-        console.warn('[WS Close] Client disconnected without roomId or clientType. Cannot process cleanup properly.');
-        return; 
-    }
-
-
-    const roomId = ws.roomId;
-    const clientType = ws.clientType;
-    console.log(`[WS Close] Client disconnected. Type: ${clientType}, Room: ${roomId}`);
-    const room = gameRooms.get(roomId);
-    if (!room) { 
-        console.warn(`[WS Close] Room ${roomId} not found during client disconnect cleanup.`);
-        return;
-    }
-
-    let gameClientCountBefore = room.gameClients.size; // 記錄移除前的數量
-    if (clientType === 'game') {
-        room.gameClients.delete(ws); // 從 Set 中移除
-        console.log(`[WS Close] Game client removed from room ${roomId}. Remaining game clients: ${room.gameClients.size}`);
-        // --->>> 只有當遊戲客戶端數量從 >0 變成 0 時，才通知控制器 <<<---
-        if (gameClientCountBefore > 0 && room.gameClients.size === 0) {
-            broadcastToControllers(roomId, { type: 'gameStatus', status: 'disconnected', roomId: roomId });
-            console.log(`[WS Close] Notified controllers in room ${roomId} about game disconnection (last game client left).`);
-        }
-    } else if (clientType === 'controller') {
-        room.controllerClients.delete(ws);
-        console.log(`[WS Close] Controller client removed from room ${roomId}. Remaining controllers: ${room.controllerClients.size}`);
-    } else { 
-
-
-
-        console.warn(`[WS Close] Unknown client type '${clientType}' disconnected from room ${roomId}.`);
-    }
-   // --->>> 判斷房間是否完全空了 <<<---
-    if (room.gameClients.size === 0 && room.controllerClients.size === 0) {
-        console.log(`[WS Close] Room ${roomId} is now empty. Removing from gameRooms.`);
-        gameRooms.delete(roomId);
-    } else {
-        room.lastActive = Date.now();
-    }
-    console.log(`[WS Close] Current active rooms count: ${gameRooms.size}`);
-}
-
-// --- handleWebSocketError 保持不變 ---
-function handleWebSocketError(ws, error) {
-    const roomId = ws.roomId || 'unknown';
-    const clientType = ws.clientType || 'unknown';
-    console.error(`[WS Error] WebSocket error occurred. Type: ${clientType}, Room: ${roomId}:`, error);
-    // 關閉處理會自動調用 handleWebSocketClose 來清理
-    // handleWebSocketClose(ws); // 移除這行，避免重複處理
-    ws.terminate(); // 強制終止可能出錯的連接
-}
+ 
