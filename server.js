@@ -82,8 +82,10 @@ app.get('/api/admin/rooms/:roomId', async (req, res) => {
     const { roomId } = req.params;
      console.log(`[API GET /api/admin/rooms/:roomId] Request received for room: ${roomId}`);
     try {
-        const room = await dbClient.getRoom(roomId); // Use existing dbClient function
-        if (!room) {
+        (async () => {
+            const room = await dbClient.getRoom(roomId);
+            console.log(room);
+        })();        if (!room) {
             console.warn(`[API GET /api/admin/rooms/:roomId] Room not found: ${roomId}`);
             return res.status(404).json({ error: '找不到指定的房間' });
         }
@@ -240,8 +242,10 @@ app.get('/api/game-rooms', async (req, res) => {
 app.get('/api/game-rooms/:roomId', async (req, res) => {
     const { roomId } = req.params;
     try {
-        const room = await dbClient.getRoom(roomId); // Use dbClient
-        if (!room) {
+        (async () => {
+            const room = await dbClient.getRoom(roomId);
+            console.log(room);
+        })();        if (!room) {
             return res.status(404).json({ error: '找不到指定的房間' });
         }
          const gameState = room.game_state || {};
@@ -275,8 +279,10 @@ app.post('/api/game-rooms/:roomId/join', async (req, res) => {
     }
 
     try {
-        const room = await dbClient.getRoom(roomId); // Use dbClient
-
+        (async () => {
+            const room = await dbClient.getRoom(roomId);
+            console.log(room);
+        })();
         if (!room || !room.game_state) {
             return res.status(404).json({ error: '找不到指定房間' });
         }
@@ -622,8 +628,10 @@ async function handleSimpleWalkerClose(ws) {
 
     // 获取当前游戏状态以保存玩家位置
     try {
-        const room = await dbClient.getRoom(roomId);
-        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
+        (async () => {
+            const room = await dbClient.getRoom(roomId);
+            console.log(room);
+        })();        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
             console.warn(`[WS Simple Walker Close] Player ${playerName} (${playerId}) not found in room ${roomId} state.`);
             return;
         }
@@ -681,8 +689,10 @@ async function handleSimpleWalkerClose(ws) {
 
     // 获取当前游戏状态以保存玩家位置
     try {
-        const room = await dbClient.getRoom(roomId);
-        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
+        (async () => {
+            const room = await dbClient.getRoom(roomId);
+            console.log(room);
+        })();        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
             console.warn(`[WS Simple Walker Close] Player ${playerName} (${playerId}) not found in room ${roomId} state.`);
             return;
         }
