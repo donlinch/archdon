@@ -146,7 +146,7 @@ function createCircleMap(size) {
     mapContainer.style.position = 'relative'; // 圓形佈局需要相對定位的容器
     mapContainer.style.width = '300px'; // 容器寬度
     mapContainer.style.height = '300px'; // 容器高度
-    mapContainer.style.margin = '20px auto'; // 居中顯示
+    mapContainer.style.margin = '20px 0'; // 靠左顯示
 
     const radius = 120; // 圓形半徑
     const centerX = 150; // 容器中心X (300/2)
@@ -204,7 +204,7 @@ function createRectangleMap(mapRows, mapCols) {
     mapContainer.style.padding = '5px';
     mapContainer.style.position = 'relative';
     mapContainer.style.width = '85%';
-    mapContainer.style.margin = '20px auto';
+    mapContainer.style.margin = '20px 0'; // 改為靠左，移除 auto
     
     // 計算循環大小以確保索引正確
     const mapLoopSize = 2 * mapCols + 2 * (mapRows - 2);
