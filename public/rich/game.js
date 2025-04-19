@@ -364,73 +364,178 @@ function updatePlayersList() {
         if (colorIndex > 5) colorIndex = 1; // Cycle through 5 colors
     });
 }
-
-// 更新玩家位置標記
+// ★★★ 更新玩家標記函數 (已修改，處理重疊問題) ★★★
 function updatePlayerMarkers(oldState) {
-     // Ensure map elements exist before trying to place markers
-     if (!mapContainer.firstChild) {
-          console.warn("Map container is empty, cannot update player markers yet.");
-          return;
-      }
+    // 確保地圖元素已加載，才能放置標記
+    if (!mapContainer.firstChild) {
+        console.warn("地圖容器為空，暫時無法更新玩家標記。");
+        return;
+    }
 
-    // Clear only the players container
+    // 只清空玩家標記的容器
     playersContainer.innerHTML = '';
 
-    // For each player in the current gameState
-    let colorIndex = 1;
-    const playerIds = Object.keys(gameState.players || {});
+    // --- 步驟 1: 按位置將玩家分組 ---
+    const positionToPlayersMap = new Map(); // 結構: Map<位置索引, [玩家ID1, 玩家ID2, ...]>
+    const playerIds = Object.keys(gameState.players || {}); // 使用當前的 gameState
 
     playerIds.forEach(id => {
         const player = gameState.players[id];
-        const oldPlayer = oldState?.players?.[id]; // Safely access old player data
-
-        // Get the map cell element corresponding to the player's position
-        const cellElement = document.getElementById(`cell-${player.position}`);
-
-        if (cellElement) {
-            // Create player marker element
-            const marker = document.createElement('div');
-            marker.className = `player-marker player-color-${colorIndex}`; // Use CSS for color
-            marker.id = `player-${id}`;
-            // Use first initial, handle potential empty names
-            marker.textContent = player.name ? player.name.charAt(0).toUpperCase() : '?';
-            marker.title = player.name || '未知玩家'; // Tooltip
-
-            // Calculate position RELATIVE TO THE MAP CONTAINER
-            // This works for both circle and rectangle layouts as long as cells have correct IDs
-            const markerSize = 30; // Match CSS marker size
-            const cellRect = cellElement.getBoundingClientRect();
-            const containerRect = mapContainer.getBoundingClientRect(); // Use map container as reference
-
-            // Position marker center over cell center
-             // Use offsetLeft/Top relative to the mapContainer's offsetParent
-             const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - (markerSize / 2);
-             const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - (markerSize / 2);
-
-            marker.style.position = 'absolute'; // Essential for left/top positioning
-            marker.style.left = `${left}px`;
-            marker.style.top = `${top}px`;
-
-            // Animate if position changed
-            if (oldPlayer && oldPlayer.position !== player.position) {
-                marker.classList.add('player-moving');
-                // Remove class after animation duration (match CSS)
-                setTimeout(() => {
-                    marker.classList.remove('player-moving');
-                }, 500);
+        if (player) { // 確保玩家數據存在
+            const position = player.position;
+            if (!positionToPlayersMap.has(position)) {
+                positionToPlayersMap.set(position, []);
             }
+            positionToPlayersMap.get(position).push(id);
+        }
+    });
 
-            playersContainer.appendChild(marker);
+    // --- 步驟 2: 確定一致的顏色分配 ---
+    // 按玩家名稱字母順序排序 ID，確保每次更新顏色分配都一樣
+    const sortedPlayerIds = playerIds.sort((a, b) => {
+        const nameA = gameState.players[a]?.name || ''; // 安全獲取名稱
+        const nameB = gameState.players[b]?.name || '';
+        return nameA.localeCompare(nameB); // 使用本地化比較
+    });
+    const playerIdToColorIndex = new Map(); // 結構: Map<玩家ID, 顏色索引(1-5)>
+    sortedPlayerIds.forEach((id, index) => {
+        playerIdToColorIndex.set(id, (index % 5) + 1); // 分配 1 到 5 的顏色索引
+    });
 
-        } else {
-            console.warn(`Could not find cell element for ID: cell-${player.position} for player ${player.name}`);
+
+    // --- 步驟 3: 遍歷每個有玩家的位置並放置標記 ---
+    positionToPlayersMap.forEach((playerIdsOnCell, position) => {
+        // 獲取該位置對應的地圖格子元素
+        const cellElement = document.getElementById(`cell-${position}`);
+        if (!cellElement) {
+            console.warn(`找不到 ID 為 cell-${position} 的格子元素`);
+            return; // 如果格子不存在，跳過處理
         }
 
-        // Increment color index
-        colorIndex++;
-        if (colorIndex > 5) colorIndex = 1;
+        const numPlayersOnCell = playerIdsOnCell.length; // 這個格子上的玩家數量
+        const offsets = getPlayerOffsets(numPlayersOnCell); // 獲取對應數量的偏移量數組
+
+        // 計算格子中心點的基礎坐標 (相對於地圖容器)
+        const markerSize = 30; // 標記的大小，需要與 CSS 匹配
+        // 使用 offsetLeft/offsetTop 相對於其 offsetParent (通常是 mapContainer)
+        const cellCenterX = cellElement.offsetLeft + (cellElement.offsetWidth / 2);
+        const cellCenterY = cellElement.offsetTop + (cellElement.offsetHeight / 2);
+        // 計算標記左上角的基礎位置（使其中心對準格子中心）
+        const baseLeft = cellCenterX - (markerSize / 2);
+        const baseTop = cellCenterY - (markerSize / 2);
+
+
+        // --- 步驟 4: 為這個格子上的每個玩家創建並定位標記 ---
+        // 將格子內的玩家按 ID 排序，確保偏移量分配穩定
+        playerIdsOnCell.sort((a, b) => a.localeCompare(b));
+
+        playerIdsOnCell.forEach((playerId, indexInCell) => {
+            const player = gameState.players[playerId];
+            const oldPlayer = oldState?.players?.[playerId]; // 安全獲取舊狀態
+            const colorIndex = playerIdToColorIndex.get(playerId) || 1; // 獲取一致的顏色索引
+
+            // 創建標記元素
+            const marker = document.createElement('div');
+            marker.className = `player-marker player-color-${colorIndex}`; // 使用 CSS class 控制顏色
+            marker.id = `player-${playerId}`;
+            // 顯示玩家名字的首字母（大寫），處理名字可能為空的情況
+            marker.textContent = player.name ? player.name.charAt(0).toUpperCase() : '?';
+            marker.title = player.name || '未知玩家'; // 鼠標懸停提示
+
+            // 計算最終位置（基礎位置 + 偏移量）
+            const offset = offsets[indexInCell]; // 獲取這個玩家在這個格子內的偏移量
+            const finalLeft = baseLeft + offset.x;
+            const finalTop = baseTop + offset.y;
+
+            marker.style.position = 'absolute'; // 必須是絕對定位
+            marker.style.left = `${finalLeft}px`;
+            marker.style.top = `${finalTop}px`;
+            // 簡單地設置 z-index，讓後來的玩家疊在上面（如果偏移不足以完全分開）
+            marker.style.zIndex = indexInCell + 1;
+
+            // 如果玩家的位置 (position) 改變了，應用移動動畫
+            if (oldPlayer && oldPlayer.position !== player.position) {
+                // 動畫前最好再次確認目標格子存在
+                const newCellElement = document.getElementById(`cell-${player.position}`);
+                if (newCellElement) {
+                    marker.classList.add('player-moving');
+                    // 動畫結束後移除 class (時間要與 CSS 動畫時間匹配)
+                    setTimeout(() => {
+                        marker.classList.remove('player-moving');
+                    }, 500);
+                }
+            }
+            // 注意：如果玩家 position 沒變，但因為同格玩家數變化導致 offset 變了，
+            // 標記會直接“跳”到新位置，目前沒有為這種情況加動畫，通常是可接受的。
+
+            // 將創建好的標記添加到標記容器中
+            playersContainer.appendChild(marker);
+        });
     });
 }
+
+// ★★★ 輔助函數：根據格子上的玩家數量計算偏移量數組 ★★★
+function getPlayerOffsets(count) {
+    const offsets = [];
+    const baseOffset = 10; // 基礎偏移量，可以調整這個值來改變分散程度
+    const smallOffset = 7; // 小一點的偏移量
+
+    // 預設偏移量，可以根據需要調整這些值以獲得最佳視覺效果
+    switch (count) {
+        case 1: // 1 個玩家：居中
+            offsets.push({ x: 0, y: 0 });
+            break;
+        case 2: // 2 個玩家：左右分開
+            offsets.push({ x: -smallOffset, y: 0 });
+            offsets.push({ x: smallOffset, y: 0 });
+            break;
+        case 3: // 3 個玩家：小三角形
+            offsets.push({ x: 0, y: -smallOffset }); // 上
+            offsets.push({ x: -smallOffset, y: smallOffset }); // 左下
+            offsets.push({ x: smallOffset, y: smallOffset }); // 右下
+            break;
+        case 4: // 4 個玩家：四角
+            offsets.push({ x: -smallOffset, y: -smallOffset }); // 左上
+            offsets.push({ x: smallOffset, y: -smallOffset }); // 右上
+            offsets.push({ x: -smallOffset, y: smallOffset }); // 左下
+            offsets.push({ x: smallOffset, y: smallOffset }); // 右下
+            break;
+        case 5: // 5 個玩家：梅花形 (中間 + 四角)
+            offsets.push({ x: 0, y: 0 }); // 中
+            offsets.push({ x: -baseOffset, y: -baseOffset }); // 左上
+            offsets.push({ x: baseOffset, y: -baseOffset }); // 右上
+            offsets.push({ x: -baseOffset, y: baseOffset }); // 左下
+            offsets.push({ x: baseOffset, y: baseOffset }); // 右下
+            break;
+        default: // 超過 5 個玩家：隨機分散或使用固定模式（這裡簡單處理為疊加在5的基礎上）
+             // 這裡只是個示例，可能需要更複雜的邏輯來處理更多玩家
+             offsets.push({ x: 0, y: 0 });
+             offsets.push({ x: -baseOffset, y: -baseOffset });
+             offsets.push({ x: baseOffset, y: -baseOffset });
+             offsets.push({ x: -baseOffset, y: baseOffset });
+             offsets.push({ x: baseOffset, y: baseOffset });
+             // 額外的玩家稍微再偏一點
+             for(let i = 5; i < count; i++) {
+                 offsets.push({ x: (i % 2 === 0 ? 1 : -1) * (baseOffset + 3), y: (Math.floor(i / 2) % 2 === 0 ? 1: -1) * (baseOffset+3) });
+             }
+            break;
+    }
+
+    // 確保返回的數組長度與 count 匹配 (如果 default 邏輯不完美)
+    while (offsets.length < count) {
+        // 添加一些備用位置，避免出錯
+        offsets.push({ x: (Math.random() - 0.5) * 2 * baseOffset, y: (Math.random() - 0.5) * 2 * baseOffset });
+    }
+
+    return offsets.slice(0, count); // 只返回需要的數量
+}
+
+
+
+
+
+
+
 
 
 // Send move command via WebSocket

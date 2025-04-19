@@ -193,3 +193,51 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+
+#players-container {
+    position: absolute; /* 相對於 #game-map 定位 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 允許點擊穿透到地圖格子 */
+    z-index: 10; /* 確保標記在格子數字之上 */
+}
+
+.player-marker {
+    position: absolute; /* 必須是 absolute */
+    width: 30px;        /* 設置標記寬度 */
+    height: 30px;       /* 設置標記高度 */
+    border-radius: 50%; /* 圓形標記 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: left 0.4s ease-in-out, top 0.4s ease-in-out; /* 動畫效果 */
+    z-index: 11; /* 比格子數字高 */
+}
+
+/* 定義不同玩家的顏色 */
+.player-color-1 { background-color: #e74c3c; } /* Red */
+.player-color-2 { background-color: #3498db; } /* Blue */
+.player-color-3 { background-color: #2ecc71; } /* Green */
+.player-color-4 { background-color: #f1c40f; } /* Yellow */
+.player-color-5 { background-color: #9b59b6; } /* Purple */
+
+/* 移動動畫效果 */
+.player-moving {
+    /* 可以添加例如 transform: scale(1.2); 來強調移動 */
+    transition: left 0.4s ease-in-out, top 0.4s ease-in-out, transform 0.2s ease-out;
+    transform: scale(1.1); /* 稍微放大一點 */
+}
+
+/* 修正：確保地圖容器是相對定位的，這樣標記容器才能相對於它定位 */
+#game-map {
+    position: relative;
+    /* 其他樣式... */
+}
