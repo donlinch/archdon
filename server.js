@@ -2,25 +2,19 @@
  
 // server.js
 require('dotenv').config();
-const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
+// const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
 const http = require('http'); // <--- Need http module
 const express = require('express');
 const path = require('path');
-const { Pool } = require('pg');
+// const { Pool } = require('pg'); // <--- dbClient handles this now
 const WebSocket = require('ws'); // <--- Import the ws library
-// const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
-const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
+const dbClient = require('./dbclient'); // <--- Use the dbClient module
 const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
-
-
 const multer = require('multer');
 const fs = require('fs');
-
-
 
 
 

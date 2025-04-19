@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Walker - 管理後台</title>
+    <link rel="stylesheet" href="style.css"> <!-- 可以共用或建立 admin.css -->
+    <style>
+        /* Admin specific styles */
+        .room-list-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .room-details {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eee;
+            border-radius: 5px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>管理後台 - Simple Walker</h1>
+
+        <!-- 這裡應該有登入/驗證機制 -->
+        <!-- <div id="login-panel"> ... </div> -->
+
+        <div id="admin-panel">
+            <h2>房間列表</h2>
+            <button id="refresh-rooms-btn" class="btn btn-secondary">重新整理</button>
+            <div id="room-list-container" style="margin-top: 15px;">
+                <!-- 房間列表會動態載入到這裡 -->
+                <p>正在載入房間列表...</p>
+            </div>
+
+            <hr style="margin: 20px 0;">
+
+            <h2>房間詳情</h2>
+            <div id="room-details-container" class="room-details hidden">
+                <p>請在上方列表中選擇一個房間查看詳情。</p>
+                <div id="details-content"></div>
+                 <button id="delete-room-btn" class="btn btn-danger hidden" style="background-color: #d9534f; color: white;">刪除此房間</button>
+            </div>
+        </div>
+
+        <div id="admin-error-message" class="hidden" style="color: #d9534f; margin-top: 15px;"></div>
+
+    </div>
+
+    <script src="rich-admin.js"></script> <!-- 需要建立這個 JS 檔案 -->
+</body>
+</html>
