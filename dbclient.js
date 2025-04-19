@@ -1,4 +1,58 @@
+// --- START OF FILE dbclient.js ---
+
 // dbClient.js - 封裝 PostgreSQL 操作的模組
+const { Pool } = require('pg'); // <--- 確保這一行存在
+
+// 創建連接池 <--- 確保 pool 的定義存在
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+/**
+ * 獲取資料庫連接
+ * @returns {Promise<import('pg').PoolClient>} 資料庫客戶端
+ */
+// ★★★ 確保 getClient 的定義在這裡 ★★★
+async function getClient() {
+    return await pool.connect();
+}
+
+/**
+ * 創建一個新的遊戲房間
+ * @param {string} roomId 房間 ID
+ * @param {string} roomName 房間名稱
+ * @param {number} maxPlayers 最大玩家數
+ * @returns {Promise<Object>} 創建的房間資訊
+ */
+async function createRoom(roomId, roomName, maxPlayers = 5) {
+    const gameState = {
+        mapLoopSize: 10,
+        maxPlayers: parseInt(maxPlayers),
+        players: {},
+        gameStarted: false
+    };
+
+    const query = `
+        INSERT INTO game_rooms(room_id, room_name, last_active, game_state)
+        VALUES($1, $2, NOW(), $3)
+        RETURNING room_id, room_name, created_at, last_active, game_state
+    `;
+
+    const { rows } = await pool.query(query, [roomId, roomName, JSON.stringify(gameState)]);
+    return rows[0];
+}
+
+/**
+ * 獲取房間信息
+ * @param {string} roomId 房間 ID
+ * @returns {Promise<Object|null>} 房間信息，如果不存在則返回 null
+ */
+async function getRoom(roomId) {
+    const query = 'SELECT * FROM game_rooms WHERE room_id = $1';
+    const { rows } = await pool.query(query, [roomId]);
+    return rows.length > 0 ? rows[0] : null;
+}
 
 
 /**
@@ -69,7 +123,7 @@ async function addPlayerToRoom(roomId, playerId, playerName) {
         throw new Error('房間已滿');
     }
 
-    // 檢查名稱是否重複 (根據 Simple Walker 邏輯，這裡可能不需要檢查，但保留以防萬一)
+    // 檢查名稱是否重複 (如果需要的話，取消註解)
     // for (const pid in gameState.players) {
     //     if (gameState.players[pid].name === playerName) {
     //         throw new Error('玩家名稱已被使用');
@@ -174,17 +228,20 @@ async function close() {
     await pool.end();
 }
 
+// --- ★★★ module.exports 必須在所有函數定義之後 ★★★ ---
 module.exports = {
-    getClient,
+    // pool, // 如果 server.js 其他地方直接用到 pool，需要匯出，否則不需要
+    getClient, // <-- 現在 getClient 在這行之前已經定義了
     createRoom,
     getRoom,
     getActiveRooms,
-    getAllRooms, // <-- 新增匯出
+    getAllRooms,
     updateRoomState,
     addPlayerToRoom,
     removePlayerFromRoom,
     updatePlayerPosition,
     cleanInactiveRooms,
-    deleteRoom, // <-- 新增匯出
+    deleteRoom,
     close
 };
+// --- END OF FILE dbclient.js ---
