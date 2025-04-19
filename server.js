@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 
 
-const dbClient = require('./dbclient');
+ 
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const fs = require('fs');
