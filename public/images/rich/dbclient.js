@@ -185,7 +185,7 @@ async function cleanInactiveRooms(hours = 1) {
     const result = await pool.query(query);
     return result.rowCount;
 }
-
+ 
 /**
  * 關閉所有資料庫連接
  */
