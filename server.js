@@ -500,6 +500,8 @@ wss.on('connection', async (ws, req) => {
         ws.close(1003, "不支持的客戶端類型");
     }
 });
+
+// 同時，確保 handleSimpleWalkerClose 會正確移除玩家數據
 async function handleSimpleWalkerClose(ws) {
     const roomId = ws.roomId;
     const playerId = ws.playerId;
@@ -513,149 +515,196 @@ async function handleSimpleWalkerClose(ws) {
 
     const connections = simpleWalkerConnections.get(roomId);
     if (connections) {
-        connections.delete(ws); // 从内存连接池中移除
+        connections.delete(ws); // 從內存連接池中移除
         console.log(`[WS Simple Walker Close] Connection removed from memory map. Room ${roomId} remaining: ${connections.size}`);
         if (connections.size === 0) {
             simpleWalkerConnections.delete(roomId);
             console.log(`[WS Simple Walker Close] Room ${roomId} removed from active connections map as it's empty.`);
+            // 注意：這裡不刪除資料庫中的房間，讓 cleanup job 來處理
         }
     }
 
-    // 获取当前游戏状态以保存玩家位置
+    // *** 這裡很重要：從數據庫狀態中移除玩家 ***
+    // 這樣即使玩家意外斷線，狀態也會被清理
     try {
-        const room = await dbClient.getRoom(roomId);
-        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
-            console.warn(`[WS Simple Walker Close] Player ${playerName} (${playerId}) not found in room ${roomId} state.`);
-            return;
+        console.log(`[WS Simple Walker Close] Removing player ${playerName} (${playerId}) from DB state in room ${roomId}...`);
+        const updatedRoomResult = await dbClient.removePlayerFromRoom(roomId, playerId); // <--- 確認這會更新DB
+
+        if (updatedRoomResult && updatedRoomResult.game_state && simpleWalkerConnections.has(roomId)) {
+            // 如果移除玩家後房間還有其他人，廣播更新後的狀態
+             const remainingPlayersCount = Object.keys(updatedRoomResult.game_state.players || {}).length;
+             console.log(`[WS Simple Walker Close] Player removed from DB. Remaining: ${remainingPlayersCount}. Broadcasting update.`);
+             if (remainingPlayersCount > 0 && connections && connections.size > 0) { // 確保還有連接可以廣播
+                 broadcastToSimpleWalkerRoom(roomId, {
+                     type: 'gameStateUpdate',
+                     roomName: updatedRoomResult.room_name,
+                     gameState: updatedRoomResult.game_state
+                 });
+             }
+        } else if (!updatedRoomResult) {
+            console.warn(`[WS Simple Walker Close] Room ${roomId} not found in DB during player removal, maybe already cleaned up.`);
+        } else {
+            // console.log(`[WS Simple Walker Close] Player removed, no remaining connections in room ${roomId} to broadcast to.`);
         }
-        
-        const player = room.game_state.players[playerId];
-        const reconnectKey = `${roomId}_${playerId}`;
-        
-        // 如果已经有一个超时，先清除它
-        if (disconnectedPlayers.has(reconnectKey)) {
-            clearTimeout(disconnectedPlayers.get(reconnectKey).timeoutId);
-        }
-        
-        // 设置新的超时，在30秒后从房间删除玩家
-        const timeoutId = setTimeout(async () => {
-            console.log(`[WS Simple Walker Close] Reconnect window expired for player ${playerName} (${playerId}) in room ${roomId}. Removing from room.`);
-            
-            try {
-                // 从数据库中删除玩家
-                const updatedRoomResult = await dbClient.removePlayerFromRoom(roomId, playerId);
-                disconnectedPlayers.delete(reconnectKey);
-                
-                if (updatedRoomResult && updatedRoomResult.game_state && simpleWalkerConnections.has(roomId)) {
-                    // 广播更新后的状态
-                    const remainingPlayersCount = Object.keys(updatedRoomResult.game_state.players || {}).length;
-                    console.log(`[WS Simple Walker Close] Player removed from DB. Remaining: ${remainingPlayersCount}. Broadcasting update.`);
-                    if (remainingPlayersCount > 0 && connections && connections.size > 0) {
-                        broadcastToSimpleWalkerRoom(roomId, {
-                            type: 'gameStateUpdate',
-                            roomName: updatedRoomResult.room_name,
-                            gameState: updatedRoomResult.game_state
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error(`[WS Simple Walker Close] Error removing player ${playerId} after timeout:`, error);
-            }
-        }, 30 * 1000); // 30秒重连窗口
-        
-        // 保存玩家信息和超时ID
-        disconnectedPlayers.set(reconnectKey, {
-            timeoutId,
-            player: {
-                playerId,
-                playerName,
-                position: player.position
-            }
-        });
-        
-        console.log(`[WS Simple Walker Close] Set 30-second reconnect window for player ${playerName} (${playerId}) in room ${roomId}. Current position: ${player.position}`);
-        
     } catch (error) {
-        console.error(`[WS Simple Walker Close] Error handling disconnect for player ${playerName} (${playerId}):`, error);
+        console.error(`[WS Simple Walker Close] Error removing player ${playerName} (${playerId}) from DB or broadcasting:`, error.stack || error);
     }
-}async function handleSimpleWalkerClose(ws) {
-    const roomId = ws.roomId;
-    const playerId = ws.playerId;
-    const clientType = ws.clientType;
-    const playerName = ws.playerName || playerId;
+}
 
-    if (!roomId || !playerId || !clientType || clientType !== 'controller') {
-        return;
-    }
-    console.log(`[WS Simple Walker Close] Player ${playerName} (${playerId}) disconnected from room ${roomId}.`);
 
-    const connections = simpleWalkerConnections.get(roomId);
-    if (connections) {
-        connections.delete(ws); // 从内存连接池中移除
-        console.log(`[WS Simple Walker Close] Connection removed from memory map. Room ${roomId} remaining: ${connections.size}`);
-        if (connections.size === 0) {
-            simpleWalkerConnections.delete(roomId);
-            console.log(`[WS Simple Walker Close] Room ${roomId} removed from active connections map as it's empty.`);
-        }
-    }
+    
 
-    // 获取当前游戏状态以保存玩家位置
-    try {
-        const room = await dbClient.getRoom(roomId);
-        if (!room || !room.game_state || !room.game_state.players || !room.game_state.players[playerId]) {
-            console.warn(`[WS Simple Walker Close] Player ${playerName} (${playerId}) not found in room ${roomId} state.`);
-            return;
-        }
-        
-        const player = room.game_state.players[playerId];
-        const reconnectKey = `${roomId}_${playerId}`;
-        
-        // 如果已经有一个超时，先清除它
-        if (disconnectedPlayers.has(reconnectKey)) {
-            clearTimeout(disconnectedPlayers.get(reconnectKey).timeoutId);
-        }
-        
-        // 设置新的超时，在30秒后从房间删除玩家
-        const timeoutId = setTimeout(async () => {
-            console.log(`[WS Simple Walker Close] Reconnect window expired for player ${playerName} (${playerId}) in room ${roomId}. Removing from room.`);
-            
-            try {
-                // 从数据库中删除玩家
-                const updatedRoomResult = await dbClient.removePlayerFromRoom(roomId, playerId);
-                disconnectedPlayers.delete(reconnectKey);
-                
-                if (updatedRoomResult && updatedRoomResult.game_state && simpleWalkerConnections.has(roomId)) {
-                    // 广播更新后的状态
-                    const remainingPlayersCount = Object.keys(updatedRoomResult.game_state.players || {}).length;
-                    console.log(`[WS Simple Walker Close] Player removed from DB. Remaining: ${remainingPlayersCount}. Broadcasting update.`);
-                    if (remainingPlayersCount > 0 && connections && connections.size > 0) {
-                        broadcastToSimpleWalkerRoom(roomId, {
-                            type: 'gameStateUpdate',
-                            roomName: updatedRoomResult.room_name,
-                            gameState: updatedRoomResult.game_state
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error(`[WS Simple Walker Close] Error removing player ${playerId} after timeout:`, error);
+
+// --- WebSocket Message/Close/Error Handlers (Keep your existing handlers) ---
+// Make sure handleSimpleWalkerMessage uses dbClient.updatePlayerPosition
+// Make sure handleSimpleWalkerClose uses dbClient.removePlayerFromRoom
+// Make sure broadcastToSimpleWalkerRoom is defined and works correctly
+
+// ★★★ 添加或恢復這個函數定義 ★★★
+async function handleSimpleWalkerMessage(ws, message) {
+    if (!ws.roomId || !ws.playerId || !ws.clientType || ws.clientType !== 'controller') {
+       console.warn(`[WS Simple Walker Msg] Received message from invalid connection. Ignoring.`);
+       return;
+   }
+   const roomId = ws.roomId;
+   const playerId = ws.playerId;
+   const playerName = ws.playerName || playerId; // Use stored name
+
+   try {
+       let parsedMessage; // <--- 確保解析發生在 try 內部
+       try {
+           parsedMessage = JSON.parse(message);
+       } catch (parseError) {
+            console.error(`[WS Simple Walker Msg] Failed to parse message from ${playerName} (${playerId}):`, message, parseError);
+            return; // 無法解析的消息，直接忽略
+       }
+
+       console.log(`[WS Simple Walker Msg] Received from ${playerName} (${playerId}) in ${roomId}:`, parsedMessage.type);
+
+       if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
+           const direction = parsedMessage.direction;
+
+           // 1. 獲取最新房間數據 (確保拿到最新狀態來計算)
+           const roomData = await dbClient.getRoom(roomId); // Use dbClient
+           if (!roomData || !roomData.game_state || !roomData.game_state.players) {
+               console.warn(`[WS Simple Walker Move] Invalid room state for ${roomId}. Cannot process move.`);
+               // 可選：發送錯誤回客戶端
+               // ws.send(JSON.stringify({ type: 'error', message: '伺服器房間狀態錯誤' }));
+               return;
+           }
+           const gameState = roomData.game_state;
+           const mapSize = gameState.mapLoopSize || 10; // 從遊戲狀態獲取地圖大小
+
+           // 2. 檢查玩家是否存在於當前狀態
+           if (!gameState.players[playerId]) {
+               console.warn(`[WS Simple Walker Move] Player ${playerName} (${playerId}) not found in current state for room ${roomId}. Connection might be stale.`);
+               // 玩家數據可能因某些原因丟失，強制斷開或提示錯誤
+               ws.send(JSON.stringify({ type: 'error', message: '伺服器狀態錯誤，找不到您的資料，請嘗試重新加入' }));
+               ws.close(1011, "玩家資料不同步");
+               return;
+           }
+
+           // 3. 計算新位置
+           let currentPosition = gameState.players[playerId].position;
+           let newPosition;
+           if (direction === 'forward') {
+               newPosition = (currentPosition + 1) % mapSize;
+           } else if (direction === 'backward') {
+               newPosition = (currentPosition - 1 + mapSize) % mapSize; // 確保負數取模正確
+           } else {
+               console.warn(`[WS Simple Walker Move] Invalid direction received: ${direction}`);
+               return; // 忽略無效方向
+           }
+
+           console.log(`[WS Simple Walker Move] Updating ${playerName} (${playerId}) in ${roomId} from ${currentPosition} to ${newPosition}`);
+
+           // 4. 更新資料庫中的玩家位置
+           const updatedRoomResult = await dbClient.updatePlayerPosition(roomId, playerId, newPosition); // Use dbClient
+
+           if (!updatedRoomResult || !updatedRoomResult.game_state) {
+               console.error(`[WS Simple Walker Move] Failed to update position in DB for ${playerName} (${playerId})`);
+               ws.send(JSON.stringify({ type: 'error', message: '更新位置時伺服器發生錯誤' }));
+               return; // 更新失敗，不廣播
+           }
+
+           // 5. 廣播最新的遊戲狀態給房間內所有玩家
+           const latestGameState = updatedRoomResult.game_state;
+           const latestRoomName = updatedRoomResult.room_name;
+
+           console.log(`[WS Simple Walker Move] Player ${playerName} moved. Broadcasting update to room ${roomId}.`);
+           broadcastToSimpleWalkerRoom(roomId, {
+               type: 'gameStateUpdate',
+               roomName: latestRoomName,
+               gameState: latestGameState
+           }); // 廣播給所有人，包括自己，以確保狀態同步
+
+       } else {
+           console.warn(`[WS Simple Walker Msg] Received unknown or malformed message type from ${playerName} (${playerId}): ${parsedMessage.type}`);
+           // 可以選擇忽略或發送錯誤提示
+           // ws.send(JSON.stringify({ type: 'error', message: `未知的命令類型: ${parsedMessage.type}` }));
+       }
+
+   } catch (error) {
+       // 這個 catch 處理 JSON.parse 之外的其他異步錯誤 (如 DB 操作錯誤)
+       console.error(`[WS Simple Walker Msg] Error processing message from ${playerName} (${playerId}):`, error.stack || error);
+       try {
+           // 嘗試發送通用錯誤給客戶端
+           ws.send(JSON.stringify({ type: 'error', message: '處理您的請求時伺服器發生錯誤' }));
+       } catch (sendErr) {
+           console.error(`[WS Simple Walker Msg] Failed to send error message to ${playerName} (${playerId}):`, sendErr);
+       }
+   }
+}
+
+// --- 你的 handleSimpleWalkerClose, handleSimpleWalkerError, broadcastToSimpleWalkerRoom 函數定義應該在這裡 ---
+async function handleSimpleWalkerClose(ws) {
+   // ... (你之前的 handleSimpleWalkerClose 程式碼) ...
+   const roomId = ws.roomId;
+   const playerId = ws.playerId;
+   const clientType = ws.clientType;
+   const playerName = ws.playerName || playerId;
+
+   if (!roomId || !playerId || !clientType || clientType !== 'controller') {
+       return;
+   }
+   console.log(`[WS Simple Walker Close] Player ${playerName} (${playerId}) disconnected from room ${roomId}.`);
+
+   const connections = simpleWalkerConnections.get(roomId);
+   if (connections) {
+       connections.delete(ws); // 從內存連接池中移除
+       console.log(`[WS Simple Walker Close] Connection removed from memory map. Room ${roomId} remaining: ${connections.size}`);
+       if (connections.size === 0) {
+           simpleWalkerConnections.delete(roomId);
+           console.log(`[WS Simple Walker Close] Room ${roomId} removed from active connections map as it's empty.`);
+           // 注意：這裡不刪除資料庫中的房間，讓 cleanup job 來處理
+       }
+   }
+
+   // *** 這裡很重要：從數據庫狀態中移除玩家 ***
+   // 這樣即使玩家意外斷線，狀態也會被清理
+   try {
+       console.log(`[WS Simple Walker Close] Removing player ${playerName} (${playerId}) from DB state in room ${roomId}...`);
+       const updatedRoomResult = await dbClient.removePlayerFromRoom(roomId, playerId); // <--- 確認這會更新DB
+
+       if (updatedRoomResult && updatedRoomResult.game_state && simpleWalkerConnections.has(roomId)) {
+           // 如果移除玩家後房間還有其他人，廣播更新後的狀態
+            const remainingPlayersCount = Object.keys(updatedRoomResult.game_state.players || {}).length;
+            console.log(`[WS Simple Walker Close] Player removed from DB. Remaining: ${remainingPlayersCount}. Broadcasting update.`);
+            if (remainingPlayersCount > 0 && connections && connections.size > 0) { // 確保還有連接可以廣播
+                broadcastToSimpleWalkerRoom(roomId, {
+                    type: 'gameStateUpdate',
+                    roomName: updatedRoomResult.room_name,
+                    gameState: updatedRoomResult.game_state
+                });
             }
-        }, 30 * 1000); // 30秒重连窗口
-        
-        // 保存玩家信息和超时ID
-        disconnectedPlayers.set(reconnectKey, {
-            timeoutId,
-            player: {
-                playerId,
-                playerName,
-                position: player.position
-            }
-        });
-        
-        console.log(`[WS Simple Walker Close] Set 30-second reconnect window for player ${playerName} (${playerId}) in room ${roomId}. Current position: ${player.position}`);
-        
-    } catch (error) {
-        console.error(`[WS Simple Walker Close] Error handling disconnect for player ${playerName} (${playerId}):`, error);
-    }
+       } else if (!updatedRoomResult) {
+           console.warn(`[WS Simple Walker Close] Room ${roomId} not found in DB during player removal, maybe already cleaned up.`);
+       } else {
+           // console.log(`[WS Simple Walker Close] Player removed, no remaining connections in room ${roomId} to broadcast to.`);
+       }
+   } catch (error) {
+       console.error(`[WS Simple Walker Close] Error removing player ${playerName} (${playerId}) from DB or broadcasting:`, error.stack || error);
+   }
 }
 
 
