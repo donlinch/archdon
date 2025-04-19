@@ -9,14 +9,14 @@ const path = require('path');
 const { Pool } = require('pg');
 const WebSocket = require('ws'); // <--- Import the ws library
 // const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
-
+const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
+const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 
 
- 
-const { v4: uuidv4 } = require('uuid');
+
 const multer = require('multer');
 const fs = require('fs');
 
