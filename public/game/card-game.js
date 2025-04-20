@@ -218,34 +218,25 @@ function initializeInputs() {
     }
 }
 
-// 點擊揭示內容
 function revealHole(event) {
     const hole = event.currentTarget;
     const index = parseInt(hole.dataset.index);
 
     if (!gameState.revealed[index]) {
-        // 添加揭示中的類，以應用揭示動畫
-        hole.classList.add('revealing');
+        // 直接添加 revealed 類，不使用中間的 revealing 狀態
+        hole.classList.add('revealed');
         
-        // 設置一個延遲，讓動畫完成後再添加 revealed 類
-        setTimeout(() => {
-            hole.classList.remove('revealing');
-            hole.classList.add('revealed');
-        }, 600); // 動畫持續時間
-
-        // 獲取內容索引（根據隨機位置映射）
+        // 更新游戲狀態
+        gameState.revealed[index] = true;
+        
+        // 顯示內容
         const contentIndex = gameState.contentPositions[index];
-
-        // 確保內容索引有效
         if (contentIndex >= 0 && contentIndex < gameState.contents.length) {
-            // 從 gameState.contents 獲取內容並顯示
             showCenteredCard(gameState.contents[contentIndex], index);
         } else {
             console.error(`無效的內容索引 ${contentIndex} 對於格子 ${index}`);
-            showCenteredCard("錯誤", index); // 顯示錯誤提示
+            showCenteredCard("錯誤", index);
         }
-
-        gameState.revealed[index] = true;
     }
 }
 

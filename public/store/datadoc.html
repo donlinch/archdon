@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綠界科技 金流與物流 整合開發指南 (SunnyYummy 專案)</title>
+    <style>
+        /* --- 整體樣式 --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Sans TC", sans-serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            background-color: #fcfcfc;
+            color: #343a40;
+        }
+        .container {
+            max-width: 1100px; /* 稍微加寬以容納表格 */
+            margin: 30px auto;
+            padding: 35px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            border-top: 6px solid #4CAF50; /* 綠界風格綠色 */
+        }
+
+        /* --- 標題樣式 --- */
+        h1, h2, h3, h4, h5 {
+            color: #2c3e50;
+            margin-bottom: 1em;
+            font-weight: 600;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            border-bottom: 3px solid #f1f1f1;
+            padding-bottom: 20px;
+            margin-bottom: 2em;
+            font-size: 2.5em;
+        }
+        h2 {
+            border-left: 5px solid #4CAF50;
+            padding-left: 15px;
+            margin-top: 3em;
+            font-size: 2em;
+        }
+        h3 {
+            font-size: 1.6em;
+            margin-top: 2em;
+            color: #34495e;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+         h4 {
+            font-size: 1.2em;
+            margin-top: 1.8em;
+            color: #555;
+        }
+
+        /* --- 重點資訊區塊 --- */
+        .key-info {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-left: 6px solid #4CAF50;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+        .key-info strong {
+            color: #1b5e20;
+        }
+        .key-info code {
+             background-color: #dcedc8;
+             padding: 4px 7px;
+             border: 1px solid #b2dfdb;
+        }
+
+        /* --- 警告/提示區塊 --- */
+        .alert {
+            padding: 18px;
+            margin-bottom: 25px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert .emoji { font-size: 1.5em; }
+        .alert-warning {
+            color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;
+        }
+        .alert-danger {
+            color: #a94442; background-color: #f2dede; border-color: #ebccd1;
+        }
+        .alert-info {
+            color: #31708f; background-color: #d9edf7; border-color: #bce8f1;
+        }
+        .alert-success {
+             color: #3c763d; background-color: #dff0d8; border-color: #d6e9c6;
+        }
+
+        /* --- 程式碼區塊 --- */
+        code {
+            background-color: #ecf0f1;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            border: 1px solid #dde;
+             word-wrap: break-word;
+        }
+        .code-block {
+            background-color: #2b2b2b; /* 深灰 */
+            color: #f8f8f2;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            border: 1px solid #444;
+            white-space: pre-wrap; /* 自動換行 */
+            word-wrap: break-word;
+        }
+        .code-block .comment { color: #75715e; } /* 註解顏色 */
+        .code-block .key { color: #f92672; } /* 關鍵字顏色 */
+        .code-block .string { color: #e6db74; } /* 字串顏色 */
+        .code-block .number { color: #ae81ff; } /* 數字顏色 */
+        .php-note code { background-color: #ffe0b2; border-color: #ffcc80;}
+
+        /* --- 列表樣式 --- */
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 1.5em;
+        }
+        li {
+            margin-bottom: 0.8em;
+        }
+        .task-list li {
+            list-style: none;
+            margin-bottom: 1.2em;
+            padding-left: 10px;
+            position: relative;
+            border-left: 3px solid #b2dfdb; /* 淡青色 */
+            padding-left: 15px;
+        }
+         .task-list li::before { content: none; } /* 移除預設標記 */
+        .task-list .icon {
+            margin-right: 12px;
+            font-size: 1.3em;
+            vertical-align: middle;
+        }
+         .task-list strong { color: #00796b; } /* 強調文字顏色 */
+
+        /* --- 表格樣式 --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        th, td {
+            border: 1px solid #e0e0e0;
+            padding: 12px 16px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+             color: #444;
+             white-space: nowrap;
+        }
+        td { background-color: #fff; }
+        .param-table td:first-child {
+            font-weight: bold;
+            width: 28%; /* 調整寬度 */
+            background-color: #f9f9f9;
+             white-space: nowrap;
+        }
+        .param-table code { font-weight: normal; background-color: #f0f0f0;}
+        .param-table .required { color: #c0392b; font-weight: bold; } /* 必填標示 */
+        .param-table .note { font-size: 0.85em; color: #555; margin-top: 6px; display: block; }
+
+        /* --- 其他樣式 --- */
+        .emoji {
+            font-size: 1.3em;
+            margin-right: 8px;
+            vertical-align: -0.1em;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #eee;
+            margin: 3em 0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 3em;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="emoji">🚀</span> 綠界科技 金流與物流 整合開發指南 (SunnyYummy 專案)</h1>
+
+        <div class="alert alert-info">
+            <span class="emoji">ℹ️</span>
+            <div>
+                <strong>文件目的：</strong> 本文件整合了專案需求、綠界官方文件要點與討論結果，旨在提供清晰、可執行的開發藍圖，方便開發團隊直接參考並開始實作 ECPay 超商物流 (CVS) 與 超商代碼 (CVS) 付款的串接。
+            </div>
+        </div>
+
+        <h2>一、整合背景與目標</h2>
+        <p>為了解決原 7-11 賣貨便出貨時效限制 (4天) 與實際備貨週期 (約一週) 的落差，並提升網站功能完整性與使用者體驗，決定導入綠界科技的超商物流與非信用卡支付 (超商代碼) API。</p>
+        <ul>
+            <li><strong>取代：</strong> 7-11 賣貨便。</li>
+            <li><strong>增加：</strong> 超商代碼付款方式。</li>
+            <li><strong>核心優勢：</strong> 掌握出貨單建立時機、自訂前端流程、透過 Webhook 自動化、全程無需跳離自有網站。</li>
+        </ul>
+
+        <hr>
+
+        <h2>二、核心介接資訊 (金鑰與端點)</h2>
+
+        <h3><span class="emoji">🔑</span> 介接金鑰 (HashKey & HashIV)</h3>
+        <div class="key-info">
+            <p><strong>正式環境 (Production):</strong></p>
+            <ul>
+                <li>商店代號 (MerchantID): <code>3451680</code></li>
+                <li>**物流** HashKey: <code>PrS33tqXZ4pb9qFR</code></li>
+                <li>**物流** HashIV: <code>5TykYe2aBiLX5R3Y</code></li>
+                <li>**金流** HashKey: <strong class="required">[請填入您的正式金流 HashKey]</strong></li>
+                <li>**金流** HashIV: <strong class="required">[請填入您的正式金流 HashIV]</strong></li>
+                 <li style="margin-top:10px;"><em><span class="emoji">💡</span> 請務必登入 <a href="https://vendor.ecpay.com.tw" target="_blank">綠界廠商後台</a> > 系統設定 > 系統介接設定，確認上述金鑰正確無誤。</em></li>
+            </ul>
+        </div>
+        <div class="alert alert-warning">
+            <span class="emoji">🧪</span>
+            <div>
+                <strong>測試環境 (Stage):</strong> 開發與測試階段**務必**使用以下資訊！
+                 <table>
+                    <thead><tr><th>服務</th><th>測試 MerchantID</th><th>測試 HashKey</th><th>測試 HashIV</th></tr></thead>
+                    <tbody>
+                        <tr><td>物流 (B2C/宅配)</td><td><code>2000132</code></td><td><code>5294y06JbISpM5x9</code></td><td><code>v77hoKGq4kWxNNIS</code></td></tr>
+                        <tr><td>物流 (C2C)</td><td><code>2000933</code></td><td><code>XBERn1YOvpM9nfZc</code></td><td><code>h1ONHk4P4yqbl5LK</code></td></tr>
+                         <tr><td>金流 (通用)</td><td><code>3002607</code> <span class="note">(或 <code>2000132</code>)</span></td><td><code>pwFHCqoqZZ0atSQS</code></td><td><code>EkRm7iFT261dpevs</code></td></tr>
+                    </tbody>
+                </table>
+                 <em><span class="emoji">💡</span> 金流測試 MerchantID 依文件可能不同，請以您申請到的為主。</em>
+            </div>
+        </div>
+
+        <h3><span class="emoji">🌐</span> API 端點網址 (Endpoints)</h3>
+        <table>
+            <thead>
+                <tr><th>功能</th><th>測試環境 (Stage)</th><th>正式環境 (Production)</th><th>主要用途</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>**物流** - 門市地圖</td>
+                    <td><code>https://logistics-stage.ecpay.com.tw/Express/map</code></td>
+                    <td><code>https://logistics.ecpay.com.tw/Express/map</code></td>
+                    <td>開啟超商選擇地圖介面</td>
+                </tr>
+                 <tr>
+                    <td>**物流** - 建立訂單</td>
+                    <td><code>https://logistics-stage.ecpay.com.tw/Express/Create</code></td>
+                    <td><code>https://logistics.ecpay.com.tw/Express/Create</code></td>
+                    <td>(後端) 建立綠界物流單</td>
+                </tr>
+                 <tr>
+                    <td>**物流** - 列印託運單 (B2C/宅配)</td>
+                    <td><code>https://logistics-stage.ecpay.com.tw/helper/printTradeDocument</code></td>
+                    <td><code>https://logistics.ecpay.com.tw/helper/printTradeDocument</code></td>
+                    <td>(後端觸發) 取得 B2C 託運單</td>
+                </tr>
+                 <tr>
+                    <td>**物流** - 列印託運單 (C2C)</td>
+                    <td><code>https://logistics-stage.ecpay.com.tw/Express/Print[FAMIC2C/UNIMARTC2C/...]OrderInfo</code></td>
+                    <td><code>https://logistics.ecpay.com.tw/Express/Print[FAMIC2C/UNIMARTC2C/...]OrderInfo</code></td>
+                    <td>(後端觸發) 取得 C2C 託運單</td>
+                </tr>
+                <tr>
+                    <td>**金流** - 幕後取號 (超商代碼/條碼/ATM)</td>
+                    <td><code>https://ecpayment-stage.ecpay.com.tw/1.0.0/Cashier/GenPaymentCode</code></td>
+                    <td><code>https://ecpayment.ecpay.com.tw/1.0.0/Cashier/GenPaymentCode</code></td>
+                    <td>(後端) 取得非信用卡付款碼</td>
+                </tr>
+                <!-- 其他 API 端點 (如查詢訂單、退貨等) 請參考完整文件 -->
+            </tbody>
+        </table>
+
+         <h3><span class="emoji">📚</span> 相關技術文件</h3>
+        <ul>
+            <li><a href="https://www.ecpay.com.tw/Service/API_Dwnld?Anchor=Logistics" target="_blank">物流 API 文件下載</a> (需登入)</li>
+             <li><a href="https://developers.ecpay.com.tw/?p=2613" target="_blank">物流 API 開發者文件</a></li>
+            <li><a href="https://www.ecpay.com.tw/Content/files/ecpay_011.pdf" target="_blank">非信用卡幕後取號 API 文件</a> (直接連結，可能變動，建議從官網下載)</li>
+             <li><a href="https://developers.ecpay.com.tw/?p=4073" target="_blank">參數加密方式說明</a> (非信用卡 API Data 加密)</li>
+             <li><a href="https://developers.ecpay.com.tw/?p=4072" target="_blank">檢查碼機制說明</a> (CheckMacValue 計算)</li>
+        </ul>
+
+        <hr>
+
+        <h2>三、開發 Roadmap (待辦事項)</h2>
+
+        <h3>階段一：基礎建設與核心流程 <span class="emoji">🚀</span></h3>
+        <ol class="task-list">
+            <li><span class="icon">🛒</span> **前端改造 (<code>index.html</code>, <code>app.js</code>, 新增購物車/結帳頁):**
+                <ul>
+                    <li>實作基本購物車 UI 與邏輯 (加入、檢視、修改、移除商品，LocalStorage 暫存)。</li>
+                    <li>建立結帳頁面，包含商品列表、總金額、收件人資訊表單。</li>
+                    <li>新增「<span class="emoji">🏪</span> 選擇取貨門市」按鈕。</li>
+                     <li>新增「<span class="emoji">💰</span> 選擇付款方式」選項 (至少包含 "超商代碼")。</li>
+                </ul>
+            </li>
+             <li><span class="icon">🗺️</span> **前端/後端整合 - 門市地圖 (<code>app.js</code> / <code>server.js</code>)：**
+                <ul>
+                     <li>**前端：** 點擊「選擇門市」按鈕時，觸發後端 API 取得開啟地圖所需的參數 (含 CheckMacValue)。</li>
+                     <li>**後端 (新 API)：** <code>GET /api/logistics/map-params</code>，準備 `MerchantID`, `MerchantTradeNo` (唯一), `LogisticsSubType`, `ServerReplyURL` (指向步驟3的 Webhook)，計算 CheckMacValue，回傳給前端。</li>
+                    <li>**前端：** 收到參數後，動態產生一個 POST 表單並提交至綠界門市地圖網址 (`/Express/map`)。</li>
+                     <li>綠界處理完選擇後，將門市資訊 POST 到後端的 `ServerReplyURL`。</li>
+                     <li>**前端：** 更新 UI 顯示已選門市名稱。</li>
+                </ul>
+            </li>
+             <li><span class="icon">✍️</span> **後端實作 - 接收門市選擇結果 (Webhook for Map - <code>server.js</code>)：**
+                <ul>
+                     <li>建立 <code>POST /api/logistics/store-selected</code> 路由。</li>
+                     <li>**<span class="emoji">🛡️</span> 驗證 CheckMacValue。**</li>
+                     <li>**<span class="emoji">💾</span> 暫存門市資訊：** 將門市資訊與 `MerchantTradeNo` 關聯後暫存 (Session 或 Redis)。</li>
+                     <li>回應 <code>1|OK</code>。</li>
+                </ul>
+            </li>
+             <li><span class="icon">✅</span> **前端/後端 - 訂單確認與提交 (結帳頁 JS / <code>server.js</code>)：**
+                <ul>
+                     <li>前端收集購物車商品、收件人資訊、選擇的付款方式 (`ChoosePayment`='CVS')、關聯的 `MerchantTradeNo` (用於查找暫存的門市資訊)。</li>
+                     <li>前端將所有資訊 POST 到後端訂單建立 API (例如：<code>POST /api/orders</code>)。</li>
+                </ul>
+            </li>
+            <li><span class="icon">⚙️</span> **後端實作 - 建立訂單 & 取得付款碼/物流單 (<code>server.js</code>)：**
+                <ul>
+                    <li>**處理請求：** 接收前端 POST 過來的訂單資料。</li>
+                    <li>**儲存初始訂單：** 在資料庫 `orders` 表建立記錄，狀態設為 `pending_payment`。儲存 `order_items`。從暫存區讀取並儲存門市資訊 (`selected_store_id` 等)。</li>
+                    <li>**判斷付款方式:**
+                        <ul>
+                           <li>**If `ChoosePayment` === 'CVS':**
+                                <ul>
+                                    <li>準備呼叫「**非信用卡幕後取號 API**」(` /1.0.0/Cashier/GenPaymentCode`) 的參數 (Inner JSON: MerchantID, ChoosePayment='CVS', OrderInfo{MerchantTradeNo, MerchantTradeDate, TotalAmount, ReturnURL - 指向金流結果通知 Webhook}, CVSInfo{ExpireDate})。</li>
+                                    <li>**<span class="emoji">🔒</span> Data 加密：** 依照「參數加密方式說明」將 Inner JSON 加密。</li>
+                                     <li>準備 Outer JSON (MerchantID, RqHeader.Timestamp, Data=加密後字串)。</li>
+                                    <li>呼叫 API。</li>
+                                    <li>**處理回應：**
+                                        <ul>
+                                            <li>**<span class="emoji">🔑</span> Data 解密：** 依照文件解密回傳的 `Data` 參數。</li>
+                                            <li>**成功 (RtnCode=1):** 從解密後的 Data 中取得 <code>PaymentNo</code> (繳費代碼), <code>ExpireDate</code> (繳費期限), <code>PaymentURL</code> (條碼網址)，將這些資訊更新到資料庫訂單記錄。</li>
+                                             <li>**失敗:** 記錄錯誤，訂單狀態設為 `payment_failed`。</li>
+                                        </ul>
+                                    </li>
+                                     <li>將付款代碼/期限等資訊回傳給前端顯示。</li>
+                                </ul>
+                           </li>
+                            <li>**If `ChoosePayment` === '[未來其他方式]' ...**</li>
+                        </ul>
+                    </li>
+                     <li>**(推薦延後處理) 建立物流單：** 初始下單時 **不** 呼叫綠界建立物流單 API。等待付款成功 (由 Webhook 通知) 且商品備妥 (後台標記) 後，再由排程或手動觸發。</li>
+                </ul>
+            </li>
+             <li><span class="icon">📄</span> **前端顯示結果 (結帳成功頁)：**
+                <ul>
+                     <li>顯示訂單成功訊息。</li>
+                     <li>**If 付款方式 = 'CVS':** 顯示清楚的「超商代碼」 (<code>PaymentNo</code>) 和「繳費期限」 (<code>ExpireDate</code>)。(可選) 提供「手機條碼連結」 (<code>PaymentURL</code>)。</li>
+                </ul>
+            </li>
+            <li><span class="icon">📊</span> **後台管理 (<code>admin.html</code> / <code>admin.js</code>)：**
+                <ul>
+                    <li>建立「訂單管理」頁面。</li>
+                    <li>顯示訂單列表 (含訂單號、顧客、金額、付款方式、付款狀態、**物流狀態**、**寄貨編號**)。</li>
+                    <li>訂單詳情頁顯示商品、收件人、**門市資訊**、**付款代碼/期限** (若適用)。</li>
+                    <li>提供**手動標記「已備貨」/「準備出貨」** (<code>ready_to_ship</code>) 的功能。</li>
+                    <li>提供觸發**手動建立物流單** (呼叫後端 API) 的按鈕 (若不用 Cron Job)。</li>
+                    <li>提供觸發**列印託運單** (呼叫後端 API) 的按鈕。</li>
+                </ul>
+            </li>
+        </ol>
+
+       <h3>階段二：通知、自動化與完善 <span class="emoji">🔁</span></h3>
+        <ol class="task-list">
+             <li><span class="icon">💳</span> **後端實作 - 付款結果通知 Webhook (<code>server.js</code>)：**
+                 <ul>
+                     <li>建立用於接收綠界**付款結果**通知的 POST 路由 (這就是你在取號 API 中傳遞的 `ReturnURL`，例如 <code>POST /api/payment/webhook/update</code>)。</li>
+                     <li>**<span class="emoji">🛡️</span> 驗證 CheckMacValue。**</li>
+                     <li>解析參數，取得 `MerchantTradeNo`, `RtnCode` (付款狀態碼), `PaymentType` 等。</li>
+                     <li>**<span class="emoji">💾</span> 更新資料庫：** 若 `RtnCode`=1 (付款成功)，更新對應訂單的 `payment_status` 為 `paid`。</li>
+                     <li>回應 <code>1|OK</code> 給綠界。</li>
+                 </ul>
+             </li>
+            <li><span class="icon">📡</span> **後端實作 - 物流狀態更新 Webhook (<code>server.js</code>)：**
+                <ul>
+                    <li>建立用於接收綠界**物流狀態**更新通知的 POST 路由 (這就是你在物流 `Create` API 中傳遞的 `ServerReplyURL`，例如：<code>POST /api/logistics/webhook/update</code>)。</li>
+                    <li>**<span class="emoji">🛡️</span> 驗證 CheckMacValue。**</li>
+                    <li>解析參數 (`AllPayLogisticsID`, `RtnCode`, `UpdateStatusDate` 等)。</li>
+                    <li>**<span class="emoji">💾</span> 更新資料庫：** 更新對應訂單的 `logistics_status_code` 及 `shipment_status`。</li>
+                    <li>回應 <code>1|OK</code>。</li>
+                    <li>**觸發通知:** 根據 `RtnCode` (例如到店 `2063/2073/3018`) 觸發 Email 或其他通知。</li>
+                </ul>
+            </li>
+            <li><span class="icon">✉️</span> **Email 通知實作 (Nodemailer)：**
+                <ul>
+                    <li>**訂單確認** (下單成功後)。</li>
+                    <li>**付款成功/代碼通知** (收到金流 Webhook 或取號 API 成功後)。</li>
+                    <li>**出貨通知** (建立物流單成功後/收到出貨狀態 Webhook)。</li>
+                    <li>**到貨通知** (收到到店狀態 Webhook)。</li>
+                </ul>
+            </li>
+             <li><span class="icon">⏱️</span> **(推薦) 建立物流單排程 (Cron Job - <code>server.js</code>)：**
+                <ul>
+                     <li>定時 (如每日) 撈取 `payment_status`='paid' 且 `shipment_status`='ready_to_ship' 的訂單。</li>
+                     <li>逐筆呼叫綠界「**門市訂單建立 API**」(` /Express/Create`)。</li>
+                     <li>成功後更新訂單狀態為 `logistics_created`，儲存物流資訊，觸發出貨 Email。</li>
+                     <li>失敗則記錄錯誤。</li>
+                </ul>
+            </li>
+        </ol>
+
+        <hr>
+
+        <h2>六、CheckMacValue 計算機制 (極重要)</h2>
+        <div class="alert alert-danger">
+            <strong><span class="emoji">🔒</span> 安全核心：</strong> CheckMacValue 是驗證請求來源與資料完整性的關鍵，**必須嚴格按照綠界文件實作**，任何微小差異都會導致驗證失敗！計算**必須**在**後端**進行。
+        </div>
+        <p><strong>適用範圍：</strong> 所有綠界 API 請求 (無論是物流還是金流) 以及接收到的 Webhook 通知驗證。</p>
+        <p><strong>計算步驟 (參考【附錄】>【檢查碼機制說明】)：</strong></p>
+        <ol>
+            <li><strong>收集參數：</strong> 將**所有**要傳送/已收到的參數 (除了 CheckMacValue 本身) 放入一個集合中。</li>
+            <li><strong>排序參數：</strong> 依照參數名稱的**英文字母**順序，由 A 到 Z 排序 (忽略大小寫)。</li>
+            <li><strong>串接參數：** 將排序後的參數，以 <code>Key=Value</code> 的格式用 <code>&</code> 符號串接起來。<br><em>範例：</em><code>GoodsAmount=1000&IsCollection=N&LogisticsSubType=FAMIC2C...</code></li>
+            <li><strong>加上 Key/IV：** 在串接好的字串 **最前面** 加上 <code>HashKey=</code> + 對應服務的 HashKey，在 **最後面** 加上 <code>&HashIV=</code> + 對應服務的 HashIV。<br><em>範例：</em><code>HashKey=XBERn1...&GoodsAmount=1000&...&ServerReplyURL=...&HashIV=h1ONHk...</code></li>
+            <li><strong>URL Encode：** 將**整串**包含 Key/IV 的字串進行 URL Encode。<br><strong><span class="emoji">⚠️</span> .NET 相容性：</strong> 綠界要求使用 **.NET 相容**的編碼。 Node.js 的 <code>encodeURIComponent</code> 與 PHP 的 <code>urlencode</code> 可能會將某些特殊字元 (如 <code>! * ( )</code>) 編碼成與 .NET 不同的格式。**必須**參考文件中的【URLEncode轉換表】，在編碼後手動將不符的百分比編碼替換回原始字元。
+                 <div class="code-block php-note">
+                    <span class="comment">// PHP 範例 (str_replace 替換，可能需依文件增減):</span><br>
+                    $sMacValue = urlencode($sParameters);<br>
+                    $sMacValue = str_replace('%2d', '-', $sMacValue);<br>
+                    $sMacValue = str_replace('%5f', '_', $sMacValue);<br>
+                    $sMacValue = str_replace('%2e', '.', $sMacValue);<br>
+                    $sMacValue = str_replace('%21', '!', $sMacValue);<br>
+                    $sMacValue = str_replace('%2a', '*', $sMacValue);<br>
+                    $sMacValue = str_replace('%28', '(', $sMacValue);<br>
+                    $sMacValue = str_replace('%29', ')', $sMacValue);<br>
+                    <span class="comment">// Node.js 需使用 .replace(/%XX/g, '原始字元') 達成類似效果</span>
+                 </div>
+            </li>
+            <li>**轉小寫：** 將 URL Encode 並處理過的整串字串轉為**全部小寫**。</li>
+            <li>**MD5 加密：** 使用 MD5 雜湊函數 (Node.js 可用 <code>crypto</code> 模組) 計算出 32 字元的十六進制雜湊值。</li>
+            <li>**轉大寫：** 將計算出來的 MD5 雜湊值轉為**全部大寫**。這就是最終的 <code>CheckMacValue</code>。</li>
+        </ol>
+        <p><strong>Webhook 驗證：</strong> 收到綠界通知時，重複步驟 1-8 (使用收到的參數)，計算出本地 CheckMacValue，再與綠界傳來的 CheckMacValue 比對。</p>
+
+        <hr>
+
+        <h2>七、資料加密與解密 (非信用卡 API Data 欄位)</h2>
+        <div class="alert alert-info">
+            <span class="emoji">🔑</span>
+            <div>
+                <strong>適用範圍：</strong> 僅限於「非信用卡幕後取號 API」(` /1.0.0/Cashier/GenPaymentCode`) 的 <code>Data</code> 參數。物流 API **不使用**此加密層。
+            </div>
+        </div>
+         <p>此 API 的 Request 和 Response 中的 <code>Data</code> 欄位值需要進行加解密。</p>
+         <ol>
+            <li><strong>加密 (Request)：</strong>
+                <ul>
+                    <li>將要傳送的內部 JSON 資料 (包含 MerchantID, ChoosePayment, OrderInfo, CVSInfo 等) 進行 URL Encode。</li>
+                    <li>使用 **AES-CBC-256** 加密演算法。</li>
+                    <li>**金鑰 (Key):** 使用**金流**的 HashKey。</li>
+                    <li>**初始向量 (IV):** 使用**金流**的 HashIV。</li>
+                    <li>填充方式 (Padding): PKCS7。</li>
+                    <li>將加密後的二進制數據轉換成**十六進制 (Hex)** 字串。</li>
+                    <li>參考綠界文件【附錄】>【參數加密方式說明】獲取詳細範例和實現細節。</li>
+                </ul>
+            </li>
+             <li><strong>解密 (Response)：</strong>
+                 <ul>
+                    <li>將收到的十六進制字串 `Data` 轉換回二進制數據。</li>
+                    <li>使用 **AES-CBC-256** 解密演算法。</li>
+                    <li>**金鑰 (Key):** 使用**金流**的 HashKey。</li>
+                    <li>**初始向量 (IV):** 使用**金流**的 HashIV。</li>
+                    <li>填充方式 (Padding): PKCS7。</li>
+                    <li>將解密後的數據進行 URL Decode。</li>
+                    <li>將解碼後的字串解析為 JSON 物件。</li>
+                </ul>
+             </li>
+         </ol>
+        <p><strong>Node.js 實作：</strong> 可以使用內建的 <code>crypto</code> 模組來完成 AES 加解密。注意選擇正確的演算法 (`aes-256-cbc`)、金鑰/IV、填充方式，以及進出 Base64 或 Hex 的轉換。</p>
+
+        <hr>
+
+
+        <h2>八、資料庫 Schema 建議 (整合版)</h2>
+         <p>基於您現有的資料庫結構，並整合物流與金流 (超商代碼) 需求，以下是更新後的 <code>orders</code> 和新增的 <code>order_items</code> 表建議：</p>
+          (表格內容同上一版本，此處省略以縮短篇幅，請參考上一版本回應中的表格)
+        <h3><code>orders</code> (訂單主表)</h3>
+         <table>
+             <thead><tr><th>建議欄位</th><th>資料類型</th><th>說明</th></tr></thead>
+             <tbody>
+                 <tr><td><code>id</code></td><td>SERIAL/BIGSERIAL</td><td>主鍵</td></tr>
+                 <tr><td><code>order_number</code></td><td>VARCHAR(50)</td><td><strong>你的</strong>唯一訂單號</td></tr>
+                 <tr><td><code>user_id</code></td><td>INTEGER/BIGINT</td><td>關聯用戶 ID (若有)</td></tr>
+                 <tr><td><code>customer_name</code></td><td>VARCHAR(50)</td><td>收件人姓名</td></tr>
+                 <tr><td><code>customer_phone</code></td><td>VARCHAR(20)</td><td>收件人手機</td></tr>
+                 <tr><td><code>customer_email</code></td><td>VARCHAR(100)</td><td>收件人 Email</td></tr>
+                 <tr><td><code>total_amount</code></td><td>DECIMAL(10, 2)</td><td>商品總價</td></tr>
+                 <tr><td><code>shipping_fee</code></td><td>DECIMAL(10, 2)</td><td>運費</td></tr>
+                 <tr><td><code>grand_total</code></td><td>DECIMAL(10, 2)</td><td>應付總額</td></tr>
+                 <tr><td><code>payment_method</code></td><td>VARCHAR(20)</td><td>付款方式 (e.g., 'CVS', 'ATM', 'Credit')</td></tr>
+                 <tr><td><code>payment_status</code></td><td>VARCHAR(20)</td><td>付款狀態 (e.g., unpaid, paid, failed)</td></tr>
+                 <tr><td><code>ecpay_trade_no</code></td><td>VARCHAR(20)</td><td>綠界金流交易編號</td></tr>
+                 <tr><td><code>cvs_payment_no</code></td><td>VARCHAR(20)</td><td>超商繳費代碼</td></tr>
+                 <tr><td><code>cvs_expire_date</code></td><td>TIMESTAMP WITH TIME ZONE</td><td>超商繳費期限</td></tr>
+                 <tr><td><code>cvs_payment_url</code></td><td>VARCHAR(255)</td><td>超商條碼繳費連結</td></tr>
+                 <tr><td><code>shipment_status</code></td><td>VARCHAR(30)</td><td>內部物流狀態</td></tr>
+                 <tr><td><code>is_store_selected</code></td><td>BOOLEAN</td><td>已選門市?</td></tr>
+                 <tr><td><code>selected_store_id</code></td><td>VARCHAR(10)</td><td>綠界門市代號</td></tr>
+                 <tr><td><code>selected_store_name</code></td><td>VARCHAR(100)</td><td>綠界門市名稱</td></tr>
+                 <tr><td><code>selected_store_address</code></td><td>VARCHAR(200)</td><td>綠界門市地址</td></tr>
+                 <tr><td><code>is_logistics_order_created</code></td><td>BOOLEAN</td><td>已建綠界物流單?</td></tr>
+                 <tr><td><code>ecpay_merchant_trade_no</code></td><td>VARCHAR(50)</td><td>傳給綠界的訂單號 (建議同 order_number)</td></tr>
+                 <tr><td><code>ecpay_logistics_id</code></td><td>VARCHAR(20)</td><td>綠界物流單號</td></tr>
+                 <tr><td><code>ecpay_cvs_payment_no</code></td><td>VARCHAR(20)</td><td>綠界物流寄貨編號</td></tr>
+                 <tr><td><code>ecpay_cvs_validation_no</code></td><td>VARCHAR(10)</td><td>綠界物流驗證碼 (7-11 C2C)</td></tr>
+                 <tr><td><code>logistics_status_code</code></td><td>INTEGER</td><td>最新綠界物流狀態碼</td></tr>
+                 <tr><td><code>logistics_status_message</code></td><td>VARCHAR(200)</td><td>最新綠界物流狀態描述</td></tr>
+                 <tr><td><code>order_notes</code></td><td>TEXT</td><td>訂單備註</td></tr>
+                 <tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>建立時間</td></tr>
+                 <tr><td><code>updated_at</code></td><td>TIMESTAMPTZ</td><td>更新時間</td></tr>
+             </tbody>
+         </table>
+
+         <h3><code>order_items</code> (訂單項目表)</h3>
+         <table>
+            <thead><tr><th>建議欄位</th><th>資料類型</th><th>說明</th></tr></thead>
+             <tbody>
+                 <tr><td><code>id</code></td><td>SERIAL/BIGSERIAL</td><td>主鍵</td></tr>
+                 <tr><td><code>order_id</code></td><td>INTEGER/BIGINT</td><td>關聯 orders.id (外鍵)</td></tr>
+                 <tr><td><code>product_id</code></td><td>INTEGER/BIGINT</td><td>關聯 products.id (若有)</td></tr>
+                 <tr><td><code>product_name</code></td><td>VARCHAR(255)</td><td>商品名稱快照</td></tr>
+                 <tr><td><code>product_variation</code></td><td>VARCHAR(100)</td><td>商品規格快照</td></tr>
+                 <tr><td><code>quantity</code></td><td>INTEGER</td><td>數量</td></tr>
+                 <tr><td><code>unit_price</code></td><td>DECIMAL(10, 2)</td><td>單價快照</td></tr>
+                 <tr><td><code>item_total</code></td><td>DECIMAL(10, 2)</td><td>項目小計</td></tr>
+             </tbody>
+        </table>
+
+        <hr>
+
+         <h2>九、現有網站程式碼整合點 (參考)</h2>
+        <p>根據您提供的檔案結構 (<code>server.js</code>, <code>index.html</code>, <code>app.js</code>, <code>admin.html</code>, <code>admin.js</code>)，以下是需要修改或新增的關鍵點：</p>
+
+        <h3><code>index.html</code> / <code>購物車頁面.html</code> / <code>結帳頁面.html</code> (前端 UI)</h3>
+        <ul>
+            <li>商品列表 (<code>index.html</code>): 加入「加入購物車」按鈕。</li>
+            <li>導覽列/全域: 加入購物車圖示及數量顯示。</li>
+            <li>購物車頁面 (新): 顯示購物車內容、總計、修改/移除按鈕、「前往結帳」按鈕。</li>
+            <li>結帳頁面 (新):
+                <ul>
+                    <li>顯示訂單摘要。</li>
+                    <li>收件人資訊表單 (姓名、手機)。</li>
+                    <li>**「選擇付款方式」下拉選單或 Radio Buttons (含超商代碼)。**</li>
+                    <li>**「選擇取貨門市」按鈕 (觸發門市地圖流程)。**</li>
+                    <li>顯示已選門市資訊的區塊。</li>
+                    <li>「確認下單」按鈕。</li>
+                </ul>
+            </li>
+             <li>結帳成功頁 (新): 顯示成功訊息、訂單號碼、**超商代碼及繳費期限**。</li>
+        </ul>
+
+        <h3><code>app.js</code> / <code>cart.js</code> / <code>checkout.js</code> (前端邏輯)</h3>
+        <ul>
+            <li>購物車邏輯：處理加入、修改、移除商品至 LocalStorage/SessionStorage，更新 UI 顯示。</li>
+            <li>結帳頁邏輯：
+                <ul>
+                    <li>觸發「選擇門市」按鈕時，呼叫後端 API 取得地圖參數，並提交 POST 表單給綠界。</li>
+                    <li>處理從後端 (或 Session) 獲取的已選門市資訊，並更新顯示。</li>
+                    <li>收集所有結帳資訊 (商品、收件人、付款方式、關聯的 MerchantTradeNo)。</li>
+                    <li>觸發「確認下單」按鈕時，將資料 POST 到後端 <code>/api/orders</code>。</li>
+                    <li>處理後端回傳的結果，導向成功頁面並顯示付款資訊，或顯示錯誤訊息。</li>
+                </ul>
+            </li>
+        </ul>
+
+         <h3><code>server.js</code> (後端 API)</h3>
+        <ul>
+            <li>**新增 API Routes:**
+                <ul>
+                     <li><code>GET /api/logistics/map-params</code>: 產生並回傳開啟門市地圖所需的參數 (含 CheckMacValue)。</li>
+                     <li><code>POST /api/logistics/store-selected</code>: 接收綠界門市地圖回傳，驗證 CheckMacValue，暫存門市資訊。</li>
+                    <li><code>POST /api/orders</code>: 處理前端提交的訂單：
+                        <ul>
+                            <li>儲存訂單/訂單項目至資料庫。</li>
+                             <li>呼叫綠界「非信用卡幕後取號 API」取得超商代碼 (含加密/解密、CheckMacValue)。</li>
+                            <li>(若非 Cron Job) 呼叫綠界「建立物流訂單 API」(含 CheckMacValue)。</li>
+                             <li>更新資料庫訂單狀態與資訊。</li>
+                             <li>回傳結果給前端。</li>
+                        </ul>
+                    </li>
+                     <li><code>POST /api/payment/webhook/update</code>: 接收綠界**付款結果**通知，驗證 CheckMacValue，更新訂單付款狀態。</li>
+                    <li><code>POST /api/logistics/webhook/update</code>: 接收綠界**物流狀態**通知，驗證 CheckMacValue，更新訂單物流狀態，觸發到貨通知。</li>
+                     <li>(可選) <code>POST /api/admin/orders/:id/create-logistics</code>: (供後台手動觸發) 呼叫綠界建立物流單 API。</li>
+                     <li>(可選) <code>GET /api/admin/orders/:id/print-label</code>: (供後台觸發) 呼叫綠界列印託運單 API。</li>
+                     <li><code>GET /api/admin/orders</code>: (供後台) 查詢訂單列表 (含篩選、分頁)。</li>
+                     <li><code>GET /api/admin/orders/:id</code>: (供後台) 查詢單一訂單詳情。</li>
+                      <li><code>PUT /api/admin/orders/:id/status</code>: (供後台) 更新訂單內部狀態 (如標記為 ready_to_ship)。</li>
+                </ul>
+            </li>
+             <li>**引入 `crypto` 模組:** 用於計算 MD5 (CheckMacValue) 和 AES 加解密 (非信用卡 API)。</li>
+             <li>**實作 CheckMacValue 函數:** 嚴格依照文件規則。</li>
+             <li>**實作 AES 加解密函數:** 嚴格依照文件規則。</li>
+             <li>**環境變數 (<code>.env</code>):** 讀取 MerchantID, HashKey, HashIV。</li>
+             <li>**Nodemailer 設定:** 配置 SMTP 資訊。</li>
+              <li>**(可選) `node-cron` 設定:** 如果使用排程建立物流單。</li>
+        </ul>
+
+        <h3><code>admin.html</code> (後台 UI)</h3>
+        <ul>
+            <li>新增「訂單管理」導覽連結。</li>
+            <li>建立訂單列表表格，顯示重要欄位。</li>
+            <li>建立訂單詳情 Modal 或頁面。</li>
+            <li>加入狀態篩選、日期篩選等功能。</li>
+            <li>加入更新狀態、手動建立物流單、列印託運單的按鈕。</li>
+        </ul>
+
+         <h3><code>admin.js</code> (後台邏輯)</h3>
+        <ul>
+            <li>呼叫後端 API 取得訂單列表/詳情並渲染。</li>
+            <li>處理篩選、分頁邏輯。</li>
+            <li>處理按鈕點擊事件，呼叫對應的後端 API (更新狀態、建立物流單、列印)。</li>
+        </ul>
+
+        <hr>
+
+        <h2>十、其他注意事項與建議</h2>
+        <ul>
+            <li><strong><span class="emoji">📦</span> B2C 測標：</strong> 若使用 B2C (大宗寄倉)，需先透過 API 產生測標資料，並實際寄送包裹給綠界測試通過後，才能正式建立 B2C 物流訂單。</li>
+            <li><strong><span class="emoji">💰</span> 帳戶餘額：</strong> 確保綠界帳戶有足夠餘額扣款物流費用，否則建立物流單會失敗。</li>
+            <li><strong><span class="emoji">🔄</span> 錯誤處理與重試：</strong> API 呼叫可能失敗，需要設計合理的錯誤記錄與重試機制 (尤其對於建立物流單)。Webhook 通知也可能延遲或失敗，考慮定期主動查詢訂單狀態作為備援。</li>
+             <li><strong><span class="emoji">🆔</span> 訂單編號唯一性：</strong> <code>MerchantTradeNo</code> (你傳給綠界的訂單號) 必須是唯一的，重複會導致錯誤。</li>
+             <li><strong><span class="emoji">⏱️</span> 時效性：</strong> 建立物流單 API 中的 `MerchantTradeDate`、取號 API 中的 `Timestamp` 都需注意格式與時效性。超商代碼有繳費期限，物流單也有列印/寄件期限，需在 UI 和通知中提醒使用者。</li>
+        </ul>
+
+        <hr>
+
+        <p class="footer">本指南整合自 SunnyYummy 專案需求、綠界官方文件及討論結果，請以綠界最新官方文件為最終開發依據。</p>
+
+    </div>
+</body>
+</html>

@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const templateSelect = document.getElementById('templateSelect');
   const loadTemplateBtn = document.getElementById('loadTemplateBtn');
   const loadingSpinner = document.getElementById('loadingSpinner');
+  
 
   // --- Global State Variables ---
   let pathCells = []; // Array of cell data objects for the current map path
