@@ -36,8 +36,8 @@ function getDOMElements() {
         mobileConfigBtn: document.getElementById('mobileConfigBtn'),
         mobileResetBtn: document.getElementById('mobileResetBtn'),
         shareBtn: document.getElementById('shareBtn'),
-        controlsToggle: document.getElementById('controlsToggle'),
         gameControls: document.getElementById('gameControls'),
+        // controlsToggle 已從這裡移除
         
         // 模板管理元素 (保留以避免函數錯誤)
         templateSelect: document.getElementById('templateSelect'),
@@ -437,18 +437,13 @@ function setExampleContent() {
     gameState.contents = Array(totalCells).fill('').map((_, i) => exampleContent[i % exampleContent.length]);
 }
 
-// 打開控制面板
+// 打開控制面板 - 移除控制面板切換功能
 function toggleControlPanel() {
-    const { gameControls, controlsToggle } = getDOMElements();
-    if (!gameControls || !controlsToggle) return;
+    const { gameControls } = getDOMElements();
+    if (!gameControls) return;
 
-    if (gameControls.classList.contains('visible')) {
-        gameControls.classList.remove('visible');
-        controlsToggle.textContent = '⚙️';
-    } else {
-        gameControls.classList.add('visible');
-        controlsToggle.textContent = '✖';
-    }
+    // 始終顯示控制面板
+    gameControls.classList.add('visible');
 }
 
 // 打開模板抽屜 (保留函數但不再實際使用)
@@ -504,10 +499,9 @@ function closeAllDrawers() {
     closeGamesDrawer();
     
     // 關閉控制面板
-    const { gameControls, controlsToggle } = getDOMElements();
+    const { gameControls } = getDOMElements();
     if (gameControls && gameControls.classList.contains('visible')) {
         gameControls.classList.remove('visible');
-        if (controlsToggle) controlsToggle.textContent = '⚙️';
     }
     
     // 關閉模態窗口
@@ -611,7 +605,7 @@ async function loadGames() {
     }
 }
 
-// 設置事件監聽器 - 移除模板相關的監聽器
+// 設置事件監聽器 - 移除齒輪按鈕相關的監聽器
 function setupEventListeners() {
     const elements = getDOMElements();
     
@@ -638,9 +632,6 @@ function setupEventListeners() {
                 elements.configModal.style.display = 'block';
                 if (elements.gameControls) {
                     elements.gameControls.classList.remove('visible');
-                }
-                if (elements.controlsToggle) {
-                    elements.controlsToggle.textContent = '⚙️';
                 }
             }
         });
@@ -679,9 +670,6 @@ function setupEventListeners() {
             if (elements.gameControls) {
                 elements.gameControls.classList.remove('visible');
             }
-            if (elements.controlsToggle) {
-                elements.controlsToggle.textContent = '⚙️';
-            }
         });
     }
     
@@ -699,20 +687,12 @@ function setupEventListeners() {
         elements.drawerOverlay.addEventListener('click', closeAllDrawers);
     }
     
-    // 控制面板開關
-    if (elements.controlsToggle) {
-        elements.controlsToggle.addEventListener('click', toggleControlPanel);
-    }
-    
     // 分享按鈕
     if (elements.shareBtn) {
         elements.shareBtn.addEventListener('click', () => {
             shareGame();
             if (elements.gameControls) {
                 elements.gameControls.classList.remove('visible');
-            }
-            if (elements.controlsToggle) {
-                elements.controlsToggle.textContent = '⚙️';
             }
         });
     }
@@ -726,8 +706,8 @@ function setupEventListeners() {
     });
 }
 
-// 初始化應用 - 移除模板相關的功能
-async function initializeApp() {
+// 初始化應用 - 移除齒輪按鈕
+function initializeApp() {
     console.log("洞洞樂遊戲初始化開始...");
     try {
         // 1. 設置初始內容
@@ -742,16 +722,10 @@ async function initializeApp() {
         // 4. 設置事件監聽器
         setupEventListeners();
 
-        // 5. 顯示控制按鈕
+        // 5. 顯示控制按鈕 (移動設備上始終顯示控制面板)
         const { gameControls } = getDOMElements();
-        if (gameControls && window.innerWidth <= 767) {
-            // 在移動設備上顯示切換按鈕，但不立即顯示控制面板
-            const { controlsToggle } = getDOMElements();
-            if (controlsToggle) {
-                controlsToggle.style.display = 'flex';
-            }
-        } else if (gameControls) {
-            // 在桌面顯示控制面板
+        if (gameControls) {
+            // 始終顯示控制面板
             gameControls.classList.add('visible');
         }
 
@@ -763,27 +737,16 @@ async function initializeApp() {
     }
 }
 
-// 檢測設備類型
+// 檢測設備類型 (移除齒輪按鈕相關代碼)
 function detectDevice() {
     const isMobile = window.innerWidth <= 767;
     document.body.classList.toggle('is-mobile', isMobile);
     
     // 根據設備類型調整控制面板
-    const { gameControls, controlsToggle } = getDOMElements();
+    const { gameControls } = getDOMElements();
     if (gameControls) {
-        if (isMobile) {
-            // 移動設備上隱藏控制面板，顯示切換按鈕
-            gameControls.classList.remove('visible');
-            if (controlsToggle) {
-                controlsToggle.style.display = 'flex';
-            }
-        } else {
-            // 桌面設備上顯示控制面板，隱藏切換按鈕
-            gameControls.classList.add('visible');
-            if (controlsToggle) {
-                controlsToggle.style.display = 'none';
-            }
-        }
+        // 無論移動還是桌面設備，始終顯示控制面板
+        gameControls.classList.add('visible');
     }
 }
 

@@ -332,22 +332,7 @@
         
         /* 控制按鈕開關 */
         .controls-toggle {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #FF9800;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            z-index: 901;
-            font-size: 24px;
-            transition: all 0.3s;
+            display: none !important; /* 完全禁用顯示 */
         }
         
         .controls-toggle:hover {
@@ -964,131 +949,25 @@
 
         /* --- 響應式設計 --- */
         @media (max-width: 767px) {
-            .input-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .desktop-footer {
-                display: none; /* 手機版隱藏桌面頁腳 */
-            }
-            
-            .game-controls button {
-                font-size: 13px;
-                padding: 8px 12px;
-            }
+            .game-controls {
+        padding: 10px 0;
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .game-controls button {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
         }
 
         @media (min-width: 768px) {
-            .hole {
-                height: 120px; /* 增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 40px; /* 增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 20px; /* 增加背面文字大小 */
-                padding: 10px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 15px; /* 增加格子間距 */
-                max-width: 700px; /* 控制遊戲板最大寬度 */
-                margin: 0 auto 30px;
-            }
-            
-            .game-container {
-                max-width: 700px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .centered-card-content {
-                font-size: 42px; /* 增加卡片文字大小 */
-                padding: 50px; /* 增加卡片內邊距 */
-            }
-            
-            .card-inner {
-                padding: 30px 40px; /* 增加卡片內部內邊距 */
-            }
-            
-            .card-hint {
-                font-size: 18px; /* 增加提示文字大小 */
-            }
-            
-            body {
-                padding-bottom: 0; /* 取消底部填充 */
-            }
-            
-            .bottom-nav {
-                display: none; /* 隱藏底部導航 */
-            }
-            
-            .desktop-footer {
-                display: block; /* 顯示桌面頁腳 */
-            }
-            
-            .category-tabs {
-                padding: 15px 20px;
-            }
-            
-            .category-tabs a, .category-tabs button {
-                font-size: 16px;
-                padding: 10px 20px;
-            }
-            
-            .template-drawer, .games-drawer {
-                width: 350px;
-                max-width: 350px;
-            }
-            
-            .template-drawer-content {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            
-            .games-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
             .game-controls {
-                position: static;
-                background-color: transparent;
-                box-shadow: none;
-                padding: 20px 0;
-                margin-bottom: 20px;
-                transform: translateY(0);
-            }
-            
-            .controls-toggle {
-                display: none;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .hole {
-                height: 150px; /* 進一步增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 48px; /* 進一步增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 24px; /* 進一步增加背面文字大小 */
-                padding: 15px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 20px; /* 增加格子間距 */
-                max-width: 900px; /* 進一步控制遊戲板最大寬度 */
-            }
-            
-            .game-container {
-                max-width: 900px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .games-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        position: static;
+        background-color: transparent;
+        box-shadow: none;
+        padding: 20px 0;
+        margin-bottom: 20px;
+    }
         }
         
         /* 孔洞懸停效果 */
