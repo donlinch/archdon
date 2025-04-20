@@ -312,21 +312,13 @@
             background-color: #E64A19;
         }
         
-        /* 自定義內容按鈕和模板列表按鈕 */
+        /* 自定義內容按鈕 */
         .game-controls .config-btn {
             background-color: #FFB74D; /* 黃色配置按鈕 */
         }
         
         .game-controls .config-btn:hover {
             background-color: #FFA726;
-        }
-        
-        .game-controls .templates-btn {
-            background-color: #4DB6AC; /* 綠色模板按鈕 */
-        }
-        
-        .game-controls .templates-btn:hover {
-            background-color: #26A69A;
         }
         
         /* 分享按鈕 */
@@ -547,7 +539,7 @@
             transform: rotate(90deg);
         }
 
-        /* 模板抽屜樣式 */
+        /* 模板抽屜樣式 (保留但不會使用) */
         .template-drawer {
             position: fixed;
             top: 0;
@@ -864,6 +856,8 @@
             font-size: 24px;
             color: #777;
             cursor: pointer;
+            
+
             width: 30px;
             height: 30px;
             display: flex;
@@ -1128,7 +1122,6 @@
                 opacity: 0;
             }
         }
-
     </style>
 </head>
 
@@ -1140,7 +1133,7 @@
     <!-- 分類標籤 -->
     <div class="category-tabs">
         <button id="configBtn" class="config-btn">自定義內容</button>
-        <button id="templatesBtn" class="templates-btn">模板列表</button>
+        <!-- 模板列表按鈕已刪除 -->
         <button id="resetBtn" class="reset-btn">重置遊戲</button>
         <button id="allGamesBtn" class="all-games-btn">全部遊戲</button>
     </div>
@@ -1159,7 +1152,7 @@
     <!-- 遊戲控制區域 -->
     <div class="game-controls" id="gameControls">
         <button id="mobileConfigBtn" class="config-btn">自定義內容</button>
-        <button id="mobileTemplatesBtn" class="templates-btn">模板列表</button>
+        <!-- 模板列表按鈕已刪除 -->
         <button id="mobileResetBtn" class="reset-btn">重置遊戲</button>
         <button id="shareBtn" class="share-btn">分享遊戲</button>
     </div>
@@ -1205,14 +1198,14 @@
         </div>
     </div>
     
-    <!-- 模板抽屜 -->
-    <div id="templateDrawer" class="template-drawer">
+    <!-- 模板抽屜功能已移除，但保留相關HTML結構以避免JS錯誤 -->
+    <div id="templateDrawer" class="template-drawer" style="display:none;">
         <div class="template-drawer-header">
             <div class="template-drawer-title">模板列表</div>
             <button id="templateDrawerClose" class="template-drawer-close">×</button>
         </div>
         <div id="templateDrawerContent" class="template-drawer-content">
-            <!-- 模板按鈕將由 JavaScript 動態載入 -->
+            <!-- 模板列表功能已移除 -->
         </div>
     </div>
     
@@ -1270,4 +1263,4 @@
     
     <script src="card-game拷貝.js"></script>
 </body>
-</html>
+</html>   
