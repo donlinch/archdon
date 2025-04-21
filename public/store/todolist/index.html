@@ -101,125 +101,143 @@
     </div>
 
     <script>
-        function generateChecklist() {
-            const htmlInput = document.getElementById('htmlInput').value;
-            const outputDiv = document.getElementById('output');
-            outputDiv.innerHTML = ''; // 清空之前的結果
+      function generateChecklist() {
+    const htmlInput = document.getElementById('htmlInput').value;
+    const outputDiv = document.getElementById('output');
+    outputDiv.innerHTML = ''; // 清空之前的結果
 
-            if (!htmlInput.trim()) {
-                outputDiv.innerHTML = '<p>請先貼上 HTML 內容。</p>';
-                return;
-            }
+    if (!htmlInput.trim()) {
+        outputDiv.innerHTML = '<p>請先貼上 HTML 內容。</p>';
+        return;
+    }
 
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlInput, 'text/html');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlInput, 'text/html');
 
-            // --- 決定哪些元素需要加上 Checkbox ---
-            // 策略：選取特定 class 下的 li 元素，或特定 table 的 tr 元素
+    // --- 決定哪些元素需要加上 Checkbox ---
 
-            // 1. 處理 "詳細工作腳本" 中的 checklist 和 note 裡的 li
-            const detailedScriptSection = doc.querySelector('.section:has(h2.section-title:contains("詳細工作腳本"))');
-            if (detailedScriptSection) {
-                const itemsToCheckbox = detailedScriptSection.querySelectorAll('.checklist li, .note ul li');
-                itemsToCheckbox.forEach((item, index) => {
-                    // 避免重複添加 checkbox (如果原始碼已有)
-                    if (!item.querySelector('input[type="checkbox"]')) {
-                         // 創建 checkbox 和 label
-                        const checkboxId = `task-detail-${index}`;
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.id = checkboxId;
+    // 找出所有的 section 元素
+    const allSections = doc.querySelectorAll('.section');
 
-                        const label = document.createElement('label');
-                        label.htmlFor = checkboxId;
-                        // 將 li 的現有內容移到 label 中
-                        label.innerHTML = item.innerHTML;
+    // 1. 處理 "詳細工作腳本"
+    allSections.forEach(section => {
+        const titleElement = section.querySelector('h2.section-title');
+        // 檢查是否有標題且標題文字包含目標文字
+        if (titleElement && titleElement.textContent.includes("詳細工作腳本")) {
+            const itemsToCheckbox = section.querySelectorAll('.checklist li, .note ul li');
+            itemsToCheckbox.forEach((item, index) => {
+                if (!item.querySelector('input[type="checkbox"]')) {
+                    const checkboxId = `task-detail-${section.id || 's1'}-${index}`; // 給予更唯一的 ID
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = checkboxId;
 
-                        // 清空 li 並插入 checkbox 和 label
-                        item.innerHTML = '';
-                        item.prepend(checkbox);
-                        item.appendChild(label);
-                    }
-                });
-            }
+                    const label = document.createElement('label');
+                    label.htmlFor = checkboxId;
+                    // 將 li 的現有內容移到 label 中 (除了可能的 ::before)
+                    // 先複製內容，再清空
+                    const contentNodes = Array.from(item.childNodes);
+                    label.append(...contentNodes);
 
-            // 2. 處理 "準備物品清單" 中的 li
-            const preparationListSection = doc.querySelector('.section:has(h2.section-title:contains("準備物品清單"))');
-            if (preparationListSection) {
-                const itemsToCheckbox = preparationListSection.querySelectorAll('.item-list li');
-                itemsToCheckbox.forEach((item, index) => {
-                     if (!item.querySelector('input[type="checkbox"]')) {
-                        const checkboxId = `prep-item-${index}`;
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.id = checkboxId;
+                    // 清空 li 並插入 checkbox 和 label
+                    item.innerHTML = '';
+                    // 保持可能的 ::before 樣式空間 (如果它是通過偽元素添加的)
+                    // item.style.position = 'relative'; // 確保偽元素定位正確
+                    // item.style.paddingLeft = '25px'; // 根據你的 CSS 調整
+                    item.prepend(checkbox);
+                    item.appendChild(label);
 
-                        const label = document.createElement('label');
-                        label.htmlFor = checkboxId;
-                        label.innerHTML = item.innerHTML; // 包含原始的 ::before 樣式產生的點或其他內容
-
-                        item.innerHTML = '';
-                        item.prepend(checkbox);
-                        item.appendChild(label);
-                    }
-                });
-            }
-
-             // 3. 處理 "活動流程總表" 的表格行 (可選)
-            // 如果你想把流程表的每一行也當作一個待辦事項
-            const scheduleTable = doc.querySelector('.schedule-table tbody');
-            if (scheduleTable) {
-                const rows = scheduleTable.querySelectorAll('tr');
-                rows.forEach((row, index) => {
-                    const firstCell = row.querySelector('td:first-child'); // 在第一格前面加 checkbox
-                    if (firstCell && !row.querySelector('input[type="checkbox"]')) {
-                        const checkboxId = `schedule-row-${index}`;
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.id = checkboxId;
-                         // 包裝 checkbox 在一個 td 裡，維持表格結構
-                        const checkboxCell = document.createElement('td');
-                        checkboxCell.style.width = '30px'; // 給 checkbox 一點空間
-                        checkboxCell.appendChild(checkbox);
-                        row.prepend(checkboxCell);
-
-                        // (可選) 將第一欄的內容也包在 label 裡
-                        // const label = document.createElement('label');
-                        // label.htmlFor = checkboxId;
-                        // label.innerHTML = firstCell.innerHTML;
-                        // firstCell.innerHTML = '';
-                        // firstCell.appendChild(label);
-                    }
-                });
-                 // (可選) 如果加了 checkbox 的 td，需要調整表頭增加一欄
-                 const headerRow = doc.querySelector('.schedule-table thead tr');
-                 if(headerRow && !headerRow.querySelector('th.checkbox-header')){
-                     const th = document.createElement('th');
-                     th.className = 'checkbox-header'; // 避免重複添加
-                     th.textContent = '✓'; // 或留空
-                     th.style.width = '30px';
-                     headerRow.prepend(th);
-                 }
-            }
-
-
-            // --- 把處理過的內容放回輸出區 ---
-            // 我們只複製 body 裡的 container 內容，或者可以選擇性複製需要的 section
-            const containerContent = doc.querySelector('.container'); // 假設原始碼有 .container
-            if (containerContent) {
-                outputDiv.innerHTML = containerContent.innerHTML;
-            } else {
-                // 如果原始碼沒有 .container，嘗試複製 body 內容
-                outputDiv.innerHTML = doc.body.innerHTML;
-            }
-
-             // 移除輸出區塊中的 header 和 footer (如果有的話，根據你的原始碼調整)
-            const headerToRemove = outputDiv.querySelector('.header');
-            if (headerToRemove) headerToRemove.remove();
-            // const footerToRemove = outputDiv.querySelector('.footer'); // 如果有 footer
-            // if (footerToRemove) footerToRemove.remove();
-
+                     // 移除原始的 ::before 符號 (如果有的話)
+                     // 這比較難直接處理，因為它是 CSS 生成的。
+                     // 一個替代方法是修改 CSS，讓有 checkbox 的 li 不顯示 ::before
+                     // 或者在 JS 添加一個 class 來控制
+                     item.classList.add('has-checkbox');
+                }
+            });
         }
+    });
+
+    // 2. 處理 "準備物品清單"
+    allSections.forEach(section => {
+        const titleElement = section.querySelector('h2.section-title');
+        // 檢查是否有標題且標題文字包含目標文字
+        if (titleElement && titleElement.textContent.includes("準備物品清單")) {
+            const itemsToCheckbox = section.querySelectorAll('.item-list li');
+            itemsToCheckbox.forEach((item, index) => {
+                 if (!item.querySelector('input[type="checkbox"]')) {
+                    const checkboxId = `prep-item-${section.id || 's2'}-${index}`; // 給予更唯一的 ID
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = checkboxId;
+
+                    const label = document.createElement('label');
+                    label.htmlFor = checkboxId;
+
+                    const contentNodes = Array.from(item.childNodes);
+                    label.append(...contentNodes);
+
+                    item.innerHTML = '';
+                    item.prepend(checkbox);
+                    item.appendChild(label);
+                    item.classList.add('has-checkbox'); // 添加 class
+                }
+            });
+        }
+    });
+
+     // 3. 處理 "活動流程總表" 的表格行
+    const scheduleTable = doc.querySelector('.schedule-table tbody');
+    if (scheduleTable) {
+        const rows = scheduleTable.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const firstCell = row.querySelector('td:first-child');
+            if (firstCell && !row.querySelector('input[type="checkbox"]')) {
+                const checkboxId = `schedule-row-${index}`;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkboxId;
+
+                const checkboxCell = document.createElement('td');
+                checkboxCell.style.width = '30px';
+                checkboxCell.style.textAlign = 'center'; // 置中 checkbox
+                checkboxCell.appendChild(checkbox);
+                row.prepend(checkboxCell);
+            }
+        });
+         // 調整表頭
+         const headerRow = doc.querySelector('.schedule-table thead tr');
+         if(headerRow && !headerRow.querySelector('th.checkbox-header')){
+             const th = document.createElement('th');
+             th.className = 'checkbox-header';
+             // th.textContent = '✓'; // 可以加個標題或留空
+             th.style.width = '30px';
+             headerRow.prepend(th);
+         }
+    }
+
+
+    // --- 把處理過的內容放回輸出區 ---
+    const containerContent = doc.querySelector('.container');
+    if (containerContent) {
+        // 移除原始的 header (如果需要)
+        const headerToRemove = containerContent.querySelector('.header');
+        if (headerToRemove) headerToRemove.remove();
+
+        outputDiv.innerHTML = containerContent.innerHTML;
+    } else {
+        outputDiv.innerHTML = doc.body.innerHTML;
+        // 也嘗試移除 body 下的 header
+        const headerToRemoveFromBody = outputDiv.querySelector('.header');
+         if (headerToRemoveFromBody) {
+             // 因為 innerHTML 賦值後，需要重新查詢 outputDiv 內的元素
+             outputDiv.querySelector('.header').remove();
+         }
+    }
+
+     
+    document.head.appendChild(style); // 將樣式添加到 head
+
+}
     </script>
 </body>
 </html>
