@@ -1,4 +1,4 @@
-// 修正後的 report-editor.js
+// 修正後的 report-editor.js (適用於 /store/ 路徑)
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('報告編輯器初始化...');
@@ -39,8 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const resetForm = () => {
-        if (reportForm) reportForm.reset(); // 清空表單所有欄位
-        editingReportIdInput.value = ''; // 清除正在編輯的 ID
+        // 直接清空各个输入字段，而不是使用表单的reset方法
+        if (reportTitleInput) reportTitleInput.value = '';
+        if (htmlContentInput) htmlContentInput.value = '';
+        
+        editingReportIdInput.value = ''; // 清除正在编辑的 ID
         saveButton.textContent = '儲存新報告';
         saveButton.disabled = false;
         if (cancelEditButton) cancelEditButton.style.display = 'none'; // 隱藏取消按鈕
@@ -60,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('正在載入報告列表...');
 
         try {
-            // 嘗試調整API路徑 - 處理可能的子路徑部署情況
-            const apiPath = window.location.pathname.includes('/store/') ? '/store/api/reports' : '/api/reports';
-            console.log(`嘗試從 ${apiPath} 獲取報告列表`);
+            // 確保使用正確的API路徑 - 始終使用 /store/api/reports
+            const apiPath = '/store/api/reports';
+            console.log(`從 ${apiPath} 獲取報告列表`);
             
             const response = await fetch(apiPath); // GET 請求獲取列表
             console.log('API 回應狀態:', response.status);
@@ -93,8 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // 查看按鈕 (連結) - 修正查看路徑
                     const viewLink = document.createElement('a');
-                    const basePath = window.location.pathname.includes('/store/') ? '/store' : '';
-                    viewLink.href = `${basePath}/report-view.html?id=${report.id}`;
+                    viewLink.href = `/store/report/report-view.html?id=${report.id}`;
                     viewLink.textContent = '查看';
                     viewLink.target = '_blank'; // 在新分頁開啟
                     viewLink.className = 'button-like'; // 讓連結看起來像按鈕
@@ -154,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         saveButton.textContent = editingId ? '更新中...' : '儲存中...';
         clearStatus();
 
-        // 嘗試調整API路徑 - 處理可能的子路徑部署情況
-        const basePath = window.location.pathname.includes('/store/') ? '/store' : '';
+        // 始終使用固定的API路徑 - /store/api/reports
+        const basePath = '/store';
         const url = editingId ? `${basePath}/api/reports/${editingId}` : `${basePath}/api/reports`;
         const method = editingId ? 'PUT' : 'POST';
         const bodyData = { title, html_content: htmlContent };
@@ -214,8 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
             resetForm(); // 先重置表單
 
             try {
-                // 嘗試調整API路徑 - 處理可能的子路徑部署情況
-                const basePath = window.location.pathname.includes('/store/') ? '/store' : '';
+                // 始終使用固定的API路徑
+                const basePath = '/store';
                 const response = await fetch(`${basePath}/api/reports/${reportId}`); // GET 請求報告內容
                 
                 if (!response.ok) {
@@ -252,8 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             target.disabled = true; // 暫時禁用刪除按鈕
 
             try {
-                // 嘗試調整API路徑 - 處理可能的子路徑部署情況
-                const basePath = window.location.pathname.includes('/store/') ? '/store' : '';
+                // 始終使用固定的API路徑
+                const basePath = '/store';
                 const response = await fetch(`${basePath}/api/reports/${reportId}`, { method: 'DELETE' });
                 console.log(`刪除請求回應狀態: ${response.status}`);
 

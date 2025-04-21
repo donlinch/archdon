@@ -1,4 +1,4 @@
-// /public/js/report-viewer.js
+// /public/store/report/report-viewer.js
 
 document.addEventListener('DOMContentLoaded', async () => {
     // --- DOM 元素獲取 ---
@@ -40,7 +40,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // 2. 向後端 API 發送 GET 請求獲取報告內容
-        const response = await fetch(`/api/reports/${reportId}`); // 使用之前定義的 API
+        // 修正 API 路徑，增加 /store 前缀
+        const apiUrl = `/store/api/reports/${reportId}`;
+        console.log(`正在從 ${apiUrl} 獲取報告數據`);
+        
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
             let errorMsg = `無法載入報告 (錯誤 ${response.status})`;
