@@ -177,14 +177,67 @@
         }
 
         .disclaimer {
-            color: #757575;
-            font-size: 0.9em;
-            line-height: 1.5;
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
+            color: #555;
+            font-size: 1em;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #fff8e1;
+            border-radius: 12px;
             border-left: 4px solid #FFB74D;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        
+        .disclaimer h3 {
+            margin-bottom: 10px;
+            color: #FF9800;
+            font-size: 1.2em;
+        }
+        
+        .disclaimer ol {
+            margin: 10px 0 10px 25px;
+        }
+        
+        .disclaimer li {
+            margin-bottom: 8px;
+        }
+        
+        .disclaimer .note {
+            margin-top: 10px;
+            font-style: italic;
+            color: #F57C00;
+        }
+        
+        /* --- 流程圖樣式 --- */
+        .flow-diagram {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .flow-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* --- 返回連結 --- */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #1E88E5;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            color: #1565C0;
+            transform: translateX(-3px);
+        }
+
+        .back-link:before {
+            content: "← ";
         }
 
         /* --- 返回連結 --- */
@@ -284,10 +337,22 @@
     </header>
 
     <main class="report-container">
-        <p class="disclaimer">在此編輯您的 HTML 報告，儲存後將產生一個唯一的分享連結。<br>
-            請注意：連結為公開存取，請勿包含機密或個人隱私資訊。報告不保證永久保存。
-        </p>
-        <a href="/store" class="back-link">返回 Store 首頁</a>
+        <div class="disclaimer">
+            <h3>使用說明 📝</h3>
+            <div class="flow-diagram">
+                <img src="https://sunnyyummy.onrender.com/uploads/1745231310239-21330.png" alt="使用流程：文件 → AI處理 → 轉換 → 驗證 → 分享報告" class="flow-image">
+            </div>
+            <p>這是一個 HTML 報告轉網頁工具，特別適合將 AI 生成的內容轉為可分享的網頁：</p>
+            <ol>
+                <li>請先使用 AI 工具（如 Claude）生成您需要的報告、圖表或文檔</li>
+                <li>要求 AI 將該內容轉為 HTML 格式並進行美化</li>
+                <li>將 AI 生成的 HTML 程式碼複製貼上到下方的編輯區</li>
+                <li>點擊儲存按鈕後，系統會產生一個唯一的網頁連結</li>
+                <li>分享此連結給他人，對方無需登入即可查看您的精美報告</li>
+            </ol>
+            <p class="note">📌 這是將 AI 生成內容轉為專業網頁最簡單的方式！連結為公開存取，請勿包含機密資訊。</p>
+        </div>
+        <a href="/" class="back-link">返回首頁</a>
         <hr>
 
         <form id="report-form">
