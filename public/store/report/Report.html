@@ -157,6 +157,26 @@
             background-color: #64B5F6;
         }
 
+        /* --- 限制信息樣式 --- */
+        .limit-info {
+            margin: 15px 0;
+            padding: 10px 15px;
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        
+        .limit-info.warning {
+            background-color: #fff8e1;
+            border-left-color: #FFC107;
+        }
+        
+        .limit-info.danger {
+            background-color: #ffebee;
+            border-left-color: #F44336;
+        }
+
         /* --- 狀態與錯誤訊息 --- */
         .status-error {
             color: #e53935;
@@ -237,99 +257,81 @@
         }
 
         .back-link:before {
-            content: "← ";
-        }
+    content: "← ";
+}
 
-        /* --- 返回連結 --- */
-        .back-link {
-            display: inline-block;
-            margin-bottom: 15px;
-            color: #1E88E5;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
+/* --- 動畫效果 --- */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 
-        .back-link:hover {
-            color: #1565C0;
-            transform: translateX(-3px);
-        }
+@keyframes slideDown {
+    from { 
+        opacity: 0; 
+        transform: translateY(-20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-        .back-link:before {
-            content: "← ";
-        }
+/* --- 可愛裝飾元素 --- */
+.decoration {
+    position: absolute;
+    font-size: 2rem;
+    opacity: 0.15;
+    user-select: none;
+    z-index: -1;
+}
 
-        /* --- 動畫效果 --- */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+.decoration-1 {
+    top: 15%;
+    left: 5%;
+    animation: float 8s ease-in-out infinite;
+}
 
-        @keyframes slideDown {
-            from { 
-                opacity: 0; 
-                transform: translateY(-20px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+.decoration-2 {
+    top: 50%;
+    right: 7%;
+    animation: float 6s ease-in-out infinite reverse;
+}
 
-        /* --- 可愛裝飾元素 --- */
-        .decoration {
-            position: absolute;
-            font-size: 2rem;
-            opacity: 0.15;
-            user-select: none;
-            z-index: -1;
-        }
+.decoration-3 {
+    bottom: 15%;
+    left: 10%;
+    animation: float 7s ease-in-out infinite 1s;
+}
 
-        .decoration-1 {
-            top: 15%;
-            left: 5%;
-            animation: float 8s ease-in-out infinite;
-        }
+@keyframes float {
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+}
 
-        .decoration-2 {
-            top: 50%;
-            right: 7%;
-            animation: float 6s ease-in-out infinite reverse;
-        }
+/* --- 響應式設計 --- */
+@media (max-width: 768px) {
+    .report-container {
+        padding: 15px;
+        margin: 15px;
+    }
 
-        .decoration-3 {
-            bottom: 15%;
-            left: 10%;
-            animation: float 7s ease-in-out infinite 1s;
-        }
+    button, input, textarea {
+        font-size: 16px; /* 避免iOS上縮放 */
+    }
 
-        @keyframes float {
-            0% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(5deg); }
-            100% { transform: translateY(0) rotate(0deg); }
-        }
+    .decoration {
+        display: none; /* 在小屏幕上隱藏裝飾 */
+    }
+}
 
-        /* --- 響應式設計 --- */
-        @media (max-width: 768px) {
-            .report-container {
-                padding: 15px;
-                margin: 15px;
-            }
+/* 隱藏標題輸入欄位 */
+.hidden-field {
+    display: none;
+}
 
-            button, input, textarea {
-                font-size: 16px; /* 避免iOS上縮放 */
-            }
-
-            .decoration {
-                display: none; /* 在小屏幕上隱藏裝飾 */
-            }
-        }
-        
-        /* 隱藏標題輸入欄位 */
-        .hidden-field {
-            display: none;
-        }
-    </style>
+</style>
 </head>
 <body>
     <!-- 裝飾元素 -->

@@ -13,7 +13,7 @@ const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 
 
@@ -1152,6 +1152,90 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
         client.release();
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+// 2. 創建 IP 限制器實例（設置每日每IP最大報告數為10）
+const reportRateLimiter = createReportRateLimiter(10);
+
+// 3. 將這段代碼加入到報告路由處理部分
+
+// 處理報告提交時添加大小限制
+reportTemplatesRouter.post('/', reportRateLimiter, async (req, res) => {
+    const { title, html_content } = req.body;
+    const creatorIp = req.ip || 'unknown'; // 獲取 IP
+    const reportUUID = uuidv4(); // 生成 UUID
+
+    // 基本驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    // 檢查 html_content 是否存在 (允許空字串)
+    if (typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+
+    // 檢查內容大小限制 (最大 50,000 字節)
+    const MAX_CONTENT_BYTES = 50000;
+    const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+    
+    if (contentSizeBytes > MAX_CONTENT_BYTES) {
+        return res.status(413).json({ 
+            error: '報告內容超過大小限制', 
+            detail: `最大允許 ${MAX_CONTENT_BYTES.toLocaleString()} 字節，當前 ${contentSizeBytes.toLocaleString()} 字節`,
+            maxBytes: MAX_CONTENT_BYTES,
+            currentBytes: contentSizeBytes
+        });
+    }
+
+    try {
+        // 使用修改後的 SQL 查詢，加入 size_bytes 欄位
+        const query = `
+            INSERT INTO report_templates (id, title, html_content, size_bytes, creator_ip)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, title, created_at, updated_at, size_bytes;
+        `;
+        // 現在提供5個參數，與SQL查詢對應
+        const result = await pool.query(query, [
+            reportUUID, 
+            title.trim(), 
+            html_content,
+            contentSizeBytes,
+            creatorIp
+        ]);
+
+        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}，大小: ${contentSizeBytes} 字節`);
+
+        // 回傳包含 UUID 和大小資訊的成功訊息給前端
+        res.status(201).json({
+            success: true,
+            id: result.rows[0].id, // 返回 UUID
+            title: result.rows[0].title,
+            created_at: result.rows[0].created_at,
+            size_bytes: result.rows[0].size_bytes
+        });
+
+    } catch (err) {
+        console.error('[API POST /api/reports] 新增報告時發生錯誤:', err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法儲存報告。', detail: err.message });
+    }
+});
+
+
+
+
+
+
+
+
 
 
 
