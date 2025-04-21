@@ -56,8 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 10);
             
             clearError();
-            // 清空輸入框以便產生下一個 (可選)
-            if (reportTitleInput) reportTitleInput.value = '';
+            // 清空 HTML 內容輸入框以便產生下一個 (但保持隱藏的標題欄位不變)
             if (htmlContentInput) htmlContentInput.value = '';
             // 聚焦並選取連結，方便複製
             generatedLinkInput.focus();
@@ -85,15 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const title = reportTitleInput?.value.trim();
+        // 使用預設標題 "guest"，從隱藏欄位獲取
+        const title = reportTitleInput?.value.trim() || "guest";
         const htmlContent = htmlContentInput?.value;
 
-        // 基本客戶端驗證
-        if (!title) {
-            showError('報告標題不能為空！');
-            reportTitleInput?.focus();
-            return;
-        }
+        // 只檢查 HTML 內容是否為空
         if (typeof htmlContent !== 'string' || htmlContent.length === 0) { // 確保內容不是空字串
             showError('HTML 內容不能為空！');
             htmlContentInput?.focus();
@@ -212,17 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('錯誤：找不到 ID 為 "copy-link-button" 的按鈕元素。');
     }
 
-    // 添加動畫效果和互動
-    if (reportTitleInput) {
-        reportTitleInput.addEventListener('focus', () => {
-            reportTitleInput.style.transition = 'all 0.3s';
-            reportTitleInput.style.transform = 'scale(1.02)';
-        });
-        reportTitleInput.addEventListener('blur', () => {
-            reportTitleInput.style.transform = 'scale(1)';
-        });
-    }
-
+    // 添加動畫效果和互動 (僅保留 HTML 內容的互動效果)
     if (htmlContentInput) {
         htmlContentInput.addEventListener('focus', () => {
             htmlContentInput.style.transition = 'all 0.3s';
