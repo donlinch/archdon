@@ -1,7 +1,7 @@
-// /public/js/report-editor.js (UUID Version - Simplified)
+// /public/js/report-editor.js (美化版 - 增強互動)
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('報告產生器初始化 (UUID 版本)...');
+    console.log('報告產生器初始化 (美化版)...');
 
     // --- DOM 元素獲取 ---
     const reportForm = document.getElementById('report-form');
@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusError) {
             statusError.textContent = message;
             statusError.style.display = 'block';
+            
+            // 添加動畫效果
+            statusError.style.animation = 'none';
+            setTimeout(() => {
+                statusError.style.animation = 'slideDown 0.5s ease';
+            }, 10);
         }
         if (linkDisplayArea) linkDisplayArea.style.display = 'none'; // 出錯時隱藏連結區
     };
@@ -42,6 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (generatedLinkInput && linkDisplayArea) {
             generatedLinkInput.value = fullUrl;
             linkDisplayArea.style.display = 'block'; // 顯示連結區域
+            
+            // 添加動畫效果
+            linkDisplayArea.style.animation = 'none';
+            setTimeout(() => {
+                linkDisplayArea.style.animation = 'slideDown 0.5s ease';
+            }, 10);
+            
             clearError();
             // 清空輸入框以便產生下一個 (可選)
             if (reportTitleInput) reportTitleInput.value = '';
@@ -49,6 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // 聚焦並選取連結，方便複製
             generatedLinkInput.focus();
             generatedLinkInput.select();
+            
+            // 添加完成音效 (可選)
+            try {
+                const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbsAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//MUxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+                audio.play();
+            } catch (e) {
+                console.log('音效播放失敗，忽略此錯誤', e);
+            }
         } else {
             console.error("連結顯示區域元素未找到！");
         }
@@ -83,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveButton) {
             saveButton.disabled = true;
             saveButton.textContent = '儲存中...';
+            saveButton.style.background = '#FFA726';
         }
         clearError();
         if (linkDisplayArea) linkDisplayArea.style.display = 'none';
@@ -125,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
              if (saveButton) {
                  saveButton.textContent = '儲存並產生分享連結';
                  saveButton.disabled = false;
+                 saveButton.style.background = '#FFB74D';
              }
              isSubmitting = false; // 重設提交狀態
         }
@@ -140,19 +163,31 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 優先使用 navigator.clipboard API
             navigator.clipboard.writeText(generatedLinkInput.value).then(() => {
-                if(copyLinkButton) copyLinkButton.textContent = '已複製!';
-                setTimeout(() => {
-                    if(copyLinkButton) copyLinkButton.textContent = '複製連結';
-                }, 1500); // 1.5秒後恢復
+                if(copyLinkButton) {
+                    copyLinkButton.textContent = '已複製! ✓';
+                    copyLinkButton.style.backgroundColor = '#4CAF50';
+                    setTimeout(() => {
+                        if(copyLinkButton) {
+                            copyLinkButton.textContent = '複製連結';
+                            copyLinkButton.style.backgroundColor = '#90CAF9';
+                        }
+                    }, 1500); // 1.5秒後恢復
+                }
             }).catch(err => {
                 console.warn('Clipboard API 複製失敗:', err, '嘗試使用舊方法...');
                 // 降級使用 document.execCommand
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    if(copyLinkButton) copyLinkButton.textContent = '已複製!';
-                    setTimeout(() => {
-                        if(copyLinkButton) copyLinkButton.textContent = '複製連結';
-                    }, 1500);
+                    if(copyLinkButton) {
+                        copyLinkButton.textContent = '已複製! ✓';
+                        copyLinkButton.style.backgroundColor = '#4CAF50';
+                        setTimeout(() => {
+                            if(copyLinkButton) {
+                                copyLinkButton.textContent = '複製連結';
+                                copyLinkButton.style.backgroundColor = '#90CAF9';
+                            }
+                        }, 1500);
+                    }
                 } else {
                     console.error('document.execCommand 複製也失敗');
                     alert('自動複製失敗，請手動選取並複製連結。');
@@ -174,7 +209,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (copyLinkButton) {
         copyLinkButton.addEventListener('click', handleCopyLink);
     } else {
-         console.error('錯誤：找不到 ID 為 "copy-link-button" 的按鈕元素。');
+        console.error('錯誤：找不到 ID 為 "copy-link-button" 的按鈕元素。');
+    }
+
+    // 添加動畫效果和互動
+    if (reportTitleInput) {
+        reportTitleInput.addEventListener('focus', () => {
+            reportTitleInput.style.transition = 'all 0.3s';
+            reportTitleInput.style.transform = 'scale(1.02)';
+        });
+        reportTitleInput.addEventListener('blur', () => {
+            reportTitleInput.style.transform = 'scale(1)';
+        });
+    }
+
+    if (htmlContentInput) {
+        htmlContentInput.addEventListener('focus', () => {
+            htmlContentInput.style.transition = 'all 0.3s';
+            htmlContentInput.style.transform = 'scale(1.01)';
+        });
+        htmlContentInput.addEventListener('blur', () => {
+            htmlContentInput.style.transform = 'scale(1)';
+        });
     }
 
     console.log('報告產生器 JS 初始化完成。');

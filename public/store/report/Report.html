@@ -3,68 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML 報告產生器</title>
-    <link rel="stylesheet" href="/style.css"> <!-- (可選) 通用樣式 -->
+    <title>HTML 報告產生器 - SunnyYummy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: auto; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        textarea { min-height: 300px; font-family: monospace; }
-        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background-color: #007bff; color: white; }
-        button:disabled { background-color: #aaa; cursor: not-allowed; }
-        #link-display-area { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; display: none; /* 預設隱藏 */ }
-        #link-display-area p { margin: 0 0 10px 0; font-weight: bold; }
+        /* --- 基本樣式 --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fff5f7; /* 保持淡粉色背景 */
+            color: #333;
+            padding-bottom: 70px; /* 為底部導航留出空間 */
+            overflow-x: hidden; /* 防止水平滾動 */
+        }
+
+        /* --- 頁面標題 --- */
+        .page-title-header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #FFB74D;
+            color: white;
+            margin-bottom: 0px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            margin: 0;
+        }
+
+        /* --- 主容器樣式 --- */
+        .report-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* --- 表單樣式 --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 1em;
+            transition: all 0.3s;
+            background-color: #f9f9f9;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #FFB74D;
+            box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.2);
+            background-color: #fff;
+        }
+
+        textarea {
+            min-height: 300px;
+            line-height: 1.5;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: #FFB74D;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            background-color: #FFA726;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:disabled {
+            background-color: #e0e0e0;
+            color: #a0a0a0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- 連結顯示區域 --- */
+        #link-display-area {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f0f8ff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 2px solid #e3f2fd;
+            display: none; /* 預設隱藏 */
+            animation: slideDown 0.5s ease;
+        }
+
+        #link-display-area p {
+            margin: 0 0 10px 0;
+            font-weight: bold;
+            color: #555;
+        }
+
         #generated-link {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
+            padding: 12px;
+            border: 2px solid #e3f2fd;
             background-color: #fff;
-            box-sizing: border-box;
+            border-radius: 12px;
             font-family: monospace;
-            cursor: text; /* 方便選取 */
-            margin-bottom: 10px; /* 與複製按鈕間隔 */
+            cursor: text;
+            margin-bottom: 15px;
         }
-         #copy-link-button { background-color: #28a745;}
-        .status-error { color: red; font-weight: bold; margin-top: 10px; display: none; /* 預設隱藏錯誤訊息 */ }
-        hr { margin: 20px 0; border: 0; border-top: 1px solid #eee; }
-        .disclaimer { color: #666; font-size: 0.9em; margin-bottom: 15px; }
+
+        #copy-link-button {
+            background-color: #90CAF9;
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+
+        #copy-link-button:hover {
+            background-color: #64B5F6;
+        }
+
+        /* --- 狀態與錯誤訊息 --- */
+        .status-error {
+            color: #e53935;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 8px;
+            display: none; /* 預設隱藏 */
+        }
+
+        /* --- 分隔線和免責聲明 --- */
+        hr {
+            margin: 20px 0;
+            border: 0;
+            height: 1px;
+            background-image: linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.1), rgba(0,0,0,0));
+        }
+
+        .disclaimer {
+            color: #757575;
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #FFB74D;
+        }
+
+        /* --- 返回連結 --- */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #1E88E5;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            color: #1565C0;
+            transform: translateX(-3px);
+        }
+
+        .back-link:before {
+            content: "← ";
+        }
+
+        /* --- 動畫效果 --- */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { 
+                opacity: 0; 
+                transform: translateY(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- 可愛裝飾元素 --- */
+        .decoration {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.15;
+            user-select: none;
+            z-index: -1;
+        }
+
+        .decoration-1 {
+            top: 15%;
+            left: 5%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .decoration-2 {
+            top: 50%;
+            right: 7%;
+            animation: float 6s ease-in-out infinite reverse;
+        }
+
+        .decoration-3 {
+            bottom: 15%;
+            left: 10%;
+            animation: float 7s ease-in-out infinite 1s;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        /* --- 響應式設計 --- */
+        @media (max-width: 768px) {
+            .report-container {
+                padding: 15px;
+                margin: 15px;
+            }
+
+            button, input, textarea {
+                font-size: 16px; /* 避免iOS上縮放 */
+            }
+
+            .decoration {
+                display: none; /* 在小屏幕上隱藏裝飾 */
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- 裝飾元素 -->
+    <div class="decoration decoration-1">🌸</div>
+    <div class="decoration decoration-2">✨</div>
+    <div class="decoration decoration-3">🎵</div>
 
-    <h1>HTML 報告產生器</h1>
-    <p class="disclaimer">在此編輯您的 HTML 報告，儲存後將產生一個唯一的分享連結。<br>
-        請注意：連結為公開存取，請勿包含機密或個人隱私資訊。報告不保證永久保存。
-    </p>
-    <a href="/store">返回 Store 首頁</a> <!-- 確認此路徑是否正確 -->
-    <hr>
+    <header class="page-title-header">
+        <h1 class="page-title">HTML 報告產生器</h1>
+    </header>
 
-    <form id="report-form">
-        <div class="form-group">
-            <label for="report-title">報告標題:</label>
-            <input type="text" id="report-title" placeholder="請輸入報告的標題 (方便您自己辨識)" required>
+    <main class="report-container">
+        <p class="disclaimer">在此編輯您的 HTML 報告，儲存後將產生一個唯一的分享連結。<br>
+            請注意：連結為公開存取，請勿包含機密或個人隱私資訊。報告不保證永久保存。
+        </p>
+        <a href="/store" class="back-link">返回 Store 首頁</a>
+        <hr>
+
+        <form id="report-form">
+            <div class="form-group">
+                <label for="report-title">報告標題:</label>
+                <input type="text" id="report-title" placeholder="請輸入報告的標題 (方便您自己辨識)" required>
+            </div>
+
+            <div class="form-group">
+                <label for="html-content">HTML 內容:</label>
+                <textarea id="html-content" placeholder="在此輸入完整的 HTML 程式碼..." required></textarea>
+            </div>
+
+            <button id="save-button" type="submit">儲存並產生分享連結</button>
+            <div id="status-error" class="status-error"></div>
+        </form>
+
+        <!-- 用於顯示生成的連結 -->
+        <div id="link-display-area">
+            <p>✅ 報告已儲存！請複製並保管以下連結：</p>
+            <input type="text" id="generated-link" readonly>
+            <button id="copy-link-button" type="button">複製連結</button>
         </div>
+    </main>
 
-        <div class="form-group">
-            <label for="html-content">HTML 內容:</label>
-            <textarea id="html-content" placeholder="在此輸入完整的 HTML 程式碼..." required></textarea>
-        </div>
-
-        <button id="save-button" type="submit">儲存並產生分享連結</button>
-        <div id="status-error" class="status-error"></div> <!-- 錯誤訊息顯示區 -->
-
-    </form>
-
-    <!-- 用於顯示生成的連結 -->
-    <div id="link-display-area">
-        <p>✅ 報告已儲存！請複製並保管以下連結：</p>
-        <input type="text" id="generated-link" readonly>
-        <button id="copy-link-button" type="button">複製連結</button>
-    </div>
-
-    <!-- *** 引入 JavaScript 檔案，使用絕對路徑 *** -->
+    <!-- 引入 JavaScript 檔案，使用絕對路徑 -->
     <script src="report-editor.js"></script>
-
 </body>
 </html>
