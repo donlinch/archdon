@@ -560,13 +560,13 @@
         background: rgba(0,0,0,0.8);
     }
 
-    /* --- 頁腳 --- */
-    .desktop-footer {
-        background-color: #f8f8f8;
-        padding: 20px 0;
-        margin-top: 30px;
-        display: none; /* 默認隱藏 */
-    }
+  /* --- 頁腳（桌面版） --- */
+.desktop-footer {
+    background-color: #f8f8f8;
+    padding: 20px 0;
+    margin-top: 30px;
+    display: block; /* 默認隱藏  none */
+}
 
     .footer-container {
         max-width: 1200px;
@@ -677,12 +677,12 @@
         }
         
         body {
-            padding-bottom: 0;
-        }
-        
-        .bottom-nav {
-            display: none;
-        }
+        padding-bottom: 70px; /* 為底部導航留出空間 */
+    }
+    
+    .bottom-nav {
+        display: block; /* none 隱藏底部導航 */
+    }
         
         .back-to-top {
             bottom: 20px;
@@ -797,20 +797,15 @@
     
     <!-- 頁腳 - 在大屏幕設備上顯示 -->
     <footer class="desktop-footer">
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html" class="active">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/games.html">互動遊戲</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2023 SunnyYummy. All rights reserved.</p>
-            </div>
+        
+        <div class="footer-copyright">
+            <p>© 2023 SunnyYummy. All rights reserved.</p>
+            <p>信箱：paulaqueenatina@gmail.com</p>
+        <p>客服時間：週一～週五 08:00～17:00</p>
+            
         </div>
-    </footer>
+    </div>
+</footer>
     
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
