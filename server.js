@@ -14,6 +14,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 
 
 
@@ -1073,6 +1074,8 @@ app.delete('/api/card-game/templates/:id', async (req, res) => {
 
 
 
+
+
 // GET /api/admin/files - 獲取檔案列表 (分頁、篩選、排序)
 app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
     const page = parseInt(req.query.page) || 1;
@@ -1148,6 +1151,193 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
         client.release();
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// POST /api/reports - 新增報告模板
+reportTemplatesRouter.post('/', async (req, res) => {
+    const { title, html_content } = req.body;
+    const creatorIp = req.ip || 'unknown'; // 獲取 IP
+
+    // 基本驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    // 檢查 html_content 是否存在 (允許空字串)
+    if (typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+
+    try {
+        // 假設您的 pg Pool 物件叫做 'pool'
+        const query = `
+            INSERT INTO report_templates (title, html_content, creator_ip)
+            VALUES ($1, $2, $3)
+            RETURNING id, title, created_at, updated_at; -- 回傳新紀錄的資訊
+        `;
+        const result = await pool.query(query, [title.trim(), html_content, creatorIp]);
+
+        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}`);
+        res.status(201).json(result.rows[0]); // 狀態 201 Created，回傳新資料
+
+    } catch (err) {
+        console.error('[API POST /api/reports] 新增報告時發生錯誤:', err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法儲存報告。', detail: err.message });
+    }
+});
+
+// GET /api/reports - 獲取報告列表 (用於 Report.html 管理區)
+reportTemplatesRouter.get('/', async (req, res) => {
+    try {
+        const query = `
+            SELECT id, title, updated_at -- 只選擇列表需要的欄位
+            FROM report_templates
+            ORDER BY updated_at DESC; -- 通常按最新修改排序
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows); // 直接回傳結果陣列
+
+    } catch (err) {
+        console.error('[API GET /api/reports] 獲取報告列表時發生錯誤:', err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告列表。', detail: err.message });
+    }
+});
+
+// GET /api/reports/:id - 獲取單一報告內容 (用於 report-view.html 和編輯加載)
+reportTemplatesRouter.get('/:id', async (req, res) => {
+    const { id } = req.params;
+    const reportId = parseInt(id, 10); // 將 ID 轉換為數字
+
+    // 驗證 ID 是否為有效數字
+    if (isNaN(reportId)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+
+    try {
+        const query = `
+            SELECT id, title, html_content, created_at, updated_at -- 獲取詳細資訊
+            FROM report_templates
+            WHERE id = $1;
+        `;
+        const result = await pool.query(query, [reportId]);
+
+        // 檢查是否找到報告
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的報告。' }); // 狀態 404 Not Found
+        }
+        res.json(result.rows[0]); // 回傳找到的單一報告物件
+
+    } catch (err) {
+        console.error(`[API GET /api/reports/${id}] 獲取單一報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告內容。', detail: err.message });
+    }
+});
+
+// PUT /api/reports/:id - 更新報告模板
+reportTemplatesRouter.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const reportId = parseInt(id, 10);
+    const { title, html_content } = req.body; // 從請求體獲取更新的資料
+
+    // 驗證 ID
+    if (isNaN(reportId)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+    // 驗證輸入資料
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    if (typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+
+    try {
+        // updated_at 會由資料庫觸發器自動處理
+        const query = `
+            UPDATE report_templates
+            SET title = $1, html_content = $2
+            WHERE id = $3
+            RETURNING id, title, updated_at; -- 回傳更新後的資訊
+        `;
+        const result = await pool.query(query, [title.trim(), html_content, reportId]);
+
+        // 檢查是否有資料被更新
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的報告。' });
+        }
+
+        console.log(`[API PUT /api/reports] 更新報告成功，ID: ${reportId}`);
+        res.json(result.rows[0]); // 回傳更新後的報告資訊
+
+    } catch (err) {
+        console.error(`[API PUT /api/reports/${id}] 更新報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新報告。', detail: err.message });
+    }
+});
+
+// DELETE /api/reports/:id - 刪除報告模板
+reportTemplatesRouter.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+    const reportId = parseInt(id, 10);
+
+    // 驗證 ID
+    if (isNaN(reportId)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+
+    try {
+        const query = 'DELETE FROM report_templates WHERE id = $1;';
+        const result = await pool.query(query, [reportId]);
+
+        // 檢查是否有資料被刪除
+        if (result.rowCount === 0) {
+            // 通常不視為錯誤，可能已經被刪除
+            console.warn(`[API DELETE /api/reports] 嘗試刪除報告 ID ${reportId}，但資料庫中找不到。`);
+        } else {
+             console.log(`[API DELETE /api/reports] 報告 ID ${reportId} 已從資料庫刪除。`);
+        }
+
+        res.status(204).send(); // 狀態 204 No Content，表示成功處理但無內容返回
+
+    } catch (err) {
+        console.error(`[API DELETE /api/reports/${id}] 刪除報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除報告。', detail: err.message });
+    }
+});
+
+// *** 非常重要：將定義好的 Router 掛載到 Express App 上 ***
+// 這行告訴 Express，所有指向 /api/reports 的請求都由 reportTemplatesRouter 來處理
+app.use('/api/reports', reportTemplatesRouter);
+
+// --- 結束 Report Templates API ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // POST /api/admin/files/upload - 上傳檔案
 app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), async (req, res) => {
