@@ -1166,6 +1166,8 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
 
 
 // POST /api/reports - 新增報告模板
+
+// POST /api/reports - 新增報告模板 (更新版本，支持字節大小計算)
 reportTemplatesRouter.post('/', async (req, res) => {
     const { title, html_content } = req.body;
     const creatorIp = req.ip || 'unknown'; // 獲取 IP
@@ -1180,24 +1182,34 @@ reportTemplatesRouter.post('/', async (req, res) => {
         return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
     }
 
+    // 計算內容大小（字節數）
+    const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+
     try {
-        // 修正：確保SQL查詢與參數數量一致
+        // 使用修改後的 SQL 查詢，加入 size_bytes 欄位
         const query = `
-            INSERT INTO report_templates (id, title, html_content, creator_ip)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, title, created_at, updated_at;
+            INSERT INTO report_templates (id, title, html_content, size_bytes, creator_ip)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, title, created_at, updated_at, size_bytes;
         `;
-        // 現在提供4個參數，與SQL查詢對應
-        const result = await pool.query(query, [reportUUID, title.trim(), html_content, creatorIp]);
+        // 現在提供5個參數，與SQL查詢對應
+        const result = await pool.query(query, [
+            reportUUID, 
+            title.trim(), 
+            html_content,
+            contentSizeBytes,
+            creatorIp
+        ]);
 
-        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}`);
+        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}，大小: ${contentSizeBytes} 字節`);
 
-        // 回傳包含 UUID 的成功訊息給前端
+        // 回傳包含 UUID 和大小資訊的成功訊息給前端
         res.status(201).json({
             success: true,
             id: result.rows[0].id, // 返回 UUID
             title: result.rows[0].title,
-            created_at: result.rows[0].created_at
+            created_at: result.rows[0].created_at,
+            size_bytes: result.rows[0].size_bytes
         });
 
     } catch (err) {
@@ -1483,7 +1495,8 @@ app.use([
     '/guestbook-admin.html',
     '/admin-identities.html',
     '/admin-message-detail.html',
-    '/inventory-admin.html'
+    '/inventory-admin.html',
+    '/store/report/report-admin.html'
 ], basicAuthMiddleware);
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
@@ -1546,6 +1559,240 @@ function updateGameState(roomId, updates) {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- 新增 Admin API 路由 (受保護的管理 API) ---
+
+// GET /api/admin/reports - 獲取報告列表 (包含分頁和搜尋功能)
+app.get('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search?.trim() || '';
+
+    // 構造 WHERE 子句和參數
+    let whereClause = '';
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (search) {
+        whereClause = `WHERE title ILIKE $${paramIndex++}`;
+        queryParams.push(`%${search}%`);
+    }
+
+    try {
+        // 獲取總記錄數
+        const countQuery = `SELECT COUNT(*) FROM report_templates ${whereClause}`;
+        const totalResult = await pool.query(countQuery, queryParams);
+        const totalItems = parseInt(totalResult.rows[0].count);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // 複製查詢參數陣列並添加新的參數
+        const pageParams = [...queryParams];
+        pageParams.push(limit);
+        pageParams.push(offset);
+
+        // 獲取當前頁面的記錄
+        const dataQuery = `
+            SELECT id, title, created_at, updated_at, size_bytes
+            FROM report_templates
+            ${whereClause}
+            ORDER BY updated_at DESC
+            LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+        `;
+        const dataResult = await pool.query(dataQuery, pageParams);
+
+        res.json({
+            reports: dataResult.rows,
+            current_page: page,
+            total_pages: totalPages,
+            total_items: totalItems,
+            limit: limit,
+            search: search
+        });
+    } catch (err) {
+        console.error('[API GET /admin/reports] 獲取報告列表時發生錯誤:', err);
+        res.status(500).json({ error: '獲取報告列表失敗', detail: err.message });
+    }
+});
+
+// GET /api/admin/reports/:id - 獲取單一報告詳情 (用於編輯)
+app.get('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    
+    // 驗證 ID 格式 (UUID 格式)
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+
+    try {
+        const query = `
+            SELECT id, title, html_content, created_at, updated_at, size_bytes
+            FROM report_templates
+            WHERE id = $1;
+        `;
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的報告。' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API GET /admin/reports/${id}] 獲取單一報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告。', detail: err.message });
+    }
+});
+
+// POST /api/admin/reports - 新增報告
+app.post('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
+    const { title, html_content, size_bytes } = req.body;
+    const creatorIp = req.ip || 'unknown'; // 獲取 IP
+    const reportUUID = uuidv4(); // 生成 UUID
+
+    // 基本驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    
+    if (!html_content || typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+
+    // 處理大小參數
+    let contentSizeBytes = size_bytes;
+    if (!contentSizeBytes || isNaN(contentSizeBytes)) {
+        // 如果沒有提供有效的大小，則計算之
+        contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+    }
+
+    try {
+        const query = `
+            INSERT INTO report_templates (id, title, html_content, size_bytes, creator_ip)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, title, created_at, updated_at, size_bytes;
+        `;
+        const result = await pool.query(query, [
+            reportUUID, 
+            title.trim(), 
+            html_content, 
+            contentSizeBytes,
+            creatorIp
+        ]);
+
+        console.log(`[API POST /api/admin/reports] 新增報告成功，ID: ${result.rows[0].id}, 大小: ${contentSizeBytes} 字節`);
+
+        res.status(201).json({
+            success: true,
+            ...result.rows[0]
+        });
+    } catch (err) {
+        console.error('[API POST /api/admin/reports] 新增報告時發生錯誤:', err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法儲存報告。', detail: err.message });
+    }
+});
+
+// PUT /api/admin/reports/:id - 更新報告
+app.put('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { title, html_content, size_bytes } = req.body;
+
+    // 驗證 ID 格式 (UUID 格式)
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+
+    // 驗證輸入資料
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    
+    if (!html_content || typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+
+    // 處理大小參數
+    let contentSizeBytes = size_bytes;
+    if (!contentSizeBytes || isNaN(contentSizeBytes)) {
+        // 如果沒有提供有效的大小，則計算之
+        contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+    }
+
+    try {
+        const query = `
+            UPDATE report_templates
+            SET title = $1, html_content = $2, size_bytes = $3, updated_at = NOW()
+            WHERE id = $4
+            RETURNING id, title, updated_at, size_bytes;
+        `;
+        const result = await pool.query(query, [
+            title.trim(), 
+            html_content, 
+            contentSizeBytes,
+            id
+        ]);
+
+        // 檢查是否有資料被更新
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的報告。' });
+        }
+
+        console.log(`[API PUT /api/admin/reports] 更新報告成功，ID: ${id}, 大小: ${contentSizeBytes} 字節`);
+        res.json(result.rows[0]); // 回傳更新後的報告資訊
+    } catch (err) {
+        console.error(`[API PUT /api/admin/reports/${id}] 更新報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新報告。', detail: err.message });
+    }
+});
+
+// DELETE /api/admin/reports/:id - 刪除報告
+app.delete('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+    const { id } = req.params;
+
+    // 驗證 ID 格式 (UUID 格式)
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+
+    try {
+        const query = 'DELETE FROM report_templates WHERE id = $1;';
+        const result = await pool.query(query, [id]);
+
+        // 檢查是否有資料被刪除
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的報告。' });
+        }
+
+        console.log(`[API DELETE /api/admin/reports] 報告 ID ${id} la成功從資料庫刪除。`);
+        res.status(204).send(); // 成功刪除，無內容返回
+    } catch (err) {
+        console.error(`[API DELETE /api/admin/reports/${id}] 刪除報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除報告。', detail: err.message });
+    }
+});
+
+
+
+
+
+
 
 
 
