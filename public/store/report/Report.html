@@ -73,7 +73,7 @@
             <textarea id="html-content" placeholder="在此輸入完整的 HTML 程式碼..." required></textarea>
         </div>
 
-        <button id="save-button">儲存新報告</button>
+        <button id="save-button" type="button">儲存新報告</button>
         <button id="cancel-edit-button" class="secondary" style="display: none;">取消編輯</button>
 
         <div id="status-message"></div>
@@ -89,27 +89,8 @@
             </ul>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          console.log('頁面已加載');
-          alert('頁面已加載，JavaScript 正常運行'); // 這會顯示一個彈窗
-        });
-      
-        document.addEventListener('DOMContentLoaded', () => {
-          const saveButton = document.getElementById('save-button');
-          if (saveButton) {
-            console.log('找到保存按鈕');
-            saveButton.addEventListener('click', (e) => {
-              e.preventDefault();
-              console.log('保存按鈕被點擊');
-              alert('保存按鈕被點擊 - 測試成功');
-            });
-          } else {
-            console.error('找不到保存按鈕');
-          }
-        });
-      </script>
-    <!-- 引入 JavaScript 檔案 (我們將在下一步創建) -->
+
+    <!-- 引入 JavaScript 檔案 -->
     <script src="report-editor.js"></script>
 </body>
 </html>
