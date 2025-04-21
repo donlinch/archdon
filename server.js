@@ -18,6 +18,7 @@ const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report
 
 
 
+
 const multer = require('multer');
 const fs = require('fs');
 
@@ -1169,6 +1170,7 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
 reportTemplatesRouter.post('/', async (req, res) => {
     const { title, html_content } = req.body;
     const creatorIp = req.ip || 'unknown'; // 獲取 IP
+    const reportUUID = uuidv4(); // *** 在這裡生成 UUID ***
 
     // 基本驗證
     if (!title || title.trim() === '') {
@@ -1186,10 +1188,23 @@ reportTemplatesRouter.post('/', async (req, res) => {
             VALUES ($1, $2, $3)
             RETURNING id, title, created_at, updated_at; -- 回傳新紀錄的資訊
         `;
-        const result = await pool.query(query, [title.trim(), html_content, creatorIp]);
+         // 將生成的 UUID 作為第一個參數存入資料庫
+         const result = await pool.query(query, [reportUUID, title.trim(), html_content, creatorIp]);
 
         console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}`);
         res.status(201).json(result.rows[0]); // 狀態 201 Created，回傳新資料
+
+
+        // *** 回傳包含 UUID 的成功訊息給前端 ***
+        res.status(201).json({
+            success: true,
+            id: result.rows[0].id, // 返回 UUID
+            title: result.rows[0].title,
+            created_at: result.rows[0].created_at
+        });
+
+
+
 
     } catch (err) {
         console.error('[API POST /api/reports] 新增報告時發生錯誤:', err);
@@ -1216,27 +1231,27 @@ reportTemplatesRouter.get('/', async (req, res) => {
 
 // GET /api/reports/:id - 獲取單一報告內容 (用於 report-view.html 和編輯加載)
 reportTemplatesRouter.get('/:id', async (req, res) => {
-    const { id } = req.params;
-    const reportId = parseInt(id, 10); // 將 ID 轉換為數字
+    const { id } = req.params; // 這個 id 現在是 UUID 格式的字串
 
-    // 驗證 ID 是否為有效數字
-    if (isNaN(reportId)) {
-        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    // UUID 格式的基礎驗證 (確保它看起來像 UUID)
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+         return res.status(400).json({ error: '無效的報告 ID 格式 (非 UUID)。' });
     }
 
     try {
         const query = `
-            SELECT id, title, html_content, created_at, updated_at -- 獲取詳細資訊
+            SELECT html_content -- 檢視頁面只需要 HTML 內容
             FROM report_templates
             WHERE id = $1;
         `;
-        const result = await pool.query(query, [reportId]);
+        const result = await pool.query(query, [id]); // 使用 UUID 查詢
 
-        // 檢查是否找到報告
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到指定的報告。' }); // 狀態 404 Not Found
+            return res.status(404).json({ error: '找不到指定的報告。' });
         }
-        res.json(result.rows[0]); // 回傳找到的單一報告物件
+        // *** 只回傳 html_content ***
+        res.json({ html_content: result.rows[0].html_content });
 
     } catch (err) {
         console.error(`[API GET /api/reports/${id}] 獲取單一報告時發生錯誤:`, err);

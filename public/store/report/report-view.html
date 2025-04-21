@@ -6,54 +6,20 @@
     <title>報告檢視</title> <!-- 標題會由 JS 動態修改 -->
     <!-- <link rel="stylesheet" href="/css/report-view.css"> --> <!-- (可選) -->
     <style>
-        /* 關鍵樣式：讓 iframe 填滿螢幕 */
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden; /* 防止 body 本身滾動 */
-            background-color: #f8f9fa; /* (可選) 淺灰色背景 */
-            font-family: sans-serif; /* 用於載入/錯誤訊息 */
-        }
-        #controls { /* 列印按鈕的容器 */
-            padding: 8px;
-            text-align: right;
-            background-color: #e9ecef;
-            border-bottom: 1px solid #dee2e6;
-        }
-         #controls button {
-            padding: 5px 10px;
-            font-size: 0.9em;
-         }
-        #report-container {
-            /* 計算高度以減去控制列的高度，或使用 Flexbox */
-            height: calc(100% - 41px); /* 假設控制列高度約 41px */
-            width: 100%;
-            display: flex; /* 讓 iframe 填滿 */
-            box-sizing: border-box;
-        }
-        #report-iframe {
-            flex-grow: 1; /* iframe 填滿容器 */
-            border: none; /* 移除邊框 */
-            background-color: #fff; /* 內容區背景 */
-        }   
-        .loading, .error {
-            padding: 30px;
-            text-align: center;
-            color: #6c757d;
-            width: 100%; /* 讓訊息置中 */
-        }
-        .error {
-            color: #dc3545;
-            font-weight: bold;
-        }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8f9fa; font-family: sans-serif; }
+        #controls { padding: 8px; text-align: right; background-color: #e9ecef; border-bottom: 1px solid #dee2e6; box-sizing: border-box; /* 確保 padding 不影響高度計算 */ height: 41px; /* 固定高度 */ }
+        #controls button { padding: 5px 10px; font-size: 0.9em; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        #controls button:disabled { background-color: #aaa; }
+        #report-container { height: calc(100% - 41px); /* 減去控制列高度 */ width: 100%; display: flex; box-sizing: border-box; }
+        #report-iframe { flex-grow: 1; border: none; background-color: #fff; }
+        .loading, .error { padding: 30px; text-align: center; color: #6c757d; width: 100%; }
+        .error { color: #dc3545; font-weight: bold; }
     </style>
-</head> 
+</head>
 <body>
-    <!-- (可選) 添加控制列，例如放列印按鈕 -->
-    <div id="controls">
-        <button id="print-report-btn" style="display: none;">列印此報告</button>
-        <!-- 可以考慮加個關閉按鈕 window.close() -->
+    <!-- 控制列 -->
+    <div id="controls" style="display: none;"> <!-- 預設隱藏，內容載入成功再顯示 -->
+        <button id="print-report-btn" disabled>列印此報告</button>
     </div>
 
     <!-- iframe 的容器 -->
@@ -61,7 +27,7 @@
         <p class="loading">正在載入報告...</p>
     </div>
 
-    <!-- 引入 JavaScript 檔案 (我們將在下一步創建) -->
+    <!-- *** 引入 JavaScript 檔案，使用絕對路徑 *** -->
     <script src="report-viewer.js"></script>
 </body>
 </html>

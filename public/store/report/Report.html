@@ -3,69 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML 報告編輯器</title>
-    <!-- (可選) 引入您網站的通用樣式 -->
-    <link rel="stylesheet" href="/style.css">
+    <title>HTML 報告產生器</title>
+    <link rel="stylesheet" href="/style.css"> <!-- (可選) 通用樣式 -->
     <style>
-        /* 頁面特定樣式 */
         body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: auto; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], textarea {
+        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        textarea { min-height: 300px; font-family: monospace; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background-color: #007bff; color: white; }
+        button:disabled { background-color: #aaa; cursor: not-allowed; }
+        #link-display-area { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 5px; display: none; /* 預設隱藏 */ }
+        #link-display-area p { margin: 0 0 10px 0; font-weight: bold; }
+        #generated-link {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
-        } 
-        textarea { min-height: 250px; font-family: monospace; }
-        button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            margin-right: 10px;
+            background-color: #fff;
+            box-sizing: border-box;
+            font-family: monospace;
+            cursor: text; /* 方便選取 */
+            margin-bottom: 10px; /* 與複製按鈕間隔 */
         }
-        button:disabled { background-color: #aaa; cursor: not-allowed; }
-        button.secondary { background-color: #6c757d; }
-        button.danger { background-color: #dc3545; }
-        #status-message { margin-top: 15px; font-weight: bold; }
-        .status-success { color: green; }
-        .status-error { color: red; }
-        .report-list-container { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
-        #report-list ul { list-style: none; padding: 0; }
-        #report-list li {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #report-list li:last-child { border-bottom: none; }
-        .report-actions button, .report-actions a {
-            margin-left: 8px;
-            padding: 3px 8px; /* Smaller buttons for actions */
-            font-size: 0.9em;
-            text-decoration: none; /* For link button */
-        }
-        .report-actions a.button-like { /* Make link look like button */
-             background-color: #17a2b8; color: white; border-radius: 3px;
-        }
+         #copy-link-button { background-color: #28a745;}
+        .status-error { color: red; font-weight: bold; margin-top: 10px; display: none; /* 預設隱藏錯誤訊息 */ }
+        hr { margin: 20px 0; border: 0; border-top: 1px solid #eee; }
+        .disclaimer { color: #666; font-size: 0.9em; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-    <h1>HTML 報告編輯器</h1>
-    <a href="/store">返回網站首頁</a> <!-- 修正為您的實際路徑 -->
+    <h1>HTML 報告產生器</h1>
+    <p class="disclaimer">在此編輯您的 HTML 報告，儲存後將產生一個唯一的分享連結。<br>
+        請注意：連結為公開存取，請勿包含機密或個人隱私資訊。報告不保證永久保存。
+    </p>
+    <a href="/store">返回 Store 首頁</a> <!-- 確認此路徑是否正確 -->
+    <hr>
 
-    <div id="report-form">
-        <input type="hidden" id="editing-report-id" value=""> <!-- 隱藏欄位，用於記錄正在編輯的 ID -->
-
+    <form id="report-form">
         <div class="form-group">
             <label for="report-title">報告標題:</label>
-            <input type="text" id="report-title" placeholder="請輸入報告的標題" required>
+            <input type="text" id="report-title" placeholder="請輸入報告的標題 (方便您自己辨識)" required>
         </div>
 
         <div class="form-group">
@@ -73,24 +51,20 @@
             <textarea id="html-content" placeholder="在此輸入完整的 HTML 程式碼..." required></textarea>
         </div>
 
-        <button id="save-button" type="button">儲存新報告</button>
-        <button id="cancel-edit-button" class="secondary" style="display: none;">取消編輯</button>
+        <button id="save-button" type="submit">儲存並產生分享連結</button>
+        <div id="status-error" class="status-error"></div> <!-- 錯誤訊息顯示區 -->
 
-        <div id="status-message"></div>
-    </div>
-   
-    <div class="report-list-container">
-        <h2>已儲存的報告列表</h2>
-        <button id="refresh-list-btn" class="secondary" style="margin-bottom: 10px;">重新整理列表</button>
-        <div id="report-list">
-            <p>正在載入列表...</p>
-            <ul>
-                <!-- 列表內容將由 JavaScript 填充 -->
-            </ul>
-        </div>
+    </form>
+
+    <!-- 用於顯示生成的連結 -->
+    <div id="link-display-area">
+        <p>✅ 報告已儲存！請複製並保管以下連結：</p>
+        <input type="text" id="generated-link" readonly>
+        <button id="copy-link-button" type="button">複製連結</button>
     </div>
 
-    <!-- 引入 JavaScript 檔案 -->
+    <!-- *** 引入 JavaScript 檔案，使用絕對路徑 *** -->
     <script src="report-editor.js"></script>
+
 </body>
 </html>
