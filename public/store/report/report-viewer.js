@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 發生錯誤時隱藏控制列或列印按鈕
         if (controlsDiv) controlsDiv.style.display = 'none';
     };
-
+ 
     // --- 主要邏輯 ---
     if (!container) {
         console.error("錯誤：找不到 ID 為 'report-container' 的元素。");

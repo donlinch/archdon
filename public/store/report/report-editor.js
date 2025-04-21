@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 reports.forEach(report => {
                     const li = document.createElement('li');
                     li.dataset.reportId = report.id; // 將 ID 存在 li 上方便操作
-
+ 
                     // 報告標題和更新時間
                     const reportInfo = document.createElement('span');
                     const updatedDate = new Date(report.updated_at).toLocaleString('zh-TW');
