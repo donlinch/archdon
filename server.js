@@ -1165,12 +1165,11 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
 
 
 
-
 // POST /api/reports - 新增報告模板
 reportTemplatesRouter.post('/', async (req, res) => {
     const { title, html_content } = req.body;
     const creatorIp = req.ip || 'unknown'; // 獲取 IP
-    const reportUUID = uuidv4(); // *** 在這裡生成 UUID ***
+    const reportUUID = uuidv4(); // 生成 UUID
 
     // 基本驗證
     if (!title || title.trim() === '') {
@@ -1182,29 +1181,24 @@ reportTemplatesRouter.post('/', async (req, res) => {
     }
 
     try {
-        // 假設您的 pg Pool 物件叫做 'pool'
+        // 修正：確保SQL查詢與參數數量一致
         const query = `
-            INSERT INTO report_templates (title, html_content, creator_ip)
-            VALUES ($1, $2, $3)
-            RETURNING id, title, created_at, updated_at; -- 回傳新紀錄的資訊
+            INSERT INTO report_templates (id, title, html_content, creator_ip)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, title, created_at, updated_at;
         `;
-         // 將生成的 UUID 作為第一個參數存入資料庫
-         const result = await pool.query(query, [reportUUID, title.trim(), html_content, creatorIp]);
+        // 現在提供4個參數，與SQL查詢對應
+        const result = await pool.query(query, [reportUUID, title.trim(), html_content, creatorIp]);
 
         console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}`);
-        res.status(201).json(result.rows[0]); // 狀態 201 Created，回傳新資料
 
-
-        // *** 回傳包含 UUID 的成功訊息給前端 ***
+        // 回傳包含 UUID 的成功訊息給前端
         res.status(201).json({
             success: true,
             id: result.rows[0].id, // 返回 UUID
             title: result.rows[0].title,
             created_at: result.rows[0].created_at
         });
-
-
-
 
     } catch (err) {
         console.error('[API POST /api/reports] 新增報告時發生錯誤:', err);
