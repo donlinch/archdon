@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPage = 1;
     let totalPages = 1;
     let searchTerm = '';
-    let hideGuestReports = false; // 預設不隱藏guest報告
+    let hideGuestReports = true; // 預設不隱藏guest報告
     const itemsPerPage = 10; // 每頁顯示數量
 
     // --- 輔助函數 ---
@@ -505,23 +505,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 初始化 ---
-    
-    // 檢查本地儲存中是否有隱藏guest的設定
-    try {
-        const storedPreference = localStorage.getItem('hideGuestReports');
-        if (storedPreference !== null) {
-            hideGuestReports = storedPreference === 'true';
-            if (filterGuestCheckbox) {
-                filterGuestCheckbox.checked = hideGuestReports;
-            }
-            if (filterToggle) {
-                filterToggle.textContent = hideGuestReports ? '僅顯示非guest報告中...' : '顯示全部報告';
-                filterToggle.className = hideGuestReports ? 'filter-status active' : 'filter-status';
-            }
-        }
-    } catch (e) {
-        console.warn('無法讀取本地儲存的過濾設定', e);
+   // 檢查本地儲存中是否有隱藏guest的設定
+try {
+    const storedPreference = localStorage.getItem('hideGuestReports');
+    if (storedPreference !== null) {
+        hideGuestReports = storedPreference === 'true';
+    } else {
+        // 如果沒有存儲的設定，預設為 true
+        hideGuestReports = true;
     }
+    if (filterGuestCheckbox) {
+        filterGuestCheckbox.checked = hideGuestReports;
+    }
+    if (filterToggle) {
+        filterToggle.textContent = hideGuestReports ? '僅顯示非guest報告中...' : '顯示全部報告';
+        filterToggle.className = hideGuestReports ? 'filter-status active' : 'filter-status';
+    }
+} catch (e) {
+    console.warn('無法讀取本地儲存的過濾設定', e);
+    // 發生錯誤時也預設為 true
+    hideGuestReports = true;
+    if (filterGuestCheckbox) {
+        filterGuestCheckbox.checked = true;
+    }
+}
     
     loadReportList(); // 頁面載入時自動載入報告列表
 });
