@@ -45,7 +45,7 @@ function getCurrentDateStr() {
  * @param {number} maxRequestsPerDay - 每個 IP 每天允許的最大請求數
  * @returns {Function} Express 中間件函數
  */
-function createReportRateLimiter(maxRequestsPerDay = 10) {
+function createReportRateLimiter(maxRequestsPerDay = 3) {
     console.log(`[IP限制器] 已創建報告 IP 限制器，每日最大請求數: ${maxRequestsPerDay}`);
     
     // 啟動午夜清理任務

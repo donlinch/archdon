@@ -1,4 +1,4 @@
-// /public/store/js/report-admin-custom.js - 報告管理後台專用 JS
+// report-admin.js - 增加過濾guest標題功能
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('報告管理後台初始化...');
@@ -16,12 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const searchButton = document.getElementById('search-button');
     const paginationContainer = document.getElementById('pagination');
+    
+    // 新增的過濾控制項
+    const filterGuestCheckbox = document.getElementById('filter-guest-checkbox');
+    const filterToggle = document.getElementById('filter-toggle');
 
     // --- 狀態變數 ---
     let isSubmitting = false;
     let currentPage = 1;
     let totalPages = 1;
     let searchTerm = '';
+    let hideGuestReports = false; // 預設不隱藏guest報告
     const itemsPerPage = 10; // 每頁顯示數量
 
     // --- 輔助函數 ---
@@ -174,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         reportListElement.innerHTML = '<tr><td colspan="5" style="text-align: center;">正在載入報告列表...</td></tr>';
-        console.log(`正在載入報告列表（第 ${currentPage} 頁，搜尋字詞：${searchTerm || '無'}）...`);
+        console.log(`正在載入報告列表（第 ${currentPage} 頁，搜尋字詞：${searchTerm || '無'}，隱藏guest：${hideGuestReports}）...`);
         
         try {
             // 構建 API URL，包含分頁和搜尋參數
@@ -202,18 +207,36 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log(`載入了 ${reports.length} 個報告（總計 ${total_items} 個）`);
 
+            // 在前端過濾掉標題為 "guest" 的報告（如果過濾選項啟用）
+            let displayedReports = reports;
+            if (hideGuestReports) {
+                displayedReports = reports.filter(report => report.title.toLowerCase() !== 'guest');
+                console.log(`過濾後剩餘 ${displayedReports.length} 個報告`);
+            }
+
             // 更新分頁 UI
             generatePagination(currentPage, totalPages);
 
             reportListElement.innerHTML = '';
 
-            if (reports.length === 0) {
-                reportListElement.innerHTML = '<tr><td colspan="5" style="text-align: center;">尚無報告或沒有符合搜尋條件的結果</td></tr>';
+            if (displayedReports.length === 0) {
+                let message = '尚無報告';
+                if (hideGuestReports) {
+                    message = '尚無非guest報告或沒有符合搜尋條件的結果';
+                } else if (searchTerm) {
+                    message = '沒有符合搜尋條件的結果';
+                }
+                reportListElement.innerHTML = `<tr><td colspan="5" style="text-align: center;">${message}</td></tr>`;
                 return;
             }
 
-            reports.forEach((report, index) => {
+            displayedReports.forEach((report, index) => {
                 const tr = document.createElement('tr');
+                
+                // 標記guest報告的行
+                if (report.title.toLowerCase() === 'guest') {
+                    tr.className = 'guest-report-row';
+                }
                 
                 // 編號列（根據當前頁碼和每頁數量計算）
                 const indexCell = document.createElement('td');
@@ -223,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 標題列
                 const titleCell = document.createElement('td');
                 titleCell.textContent = report.title;
+                if (report.title.toLowerCase() === 'guest') {
+                    titleCell.innerHTML = `<span class="guest-title">${report.title}</span>`;
+                }
                 tr.appendChild(titleCell);
                 
                 // 檔案大小列
@@ -427,6 +453,18 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = 1; // 搜尋時重置到第一頁
         loadReportList();
     };
+    
+    // 切換是否隱藏guest報告
+    const toggleGuestFilter = () => {
+        hideGuestReports = filterGuestCheckbox.checked;
+        // 更新過濾狀態顯示
+        filterToggle.textContent = hideGuestReports ? '僅顯示非guest報告中...' : '顯示全部報告';
+        filterToggle.className = hideGuestReports ? 'filter-status active' : 'filter-status';
+        
+        // 重新載入報告列表（恢復到第一頁）
+        currentPage = 1;
+        loadReportList();
+    };
 
     // --- 事件監聽器綁定 ---
     if (saveButton) {
@@ -460,7 +498,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // 綁定過濾切換事件
+    if (filterGuestCheckbox) {
+        filterGuestCheckbox.addEventListener('change', toggleGuestFilter);
+    }
 
     // --- 初始化 ---
+    
+    // 檢查本地儲存中是否有隱藏guest的設定
+    try {
+        const storedPreference = localStorage.getItem('hideGuestReports');
+        if (storedPreference !== null) {
+            hideGuestReports = storedPreference === 'true';
+            if (filterGuestCheckbox) {
+                filterGuestCheckbox.checked = hideGuestReports;
+            }
+            if (filterToggle) {
+                filterToggle.textContent = hideGuestReports ? '僅顯示非guest報告中...' : '顯示全部報告';
+                filterToggle.className = hideGuestReports ? 'filter-status active' : 'filter-status';
+            }
+        }
+    } catch (e) {
+        console.warn('無法讀取本地儲存的過濾設定', e);
+    }
+    
     loadReportList(); // 頁面載入時自動載入報告列表
 });
