@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(errData.error || `刪除失敗 (${response.status})`);
                 }
-
+   
             } catch (err) {
                 console.error('刪除報告失敗:', err);
                 showStatus(`刪除報告 ID ${reportId} 失敗: ${err.message}`, true);

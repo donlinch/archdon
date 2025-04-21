@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>報告檢視</title> <!-- 標題會由 JS 動態修改 -->
+    <!-- <link rel="stylesheet" href="/css/report-view.css"> --> <!-- (可選) -->
+    <style>
+        /* 關鍵樣式：讓 iframe 填滿螢幕 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* 防止 body 本身滾動 */
+            background-color: #f8f9fa; /* (可選) 淺灰色背景 */
+            font-family: sans-serif; /* 用於載入/錯誤訊息 */
+        }
+        #controls { /* 列印按鈕的容器 */
+            padding: 8px;
+            text-align: right;
+            background-color: #e9ecef;
+            border-bottom: 1px solid #dee2e6;
+        }
+         #controls button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+         }
+        #report-container {
+            /* 計算高度以減去控制列的高度，或使用 Flexbox */
+            height: calc(100% - 41px); /* 假設控制列高度約 41px */
+            width: 100%;
+            display: flex; /* 讓 iframe 填滿 */
+            box-sizing: border-box;
+        }
+        #report-iframe {
+            flex-grow: 1; /* iframe 填滿容器 */
+            border: none; /* 移除邊框 */
+            background-color: #fff; /* 內容區背景 */
+        }   
+        .loading, .error {
+            padding: 30px;
+            text-align: center;
+            color: #6c757d;
+            width: 100%; /* 讓訊息置中 */
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- (可選) 添加控制列，例如放列印按鈕 -->
+    <div id="controls">
+        <button id="print-report-btn" style="display: none;">列印此報告</button>
+        <!-- 可以考慮加個關閉按鈕 window.close() -->
+    </div>
+
+    <!-- iframe 的容器 -->
+    <div id="report-container">
+        <p class="loading">正在載入報告...</p>
+    </div>
+
+    <!-- 引入 JavaScript 檔案 (我們將在下一步創建) -->
+    <script src="/js/report-viewer.js"></script>
+</body>
+</html>

@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             // 提示使用者可能需要手動列印
                             alert("無法自動觸發列印。您可能需要右鍵點擊報告內容區域選擇列印，或檢查瀏覽器設置。");
                         }
-                    } else {
+                    } else {   
                         alert("報告內容尚未完全載入，無法列印。");
                     }
                 };

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML 報告編輯器</title>
+    <!-- (可選) 引入您網站的通用樣式 -->
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        /* 頁面特定樣式 */
+        body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
+        }
+        textarea { min-height: 250px; font-family: monospace; }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            margin-right: 10px;
+        }
+        button:disabled { background-color: #aaa; cursor: not-allowed; }
+        button.secondary { background-color: #6c757d; }
+        button.danger { background-color: #dc3545; }
+        #status-message { margin-top: 15px; font-weight: bold; }
+        .status-success { color: green; }
+        .status-error { color: red; }
+        .report-list-container { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        #report-list ul { list-style: none; padding: 0; }
+        #report-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #report-list li:last-child { border-bottom: none; }
+        .report-actions button, .report-actions a {
+            margin-left: 8px;
+            padding: 3px 8px; /* Smaller buttons for actions */
+            font-size: 0.9em;
+            text-decoration: none; /* For link button */
+        }
+        .report-actions a.button-like { /* Make link look like button */
+             background-color: #17a2b8; color: white; border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>HTML 報告編輯器</h1>
+    <a href="/">返回網站首頁</a> <!-- 或是您想要的其他返回連結 -->
+
+    <div id="report-form">
+        <input type="hidden" id="editing-report-id" value=""> <!-- 隱藏欄位，用於記錄正在編輯的 ID -->
+
+        <div class="form-group">
+            <label for="report-title">報告標題:</label>
+            <input type="text" id="report-title" placeholder="請輸入報告的標題" required>
+        </div>
+
+        <div class="form-group">
+            <label for="html-content">HTML 內容:</label>
+            <textarea id="html-content" placeholder="在此輸入完整的 HTML 程式碼..." required></textarea>
+        </div>
+
+        <button id="save-button">儲存新報告</button>
+        <button id="cancel-edit-button" class="secondary" style="display: none;">取消編輯</button>
+
+        <div id="status-message"></div>
+    </div>
+   
+    <div class="report-list-container">
+        <h2>已儲存的報告列表</h2>
+        <button id="refresh-list-btn" class="secondary" style="margin-bottom: 10px;">重新整理列表</button>
+        <div id="report-list">
+            <p>正在載入列表...</p>
+            <ul>
+                <!-- 列表內容將由 JavaScript 填充 -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- 引入 JavaScript 檔案 (我們將在下一步創建) -->
+    <script src="/js/report-editor.js"></script>
+</body>
+</html>
