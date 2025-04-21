@@ -3,31 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>報告檢視</title> <!-- 標題會由 JS 動態修改 -->
-    <!-- <link rel="stylesheet" href="/css/report-view.css"> --> <!-- (可選) -->
+    <title>報告檢視 - SunnyYummy</title> <!-- 標題會由 JS 動態修改 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8f9fa; font-family: sans-serif; }
-        #controls { padding: 8px; text-align: right; background-color: #e9ecef; border-bottom: 1px solid #dee2e6; box-sizing: border-box; /* 確保 padding 不影響高度計算 */ height: 41px; /* 固定高度 */ }
-        #controls button { padding: 5px 10px; font-size: 0.9em; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        #controls button:disabled { background-color: #aaa; }
-        #report-container { height: calc(100% - 41px); /* 減去控制列高度 */ width: 100%; display: flex; box-sizing: border-box; }
-        #report-iframe { flex-grow: 1; border: none; background-color: #fff; }
-        .loading, .error { padding: 30px; text-align: center; color: #6c757d; width: 100%; }
-        .error { color: #dc3545; font-weight: bold; }
+        /* --- 基本樣式 --- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #fff5f7; /* 淡粉色背景 */
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        /* --- 控制列樣式 --- */
+        #controls {
+            padding: 10px 20px;
+            text-align: right;
+            background-color: #FFB74D; /* 黃橙色控制列 */
+            color: white;
+            border-bottom: 1px solid #f0f0f0;
+            box-sizing: border-box;
+            height: 55px; /* 固定高度 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .controls-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .back-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-right: 20px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .back-link:hover {
+            transform: translateX(-3px);
+        }
+        
+        .back-link:before {
+            content: "←";
+            margin-right: 5px;
+            font-size: 1.1rem;
+        }
+
+        #controls button {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            background-color: white;
+            color: #FFB74D;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #controls button:hover:not(:disabled) {
+            background-color: #f8f8f8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        #controls button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #controls button:disabled {
+            background-color: #f0f0f0;
+            color: #aaa;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        /* --- 免責聲明 --- */
+        .disclaimer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            color: #888;
+            background-color: rgba(255,255,255,0.9);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+
+        /* --- 報告iframe容器 --- */
+        #report-container {
+            height: calc(100% - 55px); /* 減去控制列高度 */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        #report-iframe {
+            flex-grow: 1;
+            width: 100%;
+            border: none;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #report-iframe.loaded {
+            opacity: 1;
+        }
+
+        /* --- 載入和錯誤提示 --- */
+        .loading, .error {
+            padding: 30px;
+            text-align: center;
+            color: #757575;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .loading-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            animation: bounce 1.5s infinite;
+        }
+
+        .error {
+            color: #e53935;
+            font-weight: bold;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* --- 裝飾元素 --- */
+        .decoration {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.1;
+            user-select: none;
+            z-index: -1;
+        }
+
+        .decoration-1 {
+            top: 20%;
+            left: 5%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .decoration-2 {
+            top: 40%;
+            right: 7%;
+            animation: float 7s ease-in-out infinite 1s;
+        }
+
+        .decoration-3 {
+            bottom: 15%;
+            left: 10%;
+            animation: float 9s ease-in-out infinite 2s;
+        }
+
+        .decoration-4 {
+            bottom: 30%;
+            right: 8%;
+            animation: float 6s ease-in-out infinite 0.5s;
+        }
+
+        /* --- 動畫 --- */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        /* --- 響應式設計 --- */
+        @media (max-width: 768px) {
+            .controls-title {
+                font-size: 1rem;
+                max-width: 200px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            #controls button {
+                padding: 6px 12px;
+                font-size: 0.8em;
+            }
+            
+            .back-link {
+                font-size: 0.8rem;
+                margin-right: 10px;
+            }
+
+            .decoration {
+                display: none; /* 在小屏幕上隱藏裝飾 */
+            }
+        }
+    
     </style>
 </head>
 <body>
-    <!-- 控制列 -->
-    <div id="controls" style="display: none;"> <!-- 預設隱藏，內容載入成功再顯示 -->
-        <button id="print-report-btn" disabled>列印此報告</button>
-    </div>
+     <!-- 裝飾元素 -->
+     <div class="decoration decoration-1">🌸</div>
+     <div class="decoration decoration-2">✨</div>
+     <div class="decoration decoration-3">🎵</div>
+     <div class="decoration decoration-4">🎨</div>
+ 
+     <!-- 控制列 -->
+     <div id="controls" style="display: none;"> <!-- 預設隱藏，內容載入成功再顯示 -->
+         <div class="controls-left">
+             <a href="/" class="back-link">返回首頁</a> <small>    網站僅提供 HTML 生成與轉換服務，對報告內容與完整性不負任何責任。</small>
+             
+         </div>
+         <button id="print-report-btn" disabled>列印此報告 🖨️</button>
+     </div>
 
     <!-- iframe 的容器 -->
     <div id="report-container">
+        <div class="loading-icon">🎀</div>
         <p class="loading">正在載入報告...</p>
     </div>
 
     <!-- *** 引入 JavaScript 檔案，使用絕對路徑 *** -->
     <script src="report-viewer.js"></script>
+
+
+
+
+     
+
+
+
+
+
 </body>
 </html>
