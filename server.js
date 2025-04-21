@@ -1318,6 +1318,7 @@ reportTemplatesRouter.delete('/:id', async (req, res) => {
 
 // *** 非常重要：將定義好的 Router 掛載到 Express App 上 ***
 // 這行告訴 Express，所有指向 /api/reports 的請求都由 reportTemplatesRouter 來處理
+app.use('/store/api/reports', reportTemplatesRouter);
 app.use('/api/reports', reportTemplatesRouter);
 
 // --- 結束 Report Templates API ---
