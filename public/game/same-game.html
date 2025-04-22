@@ -26,7 +26,7 @@
             position: relative;
         }
 
- body {
+        body {
             font-family: 'Noto Sans TC', sans-serif;
             background-color: #fff5f7; /* 淡粉色背景 */
             color: #333;
@@ -55,7 +55,6 @@
             width: 100%;
             max-width: 800px;
             margin: 2rem auto;
-          /*  padding: 20px; */
             position: relative;
         }
         
@@ -84,7 +83,6 @@
             position: relative;
             overflow: hidden;
         }
-
 
         /* --- 底部導航 --- */
         .bottom-nav {
@@ -180,6 +178,29 @@
         }
         
         /* Game elements */
+        .template-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .template-select {
+
+            padding: 10px 15px;
+            border-radius: 25px;
+            border: 2px solid #FFB74D;
+            background-color: white;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 1rem;
+            color: #333;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .template-select:hover, .template-select:focus {
+            box-shadow: 0 0 10px rgba(255, 183, 77, 0.5);
+        }
+        
         .game-info {
             text-align: center;
             margin-bottom: 20px;
@@ -213,28 +234,12 @@
             perspective: 1000px;
         }
         
-        .game-board.level-1 {
-            grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .game-board.level-2 {
-            grid-template-columns: repeat(4, 1fr);
-        }
-        
-        .game-board.level-3 {
-            grid-template-columns: repeat(4, 1fr);
-        }
-        
         .card {
             position: relative;
             height: 120px;
             cursor: pointer;
             transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .level-3 .card {
-            height: 100px;
         }
         
         .card.flipped {
@@ -579,6 +584,52 @@
             box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
         }
         
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 183, 77, 0.3);
+            border-radius: 50%;
+            border-top-color: #FFB74D;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-container {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        /* Select Template Button */
+        .template-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .template-btn {
+            background-color: #FFB74D;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+        }
+        
+        .template-btn:hover {
+            background-color: #ffa726;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
+        }
+        
         /* Footer */
         .footer {
             text-align: center;
@@ -597,6 +648,73 @@
             text-decoration: underline;
         }
         
+        /* Template Selection Modal */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .template-card {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .template-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .template-card.active {
+            border: 3px solid #4caf50;
+        }
+        
+        .template-card-header {
+            background-color: #FFB74D;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .template-card-body {
+            padding: 15px;
+        }
+        
+        .template-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .template-difficulty {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .difficulty-easy {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .difficulty-normal {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+        
+        .difficulty-hard {
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+        
         /* Responsive design */
         @media (max-width: 768px) {
             .page-container {
@@ -612,15 +730,15 @@
                 height: 100px;
             }
             
-            .level-3 .card {
-                height: 80px;
-            }
-            
             .leaderboard-btn {
                 top: 15px;
                 left: 15px;
                 padding: 6px 12px;
                 font-size: 0.8rem;
+            }
+            
+            .template-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             }
         }
         
@@ -631,10 +749,6 @@
             
             .card {
                 height: 80px;
-            }
-            
-            .level-3 .card {
-                height: 60px;
             }
             
             .level-info, .moves-counter {
@@ -656,46 +770,69 @@
                 padding: 10px 20px;
                 font-size: 0.9rem;
             }
+            
+            .template-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="page-container">
         <header class="page-header">
-            <h1 class="page-title">SunnyYummy 翻牌對對碰</h1>
+            <h1 class="page-title">翻牌對對碰</h1>
         </header>
         
         <main class="game-container">
-            <!-- Leaderboard Button -->
-            <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
-            
-            <!-- Game Info -->
-            <div class="game-info">
-                <div class="level-info">第 <span id="currentLevel">1</span> 關</div>
-                <div class="moves-counter">移動次數: <span id="moveCounter">0</span></div>
+            <!-- 模板選擇 -->
+            <div class="template-selector">
+                <button id="templateSelectorBtn" class="template-btn">
+                    選擇遊戲模板
+                </button>
             </div>
             
-            <!-- Game Board -->
-            <div id="gameBoard" class="game-board level-1"></div>
-            
-            <!-- Win Message (Hidden by default) -->
-            <div id="winMessage" class="win-message" style="display: none;">
-                <h2 class="win-message-title">恭喜！你贏了！</h2>
-                <p id="winMessageText">總共使用了 <span id="levelMoves">0</span> 次移動完成本關。</p>
+            <!-- 遊戲區域 (初始隱藏) -->
+            <div id="gameArea" style="display: none;">
+                <!-- Leaderboard Button -->
+                <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
+                
+                <!-- Game Info -->
+                <div class="game-info">
+                    <div class="level-info">
+                        <span id="templateNameDisplay">未選擇模板</span> - 
+                        第 <span id="currentLevel">1</span> 關
+                    </div>
+                    <div class="moves-counter">移動次數: <span id="moveCounter">0</span></div>
+                </div>
+                
+                <!-- Game Board -->
+                <div id="gameBoard" class="game-board"></div>
+                
+                <!-- Win Message (Hidden by default) -->
+                <div id="winMessage" class="win-message" style="display: none;">
+                    <h2 class="win-message-title">恭喜！你贏了！</h2>
+                    <p id="winMessageText">總共使用了 <span id="levelMoves">0</span> 次移動完成本關。</p>
+                </div>
+                
+                <!-- Game Controls -->
+                <div class="game-controls">
+                    <button id="resetBtn" class="reset-btn">重新開始</button>
+                    <button id="nextLevelBtn" class="next-level-btn" style="display: none;">進入下一關</button>
+                </div>
+                
+                <!-- Fireworks (Hidden by default) -->
+                <div id="fireworksContainer" class="fireworks-container" style="display: none;">
+                    <div class="firework"></div>
+                    <div class="firework"></div>
+                    <div class="firework"></div>
+                    <div class="firework"></div>
+                </div>
             </div>
             
-            <!-- Game Controls -->
-            <div class="game-controls">
-                <button id="resetBtn" class="reset-btn">重新開始</button>
-                <button id="nextLevelBtn" class="next-level-btn" style="display: none;">進入第2關</button>
-            </div>
-            
-            <!-- Fireworks (Hidden by default) -->
-            <div id="fireworksContainer" class="fireworks-container" style="display: none;">
-                <div class="firework"></div>
-                <div class="firework"></div>
-                <div class="firework"></div>
-                <div class="firework"></div>
+            <!-- 載入中顯示 -->
+            <div id="loadingContainer" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="mt-3">正在載入遊戲資源...</p>
             </div>
         </main>
         
@@ -704,11 +841,32 @@
         </footer>
     </div>
     
-    <!-- Leaderboard Modal -->
+    <!-- 模板選擇模態框 -->
+    <div id="templateSelectionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">選擇遊戲模板</h2>
+            </div>
+            
+            <div id="templatesList" class="template-grid">
+                <!-- 模板卡片將通過 JavaScript 動態生成 -->
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-3">正在載入模板...</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="closeTemplateModalBtn" class="close-modal-btn">關閉</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 排行榜模態框 -->
     <div id="leaderboardModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">排行榜 - 前20名</h2>
+                <h2 class="modal-title">排行榜 - 前10名</h2>
             </div>
             
             <table class="leaderboard-table">
@@ -730,17 +888,18 @@
         </div>
     </div>
     
-    <!-- Name Input Modal -->
+    <!-- 姓名輸入模態框 -->
     <div id="nameInputModal" class="modal-overlay">
         <div class="name-input-container">
             <h2 class="name-input-title">恭喜！你完成了所有關卡！</h2>
             <p>總步數：<span id="totalMoves">0</span></p>
             <p>請輸入你的名字加入排行榜：</p>
-            <input type="text" id="playerNameInput" class="name-input" placeholder="輸入你的名字" autocomplete="off">
+            <input type="text" id="playerNameInput" class="name-input" placeholder="輸入你的名字" autocomplete="off" maxlength="20">
             <button id="submitNameBtn" class="submit-name-btn">提交</button>
         </div>
     </div>
-<!-- 底部導航 -->
+    
+    <!-- 底部導航 -->
     <nav class="bottom-nav">
         <ul>
             <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
@@ -752,58 +911,32 @@
         </ul>
     </nav>
      
-
-    
     <script>
-        // Game state
-        const gameState = { 
- 
-            level: 1,
+        // 全域變數
+        const gameState = {
+            templateId: null,
+            templateName: '',
+            currentLevel: 1,
+            maxLevel: 0,
             cards: [],
             flipped: [],
             matched: [],
             moves: 0,
             totalMoves: 0,
             gameWon: false,
-            
-            // Level images
-            images: {
-                level1: [
-                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
-                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg"
-                ],
-                level2: [
-                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
-                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg",
-                    "https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744875191661-9152.png"
-                ],
-                level3: [
-                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
-                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg",
-                    "https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744875191661-9152.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744875184954-36224.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744875177880-30033.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744904373732-70451.png",
-                    "https://sunnyyummy.onrender.com/uploads/1744906516683-72487.png"
-                ]
-            },
-            
-            // Leaderboard
-            leaderboard: [
-                { name: "玩家1", moves: 24 },
-                { name: "玩家2", moves: 26 },
-                { name: "玩家3", moves: 28 },
-                { name: "玩家4", moves: 30 },
-                { name: "玩家5", moves: 32 }
-            ],
-            
-            currentPlayer: ""
+            levels: [],
+            leaderboard: []
         };
         
-        // DOM Elements
+        // DOM 元素
         const elements = {
+            gameArea: document.getElementById('gameArea'),
+            loadingContainer: document.getElementById('loadingContainer'),
+            templateSelectorBtn: document.getElementById('templateSelectorBtn'),
+            templateSelectionModal: document.getElementById('templateSelectionModal'),
+            templatesList: document.getElementById('templatesList'),
+            closeTemplateModalBtn: document.getElementById('closeTemplateModalBtn'),
+            templateNameDisplay: document.getElementById('templateNameDisplay'),
             gameBoard: document.getElementById('gameBoard'),
             currentLevel: document.getElementById('currentLevel'),
             moveCounter: document.getElementById('moveCounter'),
@@ -823,46 +956,254 @@
             submitNameBtn: document.getElementById('submitNameBtn')
         };
         
-        // Initialize the game
-        function initializeLevel(level) {
-            // Clear game state
-            gameState.level = level;
+        // 當文檔加載完成時
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化事件監聽器
+            initEventListeners();
+            
+            // 載入可用的模板
+            loadTemplates();
+            
+            // 檢查 URL 中是否有模板 ID 參數
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateIdParam = urlParams.get('template');
+            
+            if (templateIdParam) {
+                // 直接載入指定的模板
+                loadGameTemplate(templateIdParam);
+            } else {
+                // 隱藏載入中顯示，顯示模板選擇
+                elements.loadingContainer.style.display = 'none';
+            }
+        });
+        
+        // 初始化事件監聽器
+        function initEventListeners() {
+            // 模板選擇按鈕
+            elements.templateSelectorBtn.addEventListener('click', () => {
+                showTemplateSelectionModal();
+            });
+            
+            // 關閉模板選擇模態框
+            elements.closeTemplateModalBtn.addEventListener('click', () => {
+                hideModal(elements.templateSelectionModal);
+            });
+            
+            // 重置按鈕
+            elements.resetBtn.addEventListener('click', resetLevel);
+            
+            // 下一關按鈕
+            elements.nextLevelBtn.addEventListener('click', goToNextLevel);
+            
+            // 排行榜按鈕
+            elements.leaderboardBtn.addEventListener('click', () => {
+                renderLeaderboard();
+                showModal(elements.leaderboardModal);
+            });
+            
+            // 關閉排行榜模態框
+            elements.closeLeaderboardBtn.addEventListener('click', () => {
+                hideModal(elements.leaderboardModal);
+            });
+            
+            // 提交玩家名稱
+            elements.submitNameBtn.addEventListener('click', submitPlayerName);
+            
+            // 姓名輸入框按 Enter 鍵
+            elements.playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitPlayerName();
+                }
+            });
+            
+            // 點擊模態框背景關閉
+            elements.templateSelectionModal.addEventListener('click', (e) => {
+                if (e.target === elements.templateSelectionModal) {
+                    hideModal(elements.templateSelectionModal);
+                }
+            });
+            
+            elements.leaderboardModal.addEventListener('click', (e) => {
+                if (e.target === elements.leaderboardModal) {
+                    hideModal(elements.leaderboardModal);
+                }
+            });
+            
+            elements.nameInputModal.addEventListener('click', (e) => {
+                if (e.target === elements.nameInputModal) {
+                    hideModal(elements.nameInputModal);
+                }
+            });
+        }
+        
+        // 載入遊戲模板列表
+        function loadTemplates() {
+            fetch('/api/samegame/active-templates')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('無法載入模板列表');
+                    }
+                    return response.json();
+                })
+                .then(templates => {
+                    renderTemplateSelection(templates);
+                })
+                .catch(error => {
+                    console.error('載入模板列表出錯:', error);
+                    elements.templatesList.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-danger">載入模板失敗</p>
+                            <p class="text-muted">請稍後再試</p>
+                        </div>
+                    `;
+                });
+        }
+        
+        // 渲染模板選擇
+        function renderTemplateSelection(templates) {
+            if (!templates || templates.length === 0) {
+                elements.templatesList.innerHTML = `
+                    <div class="text-center py-4">
+                        <p>暫無可用的遊戲模板</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            templates.forEach(template => {
+                const difficultyClass = getDifficultyClass(template.difficulty);
+                
+                html += `
+                    <div class="template-card" data-id="${template.id}">
+                        <div class="template-card-header">${escapeHtml(template.name)}</div>
+                        <div class="template-card-body">
+                            <p class="template-description">${escapeHtml(template.description || '無描述')}</p>
+                            <div class="template-difficulty ${difficultyClass}">
+                                ${escapeHtml(template.difficulty || '普通')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            elements.templatesList.innerHTML = html;
+            
+            // 綁定模板卡片點擊事件
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const templateId = card.dataset.id;
+                    hideModal(elements.templateSelectionModal);
+                    loadGameTemplate(templateId);
+                });
+            });
+        }
+        
+        // 根據難度獲取 CSS 類名
+        function getDifficultyClass(difficulty) {
+            switch (difficulty) {
+                case '簡單': return 'difficulty-easy';
+                case '普通': return 'difficulty-normal';
+                case '困難': return 'difficulty-hard';
+                default: return 'difficulty-normal';
+            }
+        }
+        
+        // 載入遊戲模板
+        function loadGameTemplate(templateId) {
+            // 清空遊戲狀態
+            gameState.cards = [];
+            gameState.flipped = [];
+            gameState.matched = [];
+            gameState.moves = 0;
+            gameState.totalMoves = 0;
+            gameState.currentLevel = 1;
+            
+            // 顯示載入中
+            elements.gameArea.style.display = 'none';
+            elements.loadingContainer.style.display = 'block';
+            
+            fetch(`/api/samegame/play/${templateId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('無法載入遊戲模板數據');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 保存遊戲數據
+                    gameState.templateId = data.template.id;
+                    gameState.templateName = data.template.name;
+                    gameState.levels = data.levels || [];
+                    gameState.maxLevel = gameState.levels.length;
+                    gameState.leaderboard = data.leaderboard || [];
+                    
+                    // 更新模板名稱顯示
+                    elements.templateNameDisplay.textContent = gameState.templateName;
+                    
+                    // 隱藏載入中，顯示遊戲區域
+                    elements.loadingContainer.style.display = 'none';
+                    elements.gameArea.style.display = 'block';
+                    
+                    // 初始化第一關
+                    initializeLevel(1);
+                })
+                .catch(error => {
+                    console.error('載入遊戲模板出錯:', error);
+                    elements.loadingContainer.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-danger">載入遊戲模板失敗</p>
+                            <p class="text-muted">請稍後再試</p>
+                            <button class="template-btn mt-3" onclick="window.location.reload()">返回</button>
+                        </div>
+                    `;
+                });
+        }
+        
+        // 初始化關卡
+        function initializeLevel(levelNum) {
+            // 檢查關卡號碼是否有效
+            if (levelNum < 1 || levelNum > gameState.maxLevel) {
+                console.error(`無效的關卡號碼: ${levelNum}`);
+                return;
+            }
+            
+            // 更新遊戲狀態
+            gameState.currentLevel = levelNum;
             gameState.flipped = [];
             gameState.matched = [];
             gameState.moves = 0;
             gameState.gameWon = false;
             
-            // Update UI
-            elements.currentLevel.textContent = level;
+            // 更新 UI
+            elements.currentLevel.textContent = levelNum;
             elements.moveCounter.textContent = 0;
             elements.winMessage.style.display = 'none';
             elements.nextLevelBtn.style.display = 'none';
             elements.fireworksContainer.style.display = 'none';
             
-            // Update game board class
-            elements.gameBoard.className = `game-board level-${level}`;
+            // 獲取當前關卡數據
+            const level = gameState.levels.find(l => l.level === levelNum);
             
-            // Generate cards based on level
-            let cardContents = [];
-            
-            if (level === 1) {
-                // Level 1: 2x2 grid with 2 different images
-                const levelImages = gameState.images.level1;
-                cardContents = [...levelImages, ...levelImages];
-            } else if (level === 2) {
-                // Level 2: 4x2 grid with 4 different images
-                const levelImages = gameState.images.level2;
-                cardContents = [...levelImages, ...levelImages];
-            } else if (level === 3) {
-                // Level 3: 4x4 grid with 8 different images
-                const levelImages = gameState.images.level3;
-                cardContents = [...levelImages, ...levelImages];
+            if (!level) {
+                console.error(`找不到關卡數據: ${levelNum}`);
+                return;
             }
             
-            // Shuffle the cards
+            // 設置網格大小
+            elements.gameBoard.className = `game-board`;
+            elements.gameBoard.style.gridTemplateColumns = `repeat(${level.columns}, 1fr)`;
+            
+            // 生成卡片
+            const cardImages = level.images || [];
+            
+            // 製作牌組 (兩張相同的牌)
+            let cardContents = [...cardImages, ...cardImages];
+            
+            // 洗牌
             shuffleArray(cardContents);
             
-            // Create card objects
+            // 創建卡片對象
             gameState.cards = cardContents.map((content, index) => ({
                 id: index,
                 content: content,
@@ -870,11 +1211,11 @@
                 matched: false
             }));
             
-            // Render the game board
+            // 渲染遊戲板
             renderGameBoard();
         }
         
-        // Shuffle array (Fisher-Yates algorithm)
+        // 洗牌算法 (Fisher-Yates)
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -883,7 +1224,7 @@
             return array;
         }
         
-        // Render game board
+        // 渲染遊戲板
         function renderGameBoard() {
             elements.gameBoard.innerHTML = '';
             
@@ -916,7 +1257,73 @@
             });
         }
         
-        // Create ripple effect
+        // 處理卡片點擊
+        function handleCardClick(id) {
+            // 獲取卡片元素
+            const cardElement = document.querySelector(`.card[data-id="${id}"]`);
+            
+            // 防止點擊已經翻開或已匹配的卡片，或當已經有兩張卡片被翻開時
+            if (gameState.flipped.length === 2 || gameState.flipped.includes(id) || gameState.matched.includes(id)) {
+                return;
+            }
+            
+            // 創建波紋效果
+            createRippleEffect(cardElement);
+            
+            // 將卡片添加到已翻開數組
+            gameState.flipped.push(id);
+            
+            // 翻開卡片
+            cardElement.classList.add('flipped');
+            
+            // 更新移動次數
+            gameState.moves++;
+            elements.moveCounter.textContent = gameState.moves;
+            
+            // 檢查是否有兩張卡片被翻開
+            if (gameState.flipped.length === 2) {
+                // 獲取兩張翻開的卡片內容
+                const card1 = gameState.cards.find(card => card.id === gameState.flipped[0]);
+                const card2 = gameState.cards.find(card => card.id === gameState.flipped[1]);
+                
+                // 檢查它們是否匹配
+                if (card1.content === card2.content) {
+                    // 添加到已匹配數組
+                    setTimeout(() => {
+                        // 更新匹配狀態
+                        gameState.matched.push(...gameState.flipped);
+                        
+                        // 更新卡片元素
+                        gameState.flipped.forEach(id => {
+                            const card = document.querySelector(`.card[data-id="${id}"]`);
+                            card.classList.add('matched');
+                        });
+                        
+                        // 檢查是否獲勝
+                        if (gameState.matched.length === gameState.cards.length) {
+                            gameWon();
+                        }
+                        
+                        // 重置已翻開
+                        gameState.flipped = [];
+                    }, 300);
+                } else {
+                    // 如果不匹配，延遲後翻回
+                    setTimeout(() => {
+                        // 翻回卡片
+                        gameState.flipped.forEach(id => {
+                            const card = document.querySelector(`.card[data-id="${id}"]`);
+                            card.classList.remove('flipped');
+                        });
+                        
+                        // 重置已翻開
+                        gameState.flipped = [];
+                    }, 1000);
+                }
+            }
+        }
+        
+        // 創建波紋效果
         function createRippleEffect(element) {
             const ripple = document.createElement('span');
             ripple.className = 'ripple';
@@ -926,7 +1333,7 @@
             
             ripple.style.width = ripple.style.height = `${size}px`;
             
-            // Get mouse position relative to element
+            // 獲取相對於元素的鼠標位置
             const x = event.clientX - rect.left - size / 2;
             const y = event.clientY - rect.top - size / 2;
             
@@ -940,227 +1347,154 @@
             }, 600);
         }
         
-        // Handle card click
-        function handleCardClick(id) {
-            // Get the card element
-            const cardElement = document.querySelector(`.card[data-id="${id}"]`);
-            
-            // Prevent click if already flipped or matched or if two cards are already flipped
-            if (gameState.flipped.length === 2 || gameState.flipped.includes(id) || gameState.matched.includes(id)) {
-                return;
-            }
-            
-            // Create ripple effect
-            createRippleEffect(cardElement);
-            
-            // Add card to flipped array
-            gameState.flipped.push(id);
-            
-            // Flip the card
-            cardElement.classList.add('flipped');
-            
-            // Update moves counter
-            gameState.moves++;
-            elements.moveCounter.textContent = gameState.moves;
-            
-            // Check if we have 2 cards flipped
-            if (gameState.flipped.length === 2) {
-                // Get the contents of the two flipped cards
-                const card1 = gameState.cards.find(card => card.id === gameState.flipped[0]);
-                const card2 = gameState.cards.find(card => card.id === gameState.flipped[1]);
-                
-                // Check if they match
-                if (card1.content === card2.content) {
-                    // Add to matched array with a small delay
-                    setTimeout(() => {
-                        // Update matched status
-                        gameState.matched.push(...gameState.flipped);
-                        
-                        // Update card elements
-                        gameState.flipped.forEach(id => {
-                            const card = document.querySelector(`.card[data-id="${id}"]`);
-                            card.classList.add('matched');
-                        });
-                        
-                        // Check if game is won
-                        if (gameState.matched.length === gameState.cards.length) {
-                            gameWon();
-                        }
-                        
-                        // Reset flipped
-                        gameState.flipped = [];
-                    }, 300);
-                } else {
-                    // If they don't match, flip them back after a delay
-                    setTimeout(() => {
-                        // Flip back cards
-                        gameState.flipped.forEach(id => {
-                            const card = document.querySelector(`.card[data-id="${id}"]`);
-                            card.classList.remove('flipped');
-                        });
-                        
-                        // Reset flipped
-                        gameState.flipped = [];
-                    }, 1000);
-                }
-            }
-        }
-        
-        // Handle game win
+        // 處理獲勝
         function gameWon() {
             gameState.gameWon = true;
             
-            // Update win message
+            // 更新獲勝消息
             elements.levelMoves.textContent = gameState.moves;
             elements.winMessage.style.display = 'block';
             
-            // Update total moves
+            // 更新總移動次數
             gameState.totalMoves += gameState.moves;
             
-            // Show next level button or fireworks
-            if (gameState.level < 3) {
-                elements.nextLevelBtn.textContent = `進入第${gameState.level + 1}關`;
+            // 顯示下一關按鈕或煙火
+            if (gameState.currentLevel < gameState.maxLevel) {
+                elements.nextLevelBtn.textContent = `進入第${gameState.currentLevel + 1}關`;
                 elements.nextLevelBtn.style.display = 'block';
             } else {
-                // Game completed - show fireworks
+                // 遊戲完成 - 顯示煙火
                 elements.fireworksContainer.style.display = 'block';
                 
-                // Update final win message
+                // 更新最終獲勝訊息
                 elements.winMessageText.innerHTML = `
                     總共使用了 ${gameState.moves} 次移動完成本關。<br>
-                    <strong class="text-blue-600">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
+                    <strong style="color: #4caf50">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
                 `;
                 
-                // Check if the score is in the top 20
-                if (gameState.leaderboard.length < 20 || gameState.totalMoves < gameState.leaderboard[gameState.leaderboard.length - 1].moves) {
-                    setTimeout(() => {
-                        // Show name input modal
-                        elements.totalMoves.textContent = gameState.totalMoves;
-                        showModal(elements.nameInputModal);
-                    }, 1500);
-                }
+                // 檢查是否能進入排行榜
+                checkLeaderboardEligibility();
             }
         }
         
-        // Reset game
-        function resetGame() {
-            initializeLevel(gameState.level);
+        // 檢查是否有資格進入排行榜
+        function checkLeaderboardEligibility() {
+            if (gameState.leaderboard.length < 10 || gameState.totalMoves < gameState.leaderboard[gameState.leaderboard.length - 1].total_moves) {
+                setTimeout(() => {
+                    // 顯示名稱輸入模態框
+                    elements.totalMoves.textContent = gameState.totalMoves;
+                    showModal(elements.nameInputModal);
+                }, 1500);
+            }
         }
         
-        // Go to next level
-        function goToNextLevel() {
-            initializeLevel(gameState.level + 1);
-        }
-        
-        // Update leaderboard with new score
-        function updateLeaderboard(name, score) {
-            // Add new entry
-            gameState.leaderboard.push({ name, moves: score });
+        // 提交玩家名稱到排行榜
+        function submitPlayerName() {
+            const playerName = elements.playerNameInput.value.trim() || "無名英雄";
             
-            // Sort by moves (ascending - lower is better)
-            gameState.leaderboard.sort((a, b) => a.moves - b.moves);
+            if (playerName.length > 20) {
+                alert('名稱最多只能有20個字元');
+                return;
+            }
             
-            // Keep only top 20
-            gameState.leaderboard = gameState.leaderboard.slice(0, 20);
+            const leaderboardData = {
+                template_id: gameState.templateId,
+                player_name: playerName,
+                total_moves: gameState.totalMoves
+            };
             
-            // Save to local storage
-            localStorage.setItem('leaderboard', JSON.stringify(gameState.leaderboard));
-            
-            // Render leaderboard
-            renderLeaderboard();
-            
-            // Show leaderboard
-            showModal(elements.leaderboardModal);
-        }
-        
-        // Render leaderboard
-        function renderLeaderboard() {
-            elements.leaderboardBody.innerHTML = '';
-            
-            gameState.leaderboard.forEach((entry, index) => {
-                const row = document.createElement('tr');
-                
-                // Highlight current player
-                if (entry.name === gameState.currentPlayer && entry.moves === gameState.totalMoves) {
-                    row.classList.add('highlight');
+            fetch('/api/samegame/leaderboard', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(leaderboardData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('提交排行榜失敗');
                 }
+                return response.json();
+            })
+            .then(data => {
+                // 隱藏名稱輸入模態框
+                hideModal(elements.nameInputModal);
                 
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${entry.name}</td>
-                    <td>${entry.moves}</td>
-                `;
-                
-                elements.leaderboardBody.appendChild(row);
+                // 重新載入排行榜
+                fetch(`/api/samegame/leaderboard?template_id=${gameState.templateId}`)
+                    .then(response => response.json())
+                    .then(leaderboardData => {
+                        gameState.leaderboard = leaderboardData;
+                        renderLeaderboard();
+                        showModal(elements.leaderboardModal);
+                    });
+            })
+            .catch(error => {
+                console.error('提交排行榜時出錯:', error);
+                alert('提交排行榜失敗，請稍後再試');
             });
         }
         
-        // Show modal
+        // 重置當前關卡
+        function resetLevel() {
+            initializeLevel(gameState.currentLevel);
+        }
+        
+        // 進入下一關
+        function goToNextLevel() {
+            if (gameState.currentLevel < gameState.maxLevel) {
+                initializeLevel(gameState.currentLevel + 1);
+            }
+        }
+        
+        // 渲染排行榜
+        function renderLeaderboard() {
+            let html = '';
+            
+            if (gameState.leaderboard.length === 0) {
+                html = '<tr><td colspan="3" class="text-center py-4">暫無排行榜數據</td></tr>';
+            } else {
+                gameState.leaderboard.forEach((entry, index) => {
+                    const isCurrentPlayer = entry.player_name === elements.playerNameInput.value.trim() && entry.total_moves === gameState.totalMoves;
+                    
+                    html += `
+                        <tr${isCurrentPlayer ? ' class="highlight"' : ''}>
+                            <td>${index + 1}</td>
+                            <td>${escapeHtml(entry.player_name)}</td>
+                            <td>${entry.total_moves}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            elements.leaderboardBody.innerHTML = html;
+        }
+        
+        // 顯示模板選擇模態框
+        function showTemplateSelectionModal() {
+            showModal(elements.templateSelectionModal);
+        }
+        
+        // 顯示模態框
         function showModal(modal) {
             modal.classList.add('visible');
         }
         
-        // Hide modal
+        // 隱藏模態框
         function hideModal(modal) {
             modal.classList.remove('visible');
         }
         
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Load leaderboard from localStorage
-            const savedLeaderboard = localStorage.getItem('leaderboard');
-            if (savedLeaderboard) {
-                gameState.leaderboard = JSON.parse(savedLeaderboard);
-            }
-            
-            // Initialize game
-            initializeLevel(1);
-            
-            // Reset button
-            elements.resetBtn.addEventListener('click', resetGame);
-            
-            // Next level button
-            elements.nextLevelBtn.addEventListener('click', goToNextLevel);
-            
-            // Leaderboard button
-            elements.leaderboardBtn.addEventListener('click', () => {
-                renderLeaderboard();
-                showModal(elements.leaderboardModal);
-            });
-            
-            // Close leaderboard button
-            elements.closeLeaderboardBtn.addEventListener('click', () => {
-                hideModal(elements.leaderboardModal);
-            });
-            
-            // Submit name button
-            elements.submitNameBtn.addEventListener('click', () => {
-                const name = elements.playerNameInput.value.trim() || "玩家";
-                gameState.currentPlayer = name;
-                updateLeaderboard(name, gameState.totalMoves);
-                hideModal(elements.nameInputModal);
-            });
-            
-            // Close modals when clicking outside
-            elements.leaderboardModal.addEventListener('click', (e) => {
-                if (e.target === elements.leaderboardModal) {
-                    hideModal(elements.leaderboardModal);
-                }
-            });
-            
-            elements.nameInputModal.addEventListener('click', (e) => {
-                if (e.target === elements.nameInputModal) {
-                    hideModal(elements.nameInputModal);
-                }
-            });
-            
-            // Handle Enter key on name input
-            elements.playerNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    elements.submitNameBtn.click();
-                }
-            });
-        });
+        // HTML 轉義函數
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
     </script>
 </body>
 </html>

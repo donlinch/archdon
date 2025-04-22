@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy - 翻牌對對碰遊戲管理</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+        
+        .header {
+            background-color: #FFB74D;
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #fff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .main-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,0.125);
+            font-weight: 600;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: #FFB74D;
+            border-color: #FFB74D;
+        }
+        
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: #FFA726;
+            border-color: #FFA726;
+        }
+        
+        .btn-outline-primary {
+            color: #FFB74D;
+            border-color: #FFB74D;
+        }
+        
+        .btn-outline-primary:hover, .btn-outline-primary:focus {
+            background-color: #FFB74D;
+            border-color: #FFB74D;
+            color: #fff;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(255, 183, 77, 0.05);
+        }
+        
+        .badge-primary {
+            background-color: #FFB74D;
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .draggable-item {
+            cursor: move;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .image-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .image-list-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .image-list-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .alert-dismissible {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+        
+        /* 表格响應式設計 */
+        @media (max-width: 768px) {
+            .table-responsive {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1>翻牌對對碰遊戲管理</h1>
+                </div>
+                <div class="col-auto">
+                    <a href="/admin.html" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> 返回管理首頁
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="main-content">
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates-content" type="button" role="tab" aria-controls="templates-content" aria-selected="true">
+                    <i class="fas fa-list me-1"></i> 模板管理
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="leaderboard-tab" data-bs-toggle="tab" data-bs-target="#leaderboard-content" type="button" role="tab" aria-controls="leaderboard-content" aria-selected="false">
+                    <i class="fas fa-trophy me-1"></i> 排行榜
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="adminTabsContent">
+            <!-- 模板管理 -->
+            <div class="tab-pane fade show active" id="templates-content" role="tabpanel" aria-labelledby="templates-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>遊戲模板列表</span>
+                        <button class="btn btn-primary btn-sm" id="addTemplateBtn">
+                            <i class="fas fa-plus me-1"></i> 新增模板
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" width="60">#</th>
+                                        <th scope="col">模板名稱</th>
+                                        <th scope="col">難度</th>
+                                        <th scope="col">關卡數</th>
+                                        <th scope="col">遊玩次數</th>
+                                        <th scope="col">狀態</th>
+                                        <th scope="col">更新時間</th>
+                                        <th scope="col" width="200">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="templatesList">
+                                    <!-- 數據將通過 JavaScript 加載 -->
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">載入中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模板詳情卡片 (默認隱藏) -->
+                <div class="card" id="templateDetailCard" style="display: none;">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span id="templateDetailTitle">模板詳情</span>
+                        <button class="btn btn-outline-primary btn-sm" id="backToListBtn">
+                            <i class="fas fa-arrow-left me-1"></i> 返回列表
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5 class="card-title" id="detailTemplateName">模板名稱</h5>
+                                <p class="card-text" id="detailTemplateDescription">模板描述</p>
+                                <p class="badge bg-primary" id="detailTemplateDifficulty">難度</p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button class="btn btn-primary btn-sm me-2" id="editTemplateBtn">
+                                    <i class="fas fa-edit me-1"></i> 編輯模板
+                                </button>
+                                <button class="btn btn-success btn-sm" id="addLevelBtn">
+                                    <i class="fas fa-plus me-1"></i> 新增關卡
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <h6 class="card-subtitle mb-3">關卡列表</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="levelsTable">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">關卡</th>
+                                        <th scope="col">網格大小</th>
+                                        <th scope="col">圖片數量</th>
+                                        <th scope="col">更新時間</th>
+                                        <th scope="col" width="180">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="levelsList">
+                                    <!-- 數據將通過 JavaScript 加載 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 排行榜管理 -->
+            <div class="tab-pane fade" id="leaderboard-content" role="tabpanel" aria-labelledby="leaderboard-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>遊戲排行榜</span>
+                        <div>
+                            <select class="form-select form-select-sm" id="leaderboardTemplateFilter">
+                                <option value="">所有模板</option>
+                                <!-- 模板選項將通過 JavaScript 加載 -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" width="60">#</th>
+                                        <th scope="col">玩家名稱</th>
+                                        <th scope="col">模板</th>
+                                        <th scope="col">總步數</th>
+                                        <th scope="col">完成時間</th>
+                                        <th scope="col">完成日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboardList">
+                                    <!-- 數據將通過 JavaScript 加載 -->
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">載入中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增/編輯模板彈窗 -->
+    <div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templateModalLabel">新增模板</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="templateForm">
+                        <input type="hidden" id="templateId">
+                        <div class="mb-3">
+                            <label for="templateName" class="form-label">模板名稱 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="templateName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="templateDescription" class="form-label">模板描述</label>
+                            <textarea class="form-control" id="templateDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="templateDifficulty" class="form-label">難度</label>
+                            <select class="form-select" id="templateDifficulty">
+                                <option value="簡單">簡單</option>
+                                <option value="普通">普通</option>
+                                <option value="困難">困難</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="templateActive" checked>
+                            <label class="form-check-label" for="templateActive">啟用模板</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveTemplateBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 新增/編輯關卡彈窗 -->
+    <div class="modal fade" id="levelModal" tabindex="-1" aria-labelledby="levelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="levelModalLabel">新增關卡</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="levelForm">
+                        <input type="hidden" id="levelId">
+                        <input type="hidden" id="levelTemplateId">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="levelNumber" class="form-label">關卡號碼 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="levelNumber" min="1" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="gridRows" class="form-label">網格行數 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="gridRows" min="2" max="6" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="gridColumns" class="form-label">網格列數 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="gridColumns" min="2" max="6" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">圖片列表 <span class="text-danger">*</span></label>
+                            <p class="text-muted small">請添加所需的圖片，至少需要 2 張。圖片數量需為偶數，且不超過網格大小的兩倍。</p>
+                            
+                            <ul class="image-list" id="imageList">
+                                <!-- 圖片列表將通過 JavaScript 動態生成 -->
+                            </ul>
+                            
+                            <button type="button" class="btn btn-outline-secondary mt-2" id="addImageBtn">
+                                <i class="fas fa-plus me-1"></i> 添加圖片
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveLevelBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 確認刪除模態框 -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalLabel">確認刪除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmModalBody">
+                    您確定要刪除嗎？此操作無法撤銷。
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 上傳檔案輔助彈窗 -->
+    <div class="modal fade" id="uploadHelperModal" tabindex="-1" aria-labelledby="uploadHelperModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadHelperModalLabel">上傳圖片</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">選擇圖片檔案</label>
+                        <input type="file" class="form-control" id="imageFile" accept="image/*">
+                    </div>
+                    <div class="mb-3 hidden" id="imagePreviewContainer">
+                        <label class="form-label">預覽</label>
+                        <div>
+                            <img id="imagePreview" class="img-fluid img-thumbnail" style="max-height: 200px;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="uploadImageBtn">上傳</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知提示 -->
+    <div id="alertContainer"></div>
+    
+    <!-- Bootstrap & jQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SortableJS for drag-and-drop functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <script>
+        // 全局變量
+        let currentTemplateId = null;
+        let deletingItemId = null;
+        let deleteType = null;
+        
+        // 當文檔加載完成時執行
+        $(document).ready(function() {
+            // 初始化加載
+            loadTemplates();
+            loadLeaderboard();
+            initializeEventListeners();
+            
+            // 使上傳模態框中的圖片文件輸入預覽
+            $('#imageFile').change(function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#imagePreview').attr('src', e.target.result);
+                        $('#imagePreviewContainer').removeClass('hidden');
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#imagePreviewContainer').addClass('hidden');
+                }
+            });
+        });
+        
+        // 初始化所有事件監聽器
+        function initializeEventListeners() {
+            // 新增模板按鈕
+            $('#addTemplateBtn').click(function() {
+                resetTemplateForm();
+                $('#templateModalLabel').text('新增模板');
+                $('#templateModal').modal('show');
+            });
+            
+            // 返回列表按鈕
+            $('#backToListBtn').click(function() {
+                hideTemplateDetail();
+            });
+            
+            // 保存模板按鈕
+            $('#saveTemplateBtn').click(function() {
+                saveTemplate();
+            });
+            
+            // 保存關卡按鈕
+            $('#saveLevelBtn').click(function() {
+                saveLevel();
+            });
+            
+            // 添加圖片按鈕
+            $('#addImageBtn').click(function() {
+                addImageInput();
+            });
+            
+            // 上傳圖片按鈕
+            $('#uploadImageBtn').click(function() {
+                uploadImage();
+            });
+            
+            // 排行榜模板篩選
+            $('#leaderboardTemplateFilter').change(function() {
+                loadLeaderboard($(this).val());
+            });
+            
+            // 編輯模板按鈕
+            $('#editTemplateBtn').click(function() {
+                editTemplate(currentTemplateId);
+            });
+            
+            // 新增關卡按鈕
+            $('#addLevelBtn').click(function() {
+                resetLevelForm();
+                $('#levelTemplateId').val(currentTemplateId);
+                $('#levelModalLabel').text('新增關卡');
+                $('#levelModal').modal('show');
+            });
+            
+            // 確認刪除按鈕
+            $('#confirmDeleteBtn').click(function() {
+                if (deleteType === 'template') {
+                    deleteTemplate(deletingItemId);
+                } else if (deleteType === 'level') {
+                    deleteLevel(deletingItemId);
+                }
+                $('#confirmModal').modal('hide');
+            });
+        }
+        
+        // 加載模板列表
+        function loadTemplates() {
+            $.ajax({
+                url: '/api/samegame/templates',
+                type: 'GET',
+                success: function(data) {
+                    if (data.length === 0) {
+                        $('#templatesList').html('<tr><td colspan="8" class="text-center py-4">暫無數據</td></tr>');
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.forEach(function(template, index) {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${escapeHtml(template.name)}</td>
+                                <td>${escapeHtml(template.difficulty || '未設置')}</td>
+                                <td>${template.level_count}</td>
+                                <td>${template.play_count}</td>
+                                <td>${template.is_active ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>'}</td>
+                                <td>${formatDate(template.updated_at)}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary view-btn" data-id="${template.id}">
+                                        <i class="fas fa-eye"></i> 查看
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-template-btn" data-id="${template.id}" data-name="${escapeHtml(template.name)}">
+                                        <i class="fas fa-trash"></i> 刪除
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    $('#templatesList').html(html);
+                    
+                    // 綁定查看按鈕點擊事件
+                    $('.view-btn').click(function() {
+                        const templateId = $(this).data('id');
+                        viewTemplateDetail(templateId);
+                    });
+                    
+                    // 綁定刪除模板按鈕點擊事件
+                    $('.delete-template-btn').click(function() {
+                        const templateId = $(this).data('id');
+                        const templateName = $(this).data('name');
+                        
+                        deletingItemId = templateId;
+                        deleteType = 'template';
+                        
+                        $('#confirmModalLabel').text('確認刪除模板');
+                        $('#confirmModalBody').html(`您確定要刪除模板 <strong>${templateName}</strong> 嗎？<br>此操作將刪除所有關聯的關卡和圖片，且無法撤銷。`);
+                        $('#confirmModal').modal('show');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    showAlert('載入模板列表失敗: ' + error, 'danger');
+                }
+            });
+            
+            // 同時加載排行榜模板選項
+            $.ajax({
+                url: '/api/samegame/templates',
+                type: 'GET',
+                success: function(data) {
+                    let options = '<option value="">所有模板</option>';
+                    data.forEach(function(template) {
+                        options += `<option value="${template.id}">${escapeHtml(template.name)}</option>`;
+                    });
+                    $('#leaderboardTemplateFilter').html(options);
+                }
+            });
+        }
+        
+        // 載入排行榜
+        function loadLeaderboard(templateId = '') {
+            let url = '/api/samegame/leaderboard';
+            if (templateId) {
+                url += `?template_id=${templateId}`;
+            }
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    if (data.length === 0) {
+                        $('#leaderboardList').html('<tr><td colspan="6" class="text-center py-4">暫無數據</td></tr>');
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.forEach(function(record, index) {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${escapeHtml(record.player_name)}</td>
+                                <td>${escapeHtml(record.template_name)}</td>
+                                <td>${record.total_moves}</td>
+                                <td>${record.completion_time ? record.completion_time + '秒' : '未記錄'}</td>
+                                <td>${formatDate(record.created_at)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    $('#leaderboardList').html(html);
+                },
+                error: function(xhr, status, error) {
+                    showAlert('載入排行榜失敗: ' + error, 'danger');
+                }
+            });
+        }
+        
+        // 查看模板詳情
+        function viewTemplateDetail(templateId) {
+            currentTemplateId = templateId;
+            
+            $.ajax({
+                url: `/api/samegame/templates/${templateId}`,
+                type: 'GET',
+                success: function(data) {
+                    // 更新模板詳情
+                    $('#detailTemplateName').text(data.name);
+                    $('#detailTemplateDescription').text(data.description || '無描述');
+                    $('#detailTemplateDifficulty').text(data.difficulty || '未設置');
+                    $('#templateDetailTitle').text(`模板詳情: ${data.name}`);
+                    
+                    // 顯示模板詳情卡片
+                    $('#templateDetailCard').show();
+                    
+                    // 生成關卡列表
+                    if (data.levels && data.levels.length > 0) {
+                        let html = '';
+                        data.levels.forEach(function(level) {
+                            html += `
+                                <tr>
+                                    <td>${level.level_number}</td>
+                                    <td>${level.grid_rows} × ${level.grid_columns}</td>
+                                    <td>${level.images ? level.images.length : 0} 張</td>
+                                    <td>${formatDate(level.updated_at)}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary edit-level-btn" data-id="${level.id}">
+                                            <i class="fas fa-edit"></i> 編輯
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-level-btn" data-id="${level.id}" data-level="${level.level_number}">
+                                            <i class="fas fa-trash"></i> 刪除
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#levelsList').html(html);
+                    } else {
+                        $('#levelsList').html('<tr><td colspan="5" class="text-center py-4">尚未設置任何關卡</td></tr>');
+                    }
+                    
+                    // 綁定編輯關卡按鈕點擊事件
+                    $('.edit-level-btn').click(function() {
+                        const levelId = $(this).data('id');
+                        editLevel(levelId);
+                    });
+                    
+                    // 綁定刪除關卡按鈕點擊事件
+                    $('.delete-level-btn').click(function() {
+                        const levelId = $(this).data('id');
+                        const levelNumber = $(this).data('level');
+                        
+                        deletingItemId = levelId;
+                        deleteType = 'level';
+                        
+                        $('#confirmModalLabel').text('確認刪除關卡');
+                        $('#confirmModalBody').html(`您確定要刪除第 <strong>${levelNumber}</strong> 關嗎？此操作無法撤銷。`);
+                        $('#confirmModal').modal('show');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    showAlert('載入模板詳情失敗: ' + error, 'danger');
+                }
+            });
+        }
+        
+        // 隱藏模板詳情
+        function hideTemplateDetail() {
+            $('#templateDetailCard').hide();
+            currentTemplateId = null;
+        }
+        
+        // 編輯模板
+        function editTemplate(templateId) {
+            $.ajax({
+                url: `/api/samegame/templates/${templateId}`,
+                type: 'GET',
+                success: function(data) {
+                    $('#templateId').val(data.id);
+                    $('#templateName').val(data.name);
+                    $('#templateDescription').val(data.description || '');
+                    $('#templateDifficulty').val(data.difficulty || '簡單');
+                    $('#templateActive').prop('checked', data.is_active);
+                    
+                    $('#templateModalLabel').text('編輯模板');
+                    $('#templateModal').modal('show');
+                },
+                error: function(xhr, status, error) {
+                    showAlert('載入模板數據失敗: ' + error, 'danger');
+                }
+            });
+        }
+        
+        // 編輯關卡
+        function editLevel(levelId) {
+            resetLevelForm();
+            
+            $.ajax({
+                url: `/api/samegame/templates/${currentTemplateId}`,
+                type: 'GET',
+                success: function(data) {
+                    const level = data.levels.find(l => l.id === levelId);
+                    
+                    if (level) {
+                        $('#levelId').val(level.id);
+                        $('#levelTemplateId').val(currentTemplateId);
+                        $('#levelNumber').val(level.level_number);
+                        $('#gridRows').val(level.grid_rows);
+                        $('#gridColumns').val(level.grid_columns);
+                        
+                        // 設置關卡圖片
+                        if (level.images && level.images.length > 0) {
+                            level.images.forEach(image => {
+                                addImageInput(image.image_url);
+                            });
+                        }
+                        
+                        $('#levelModalLabel').text(`編輯關卡 ${level.level_number}`);
+                        $('#levelModal').modal('show');
+                    } else {
+                        showAlert('找不到關卡數據', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showAlert('載入關卡數據失敗: ' + error, 'danger');
+                }
+            });
+        }
+        
+        // 保存模板
+        function saveTemplate() {
+            const templateId = $('#templateId').val();
+            const name = $('#templateName').val().trim();
+            const description = $('#templateDescription').val().trim();
+            const difficulty = $('#templateDifficulty').val();
+            const isActive = $('#templateActive').is(':checked');
+            
+            if (!name) {
+                showAlert('請輸入模板名稱', 'warning');
+                return;
+            }
+            
+            const templateData = {
+                name: name,
+                description: description,
+                difficulty: difficulty,
+                is_active: isActive
+            };
+            
+            if (templateId) {
+                // 更新現有模板
+                $.ajax({
+                    url: `/api/samegame/templates/${templateId}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(templateData),
+                    success: function(data) {
+                        $('#templateModal').modal('hide');
+                        showAlert('模板更新成功', 'success');
+                        
+                        // 重新加載模板列表
+                        loadTemplates();
+                        
+                        // 如果當前正在查看這個模板，則更新詳情
+                        if (currentTemplateId && currentTemplateId === templateId) {
+                            viewTemplateDetail(templateId);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMessage = '更新模板失敗';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage += ': ' + xhr.responseJSON.error;
+                        }
+                        showAlert(errorMessage, 'danger');
+                    }
+                });
+            } else {
+                // 創建新模板
+                $.ajax({
+                    url: '/api/samegame/templates',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(templateData),
+                    success: function(data) {
+                        $('#templateModal').modal('hide');
+                        showAlert('模板創建成功', 'success');
+                        
+                        // 重新加載模板列表
+                        loadTemplates();
+                        
+                        // 自動查看新創建的模板
+                        viewTemplateDetail(data.id);
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMessage = '創建模板失敗';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage += ': ' + xhr.responseJSON.error;
+                        }
+                        showAlert(errorMessage, 'danger');
+                    }
+                });
+            }
+        }
+        
+        // 保存關卡
+        function saveLevel() {
+            const levelId = $('#levelId').val();
+            const templateId = $('#levelTemplateId').val();
+            const levelNumber = $('#levelNumber').val();
+            const gridRows = $('#gridRows').val();
+            const gridColumns = $('#gridColumns').val();
+            
+            // 檢查輸入是否有效
+            if (!levelNumber || !gridRows || !gridColumns) {
+                showAlert('請填寫所有必填欄位', 'warning');
+                return;
+            }
+            
+            // 收集所有圖片 URL
+            const images = [];
+            $('.image-input').each(function() {
+                const url = $(this).val().trim();
+                if (url) {
+                    images.push({ image_url: url });
+                }
+            });
+            
+            if (images.length < 2) {
+                showAlert('請至少添加2張圖片', 'warning');
+                return;
+            }
+            
+            if (images.length % 2 !== 0) {
+                showAlert('圖片數量必須是偶數', 'warning');
+                return;
+            }
+            
+            const maxPairs = (parseInt(gridRows) * parseInt(gridColumns)) / 2;
+            if (images.length > maxPairs * 2) {
+                showAlert(`圖片數量不能超過網格大小的兩倍 (最多 ${maxPairs * 2} 張)`, 'warning');
+                return;
+            }
+            
+            const levelData = {
+                level_number: parseInt(levelNumber),
+                grid_rows: parseInt(gridRows),
+                grid_columns: parseInt(gridColumns),
+                images: images
+            };
+            
+            if (levelId) {
+                // 更新現有關卡
+                $.ajax({
+                    url: `/api/samegame/levels/${levelId}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(levelData),
+                    success: function(data) {
+                        $('#levelModal').modal('hide');
+                        showAlert('關卡更新成功', 'success');
+                        
+                        // 重新加載模板詳情以顯示更新後的關卡
+                        viewTemplateDetail(templateId);
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMessage = '更新關卡失敗';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage += ': ' + xhr.responseJSON.error;
+                        }
+                        showAlert(errorMessage, 'danger');
+                    }
+                });
+            } else {
+                // 創建新關卡
+                $.ajax({
+                    url: `/api/samegame/templates/${templateId}/levels`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(levelData),
+                    success: function(data) {
+                        $('#levelModal').modal('hide');
+                        showAlert('關卡創建成功', 'success');
+                        
+                        // 重新加載模板詳情以顯示新關卡
+                        viewTemplateDetail(templateId);
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMessage = '創建關卡失敗';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage += ': ' + xhr.responseJSON.error;
+                        }
+                        showAlert(errorMessage, 'danger');
+                    }
+                });
+            }
+        }
+        
+        // 刪除模板
+        function deleteTemplate(templateId) {
+            $.ajax({
+                url: `/api/samegame/templates/${templateId}`,
+                type: 'DELETE',
+                success: function() {
+                    showAlert('模板已成功刪除', 'success');
+                    
+                    // 如果正在查看被刪除的模板，則隱藏詳情視圖
+                    if (currentTemplateId === templateId) {
+                        hideTemplateDetail();
+                    }
+                    
+                    // 重新加載模板列表
+                    loadTemplates();
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = '刪除模板失敗';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage += ': ' + xhr.responseJSON.error;
+                    }
+                    showAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // 刪除關卡
+        function deleteLevel(levelId) {
+            $.ajax({
+                url: `/api/samegame/levels/${levelId}`,
+                type: 'DELETE',
+                success: function() {
+                    showAlert('關卡已成功刪除', 'success');
+                    
+                    // 重新加載模板詳情以更新關卡列表
+                    viewTemplateDetail(currentTemplateId);
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = '刪除關卡失敗';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage += ': ' + xhr.responseJSON.error;
+                    }
+                    showAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // 重置模板表單
+        function resetTemplateForm() {
+            $('#templateId').val('');
+            $('#templateName').val('');
+            $('#templateDescription').val('');
+            $('#templateDifficulty').val('簡單');
+            $('#templateActive').prop('checked', true);
+        }
+        
+        // 重置關卡表單
+        function resetLevelForm() {
+            $('#levelId').val('');
+            $('#levelNumber').val('');
+            $('#gridRows').val('');
+            $('#gridColumns').val('');
+            $('#imageList').empty();
+        }
+        
+        // 添加圖片輸入框
+        function addImageInput(imageUrl = '') {
+            const itemId = 'image-' + Date.now();
+            
+            const listItem = `
+                <li class="image-list-item" id="${itemId}">
+                    <div class="image-preview-container" style="width: 60px; height: 60px; margin-right: 10px; ${imageUrl ? '' : 'display: none;'}">
+                        <img src="${imageUrl}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="input-group">
+                            <input type="text" class="form-control image-input" value="${escapeHtml(imageUrl)}" placeholder="輸入圖片 URL">
+                            <button type="button" class="btn btn-outline-primary browse-btn" data-target="${itemId}">
+                                <i class="fas fa-upload"></i> 瀏覽
+                            </button>
+                            <button type="button" class="btn btn-outline-danger remove-image-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </li>
+            `;
+            
+            $('#imageList').append(listItem);
+            
+            // 綁定輸入變化事件
+            $(`#${itemId} .image-input`).on('input', function() {
+                const url = $(this).val().trim();
+                const previewContainer = $(`#${itemId} .image-preview-container`);
+                const previewImg = previewContainer.find('img');
+                
+                if (url) {
+                    previewImg.attr('src', url);
+                    previewContainer.show();
+                } else {
+                    previewContainer.hide();
+                }
+            });
+            
+            // 綁定瀏覽按鈕事件
+            $(`#${itemId} .browse-btn`).click(function() {
+                const targetId = $(this).data('target');
+                openUploadHelper(targetId);
+            });
+            
+            // 綁定刪除按鈕事件
+            $(`#${itemId} .remove-image-btn`).click(function() {
+                $(`#${itemId}`).remove();
+            });
+        }
+        
+        // 打開上傳助手
+        function openUploadHelper(targetId) {
+            $('#imageFile').val('');
+            $('#imagePreviewContainer').addClass('hidden');
+            
+            // 設置目標 ID 以便上傳完成後更新
+            $('#uploadImageBtn').data('target', targetId);
+            
+            $('#uploadHelperModal').modal('show');
+        }
+        
+        // 上傳圖片
+        function uploadImage() {
+            const targetId = $('#uploadImageBtn').data('target');
+            const imageFile = $('#imageFile')[0].files[0];
+            
+            if (!imageFile) {
+                showAlert('請選擇要上傳的圖片', 'warning');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', imageFile);
+            
+            $.ajax({
+                url: '/api/admin/files/upload',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success && response.file && response.file.file_path) {
+                        // 關閉上傳模態框
+                        $('#uploadHelperModal').modal('hide');
+                        
+                        // 更新圖片輸入框的值
+                        const imageUrl = response.file.file_path;
+                        $(`#${targetId} .image-input`).val(imageUrl).trigger('input');
+                        
+                        showAlert('圖片上傳成功', 'success');
+                    } else {
+                        showAlert('圖片上傳失敗：伺服器返回無效的響應', 'danger');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = '圖片上傳失敗';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage += ': ' + xhr.responseJSON.error;
+                    }
+                    showAlert(errorMessage, 'danger');
+                }
+            });
+        }
+        
+        // 顯示提示訊息
+        function showAlert(message, type = 'info') {
+            const alertId = 'alert-' + Date.now();
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            $('#alertContainer').append(alertHtml);
+            
+            // 3 秒後自動關閉
+            setTimeout(function() {
+                $(`#${alertId}`).alert('close');
+            }, 3000);
+        }
+        
+        // 格式化日期時間
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+        
+        // HTML 轉義函數
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

@@ -1568,6 +1568,596 @@ app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
 
 
 
+
+// --- 翻牌對對碰遊戲API路由 ---
+// 將這段代碼添加到你的 server.js 文件中
+
+// 獲取所有遊戲模板
+app.get('/api/samegame/templates', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT t.id, t.name, t.description, t.difficulty, t.is_active, 
+                   t.created_at, t.updated_at,
+                   COUNT(DISTINCT l.id) AS level_count,
+                   COUNT(DISTINCT lb.id) AS play_count
+            FROM samegame_templates t
+            LEFT JOIN samegame_levels l ON t.id = l.template_id
+            LEFT JOIN samegame_leaderboard lb ON t.id = lb.template_id
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取翻牌遊戲模板列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 獲取單個遊戲模板詳情及其關卡
+app.get('/api/samegame/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 獲取模板詳情
+        const templateResult = await client.query(`
+            SELECT id, name, description, difficulty, is_active, created_at, updated_at
+            FROM samegame_templates
+            WHERE id = $1
+        `, [templateId]);
+        
+        if (templateResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的模板' });
+        }
+        
+        // 獲取關卡信息
+        const levelsResult = await client.query(`
+            SELECT l.id, l.level_number, l.grid_rows, l.grid_columns, l.created_at, l.updated_at
+            FROM samegame_levels l
+            WHERE l.template_id = $1
+            ORDER BY l.level_number ASC
+        `, [templateId]);
+        
+        // 獲取每個關卡的圖片
+        const levelImages = {};
+        for (const level of levelsResult.rows) {
+            const imagesResult = await client.query(`
+                SELECT id, image_url, image_order
+                FROM samegame_level_images
+                WHERE level_id = $1
+                ORDER BY image_order ASC
+            `, [level.id]);
+            
+            levelImages[level.id] = imagesResult.rows;
+        }
+        
+        await client.query('COMMIT');
+        
+        // 構建響應數據
+        const template = templateResult.rows[0];
+        template.levels = levelsResult.rows.map(level => ({
+            ...level,
+            images: levelImages[level.id] || []
+        }));
+        
+        res.json(template);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`獲取翻牌遊戲模板 ${id} 詳情失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// 創建新的遊戲模板
+app.post('/api/samegame/templates', async (req, res) => {
+    const { name, description, difficulty, is_active } = req.body;
+    
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '模板名稱為必填項' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO samegame_templates (name, description, difficulty, is_active, created_by)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `, [name.trim(), description || null, difficulty || '簡單', is_active !== undefined ? is_active : true, 'admin']);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('創建翻牌遊戲模板失敗:', err);
+        if (err.code === '23505') { // 唯一約束違反
+            return res.status(409).json({ error: '模板名稱已存在' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 更新遊戲模板
+app.put('/api/samegame/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    const { name, description, difficulty, is_active } = req.body;
+    
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '模板名稱為必填項' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE samegame_templates
+            SET name = $1, description = $2, difficulty = $3, is_active = $4
+            WHERE id = $5
+            RETURNING *
+        `, [name.trim(), description || null, difficulty || '簡單', is_active !== undefined ? is_active : true, templateId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的模板' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新翻牌遊戲模板 ${id} 失敗:`, err);
+        if (err.code === '23505') { // 唯一約束違反
+            return res.status(409).json({ error: '模板名稱已存在' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 刪除遊戲模板
+app.delete('/api/samegame/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM samegame_templates WHERE id = $1', [templateId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的模板' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除翻牌遊戲模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 創建新的關卡
+app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
+    const { templateId } = req.params;
+    const tplId = parseInt(templateId, 10);
+    
+    if (isNaN(tplId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    const { level_number, grid_rows, grid_columns, images } = req.body;
+    
+    if (!level_number || isNaN(parseInt(level_number, 10))) {
+        return res.status(400).json({ error: '關卡號碼為必填項且必須是數字' });
+    }
+    
+    if (!grid_rows || isNaN(parseInt(grid_rows, 10)) || !grid_columns || isNaN(parseInt(grid_columns, 10))) {
+        return res.status(400).json({ error: '網格行數和列數為必填項且必須是數字' });
+    }
+    
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: '關卡圖片為必填項且必須是陣列' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 檢查模板是否存在
+        const templateCheck = await client.query('SELECT 1 FROM samegame_templates WHERE id = $1', [tplId]);
+        
+        if (templateCheck.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的模板' });
+        }
+        
+        // 檢查關卡號碼是否已存在
+        const levelCheck = await client.query(
+            'SELECT 1 FROM samegame_levels WHERE template_id = $1 AND level_number = $2',
+            [tplId, level_number]
+        );
+        
+        if (levelCheck.rowCount > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: `關卡 ${level_number} 已存在` });
+        }
+        
+        // 插入新關卡
+        const levelResult = await client.query(`
+            INSERT INTO samegame_levels (template_id, level_number, grid_rows, grid_columns)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `, [tplId, level_number, grid_rows, grid_columns]);
+        
+        const newLevelId = levelResult.rows[0].id;
+        
+        // 插入關卡圖片
+        for (let i = 0; i < images.length; i++) {
+            const { image_url } = images[i];
+            
+            if (!image_url || typeof image_url !== 'string' || image_url.trim() === '') {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: `第 ${i + 1} 張圖片的 URL 無效` });
+            }
+            
+            await client.query(`
+                INSERT INTO samegame_level_images (level_id, image_url, image_order)
+                VALUES ($1, $2, $3)
+            `, [newLevelId, image_url.trim(), i + 1]);
+        }
+        
+        await client.query('COMMIT');
+        
+        // 獲取關卡的完整信息，包括圖片
+        const levelData = await client.query(`
+            SELECT l.id, l.level_number, l.grid_rows, l.grid_columns, l.created_at, l.updated_at
+            FROM samegame_levels l
+            WHERE l.id = $1
+        `, [newLevelId]);
+        
+        const imagesResult = await client.query(`
+            SELECT id, image_url, image_order
+            FROM samegame_level_images
+            WHERE level_id = $1
+            ORDER BY image_order ASC
+        `, [newLevelId]);
+        
+        const responseData = {
+            ...levelData.rows[0],
+            images: imagesResult.rows
+        };
+        
+        res.status(201).json(responseData);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`創建關卡失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// 更新關卡
+app.put('/api/samegame/levels/:id', async (req, res) => {
+    const { id } = req.params;
+    const levelId = parseInt(id, 10);
+    
+    if (isNaN(levelId)) {
+        return res.status(400).json({ error: '無效的關卡 ID' });
+    }
+    
+    const { grid_rows, grid_columns, images } = req.body;
+    
+    if ((!grid_rows && grid_rows !== 0) || isNaN(parseInt(grid_rows, 10)) ||
+        (!grid_columns && grid_columns !== 0) || isNaN(parseInt(grid_columns, 10))) {
+        return res.status(400).json({ error: '網格行數和列數必須是數字' });
+    }
+    
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: '關卡圖片為必填項且必須是陣列' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 檢查關卡是否存在
+        const levelCheck = await client.query('SELECT template_id FROM samegame_levels WHERE id = $1', [levelId]);
+        
+        if (levelCheck.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的關卡' });
+        }
+        
+        const templateId = levelCheck.rows[0].template_id;
+        
+        // 更新關卡
+        await client.query(`
+            UPDATE samegame_levels
+            SET grid_rows = $1, grid_columns = $2
+            WHERE id = $3
+        `, [grid_rows, grid_columns, levelId]);
+        
+        // 刪除現有圖片
+        await client.query('DELETE FROM samegame_level_images WHERE level_id = $1', [levelId]);
+        
+        // 插入新圖片
+        for (let i = 0; i < images.length; i++) {
+            const { image_url } = images[i];
+            
+            if (!image_url || typeof image_url !== 'string' || image_url.trim() === '') {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: `第 ${i + 1} 張圖片的 URL 無效` });
+            }
+            
+            await client.query(`
+                INSERT INTO samegame_level_images (level_id, image_url, image_order)
+                VALUES ($1, $2, $3)
+            `, [levelId, image_url.trim(), i + 1]);
+        }
+        
+        await client.query('COMMIT');
+        
+        // 獲取更新後的關卡信息
+        const levelData = await client.query(`
+            SELECT l.id, l.level_number, l.grid_rows, l.grid_columns, l.created_at, l.updated_at
+            FROM samegame_levels l
+            WHERE l.id = $1
+        `, [levelId]);
+        
+        const imagesResult = await client.query(`
+            SELECT id, image_url, image_order
+            FROM samegame_level_images
+            WHERE level_id = $1
+            ORDER BY image_order ASC
+        `, [levelId]);
+        
+        const responseData = {
+            ...levelData.rows[0],
+            images: imagesResult.rows
+        };
+        
+        res.json(responseData);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`更新關卡 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// 刪除關卡
+app.delete('/api/samegame/levels/:id', async (req, res) => {
+    const { id } = req.params;
+    const levelId = parseInt(id, 10);
+    
+    if (isNaN(levelId)) {
+        return res.status(400).json({ error: '無效的關卡 ID' });
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM samegame_levels WHERE id = $1', [levelId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的關卡' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除關卡 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 獲取排行榜數據
+app.get('/api/samegame/leaderboard', async (req, res) => {
+    const { template_id } = req.query;
+    const templateId = template_id ? parseInt(template_id, 10) : null;
+    
+    try {
+        let query = `
+            SELECT lb.id, lb.player_name, lb.total_moves, lb.completion_time, lb.created_at,
+                   t.name AS template_name
+            FROM samegame_leaderboard lb
+            JOIN samegame_templates t ON lb.template_id = t.id
+        `;
+        
+        const queryParams = [];
+        
+        if (templateId && !isNaN(templateId)) {
+            query += ' WHERE lb.template_id = $1';
+            queryParams.push(templateId);
+        }
+        
+        query += ' ORDER BY lb.total_moves ASC, lb.completion_time ASC NULLS LAST LIMIT 20';
+        
+        const result = await pool.query(query, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取翻牌遊戲排行榜失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 提交排行榜
+app.post('/api/samegame/leaderboard', async (req, res) => {
+    const { template_id, player_name, total_moves, completion_time } = req.body;
+    const templateId = parseInt(template_id, 10);
+    
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    if (!player_name || player_name.trim() === '') {
+        return res.status(400).json({ error: '玩家名稱為必填項' });
+    }
+    
+    if (isNaN(parseInt(total_moves, 10)) || parseInt(total_moves, 10) <= 0) {
+        return res.status(400).json({ error: '步數必須是正整數' });
+    }
+    
+    // 完成時間可以為空，但如果提供了，必須是正整數
+    if (completion_time !== null && completion_time !== undefined && 
+        (isNaN(parseInt(completion_time, 10)) || parseInt(completion_time, 10) <= 0)) {
+        return res.status(400).json({ error: '完成時間必須是正整數' });
+    }
+    
+    const ipAddress = req.ip || 'unknown';
+    
+    try {
+        // 檢查模板是否存在
+        const templateCheck = await pool.query('SELECT 1 FROM samegame_templates WHERE id = $1', [templateId]);
+        
+        if (templateCheck.rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的模板' });
+        }
+        
+        const result = await pool.query(`
+            INSERT INTO samegame_leaderboard (template_id, player_name, total_moves, completion_time, ip_address)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `, [templateId, player_name.trim(), total_moves, completion_time || null, ipAddress]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('提交翻牌遊戲排行榜記錄失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 獲取前台使用的活躍模板
+app.get('/api/samegame/active-templates', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, description, difficulty
+            FROM samegame_templates
+            WHERE is_active = TRUE
+            ORDER BY name ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取活躍翻牌遊戲模板失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 獲取前台使用的模板詳情(關卡和圖片)
+app.get('/api/samegame/play/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    const tplId = parseInt(templateId, 10);
+    
+    if (isNaN(tplId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 獲取模板詳情
+        const templateResult = await client.query(`
+            SELECT id, name, description, difficulty
+            FROM samegame_templates
+            WHERE id = $1 AND is_active = TRUE
+        `, [tplId]);
+        
+        if (templateResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的模板或模板未啟用' });
+        }
+        
+        // 獲取關卡信息
+        const levelsResult = await client.query(`
+            SELECT l.id, l.level_number, l.grid_rows, l.grid_columns
+            FROM samegame_levels l
+            WHERE l.template_id = $1
+            ORDER BY l.level_number ASC
+        `, [tplId]);
+        
+        if (levelsResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '該模板尚未設置關卡' });
+        }
+        
+        // 獲取每個關卡的圖片
+        const allLevelImages = {};
+        for (const level of levelsResult.rows) {
+            const imagesResult = await client.query(`
+                SELECT image_url
+                FROM samegame_level_images
+                WHERE level_id = $1
+                ORDER BY image_order ASC
+            `, [level.id]);
+            
+            allLevelImages[level.level_number] = imagesResult.rows.map(row => row.image_url);
+        }
+        
+        await client.query('COMMIT');
+        
+        // 構建遊戲所需的數據結構
+        const template = templateResult.rows[0];
+        const levels = levelsResult.rows.map(level => ({
+            level: level.level_number,
+            rows: level.grid_rows,
+            columns: level.grid_columns,
+            images: allLevelImages[level.level_number] || []
+        }));
+        
+        // 獲取排行榜
+        const leaderboardResult = await pool.query(`
+            SELECT player_name, total_moves, completion_time, created_at
+            FROM samegame_leaderboard
+            WHERE template_id = $1
+            ORDER BY total_moves ASC, completion_time ASC NULLS LAST
+            LIMIT 10
+        `, [tplId]);
+        
+        // 構建前端所需的完整響應
+        const responseData = {
+            template: {
+                id: template.id,
+                name: template.name,
+                description: template.description,
+                difficulty: template.difficulty
+            },
+            levels: levels,
+            leaderboard: leaderboardResult.rows
+        };
+        
+        res.json(responseData);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`獲取翻牌遊戲模板 ${templateId} 遊戲數據失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --- 受保護的管理頁面和 API Routes ---
 app.use([
     '/admin.html',
