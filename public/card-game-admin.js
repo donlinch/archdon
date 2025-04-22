@@ -127,15 +127,19 @@ function closeAddTemplateModal() {
 function closeEditTemplateModal() {
     document.getElementById('edit-template-modal').style.display = 'none';
 }
-
-// 顯示圖片選擇器
+// 修復圖片選擇功能
 function showImageSelector(level, index, isEdit = false) {
+    console.log(`顯示圖片選擇器: 關卡=${level}, 索引=${index}, 是否編輯模式=${isEdit}`);
+    
     // 保存當前操作的關卡和索引
     window.currentImageSelector = {
         level: level,
         index: index,
         isEdit: isEdit
     };
+    
+    // 清空搜尋
+    document.getElementById('image-search').value = '';
     
     // 載入圖片列表
     loadAvailableImages();
@@ -150,6 +154,15 @@ function closeImageSelectorModal() {
 }
 
 // 載入可用圖片
+
+
+
+
+
+
+
+
+// 修復載入可用圖片
 function loadAvailableImages() {
     const imageGrid = document.getElementById('image-grid');
     imageGrid.innerHTML = '<div style="text-align: center; width: 100%; padding: 20px;">正在載入圖片...</div>';
@@ -179,6 +192,7 @@ function loadAvailableImages() {
                     imageItem.style.border = '1px solid #ddd';
                     imageItem.style.borderRadius = '5px';
                     imageItem.style.overflow = 'hidden';
+                    imageItem.style.position = 'relative';
                     
                     const img = document.createElement('img');
                     img.src = file.file_path;
@@ -200,11 +214,27 @@ function loadAvailableImages() {
                     
                     // 點擊選擇圖片
                     imageItem.addEventListener('click', () => {
+                        console.log(`選擇圖片: ${file.file_path}`);
                         selectImage(file.file_path);
                     });
                     
                     imageGrid.appendChild(imageItem);
                 }
+            });
+            
+            // 添加搜尋功能
+            document.getElementById('image-search').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                const imageElements = document.querySelectorAll('#image-grid .image-item');
+                
+                imageElements.forEach(element => {
+                    const filename = element.getAttribute('data-filename').toLowerCase();
+                    if (filename.includes(searchTerm)) {
+                        element.style.display = 'block';
+                    } else {
+                        element.style.display = 'none';
+                    }
+                });
             });
         })
         .catch(error => {
@@ -213,14 +243,30 @@ function loadAvailableImages() {
         });
 }
 
-// 選擇圖片
+// 修復選擇圖片函數
 function selectImage(imagePath) {
+    console.log(`處理選擇的圖片: ${imagePath}`);
+    
+    // 如果找不到當前選擇器狀態，則退出
+    if (!window.currentImageSelector) {
+        console.error('無法找到當前圖片選擇器狀態');
+        closeImageSelectorModal();
+        return;
+    }
+    
     const { level, index, isEdit } = window.currentImageSelector;
+    console.log(`當前選擇器: 關卡=${level}, 索引=${index}, 是否編輯模式=${isEdit}`);
     
     // 決定要操作的元素ID前綴
     const prefix = isEdit ? 'edit-' : '';
     const listId = `${prefix}level-${level}-images`;
     const imagesList = document.getElementById(listId);
+    
+    if (!imagesList) {
+        console.error(`找不到圖片列表元素: ${listId}`);
+        closeImageSelectorModal();
+        return;
+    }
     
     // 創建或更新圖片項
     let imageItem;
@@ -230,8 +276,11 @@ function selectImage(imagePath) {
         // 更新現有項
         imageItem = existingItems[index];
         const img = imageItem.querySelector('img');
-        img.src = imagePath;
+        if (img) {
+            img.src = imagePath;
+        }
         imageItem.setAttribute('data-image', imagePath);
+        console.log(`更新了現有圖片項: 索引=${index}`);
     } else {
         // 創建新項
         imageItem = document.createElement('div');
@@ -261,12 +310,30 @@ function selectImage(imagePath) {
         
         // 插入到添加按鈕之前
         const addButton = imagesList.querySelector('.add-card-image');
-        imagesList.insertBefore(imageItem, addButton);
+        if (addButton) {
+            imagesList.insertBefore(imageItem, addButton);
+            console.log(`創建了新圖片項: 索引=${index}`);
+        } else {
+            imagesList.appendChild(imageItem);
+            console.log(`添加按鈕不存在，附加到列表末尾`);
+        }
     }
     
     // 關閉選擇器
     closeImageSelectorModal();
 }
+
+// 關閉圖片選擇器
+function closeImageSelectorModal() {
+    document.getElementById('image-selector-modal').style.display = 'none';
+}
+
+
+
+
+
+
+
 
 // 儲存模板
 function saveTemplate(isEdit) {

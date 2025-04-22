@@ -985,57 +985,124 @@
                     alert('載入模板失敗，請重新選擇或刷新頁面。');
                 });
         }
-        
-        // 初始化關卡
-        function initializeLevel(level) {
-            // 清空遊戲狀態
-            gameState.level = level;
-            gameState.flipped = [];
-            gameState.matched = [];
-            gameState.moves = 0;
-            gameState.gameWon = false;
-            
-            // 更新UI
-            elements.currentLevel.textContent = level;
-            elements.moveCounter.textContent = 0;
-            elements.winMessage.style.display = 'none';
-            elements.nextLevelBtn.style.display = 'none';
-            elements.fireworksContainer.style.display = 'none';
-            
-            // 更新遊戲板塊樣式
-            elements.gameBoard.className = `game-board level-${level}`;
-            
-            // 生成卡片內容
-            let cardContents = [];
-            
-            if (level === 1) {
-                // 第一關: 2x2 方格，2張不同圖片
-                const levelImages = gameState.images.level1;
-                cardContents = [...levelImages, ...levelImages]; // 每張圖片重複一次
-            } else if (level === 2) {
-                // 第二關: 4x2 方格，4張不同圖片
-                const levelImages = gameState.images.level2;
-                cardContents = [...levelImages, ...levelImages]; // 每張圖片重複一次
-            } else if (level === 3) {
-                // 第三關: 4x4 方格，8張不同圖片
-                const levelImages = gameState.images.level3;
-                cardContents = [...levelImages, ...levelImages]; // 每張圖片重複一次
+        // 修復 levelImages is not iterable 錯誤的函數
+function initializeLevel(level) {
+    // 清空遊戲狀態
+    gameState.level = level;
+    gameState.flipped = [];
+    gameState.matched = [];
+    gameState.moves = 0;
+    gameState.gameWon = false;
+    
+    // 更新UI
+    elements.currentLevel.textContent = level;
+    elements.moveCounter.textContent = 0;
+    elements.winMessage.style.display = 'none';
+    elements.nextLevelBtn.style.display = 'none';
+    elements.fireworksContainer.style.display = 'none';
+    
+    // 更新遊戲板塊樣式
+    elements.gameBoard.className = `game-board level-${level}`;
+    
+    // 生成卡片內容
+    let cardContents = [];
+    
+    // 防止 levelImages 不是可迭代對象
+    try {
+        if (level === 1) {
+            // 第一關: 2x2 方格，2張不同圖片
+            const levelImages = Array.isArray(gameState.images.level1) ? 
+                gameState.images.level1 : 
+                ["/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg"];
+                
+            // 確保至少有兩張圖片
+            if (levelImages.length < 2) {
+                throw new Error('第一關圖片不足，使用預設圖片');
             }
             
-            // 洗牌
-            shuffleArray(cardContents);
+            // 只取前兩張圖片，每張圖片重複一次
+            cardContents = [...levelImages.slice(0, 2), ...levelImages.slice(0, 2)];
+        } else if (level === 2) {
+            // 第二關: 4x2 方格，4張不同圖片
+            const levelImages = Array.isArray(gameState.images.level2) ? 
+                gameState.images.level2 : 
+                ["/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg", 
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg"];
+                
+            // 確保至少有四張圖片
+            if (levelImages.length < 4) {
+                throw new Error('第二關圖片不足，使用預設圖片');
+            }
             
-            // 創建卡片對象
-            gameState.cards = cardContents.map((content, index) => ({
-                id: index,
-                content: content,
-                flipped: false,
-                matched: false
-            }));
+            // 只取前四張圖片，每張圖片重複一次
+            cardContents = [...levelImages.slice(0, 4), ...levelImages.slice(0, 4)];
+        } else if (level === 3) {
+            // 第三關: 4x4 方格，8張不同圖片
+            const levelImages = Array.isArray(gameState.images.level3) ? 
+                gameState.images.level3 : 
+                ["/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg", 
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg",
+                "/uploads/default_card_5.jpg", "/uploads/default_card_6.jpg",
+                "/uploads/default_card_7.jpg", "/uploads/default_card_8.jpg"];
+                
+            // 確保至少有八張圖片
+            if (levelImages.length < 8) {
+                throw new Error('第三關圖片不足，使用預設圖片');
+            }
             
-            // 渲染遊戲板塊
-            renderGameBoard();
+            // 只取前八張圖片，每張圖片重複一次
+            cardContents = [...levelImages.slice(0, 8), ...levelImages.slice(0, 8)];
         }
+    } catch (error) {
+        console.error('載入關卡圖片時發生錯誤:', error);
+        console.log('使用預設圖片...');
+        
+        // 使用預設圖片
+        if (level === 1) {
+            cardContents = [
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg",
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg"
+            ];
+        } else if (level === 2) {
+            cardContents = [
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg",
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg",
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg",
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg"
+            ];
+        } else if (level === 3) {
+            cardContents = [
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg",
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg",
+                "/uploads/default_card_5.jpg", "/uploads/default_card_6.jpg",
+                "/uploads/default_card_7.jpg", "/uploads/default_card_8.jpg",
+                "/uploads/default_card_1.jpg", "/uploads/default_card_2.jpg",
+                "/uploads/default_card_3.jpg", "/uploads/default_card_4.jpg",
+                "/uploads/default_card_5.jpg", "/uploads/default_card_6.jpg",
+                "/uploads/default_card_7.jpg", "/uploads/default_card_8.jpg"
+            ];
+        }
+    }
+    
+    // 確保卡片數量是偶數，以便配對
+    if (cardContents.length % 2 !== 0) {
+        cardContents = cardContents.slice(0, cardContents.length - 1);
+    }
+    
+    // 洗牌
+    shuffleArray(cardContents);
+    
+    // 創建卡片對象
+    gameState.cards = cardContents.map((content, index) => ({
+        id: index,
+        content: content,
+        flipped: false,
+        matched: false
+    }));
+    
+    // 渲染遊戲板塊
+    renderGameBoard();
+}
         
         // 洗牌函數 (Fisher-Yates 算法)
         function shuffleArray(array) {
