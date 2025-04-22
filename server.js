@@ -685,6 +685,7 @@ app.use(async (req, res, next) => {
         '/game/card-game.html', // <-- 新增
         '/game/wheel-game.html', // <-- 新增
         '/game/brige-game.html',  // <-- 新增
+        '/game/text-game.html',
         
 '/games.html'
 
@@ -1066,6 +1067,253 @@ app.delete('/api/card-game/templates/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除模板' });
     }
 });
+
+
+
+
+
+
+
+// --- 翻牌對對碰遊戲API ---
+
+// GET /api/card-game/templates - 獲取所有模板
+app.get('/api/card-game/templates', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, template_name, created_at, updated_at
+             FROM card_game_templates
+             WHERE is_public = TRUE
+             ORDER BY updated_at DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取翻牌模板列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/card-game/templates/:id - 獲取特定模板
+app.get('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+
+    try {
+        const result = await pool.query(
+            'SELECT id, template_name, content_data, created_at, updated_at FROM card_game_templates WHERE id = $1 AND is_public = TRUE',
+            [templateId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到模板或模板不公開' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取翻牌模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/card-game/templates - 創建新模板
+app.post('/api/card-game/templates', async (req, res) => {
+    const { template_name, content_data, is_public = true } = req.body;
+    
+    if (!template_name) {
+        return res.status(400).json({ error: '模板名稱不能為空' });
+    }
+    
+    if (!content_data || typeof content_data !== 'object') {
+        return res.status(400).json({ error: '卡片內容格式不正確' });
+    }
+
+    try {
+        // 檢查必須的關卡圖片
+        if (!content_data.level1 || !Array.isArray(content_data.level1) || content_data.level1.length < 2) {
+            return res.status(400).json({ error: '第一關至少需要2張不同圖片' });
+        }
+        if (!content_data.level2 || !Array.isArray(content_data.level2) || content_data.level2.length < 4) {
+            return res.status(400).json({ error: '第二關至少需要4張不同圖片' });
+        }
+        if (!content_data.level3 || !Array.isArray(content_data.level3) || content_data.level3.length < 8) {
+            return res.status(400).json({ error: '第三關至少需要8張不同圖片' });
+        }
+        
+        // 檢查模板名稱是否已存在
+        const existingCheck = await pool.query(
+            'SELECT 1 FROM card_game_templates WHERE template_name = $1',
+            [template_name]
+        );
+        
+        if (existingCheck.rows.length > 0) {
+            return res.status(409).json({ error: '此模板名稱已存在' });
+        }
+        
+        // 插入新模板
+        const ip_address = req.ip || 'unknown';  
+        const result = await pool.query(
+            `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
+             VALUES ($1, $2::json, $3, $4) 
+             RETURNING id, template_name, content_data, created_at, updated_at`,
+            [template_name, JSON.stringify(content_data), ip_address, is_public]
+        );
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('創建翻牌模板失敗:', err);
+        res.status(500).json({ 
+            error: '伺服器內部錯誤',
+            detail: err.message
+        });
+    }
+});
+
+// PUT /api/card-game/templates/:id - 更新模板
+app.put('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    const { template_name, content_data } = req.body;
+    
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+    
+    if (!template_name) {
+        return res.status(400).json({ error: '模板名稱不能為空' });
+    }
+    
+    if (!content_data || typeof content_data !== 'object') {
+        return res.status(400).json({ error: '卡片內容格式不正確' });
+    }
+    
+    try {
+        // 檢查必須的關卡圖片
+        if (!content_data.level1 || !Array.isArray(content_data.level1) || content_data.level1.length < 2) {
+            return res.status(400).json({ error: '第一關至少需要2張不同圖片' });
+        }
+        if (!content_data.level2 || !Array.isArray(content_data.level2) || content_data.level2.length < 4) {
+            return res.status(400).json({ error: '第二關至少需要4張不同圖片' });
+        }
+        if (!content_data.level3 || !Array.isArray(content_data.level3) || content_data.level3.length < 8) {
+            return res.status(400).json({ error: '第三關至少需要8張不同圖片' });
+        }
+        
+        // 檢查模板是否存在
+        const existingTemplateCheck = await pool.query(
+            'SELECT 1 FROM card_game_templates WHERE id = $1',
+            [templateId]
+        );
+        
+        if (existingTemplateCheck.rows.length === 0) {
+            return res.status(404).json({ error: '找不到要更新的模板' });
+        }
+        
+        // 檢查模板名稱是否與其他模板重複
+        const existingNameCheck = await pool.query(
+            'SELECT 1 FROM card_game_templates WHERE template_name = $1 AND id <> $2',
+            [template_name, templateId]
+        );
+        
+        if (existingNameCheck.rows.length > 0) {
+            return res.status(409).json({ error: '此模板名稱已被其他模板使用' });
+        }
+        
+        // 更新模板
+        const result = await pool.query(
+            `UPDATE card_game_templates 
+             SET template_name = $1, content_data = $2::json, updated_at = NOW() 
+             WHERE id = $3 
+             RETURNING id, template_name, content_data, created_at, updated_at`,
+            [template_name, JSON.stringify(content_data), templateId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到要更新的模板' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新翻牌模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// DELETE /api/card-game/templates/:id - 刪除模板
+app.delete('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10);
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
+
+    try {
+        // 刪除模板
+        const result = await pool.query('DELETE FROM card_game_templates WHERE id = $1', [templateId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的模板' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除翻牌模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// GET /api/card-game/leaderboard - 獲取排行榜
+app.get('/api/card-game/leaderboard', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT cg.id, cg.player_name, cg.total_moves, cg.completion_time, 
+                    cgt.template_name, cg.created_at 
+             FROM card_game_leaderboard cg
+             LEFT JOIN card_game_templates cgt ON cg.template_id = cgt.id
+             ORDER BY cg.total_moves ASC, cg.completion_time ASC
+             LIMIT 20`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取翻牌遊戲排行榜失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// POST /api/card-game/submit-score - 提交分數
+app.post('/api/card-game/submit-score', async (req, res) => {
+    const { player_name, total_moves, template_id } = req.body;
+    
+    if (!player_name) {
+        return res.status(400).json({ error: '玩家名稱不能為空' });
+    }
+    
+    if (!total_moves || isNaN(parseInt(total_moves))) {
+        return res.status(400).json({ error: '總步數必須是數字' });
+    }
+    
+    try {
+        const ip_address = req.ip || 'unknown';
+        
+        // 插入分數記錄
+        const result = await pool.query(
+            `INSERT INTO card_game_leaderboard (player_name, total_moves, template_id, ip_address) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING id`,
+            [player_name, parseInt(total_moves), template_id || null, ip_address]
+        );
+        
+        res.json({ success: true, id: result.rows[0].id });
+    } catch (err) {
+        console.error('提交翻牌遊戲分數失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
+
 
 
 

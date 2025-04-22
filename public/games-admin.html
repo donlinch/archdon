@@ -68,6 +68,152 @@
             color: #666;
             font-size: 0.9rem;
         }
+        
+        /* 分頁控制 */
+        .tab-controls {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab-controls button {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            cursor: pointer;
+            outline: none;
+        }
+        .tab-controls button.active {
+            border-bottom: 3px solid #ff6b6b;
+            font-weight: bold;
+            color: #333;
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        
+        /* 翻牌對對碰相關樣式 */
+        #card-template-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        #card-template-list-table th, #card-template-list-table td { border: 1px solid #ddd; padding: 10px; }
+        #card-template-list-table th { background-color: #e9ecef; }
+        
+        .card-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .card-preview-item {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f9fa;
+            position: relative;
+        }
+        .card-preview-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 10px;
+            padding: 2px;
+            text-align: center;
+        }
+        
+        /* 排行榜樣式 */
+        #leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        #leaderboard-table th, #leaderboard-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        #leaderboard-table th { background-color: #e9ecef; }
+        
+        /* 翻牌模板編輯器 */
+        .card-images-editor {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .template-level {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+        }
+        .level-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-image-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .card-image-item {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            background-color: #fff;
+        }
+        .card-image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .card-image-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .add-card-image {
+            width: 100px;
+            height: 100px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            background-color: #fff;
+        }
+        .add-card-image:hover {
+            border-color: #28a745;
+            color: #28a745;
+        }
+        .add-card-image i {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -81,51 +227,112 @@
        <a href="/guestbook-admin.html">留言管理</a>
        <a href="/games-admin.html" class="active">遊戲管理</a>
        <a href="/file-admin.html">檔案管理</a>
-       <a href="/store/report/report-admin.html"  >html報告管理</a>
+       <a href="/store/report/report-admin.html">html報告管理</a>
    </nav>
 
    <div class="admin-container">
        <h1>遊戲管理</h1>
        <a href="/games.html" style="display: inline-block; margin-bottom: 1rem;">前往遊戲頁面</a>
-       <button class="add-game-btn" onclick="showAddForm()">新增遊戲</button>
        
-       <!-- 遊戲數據統計卡片 -->
-       <div class="stats-cards">
-           <div class="stat-card">
-               <div class="stat-label">遊戲總數</div>
-               <div class="stat-value" id="total-games-count">-</div>
+       <!-- 分頁控制 -->
+       <div class="tab-controls">
+           <button class="tab-btn active" data-tab="games-tab">遊戲列表</button>
+           <button class="tab-btn" data-tab="card-game-tab">翻牌對對碰設定</button>
+       </div>
+       
+       <!-- 遊戲列表分頁 -->
+       <div id="games-tab" class="tab-panel active">
+           <button class="add-game-btn" onclick="showAddForm()">新增遊戲</button>
+           
+           <!-- 遊戲數據統計卡片 -->
+           <div class="stats-cards">
+               <div class="stat-card">
+                   <div class="stat-label">遊戲總數</div>
+                   <div class="stat-value" id="total-games-count">-</div>
+               </div>
+               <div class="stat-card">
+                   <div class="stat-label">總遊玩次數</div>
+                   <div class="stat-value" id="total-plays-count">-</div>
+               </div>
+               <div class="stat-card">
+                   <div class="stat-label">最受歡迎遊戲</div>
+                   <div class="stat-value" id="most-popular-game">-</div>
+               </div>
+               <div class="stat-card">
+                   <div class="stat-label">今日遊玩次數</div>
+                   <div class="stat-value" id="today-plays-count">-</div>
+               </div>
            </div>
-           <div class="stat-card">
-               <div class="stat-label">總遊玩次數</div>
-               <div class="stat-value" id="total-plays-count">-</div>
-           </div>
-           <div class="stat-card">
-               <div class="stat-label">最受歡迎遊戲</div>
-               <div class="stat-value" id="most-popular-game">-</div>
-           </div>
-           <div class="stat-card">
-               <div class="stat-label">今日遊玩次數</div>
-               <div class="stat-value" id="today-plays-count">-</div>
+           
+           <h2>現有遊戲列表</h2>
+           <div id="games-list-container">
+               <table id="games-list-table">
+                   <thead>
+                       <tr>
+                           <th>ID</th>
+                           <th>名稱</th>
+                           <th>描述</th>
+                           <th>遊玩次數</th>
+                           <th>縮圖</th>
+                           <th>操作</th>
+                       </tr>
+                   </thead>
+                   <tbody>
+                       <!-- 遊戲列表將由 JavaScript 動態生成 -->
+                   </tbody>
+               </table>
            </div>
        </div>
        
-       <h2>現有遊戲列表</h2>
-       <div id="games-list-container">
-           <table id="games-list-table">
-               <thead>
-                   <tr>
-                       <th>ID</th>
-                       <th>名稱</th>
-                       <th>描述</th>
-                       <th>遊玩次數</th>
-                       <th>縮圖</th>
-                       <th>操作</th>
-                   </tr>
-               </thead>
-               <tbody>
-                   <!-- 遊戲列表將由 JavaScript 動態生成 -->
-               </tbody>
-           </table>
+       <!-- 翻牌對對碰設定分頁 -->
+       <div id="card-game-tab" class="tab-panel">
+           <div class="tab-controls" style="margin-top: 20px;">
+               <button class="subtab-btn active" data-subtab="templates-subtab">模板管理</button>
+               <button class="subtab-btn" data-subtab="leaderboard-subtab">排行榜</button>
+           </div>
+           
+           <!-- 模板管理子分頁 -->
+           <div id="templates-subtab" class="subtab-panel active">
+               <button class="add-game-btn" onclick="showAddTemplateForm()">新增模板</button>
+               
+               <h2>翻牌對對碰模板列表</h2>
+               <div id="card-template-list-container">
+                   <table id="card-template-list-table">
+                       <thead>
+                           <tr>
+                               <th style="width: 8%;">ID</th>
+                               <th style="width: 20%;">模板名稱</th>
+                               <th style="width: 40%;">卡片預覽</th>
+                               <th style="width: 15%;">建立日期</th>
+                               <th style="width: 17%;">操作</th>
+                           </tr>
+                       </thead>
+                       <tbody>
+                           <!-- 模板列表將由 JavaScript 動態生成 -->
+                       </tbody>
+                   </table>
+               </div>
+           </div>
+           
+           <!-- 排行榜子分頁 -->
+           <div id="leaderboard-subtab" class="subtab-panel">
+               <h2>翻牌對對碰排行榜</h2>
+               <table id="leaderboard-table">
+                   <thead>
+                       <tr>
+                           <th>排名</th>
+                           <th>玩家名稱</th>
+                           <th>總步數</th>
+                           <th>完成時間</th>
+                           <th>模板</th>
+                           <th>遊玩日期</th>
+                       </tr>
+                   </thead>
+                   <tbody>
+                       <!-- 排行榜列表將由 JavaScript 動態生成 -->
+                   </tbody>
+               </table>
+           </div>
        </div>
    </div>
 
@@ -219,8 +426,144 @@
            </form>
        </div>
    </div>
+   
+   <!-- Add Card Template Modal -->
+   <div id="add-template-modal" class="modal">
+       <div class="modal-content" style="max-width: 800px;">
+           <span class="close-btn" onclick="closeAddTemplateModal()">×</span>
+           <h2>新增翻牌對對碰模板</h2>
+           <form id="add-template-form">
+               <div class="form-group">
+                   <label for="template-name">模板名稱:</label>
+                   <input type="text" id="template-name" name="template_name" required placeholder="例如：動物世界、水果園等">
+               </div>
+               
+               <div class="card-images-editor">
+                   <div class="template-level" id="level-1">
+                       <div class="level-title">
+                           <span>第一關 (2×2配對 - 需要2張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="level-1-images">
+                           <div class="add-card-image" onclick="showImageSelector(1, 0)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="template-level" id="level-2">
+                       <div class="level-title">
+                           <span>第二關 (4×2配對 - 需要4張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="level-2-images">
+                           <div class="add-card-image" onclick="showImageSelector(2, 0)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="template-level" id="level-3">
+                       <div class="level-title">
+                           <span>第三關 (4×4配對 - 需要8張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="level-3-images">
+                           <div class="add-card-image" onclick="showImageSelector(3, 0)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+               
+               <div class="form-actions">
+                   <button type="submit" class="action-btn save-btn">儲存模板</button>
+                   <button type="button" class="action-btn cancel-btn" onclick="closeAddTemplateModal()">取消</button>
+               </div>
+               <p id="add-template-form-error" style="color: red;"></p>
+           </form>
+       </div>
+   </div>
+   
+   <!-- Edit Card Template Modal -->
+   <div id="edit-template-modal" class="modal">
+       <div class="modal-content" style="max-width: 800px;">
+           <span class="close-btn" onclick="closeEditTemplateModal()">×</span>
+           <h2>編輯翻牌對對碰模板</h2>
+           <form id="edit-template-form">
+               <input type="hidden" id="edit-template-id">
+               <div class="form-group">
+                   <label for="edit-template-name">模板名稱:</label>
+                   <input type="text" id="edit-template-name" name="template_name" required>
+               </div>
+               
+               <div class="card-images-editor">
+                   <div class="template-level" id="edit-level-1">
+                       <div class="level-title">
+                           <span>第一關 (2×2配對 - 需要2張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="edit-level-1-images">
+                           <div class="add-card-image" onclick="showImageSelector(1, 0, true)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="template-level" id="edit-level-2">
+                       <div class="level-title">
+                           <span>第二關 (4×2配對 - 需要4張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="edit-level-2-images">
+                           <div class="add-card-image" onclick="showImageSelector(2, 0, true)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+                   
+                   <div class="template-level" id="edit-level-3">
+                       <div class="level-title">
+                           <span>第三關 (4×4配對 - 需要8張不同圖片)</span>
+                       </div>
+                       <div class="card-image-list" id="edit-level-3-images">
+                           <div class="add-card-image" onclick="showImageSelector(3, 0, true)">
+                               <i>+</i>
+                               <span>添加圖片</span>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+               
+               <div class="form-actions">
+                   <button type="submit" class="action-btn save-btn">儲存變更</button>
+                   <button type="button" class="action-btn cancel-btn" onclick="closeEditTemplateModal()">取消</button>
+               </div>
+               <p id="edit-template-form-error" style="color: red;"></p>
+           </form>
+       </div>
+   </div>
+   
+   <!-- Image Selector Modal -->
+   <div id="image-selector-modal" class="modal">
+       <div class="modal-content" style="max-width: 900px;">
+           <span class="close-btn" onclick="closeImageSelectorModal()">×</span>
+           <h2>選擇圖片</h2>
+           
+           <input type="text" id="image-search" placeholder="搜尋圖片..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+           
+           <div id="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px;">
+               <!-- 圖片將由 JavaScript 動態加載 -->
+           </div>
+           
+           <div style="margin-top: 15px; text-align: right;">
+               <button class="action-btn cancel-btn" onclick="closeImageSelectorModal()">取消</button>
+           </div>
+       </div>
+   </div>
 
    <!-- 引入外部 JavaScript 文件 -->
    <script src="games-admin.js"></script>
+   <script src="card-game-admin.js"></script>
 </body>
-</html> 
+</html>
