@@ -7,774 +7,775 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #fff5f7;
-            color: #333;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow-x: hidden;
-            position: relative;
-        }
 
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #fff5f7; /* 淡粉色背景 */
-            color: #333;
-            padding-bottom: 70px; /* 為底部導航留出空間 */
-            overflow-x: hidden; /* 防止水平滾動 */
-        }
 
-        /* --- 頁面標題樣式 --- */
-        .page-title-header {
-            background-color: #FFB74D;
-            padding: 1.5rem 1rem;
-            text-align: center;
-            width: 100%;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-        }
-        
-        .page-title {
-            color: #424242;
-            margin: 0;
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        
-        .page-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 2rem auto;
-            position: relative;
-        }
-        
-        .page-header {
-            background-color: #FFB74D;
-            padding: 1.5rem 1rem;
-            text-align: center;
-            width: 100%;
-            border-radius: 12px 12px 0 0;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-            margin-bottom: 20px;
-        }
-        
-        .page-title {
-            color: #424242;
-            margin: 0;
-            font-size: 2rem;
-            font-weight: 700;
-        }
-        
-        .game-container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            position: relative;
-            overflow: hidden;
-        }
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: #fff5f7;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: 70px; /* 為底部導航留出空間 */
+}
 
-        /* --- 底部導航 --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: white;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            z-index: 1000;
-            padding: 5px 0;
-        }
+/* --- 頁面標題樣式 --- */
+.page-title-header {
+    background-color: #FFB74D;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    width: 100%;
+    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+}
 
-        .bottom-nav ul {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
+.page-title {
+    color: #424242;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
 
-        .bottom-nav li {
-            text-align: center;
-        }
+.page-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    position: relative;
+}
 
-        .bottom-nav a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 5px;
-            text-decoration: none;
-            color: #777;
-            font-size: 0.7rem;
-            transition: all 0.3s;
-        }
+.page-header {
+    background-color: #FFB74D;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+    margin-bottom: 20px;
+}
 
-        .bottom-nav a.active {
-            color: #FFB74D;
-            background-color: rgba(255, 183, 77, 0.1);
-            border-radius: 20px;
-            animation: pulse 2s infinite;
-        }
+.page-title {
+    color: #424242;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
 
-        .bottom-nav .icon {
-            font-size: 1.5rem;
-            margin-bottom: 3px;
-        }
+.game-container {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    position: relative;
+    overflow: hidden;
+}
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        /* Animation keyframes */
-        @keyframes floatAnimation {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-            100% { transform: translateY(0px); }
-        }
-        
-        @keyframes pulseGlow {
-            0% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(255, 183, 77, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
-        }
-        
-        @keyframes matchedPulse {
-            0% { transform: scale(1.05); }
-            50% { transform: scale(1.15); }
-            100% { transform: scale(1.05); }
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        @keyframes firework {
-            0% { transform: translate(50%, 50%); width: 0; opacity: 1; }
-            50% { width: 100%; opacity: 0.8; }
-            100% { width: 160%; opacity: 0; }
-        }
-        
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-        
-        /* Game elements */
-        .template-selector {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .template-select {
+/* --- 底部導航 --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 1000;
+    padding: 5px 0;
+}
 
-            padding: 10px 15px;
-            border-radius: 25px;
-            border: 2px solid #FFB74D;
-            background-color: white;
-            font-family: 'Noto Sans TC', sans-serif;
-            font-size: 1rem;
-            color: #333;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .template-select:hover, .template-select:focus {
-            box-shadow: 0 0 10px rgba(255, 183, 77, 0.5);
-        }
-        
-        .game-info {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .level-info {
-            display: inline-block;
-            background-color: #f5f5f5;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 500;
-            margin-bottom: 10px;
-            color: #666;
-        }
-        
-        .moves-counter {
-            display: inline-block;
-            background-color: #e3f2fd;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 500;
-            margin-left: 10px;
-            color: #1976d2;
-        }
-        
-        .game-board {
-            display: grid;
-            gap: 10px;
-            margin: 0 auto 30px;
-            max-width: 600px;
-            perspective: 1000px;
-        }
-        
-        .card {
-            position: relative;
-            height: 120px;
-            cursor: pointer;
-            transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .card.flipped {
-            transform: rotateY(180deg);
-        }
-        
-        .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card-back {
-            background: linear-gradient(135deg, #64B5F6, #42A5F5, #2196F3);
-            color: transparent;
-            transform: rotateY(0deg);
-        }
-        
-        .card-front {
-            background-size: cover;
-            background-position: center;
-            transform: rotateY(180deg);
-        }
-        
-        .card:hover:not(.flipped):not(.matched) {
-            animation: floatAnimation 2s ease-in-out infinite;
-        }
-        
-        .card:hover:not(.flipped):not(.matched) .card-back {
-            animation: pulseGlow 1.5s infinite;
-        }
-        
-        .card.matched .card-front {
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
-            animation: matchedPulse 1.5s ease infinite;
-        }
-        
-        .win-message {
-            background-color: #e8f5e9;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            animation: bounce 1s infinite;
-        }
-        
-        .win-message-title {
-            color: #2e7d32;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        
-        .game-controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .reset-btn {
-            background-color: #e0e0e0;
-            color: #757575;
-            border: none;
-            padding: 8px 12px;
-            font-size: 0.9rem;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .reset-btn:hover {
-            background-color: #bdbdbd;
-            transform: translateY(-2px);
-        }
-        
-        .next-level-btn {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: 500;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
-        }
-        
-        .next-level-btn:hover {
-            background-color: #43a047;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
-        }
-        
-        .leaderboard-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: #ffb74d;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-            z-index: 100;
-        }
-        
-        .leaderboard-btn:hover {
-            background-color: #ffa726;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
-        }
-        
-        /* Fireworks effects */
-        .fireworks-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 10;
-        }
-        
-        .firework {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-        }
-        
-        .firework::before, .firework::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border-radius: 50%;
-            width: 5px;
-            height: 5px;
-            box-shadow: 
-                0 0 0 4px #ff8426,
-                0 0 0 8px #ffde66,
-                0 0 0 12px #66ffde,
-                0 0 0 16px #66a6ff,
-                0 0 0 20px #a366ff,
-                0 0 0 24px #ff66d9;
-            animation: firework 1.5s ease-out infinite;
-        }
-        
-        .firework:nth-child(2) {
-            transform: rotate(45deg);
-        }
-        
-        .firework:nth-child(3) {
-            transform: rotate(90deg);
-        }
-        
-        .firework:nth-child(4) {
-            transform: rotate(135deg);
-        }
-        
-        /* Leaderboard Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        
-        .modal-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .modal-content {
-            background-color: white;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 30px;
-            transform: scale(0.9);
-            opacity: 0;
-            transition: transform 0.3s, opacity 0.3s;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .modal-overlay.visible .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-        
-        .modal-header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .modal-title {
-            font-size: 1.5rem;
-            color: #424242;
-            font-weight: 700;
-        }
-        
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        
-        .leaderboard-table th,
-        .leaderboard-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .leaderboard-table th {
-            background-color: #f5f5f5;
-            font-weight: 600;
-            color: #757575;
-        }
-        
-        .leaderboard-table tr:nth-child(even) {
-            background-color: #fafafa;
-        }
-        
-        .leaderboard-table tr.highlight {
-            background-color: #fff9c4;
-        }
-        
-        .leaderboard-table tr:hover {
-            background-color: #f5f5f5;
-        }
-        
-        .modal-footer {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .close-modal-btn {
-            background-color: #2196f3;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .close-modal-btn:hover {
-            background-color: #1976d2;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
-        }
-        
-        /* Name Input Modal */
-        .name-input-container {
-            background-color: white;
-            border-radius: 15px;
-            padding: 25px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            transform: scale(0.9);
-            opacity: 0;
-            transition: transform 0.3s, opacity 0.3s;
-        }
-        
-        .modal-overlay.visible .name-input-container {
-            transform: scale(1);
-            opacity: 1;
-        }
-        
-        .name-input-title {
-            font-size: 1.3rem;
-            color: #424242;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-        
-        .name-input {
-            width: 100%;
-            padding: 12px 15px;
-            font-size: 1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-family: 'Noto Sans TC', sans-serif;
-            transition: border-color 0.3s;
-        }
-        
-        .name-input:focus {
-            border-color: #2196f3;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
-        }
-        
-        .submit-name-btn {
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .submit-name-btn:hover {
-            background-color: #43a047;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
-        }
-        
-        /* Loading Spinner */
-        .loading-spinner {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 183, 77, 0.3);
-            border-radius: 50%;
-            border-top-color: #FFB74D;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .loading-container {
-            text-align: center;
-            padding: 30px;
-        }
-        
-        /* Select Template Button */
-        .template-selector {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        
-        .template-btn {
-            background-color: #FFB74D;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 500;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-        }
-        
-        .template-btn:hover {
-            background-color: #ffa726;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
-        }
-        
-        /* Footer */
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            font-size: 0.9rem;
-            color: #757575;
-        }
-        
-        .footer a {
-            color: #2196f3;
-            text-decoration: none;
-        }
-        
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        
-        /* Template Selection Modal */
-        .template-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .template-card {
-            background-color: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .template-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .template-card.active {
-            border: 3px solid #4caf50;
-        }
-        
-        .template-card-header {
-            background-color: #FFB74D;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .template-card-body {
-            padding: 15px;
-        }
-        
-        .template-description {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 10px;
-        }
-        
-        .template-difficulty {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .difficulty-easy {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .difficulty-normal {
-            background-color: #fff3e0;
-            color: #e65100;
-        }
-        
-        .difficulty-hard {
-            background-color: #ffebee;
-            color: #b71c1c;
-        }
-        
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .page-container {
-                padding: 15px;
-                margin: 1rem auto;
-            }
-            
-            .game-container {
-                padding: 20px;
-            }
-            
-            .card {
-                height: 100px;
-            }
-            
-            .leaderboard-btn {
-                top: 15px;
-                left: 15px;
-                padding: 6px 12px;
-                font-size: 0.8rem;
-            }
-            
-            .template-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .page-title {
-                font-size: 1.5rem;
-            }
-            
-            .card {
-                height: 80px;
-            }
-            
-            .level-info, .moves-counter {
-                padding: 6px 12px;
-                font-size: 0.9rem;
-                display: block;
-                margin: 0 auto 10px;
-            }
-            
-            .moves-counter {
-                margin-left: 0;
-            }
-            
-            .win-message-title {
-                font-size: 1.2rem;
-            }
-            
-            .next-level-btn {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-            }
-            
-            .template-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+.bottom-nav ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bottom-nav li {
+    text-align: center;
+}
+
+.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px;
+    text-decoration: none;
+    color: #777;
+    font-size: 0.7rem;
+    transition: all 0.3s;
+}
+
+.bottom-nav a.active {
+    color: #FFB74D;
+    background-color: rgba(255, 183, 77, 0.1);
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+}
+
+.bottom-nav .icon {
+    font-size: 1.5rem;
+    margin-bottom: 3px;
+}
+
+/* Animation keyframes */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes floatAnimation {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(255, 183, 77, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
+}
+
+@keyframes matchedPulse {
+    0% { transform: scale(1.05); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1.05); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes firework {
+    0% { transform: translate(50%, 50%); width: 0; opacity: 1; }
+    50% { width: 100%; opacity: 0.8; }
+    100% { width: 160%; opacity: 0; }
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Game elements */
+.template-selector {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.template-select {
+    padding: 10px 15px;
+    border-radius: 25px;
+    border: 2px solid #FFB74D;
+    background-color: white;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 1rem;
+    color: #333;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.template-select:hover, .template-select:focus {
+    box-shadow: 0 0 10px rgba(255, 183, 77, 0.5);
+}
+
+.game-info {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.level-info {
+    display: inline-block;
+    background-color: #f5f5f5;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.moves-counter {
+    display: inline-block;
+    background-color: #e3f2fd;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin-left: 10px;
+    color: #1976d2;
+}
+
+.game-board {
+    display: grid;
+    gap: 10px;
+    margin: 0 auto 30px;
+    max-width: 600px;
+    perspective: 1000px;
+}
+
+/* Vertical layout for level 1 and 2 */
+.game-board.vertical-layout {
+    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.card {
+    position: relative;
+    height: 120px;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-back {
+    background: linear-gradient(135deg, #64B5F6, #42A5F5, #2196F3);
+    color: transparent;
+    transform: rotateY(0deg);
+}
+
+.card-front {
+    background-size: cover;
+    background-position: center;
+    transform: rotateY(180deg);
+}
+
+.card:hover:not(.flipped):not(.matched) {
+    animation: floatAnimation 2s ease-in-out infinite;
+}
+
+.card:hover:not(.flipped):not(.matched) .card-back {
+    animation: pulseGlow 1.5s infinite;
+}
+
+.card.matched .card-front {
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+    animation: matchedPulse 1.5s ease infinite;
+}
+
+.win-message {
+    background-color: #e8f5e9;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    animation: bounce 1s infinite;
+}
+
+.win-message-title {
+    color: #2e7d32;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.reset-btn {
+    background-color: #e0e0e0;
+    color: #757575;
+    border: none;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reset-btn:hover {
+    background-color: #bdbdbd;
+    transform: translateY(-2px);
+}
+
+.next-level-btn {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.next-level-btn:hover {
+    background-color: #43a047;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+}
+
+.leaderboard-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: #ffb74d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+    z-index: 100;
+}
+
+.leaderboard-btn:hover {
+    background-color: #ffa726;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
+}
+
+/* Fireworks effects */
+.fireworks-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.firework {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.firework::before, .firework::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    width: 5px;
+    height: 5px;
+    box-shadow: 
+        0 0 0 4px #ff8426,
+        0 0 0 8px #ffde66,
+        0 0 0 12px #66ffde,
+        0 0 0 16px #66a6ff,
+        0 0 0 20px #a366ff,
+        0 0 0 24px #ff66d9;
+    animation: firework 1.5s ease-out infinite;
+}
+
+.firework:nth-child(2) {
+    transform: rotate(45deg);
+}
+
+.firework:nth-child(3) {
+    transform: rotate(90deg);
+}
+
+.firework:nth-child(4) {
+    transform: rotate(135deg);
+}
+
+/* Leaderboard Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-overlay.visible .modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    color: #424242;
+    font-weight: 700;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.leaderboard-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    color: #757575;
+}
+
+.leaderboard-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.leaderboard-table tr.highlight {
+    background-color: #fff9c4;
+}
+
+.leaderboard-table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.modal-footer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.close-modal-btn {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.close-modal-btn:hover {
+    background-color: #1976d2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+}
+
+/* Name Input Modal */
+.name-input-container {
+    background-color: white;
+    border-radius: 15px;
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+}
+
+.modal-overlay.visible .name-input-container {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.name-input-title {
+    font-size: 1.3rem;
+    color: #424242;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.name-input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: border-color 0.3s;
+}
+
+.name-input:focus {
+    border-color: #2196f3;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+}
+
+.submit-name-btn {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.submit-name-btn:hover {
+    background-color: #43a047;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 183, 77, 0.3);
+    border-radius: 50%;
+    border-top-color: #FFB74D;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-container {
+    text-align: center;
+    padding: 30px;
+}
+
+/* Select Template Button */
+.template-selector {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.template-btn {
+    background-color: #FFB74D;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+}
+
+.template-btn:hover {
+    background-color: #ffa726;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    padding: 15px;
+    font-size: 0.9rem;
+    color: #757575;
+}
+
+.footer a {
+    color: #2196f3;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* Template Selection Modal */
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.template-card {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.template-card.active {
+    border: 3px solid #4caf50;
+}
+
+.template-card-header {
+    background-color: #FFB74D;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.template-card-body {
+    padding: 15px;
+}
+
+.template-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.template-difficulty {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.difficulty-easy {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.difficulty-normal {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.difficulty-hard {
+    background-color: #ffebee;
+    color: #b71c1c;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .page-container {
+        padding: 15px;
+        margin: 1rem auto;
+    }
+    
+    .game-container {
+        padding: 20px;
+    }
+    
+    .card {
+        height: 100px;
+    }
+    
+    .leaderboard-btn {
+        top: 15px;
+        left: 15px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .template-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .card {
+        height: 80px;
+    }
+    
+    .level-info, .moves-counter {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+        display: block;
+        margin: 0 auto 10px;
+    }
+    
+    .moves-counter {
+        margin-left: 0;
+    }
+    
+    .win-message-title {
+        font-size: 1.2rem;
+    }
+    
+    .next-level-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+    
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
     </style>
 </head>
 <body>
@@ -912,589 +913,592 @@
     </nav>
      
     <script>
-        // 全域變數
-        const gameState = {
-            templateId: null,
-            templateName: '',
-            currentLevel: 1,
-            maxLevel: 0,
-            cards: [],
-            flipped: [],
-            matched: [],
-            moves: 0,
-            totalMoves: 0,
-            gameWon: false,
-            levels: [],
-            leaderboard: []
-        };
-        
-        // DOM 元素
-        const elements = {
-            gameArea: document.getElementById('gameArea'),
-            loadingContainer: document.getElementById('loadingContainer'),
-            templateSelectorBtn: document.getElementById('templateSelectorBtn'),
-            templateSelectionModal: document.getElementById('templateSelectionModal'),
-            templatesList: document.getElementById('templatesList'),
-            closeTemplateModalBtn: document.getElementById('closeTemplateModalBtn'),
-            templateNameDisplay: document.getElementById('templateNameDisplay'),
-            gameBoard: document.getElementById('gameBoard'),
-            currentLevel: document.getElementById('currentLevel'),
-            moveCounter: document.getElementById('moveCounter'),
-            winMessage: document.getElementById('winMessage'),
-            winMessageText: document.getElementById('winMessageText'),
-            levelMoves: document.getElementById('levelMoves'),
-            resetBtn: document.getElementById('resetBtn'),
-            nextLevelBtn: document.getElementById('nextLevelBtn'),
-            fireworksContainer: document.getElementById('fireworksContainer'),
-            leaderboardBtn: document.getElementById('leaderboardBtn'),
-            leaderboardModal: document.getElementById('leaderboardModal'),
-            leaderboardBody: document.getElementById('leaderboardBody'),
-            closeLeaderboardBtn: document.getElementById('closeLeaderboardBtn'),
-            nameInputModal: document.getElementById('nameInputModal'),
-            totalMoves: document.getElementById('totalMoves'),
-            playerNameInput: document.getElementById('playerNameInput'),
-            submitNameBtn: document.getElementById('submitNameBtn')
-        };
-        
-        // 當文檔加載完成時
-        document.addEventListener('DOMContentLoaded', () => {
-            // 初始化事件監聽器
-            initEventListeners();
-            
-            // 載入可用的模板
-            loadTemplates();
-            
-            // 檢查 URL 中是否有模板 ID 參數
-            const urlParams = new URLSearchParams(window.location.search);
-            const templateIdParam = urlParams.get('template');
-            
-            if (templateIdParam) {
-                // 直接載入指定的模板
-                loadGameTemplate(templateIdParam);
-            } else {
-                // 隱藏載入中顯示，顯示模板選擇
-                elements.loadingContainer.style.display = 'none';
+
+
+
+
+// 全域變數
+const gameState = {
+    templateId: null,
+    templateName: '',
+    currentLevel: 1,
+    maxLevel: 0,
+    cards: [],
+    flipped: [],
+    matched: [],
+    moves: 0,
+    totalMoves: 0,
+    gameWon: false,
+    levels: [],
+    leaderboard: []
+};
+
+// DOM 元素
+const elements = {
+    gameArea: document.getElementById('gameArea'),
+    loadingContainer: document.getElementById('loadingContainer'),
+    templateSelectorBtn: document.getElementById('templateSelectorBtn'),
+    templateSelectionModal: document.getElementById('templateSelectionModal'),
+    templatesList: document.getElementById('templatesList'),
+    closeTemplateModalBtn: document.getElementById('closeTemplateModalBtn'),
+    templateNameDisplay: document.getElementById('templateNameDisplay'),
+    gameBoard: document.getElementById('gameBoard'),
+    currentLevel: document.getElementById('currentLevel'),
+    moveCounter: document.getElementById('moveCounter'),
+    winMessage: document.getElementById('winMessage'),
+    winMessageText: document.getElementById('winMessageText'),
+    levelMoves: document.getElementById('levelMoves'),
+    resetBtn: document.getElementById('resetBtn'),
+    nextLevelBtn: document.getElementById('nextLevelBtn'),
+    fireworksContainer: document.getElementById('fireworksContainer'),
+    leaderboardBtn: document.getElementById('leaderboardBtn'),
+    leaderboardModal: document.getElementById('leaderboardModal'),
+    leaderboardBody: document.getElementById('leaderboardBody'),
+    closeLeaderboardBtn: document.getElementById('closeLeaderboardBtn'),
+    nameInputModal: document.getElementById('nameInputModal'),
+    totalMoves: document.getElementById('totalMoves'),
+    playerNameInput: document.getElementById('playerNameInput'),
+    submitNameBtn: document.getElementById('submitNameBtn')
+};
+
+// 當文檔加載完成時
+document.addEventListener('DOMContentLoaded', () => {
+    // 初始化事件監聽器
+    initEventListeners();
+    
+    // 直接載入預設模板 (ID: 1)
+    loadGameTemplate('1');
+});
+
+// 初始化事件監聽器
+function initEventListeners() {
+    // 模板選擇按鈕
+    elements.templateSelectorBtn.addEventListener('click', () => {
+        showTemplateSelectionModal();
+    });
+    
+    // 關閉模板選擇模態框
+    elements.closeTemplateModalBtn.addEventListener('click', () => {
+        hideModal(elements.templateSelectionModal);
+    });
+    
+    // 重置按鈕
+    elements.resetBtn.addEventListener('click', resetLevel);
+    
+    // 下一關按鈕
+    elements.nextLevelBtn.addEventListener('click', goToNextLevel);
+    
+    // 排行榜按鈕
+    elements.leaderboardBtn.addEventListener('click', () => {
+        renderLeaderboard();
+        showModal(elements.leaderboardModal);
+    });
+    
+    // 關閉排行榜模態框
+    elements.closeLeaderboardBtn.addEventListener('click', () => {
+        hideModal(elements.leaderboardModal);
+    });
+    
+    // 提交玩家名稱
+    elements.submitNameBtn.addEventListener('click', submitPlayerName);
+    
+    // 姓名輸入框按 Enter 鍵
+    elements.playerNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            submitPlayerName();
+        }
+    });
+    
+    // 點擊模態框背景關閉
+    elements.templateSelectionModal.addEventListener('click', (e) => {
+        if (e.target === elements.templateSelectionModal) {
+            hideModal(elements.templateSelectionModal);
+        }
+    });
+    
+    elements.leaderboardModal.addEventListener('click', (e) => {
+        if (e.target === elements.leaderboardModal) {
+            hideModal(elements.leaderboardModal);
+        }
+    });
+    
+    elements.nameInputModal.addEventListener('click', (e) => {
+        if (e.target === elements.nameInputModal) {
+            hideModal(elements.nameInputModal);
+        }
+    });
+}
+
+// 載入遊戲模板列表
+function loadTemplates() {
+    fetch('/api/samegame/active-templates')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('無法載入模板列表');
             }
+            return response.json();
+        })
+        .then(templates => {
+            renderTemplateSelection(templates);
+        })
+        .catch(error => {
+            console.error('載入模板列表出錯:', error);
+            elements.templatesList.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-danger">載入模板失敗</p>
+                    <p class="text-muted">請稍後再試</p>
+                </div>
+            `;
         });
+}
+
+// 渲染模板選擇
+function renderTemplateSelection(templates) {
+    if (!templates || templates.length === 0) {
+        elements.templatesList.innerHTML = `
+            <div class="text-center py-4">
+                <p>暫無可用的遊戲模板</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    templates.forEach(template => {
+        const difficultyClass = getDifficultyClass(template.difficulty);
         
-        // 初始化事件監聽器
-        function initEventListeners() {
-            // 模板選擇按鈕
-            elements.templateSelectorBtn.addEventListener('click', () => {
-                showTemplateSelectionModal();
-            });
+        html += `
+            <div class="template-card" data-id="${template.id}">
+                <div class="template-card-header">${escapeHtml(template.name)}</div>
+                <div class="template-card-body">
+                    <p class="template-description">${escapeHtml(template.description || '無描述')}</p>
+                    <div class="template-difficulty ${difficultyClass}">
+                        ${escapeHtml(template.difficulty || '普通')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    elements.templatesList.innerHTML = html;
+    
+    // 綁定模板卡片點擊事件
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const templateId = card.dataset.id;
+            hideModal(elements.templateSelectionModal);
+            loadGameTemplate(templateId);
+        });
+    });
+}
+
+// 根據難度獲取 CSS 類名
+function getDifficultyClass(difficulty) {
+    switch (difficulty) {
+        case '簡單': return 'difficulty-easy';
+        case '普通': return 'difficulty-normal';
+        case '困難': return 'difficulty-hard';
+        default: return 'difficulty-normal';
+    }
+}
+
+// 載入遊戲模板
+function loadGameTemplate(templateId) {
+    // 清空遊戲狀態
+    gameState.cards = [];
+    gameState.flipped = [];
+    gameState.matched = [];
+    gameState.moves = 0;
+    gameState.totalMoves = 0;
+    gameState.currentLevel = 1;
+    
+    // 顯示載入中
+    elements.gameArea.style.display = 'none';
+    elements.loadingContainer.style.display = 'block';
+    
+    fetch(`/api/samegame/play/${templateId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('無法載入遊戲模板數據');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // 保存遊戲數據
+            gameState.templateId = data.template.id;
+            gameState.templateName = data.template.name;
+            gameState.levels = data.levels || [];
+            gameState.maxLevel = gameState.levels.length;
+            gameState.leaderboard = data.leaderboard || [];
             
-            // 關閉模板選擇模態框
-            elements.closeTemplateModalBtn.addEventListener('click', () => {
-                hideModal(elements.templateSelectionModal);
-            });
+            // 更新模板名稱顯示
+            elements.templateNameDisplay.textContent = gameState.templateName;
             
-            // 重置按鈕
-            elements.resetBtn.addEventListener('click', resetLevel);
+            // 隱藏載入中，顯示遊戲區域
+            elements.loadingContainer.style.display = 'none';
+            elements.gameArea.style.display = 'block';
             
-            // 下一關按鈕
-            elements.nextLevelBtn.addEventListener('click', goToNextLevel);
-            
-            // 排行榜按鈕
-            elements.leaderboardBtn.addEventListener('click', () => {
+            // 初始化第一關
+            initializeLevel(1);
+        })
+        .catch(error => {
+            console.error('載入遊戲模板出錯:', error);
+            elements.loadingContainer.innerHTML = `
+                <div class="text-center">
+                    <p class="text-danger">載入遊戲模板失敗</p>
+                    <p class="text-muted">請稍後再試</p>
+                    <button class="template-btn mt-3" onclick="window.location.reload()">返回</button>
+                </div>
+            `;
+        });
+}
+
+// 初始化關卡
+function initializeLevel(levelNum) {
+    // 檢查關卡號碼是否有效
+    if (levelNum < 1 || levelNum > gameState.maxLevel) {
+        console.error(`無效的關卡號碼: ${levelNum}`);
+        return;
+    }
+    
+    // 更新遊戲狀態
+    gameState.currentLevel = levelNum;
+    gameState.flipped = [];
+    gameState.matched = [];
+    gameState.moves = 0;
+    gameState.gameWon = false;
+    
+    // 更新 UI
+    elements.currentLevel.textContent = levelNum;
+    elements.moveCounter.textContent = 0;
+    elements.winMessage.style.display = 'none';
+    elements.nextLevelBtn.style.display = 'none';
+    elements.fireworksContainer.style.display = 'none';
+    
+    // 獲取當前關卡數據
+    const level = gameState.levels.find(l => l.level === levelNum);
+    
+    if (!level) {
+        console.error(`找不到關卡數據: ${levelNum}`);
+        return;
+    }
+    
+    // 設置網格大小 - 針對第1和第2關使用直式佈局
+    if (levelNum <= 2) {
+        elements.gameBoard.className = 'game-board vertical-layout';
+    } else {
+        elements.gameBoard.className = 'game-board';
+        elements.gameBoard.style.gridTemplateColumns = `repeat(${level.columns}, 1fr)`;
+    }
+    
+    // 生成卡片
+    const cardImages = level.images || [];
+    
+    // 製作牌組 (兩張相同的牌)
+    let cardContents = [...cardImages, ...cardImages];
+    
+    // 洗牌
+    shuffleArray(cardContents);
+    
+    // 創建卡片對象
+    gameState.cards = cardContents.map((content, index) => ({
+        id: index,
+        content: content,
+        flipped: false,
+        matched: false
+    }));
+    
+    // 渲染遊戲板
+    renderGameBoard();
+}
+
+// 洗牌算法 (Fisher-Yates)
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// 渲染遊戲板
+function renderGameBoard() {
+    elements.gameBoard.innerHTML = '';
+    
+    gameState.cards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.dataset.id = card.id;
+        
+        if (card.matched) {
+            cardElement.classList.add('matched');
+        }
+        
+        if (card.flipped || card.matched) {
+            cardElement.classList.add('flipped');
+        }
+        
+        const cardBack = document.createElement('div');
+        cardBack.className = 'card-face card-back';
+        
+        const cardFront = document.createElement('div');
+        cardFront.className = 'card-face card-front';
+        cardFront.style.backgroundImage = `url(${card.content})`;
+        
+        cardElement.appendChild(cardBack);
+        cardElement.appendChild(cardFront);
+        
+        cardElement.addEventListener('click', () => handleCardClick(card.id));
+        
+        elements.gameBoard.appendChild(cardElement);
+    });
+}
+
+// 處理卡片點擊
+function handleCardClick(id) {
+    // 獲取卡片元素
+    const cardElement = document.querySelector(`.card[data-id="${id}"]`);
+    
+    // 防止點擊已經翻開或已匹配的卡片，或當已經有兩張卡片被翻開時
+    if (gameState.flipped.length === 2 || gameState.flipped.includes(id) || gameState.matched.includes(id)) {
+        return;
+    }
+    
+    // 創建波紋效果
+    createRippleEffect(cardElement);
+    
+    // 將卡片添加到已翻開數組
+    gameState.flipped.push(id);
+    
+    // 翻開卡片
+    cardElement.classList.add('flipped');
+    
+    // 更新移動次數
+    gameState.moves++;
+    elements.moveCounter.textContent = gameState.moves;
+    
+    // 檢查是否有兩張卡片被翻開
+    if (gameState.flipped.length === 2) {
+        // 獲取兩張翻開的卡片內容
+        const card1 = gameState.cards.find(card => card.id === gameState.flipped[0]);
+        const card2 = gameState.cards.find(card => card.id === gameState.flipped[1]);
+        
+        // 檢查它們是否匹配
+        if (card1.content === card2.content) {
+            // 添加到已匹配數組
+            setTimeout(() => {
+                // 更新匹配狀態
+                gameState.matched.push(...gameState.flipped);
+                
+                // 更新卡片元素
+                gameState.flipped.forEach(id => {
+                    const card = document.querySelector(`.card[data-id="${id}"]`);
+                    card.classList.add('matched');
+                });
+                
+                // 檢查是否獲勝
+                if (gameState.matched.length === gameState.cards.length) {
+                    gameWon();
+                }
+                
+                // 重置已翻開
+                gameState.flipped = [];
+            }, 300);
+        } else {
+            // 如果不匹配，延遲後翻回
+            setTimeout(() => {
+                // 翻回卡片
+                gameState.flipped.forEach(id => {
+                    const card = document.querySelector(`.card[data-id="${id}"]`);
+                    card.classList.remove('flipped');
+                });
+                
+                // 重置已翻開
+                gameState.flipped = [];
+            }, 1000);
+        }
+    }
+}
+
+// 創建波紋效果
+function createRippleEffect(element) {
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    
+    ripple.style.width = ripple.style.height = `${size}px`;
+    
+    // 獲取相對於元素的鼠標位置
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    
+    element.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}
+
+// 處理獲勝
+function gameWon() {
+    gameState.gameWon = true;
+    
+    // 更新獲勝消息
+    elements.levelMoves.textContent = gameState.moves;
+    elements.winMessage.style.display = 'block';
+    
+    // 更新總移動次數
+    gameState.totalMoves += gameState.moves;
+    
+    // 顯示下一關按鈕或煙火
+    if (gameState.currentLevel < gameState.maxLevel) {
+        elements.nextLevelBtn.textContent = `進入第${gameState.currentLevel + 1}關`;
+        elements.nextLevelBtn.style.display = 'block';
+    } else {
+        // 遊戲完成 - 顯示煙火
+        elements.fireworksContainer.style.display = 'block';
+        
+        // 更新最終獲勝訊息
+        elements.winMessageText.innerHTML = `
+            總共使用了 ${gameState.moves} 次移動完成本關。<br>
+            <strong style="color: #4caf50">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
+        `;
+        
+        // 檢查是否能進入排行榜
+        checkLeaderboardEligibility();
+    }
+}
+
+// 檢查是否有資格進入排行榜
+function checkLeaderboardEligibility() {
+    if (gameState.leaderboard.length < 10 || gameState.totalMoves < gameState.leaderboard[gameState.leaderboard.length - 1].total_moves) {
+        setTimeout(() => {
+            // 顯示名稱輸入模態框
+            elements.totalMoves.textContent = gameState.totalMoves;
+            showModal(elements.nameInputModal);
+        }, 1500);
+    }
+}
+
+// 提交玩家名稱到排行榜
+function submitPlayerName() {
+    const playerName = elements.playerNameInput.value.trim() || "無名英雄";
+    
+    if (playerName.length > 20) {
+        alert('名稱最多只能有20個字元');
+        return;
+    }
+    
+    const leaderboardData = {
+        template_id: gameState.templateId,
+        player_name: playerName,
+        total_moves: gameState.totalMoves
+    };
+    
+    fetch('/api/samegame/leaderboard', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(leaderboardData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('提交排行榜失敗');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // 隱藏名稱輸入模態框
+        hideModal(elements.nameInputModal);
+        
+        // 重新載入排行榜
+        fetch(`/api/samegame/leaderboard?template_id=${gameState.templateId}`)
+            .then(response => response.json())
+            .then(leaderboardData => {
+                gameState.leaderboard = leaderboardData;
                 renderLeaderboard();
                 showModal(elements.leaderboardModal);
             });
+    })
+    .catch(error => {
+        console.error('提交排行榜時出錯:', error);
+        alert('提交排行榜失敗，請稍後再試');
+    });
+}
+
+// 重置當前關卡
+function resetLevel() {
+    initializeLevel(gameState.currentLevel);
+}
+
+// 進入下一關
+function goToNextLevel() {
+    if (gameState.currentLevel < gameState.maxLevel) {
+        initializeLevel(gameState.currentLevel + 1);
+    }
+}
+
+// 渲染排行榜
+function renderLeaderboard() {
+    let html = '';
+    
+    if (gameState.leaderboard.length === 0) {
+        html = '<tr><td colspan="3" class="text-center py-4">暫無排行榜數據</td></tr>';
+    } else {
+        gameState.leaderboard.forEach((entry, index) => {
+            const isCurrentPlayer = entry.player_name === elements.playerNameInput.value.trim() && entry.total_moves === gameState.totalMoves;
             
-            // 關閉排行榜模態框
-            elements.closeLeaderboardBtn.addEventListener('click', () => {
-                hideModal(elements.leaderboardModal);
-            });
-            
-            // 提交玩家名稱
-            elements.submitNameBtn.addEventListener('click', submitPlayerName);
-            
-            // 姓名輸入框按 Enter 鍵
-            elements.playerNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    submitPlayerName();
-                }
-            });
-            
-            // 點擊模態框背景關閉
-            elements.templateSelectionModal.addEventListener('click', (e) => {
-                if (e.target === elements.templateSelectionModal) {
-                    hideModal(elements.templateSelectionModal);
-                }
-            });
-            
-            elements.leaderboardModal.addEventListener('click', (e) => {
-                if (e.target === elements.leaderboardModal) {
-                    hideModal(elements.leaderboardModal);
-                }
-            });
-            
-            elements.nameInputModal.addEventListener('click', (e) => {
-                if (e.target === elements.nameInputModal) {
-                    hideModal(elements.nameInputModal);
-                }
-            });
-        }
-        
-        // 載入遊戲模板列表
-        function loadTemplates() {
-            fetch('/api/samegame/active-templates')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('無法載入模板列表');
-                    }
-                    return response.json();
-                })
-                .then(templates => {
-                    renderTemplateSelection(templates);
-                })
-                .catch(error => {
-                    console.error('載入模板列表出錯:', error);
-                    elements.templatesList.innerHTML = `
-                        <div class="text-center py-4">
-                            <p class="text-danger">載入模板失敗</p>
-                            <p class="text-muted">請稍後再試</p>
-                        </div>
-                    `;
-                });
-        }
-        
-        // 渲染模板選擇
-        function renderTemplateSelection(templates) {
-            if (!templates || templates.length === 0) {
-                elements.templatesList.innerHTML = `
-                    <div class="text-center py-4">
-                        <p>暫無可用的遊戲模板</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            templates.forEach(template => {
-                const difficultyClass = getDifficultyClass(template.difficulty);
-                
-                html += `
-                    <div class="template-card" data-id="${template.id}">
-                        <div class="template-card-header">${escapeHtml(template.name)}</div>
-                        <div class="template-card-body">
-                            <p class="template-description">${escapeHtml(template.description || '無描述')}</p>
-                            <div class="template-difficulty ${difficultyClass}">
-                                ${escapeHtml(template.difficulty || '普通')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            elements.templatesList.innerHTML = html;
-            
-            // 綁定模板卡片點擊事件
-            document.querySelectorAll('.template-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const templateId = card.dataset.id;
-                    hideModal(elements.templateSelectionModal);
-                    loadGameTemplate(templateId);
-                });
-            });
-        }
-        
-        // 根據難度獲取 CSS 類名
-        function getDifficultyClass(difficulty) {
-            switch (difficulty) {
-                case '簡單': return 'difficulty-easy';
-                case '普通': return 'difficulty-normal';
-                case '困難': return 'difficulty-hard';
-                default: return 'difficulty-normal';
-            }
-        }
-        
-        // 載入遊戲模板
-        function loadGameTemplate(templateId) {
-            // 清空遊戲狀態
-            gameState.cards = [];
-            gameState.flipped = [];
-            gameState.matched = [];
-            gameState.moves = 0;
-            gameState.totalMoves = 0;
-            gameState.currentLevel = 1;
-            
-            // 顯示載入中
-            elements.gameArea.style.display = 'none';
-            elements.loadingContainer.style.display = 'block';
-            
-            fetch(`/api/samegame/play/${templateId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('無法載入遊戲模板數據');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // 保存遊戲數據
-                    gameState.templateId = data.template.id;
-                    gameState.templateName = data.template.name;
-                    gameState.levels = data.levels || [];
-                    gameState.maxLevel = gameState.levels.length;
-                    gameState.leaderboard = data.leaderboard || [];
-                    
-                    // 更新模板名稱顯示
-                    elements.templateNameDisplay.textContent = gameState.templateName;
-                    
-                    // 隱藏載入中，顯示遊戲區域
-                    elements.loadingContainer.style.display = 'none';
-                    elements.gameArea.style.display = 'block';
-                    
-                    // 初始化第一關
-                    initializeLevel(1);
-                })
-                .catch(error => {
-                    console.error('載入遊戲模板出錯:', error);
-                    elements.loadingContainer.innerHTML = `
-                        <div class="text-center">
-                            <p class="text-danger">載入遊戲模板失敗</p>
-                            <p class="text-muted">請稍後再試</p>
-                            <button class="template-btn mt-3" onclick="window.location.reload()">返回</button>
-                        </div>
-                    `;
-                });
-        }
-        
-        // 初始化關卡
-        function initializeLevel(levelNum) {
-            // 檢查關卡號碼是否有效
-            if (levelNum < 1 || levelNum > gameState.maxLevel) {
-                console.error(`無效的關卡號碼: ${levelNum}`);
-                return;
-            }
-            
-            // 更新遊戲狀態
-            gameState.currentLevel = levelNum;
-            gameState.flipped = [];
-            gameState.matched = [];
-            gameState.moves = 0;
-            gameState.gameWon = false;
-            
-            // 更新 UI
-            elements.currentLevel.textContent = levelNum;
-            elements.moveCounter.textContent = 0;
-            elements.winMessage.style.display = 'none';
-            elements.nextLevelBtn.style.display = 'none';
-            elements.fireworksContainer.style.display = 'none';
-            
-            // 獲取當前關卡數據
-            const level = gameState.levels.find(l => l.level === levelNum);
-            
-            if (!level) {
-                console.error(`找不到關卡數據: ${levelNum}`);
-                return;
-            }
-            
-            // 設置網格大小
-            elements.gameBoard.className = `game-board`;
-            elements.gameBoard.style.gridTemplateColumns = `repeat(${level.columns}, 1fr)`;
-            
-            // 生成卡片
-            const cardImages = level.images || [];
-            
-            // 製作牌組 (兩張相同的牌)
-            let cardContents = [...cardImages, ...cardImages];
-            
-            // 洗牌
-            shuffleArray(cardContents);
-            
-            // 創建卡片對象
-            gameState.cards = cardContents.map((content, index) => ({
-                id: index,
-                content: content,
-                flipped: false,
-                matched: false
-            }));
-            
-            // 渲染遊戲板
-            renderGameBoard();
-        }
-        
-        // 洗牌算法 (Fisher-Yates)
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-        
-        // 渲染遊戲板
-        function renderGameBoard() {
-            elements.gameBoard.innerHTML = '';
-            
-            gameState.cards.forEach(card => {
-                const cardElement = document.createElement('div');
-                cardElement.className = 'card';
-                cardElement.dataset.id = card.id;
-                
-                if (card.matched) {
-                    cardElement.classList.add('matched');
-                }
-                
-                if (card.flipped || card.matched) {
-                    cardElement.classList.add('flipped');
-                }
-                
-                const cardBack = document.createElement('div');
-                cardBack.className = 'card-face card-back';
-                
-                const cardFront = document.createElement('div');
-                cardFront.className = 'card-face card-front';
-                cardFront.style.backgroundImage = `url(${card.content})`;
-                
-                cardElement.appendChild(cardBack);
-                cardElement.appendChild(cardFront);
-                
-                cardElement.addEventListener('click', () => handleCardClick(card.id));
-                
-                elements.gameBoard.appendChild(cardElement);
-            });
-        }
-        
-        // 處理卡片點擊
-        function handleCardClick(id) {
-            // 獲取卡片元素
-            const cardElement = document.querySelector(`.card[data-id="${id}"]`);
-            
-            // 防止點擊已經翻開或已匹配的卡片，或當已經有兩張卡片被翻開時
-            if (gameState.flipped.length === 2 || gameState.flipped.includes(id) || gameState.matched.includes(id)) {
-                return;
-            }
-            
-            // 創建波紋效果
-            createRippleEffect(cardElement);
-            
-            // 將卡片添加到已翻開數組
-            gameState.flipped.push(id);
-            
-            // 翻開卡片
-            cardElement.classList.add('flipped');
-            
-            // 更新移動次數
-            gameState.moves++;
-            elements.moveCounter.textContent = gameState.moves;
-            
-            // 檢查是否有兩張卡片被翻開
-            if (gameState.flipped.length === 2) {
-                // 獲取兩張翻開的卡片內容
-                const card1 = gameState.cards.find(card => card.id === gameState.flipped[0]);
-                const card2 = gameState.cards.find(card => card.id === gameState.flipped[1]);
-                
-                // 檢查它們是否匹配
-                if (card1.content === card2.content) {
-                    // 添加到已匹配數組
-                    setTimeout(() => {
-                        // 更新匹配狀態
-                        gameState.matched.push(...gameState.flipped);
-                        
-                        // 更新卡片元素
-                        gameState.flipped.forEach(id => {
-                            const card = document.querySelector(`.card[data-id="${id}"]`);
-                            card.classList.add('matched');
-                        });
-                        
-                        // 檢查是否獲勝
-                        if (gameState.matched.length === gameState.cards.length) {
-                            gameWon();
-                        }
-                        
-                        // 重置已翻開
-                        gameState.flipped = [];
-                    }, 300);
-                } else {
-                    // 如果不匹配，延遲後翻回
-                    setTimeout(() => {
-                        // 翻回卡片
-                        gameState.flipped.forEach(id => {
-                            const card = document.querySelector(`.card[data-id="${id}"]`);
-                            card.classList.remove('flipped');
-                        });
-                        
-                        // 重置已翻開
-                        gameState.flipped = [];
-                    }, 1000);
-                }
-            }
-        }
-        
-        // 創建波紋效果
-        function createRippleEffect(element) {
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            
-            const rect = element.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            
-            ripple.style.width = ripple.style.height = `${size}px`;
-            
-            // 獲取相對於元素的鼠標位置
-            const x = event.clientX - rect.left - size / 2;
-            const y = event.clientY - rect.top - size / 2;
-            
-            ripple.style.left = `${x}px`;
-            ripple.style.top = `${y}px`;
-            
-            element.appendChild(ripple);
-            
-            setTimeout(() => {
-                ripple.remove();
-            }, 600);
-        }
-        
-        // 處理獲勝
-        function gameWon() {
-            gameState.gameWon = true;
-            
-            // 更新獲勝消息
-            elements.levelMoves.textContent = gameState.moves;
-            elements.winMessage.style.display = 'block';
-            
-            // 更新總移動次數
-            gameState.totalMoves += gameState.moves;
-            
-            // 顯示下一關按鈕或煙火
-            if (gameState.currentLevel < gameState.maxLevel) {
-                elements.nextLevelBtn.textContent = `進入第${gameState.currentLevel + 1}關`;
-                elements.nextLevelBtn.style.display = 'block';
-            } else {
-                // 遊戲完成 - 顯示煙火
-                elements.fireworksContainer.style.display = 'block';
-                
-                // 更新最終獲勝訊息
-                elements.winMessageText.innerHTML = `
-                    總共使用了 ${gameState.moves} 次移動完成本關。<br>
-                    <strong style="color: #4caf50">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
-                `;
-                
-                // 檢查是否能進入排行榜
-                checkLeaderboardEligibility();
-            }
-        }
-        
-        // 檢查是否有資格進入排行榜
-        function checkLeaderboardEligibility() {
-            if (gameState.leaderboard.length < 10 || gameState.totalMoves < gameState.leaderboard[gameState.leaderboard.length - 1].total_moves) {
-                setTimeout(() => {
-                    // 顯示名稱輸入模態框
-                    elements.totalMoves.textContent = gameState.totalMoves;
-                    showModal(elements.nameInputModal);
-                }, 1500);
-            }
-        }
-        
-        // 提交玩家名稱到排行榜
-        function submitPlayerName() {
-            const playerName = elements.playerNameInput.value.trim() || "無名英雄";
-            
-            if (playerName.length > 20) {
-                alert('名稱最多只能有20個字元');
-                return;
-            }
-            
-            const leaderboardData = {
-                template_id: gameState.templateId,
-                player_name: playerName,
-                total_moves: gameState.totalMoves
-            };
-            
-            fetch('/api/samegame/leaderboard', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(leaderboardData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('提交排行榜失敗');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // 隱藏名稱輸入模態框
-                hideModal(elements.nameInputModal);
-                
-                // 重新載入排行榜
-                fetch(`/api/samegame/leaderboard?template_id=${gameState.templateId}`)
-                    .then(response => response.json())
-                    .then(leaderboardData => {
-                        gameState.leaderboard = leaderboardData;
-                        renderLeaderboard();
-                        showModal(elements.leaderboardModal);
-                    });
-            })
-            .catch(error => {
-                console.error('提交排行榜時出錯:', error);
-                alert('提交排行榜失敗，請稍後再試');
-            });
-        }
-        
-        // 重置當前關卡
-        function resetLevel() {
-            initializeLevel(gameState.currentLevel);
-        }
-        
-        // 進入下一關
-        function goToNextLevel() {
-            if (gameState.currentLevel < gameState.maxLevel) {
-                initializeLevel(gameState.currentLevel + 1);
-            }
-        }
-        
-        // 渲染排行榜
-        function renderLeaderboard() {
-            let html = '';
-            
-            if (gameState.leaderboard.length === 0) {
-                html = '<tr><td colspan="3" class="text-center py-4">暫無排行榜數據</td></tr>';
-            } else {
-                gameState.leaderboard.forEach((entry, index) => {
-                    const isCurrentPlayer = entry.player_name === elements.playerNameInput.value.trim() && entry.total_moves === gameState.totalMoves;
-                    
-                    html += `
-                        <tr${isCurrentPlayer ? ' class="highlight"' : ''}>
-                            <td>${index + 1}</td>
-                            <td>${escapeHtml(entry.player_name)}</td>
-                            <td>${entry.total_moves}</td>
-                        </tr>
-                    `;
-                });
-            }
-            
-            elements.leaderboardBody.innerHTML = html;
-        }
-        
-        // 顯示模板選擇模態框
-        function showTemplateSelectionModal() {
-            showModal(elements.templateSelectionModal);
-        }
-        
-        // 顯示模態框
-        function showModal(modal) {
-            modal.classList.add('visible');
-        }
-        
-        // 隱藏模態框
-        function hideModal(modal) {
-            modal.classList.remove('visible');
-        }
-        
-        // HTML 轉義函數
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
+            html += `
+                <tr${isCurrentPlayer ? ' class="highlight"' : ''}>
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(entry.player_name)}</td>
+                    <td>${entry.total_moves}</td>
+                </tr>
+            `;
+        });
+    }
+    
+    elements.leaderboardBody.innerHTML = html;
+}
+
+// 顯示模板選擇模態框
+function showTemplateSelectionModal() {
+    // 載入模板列表
+    loadTemplates();
+    
+    // 顯示模態框
+    showModal(elements.templateSelectionModal);
+}
+
+// 顯示模態框
+function showModal(modal) {
+    modal.classList.add('visible');
+}
+
+// 隱藏模態框
+function hideModal(modal) {
+    modal.classList.remove('visible');
+}
+
+// HTML 轉義函數
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+
+
     </script>
 </body>
 </html>
