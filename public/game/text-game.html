@@ -868,124 +868,209 @@
             // 初始化加載排行榜
             loadLeaderboard();
         });
-        
-        // 載入模板列表
-        function loadTemplates() {
-            fetch('/api/card-game/templates')
-                .then(response => {
-                    if (!response.ok) throw new Error('無法獲取模板列表');
-                    return response.json();
-                })
-                .then(data => {
-                    gameState.templates = data;
-                    
-                    // 如果模板列表為空，顯示預設模板
-                    if (data.length === 0) {
-                        const defaultTemplateItem = document.createElement('div');
-                        defaultTemplateItem.className = 'template-item active';
-                        defaultTemplateItem.textContent = '預設模板';
-                        defaultTemplateItem.setAttribute('data-id', 'default');
-                        elements.templateList.appendChild(defaultTemplateItem);
-                        
-                        // 使用預設圖片
-                        useDefaultTemplate();
-                        return;
-                    }
-                    
-                    // 渲染模板列表
-                    elements.templateList.innerHTML = '';
-                    data.forEach(template => {
-                        const templateItem = document.createElement('div');
-                        templateItem.className = 'template-item';
-                        templateItem.textContent = template.template_name;
-                        templateItem.setAttribute('data-id', template.id);
-                        templateItem.addEventListener('click', () => selectTemplate(template.id));
-                        elements.templateList.appendChild(templateItem);
-                    });
-                    
-                    // 預設選擇第一個模板
-                    selectTemplate(data[0].id);
-                })
-                .catch(error => {
-                    console.error('獲取模板列表失敗:', error);
-                    // 發生錯誤時使用預設模板
-                    useDefaultTemplate();
-                });
+        // Fixed functions to use the correct flip-card API endpoints
+
+// 載入模板列表 - 修正API路徑
+function loadTemplates() {
+    fetch('/api/flip-card/templates')
+        .then(response => {
+            if (!response.ok) throw new Error('無法獲取模板列表');
+            return response.json();
+        })
+        .then(data => {
+            gameState.templates = data;
+            
+            // 如果模板列表為空，顯示預設模板
+            if (data.length === 0) {
+                const defaultTemplateItem = document.createElement('div');
+                defaultTemplateItem.className = 'template-item active';
+                defaultTemplateItem.textContent = '預設模板';
+                defaultTemplateItem.setAttribute('data-id', 'default');
+                elements.templateList.appendChild(defaultTemplateItem);
+                
+                // 使用預設圖片
+                useDefaultTemplate();
+                return;
+            }
+            
+            // 渲染模板列表
+            elements.templateList.innerHTML = '';
+            data.forEach(template => {
+                const templateItem = document.createElement('div');
+                templateItem.className = 'template-item';
+                templateItem.textContent = template.template_name;
+                templateItem.setAttribute('data-id', template.id);
+                templateItem.addEventListener('click', () => selectTemplate(template.id));
+                elements.templateList.appendChild(templateItem);
+            });
+            
+            // 預設選擇第一個模板
+            selectTemplate(data[0].id);
+        })
+        .catch(error => {
+            console.error('獲取模板列表失敗:', error);
+            // 發生錯誤時使用預設模板
+            useDefaultTemplate();
+        });
+}
+
+// 選擇模板 - 修正API路徑
+function selectTemplate(templateId) {
+    // 更新UI
+    const templateItems = document.querySelectorAll('.template-item');
+    templateItems.forEach(item => {
+        if (item.getAttribute('data-id') == templateId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
         }
-        
-        // 使用預設模板
-        function useDefaultTemplate() {
-            // 設置預設圖片
-            gameState.images = {
-                level1: [
-                    "/uploads/default_card_1.jpg",
-                    "/uploads/default_card_2.jpg"
-                ],
-                level2: [
-                    "/uploads/default_card_1.jpg",
-                    "/uploads/default_card_2.jpg",
-                    "/uploads/default_card_3.jpg",
-                    "/uploads/default_card_4.jpg"
-                ],
-                level3: [
-                    "/uploads/default_card_1.jpg",
-                    "/uploads/default_card_2.jpg",
-                    "/uploads/default_card_3.jpg",
-                    "/uploads/default_card_4.jpg",
-                    "/uploads/default_card_5.jpg",
-                    "/uploads/default_card_6.jpg",
-                    "/uploads/default_card_7.jpg",
-                    "/uploads/default_card_8.jpg"
-                ]
-            };
+    });
+    
+    // 保存選中的模板ID
+    gameState.selectedTemplate = templateId;
+    
+    // 獲取模板詳情
+    fetch(`/api/flip-card/templates/${templateId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('無法獲取模板詳情');
+            return response.json();
+        })
+        .then(template => {
+            // 解析內容數據
+            let contentData;
+            try {
+                contentData = typeof template.content_data === 'string' ? 
+                    JSON.parse(template.content_data) : template.content_data;
+            } catch (e) {
+                contentData = { level1: [], level2: [], level3: [] };
+            }
+            
+            // 設置關卡圖片
+            gameState.images = contentData;
             
             // 初始化第一關
             initializeLevel(1);
+        })
+        .catch(error => {
+            console.error('獲取模板詳情失敗:', error);
+            alert('載入模板失敗，請重新選擇或刷新頁面。');
+        });
+}
+
+// 更新排行榜 - 修正API路徑
+function submitScore() {
+    const playerName = elements.playerNameInput.value.trim() || "匿名";
+    gameState.currentPlayer = playerName;
+    
+    // 提交分數到服務器
+    fetch('/api/flip-card/submit-score', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            player_name: playerName,
+            total_moves: gameState.totalMoves,
+            template_id: gameState.selectedTemplate,
+            completion_time: gameState.completionTime || null // 添加完成時間
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 更新排行榜並顯示
+            loadLeaderboard();
+            hideModal(elements.nameInputModal);
+            showModal(elements.leaderboardModal);
+        } else {
+            alert('提交分數失敗：' + (data.error || '未知錯誤'));
         }
-        
-        // 選擇模板
-        function selectTemplate(templateId) {
-            // 更新UI
-            const templateItems = document.querySelectorAll('.template-item');
-            templateItems.forEach(item => {
-                if (item.getAttribute('data-id') == templateId) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
+    })
+    .catch(error => {
+        console.error('提交分數時出錯:', error);
+        alert('提交分數失敗，請稍後再試。');
+    });
+}
+
+// 載入排行榜 - 修正API路徑
+function loadLeaderboard() {
+    fetch('/api/flip-card/leaderboard')
+        .then(response => response.json())
+        .then(data => {
+            // 清空排行榜
+            elements.leaderboardBody.innerHTML = '';
+            
+            // 排序並顯示前20名
+            data.slice(0, 20).forEach((entry, index) => {
+                const row = document.createElement('tr');
+                
+                // 突出顯示當前玩家
+                if (entry.player_name === gameState.currentPlayer && entry.total_moves === gameState.totalMoves) {
+                    row.classList.add('highlight');
                 }
+                
+                // 格式化完成時間（如果有）
+                const completionTime = entry.completion_time ? `${entry.completion_time.toFixed(2)}秒` : '-';
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.player_name}</td>
+                    <td>${entry.total_moves}</td>
+                    <td>${completionTime}</td>
+                    <td>${entry.template_name || '-'}</td>
+                    <td>${new Date(entry.created_at).toLocaleString()}</td>
+                `;
+                
+                elements.leaderboardBody.appendChild(row);
             });
-            
-            // 保存選中的模板ID
-            gameState.selectedTemplate = templateId;
-            
-            // 獲取模板詳情
-            fetch(`/api/card-game/templates/${templateId}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('無法獲取模板詳情');
-                    return response.json();
-                })
-                .then(template => {
-                    // 解析內容數據
-                    let contentData;
-                    try {
-                        contentData = typeof template.content_data === 'string' ? 
-                            JSON.parse(template.content_data) : template.content_data;
-                    } catch (e) {
-                        contentData = { level1: [], level2: [], level3: [] };
-                    }
-                    
-                    // 設置關卡圖片
-                    gameState.images = contentData;
-                    
-                    // 初始化第一關
-                    initializeLevel(1);
-                })
-                .catch(error => {
-                    console.error('獲取模板詳情失敗:', error);
-                    alert('載入模板失敗，請重新選擇或刷新頁面。');
-                });
-        }
-        // 修復 levelImages is not iterable 錯誤的函數
+        })
+        .catch(error => {
+            console.error('獲取排行榜時出錯:', error);
+            elements.leaderboardBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">載入排行榜時出錯: ${error.message}</td></tr>`;
+        });
+}
+
+// 修改 gameWon 函數，記錄完成時間
+function gameWon() {
+    gameState.gameWon = true;
+    
+    // 記錄完成時間（如果是第三關）
+    if (gameState.level === 3) {
+        // 計算總耗時（秒）
+        gameState.completionTime = (Date.now() - gameState.startTime) / 1000;
+    }
+    
+    // 更新獲勝訊息
+    elements.levelMoves.textContent = gameState.moves;
+    elements.winMessage.style.display = 'block';
+    
+    // 更新總移動次數
+    gameState.totalMoves += gameState.moves;
+    
+    // 顯示下一關按鈕或煙火
+    if (gameState.level < 3) {
+        elements.nextLevelBtn.textContent = `進入第${gameState.level + 1}關`;
+        elements.nextLevelBtn.style.display = 'block';
+    } else {
+        // 遊戲完成 - 顯示煙火
+        elements.fireworksContainer.style.display = 'block';
+        
+        // 更新最終獲勝訊息
+        elements.winMessageText.innerHTML = `
+            總共使用了 ${gameState.moves} 次移動完成本關。<br>
+            <strong style="color: #1976d2;">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
+        `;
+        
+        // 檢查得分是否進入前20名
+        setTimeout(() => {
+            // 顯示名稱輸入模態框
+            elements.totalMoves.textContent = gameState.totalMoves;
+            showModal(elements.nameInputModal);
+        }, 1500);
+    }
+}
+
+// 修改 initializeLevel 函數，記錄開始時間
 function initializeLevel(level) {
     // 清空遊戲狀態
     gameState.level = level;
@@ -993,6 +1078,11 @@ function initializeLevel(level) {
     gameState.matched = [];
     gameState.moves = 0;
     gameState.gameWon = false;
+    
+    // 記錄開始時間（用於計算完成時間）
+    if (level === 1) {
+        gameState.startTime = Date.now();
+    }
     
     // 更新UI
     elements.currentLevel.textContent = level;
