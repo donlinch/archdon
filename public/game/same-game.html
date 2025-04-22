@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunnyYummy 翻牌對對碰遊戲</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fff5f7;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+ body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fff5f7; /* 淡粉色背景 */
+            color: #333;
+            padding-bottom: 70px; /* 為底部導航留出空間 */
+            overflow-x: hidden; /* 防止水平滾動 */
+        }
+
+        /* --- 頁面標題樣式 --- */
+        .page-title-header {
+            background-color: #FFB74D;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        
+        .page-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+          /*  padding: 20px; */
+            position: relative;
+        }
+        
+        .page-header {
+            background-color: #FFB74D;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            width: 100%;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+            margin-bottom: 20px;
+        }
+        
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+
+        /* --- 底部導航 --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            z-index: 1000;
+            padding: 5px 0;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav li {
+            text-align: center;
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            text-decoration: none;
+            color: #777;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .bottom-nav a.active {
+            color: #FFB74D;
+            background-color: rgba(255, 183, 77, 0.1);
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .bottom-nav .icon {
+            font-size: 1.5rem;
+            margin-bottom: 3px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Animation keyframes */
+        @keyframes floatAnimation {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 183, 77, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
+        }
+        
+        @keyframes matchedPulse {
+            0% { transform: scale(1.05); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1.05); }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes firework {
+            0% { transform: translate(50%, 50%); width: 0; opacity: 1; }
+            50% { width: 100%; opacity: 0.8; }
+            100% { width: 160%; opacity: 0; }
+        }
+        
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        
+        /* Game elements */
+        .game-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .level-info {
+            display: inline-block;
+            background-color: #f5f5f5;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: #666;
+        }
+        
+        .moves-counter {
+            display: inline-block;
+            background-color: #e3f2fd;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-left: 10px;
+            color: #1976d2;
+        }
+        
+        .game-board {
+            display: grid;
+            gap: 10px;
+            margin: 0 auto 30px;
+            max-width: 600px;
+            perspective: 1000px;
+        }
+        
+        .game-board.level-1 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .game-board.level-2 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        .game-board.level-3 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        .card {
+            position: relative;
+            height: 120px;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .level-3 .card {
+            height: 100px;
+        }
+        
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-back {
+            background: linear-gradient(135deg, #64B5F6, #42A5F5, #2196F3);
+            color: transparent;
+            transform: rotateY(0deg);
+        }
+        
+        .card-front {
+            background-size: cover;
+            background-position: center;
+            transform: rotateY(180deg);
+        }
+        
+        .card:hover:not(.flipped):not(.matched) {
+            animation: floatAnimation 2s ease-in-out infinite;
+        }
+        
+        .card:hover:not(.flipped):not(.matched) .card-back {
+            animation: pulseGlow 1.5s infinite;
+        }
+        
+        .card.matched .card-front {
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+            animation: matchedPulse 1.5s ease infinite;
+        }
+        
+        .win-message {
+            background-color: #e8f5e9;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            animation: bounce 1s infinite;
+        }
+        
+        .win-message-title {
+            color: #2e7d32;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .reset-btn {
+            background-color: #e0e0e0;
+            color: #757575;
+            border: none;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .reset-btn:hover {
+            background-color: #bdbdbd;
+            transform: translateY(-2px);
+        }
+        
+        .next-level-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+        }
+        
+        .next-level-btn:hover {
+            background-color: #43a047;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .leaderboard-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #ffb74d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+            z-index: 100;
+        }
+        
+        .leaderboard-btn:hover {
+            background-color: #ffa726;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
+        }
+        
+        /* Fireworks effects */
+        .fireworks-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .firework {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        
+        .firework::before, .firework::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            width: 5px;
+            height: 5px;
+            box-shadow: 
+                0 0 0 4px #ff8426,
+                0 0 0 8px #ffde66,
+                0 0 0 12px #66ffde,
+                0 0 0 16px #66a6ff,
+                0 0 0 20px #a366ff,
+                0 0 0 24px #ff66d9;
+            animation: firework 1.5s ease-out infinite;
+        }
+        
+        .firework:nth-child(2) {
+            transform: rotate(45deg);
+        }
+        
+        .firework:nth-child(3) {
+            transform: rotate(90deg);
+        }
+        
+        .firework:nth-child(4) {
+            transform: rotate(135deg);
+        }
+        
+        /* Leaderboard Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            color: #424242;
+            font-weight: 700;
+        }
+        
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .leaderboard-table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+            color: #757575;
+        }
+        
+        .leaderboard-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        
+        .leaderboard-table tr.highlight {
+            background-color: #fff9c4;
+        }
+        
+        .leaderboard-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .modal-footer {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .close-modal-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .close-modal-btn:hover {
+            background-color: #1976d2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+        }
+        
+        /* Name Input Modal */
+        .name-input-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        
+        .modal-overlay.visible .name-input-container {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .name-input-title {
+            font-size: 1.3rem;
+            color: #424242;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .name-input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Noto Sans TC', sans-serif;
+            transition: border-color 0.3s;
+        }
+        
+        .name-input:focus {
+            border-color: #2196f3;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+        }
+        
+        .submit-name-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-name-btn:hover {
+            background-color: #43a047;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 15px;
+            font-size: 0.9rem;
+            color: #757575;
+        }
+        
+        .footer a {
+            color: #2196f3;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .page-container {
+                padding: 15px;
+                margin: 1rem auto;
+            }
+            
+            .game-container {
+                padding: 20px;
+            }
+            
+            .card {
+                height: 100px;
+            }
+            
+            .level-3 .card {
+                height: 80px;
+            }
+            
+            .leaderboard-btn {
+                top: 15px;
+                left: 15px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .card {
+                height: 80px;
+            }
+            
+            .level-3 .card {
+                height: 60px;
+            }
+            
+            .level-info, .moves-counter {
+                padding: 6px 12px;
+                font-size: 0.9rem;
+                display: block;
+                margin: 0 auto 10px;
+            }
+            
+            .moves-counter {
+                margin-left: 0;
+            }
+            
+            .win-message-title {
+                font-size: 1.2rem;
+            }
+            
+            .next-level-btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header class="page-header">
+            <h1 class="page-title">SunnyYummy 翻牌對對碰</h1>
+        </header>
+        
+        <main class="game-container">
+            <!-- Leaderboard Button -->
+            <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
+            
+            <!-- Game Info -->
+            <div class="game-info">
+                <div class="level-info">第 <span id="currentLevel">1</span> 關</div>
+                <div class="moves-counter">移動次數: <span id="moveCounter">0</span></div>
+            </div>
+            
+            <!-- Game Board -->
+            <div id="gameBoard" class="game-board level-1"></div>
+            
+            <!-- Win Message (Hidden by default) -->
+            <div id="winMessage" class="win-message" style="display: none;">
+                <h2 class="win-message-title">恭喜！你贏了！</h2>
+                <p id="winMessageText">總共使用了 <span id="levelMoves">0</span> 次移動完成本關。</p>
+            </div>
+            
+            <!-- Game Controls -->
+            <div class="game-controls">
+                <button id="resetBtn" class="reset-btn">重新開始</button>
+                <button id="nextLevelBtn" class="next-level-btn" style="display: none;">進入第2關</button>
+            </div>
+            
+            <!-- Fireworks (Hidden by default) -->
+            <div id="fireworksContainer" class="fireworks-container" style="display: none;">
+                <div class="firework"></div>
+                <div class="firework"></div>
+                <div class="firework"></div>
+                <div class="firework"></div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p>© 2025 SunnyYummy. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">排行榜 - 前20名</h2>
+            </div>
+            
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>玩家</th>
+                        <th>總步數</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    <!-- Leaderboard entries will be inserted here -->
+                </tbody>
+            </table>
+            
+            <div class="modal-footer">
+                <button id="closeLeaderboardBtn" class="close-modal-btn">關閉</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Name Input Modal -->
+    <div id="nameInputModal" class="modal-overlay">
+        <div class="name-input-container">
+            <h2 class="name-input-title">恭喜！你完成了所有關卡！</h2>
+            <p>總步數：<span id="totalMoves">0</span></p>
+            <p>請輸入你的名字加入排行榜：</p>
+            <input type="text" id="playerNameInput" class="name-input" placeholder="輸入你的名字" autocomplete="off">
+            <button id="submitNameBtn" class="submit-name-btn">提交</button>
+        </div>
+    </div>
+<!-- 底部導航 -->
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
+            <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
+            <li><a href="/news.html"><span class="icon">📢</span><span>消息</span></a></li>
+            <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active"><span class="icon">🎮</span><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><span class="icon">💬</span><span>留言</span></a></li>
+        </ul>
+    </nav>
+     
+
+    
+    <script>
+        // Game state
+        const gameState = { 
+ 
+            level: 1,
+            cards: [],
+            flipped: [],
+            matched: [],
+            moves: 0,
+            totalMoves: 0,
+            gameWon: false,
+            
+            // Level images
+            images: {
+                level1: [
+                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
+                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg"
+                ],
+                level2: [
+                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
+                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg",
+                    "https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744875191661-9152.png"
+                ],
+                level3: [
+                    "https://sunnyyummy.onrender.com/uploads/1745311229757-85711.jpg",
+                    "https://sunnyyummy.onrender.com/uploads/1745311184709-15134.jpg",
+                    "https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744875191661-9152.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744875184954-36224.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744875177880-30033.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744904373732-70451.png",
+                    "https://sunnyyummy.onrender.com/uploads/1744906516683-72487.png"
+                ]
+            },
+            
+            // Leaderboard
+            leaderboard: [
+                { name: "玩家1", moves: 24 },
+                { name: "玩家2", moves: 26 },
+                { name: "玩家3", moves: 28 },
+                { name: "玩家4", moves: 30 },
+                { name: "玩家5", moves: 32 }
+            ],
+            
+            currentPlayer: ""
+        };
+        
+        // DOM Elements
+        const elements = {
+            gameBoard: document.getElementById('gameBoard'),
+            currentLevel: document.getElementById('currentLevel'),
+            moveCounter: document.getElementById('moveCounter'),
+            winMessage: document.getElementById('winMessage'),
+            winMessageText: document.getElementById('winMessageText'),
+            levelMoves: document.getElementById('levelMoves'),
+            resetBtn: document.getElementById('resetBtn'),
+            nextLevelBtn: document.getElementById('nextLevelBtn'),
+            fireworksContainer: document.getElementById('fireworksContainer'),
+            leaderboardBtn: document.getElementById('leaderboardBtn'),
+            leaderboardModal: document.getElementById('leaderboardModal'),
+            leaderboardBody: document.getElementById('leaderboardBody'),
+            closeLeaderboardBtn: document.getElementById('closeLeaderboardBtn'),
+            nameInputModal: document.getElementById('nameInputModal'),
+            totalMoves: document.getElementById('totalMoves'),
+            playerNameInput: document.getElementById('playerNameInput'),
+            submitNameBtn: document.getElementById('submitNameBtn')
+        };
+        
+        // Initialize the game
+        function initializeLevel(level) {
+            // Clear game state
+            gameState.level = level;
+            gameState.flipped = [];
+            gameState.matched = [];
+            gameState.moves = 0;
+            gameState.gameWon = false;
+            
+            // Update UI
+            elements.currentLevel.textContent = level;
+            elements.moveCounter.textContent = 0;
+            elements.winMessage.style.display = 'none';
+            elements.nextLevelBtn.style.display = 'none';
+            elements.fireworksContainer.style.display = 'none';
+            
+            // Update game board class
+            elements.gameBoard.className = `game-board level-${level}`;
+            
+            // Generate cards based on level
+            let cardContents = [];
+            
+            if (level === 1) {
+                // Level 1: 2x2 grid with 2 different images
+                const levelImages = gameState.images.level1;
+                cardContents = [...levelImages, ...levelImages];
+            } else if (level === 2) {
+                // Level 2: 4x2 grid with 4 different images
+                const levelImages = gameState.images.level2;
+                cardContents = [...levelImages, ...levelImages];
+            } else if (level === 3) {
+                // Level 3: 4x4 grid with 8 different images
+                const levelImages = gameState.images.level3;
+                cardContents = [...levelImages, ...levelImages];
+            }
+            
+            // Shuffle the cards
+            shuffleArray(cardContents);
+            
+            // Create card objects
+            gameState.cards = cardContents.map((content, index) => ({
+                id: index,
+                content: content,
+                flipped: false,
+                matched: false
+            }));
+            
+            // Render the game board
+            renderGameBoard();
+        }
+        
+        // Shuffle array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // Render game board
+        function renderGameBoard() {
+            elements.gameBoard.innerHTML = '';
+            
+            gameState.cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.dataset.id = card.id;
+                
+                if (card.matched) {
+                    cardElement.classList.add('matched');
+                }
+                
+                if (card.flipped || card.matched) {
+                    cardElement.classList.add('flipped');
+                }
+                
+                const cardBack = document.createElement('div');
+                cardBack.className = 'card-face card-back';
+                
+                const cardFront = document.createElement('div');
+                cardFront.className = 'card-face card-front';
+                cardFront.style.backgroundImage = `url(${card.content})`;
+                
+                cardElement.appendChild(cardBack);
+                cardElement.appendChild(cardFront);
+                
+                cardElement.addEventListener('click', () => handleCardClick(card.id));
+                
+                elements.gameBoard.appendChild(cardElement);
+            });
+        }
+        
+        // Create ripple effect
+        function createRippleEffect(element) {
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            
+            ripple.style.width = ripple.style.height = `${size}px`;
+            
+            // Get mouse position relative to element
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            element.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+        
+        // Handle card click
+        function handleCardClick(id) {
+            // Get the card element
+            const cardElement = document.querySelector(`.card[data-id="${id}"]`);
+            
+            // Prevent click if already flipped or matched or if two cards are already flipped
+            if (gameState.flipped.length === 2 || gameState.flipped.includes(id) || gameState.matched.includes(id)) {
+                return;
+            }
+            
+            // Create ripple effect
+            createRippleEffect(cardElement);
+            
+            // Add card to flipped array
+            gameState.flipped.push(id);
+            
+            // Flip the card
+            cardElement.classList.add('flipped');
+            
+            // Update moves counter
+            gameState.moves++;
+            elements.moveCounter.textContent = gameState.moves;
+            
+            // Check if we have 2 cards flipped
+            if (gameState.flipped.length === 2) {
+                // Get the contents of the two flipped cards
+                const card1 = gameState.cards.find(card => card.id === gameState.flipped[0]);
+                const card2 = gameState.cards.find(card => card.id === gameState.flipped[1]);
+                
+                // Check if they match
+                if (card1.content === card2.content) {
+                    // Add to matched array with a small delay
+                    setTimeout(() => {
+                        // Update matched status
+                        gameState.matched.push(...gameState.flipped);
+                        
+                        // Update card elements
+                        gameState.flipped.forEach(id => {
+                            const card = document.querySelector(`.card[data-id="${id}"]`);
+                            card.classList.add('matched');
+                        });
+                        
+                        // Check if game is won
+                        if (gameState.matched.length === gameState.cards.length) {
+                            gameWon();
+                        }
+                        
+                        // Reset flipped
+                        gameState.flipped = [];
+                    }, 300);
+                } else {
+                    // If they don't match, flip them back after a delay
+                    setTimeout(() => {
+                        // Flip back cards
+                        gameState.flipped.forEach(id => {
+                            const card = document.querySelector(`.card[data-id="${id}"]`);
+                            card.classList.remove('flipped');
+                        });
+                        
+                        // Reset flipped
+                        gameState.flipped = [];
+                    }, 1000);
+                }
+            }
+        }
+        
+        // Handle game win
+        function gameWon() {
+            gameState.gameWon = true;
+            
+            // Update win message
+            elements.levelMoves.textContent = gameState.moves;
+            elements.winMessage.style.display = 'block';
+            
+            // Update total moves
+            gameState.totalMoves += gameState.moves;
+            
+            // Show next level button or fireworks
+            if (gameState.level < 3) {
+                elements.nextLevelBtn.textContent = `進入第${gameState.level + 1}關`;
+                elements.nextLevelBtn.style.display = 'block';
+            } else {
+                // Game completed - show fireworks
+                elements.fireworksContainer.style.display = 'block';
+                
+                // Update final win message
+                elements.winMessageText.innerHTML = `
+                    總共使用了 ${gameState.moves} 次移動完成本關。<br>
+                    <strong class="text-blue-600">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
+                `;
+                
+                // Check if the score is in the top 20
+                if (gameState.leaderboard.length < 20 || gameState.totalMoves < gameState.leaderboard[gameState.leaderboard.length - 1].moves) {
+                    setTimeout(() => {
+                        // Show name input modal
+                        elements.totalMoves.textContent = gameState.totalMoves;
+                        showModal(elements.nameInputModal);
+                    }, 1500);
+                }
+            }
+        }
+        
+        // Reset game
+        function resetGame() {
+            initializeLevel(gameState.level);
+        }
+        
+        // Go to next level
+        function goToNextLevel() {
+            initializeLevel(gameState.level + 1);
+        }
+        
+        // Update leaderboard with new score
+        function updateLeaderboard(name, score) {
+            // Add new entry
+            gameState.leaderboard.push({ name, moves: score });
+            
+            // Sort by moves (ascending - lower is better)
+            gameState.leaderboard.sort((a, b) => a.moves - b.moves);
+            
+            // Keep only top 20
+            gameState.leaderboard = gameState.leaderboard.slice(0, 20);
+            
+            // Save to local storage
+            localStorage.setItem('leaderboard', JSON.stringify(gameState.leaderboard));
+            
+            // Render leaderboard
+            renderLeaderboard();
+            
+            // Show leaderboard
+            showModal(elements.leaderboardModal);
+        }
+        
+        // Render leaderboard
+        function renderLeaderboard() {
+            elements.leaderboardBody.innerHTML = '';
+            
+            gameState.leaderboard.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                
+                // Highlight current player
+                if (entry.name === gameState.currentPlayer && entry.moves === gameState.totalMoves) {
+                    row.classList.add('highlight');
+                }
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.moves}</td>
+                `;
+                
+                elements.leaderboardBody.appendChild(row);
+            });
+        }
+        
+        // Show modal
+        function showModal(modal) {
+            modal.classList.add('visible');
+        }
+        
+        // Hide modal
+        function hideModal(modal) {
+            modal.classList.remove('visible');
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load leaderboard from localStorage
+            const savedLeaderboard = localStorage.getItem('leaderboard');
+            if (savedLeaderboard) {
+                gameState.leaderboard = JSON.parse(savedLeaderboard);
+            }
+            
+            // Initialize game
+            initializeLevel(1);
+            
+            // Reset button
+            elements.resetBtn.addEventListener('click', resetGame);
+            
+            // Next level button
+            elements.nextLevelBtn.addEventListener('click', goToNextLevel);
+            
+            // Leaderboard button
+            elements.leaderboardBtn.addEventListener('click', () => {
+                renderLeaderboard();
+                showModal(elements.leaderboardModal);
+            });
+            
+            // Close leaderboard button
+            elements.closeLeaderboardBtn.addEventListener('click', () => {
+                hideModal(elements.leaderboardModal);
+            });
+            
+            // Submit name button
+            elements.submitNameBtn.addEventListener('click', () => {
+                const name = elements.playerNameInput.value.trim() || "玩家";
+                gameState.currentPlayer = name;
+                updateLeaderboard(name, gameState.totalMoves);
+                hideModal(elements.nameInputModal);
+            });
+            
+            // Close modals when clicking outside
+            elements.leaderboardModal.addEventListener('click', (e) => {
+                if (e.target === elements.leaderboardModal) {
+                    hideModal(elements.leaderboardModal);
+                }
+            });
+            
+            elements.nameInputModal.addEventListener('click', (e) => {
+                if (e.target === elements.nameInputModal) {
+                    hideModal(elements.nameInputModal);
+                }
+            });
+            
+            // Handle Enter key on name input
+            elements.playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    elements.submitNameBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
