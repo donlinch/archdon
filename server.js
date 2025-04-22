@@ -685,7 +685,6 @@ app.use(async (req, res, next) => {
         '/game/card-game.html', // <-- 新增
         '/game/wheel-game.html', // <-- 新增
         '/game/brige-game.html',  // <-- 新增
-        '/game/text-game.html',
         
 '/games.html'
 
@@ -1076,818 +1075,86 @@ app.delete('/api/card-game/templates/:id', async (req, res) => {
 
 
 
-// 載入模板列表 - 使用新的API路由
-function loadTemplates() {
-    fetch('/api/flip-card/templates')
-        .then(response => {
-            if (!response.ok) throw new Error('無法獲取模板列表');
-            return response.json();
-        })
-        .then(data => {
-            gameState.templates = data;
-            
-            // 如果模板列表為空，顯示預設模板
-            if (data.length === 0) {
-                const defaultTemplateItem = document.createElement('div');
-                defaultTemplateItem.className = 'template-item active';
-                defaultTemplateItem.textContent = '預設模板';
-                defaultTemplateItem.setAttribute('data-id', 'default');
-                elements.templateList.appendChild(defaultTemplateItem);
-                
-                // 使用預設圖片
-                useDefaultTemplate();
-                return;
-            }
-            
-            // 渲染模板列表
-            elements.templateList.innerHTML = '';
-            data.forEach(template => {
-                const templateItem = document.createElement('div');
-                templateItem.className = 'template-item';
-                templateItem.textContent = template.template_name;
-                templateItem.setAttribute('data-id', template.id);
-                templateItem.addEventListener('click', () => selectTemplate(template.id));
-                elements.templateList.appendChild(templateItem);
-            });
-            
-            // 預設選擇第一個模板
-            selectTemplate(data[0].id);
-        })
-        .catch(error => {
-            console.error('獲取模板列表失敗:', error);
-            // 發生錯誤時使用預設模板
-            useDefaultTemplate();
+
+
+// GET /api/admin/files - 獲取檔案列表 (分頁、篩選、排序)
+app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15; // 每頁數量
+    const offset = (page - 1) * limit;
+    const sortBy = req.query.sortBy || 'newest'; // newest, oldest, name_asc, name_desc, size_asc, size_desc
+    const fileType = req.query.fileType || 'all'; // all, image, pdf, other
+    const search = req.query.search?.trim() || '';
+
+    let orderByClause = 'ORDER BY uploaded_at DESC'; // 預設最新
+    switch (sortBy) {
+        case 'oldest': orderByClause = 'ORDER BY uploaded_at ASC'; break;
+        case 'name_asc': orderByClause = 'ORDER BY original_filename ASC'; break;
+        case 'name_desc': orderByClause = 'ORDER BY original_filename DESC'; break;
+        case 'size_asc': orderByClause = 'ORDER BY size_bytes ASC NULLS FIRST'; break; // NULLS FIRST 讓無大小的排前面
+        case 'size_desc': orderByClause = 'ORDER BY size_bytes DESC NULLS LAST'; break; // NULLS LAST 讓無大小的排後面
+    }
+
+    let whereClauses = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (fileType !== 'all' && ['image', 'pdf', 'other'].includes(fileType)) {
+        whereClauses.push(`file_type = $${paramIndex++}`);
+        queryParams.push(fileType);
+    }
+    if (search) {
+        // 使用 LOWER() 進行不區分大小寫搜尋
+        whereClauses.push(`LOWER(original_filename) LIKE LOWER($${paramIndex++})`);
+        queryParams.push(`%${search}%`);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const client = await pool.connect();
+    try {
+        // 查詢總數
+        const totalResult = await client.query(`SELECT COUNT(*) FROM uploaded_files ${whereSql}`, queryParams);
+        const totalItems = parseInt(totalResult.rows[0].count, 10);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // 查詢當前頁面數據
+        // 添加 limit 和 offset 的參數索引
+        const limitParamIdx = paramIndex++;
+        const offsetParamIdx = paramIndex++;
+        queryParams.push(limit);
+        queryParams.push(offset);
+
+        const filesResult = await client.query(
+            `SELECT id, file_path, original_filename, mimetype, size_bytes, file_type, uploaded_at
+             FROM uploaded_files
+             ${whereSql}
+             ${orderByClause}
+             LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
+            queryParams
+        );
+
+        res.json({
+            files: filesResult.rows,
+            currentPage: page,
+            totalPages: totalPages,
+            totalItems: totalItems,
+            limit: limit,
+            sortBy: sortBy,
+            fileType: req.query.fileType || 'all', // 返回實際使用的 fileType
+            search: req.query.search || ''       // 返回實際使用的 search
         });
-}
 
-// 選擇模板 - 使用新的API路由
-function selectTemplate(templateId) {
-    // 更新UI
-    const templateItems = document.querySelectorAll('.template-item');
-    templateItems.forEach(item => {
-        if (item.getAttribute('data-id') == templateId) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-    
-    // 保存選中的模板ID
-    gameState.selectedTemplate = templateId;
-    
-    // 獲取模板詳情
-    fetch(`/api/flip-card/templates/${templateId}`)
-        .then(response => {
-            if (!response.ok) throw new Error('無法獲取模板詳情');
-            return response.json();
-        })
-        .then(template => {
-            // 解析內容數據
-            let contentData;
-            try {
-                contentData = typeof template.content_data === 'string' ? 
-                    JSON.parse(template.content_data) : template.content_data;
-            } catch (e) {
-                contentData = { level1: [], level2: [], level3: [] };
-            }
-            
-            // 設置關卡圖片
-            gameState.images = contentData;
-            
-            // 初始化第一關
-            initializeLevel(1);
-        })
-        .catch(error => {
-            console.error('獲取模板詳情失敗:', error);
-            alert('載入模板失敗，請重新選擇或刷新頁面。');
-        });
-}
-
-// 更新排行榜 - 使用新的API路由
-function submitScore() {
-    const playerName = elements.playerNameInput.value.trim() || "匿名";
-    gameState.currentPlayer = playerName;
-    
-    // 提交分數到服務器
-    fetch('/api/flip-card/submit-score', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            player_name: playerName,
-            total_moves: gameState.totalMoves,
-            template_id: gameState.selectedTemplate,
-            completion_time: gameState.completionTime || null
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // 更新排行榜並顯示
-            loadLeaderboard();
-            hideModal(elements.nameInputModal);
-            showModal(elements.leaderboardModal);
-        } else {
-            alert('提交分數失敗：' + (data.error || '未知錯誤'));
-        }
-    })
-    .catch(error => {
-        console.error('提交分數時出錯:', error);
-        alert('提交分數失敗，請稍後再試。');
-    });
-}
-
-// 載入排行榜 - 使用新的API路由
-function loadLeaderboard() {
-    fetch('/api/flip-card/leaderboard')
-        .then(response => response.json())
-        .then(data => {
-            // 清空排行榜
-            elements.leaderboardBody.innerHTML = '';
-            
-            // 排序並顯示前20名
-            data.slice(0, 20).forEach((entry, index) => {
-                const row = document.createElement('tr');
-                
-                // 突出顯示當前玩家
-                if (entry.player_name === gameState.currentPlayer && entry.total_moves === gameState.totalMoves) {
-                    row.classList.add('highlight');
-                }
-                
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${entry.player_name}</td>
-                    <td>${entry.total_moves}</td>
-                `;
-                
-                elements.leaderboardBody.appendChild(row);
-            });
-        })
-        .catch(error => {
-            console.error('獲取排行榜時出錯:', error);
-        });
-}
-
-// 在遊戲勝利時記錄完成時間
-function gameWon() {
-    gameState.gameWon = true;
-    
-    // 記錄完成時間（如果是第三關）
-    if (gameState.level === 3) {
-        // 計算總耗時（秒）
-        gameState.completionTime = (Date.now() - gameState.startTime) / 1000;
-    }
-    
-    // 更新獲勝訊息
-    elements.levelMoves.textContent = gameState.moves;
-    elements.winMessage.style.display = 'block';
-    
-    // 更新總移動次數
-    gameState.totalMoves += gameState.moves;
-    
-    // 顯示下一關按鈕或煙火
-    if (gameState.level < 3) {
-        elements.nextLevelBtn.textContent = `進入第${gameState.level + 1}關`;
-        elements.nextLevelBtn.style.display = 'block';
-    } else {
-        // 遊戲完成 - 顯示煙火
-        elements.fireworksContainer.style.display = 'block';
-        
-        // 更新最終獲勝訊息
-        elements.winMessageText.innerHTML = `
-            總共使用了 ${gameState.moves} 次移動完成本關。<br>
-            <strong style="color: #1976d2;">恭喜完成所有關卡！總步數：${gameState.totalMoves}</strong>
-        `;
-        
-        // 檢查得分是否進入前20名
-        setTimeout(() => {
-            // 顯示名稱輸入模態框
-            elements.totalMoves.textContent = gameState.totalMoves;
-            showModal(elements.nameInputModal);
-        }, 1500);
-    }
-}
-
-// 初始化關卡時記錄開始時間
-function initializeLevel(level) {
-    // 清空遊戲狀態
-    gameState.level = level;
-    gameState.flipped = [];
-    gameState.matched = [];
-    gameState.moves = 0;
-    gameState.gameWon = false;
-    
-    // 記錄開始時間（用於計算完成時間）
-    if (level === 1) {
-        gameState.startTime = Date.now();
-    }
-    
-    // 其他初始化代碼...
-}
-
-
-
-
-
-
-
-
-
-// --- 翻牌對對碰遊戲API (獨立於洞洞樂card_game_templates) ---
-
-// GET /api/flip-card/templates - 獲取所有模板
-app.get('/api/flip-card/templates', async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT id, template_name, created_at, updated_at
-             FROM flip_card_templates
-             WHERE is_public = TRUE
-             ORDER BY updated_at DESC`
-        );
-        res.json(result.rows);
     } catch (err) {
-        console.error('獲取翻牌模板列表失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/flip-card/templates/:id - 獲取特定模板
-app.get('/api/flip-card/templates/:id', async (req, res) => {
-    const { id } = req.params;
-    const templateId = parseInt(id, 10);
-    if (isNaN(templateId)) {
-        return res.status(400).json({ error: '無效的模板 ID' });
-    }
-
-    try {
-        const result = await pool.query(
-            'SELECT id, template_name, content_data, created_at, updated_at FROM flip_card_templates WHERE id = $1 AND is_public = TRUE',
-            [templateId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到模板或模板不公開' });
-        }
-
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取翻牌模板 ${id} 失敗:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/flip-card/templates - 創建新模板
-app.post('/api/flip-card/templates', async (req, res) => {
-    const { template_name, content_data, is_public = true } = req.body;
-    
-    if (!template_name) {
-        return res.status(400).json({ error: '模板名稱不能為空' });
-    }
-    
-    if (!content_data || typeof content_data !== 'object') {
-        return res.status(400).json({ error: '卡片內容格式不正確' });
-    }
-
-    try {
-        // 檢查必須的關卡圖片
-        if (!content_data.level1 || !Array.isArray(content_data.level1) || content_data.level1.length < 2) {
-            return res.status(400).json({ error: '第一關至少需要2張不同圖片' });
-        }
-        if (!content_data.level2 || !Array.isArray(content_data.level2) || content_data.level2.length < 4) {
-            return res.status(400).json({ error: '第二關至少需要4張不同圖片' });
-        }
-        if (!content_data.level3 || !Array.isArray(content_data.level3) || content_data.level3.length < 8) {
-            return res.status(400).json({ error: '第三關至少需要8張不同圖片' });
-        }
-        
-        // 檢查模板名稱是否已存在
-        const existingCheck = await pool.query(
-            'SELECT 1 FROM flip_card_templates WHERE template_name = $1',
-            [template_name]
-        );
-        
-        if (existingCheck.rows.length > 0) {
-            return res.status(409).json({ error: '此模板名稱已存在' });
-        }
-        
-        // 插入新模板
-        const ip_address = req.ip || 'unknown';  
-        const result = await pool.query(
-            `INSERT INTO flip_card_templates (template_name, content_data, creator_ip, is_public) 
-             VALUES ($1, $2::json, $3, $4) 
-             RETURNING id, template_name, content_data, created_at, updated_at`,
-            [template_name, JSON.stringify(content_data), ip_address, is_public]
-        );
-        
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('創建翻牌模板失敗:', err);
-        res.status(500).json({ 
-            error: '伺服器內部錯誤',
-            detail: err.message
-        });
-    }
-});
-
-// PUT /api/flip-card/templates/:id - 更新模板
-app.put('/api/flip-card/templates/:id', async (req, res) => {
-    const { id } = req.params;
-    const templateId = parseInt(id, 10);
-    const { template_name, content_data } = req.body;
-    
-    if (isNaN(templateId)) {
-        return res.status(400).json({ error: '無效的模板 ID' });
-    }
-    
-    if (!template_name) {
-        return res.status(400).json({ error: '模板名稱不能為空' });
-    }
-    
-    if (!content_data || typeof content_data !== 'object') {
-        return res.status(400).json({ error: '卡片內容格式不正確' });
-    }
-    
-    try {
-        // 檢查必須的關卡圖片
-        if (!content_data.level1 || !Array.isArray(content_data.level1) || content_data.level1.length < 2) {
-            return res.status(400).json({ error: '第一關至少需要2張不同圖片' });
-        }
-        if (!content_data.level2 || !Array.isArray(content_data.level2) || content_data.level2.length < 4) {
-            return res.status(400).json({ error: '第二關至少需要4張不同圖片' });
-        }
-        if (!content_data.level3 || !Array.isArray(content_data.level3) || content_data.level3.length < 8) {
-            return res.status(400).json({ error: '第三關至少需要8張不同圖片' });
-        }
-        
-        // 檢查模板是否存在
-        const existingTemplateCheck = await pool.query(
-            'SELECT 1 FROM flip_card_templates WHERE id = $1',
-            [templateId]
-        );
-        
-        if (existingTemplateCheck.rows.length === 0) {
-            return res.status(404).json({ error: '找不到要更新的模板' });
-        }
-        
-        // 檢查模板名稱是否與其他模板重複
-        const existingNameCheck = await pool.query(
-            'SELECT 1 FROM flip_card_templates WHERE template_name = $1 AND id <> $2',
-            [template_name, templateId]
-        );
-        
-        if (existingNameCheck.rows.length > 0) {
-            return res.status(409).json({ error: '此模板名稱已被其他模板使用' });
-        }
-        
-        // 更新模板
-        const result = await pool.query(
-            `UPDATE flip_card_templates 
-             SET template_name = $1, content_data = $2::json, updated_at = NOW() 
-             WHERE id = $3 
-             RETURNING id, template_name, content_data, created_at, updated_at`,
-            [template_name, JSON.stringify(content_data), templateId]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到要更新的模板' });
-        }
-        
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`更新翻牌模板 ${id} 失敗:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// DELETE /api/flip-card/templates/:id - 刪除模板
-app.delete('/api/flip-card/templates/:id', async (req, res) => {
-    const { id } = req.params;
-    const templateId = parseInt(id, 10);
-    if (isNaN(templateId)) {
-        return res.status(400).json({ error: '無效的模板 ID' });
-    }
-
-    try {
-        // 刪除模板
-        const result = await pool.query('DELETE FROM flip_card_templates WHERE id = $1', [templateId]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的模板' });
-        }
-        
-        res.status(204).send();
-    } catch (err) {
-        console.error(`刪除翻牌模板 ${id} 失敗:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// GET /api/flip-card/leaderboard - 獲取排行榜
-app.get('/api/flip-card/leaderboard', async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT l.id, l.player_name, l.total_moves, l.completion_time, 
-                    t.template_name, l.created_at 
-             FROM flip_card_leaderboard l
-             LEFT JOIN flip_card_templates t ON l.template_id = t.id
-             ORDER BY l.total_moves ASC, l.completion_time ASC
-             LIMIT 20`
-        );
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取翻牌遊戲排行榜失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
-// POST /api/flip-card/submit-score - 提交分數
-app.post('/api/flip-card/submit-score', async (req, res) => {
-    const { player_name, total_moves, template_id, completion_time } = req.body;
-    
-    if (!player_name) {
-        return res.status(400).json({ error: '玩家名稱不能為空' });
-    }
-    
-    if (!total_moves || isNaN(parseInt(total_moves))) {
-        return res.status(400).json({ error: '總步數必須是數字' });
-    }
-    
-    try {
-        const ip_address = req.ip || 'unknown';
-        
-        // 檢查模板是否存在 (如果提供了template_id)
-        if (template_id) {
-            const templateCheck = await pool.query(
-                'SELECT 1 FROM flip_card_templates WHERE id = $1',
-                [template_id]
-            );
-            
-            if (templateCheck.rows.length === 0) {
-                return res.status(400).json({ error: '指定的模板不存在' });
-            }
-        }
-        
-        // 插入分數記錄
-        const result = await pool.query(
-            `INSERT INTO flip_card_leaderboard (player_name, total_moves, template_id, completion_time, ip_address) 
-             VALUES ($1, $2, $3, $4, $5) 
-             RETURNING id`,
-            [player_name, parseInt(total_moves), template_id || null, completion_time || null, ip_address]
-        );
-        
-        res.json({ success: true, id: result.rows[0].id });
-    } catch (err) {
-        console.error('提交翻牌遊戲分數失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
+        console.error('[API GET /admin/files] Error fetching file list:', err);
+        res.status(500).json({ error: '無法獲取檔案列表', detail: err.message });
+    } finally {
+        client.release();
     }
 });
 
 
 
-
-
-
-
-
-
-
-
-// 載入模板列表 - 使用新的API路由
-function loadCardTemplates() {
-    const tableBody = document.querySelector('#card-template-list-table tbody');
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">正在載入模板列表...</td></tr>';
-    
-    fetch('/api/flip-card/templates')
-        .then(response => {
-            if (!response.ok) throw new Error('無法獲取模板列表');
-            return response.json();
-        })
-        .then(data => {
-            tableBody.innerHTML = '';
-            
-            if (data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">目前沒有任何模板</td></tr>';
-                return;
-            }
-            
-            data.forEach(template => {
-                // 解析內容數據
-                let contentData;
-                try {
-                    contentData = typeof template.content_data === 'string' ? 
-                        JSON.parse(template.content_data) : template.content_data;
-                } catch (e) {
-                    contentData = { level1: [], level2: [], level3: [] };
-                }
-                
-                // 格式化日期
-                const createdDate = new Date(template.created_at).toLocaleString();
-                
-                // 建立卡片預覽
-                let previewHtml = '<div class="card-preview">';
-                // 每個關卡顯示最多4張圖片
-                [
-                    { level: 'level1', label: '關卡1' },
-                    { level: 'level2', label: '關卡2' },
-                    { level: 'level3', label: '關卡3' }
-                ].forEach(({ level, label }) => {
-                    if (contentData[level] && contentData[level].length > 0) {
-                        // 只顯示前2張圖片
-                        const previewImages = contentData[level].slice(0, 2);
-                        previewImages.forEach(image => {
-                            previewHtml += `
-                                <div class="card-preview-item" style="background-image: url('${image}')">
-                                    <div class="card-preview-label">${label}</div>
-                                </div>
-                            `;
-                        });
-                        
-                        // 如有更多圖片，顯示計數
-                        if (contentData[level].length > 2) {
-                            previewHtml += `
-                                <div class="card-preview-item" style="background-color: #f0f0f0; display: flex; justify-content: center; align-items: center;">
-                                    <div style="text-align: center;">+${contentData[level].length - 2} 張</div>
-                                </div>
-                            `;
-                        }
-                    }
-                });
-                previewHtml += '</div>';
-                
-                // 建立表格行
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${template.id}</td>
-                    <td>${template.template_name}</td>
-                    <td>${previewHtml}</td>
-                    <td>${createdDate}</td>
-                    <td>
-                        <button class="action-btn edit-btn" onclick="editTemplate(${template.id})">編輯</button>
-                        <button class="action-btn delete-btn" onclick="deleteTemplate(${template.id})">刪除</button>
-                    </td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-        })
-        .catch(error => {
-            console.error('獲取模板列表失敗:', error);
-            tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">載入模板列表時出錯: ${error.message}</td></tr>`;
-        });
-}
-
-// 編輯模板 - 使用新的API路由
-function editTemplate(id) {
-    // 清空表單
-    document.getElementById('edit-template-form').reset();
-    document.getElementById('edit-template-form-error').textContent = '';
-    
-    // 清空圖片列表
-    const imageLists = [
-        document.getElementById('edit-level-1-images'),
-        document.getElementById('edit-level-2-images'),
-        document.getElementById('edit-level-3-images')
-    ];
-    
-    imageLists.forEach(list => {
-        // 只保留添加按鈕
-        const addButton = list.querySelector('.add-card-image');
-        list.innerHTML = '';
-        if (addButton) {
-            list.appendChild(addButton);
-        }
-    });
-    
-    // 獲取模板數據
-    fetch(`/api/flip-card/templates/${id}`)
-        .then(response => {
-            if (!response.ok) throw new Error('無法獲取模板詳情');
-            return response.json();
-        })
-        .then(template => {
-            // 填充表單數據
-            document.getElementById('edit-template-id').value = template.id;
-            document.getElementById('edit-template-name').value = template.template_name;
-            
-            // 解析內容數據
-            let contentData;
-            try {
-                contentData = typeof template.content_data === 'string' ? 
-                    JSON.parse(template.content_data) : template.content_data;
-            } catch (e) {
-                contentData = { level1: [], level2: [], level3: [] };
-            }
-            
-            // 填充各關卡圖片
-            ['level1', 'level2', 'level3'].forEach(level => {
-                if (contentData[level] && Array.isArray(contentData[level])) {
-                    const levelImages = contentData[level];
-                    const levelNum = level.replace('level', '');
-                    const listId = `edit-level-${levelNum}-images`;
-                    const imagesList = document.getElementById(listId);
-                    const addButton = imagesList.querySelector('.add-card-image');
-                    
-                    // 為每張圖片創建元素
-                    levelImages.forEach((imagePath, index) => {
-                        const imageItem = document.createElement('div');
-                        imageItem.className = 'card-image-item';
-                        imageItem.setAttribute('data-image', imagePath);
-                        
-                        const img = document.createElement('img');
-                        img.src = imagePath;
-                        img.alt = '卡片圖片';
-                        
-                        const removeBtn = document.createElement('button');
-                        removeBtn.className = 'remove-btn';
-                        removeBtn.innerHTML = '×';
-                        removeBtn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            imageItem.remove();
-                        });
-                        
-                        imageItem.appendChild(img);
-                        imageItem.appendChild(removeBtn);
-                        
-                        // 點擊圖片項可以重新選擇
-                        imageItem.addEventListener('click', function() {
-                            const newIndex = Array.from(imagesList.querySelectorAll('.card-image-item')).indexOf(this);
-                            showImageSelector(levelNum, newIndex, true);
-                        });
-                        
-                        // 插入到添加按鈕之前
-                        imagesList.insertBefore(imageItem, addButton);
-                    });
-                }
-            });
-            
-            // 顯示模態框
-            document.getElementById('edit-template-modal').style.display = 'flex';
-        })
-        .catch(error => {
-            console.error('獲取模板詳情失敗:', error);
-            alert(`載入模板資料時出錯: ${error.message}`);
-        });
-}
-
-// 刪除模板 - 使用新的API路由
-function deleteTemplate(id) {
-    if (confirm(`確定要刪除ID為 ${id} 的翻牌模板嗎？此操作無法復原！`)) {
-        fetch(`/api/flip-card/templates/${id}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('刪除模板失敗');
-            loadCardTemplates();
-            alert('模板已成功刪除！');
-        })
-        .catch(error => {
-            console.error('刪除模板失敗:', error);
-            alert(`刪除模板時出錯: ${error.message}`);
-        });
-    }
-}
-
-// 儲存模板 - 使用新的API路由
-function saveTemplate(isEdit) {
-    const formId = isEdit ? 'edit-template-form' : 'add-template-form';
-    const errorId = isEdit ? 'edit-template-form-error' : 'add-template-form-error';
-    const form = document.getElementById(formId);
-    const errorElement = document.getElementById(errorId);
-    
-    // 獲取模板名稱
-    const templateName = isEdit ? 
-        document.getElementById('edit-template-name').value.trim() : 
-        document.getElementById('template-name').value.trim();
-    
-    if (!templateName) {
-        errorElement.textContent = '請輸入模板名稱';
-        return;
-    }
-    
-    // 獲取各關卡圖片
-    const prefix = isEdit ? 'edit-' : '';
-    const level1Images = getImagesFromLevel(`${prefix}level-1-images`);
-    const level2Images = getImagesFromLevel(`${prefix}level-2-images`);
-    const level3Images = getImagesFromLevel(`${prefix}level-3-images`);
-    
-    // 檢查圖片數量
-    if (level1Images.length < 2) {
-        errorElement.textContent = '第一關至少需要2張不同圖片';
-        return;
-    }
-    if (level2Images.length < 4) {
-        errorElement.textContent = '第二關至少需要4張不同圖片';
-        return;
-    }
-    if (level3Images.length < 8) {
-        errorElement.textContent = '第三關至少需要8張不同圖片';
-        return;
-    }
-    
-    // 準備提交的數據
-    const contentData = {
-        level1: level1Images,
-        level2: level2Images,
-        level3: level3Images
-    };
-    
-    // 構建請求數據
-    const requestData = {
-        template_name: templateName,
-        content_data: contentData
-    };
-    
-    // 判斷是新增還是編輯
-    if (isEdit) {
-        const templateId = document.getElementById('edit-template-id').value;
-        // 更新模板
-        fetch(`/api/flip-card/templates/${templateId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('更新模板失敗');
-            return response.json();
-        })
-        .then(data => {
-            closeEditTemplateModal();
-            loadCardTemplates();
-            alert('模板更新成功！');
-        })
-        .catch(error => {
-            errorElement.textContent = error.message;
-        });
-    } else {
-        // 新增模板
-        fetch('/api/flip-card/templates', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('新增模板失敗');
-            return response.json();
-        })
-        .then(data => {
-            closeAddTemplateModal();
-            loadCardTemplates();
-            alert('模板新增成功！');
-        })
-        .catch(error => {
-            errorElement.textContent = error.message;
-        });
-    }
-}
-
-// 載入排行榜 - 使用新的API路由
-function loadLeaderboard() {
-    const tableBody = document.querySelector('#leaderboard-table tbody');
-    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">正在載入排行榜...</td></tr>';
-    
-    fetch('/api/flip-card/leaderboard')
-        .then(response => {
-            if (!response.ok) throw new Error('無法獲取排行榜資料');
-            return response.json();
-        })
-        .then(data => {
-            tableBody.innerHTML = '';
-            
-            if (data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">目前沒有任何排行榜紀錄</td></tr>';
-                return;
-            }
-            
-            // 排序並顯示前20筆資料
-            data.slice(0, 20).forEach((entry, index) => {
-                const row = document.createElement('tr');
-                
-                // 格式化日期和時間
-                const playedDate = new Date(entry.created_at).toLocaleString();
-                const completionTime = entry.completion_time ? `${entry.completion_time.toFixed(2)}秒` : '-';
-                
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${entry.player_name}</td>
-                    <td>${entry.total_moves}</td>
-                    <td>${completionTime}</td>
-                    <td>${entry.template_name || '-'}</td>
-                    <td>${playedDate}</td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-        })
-        .catch(error => {
-            console.error('獲取排行榜失敗:', error);
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">載入排行榜時出錯: ${error.message}</td></tr>`;
-        });
-}
 
 
 
