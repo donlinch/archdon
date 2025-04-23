@@ -53,7 +53,7 @@ button:hover { background-color: #e0e0e0; }
 
 /* Admin 地圖網格預覽樣式 */
 #admin-map-grid-container {
-    width: 100%;
+  width: 100%;
     max-width: 700px;
     aspect-ratio: 1 / 1;
     margin: 25px auto;
@@ -73,35 +73,6 @@ button:hover { background-color: #e0e0e0; }
     height: 100%;
     gap: 3px; /* 格子間隙 */
 }
-
-
-
-/* --- ★ 新增/修改：中間文字區域樣式 ★ --- */
-#admin-map-center-text {
-    position: absolute;
-    /* 定位在內部 5x5 區域 */
-    top: var(--cell-dim, calc(100% / 7));  /* 跳過第一行 */
-    left: var(--cell-dim, calc(100% / 7)); /* 跳過第一列 */
-    width: calc(var(--cell-dim, calc(100% / 7)) * 5); /* 寬度為 5 個格子 */
-    height: calc(var(--cell-dim, calc(100% / 7)) * 5);/* 高度為 5 個格子 */
-    /* 文字樣式 */
-    display: flex;              /* 使用 flexbox 垂直居中 */
-    align-items: center;        /* 垂直居中 */
-    justify-content: center;    /* 水平居中 */
-    text-align: center;         /* 確保文字本身也居中 */
-    font-size: 1.8rem;          /* 大字體 */
-    font-weight: bold;
-    color: var(--template-primary-text-color, #333); /* 使用模板主文字顏色 */
-    padding: 15px;              /* 內部留白 */
-    overflow-y: auto;          /* 如果文字太長，允許滾動 */
-    background-color: rgba(255, 255, 255, 0.5); /* 半透明白色背景，以便看到底層顏色 */
-    border-radius: 5px;         /* 輕微圓角 */
-    box-sizing: border-box;
-    z-index: 5;                 /* 確保在格子背景之上 */
-    pointer-events: none;       /* 不阻擋下方格子的點擊 */
-    word-wrap: break-word;      /* 允許長單詞換行 */
-}
-/* --- ★ 結束新增/修改 ★ --- */
  #admin-map-center-image { /* 中央圖片預覽 */
     position: absolute;
     top: calc(100% / 7);
