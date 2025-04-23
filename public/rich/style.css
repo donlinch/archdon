@@ -243,79 +243,70 @@ h1, h2, h3 {
     color: #777;
 }
 
-    /* 計算每個方向的格子大小和位置 */
-    /* 每一邊有 7 個格子 (0-6, 7-10, 11-17, 18-21) */
-    /* 頂部和底部的格子寬度 */
-    .map-cell.top-row,
-    .map-cell.bottom-row {
-        width: calc(100% / 7);  /* 7個格子均分寬度 */
-        height: calc(100% / 7); /* 高度為地圖的1/7     原本是 7 */
-    }
 
-    /* 左側和右側的格子高度 */
-    .map-cell.left-column,
-    .map-cell.right-column {
-        width: calc(100% / 7);  /* 寬度為地圖的1/7 */
-        height: calc(100% / 7); /* 5個格子均分高度     原本是 7 */
-    }
 
-    /* 頂部一行格子 (0-6) */
-    .map-cell.top-row:nth-child(1) { left: 0; top: 0; }                 /* 0 */
-    .map-cell.top-row:nth-child(2) { left: calc(100% / 7); top: 0; }    /* 1 */
-    .map-cell.top-row:nth-child(3) { left: calc(100% / 7 * 2); top: 0; }/* 2 */
-    .map-cell.top-row:nth-child(4) { left: calc(100% / 7 * 3); top: 0; }/* 3 */
-    .map-cell.top-row:nth-child(5) { left: calc(100% / 7 * 4); top: 0; }/* 4 */
-    .map-cell.top-row:nth-child(6) { left: calc(100% / 7 * 5); top: 0; }/* 5 */
-    .map-cell.top-row:nth-child(7) { left: calc(100% / 7 * 6); top: 0; }/* 6 */
-
-    /* 右側一列格子 (7-10) */
-    .map-cell.right-column:nth-child(8) { top: calc(100% / 7 * 1); right: 0; } /* 7 */
-.map-cell.right-column:nth-child(9) { top: calc(100% / 7 * 2); right: 0; } /* 8 */
-.map-cell.right-column:nth-child(10) { top: calc(100% / 7 * 3); right: 0; } /* 9 */
-.map-cell.right-column:nth-child(11) { top: calc(100% / 7 * 4); right: 0; } /* 10 */
-    
-
-    /* 底部一行格子 (11-17) - 注意這裡順序是相反的 */
-   .map-cell.bottom-row:nth-child(12) {
-    /* right: 0;  <-- 移除或註釋掉 right: 0 */
-    /* bottom: 0; <-- 移除或註釋掉 bottom: 0 */
-    top: calc(100% / 7 * 5); /* <--- 新增：直接指定頂部位置，與 cell 10 的底部對齊 */
-    right: 0;               /* <--- 保留：仍然靠右 */
-}             /* 11 */
-   
-/* Cell 12 (Child 13) */
-.map-cell.bottom-row:nth-child(13) {
-    top: calc(100% / 7 * 5);   /* <--- 新增：頂部對齊 */
-    right: calc(100% / 7 * 1); /* 保留原來的 right 值 */
-    /* bottom: 0; */          /* 註釋或刪除 bottom */
+/* --- 定義網格尺寸 --- */
+:root {
+    --grid-size: 7; /* 每邊 7 個格子 */
+    /* 計算每個格子的尺寸 */
+    --cell-dim: calc(100% / var(--grid-size));
 }
 
-/* Cell 13 (Child 14) */
-.map-cell.bottom-row:nth-child(14) {
-    top: calc(100% / 7 * 5);   /* <--- 新增：頂部對齊 */
-    right: calc(100% / 7 * 2); /* 保留原來的 right 值 */
-    /* bottom: 0; */          /* 註釋或刪除 bottom */
+/* --- 格子尺寸 --- */
+.map-cell {
+    width: var(--cell-dim);
+    height: var(--cell-dim);
+}
+/* 如果角落格子大小不同，可能需要特別設定，這裡假設都一樣 */
+
+/* --- 格子定位 --- */
+
+/* 頂部行 (0-6) -> nth-child(1) 到 nth-child(7) */
+.map-cell.top-row { top: 0; } /* 統一設定 top */
+.map-cell.top-row:nth-child(1) { left: calc(var(--cell-dim) * 0); } /* 格子 0 */
+.map-cell.top-row:nth-child(2) { left: calc(var(--cell-dim) * 1); } /* 格子 1 */
+.map-cell.top-row:nth-child(3) { left: calc(var(--cell-dim) * 2); } /* 格子 2 */
+.map-cell.top-row:nth-child(4) { left: calc(var(--cell-dim) * 3); } /* 格子 3 */
+.map-cell.top-row:nth-child(5) { left: calc(var(--cell-dim) * 4); } /* 格子 4 */
+.map-cell.top-row:nth-child(6) { left: calc(var(--cell-dim) * 5); } /* 格子 5 */
+.map-cell.top-row:nth-child(7) { left: calc(var(--cell-dim) * 6); } /* 格子 6 */
+
+/* 右側列 (7-10) -> nth-child(8) 到 nth-child(11) */
+.map-cell.right-column { right: 0; } /* 統一設定 right */
+.map-cell.right-column:nth-child(8)  { top: calc(var(--cell-dim) * 1); } /* 格子 7 */
+.map-cell.right-column:nth-child(9)  { top: calc(var(--cell-dim) * 2); } /* 格子 8 */
+.map-cell.right-column:nth-child(10) { top: calc(var(--cell-dim) * 3); } /* 格子 9 */
+.map-cell.right-column:nth-child(11) { top: calc(var(--cell-dim) * 4); } /* 格子 10 */
+
+/* 底部行 (11-17) -> nth-child(12) 到 nth-child(18) */
+/* 統一從頂部邊緣定位，確保對齊 */
+.map-cell.bottom-row { top: calc(var(--cell-dim) * (var(--grid-size) - 1)); } /* (7-1 = 6)，頂部在第6格高度處 */
+.map-cell.bottom-row:nth-child(12) { left: calc(var(--cell-dim) * 6); } /* 格子 11 */
+.map-cell.bottom-row:nth-child(13) { left: calc(var(--cell-dim) * 5); } /* 格子 12 */
+.map-cell.bottom-row:nth-child(14) { left: calc(var(--cell-dim) * 4); } /* 格子 13 */
+.map-cell.bottom-row:nth-child(15) { left: calc(var(--cell-dim) * 3); } /* 格子 14 */
+.map-cell.bottom-row:nth-child(16) { left: calc(var(--cell-dim) * 2); } /* 格子 15 */
+.map-cell.bottom-row:nth-child(17) { left: calc(var(--cell-dim) * 1); } /* 格子 16 */
+/* === 修正：格子 17 (高雄) 的位置 === */
+.map-cell.bottom-row:nth-child(18) { top: calc(var(--cell-dim) * 5); } /* 格子 17 - 定位在最左邊 (left: 0) */
+
+/* 左側列 (18-21) -> nth-child(19) 到 nth-child(22) */
+.map-cell.left-column { left: 0; } /* 統一設定 left: 0 */
+
+/* 格子 18 (屏東) */
+.map-cell.left-column:nth-child(19) {  top: calc(var(--cell-dim) * 4); }
+/* 格子 19 (命運!) */
+.map-cell.left-column:nth-child(20) {  top: calc(var(--cell-dim) * 3); }
+
+/* === 修正：格子 20 (台東) 的位置 === */
+.map-cell.left-column:nth-child(21) {
+    top: calc(var(--cell-dim) * 2); /* 將 top 設為第 2 格高度處，即花蓮正下方 */
 }
 
-/* Cell 14 (Child 15) */
-.map-cell.bottom-row:nth-child(15) {
-    top: calc(100% / 7 * 5);   /* <--- 新增：頂部對齊 */
-    right: calc(100% / 7 * 3); /* 保留原來的 right 值 */
-    /* bottom: 0; */          /* 註釋或刪除 bottom */
-}
 
-/* Cell 15 (Child 16) */
-.map-cell.bottom-row:nth-child(16) {
-    top: calc(100% / 7 * 5);   /* <--- 新增：頂部對齊 */
-    right: calc(100% / 7 * 4); /* 保留原來的 right 值 */
-    /* bottom: 0; */          /* 註釋或刪除 bottom */
-}
-
-/* Cell 16 (Child 17) */
-.map-cell.bottom-row:nth-child(17) {
-    top: calc(100% / 7 * 5);   /* <--- 新增：頂部對齊 */
-    right: calc(100% / 7 * 5); /* 保留原來的 right 值 */
-    /* bottom: 0; */          /* 註釋或刪除 bottom */
+/* === 修正：格子 21 (花蓮) 的位置 === */
+.map-cell.left-column:nth-child(22) {
+    top: calc(var(--cell-dim) * 1); /* 將 top 設為第 1 格高度處，即起點正下方 */
 }
 
 
@@ -325,32 +316,7 @@ h1, h2, h3 {
 
 
 
-/* 左側一列格子 (18-21) -> nth-child(19 to 22) */
-/* 全部改用 top 定位，確保垂直連續 */
 
-.map-cell.left-column:nth-child(19) { /* Cell 18 ("澎湖") */
-    top: calc(100% / 7 * 4);
-    left: 0;
-    bottom: auto; /* 確保舊 bottom 失效 */
-}
-
-.map-cell.left-column:nth-child(20) { /* Cell 19 ("金門") */
-    top: calc(100% / 7 * 3);
-    left: 0;
-    bottom: auto; /* 確保舊 bottom 失效 */
-}
-
-.map-cell.left-column:nth-child(21) { /* Cell 20 ("馬祖") */
-    top: calc(100% / 7 * 2);
-    left: 0;
-    bottom: auto; /* 確保舊 bottom 失效 */
-}
-
-.map-cell.left-column:nth-child(22) { /* Cell 21 ("小琉球") */
-    top: calc(100% / 7 * 1);
-    left: 0;
-    bottom: auto; /* 確保舊 bottom 失效 */
-}
 /* ===== 玩家標記樣式 ===== */
 #players-container {
     position: absolute;
