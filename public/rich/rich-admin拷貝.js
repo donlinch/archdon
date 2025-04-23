@@ -604,86 +604,117 @@
             }
         };
     }
-
     function populateTemplateEditor(template) {
+        // Check if template exists
+        if (!template) {
+            console.error("無法填充模板編輯器：模板數據為空");
+            return;
+        }
+    
+        // Template basic info
         templateIdInput.value = template.template_id || '';
         templateIdInput.readOnly = !!template.template_id;
         templateNameInput.value = template.template_name || '';
         templateDescriptionInput.value = template.description || '';
-
+    
         const styles = template.style_data || {};
-
+    
         // General section
-        styleInputs.general.pageBgColor.value = styles.general?.pageBgColor || '#f5f5f5';
-        styleInputs.general.primaryTextColor.value = styles.general?.primaryTextColor || '#333333';
-        styleInputs.general.primaryFontFamily.value = styles.general?.primaryFontFamily || '';
+        if (styleInputs.general) {
+            styleInputs.general.pageBgColor.value = styles.general?.pageBgColor || '#f5f5f5';
+            styleInputs.general.primaryTextColor.value = styles.general?.primaryTextColor || '#333333';
+            styleInputs.general.primaryFontFamily.value = styles.general?.primaryFontFamily || '';
+        }
         
         // Header section
-        styleInputs.header.headerBgColor.value = styles.header?.headerBgColor || '#4CAF50';
-        styleInputs.header.headerTextColor.value = styles.header?.headerTextColor || '#FFFFFF';
-        styleInputs.header.roomInfoColor.value = styles.header?.roomInfoColor || '#FFFFFF';
+        if (styleInputs.header) {
+            styleInputs.header.headerBgColor.value = styles.header?.headerBgColor || '#4CAF50';
+            styleInputs.header.headerTextColor.value = styles.header?.headerTextColor || '#FFFFFF';
+            styleInputs.header.roomInfoColor.value = styles.header?.roomInfoColor || '#FFFFFF';
+        }
         
         // Board section
-        styleInputs.board.borderColor.value = styles.board?.borderColor || '#4CAF50';
-        styleInputs.board.borderWidth.value = styles.board?.borderWidth || '2px';
-        styleInputs.board.centerBgColor.value = styles.board?.centerBgColor || '#e8f5e9';
-        styleInputs.board.centerImageUrl.value = styles.board?.centerImageUrl || '';
+        if (styleInputs.board) {
+            styleInputs.board.borderColor.value = styles.board?.borderColor || '#4CAF50';
+            styleInputs.board.borderWidth.value = styles.board?.borderWidth || '2px';
+            styleInputs.board.centerBgColor.value = styles.board?.centerBgColor || '#e8f5e9';
+            styleInputs.board.centerImageUrl.value = styles.board?.centerImageUrl || '';
+        }
         
         // Map Cell section
-        styleInputs.mapCell.defaultBgColor.value = styles.mapCell?.defaultBgColor || '#FFFFFF';
-        styleInputs.mapCell.defaultBorderColor.value = styles.mapCell?.defaultBorderColor || '#4CAF50';
-        styleInputs.mapCell.defaultBorderWidth.value = styles.mapCell?.defaultBorderWidth || '1px';
-        styleInputs.mapCell.titleTextColor.value = styles.mapCell?.titleTextColor || '#333333';
-        styleInputs.mapCell.numberTextColor.value = styles.mapCell?.numberTextColor || '#777777';
-        styleInputs.mapCell.hoverBgColor.value = styles.mapCell?.hoverBgColor || '#e8f5e9';
-        styleInputs.mapCell.hoverBorderColor.value = styles.mapCell?.hoverBorderColor || '#3e8e41';
+        if (styleInputs.mapCell) {
+            styleInputs.mapCell.defaultBgColor.value = styles.mapCell?.defaultBgColor || '#FFFFFF';
+            styleInputs.mapCell.defaultBorderColor.value = styles.mapCell?.defaultBorderColor || '#4CAF50';
+            styleInputs.mapCell.defaultBorderWidth.value = styles.mapCell?.defaultBorderWidth || '1px';
+            styleInputs.mapCell.titleTextColor.value = styles.mapCell?.titleTextColor || '#333333';
+            styleInputs.mapCell.numberTextColor.value = styles.mapCell?.numberTextColor || '#777777';
+            styleInputs.mapCell.hoverBgColor.value = styles.mapCell?.hoverBgColor || '#e8f5e9';
+            styleInputs.mapCell.hoverBorderColor.value = styles.mapCell?.hoverBorderColor || '#3e8e41';
+        }
         
         // Player Marker section
-        styleInputs.playerMarker.shape.value = styles.playerMarker?.shape || '50%';
-        styleInputs.playerMarker.textColor.value = styles.playerMarker?.textColor || '#FFFFFF';
-        styleInputs.playerMarker.boxShadow.value = styles.playerMarker?.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
-        
-        const playerColors = styles.playerMarker?.playerColors || [];
-        styleInputs.playerMarker.colors.forEach((input, i) => { 
-            input.value = playerColors[i] || '#cccccc'; 
-        });
+        if (styleInputs.playerMarker) {
+            styleInputs.playerMarker.shape.value = styles.playerMarker?.shape || '50%';
+            styleInputs.playerMarker.textColor.value = styles.playerMarker?.textColor || '#FFFFFF';
+            styleInputs.playerMarker.boxShadow.value = styles.playerMarker?.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
+            
+            const playerColors = styles.playerMarker?.playerColors || [];
+            styleInputs.playerMarker.colors.forEach((input, i) => { 
+                input.value = playerColors[i] || '#cccccc'; 
+            });
+        }
         
         // Controller section
-        styleInputs.controller.panelBackground.value = styles.controller?.panelBackground || '#FFFFFF';
-        styleInputs.controller.playerLabelColor.value = styles.controller?.playerLabelColor || '#333333';
-        styleInputs.controller.button.defaultBgColor.value = styles.controller?.controlButton?.defaultBgColor || '#4CAF50';
-        styleInputs.controller.button.defaultTextColor.value = styles.controller?.controlButton?.defaultTextColor || '#FFFFFF';
-        styleInputs.controller.button.borderRadius.value = styles.controller?.controlButton?.borderRadius || '5px';
-        styleInputs.controller.button.hoverBgColor.value = styles.controller?.controlButton?.hoverBgColor || '#3e8e41';
-        styleInputs.controller.button.cooldownOpacity.value = styles.controller?.controlButton?.cooldownOpacity || '0.6';
+        if (styleInputs.controller) {
+            styleInputs.controller.panelBackground.value = styles.controller?.panelBackground || '#FFFFFF';
+            styleInputs.controller.playerLabelColor.value = styles.controller?.playerLabelColor || '#333333';
+            
+            if (styleInputs.controller.button) {
+                styleInputs.controller.button.defaultBgColor.value = styles.controller?.controlButton?.defaultBgColor || '#4CAF50';
+                styleInputs.controller.button.defaultTextColor.value = styles.controller?.controlButton?.defaultTextColor || '#FFFFFF';
+                styleInputs.controller.button.borderRadius.value = styles.controller?.controlButton?.borderRadius || '5px';
+                styleInputs.controller.button.hoverBgColor.value = styles.controller?.controlButton?.hoverBgColor || '#3e8e41';
+                styleInputs.controller.button.cooldownOpacity.value = styles.controller?.controlButton?.cooldownOpacity || '0.6';
+            }
+        }
         
         // Info section
-        styleInputs.info.panelBackground.value = styles.info?.panelBackground || '#FFFFFF';
-        styleInputs.info.sectionTitleColor.value = styles.info?.sectionTitleColor || '#333333';
-        styleInputs.info.playerListText.value = styles.info?.playerListText || '#333333';
-        styleInputs.info.staticTextColor.value = styles.info?.staticTextColor || '#333333';
-        styleInputs.info.leaveButton.defaultBgColor.value = styles.info?.leaveButton?.defaultBgColor || '#f1f1f1';
-        styleInputs.info.leaveButton.defaultTextColor.value = styles.info?.leaveButton?.defaultTextColor || '#333333';
+        if (styleInputs.info) {
+            styleInputs.info.panelBackground.value = styles.info?.panelBackground || '#FFFFFF';
+            styleInputs.info.sectionTitleColor.value = styles.info?.sectionTitleColor || '#333333';
+            styleInputs.info.playerListText.value = styles.info?.playerListText || '#333333';
+            styleInputs.info.staticTextColor.value = styles.info?.staticTextColor || '#333333';
+            
+            if (styleInputs.info.leaveButton) {
+                styleInputs.info.leaveButton.defaultBgColor.value = styles.info?.leaveButton?.defaultBgColor || '#f1f1f1';
+                styleInputs.info.leaveButton.defaultTextColor.value = styles.info?.leaveButton?.defaultTextColor || '#333333';
+            }
+        }
         
         // Connection section
-        styleInputs.connection.onlineBgColor.value = styles.connection?.onlineBgColor || '#dff0d8';
-        styleInputs.connection.onlineTextColor.value = styles.connection?.onlineTextColor || '#3c763d';
-        styleInputs.connection.offlineBgColor.value = styles.connection?.offlineBgColor || '#f2dede';
-        styleInputs.connection.offlineTextColor.value = styles.connection?.offlineTextColor || '#a94442';
-        styleInputs.connection.connectingBgColor.value = styles.connection?.connectingBgColor || '#fcf8e3';
-        styleInputs.connection.connectingTextColor.value = styles.connection?.connectingTextColor || '#8a6d3b';
+        if (styleInputs.connection) {
+            styleInputs.connection.onlineBgColor.value = styles.connection?.onlineBgColor || '#dff0d8';
+            styleInputs.connection.onlineTextColor.value = styles.connection?.onlineTextColor || '#3c763d';
+            styleInputs.connection.offlineBgColor.value = styles.connection?.offlineBgColor || '#f2dede';
+            styleInputs.connection.offlineTextColor.value = styles.connection?.offlineTextColor || '#a94442';
+            styleInputs.connection.connectingBgColor.value = styles.connection?.connectingBgColor || '#fcf8e3';
+            styleInputs.connection.connectingTextColor.value = styles.connection?.connectingTextColor || '#8a6d3b';
+        }
         
         // Modal section
-        styleInputs.modal.overlayBgColor.value = styles.modal?.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
-        styleInputs.modal.contentBgColor.value = styles.modal?.contentBgColor || '#FFFFFF';
-        styleInputs.modal.headerBgColor.value = styles.modal?.headerBgColor || '#4CAF50';
-        styleInputs.modal.headerTextColor.value = styles.modal?.headerTextColor || '#FFFFFF';
-        styleInputs.modal.bodyTextColor.value = styles.modal?.bodyTextColor || '#333333';
+        if (styleInputs.modal) {
+            styleInputs.modal.overlayBgColor.value = styles.modal?.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
+            styleInputs.modal.contentBgColor.value = styles.modal?.contentBgColor || '#FFFFFF';
+            styleInputs.modal.headerBgColor.value = styles.modal?.headerBgColor || '#4CAF50';
+            styleInputs.modal.headerTextColor.value = styles.modal?.headerTextColor || '#FFFFFF';
+            styleInputs.modal.bodyTextColor.value = styles.modal?.bodyTextColor || '#333333';
+        }
         
-        // 更新預覽
-        updatePreviewVariables();
-    }  
-
+        // Update preview variables
+        if (typeof updatePreviewVariables === 'function') {
+            updatePreviewVariables();
+        }
+    }
 
 
 
