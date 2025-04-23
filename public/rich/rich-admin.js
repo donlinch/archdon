@@ -430,18 +430,28 @@ document.addEventListener('DOMContentLoaded', () => {
             titleSpan.className = 'admin-cell-title';
             titleSpan.textContent = cellData.title || '(無標題)';
 
-            const indexSpan = document.createElement('span');
-            indexSpan.className = 'admin-cell-index';
-            indexSpan.textContent = i;
 
-            cellDiv.appendChild(titleSpan);
-            cellDiv.appendChild(indexSpan);
-            cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
+   // --- ★ 新增：創建並添加描述元素 ★ ---
+   const descSpan = document.createElement('span'); // 或者用 'p' 元素
+   descSpan.className = 'admin-cell-desc';
+   descSpan.textContent = cellData.description || ''; // 顯示描述，如果沒有則為空字串
+   // --- ★ 結束新增 ★ ---
 
-            cellDiv.addEventListener('click', () => { openCellEditModal(i); });
-            adminMapGrid.appendChild(cellDiv);
-        });
-        applyGridPositioningCSS();
+   const indexSpan = document.createElement('span');
+   indexSpan.className = 'admin-cell-index';
+   indexSpan.textContent = i;
+
+   // --- ★ 修改：調整附加順序 ★ ---
+   cellDiv.appendChild(titleSpan);
+   cellDiv.appendChild(descSpan); // 將描述加在標題下面
+   cellDiv.appendChild(indexSpan);
+   // --- ★ 結束修改 ★ ---
+
+   cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
+   cellDiv.addEventListener('click', () => { openCellEditModal(i); });
+   adminMapGrid.appendChild(cellDiv);
+});
+applyGridPositioningCSS();
     }
 
     function applyGridPositioningCSS() {
