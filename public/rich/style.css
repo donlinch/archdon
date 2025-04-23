@@ -290,14 +290,15 @@ h1, h2, h3 {
 /* 格子 18 (第19個元素) */
 .map-cell.bottom-row:nth-child(19) { left: calc(var(--cell-dim) * 0); } /* 格子 18 - 這才是醫院的位置 */
 /* 格子 19 (左下角, 第20個元素) */
-.map-cell.bottom-row:nth-child(20) { left: calc(var(--cell-dim) * 0); } /* 格子 19 (左下角) */
+ 
 
 /* 左側列 (格子 20-23) -> 對應 :nth-child(21) 到 :nth-child(24) */
 .map-cell.left-column { left: 0; } /* 左側對齊 */
 /* 格子 19 (nth-child(20)) 由 bottom-row 處理，不需要 left-column 規則 */
-.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 5); } /* 格子 20 (綠島) */
-.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 4); } /* 格子 21 (小琉球) */
-.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 3); } /* 格子 22 (新地點A) */
+.map-cell.left-column:nth-child(20) { top: calc(var(--cell-dim) * 5); } /* 格子 20 (綠島) */
+.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 4); } /* 格子 20 (綠島) */
+.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 3); } /* 格子 21 (小琉球) */
+.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 2); } /* 格子 22 (新地點A) */
 .map-cell.left-column:nth-child(24) { top: calc(var(--cell-dim) * 1); } /* 格子 23 (新地點B) */
 
 /* ===== 玩家標記樣式 ===== */
