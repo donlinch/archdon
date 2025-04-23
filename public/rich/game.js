@@ -106,32 +106,41 @@ function setupEventListeners() {
 // 修改创建地图的函数
 
 // 修改创建地图的函数
+// 修正後的createGameMap函數
 function createGameMap() {
     mapContainer.innerHTML = '';
     
-    // 创建7×6的环形地图
+    // 設定網格佈局
+    mapContainer.style.display = 'grid';
+    mapContainer.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    mapContainer.style.gridTemplateRows = 'repeat(6, 1fr)';
+    mapContainer.style.gap = '5px';
+    mapContainer.style.width = '100%';
+    mapContainer.style.height = '400px';
+    
+    // 創建7×6的環形地圖 (總共42個格子)
     for (let row = 0; row < 6; row++) {
         for (let col = 0; col < 7; col++) {
-            // 计算格子在环中的索引位置
-            let index;
+            // 計算格子在環中的索引位置
+            let index = -1;
             
-            // 第一行 (0-6)
+            // 第一行 (0-6) 從左到右
             if (row === 0) {
                 index = col;
             }
-            // 最后一行 (35-41)，需要反向
+            // 最後一行 (35-41) 從右到左
             else if (row === 5) {
                 index = 41 - col;
             }
-            // 右侧列 (7-13)
+            // 右側列 (7-13) 從上到下
             else if (col === 6) {
                 index = 7 + (row - 1);
             }
-            // 左侧列 (28-34)，需要反向
+            // 左側列 (28-34) 從下到上
             else if (col === 0) {
                 index = 34 - (row - 1);
             }
-            // 中间部分不显示格子
+            // 中間部分不顯示格子
             else {
                 continue;
             }
@@ -140,18 +149,29 @@ function createGameMap() {
             cell.className = 'map-cell';
             cell.id = `cell-${index}`;
             
-            // 根据行列设置位置
+            // 設置網格位置
             cell.style.gridRow = row + 1;
             cell.style.gridColumn = col + 1;
             
+            // 顯示格子編號
             const cellNumber = document.createElement('span');
             cellNumber.className = 'map-cell-number';
             cellNumber.textContent = index;
             
             cell.appendChild(cellNumber);
             mapContainer.appendChild(cell);
+            
+            // 將邊界格子著色，便於偵錯
+            if (index === 9 || index === 10 || index === 11) {
+                cell.style.backgroundColor = '#f8d7da'; // 淡紅色
+            }
         }
     }
+    
+    // 添加可視化的環路路徑
+    const path = document.createElement('div');
+    path.className = 'map-path';
+    mapContainer.appendChild(path);
 }
 
 // 連接到WebSocket
@@ -194,10 +214,11 @@ function connectWebSocket() {
     };
 }
 
-// 處理收到的WebSocket消息
+// 改進的WebSocket消息處理函數
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
+        console.log('收到消息:', message);
         
         switch (message.type) {
             case 'gameStateUpdate':
@@ -225,7 +246,7 @@ function handleWebSocketMessage(data) {
     }
 }
 
-// 更新遊戲狀態
+// 改進的遊戲狀態更新函數
 function updateGameState(message) {
     const oldState = { ...gameState };
     
@@ -237,6 +258,18 @@ function updateGameState(message) {
     
     // 更新遊戲狀態
     gameState = message.gameState;
+    
+    // 確保地圖大小正確
+    if (gameState.mapLoopSize !== undefined) {
+        console.log(`地圖大小: ${gameState.mapLoopSize}`);
+    }
+    
+    // 檢查是否需要重新創建地圖 (地圖大小變化)
+    if (oldState.mapLoopSize !== gameState.mapLoopSize) {
+        console.log(`地圖大小變更: ${oldState.mapLoopSize} -> ${gameState.mapLoopSize}`);
+        // 如果地圖大小發生變化，則重新創建地圖
+        createGameMap();
+    }
     
     // 更新最大玩家數顯示
     maxPlayersDisplay.textContent = gameState.maxPlayers;
@@ -250,6 +283,12 @@ function updateGameState(message) {
     
     // 更新玩家位置標記
     updatePlayerMarkers(oldState);
+    
+    // 記錄所有玩家的位置 (用於調試)
+    console.log("目前所有玩家位置:");
+    for (const pid in gameState.players) {
+        console.log(`玩家 ${gameState.players[pid].name} (${pid}): 位置 ${gameState.players[pid].position}`);
+    }
 }
 
 // 更新玩家列表
@@ -287,54 +326,57 @@ function updatePlayersList() {
 
 
 
-
-// 修改updatePlayerMarkers函数
+// 修正後的updatePlayerMarkers函數
 function updatePlayerMarkers(oldState) {
     // 清空玩家容器
     playersContainer.innerHTML = '';
     
-    // 获取所有格子
-    const cells = document.querySelectorAll('.map-cell');
-    
-    // 为每个玩家创建标记
+    // 為每個玩家創建標記
     let colorIndex = 1;
     for (const id in gameState.players) {
         const player = gameState.players[id];
         const oldPlayer = oldState.players && oldState.players[id];
         
-        // 创建玩家标记元素
+        // 創建玩家標記元素
         const marker = document.createElement('div');
         marker.className = `player-marker player-color-${colorIndex}`;
         marker.id = `player-${id}`;
         marker.textContent = player.name.charAt(0).toUpperCase();
         marker.title = player.name;
         
-        // 获取正确的格子索引和元素
+        // 獲取正確的格子索引和元素
         const position = player.position;
         const cellId = `cell-${position}`;
         const cell = document.getElementById(cellId);
         
         if (cell) {
-            // 获取格子的位置信息
-            const rect = cell.getBoundingClientRect();
+            // 獲取格子的位置
+            const cellRect = cell.getBoundingClientRect();
             const mapRect = mapContainer.getBoundingClientRect();
             
-            // 计算相对位置（相对于地图容器）
-            const left = cell.offsetLeft + (cell.offsetWidth / 2) - 15;
-            const top = cell.offsetTop + (cell.offsetHeight / 2) - 15;
+            // 設置標記到格子中央
+            const cellBox = cell.getBoundingClientRect();
+            const containerBox = mapContainer.getBoundingClientRect();
             
-            marker.style.left = `${left}px`;
-            marker.style.top = `${top}px`;
+            // 計算相對於mapContainer的位置
+            const relativeLeft = cell.offsetLeft + (cell.offsetWidth / 2) - 15;
+            const relativeTop = cell.offsetTop + (cell.offsetHeight / 2) - 15;
             
-            // 记录日志，帮助调试
-            console.log(`玩家 ${player.name} 位置: ${position}, 坐标: (${left}, ${top}), 格子ID: ${cellId}`);
+            // 設置絕對位置
+            marker.style.left = `${relativeLeft}px`;
+            marker.style.top = `${relativeTop}px`;
             
-            // 如果位置变化了，添加动画效果
+            // 如果位置變化了，添加動畫效果
             if (oldPlayer && oldPlayer.position !== player.position) {
                 marker.classList.add('player-moving');
                 setTimeout(() => {
                     marker.classList.remove('player-moving');
                 }, 500);
+            }
+            
+            // 添加當前玩家強調樣式
+            if (id === playerId) {
+                marker.classList.add('current-player');
             }
         } else {
             console.error(`找不到格子: cell-${position}`);
@@ -343,7 +385,7 @@ function updatePlayerMarkers(oldState) {
         playersContainer.appendChild(marker);
         colorIndex++;
         
-        // 最多支持5个玩家颜色
+        // 最多支持5個玩家顏色
         if (colorIndex > 5) colorIndex = 1;
     }
 }
@@ -366,6 +408,10 @@ function sendMoveCommand(direction) {
     ws.send(JSON.stringify(moveCommand));
     console.log(`發送移動命令: ${direction}`);
 }
+
+// 在客户端，当收到游戏状态更新时记录日志
+console.log(`收到游戏状态更新: `, message.gameState);
+console.log(`地图大小: ${message.gameState.mapLoopSize}`);
 
 // 應用按鈕冷卻時間
 function applyButtonCooldown(button) {
