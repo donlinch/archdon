@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 創建大富翁風格地圖
+// 創建大富翁風格地圖
 function createMonopolyMap() {
     mapContainer.innerHTML = '';
     
@@ -119,13 +120,13 @@ function createMonopolyMap() {
         cell.appendChild(cellNumber);
         
         // 添加格子位置類別，定位格子在環形的位置
-        if (i >= 0 && i <= 7) {
+        if (i >= 0 && i <= 6) {
             cell.classList.add('top-row');
-        } else if (i >= 8 && i <= 13) {
+        } else if (i >= 7 && i <= 11) {
             cell.classList.add('right-column');
-        } else if (i >= 14 && i <= 21) {
+        } else if (i >= 12 && i <= 17) {
             cell.classList.add('bottom-row');
-        } else {
+        } else if (i >= 18 && i <= 21) {
             cell.classList.add('left-column');
         }
         
@@ -137,7 +138,6 @@ function createMonopolyMap() {
         mapContainer.appendChild(cell);
     }
 }
-
 // 顯示地點詳情彈窗
 function showLocationModal(cellIndex) {
     const cell = cellInfo[cellIndex];
