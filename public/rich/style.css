@@ -270,7 +270,7 @@ h1, h2, h3 {
 .map-cell.right-column:nth-child(9) { top: 28.57%; }   /* 8 */
 .map-cell.right-column:nth-child(10) { top: 42.86%; }  /* 9 */
 .map-cell.right-column:nth-child(11) { top: 57.14%; }  /* 10 */
-.map-cell.right-column:nth-child(12) { top: 71.43%; }  /* 10 */
+ 
 /* 底部一行格子 (11-17) */
 .map-cell.bottom-row {
     bottom: 0;
@@ -289,11 +289,11 @@ h1, h2, h3 {
 .map-cell.left-column {
     left: 0;
 }
-.map-cell.left-column:nth-child(23) { top: 71.43%; }  /* 18 */
-.map-cell.left-column:nth-child(22) { top: 57.14%; }  /* 19 */
+.map-cell.left-column:nth-child(19) { top: 71.43%; }  /* 18 */
+.map-cell.left-column:nth-child(20) { top: 57.14%; }  /* 19 */
 .map-cell.left-column:nth-child(21) { top: 42.86%; }  /* 20 */
-.map-cell.left-column:nth-child(20) { top: 28.57%; }  /* 21 */
-.map-cell.left-column:nth-child(19) { top: 14.29%; }  /* 額外格子，如果需要 */
+.map-cell.left-column:nth-child(22) { top: 28.57%; }  /* 21 */
+.map-cell.left-column:nth-child(23) { top: 14.29%; }  /* 額外格子，如果需要 */
 
 /* ===== 玩家標記樣式 ===== */
 #players-container {
