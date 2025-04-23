@@ -170,13 +170,13 @@ h1, h2, h3 {
 }
 
 #map-container {
-    display: flex;
-    justify-content: space-evenly;
-    position: absolute;
-    top: 0;
-    left: 0;
+    display: grid;
+    grid-template-columns: repeat(11, 1fr); /* 可以调整列数，例如使用2行11列的布局 */
+    grid-template-rows: repeat(2, 1fr);
+    gap: 5px;
     width: 100%;
-    height: 100%;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 /* 地圖格子樣式 */
