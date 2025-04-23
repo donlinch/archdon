@@ -1,5 +1,5 @@
-// rich-admin.js - 移動裝置優化版
-document.addEventListener('DOMContentLoaded', () => {
+ // rich-admin.js - 移動裝置優化版
+ document.addEventListener('DOMContentLoaded', () => {
     // --- 添加移動設備檢測 ---
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
@@ -14,48 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteTemplateBtn = document.getElementById('delete-template-btn');
     const templateEditor = document.getElementById('template-editor');
     const statusMessage = document.getElementById('status-message');
-    
-    // 地圖格子編輯器元素 - 移到這裡!
-    const adminMapGrid = document.getElementById('admin-map-grid');
 
     // --- 添加移動裝置的工具欄 ---
     if (isMobile) {
         createMobileToolbar();
-    }
-
-    // 為移動設備添加縮放控制功能
-    if (isMobile && adminMapGrid) { // 確保 adminMapGrid 已經存在
-        const zoomControls = document.createElement('div');
-        zoomControls.className = 'zoom-controls';
-        zoomControls.innerHTML = `
-            <button id="zoom-in" title="放大">+</button>
-            <button id="zoom-out" title="縮小">-</button>
-            <button id="zoom-reset" title="重置">1:1</button>
-        `;
-        
-        const gridSection = document.getElementById('cell-editor');
-        if (gridSection) {
-            gridSection.insertBefore(zoomControls, adminMapGrid.parentElement);
-            
-            let currentZoom = 1.0;
-            
-            document.getElementById('zoom-in').addEventListener('click', () => {
-                currentZoom += 0.1;
-                adminMapGrid.style.transform = `scale(${currentZoom})`;
-                adminMapGrid.style.transformOrigin = 'center';
-            });
-            
-            document.getElementById('zoom-out').addEventListener('click', () => {
-                currentZoom = Math.max(0.5, currentZoom - 0.1);
-                adminMapGrid.style.transform = `scale(${currentZoom})`;
-                adminMapGrid.style.transformOrigin = 'center';
-            });
-            
-            document.getElementById('zoom-reset').addEventListener('click', () => {
-                currentZoom = 1.0;
-                adminMapGrid.style.transform = '';
-            });
-        }
     }
 
     // 樣式編輯器輸入框
@@ -139,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             bodyTextColor: document.getElementById('modal-bodyTextColor')
         }
     };
+
+    // 地圖格子編輯器元素
+    const adminMapGrid = document.getElementById('admin-map-grid');
 
     // 格子編輯彈窗元素
     const cellEditModal = document.getElementById('cell-edit-modal');
@@ -297,45 +262,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMobile = window.innerWidth <= 768;
         
         if (isMobile) {
-            // 修改：改變移動設備上的佈局方式
+            // 在移動設備上，使用更適合觸控的大小
             gridContainer.style.maxWidth = '100%';
-            gridContainer.style.overflow = 'auto'; // 添加滾動功能
-            gridContainer.style.WebkitOverflowScrolling = 'touch'; // 提高iOS滾動性能
             
-            // 調整格子大小，使其在手機上更緊湊
+            // 調整所有單元格的字體大小
             const cells = document.querySelectorAll('.admin-map-cell');
             cells.forEach(cell => {
-                cell.style.minWidth = '40px'; // 減小最小寬度
-                cell.style.minHeight = '40px'; // 減小最小高度
-                
                 const title = cell.querySelector('.admin-cell-title');
                 const index = cell.querySelector('.admin-cell-index');
                 
-                if (title) title.style.fontSize = '8px'; // 更小的字體
-                if (index) index.style.fontSize = '7px'; // 更小的字體
+                if (title) title.style.fontSize = '10px';
+                if (index) index.style.fontSize = '9px';
             });
-            
-            // 修改格子編輯彈窗大小
-            const modal = document.getElementById('cell-edit-modal');
-            if (modal) {
-                const modalContent = modal.querySelector('.modal-content');
-                if (modalContent) {
-                    modalContent.style.width = '95%';
-                    modalContent.style.maxHeight = '85vh';
-                    modalContent.style.overflow = 'auto';
-                }
-            }
         } else {
             // 恢復桌面大小
             gridContainer.style.maxWidth = '700px';
-            gridContainer.style.overflow = '';
             
             // 恢復默認字體大小
             const cells = document.querySelectorAll('.admin-map-cell');
             cells.forEach(cell => {
-                cell.style.minWidth = '';
-                cell.style.minHeight = '';
-                
                 const title = cell.querySelector('.admin-cell-title');
                 const index = cell.querySelector('.admin-cell-index');
                 
@@ -463,58 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCellInfo = [];
         }
     }
-
-
-
-
-
-
-// Add the clearTemplateEditor function that's missing
-function clearTemplateEditor() {
-    // Reset form inputs
-    templateIdInput.value = '';
-    templateIdInput.readOnly = true;
-    templateNameInput.value = '';
-    templateDescriptionInput.value = '';
-    
-    // Reset all style inputs
-    for (const category in styleInputs) {
-        for (const prop in styleInputs[category]) {
-            const input = styleInputs[category][prop];
-            
-            // Handle nested objects (like controller.button)
-            if (input && typeof input === 'object' && !Array.isArray(input)) {
-                for (const nestedProp in input) {
-                    if (input[nestedProp] && input[nestedProp].value !== undefined) {
-                        input[nestedProp].value = input[nestedProp].type === 'color' ? '#ffffff' : '';
-                    }
-                }
-            } 
-            // Handle arrays (like playerMarker.colors)
-            else if (Array.isArray(input)) {
-                input.forEach(item => {
-                    if (item && item.value !== undefined) {
-                        item.value = item.type === 'color' ? '#ffffff' : '';
-                    }
-                });
-            }
-            // Handle regular inputs
-            else if (input && input.value !== undefined) {
-                input.value = input.type === 'color' ? '#ffffff' : '';
-            }
-        }
-    }
-    
-    // Hide editor sections
-    templateEditor.classList.add('hidden');
-}
-
-// Make sure to include this function definition BEFORE it's used in event handlers
-
-
-
-
-
 
     function handleNewTemplate() {
         clearTemplateEditor();
@@ -711,398 +604,542 @@ function clearTemplateEditor() {
             }
         };
     }
-
-    // 添加加載提示功能
-    function showLoader() {
-        // 檢查是否已存在加載器
-        if (document.getElementById('page-loader')) return;
-        
-        const loader = document.createElement('div');
-        loader.id = 'page-loader';
-        loader.innerHTML = `
-            <div class="loader-content">
-                <div class="spinner"></div>
-                <div class="loader-text">處理中...</div>
-            </div>
-        `;
-        document.body.appendChild(loader);
-        document.body.classList.add('loading');
-    }
-    function hideLoader() {
-        const loader = document.getElementById('page-loader');
-        if (loader) {
-            loader.classList.add('fade-out');
-            setTimeout(() => {
-                // Check if the element still exists and is still attached to the document
-                if (document.body.contains(loader)) {
-                    document.body.removeChild(loader);
-                }
-                document.body.classList.remove('loading');
-            }, 300);
+    function populateTemplateEditor(template) {
+        // Check if template exists
+        if (!template) {
+            console.error("無法填充模板編輯器：模板數據為空");
+            return;
         }
+    
+        // Template basic info
+        templateIdInput.value = template.template_id || '';
+        templateIdInput.readOnly = !!template.template_id;
+        templateNameInput.value = template.template_name || '';
+        templateDescriptionInput.value = template.description || '';
+    
+        const styles = template.style_data || {};
+    
+        // General section
+        if (styleInputs.general) {
+            styleInputs.general.pageBgColor.value = styles.general?.pageBgColor || '#f5f5f5';
+            styleInputs.general.primaryTextColor.value = styles.general?.primaryTextColor || '#333333';
+            styleInputs.general.primaryFontFamily.value = styles.general?.primaryFontFamily || '';
+        }
+        
+        // Header section
+        if (styleInputs.header) {
+            styleInputs.header.headerBgColor.value = styles.header?.headerBgColor || '#4CAF50';
+            styleInputs.header.headerTextColor.value = styles.header?.headerTextColor || '#FFFFFF';
+            styleInputs.header.roomInfoColor.value = styles.header?.roomInfoColor || '#FFFFFF';
+        }
+        
+        // Board section
+        if (styleInputs.board) {
+            styleInputs.board.borderColor.value = styles.board?.borderColor || '#4CAF50';
+            styleInputs.board.borderWidth.value = styles.board?.borderWidth || '2px';
+            styleInputs.board.centerBgColor.value = styles.board?.centerBgColor || '#e8f5e9';
+            styleInputs.board.centerImageUrl.value = styles.board?.centerImageUrl || '';
+        }
+        
+        // Map Cell section
+        if (styleInputs.mapCell) {
+            styleInputs.mapCell.defaultBgColor.value = styles.mapCell?.defaultBgColor || '#FFFFFF';
+            styleInputs.mapCell.defaultBorderColor.value = styles.mapCell?.defaultBorderColor || '#4CAF50';
+            styleInputs.mapCell.defaultBorderWidth.value = styles.mapCell?.defaultBorderWidth || '1px';
+            styleInputs.mapCell.titleTextColor.value = styles.mapCell?.titleTextColor || '#333333';
+            styleInputs.mapCell.numberTextColor.value = styles.mapCell?.numberTextColor || '#777777';
+            styleInputs.mapCell.hoverBgColor.value = styles.mapCell?.hoverBgColor || '#e8f5e9';
+            styleInputs.mapCell.hoverBorderColor.value = styles.mapCell?.hoverBorderColor || '#3e8e41';
+        }
+        
+        // Player Marker section
+        if (styleInputs.playerMarker) {
+            styleInputs.playerMarker.shape.value = styles.playerMarker?.shape || '50%';
+            styleInputs.playerMarker.textColor.value = styles.playerMarker?.textColor || '#FFFFFF';
+            styleInputs.playerMarker.boxShadow.value = styles.playerMarker?.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
+            
+            const playerColors = styles.playerMarker?.playerColors || [];
+            styleInputs.playerMarker.colors.forEach((input, i) => { 
+                input.value = playerColors[i] || '#cccccc'; 
+            });
+        }
+        
+        // Controller section
+        if (styleInputs.controller) {
+            styleInputs.controller.panelBackground.value = styles.controller?.panelBackground || '#FFFFFF';
+            styleInputs.controller.playerLabelColor.value = styles.controller?.playerLabelColor || '#333333';
+            
+            if (styleInputs.controller.button) {
+                styleInputs.controller.button.defaultBgColor.value = styles.controller?.controlButton?.defaultBgColor || '#4CAF50';
+                styleInputs.controller.button.defaultTextColor.value = styles.controller?.controlButton?.defaultTextColor || '#FFFFFF';
+                styleInputs.controller.button.borderRadius.value = styles.controller?.controlButton?.borderRadius || '5px';
+                styleInputs.controller.button.hoverBgColor.value = styles.controller?.controlButton?.hoverBgColor || '#3e8e41';
+                styleInputs.controller.button.cooldownOpacity.value = styles.controller?.controlButton?.cooldownOpacity || '0.6';
+            }
+        }
+        
+        // Info section
+        if (styleInputs.info) {
+            styleInputs.info.panelBackground.value = styles.info?.panelBackground || '#FFFFFF';
+            styleInputs.info.sectionTitleColor.value = styles.info?.sectionTitleColor || '#333333';
+            styleInputs.info.playerListText.value = styles.info?.playerListText || '#333333';
+            styleInputs.info.staticTextColor.value = styles.info?.staticTextColor || '#333333';
+            
+            if (styleInputs.info.leaveButton) {
+                styleInputs.info.leaveButton.defaultBgColor.value = styles.info?.leaveButton?.defaultBgColor || '#f1f1f1';
+                styleInputs.info.leaveButton.defaultTextColor.value = styles.info?.leaveButton?.defaultTextColor || '#333333';
+            }
+        }
+        
+        // Connection section
+        if (styleInputs.connection) {
+            styleInputs.connection.onlineBgColor.value = styles.connection?.onlineBgColor || '#dff0d8';
+            styleInputs.connection.onlineTextColor.value = styles.connection?.onlineTextColor || '#3c763d';
+            styleInputs.connection.offlineBgColor.value = styles.connection?.offlineBgColor || '#f2dede';
+            styleInputs.connection.offlineTextColor.value = styles.connection?.offlineTextColor || '#a94442';
+            styleInputs.connection.connectingBgColor.value = styles.connection?.connectingBgColor || '#fcf8e3';
+            styleInputs.connection.connectingTextColor.value = styles.connection?.connectingTextColor || '#8a6d3b';
+        }
+        
+        // Modal section
+        if (styleInputs.modal) {
+            styleInputs.modal.overlayBgColor.value = styles.modal?.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
+            styleInputs.modal.contentBgColor.value = styles.modal?.contentBgColor || '#FFFFFF';
+            styleInputs.modal.headerBgColor.value = styles.modal?.headerBgColor || '#4CAF50';
+            styleInputs.modal.headerTextColor.value = styles.modal?.headerTextColor || '#FFFFFF';
+            styleInputs.modal.bodyTextColor.value = styles.modal?.bodyTextColor || '#333333';
+        }
+        
+        // Update preview variables
+        if (typeof updatePreviewVariables === 'function') {
+            updatePreviewVariables();
+        }
+    }
+
+
+
+    function updatePreviewVariables() {
+        // 更新所有顯示預覽的 CSS 變量
+        const styleData = collectStyleData();
+        
+        // 更新一般設置
+        document.documentElement.style.setProperty('--template-page-bg-color', styleData.general.pageBgColor);
+        document.documentElement.style.setProperty('--template-primary-text-color', styleData.general.primaryTextColor);
+        
+        // 更新頁眉設置
+        document.documentElement.style.setProperty('--template-header-bg-color', styleData.header.headerBgColor);
+        document.documentElement.style.setProperty('--template-header-text-color', styleData.header.headerTextColor);
+        
+        // 更新棋盤設置
+        document.documentElement.style.setProperty('--template-board-border-color', styleData.board.borderColor);
+        
+        // 更新格子設置
+        document.documentElement.style.setProperty('--template-cell-default-bg', styleData.mapCell.defaultBgColor);
+        document.documentElement.style.setProperty('--template-cell-default-border-color', styleData.mapCell.defaultBorderColor);
+        document.documentElement.style.setProperty('--template-cell-title-text-color', styleData.mapCell.titleTextColor);
+        document.documentElement.style.setProperty('--template-cell-number-text-color', styleData.mapCell.numberTextColor);
+        document.documentElement.style.setProperty('--template-cell-hover-bg-color', styleData.mapCell.hoverBgColor);
+        document.documentElement.style.setProperty('--template-cell-hover-border-color', styleData.mapCell.hoverBorderColor);
+        
+        // 更新模態框設置
+        document.documentElement.style.setProperty('--template-modal-header-bg-color', styleData.modal.headerBgColor);
+    }
+
+
+
+
+
+    function clearTemplateEditor() {
+        templateIdInput.value = '';
+        templateIdInput.placeholder = '';
+        templateIdInput.readOnly = false;
+        templateNameInput.value = '';
+        templateDescriptionInput.value = '';
+        populateTemplateEditor({ style_data: {} });
+        adminMapGrid.innerHTML = '';
+        currentCellInfo = [];
+        templateEditor.classList.add('hidden');
+        deleteTemplateBtn.classList.add('hidden');
+        currentEditingTemplateId = null;
+        templateSelect.value = "";
+        
+        // 清除已展開的區段
+        activeSection = null;
     }
      
+    
+    
+    
+    
+
+    // 添加加載提示功能
+function showLoader() {
+// 檢查是否已存在加載器
+if (document.getElementById('page-loader')) return;
+
+const loader = document.createElement('div');
+loader.id = 'page-loader';
+loader.innerHTML = `
+<div class="loader-content">
+    <div class="spinner"></div>
+    <div class="loader-text">處理中...</div>
+</div>
+`;
+document.body.appendChild(loader);
+document.body.classList.add('loading');
+}
+
+function hideLoader() {
+const loader = document.getElementById('page-loader');
+if (loader) {
+loader.classList.add('fade-out');
+setTimeout(() => {
+    document.body.removeChild(loader);
+    document.body.classList.remove('loading');
+}, 300);
+}
+}
+
+// --- 地圖格子相關函數 ---
 function renderAdminGrid() {
-    adminMapGrid.innerHTML = '';
-    const totalCells = 24;
+adminMapGrid.innerHTML = '';
+const totalCells = 24;
 
-    if (!Array.isArray(currentCellInfo)) {
-        console.error("currentCellInfo 不是陣列!", currentCellInfo);
-        currentCellInfo = createDefaultCellData();
-    }
-    if (currentCellInfo.length !== totalCells) {
-         console.warn(`格子資料數量 (${currentCellInfo.length}) 不等於預期的 ${totalCells}，將使用預設值填充。`);
-         currentCellInfo = createDefaultCellData();
-    }
-
-    currentCellInfo.sort((a, b) => (a.cell_index || 0) - (b.cell_index || 0));
-    
-    // 添加一個控制標籤
-    const gridLabel = document.createElement('h3');
-    gridLabel.className = 'grid-title';
-    gridLabel.textContent = '地圖格子預覽 (點擊格子進行編輯)';
-    adminMapGrid.parentElement.insertBefore(gridLabel, adminMapGrid);
-
-    for (let i = 0; i < totalCells; i++) {
-        if (!currentCellInfo[i] || currentCellInfo[i].cell_index !== i) {
-            console.warn(`修復/替換索引 ${i} 的格子資料。`);
-            currentCellInfo[i] = {
-               cell_index: i, title: `預設 ${i}`, description: '', cell_bg_color: null, modal_header_bg_color: null
-            };
-        }
-    }
-
-    currentCellInfo.forEach((cellData, i) => {
-        const cellDiv = document.createElement('div');
-        cellDiv.className = 'admin-map-cell';
-        cellDiv.id = `admin-cell-${i}`;
-        cellDiv.dataset.cellIndex = i;
-
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'admin-cell-title';
-        titleSpan.textContent = cellData.title || '(無標題)';
-
-        const indexSpan = document.createElement('span');
-        indexSpan.className = 'admin-cell-index';
-        indexSpan.textContent = i;
-
-        cellDiv.appendChild(titleSpan);
-        cellDiv.appendChild(indexSpan);
-        cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
-
-        cellDiv.addEventListener('click', () => { openCellEditModal(i); });
-        adminMapGrid.appendChild(cellDiv);
-    });
-    applyGridPositioningCSS();
+if (!Array.isArray(currentCellInfo)) {
+console.error("currentCellInfo 不是陣列!", currentCellInfo);
+currentCellInfo = createDefaultCellData();
 }
+if (currentCellInfo.length !== totalCells) {
+ console.warn(`格子資料數量 (${currentCellInfo.length}) 不等於預期的 ${totalCells}，將使用預設值填充。`);
+ currentCellInfo = createDefaultCellData();
+}
+
+currentCellInfo.sort((a, b) => (a.cell_index || 0) - (b.cell_index || 0));
+
+// 添加一個控制標籤
+const gridLabel = document.createElement('h3');
+gridLabel.className = 'grid-title';
+gridLabel.textContent = '地圖格子預覽 (點擊格子進行編輯)';
+adminMapGrid.parentElement.insertBefore(gridLabel, adminMapGrid);
+
+for (let i = 0; i < totalCells; i++) {
+if (!currentCellInfo[i] || currentCellInfo[i].cell_index !== i) {
+    console.warn(`修復/替換索引 ${i} 的格子資料。`);
+    currentCellInfo[i] = {
+       cell_index: i, title: `預設 ${i}`, description: '', cell_bg_color: null, modal_header_bg_color: null
+    };
+}
+}
+
+currentCellInfo.forEach((cellData, i) => {
+const cellDiv = document.createElement('div');
+cellDiv.className = 'admin-map-cell';
+cellDiv.id = `admin-cell-${i}`;
+cellDiv.dataset.cellIndex = i;
+
+const titleSpan = document.createElement('span');
+titleSpan.className = 'admin-cell-title';
+titleSpan.textContent = cellData.title || '(無標題)';
+
+const indexSpan = document.createElement('span');
+indexSpan.className = 'admin-cell-index';
+indexSpan.textContent = i;
+
+cellDiv.appendChild(titleSpan);
+cellDiv.appendChild(indexSpan);
+cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
+
+cellDiv.addEventListener('click', () => { openCellEditModal(i); });
+adminMapGrid.appendChild(cellDiv);
+});
+applyGridPositioningCSS();
+}
+
 function applyGridPositioningCSS() {
-    // 檢測是否為移動設備
-    const isMobile = window.innerWidth <= 768;
-    const cells = adminMapGrid.querySelectorAll('.admin-map-cell');
-    
-    if (isMobile) {
-        // 在移動設備上使用更簡單的線性布局
-        adminMapGrid.style.display = 'grid';
-        adminMapGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
-        adminMapGrid.style.gridAutoRows = 'minmax(50px, auto)';
-        
-        cells.forEach(cell => {
-            // 移除之前的網格位置
-            cell.style.gridArea = '';
-        });
-    } else {
-        // 桌面版使用原始的棋盤布局
-        adminMapGrid.style.display = 'grid';
-        adminMapGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-        adminMapGrid.style.gridTemplateRows = 'repeat(7, 1fr)';
-        
-        cells.forEach(cell => {
-            const i = parseInt(cell.dataset.cellIndex);
-            // ★★★ 格子位置設置 ★★★
-            if (i >= 0 && i <= 6) { // Top row (0-6)
-                cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
-            } else if (i >= 7 && i <= 11) { // Right column excluding corner (7-11)
-                cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
-            } else if (i === 12) { // Bottom right corner (12)
-                 cell.style.gridArea = `7 / 7 / 8 / 8`;
-            } else if (i >= 13 && i <= 18) { // Bottom row (13-18)
-                cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`;
-            } else if (i >= 19 && i <= 23) { // Left column (19-23)
-                 cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`;
-            }
-        });
-    }
+const cells = adminMapGrid.querySelectorAll('.admin-map-cell');
+cells.forEach(cell => {
+const i = parseInt(cell.dataset.cellIndex);
+// ★★★ 格子位置設置 ★★★
+if (i >= 0 && i <= 6) { // Top row (0-6)
+    cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
+} else if (i >= 7 && i <= 11) { // Right column excluding corner (7-11)
+    cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
+} else if (i === 12) { // Bottom right corner (12)
+     cell.style.gridArea = `7 / 7 / 8 / 8`;
+} else if (i >= 13 && i <= 18) { // Bottom row (13-18)
+    cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`; // 調整計算基數
+} else if (i >= 19 && i <= 23) { // Left column (19-23)
+     cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`; // 調整計算基數
 }
+});
+}
+
 function openCellEditModal(index) {
-    if (index < 0 || index >= currentCellInfo.length) {
-        displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-        return;
-    }
-    const cellData = currentCellInfo[index];
+if (index < 0 || index >= currentCellInfo.length) {
+ displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+ return;
+}
+const cellData = currentCellInfo[index];
 
-   // 更新模態框標題顯示
-   document.getElementById('modal-cell-title-display').textContent = '編輯格子';
-   modalCellIndexDisplay.textContent = index;
-   editingCellIndexInput.value = index;
-   modalCellTitleInput.value = cellData.title || '';
-   modalCellDescTextarea.value = cellData.description || '';
-   modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
-   modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
-   modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
-   modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
+// 更新模態框標題顯示
+document.getElementById('modal-cell-title-display').textContent = '編輯格子';
+modalCellIndexDisplay.textContent = index;
+editingCellIndexInput.value = index;
+modalCellTitleInput.value = cellData.title || '';
+modalCellDescTextarea.value = cellData.description || '';
+modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
+modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
 
-   cellEditModal.classList.remove('hidden');
-   
-   // 在移動設備上，調整模態框的位置和大小
-   if (window.innerWidth <= 768) {
-       const modalContent = cellEditModal.querySelector('.modal-content');
-       if (modalContent) {
-           modalContent.style.width = '95%';
-           modalContent.style.maxHeight = '85vh';
-           modalContent.style.overflow = 'auto';
-           modalContent.style.position = 'fixed';
-           modalContent.style.top = '50%';
-           modalContent.style.left = '50%';
-           modalContent.style.transform = 'translate(-50%, -50%)';
-           
-           // 確保輸入框自動聚焦
-           setTimeout(() => modalCellTitleInput.focus(), 100);
-       }
-   }
+cellEditModal.classList.remove('hidden');
+
+// 在移動設備上，調整模態框的位置和大小
+if (window.innerWidth <= 768) {
+const modalContent = cellEditModal.querySelector('.modal-content');
+if (modalContent) {
+    modalContent.style.width = '90%';
+    modalContent.style.maxHeight = '80vh';
+    modalContent.style.overflow = 'auto';
+    
+    // 確保輸入框自動聚焦
+    setTimeout(() => modalCellTitleInput.focus(), 100);
+}
+}
 }
 
 function saveModalChangesToLocal() {
-    const index = parseInt(editingCellIndexInput.value, 10);
-    if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
-        displayStatus("錯誤：無效的格子索引，無法儲存。", true);
-        return;
+const index = parseInt(editingCellIndexInput.value, 10);
+if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
+displayStatus("錯誤：無效的格子索引，無法儲存。", true);
+return;
+}
+const cellData = currentCellInfo[index];
+
+const newTitle = modalCellTitleInput.value.trim();
+const newDesc = modalCellDescTextarea.value.trim();
+let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
+             ? null : modalCellBgColorInput.value;
+let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
+                      ? null : modalModalHeaderBgColorInput.value;
+
+cellData.title = newTitle;
+cellData.description = newDesc;
+cellData.cell_bg_color = newBgColor;
+cellData.modal_header_bg_color = newModalHeaderBgColor;
+
+const adminCellDiv = document.getElementById(`admin-cell-${index}`);
+if (adminCellDiv) {
+const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
+if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
+adminCellDiv.style.backgroundColor = newBgColor || '';
+}
+
+closeCellEditModal();
+
+// 顯示帶有確認按鈕的狀態消息
+const message = `格子 ${index} 變更已應用。`;
+
+if (window.innerWidth <= 768) {
+displayStatusWithAction(
+    message, 
+    '儲存全部', 
+    () => {
+        saveTemplateBtn.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => saveTemplateBtn.classList.add('highlight-btn'), 500);
+        setTimeout(() => saveTemplateBtn.classList.remove('highlight-btn'), 3000);
     }
-    const cellData = currentCellInfo[index];
-
-    const newTitle = modalCellTitleInput.value.trim();
-    const newDesc = modalCellDescTextarea.value.trim();
-    let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
-                     ? null : modalCellBgColorInput.value;
-    let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
-                              ? null : modalModalHeaderBgColorInput.value;
-
-    cellData.title = newTitle;
-    cellData.description = newDesc;
-    cellData.cell_bg_color = newBgColor;
-    cellData.modal_header_bg_color = newModalHeaderBgColor;
-
-    const adminCellDiv = document.getElementById(`admin-cell-${index}`);
-    if (adminCellDiv) {
-        const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
-        if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
-        adminCellDiv.style.backgroundColor = newBgColor || '';
-    }
-
-    closeCellEditModal();
-    
-    // 顯示帶有確認按鈕的狀態消息
-    const message = `格子 ${index} 變更已應用。`;
-    
-    if (window.innerWidth <= 768) {
-        displayStatusWithAction(
-            message, 
-            '儲存全部', 
-            () => {
-                saveTemplateBtn.scrollIntoView({ behavior: 'smooth' });
-                setTimeout(() => saveTemplateBtn.classList.add('highlight-btn'), 500);
-                setTimeout(() => saveTemplateBtn.classList.remove('highlight-btn'), 3000);
-            }
-        );
-    } else {
-        displayStatus(`${message}點擊「儲存模板樣式」以儲存所有變更。`);
-    }
+);
+} else {
+displayStatus(`${message}點擊「儲存模板樣式」以儲存所有變更。`);
+}
 }
 
 function displayStatusWithAction(message, actionText, actionCallback) {
-    // 移除先前的狀態消息
-    const oldStatus = document.getElementById('status-message');
-    if (oldStatus.querySelector('.action-btn')) {
-        oldStatus.innerHTML = '';
-    }
-    
-    // 創建新的帶按鈕的狀態消息
-    oldStatus.className = 'status-success';
-    
-    const messageSpan = document.createElement('span');
-    messageSpan.textContent = message;
-    oldStatus.appendChild(messageSpan);
-    
-    const actionButton = document.createElement('button');
-    actionButton.className = 'action-btn';
-    actionButton.textContent = actionText;
-    actionButton.addEventListener('click', actionCallback);
-    
-    oldStatus.appendChild(actionButton);
-    
-    // 自動隱藏
-    setTimeout(() => {
-        if (oldStatus.contains(actionButton)) {
-            oldStatus.innerHTML = '';
-            oldStatus.className = '';
-        }
-    }, 8000);
+// 移除先前的狀態消息
+const oldStatus = document.getElementById('status-message');
+if (oldStatus.querySelector('.action-btn')) {
+oldStatus.innerHTML = '';
+}
+
+// 創建新的帶按鈕的狀態消息
+oldStatus.className = 'status-success';
+
+const messageSpan = document.createElement('span');
+messageSpan.textContent = message;
+oldStatus.appendChild(messageSpan);
+
+const actionButton = document.createElement('button');
+actionButton.className = 'action-btn';
+actionButton.textContent = actionText;
+actionButton.addEventListener('click', actionCallback);
+
+oldStatus.appendChild(actionButton);
+
+// 自動隱藏
+setTimeout(() => {
+if (oldStatus.contains(actionButton)) {
+    oldStatus.innerHTML = '';
+    oldStatus.className = '';
+}
+}, 8000);
 }
 
 // --- 工具函數 ---
 function displayStatus(message, isError = false) {
-    statusMessage.textContent = message;
-    statusMessage.className = isError ? 'status-error' : 'status-success';
-    
-    // 在移動設備上，確保狀態訊息可見
-    if (window.innerWidth <= 768 && !isInViewport(statusMessage)) {
-        statusMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    // 自動隱藏狀態訊息
-    setTimeout(() => {
-        if (statusMessage.textContent === message) {
-             statusMessage.textContent = '';
-             statusMessage.className = '';
-        }
-    }, isError ? 8000 : 5000); // 錯誤訊息顯示時間更長
+statusMessage.textContent = message;
+statusMessage.className = isError ? 'status-error' : 'status-success';
+
+// 在移動設備上，確保狀態訊息可見
+if (window.innerWidth <= 768 && !isInViewport(statusMessage)) {
+statusMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 自動隱藏狀態訊息
+setTimeout(() => {
+if (statusMessage.textContent === message) {
+     statusMessage.textContent = '';
+     statusMessage.className = '';
+}
+}, isError ? 8000 : 5000); // 錯誤訊息顯示時間更長
 }
 
 // 檢查元素是否在視口中
 function isInViewport(element) {
-    const rect = element.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= window.innerHeight &&
-        rect.right <= window.innerWidth
-    );
+const rect = element.getBoundingClientRect();
+return (
+rect.top >= 0 &&
+rect.left >= 0 &&
+rect.bottom <= window.innerHeight &&
+rect.right <= window.innerWidth
+);
 }
 
 // 防抖函數，用於處理窗口大小調整等頻繁事件
 function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-    };
+let timeout;
+return function(...args) {
+const context = this;
+clearTimeout(timeout);
+timeout = setTimeout(() => func.apply(context, args), wait);
+};
 }
 
 function createDefaultCellData() {
-    const defaultCells = [];
-    const defaultTitles = [
-        "起點", "住宅區A", "機會", "住宅區B", "所得稅", "車站北站", "監獄(探訪)",
-        "商業區A", "命運", "商業區B", "商業區C", "電廠", "免費停車",
-        "住宅區D", "機會", "住宅區E", "車站西站", "公園", "命運", "住宅區F",
-        "進監獄", "豪宅區A", "水廠", "豪宅區B"
-    ];
-    for (let i = 0; i < 24; i++) {
-        defaultCells.push({
-            cell_index: i,
-            title: defaultTitles[i] || `格位 ${i}`,
-            description: `這裡是 ${defaultTitles[i] || `格位 ${i}`}。`,
-            cell_bg_color: null,
-            modal_header_bg_color: null
-        });
-    }
-    return defaultCells;
+const defaultCells = [];
+const defaultTitles = [
+"起點", "住宅區A", "機會", "住宅區B", "所得稅", "車站北站", "監獄(探訪)",
+"商業區A", "命運", "商業區B", "商業區C", "電廠", "免費停車",
+"住宅區D", "機會", "住宅區E", "車站西站", "公園", "命運", "住宅區F",
+"進監獄", "豪宅區A", "水廠", "豪宅區B"
+];
+for (let i = 0; i < 24; i++) {
+defaultCells.push({
+    cell_index: i,
+    title: defaultTitles[i] || `格位 ${i}`,
+    description: `這裡是 ${defaultTitles[i] || `格位 ${i}`}。`,
+    cell_bg_color: null,
+    modal_header_bg_color: null
+});
+}
+return defaultCells;
 }
 
 // 關閉格子編輯彈窗
 function closeCellEditModal() {
-    cellEditModal.classList.add('hidden');
+cellEditModal.classList.add('hidden');
 }
 
 window.closeCellEditModal = closeCellEditModal;
 window.clearColorInput = (inputId) => {
-     const input = document.getElementById(inputId);
-     input.value = '#ffffff';
-     input.dataset.cleared = 'true';
-     
-     // 若有對應的預覽變數，也要更新
-     const label = input.closest('.form-group').querySelector('label');
-     if (label) {
-         const varName = label.textContent.split(':')[0].trim().toLowerCase().replace(/\s+/g, '-');
-         // 簡單判斷是否可能與預覽相關
-         if (varName.includes('bg-color') || varName.includes('background')) {
-             updatePreviewColor(varName, '');
-         }
-     }
- };
- 
+const input = document.getElementById(inputId);
+input.value = '#ffffff';
+input.dataset.cleared = 'true';
+
+// 若有對應的預覽變數，也要更新
+const label = input.closest('.form-group').querySelector('label');
+if (label) {
+ const varName = label.textContent.split(':')[0].trim().toLowerCase().replace(/\s+/g, '-');
+ // 簡單判斷是否可能與預覽相關
+ if (varName.includes('bg-color') || varName.includes('background')) {
+     updatePreviewColor(varName, '');
+ }
+}
+};
+
 // 添加鍵盤快捷鍵支持
 document.addEventListener('keydown', (e) => {
-    // Ctrl+S 保存
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        if (templateEditor.classList.contains('hidden')) return;
-        saveTemplateBtn.click();
-    }
-    
-    // Esc 關閉模態框
-    if (e.key === 'Escape') {
-        if (!cellEditModal.classList.contains('hidden')) {
-            closeCellEditModal();
-        }
-    }
+// Ctrl+S 保存
+if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+e.preventDefault();
+if (templateEditor.classList.contains('hidden')) return;
+saveTemplateBtn.click();
+}
+
+// Esc 關閉模態框
+if (e.key === 'Escape') {
+if (!cellEditModal.classList.contains('hidden')) {
+    closeCellEditModal();
+}
+}
 });
 
 // 在加載完成時執行最終的初始化
 setTimeout(() => {
-    // 添加移動友好的提示
-    if (isMobile) {
-        const topTip = document.createElement('div');
-        topTip.className = 'mobile-tip';
-        topTip.textContent = '提示：點擊標題可以展開/收起設定區域';
-        templateEditor.insertBefore(topTip, templateEditor.firstChild);
-        
-        // 監聽手勢
-        setupTouchGestures();
-    }
+// 添加移動友好的提示
+if (isMobile) {
+const topTip = document.createElement('div');
+topTip.className = 'mobile-tip';
+topTip.textContent = '提示：點擊標題可以展開/收起設定區域';
+templateEditor.insertBefore(topTip, templateEditor.firstChild);
+
+// 監聽手勢
+setupTouchGestures();
+}
 }, 1000);
 
 // 設置觸摸手勢 (簡單的左右滑動)
 function setupTouchGestures() {
-    let startX, startY;
-    const minSwipeDistance = 50;
-    
-    document.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    document.addEventListener('touchend', (e) => {
-        if (!startX || !startY) return;
-        
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        
-        const diffX = endX - startX;
-        const diffY = endY - startY;
-        
-        // 水平滑動距離要大於垂直滑動
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
-            // 從右向左滑動：前往下一個區域
-            if (diffX < 0) {
-                const cellEditor = document.getElementById('cell-editor');
-                if (cellEditor && isInViewport(cellEditor)) {
-                    saveTemplateBtn.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    document.getElementById('cell-editor').scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-            // 從左向右滑動：返回上一個區域
-            else {
-                const templateSection = document.querySelector('#template-editor > h2');
-                if (templateSection) {
-                    templateSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
+let startX, startY;
+const minSwipeDistance = 50;
+
+document.addEventListener('touchstart', (e) => {
+startX = e.touches[0].clientX;
+startY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+if (!startX || !startY) return;
+
+const endX = e.changedTouches[0].clientX;
+const endY = e.changedTouches[0].clientY;
+
+const diffX = endX - startX;
+const diffY = endY - startY;
+
+// 水平滑動距離要大於垂直滑動
+if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
+    // 從右向左滑動：前往下一個區域
+    if (diffX < 0) {
+        const cellEditor = document.getElementById('cell-editor');
+        if (cellEditor && isInViewport(cellEditor)) {
+            saveTemplateBtn.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            document.getElementById('cell-editor').scrollIntoView({ behavior: 'smooth' });
         }
-        
-        startX = null;
-        startY = null;
-    }, { passive: true });
+    }
+    // 從左向右滑動：返回上一個區域
+    else {
+        const templateSection = document.querySelector('#template-editor > h2');
+        if (templateSection) {
+            templateSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+startX = null;
+startY = null;
+}, { passive: true });
 }
 
 }); // End DOMContentLoaded
