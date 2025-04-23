@@ -464,6 +464,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+
+
+
+
+// Add the clearTemplateEditor function that's missing
+function clearTemplateEditor() {
+    // Reset form inputs
+    templateIdInput.value = '';
+    templateIdInput.readOnly = true;
+    templateNameInput.value = '';
+    templateDescriptionInput.value = '';
+    
+    // Reset all style inputs
+    for (const category in styleInputs) {
+        for (const prop in styleInputs[category]) {
+            const input = styleInputs[category][prop];
+            
+            // Handle nested objects (like controller.button)
+            if (input && typeof input === 'object' && !Array.isArray(input)) {
+                for (const nestedProp in input) {
+                    if (input[nestedProp] && input[nestedProp].value !== undefined) {
+                        input[nestedProp].value = input[nestedProp].type === 'color' ? '#ffffff' : '';
+                    }
+                }
+            } 
+            // Handle arrays (like playerMarker.colors)
+            else if (Array.isArray(input)) {
+                input.forEach(item => {
+                    if (item && item.value !== undefined) {
+                        item.value = item.type === 'color' ? '#ffffff' : '';
+                    }
+                });
+            }
+            // Handle regular inputs
+            else if (input && input.value !== undefined) {
+                input.value = input.type === 'color' ? '#ffffff' : '';
+            }
+        }
+    }
+    
+    // Hide editor sections
+    templateEditor.classList.add('hidden');
+}
+
+// Make sure to include this function definition BEFORE it's used in event handlers
+
+
+
+
+
+
     function handleNewTemplate() {
         clearTemplateEditor();
         templateIdInput.value = '';
