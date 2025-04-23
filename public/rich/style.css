@@ -224,6 +224,14 @@ h1, h2, h3 {
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
+
+/* 修正每一排格子的具體位置 */
+.map-cell.top-row { top: 0%; } /* 上排的格子 */
+.map-cell.right-column { right: 0%; } /* 右排的格子 */
+.map-cell.bottom-row { bottom: 0%; } /* 下排的格子 */
+.map-cell.left-column { left: 0%; } /* 左排的格子 */
+
+
 .map-cell:hover, .map-cell:active {
     background-color: #e8f5e9;
     transform: scale(1.05);
