@@ -1,6 +1,7 @@
 // monopoly-game.js - 大富翁風格遊戲腳本
 
 // 地圖格子資訊 - 每個格子有標題和描述
+// game.js
 const cellInfo = [
     { title: "起點", description: "每經過起點可以獲得一次獎勵。" },
     { title: "台北", description: "台灣的首都，這裡有著名的台北101和夜市文化。" },
@@ -21,11 +22,13 @@ const cellInfo = [
     { title: "金門", description: "台灣外島，有獨特的戰地風光和高粱酒。" },
     { title: "命運", description: "抽取一張命運卡，看看命運將帶你何方。" },
     { title: "澎湖", description: "美麗的島嶼群，有著澎湖藍的海洋風光。" },
-    { title: "進入醫院", description: "生病了！必須在醫院休養，暫停一回合。" },
+    { title: "醫院", description: "生病了！必須在醫院休養，暫停一回合。" }, // 原為進入醫院
     { title: "綠島", description: "知名的離島，有美麗的海底風光和歷史遺跡。" },
     { title: "小琉球", description: "台灣西南外海的珊瑚礁島嶼，生態豐富。" },
+    // --- 新增的格子 ---
+    { title: "新地點A", description: "這是新地點A的描述。" }, // 索引 22
+    { title: "新地點B", description: "這是新地點B的描述。" }  // 索引 23
 ];
-
 // 遊戲狀態
 let gameState = {
     mapLoopSize: 22,  // 22格的環形地圖
@@ -91,53 +94,54 @@ document.addEventListener('DOMContentLoaded', function() {
     // 設置按鈕事件
     setupEventListeners();
 });
-
-// 創建大富翁風格地圖
 function createMonopolyMap() {
     mapContainer.innerHTML = '';
-    
-    // 總格子數
-    const totalCells = 22;
-    
-    // 創建環形地圖格子
+
+    // ★★★ 更新總格子數 ★★★
+    const totalCells = 24;
+
     for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'map-cell';
         cell.id = `cell-${i}`;
-        cell.dataset.cellIndex = i;  // 添加索引屬性，用於彈窗顯示
-        
-        // 添加標題
+        cell.dataset.cellIndex = i; // 添加 data-* 屬性以供點擊事件使用
+
         const title = document.createElement('div');
         title.className = 'cell-title';
-        title.textContent = cellInfo[i].title;
+        // ★★★ 確保 cellInfo 有 24 個條目 ★★★
+        // 如果 cellInfo[i] 不存在，提供一個預設標題
+        title.textContent = cellInfo[i] ? cellInfo[i].title : `格 ${i}`;
         cell.appendChild(title);
-        
-        // 添加編號
+
         const cellNumber = document.createElement('div');
         cellNumber.className = 'cell-number';
         cellNumber.textContent = i;
         cell.appendChild(cellNumber);
-        
-        // 添加格子位置類別，定位格子在環形的位置
-        if (i >= 0 && i <= 6) {
+
+        // ★★★ 更新分配樣式類的邏輯 ★★★
+        if (i >= 0 && i <= 6) { // 頂部行 (0-6)
             cell.classList.add('top-row');
-        } else if (i >= 7 && i <= 10) {
+        } else if (i >= 7 && i <= 12) { // 右側列 (7-12)
             cell.classList.add('right-column');
-        } else if (i >= 11 && i <= 17) {
+        } else if (i >= 13 && i <= 19) { // 底部行 (13-19)
             cell.classList.add('bottom-row');
-        } else if (i >= 18 && i <= 21) {
+        } else if (i >= 20 && i <= 23) { // 左側列 (20-23)
             cell.classList.add('left-column');
         }
-        
-        // 添加點擊事件，顯示格子詳情
+
+        // 添加點擊事件監聽器
         cell.addEventListener('click', function() {
-            showLocationModal(i);
+            // ★★★ 確保 cellInfo 有 24 個條目 ★★★
+            if (cellInfo[i]) { // 檢查是否存在對應的格子信息
+                 showLocationModal(i);
+            } else {
+                 console.warn(`找不到索引 ${i} 的格子資訊`);
+            }
         });
-        
+
         mapContainer.appendChild(cell);
     }
 }
-
 // 顯示地點詳情彈窗
 function showLocationModal(cellIndex) {
     const cell = cellInfo[cellIndex];
