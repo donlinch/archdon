@@ -684,6 +684,40 @@
                 updatePreviewVariables();
             }  
 
+
+
+
+            function updatePreviewVariables() {
+                // 更新所有顯示預覽的 CSS 變量
+                const styleData = collectStyleData();
+                
+                // 更新一般設置
+                document.documentElement.style.setProperty('--template-page-bg-color', styleData.general.pageBgColor);
+                document.documentElement.style.setProperty('--template-primary-text-color', styleData.general.primaryTextColor);
+                
+                // 更新頁眉設置
+                document.documentElement.style.setProperty('--template-header-bg-color', styleData.header.headerBgColor);
+                document.documentElement.style.setProperty('--template-header-text-color', styleData.header.headerTextColor);
+                
+                // 更新棋盤設置
+                document.documentElement.style.setProperty('--template-board-border-color', styleData.board.borderColor);
+                
+                // 更新格子設置
+                document.documentElement.style.setProperty('--template-cell-default-bg', styleData.mapCell.defaultBgColor);
+                document.documentElement.style.setProperty('--template-cell-default-border-color', styleData.mapCell.defaultBorderColor);
+                document.documentElement.style.setProperty('--template-cell-title-text-color', styleData.mapCell.titleTextColor);
+                document.documentElement.style.setProperty('--template-cell-number-text-color', styleData.mapCell.numberTextColor);
+                document.documentElement.style.setProperty('--template-cell-hover-bg-color', styleData.mapCell.hoverBgColor);
+                document.documentElement.style.setProperty('--template-cell-hover-border-color', styleData.mapCell.hoverBorderColor);
+                
+                // 更新模態框設置
+                document.documentElement.style.setProperty('--template-modal-header-bg-color', styleData.modal.headerBgColor);
+            }
+
+
+
+
+
             function clearTemplateEditor() {
                 templateIdInput.value = '';
                 templateIdInput.placeholder = '';
@@ -701,6 +735,11 @@
                 // 清除已展開的區段
                 activeSection = null;
             }
+             
+            
+            
+            
+            
 
             // 添加加載提示功能
 function showLoader() {
