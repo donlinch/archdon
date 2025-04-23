@@ -1,9 +1,8 @@
 // game.js - Simple Walker 遊戲頁面腳本
 
 // 遊戲狀態
-// 修改游戏状态中的地图大小
 let gameState = {
-    mapLoopSize: 42, // 7×6=42个格子
+    mapLoopSize: 10,
     maxPlayers: 5,
     players: {},
     gameStarted: false
@@ -33,8 +32,8 @@ const statusText = document.getElementById('status-text');
 const moveForwardBtn = document.getElementById('move-forward');
 const moveBackwardBtn = document.getElementById('move-backward');
 const leaveGameBtn = document.getElementById('leave-game');
-// 在DOMContentLoaded事件中整合所有修改
 
+// 頁面載入時執行
 document.addEventListener('DOMContentLoaded', function() {
     // 獲取URL參數
     const urlParams = new URLSearchParams(window.location.search);
@@ -51,65 +50,15 @@ document.addEventListener('DOMContentLoaded', function() {
     playerNameDisplay.textContent = playerName;
     roomIdDisplay.textContent = roomId;
     
-    // 創建地圖 - 使用修正後的函數
+    // 創建地圖
     createGameMap();
-    
-    // 驗證地圖
-    if (!validateMap()) {
-        console.warn('初始地圖驗證失敗，嘗試緊急修復');
-        emergencyMapRepair();
-    }
     
     // 連接到WebSocket
     connectWebSocket();
     
     // 設置按鈕事件
     setupEventListeners();
-    
-    // 添加窗口大小變化處理
-    window.addEventListener('resize', function() {
-        // 地圖重新計算
-        if (gameState && gameState.players) {
-            // 保存當前狀態
-            const oldState = { ...gameState };
-            // 更新所有玩家標記位置
-            updatePlayerMarkers(oldState);
-        }
-    });
-    
-    // 添加調試按鈕 (僅在調試模式下)
-    if (DEBUG_MODE) {
-        addDebugControls();
-    }
 });
-
-
-
-// 添加調試控制按鈕
-function addDebugControls() {
-    const debugPanel = document.createElement('div');
-    debugPanel.className = 'debug-panel';
-    debugPanel.innerHTML = `
-        <div style="position: fixed; bottom: 50px; right: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 5px; color: white;">
-            <button id="debug-validate">驗證地圖</button>
-            <button id="debug-repair">修復地圖</button>
-            <button id="debug-toggle">顯示/隱藏格子號</button>
-        </div>
-    `;
-    document.body.appendChild(debugPanel);
-    
-    // 添加事件監聽
-    document.getElementById('debug-validate').addEventListener('click', validateMap);
-    document.getElementById('debug-repair').addEventListener('click', emergencyMapRepair);
-    document.getElementById('debug-toggle').addEventListener('click', function() {
-        const numbers = document.querySelectorAll('.map-cell-number');
-        numbers.forEach(num => {
-            num.style.display = num.style.display === 'none' ? '' : 'none';
-        });
-    });
-}
-
-
 
 // 設置按鈕事件
 function setupEventListeners() {
@@ -153,113 +102,23 @@ function setupEventListeners() {
     });
 }
 
-// 修改创建地图的函数
-// 完整重寫createGameMap函數，確保創建完整的42格環形地圖
+// 創建遊戲地圖
 function createGameMap() {
-    // 清空地圖容器
     mapContainer.innerHTML = '';
     
-    // 設置地圖容器樣式
-    mapContainer.style.position = 'relative';
-    mapContainer.style.width = '100%';
-    mapContainer.style.height = '400px';
-    
-    // 定義環形地圖的路徑點
-    const mapPoints = [];
-    
-    // 上方行 (0-6) - 從左到右
-    for (let i = 0; i <= 6; i++) {
-        mapPoints.push({
-            index: i,
-            x: (i / 6) * 100, // 百分比位置
-            y: 0
-        });
-    }
-    
-    // 右側列 (7-13) - 從上到下
-    for (let i = 1; i <= 5; i++) {
-        mapPoints.push({
-            index: 6 + i,
-            x: 100,
-            y: (i / 5) * 100
-        });
-    }
-    
-    // 下方行 (14-20) - 從右到左
-    for (let i = 0; i <= 6; i++) {
-        mapPoints.push({
-            index: 20 - i,
-            x: ((6 - i) / 6) * 100,
-            y: 100
-        });
-    }
-    
-    // 左側列 (21-27) - 從下到上
-    for (let i = 1; i <= 5; i++) {
-        mapPoints.push({
-            index: 27 - i + 1,
-            x: 0,
-            y: ((5 - i) / 5) * 100
-        });
-    }
-    
-    // 再添加一列，達到42個格子
-    // 額外上方行 (28-34) - 從左到右
-    for (let i = 0; i <= 6; i++) {
-        mapPoints.push({
-            index: 28 + i,
-            x: (i / 6) * 100,
-            y: 15 // 稍微下移
-        });
-    }
-    
-    // 額外右側列 (35-41) - 從上到下
-    for (let i = 1; i <= 5; i++) {
-        mapPoints.push({
-            index: 34 + i,
-            x: 85, // 稍微左移
-            y: (i / 5) * 100
-        });
-    }
-    
-    // 確保我們有42個點
-    console.log(`創建了 ${mapPoints.length} 個地圖點`);
-    
-    // 創建每個格子
-    mapPoints.forEach(point => {
+    // 創建10個格子的環形地圖
+    for (let i = 0; i < 10; i++) {
         const cell = document.createElement('div');
         cell.className = 'map-cell';
-        cell.id = `cell-${point.index}`; // 每個格子的ID為 cell-0, cell-1 等
+        cell.id = `cell-${i}`;
         
-        // 設置位置
-        cell.style.position = 'absolute';
-        cell.style.left = `${point.x}%`;
-        cell.style.top = `${point.y}%`;
-        cell.style.transform = 'translate(-50%, -50%)'; // 居中
-        cell.style.width = '40px';
-        cell.style.height = '40px';
-        
-        // 添加格子編號
         const cellNumber = document.createElement('span');
         cellNumber.className = 'map-cell-number';
-        cellNumber.textContent = point.index;
-        
-        // 為特定格子添加特殊樣式 (調試用)
-        if (point.index >= 9 && point.index <= 14) {
-            cell.style.backgroundColor = '#ffecec'; // 淡紅色背景
-            cell.style.border = '2px solid #ffadad'; // 紅色邊框
-        }
+        cellNumber.textContent = i;
         
         cell.appendChild(cellNumber);
         mapContainer.appendChild(cell);
-    });
-    
-    // 添加環形路徑指示
-    const pathEl = document.createElement('div');
-    pathEl.className = 'map-path';
-    mapContainer.appendChild(pathEl);
-    
-    console.log(`完成地圖創建，總共 ${mapContainer.querySelectorAll('.map-cell').length} 個格子`);
+    }
 }
 
 // 連接到WebSocket
@@ -302,20 +161,13 @@ function connectWebSocket() {
     };
 }
 
-// 修改handleWebSocketMessage函數，加入錯誤處理
+// 處理收到的WebSocket消息
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
-        debugLog('收到消息:', message);
         
         switch (message.type) {
             case 'gameStateUpdate':
-                // 更新前先驗證地圖
-                if (!validateMap()) {
-                    console.warn('地圖驗證失敗，嘗試修復');
-                    emergencyMapRepair();
-                }
-                
                 // 更新遊戲狀態
                 updateGameState(message);
                 break;
@@ -323,7 +175,7 @@ function handleWebSocketMessage(data) {
             case 'playerInfo':
                 // 接收玩家ID和名稱確認
                 playerId = message.playerId;
-                debugLog(`收到玩家ID: ${playerId}`);
+                console.log(`收到玩家ID: ${playerId}`);
                 break;
             
             case 'error':
@@ -333,14 +185,14 @@ function handleWebSocketMessage(data) {
                 break;
             
             default:
-                debugLog('收到未知類型消息:', message);
+                console.log('收到未知類型消息:', message);
         }
     } catch (error) {
         console.error('解析消息錯誤:', error, data);
     }
 }
 
-// 改進的遊戲狀態更新函數
+// 更新遊戲狀態
 function updateGameState(message) {
     const oldState = { ...gameState };
     
@@ -352,18 +204,6 @@ function updateGameState(message) {
     
     // 更新遊戲狀態
     gameState = message.gameState;
-    
-    // 確保地圖大小正確
-    if (gameState.mapLoopSize !== undefined) {
-        console.log(`地圖大小: ${gameState.mapLoopSize}`);
-    }
-    
-    // 檢查是否需要重新創建地圖 (地圖大小變化)
-    if (oldState.mapLoopSize !== gameState.mapLoopSize) {
-        console.log(`地圖大小變更: ${oldState.mapLoopSize} -> ${gameState.mapLoopSize}`);
-        // 如果地圖大小發生變化，則重新創建地圖
-        createGameMap();
-    }
     
     // 更新最大玩家數顯示
     maxPlayersDisplay.textContent = gameState.maxPlayers;
@@ -377,12 +217,6 @@ function updateGameState(message) {
     
     // 更新玩家位置標記
     updatePlayerMarkers(oldState);
-    
-    // 記錄所有玩家的位置 (用於調試)
-    console.log("目前所有玩家位置:");
-    for (const pid in gameState.players) {
-        console.log(`玩家 ${gameState.players[pid].name} (${pid}): 位置 ${gameState.players[pid].position}`);
-    }
 }
 
 // 更新玩家列表
@@ -416,19 +250,19 @@ function updatePlayersList() {
     });
 }
 
-
-
-// 完全重寫的玩家標記更新函數
+// 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
-    // 清空玩家標記容器
+    // 清空玩家容器
     playersContainer.innerHTML = '';
+    
+    // 獲取格子位置信息
+    const cells = document.querySelectorAll('.map-cell');
     
     // 為每個玩家創建標記
     let colorIndex = 1;
-    
     for (const id in gameState.players) {
         const player = gameState.players[id];
-        const oldPosition = oldState.players && oldState.players[id] ? oldState.players[id].position : null;
+        const oldPlayer = oldState.players && oldState.players[id];
         
         // 創建玩家標記元素
         const marker = document.createElement('div');
@@ -437,49 +271,27 @@ function updatePlayerMarkers(oldState) {
         marker.textContent = player.name.charAt(0).toUpperCase();
         marker.title = player.name;
         
-        // 獲取正確的格子索引和元素
-        const position = player.position;
-        const cellId = `cell-${position}`;
-        const cell = document.getElementById(cellId);
-        
-        if (cell) {
-            // 直接使用getBoundingClientRect獲取格子位置
-            const cellRect = cell.getBoundingClientRect();
-            const containerRect = mapContainer.getBoundingClientRect();
+        // 設置標記位置
+        const cellIndex = player.position;
+        const cellElement = cells[cellIndex];
+        if (cellElement) {
+            const cellRect = cellElement.getBoundingClientRect();
+            const containerRect = playersContainer.getBoundingClientRect();
             
-            // 計算格子中心點相對於容器的位置
-            const relativeLeft = cell.offsetLeft + (cell.offsetWidth / 2) - 15;
-            const relativeTop = cell.offsetTop + (cell.offsetHeight / 2) - 15;
+            // 計算相對於容器的位置
+            const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - 15;
+            const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - 15;
             
-            marker.style.left = `${relativeLeft}px`;
-            marker.style.top = `${relativeTop}px`;
-            
-            // 記錄日誌，幫助調試
-            console.log(`放置玩家 ${player.name} 標記到位置 ${position}, 對應格子 ${cellId}, 坐標: (${relativeLeft}, ${relativeTop})`);
+            marker.style.left = `${left}px`;
+            marker.style.top = `${top}px`;
             
             // 如果位置變化了，添加動畫效果
-            if (oldPosition !== null && oldPosition !== position) {
-                console.log(`玩家 ${player.name} 從位置 ${oldPosition} 移動到 ${position}`);
+            if (oldPlayer && oldPlayer.position !== player.position) {
                 marker.classList.add('player-moving');
-                
                 setTimeout(() => {
                     marker.classList.remove('player-moving');
                 }, 500);
             }
-            
-            // 標記當前玩家
-            if (id === playerId) {
-                marker.classList.add('current-player');
-                marker.textContent += '★'; // 添加星號表示當前玩家
-            }
-        } else {
-            console.error(`找不到格子: cell-${position}，無法放置玩家標記`);
-            // 緊急備用方案：即使找不到格子，也生成一個可見的標記在地圖中央
-            marker.style.left = '50%';
-            marker.style.top = '50%';
-            marker.style.backgroundColor = 'red';
-            marker.style.opacity = '0.7';
-            marker.classList.add('error-marker');
         }
         
         playersContainer.appendChild(marker);
@@ -489,46 +301,6 @@ function updatePlayerMarkers(oldState) {
         if (colorIndex > 5) colorIndex = 1;
     }
 }
-
-
-
-
-
-
-// 添加備用地圖創建
-function createEmergencyMap() {
-    console.warn('創建備用地圖');
-    
-    // 清空並設置容器
-    mapContainer.innerHTML = '';
-    mapContainer.style.display = 'flex';
-    mapContainer.style.flexWrap = 'wrap';
-    mapContainer.style.justifyContent = 'center';
-    
-    // 創建簡單的線性地圖
-    for (let i = 0; i < gameState.mapLoopSize; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'map-cell';
-        cell.id = `cell-${i}`;
-        cell.style.position = 'relative';
-        cell.style.margin = '5px';
-        cell.style.transform = 'none';
-        
-        const cellNumber = document.createElement('span');
-        cellNumber.className = 'map-cell-number';
-        cellNumber.textContent = i;
-        
-        cell.appendChild(cellNumber);
-        mapContainer.appendChild(cell);
-    }
-    
-    // 確認所有格子都已創建
-    validateMap();
-}
-
-
-
-
 
 // 發送移動命令
 function sendMoveCommand(direction) {
@@ -542,10 +314,6 @@ function sendMoveCommand(direction) {
     ws.send(JSON.stringify(moveCommand));
     console.log(`發送移動命令: ${direction}`);
 }
-
-// 在客户端，当收到游戏状态更新时记录日志
-console.log(`收到游戏状态更新: `, message.gameState);
-console.log(`地图大小: ${message.gameState.mapLoopSize}`);
 
 // 應用按鈕冷卻時間
 function applyButtonCooldown(button) {

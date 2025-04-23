@@ -23,9 +23,9 @@ async function getClient() {
  * @param {number} maxPlayers 最大玩家數
  * @returns {Promise<Object>} 創建的房間資訊
  */
-async function createRoom(roomId, roomName, maxPlayers = 5, mapLoopSize = 10) {
+async function createRoom(roomId, roomName, maxPlayers = 5) {
     const gameState = {
-        mapLoopSize: mapLoopSize,
+        mapLoopSize: 10,
         maxPlayers: parseInt(maxPlayers),
         players: {},
         gameStarted: false
@@ -40,35 +40,6 @@ async function createRoom(roomId, roomName, maxPlayers = 5, mapLoopSize = 10) {
     const { rows } = await pool.query(query, [roomId, roomName, JSON.stringify(gameState)]);
     return rows[0];
 }
-
-
-
-
-
-async function updateAllRoomsMapSize() {
-    try {
-        // 获取所有房间
-        const result = await pool.query('SELECT room_id, game_state FROM game_rooms');
-        
-        for (const row of result.rows) {
-            const gameState = row.game_state;
-            if (!gameState.mapLoopSize || gameState.mapLoopSize === 10) {
-                gameState.mapLoopSize = 42;
-                await pool.query(
-                    'UPDATE game_rooms SET game_state = $1 WHERE room_id = $2',
-                    [JSON.stringify(gameState), row.room_id]
-                );
-                console.log(`Updated room ${row.room_id} with new mapLoopSize: 42`);
-            }
-        }
-        console.log('All rooms updated successfully');
-    } catch (err) {
-        console.error('Error updating rooms:', err);
-    }
-}
-
-
-
 
 /**
  * 獲取房間信息
