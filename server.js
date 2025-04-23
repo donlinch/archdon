@@ -2152,6 +2152,231 @@ app.get('/api/samegame/play/:templateId', async (req, res) => {
 
 
 
+const walkMapAdminRouter = express.Router();
+walkMapAdminRouter.use(basicAuthMiddleware);
+
+
+// GET /api/admin/walk_map/templates - List all templates
+walkMapAdminRouter.get('/templates', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT template_id, template_name FROM walk_map_templates ORDER BY template_name');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /admin/walk_map/templates] Error:', err.stack || err);
+        res.status(500).json({ error: 'Failed to retrieve templates' });
+    }
+});
+
+// GET /api/admin/walk_map/templates/:templateId - Get single template details
+walkMapAdminRouter.get('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    try {
+        const result = await pool.query('SELECT template_id, template_name, description, style_data FROM walk_map_templates WHERE template_id = $1', [templateId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API GET /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to retrieve template details' });
+    }
+});
+
+// POST /api/admin/walk_map/templates - Create new template
+walkMapAdminRouter.post('/templates', async (req, res) => {
+    const { template_id, template_name, description, style_data } = req.body;
+    if (!template_id || !template_name || !style_data) {
+        return res.status(400).json({ error: 'Missing required fields: template_id, template_name, style_data' });
+    }
+    try {
+        // Basic JSON validation
+        let styleJson;
+        if (typeof style_data === 'string') {
+           try { styleJson = JSON.parse(style_data); } catch (e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
+        } else if (typeof style_data === 'object') {
+            styleJson = style_data;
+        } else {
+             return res.status(400).json({ error: 'style_data must be a JSON object or string' });
+        }
+
+
+        const result = await pool.query(
+            'INSERT INTO walk_map_templates (template_id, template_name, description, style_data) VALUES ($1, $2, $3, $4) RETURNING template_id, template_name',
+            [template_id, template_name, description || null, styleJson]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[API POST /admin/walk_map/templates] Error:', err.stack || err);
+         if (err.code === '23505') { // Unique violation
+            return res.status(409).json({ error: 'Template ID or Name already exists' });
+        }
+        res.status(500).json({ error: 'Failed to create template', detail: err.message });
+    }
+});
+
+// PUT /api/admin/walk_map/templates/:templateId - Update existing template
+walkMapAdminRouter.put('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    const { template_name, description, style_data } = req.body; // Note: template_id in URL is used, not from body
+
+    if (!template_name || !style_data) {
+        return res.status(400).json({ error: 'Missing required fields: template_name, style_data' });
+    }
+     try {
+         // Basic JSON validation
+         let styleJson;
+         if (typeof style_data === 'string') {
+            try { styleJson = JSON.parse(style_data); } catch (e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
+         } else if (typeof style_data === 'object') {
+             styleJson = style_data;
+         } else {
+              return res.status(400).json({ error: 'style_data must be a JSON object or string' });
+         }
+
+        const result = await pool.query(
+            'UPDATE walk_map_templates SET template_name = $1, description = $2, style_data = $3, updated_at = NOW() WHERE template_id = $4 RETURNING template_id, template_name',
+            [template_name, description || null, styleJson, templateId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        if (err.code === '23505') { // Unique violation on name
+           return res.status(409).json({ error: 'Template Name already exists for another template' });
+       }
+        res.status(500).json({ error: 'Failed to update template', detail: err.message });
+    }
+});
+
+// DELETE /api/admin/walk_map/templates/:templateId - Delete template
+walkMapAdminRouter.delete('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM walk_map_templates WHERE template_id = $1', [templateId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        res.status(204).send(); // No content on successful delete
+    } catch (err) {
+        console.error(`[API DELETE /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to delete template' });
+    }
+});
+
+// --- Map Cell API Endpoints ---
+
+// GET /api/admin/walk_map/cells - Get all cell data
+walkMapAdminRouter.get('/cells', async (req, res) => {
+    try {
+        // Ensure we get all cells, even if some haven't been customized yet
+        // We can use a LEFT JOIN with a generated series or rely on the initial insert
+        const result = await pool.query(
+            'SELECT cell_index, title, description, cell_bg_color, modal_header_bg_color FROM walk_map_cells ORDER BY cell_index'
+        );
+        // Ensure all 24 cells are present, add defaults if missing (shouldn't happen if initial insert runs)
+        const cells = result.rows;
+        const completeCells = [];
+        const existingIndices = new Set(cells.map(c => c.cell_index));
+        for(let i = 0; i < 24; i++) {
+             if(existingIndices.has(i)) {
+                 completeCells.push(cells.find(c => c.cell_index === i));
+             } else {
+                 // This case indicates missing data in the DB, provide a default structure
+                 completeCells.push({
+                     cell_index: i,
+                     title: `未定義 ${i}`,
+                     description: '',
+                     cell_bg_color: null,
+                     modal_header_bg_color: null
+                 });
+             }
+         }
+        res.json(completeCells);
+    } catch (err) {
+        console.error('[API GET /admin/walk_map/cells] Error:', err.stack || err);
+        res.status(500).json({ error: 'Failed to retrieve cell data' });
+    }
+});
+
+// PUT /api/admin/walk_map/cells - Update all cell data (Bulk Update)
+walkMapAdminRouter.put('/cells', async (req, res) => {
+    const allCellsData = req.body;
+
+    if (!Array.isArray(allCellsData) || allCellsData.length !== 24) {
+        return res.status(400).json({ error: 'Invalid data format. Expected an array of 24 cell objects.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const updateQuery = `
+            UPDATE walk_map_cells
+            SET title = $1,
+                description = $2,
+                cell_bg_color = $3,
+                modal_header_bg_color = $4,
+                updated_at = NOW()
+            WHERE cell_index = $5
+        `;
+
+        let updatedCount = 0;
+        for (const cell of allCellsData) {
+            // Validate each cell object
+            if (typeof cell.cell_index !== 'number' || cell.cell_index < 0 || cell.cell_index > 23 ||
+                typeof cell.title !== 'string' ||
+                (cell.description !== null && typeof cell.description !== 'string') ||
+                (cell.cell_bg_color !== null && typeof cell.cell_bg_color !== 'string') || // Add further color validation if needed
+                (cell.modal_header_bg_color !== null && typeof cell.modal_header_bg_color !== 'string')
+               )
+            {
+                 console.warn("Invalid cell data format received:", cell);
+                 continue; // Skip invalid entries or throw error
+             }
+
+            // Ensure NULL is passed for empty/invalid colors
+            const bgColor = (cell.cell_bg_color && /^#[0-9A-Fa-f]{6}$/.test(cell.cell_bg_color)) ? cell.cell_bg_color : null;
+            const modalColor = (cell.modal_header_bg_color && /^#[0-9A-Fa-f]{6}$/.test(cell.modal_header_bg_color)) ? cell.modal_header_bg_color : null;
+
+            const result = await client.query(updateQuery, [
+                cell.title,
+                cell.description || null,
+                bgColor,
+                modalColor,
+                cell.cell_index
+            ]);
+            updatedCount += result.rowCount;
+        }
+
+        await client.query('COMMIT');
+        console.log(`[API PUT /admin/walk_map/cells] Updated ${updatedCount} cells.`);
+        res.status(200).json({ success: true, message: `Successfully updated ${updatedCount} cells.` });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[API PUT /admin/walk_map/cells] Error during bulk update:', err.stack || err);
+        res.status(500).json({ error: 'Failed to update cell data', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+
+app.use('/api/admin/walk_map', walkMapAdminRouter); // <-- Add this line
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2233,6 +2458,13 @@ function updateGameState(roomId, updates) {
         }
     });
 }
+
+
+
+
+
+
+
 
 
 
@@ -2461,6 +2693,20 @@ app.delete('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除報告。', detail: err.message });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
