@@ -33,7 +33,74 @@ document.addEventListener('DOMContentLoaded', () => {
             primaryTextColor: document.getElementById('general-primaryTextColor'),
             primaryFontFamily: document.getElementById('general-primaryFontFamily')
         },
-        // 其他輸入框...
+        header: {
+            headerBgColor: document.getElementById('header-headerBgColor'),
+            headerTextColor: document.getElementById('header-headerTextColor'),
+            roomInfoColor: document.getElementById('header-roomInfoColor')
+        },
+        board: {
+            borderColor: document.getElementById('board-borderColor'),
+            borderWidth: document.getElementById('board-borderWidth'),
+            centerBgColor: document.getElementById('board-centerBgColor'),
+            centerImageUrl: document.getElementById('board-centerImageUrl')
+        },
+        mapCell: {
+            defaultBgColor: document.getElementById('mapCell-defaultBgColor'),
+            defaultBorderColor: document.getElementById('mapCell-defaultBorderColor'),
+            defaultBorderWidth: document.getElementById('mapCell-defaultBorderWidth'),
+            titleTextColor: document.getElementById('mapCell-titleTextColor'),
+            numberTextColor: document.getElementById('mapCell-numberTextColor'),
+            hoverBgColor: document.getElementById('mapCell-hoverBgColor'),
+            hoverBorderColor: document.getElementById('mapCell-hoverBorderColor')
+        },
+        playerMarker: {
+            shape: document.getElementById('playerMarker-shape'),
+            textColor: document.getElementById('playerMarker-textColor'),
+            boxShadow: document.getElementById('playerMarker-boxShadow'),
+            colors: [
+                document.getElementById('playerMarker-color1'),
+                document.getElementById('playerMarker-color2'),
+                document.getElementById('playerMarker-color3'),
+                document.getElementById('playerMarker-color4'),
+                document.getElementById('playerMarker-color5')
+            ]
+        },
+        controller: {
+            panelBackground: document.getElementById('controller-panelBackground'),
+            playerLabelColor: document.getElementById('controller-playerLabelColor'),
+            button: {
+                defaultBgColor: document.getElementById('controller-button-defaultBgColor'),
+                defaultTextColor: document.getElementById('controller-button-defaultTextColor'),
+                borderRadius: document.getElementById('controller-button-borderRadius'),
+                hoverBgColor: document.getElementById('controller-button-hoverBgColor'),
+                cooldownOpacity: document.getElementById('controller-button-cooldownOpacity')
+            }
+        },
+        info: {
+            panelBackground: document.getElementById('info-panelBackground'),
+            sectionTitleColor: document.getElementById('info-sectionTitleColor'),
+            playerListText: document.getElementById('info-playerListText'),
+            staticTextColor: document.getElementById('info-staticTextColor'),
+            leaveButton: {
+                defaultBgColor: document.getElementById('info-leaveButton-defaultBgColor'),
+                defaultTextColor: document.getElementById('info-leaveButton-defaultTextColor')
+            }
+        },
+        connection: {
+            onlineBgColor: document.getElementById('connection-onlineBgColor'),
+            onlineTextColor: document.getElementById('connection-onlineTextColor'),
+            offlineBgColor: document.getElementById('connection-offlineBgColor'),
+            offlineTextColor: document.getElementById('connection-offlineTextColor'),
+            connectingBgColor: document.getElementById('connection-connectingBgColor'),
+            connectingTextColor: document.getElementById('connection-connectingTextColor')
+        },
+        modal: {
+            overlayBgColor: document.getElementById('modal-overlayBgColor'),
+            contentBgColor: document.getElementById('modal-contentBgColor'),
+            headerBgColor: document.getElementById('modal-headerBgColor'),
+            headerTextColor: document.getElementById('modal-headerTextColor'),
+            bodyTextColor: document.getElementById('modal-bodyTextColor')
+        }
     };
 
     // 地圖格子編輯器元素
