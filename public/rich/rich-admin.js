@@ -508,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 將彈窗修改暫存到本地 currentCellInfo
+    // 將彈窗修改暫存到本地 currentCellInfo
     function saveModalChangesToLocal() {
         const index = parseInt(editingCellIndexInput.value, 10);
         if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
@@ -518,22 +519,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newTitle = modalCellTitleInput.value.trim();
         const newDesc = modalCellDescTextarea.value.trim();
-        let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true' || modalCellBgColorInput.value.toLowerCase() === '#ffffff')
+
+        // --- ★ 修改顏色處理邏輯 ★ ---
+        // 只有當 dataset.cleared 為 'true' 時才存 null，否則儲存選擇的顏色值
+        let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
                          ? null : modalCellBgColorInput.value;
-        let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true' || modalModalHeaderBgColorInput.value.toLowerCase() === '#ffffff')
+        let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
                                   ? null : modalModalHeaderBgColorInput.value;
+        // --- ★ 結束修改 ★ ---
+
 
         // 更新本地陣列中的物件
         cellData.title = newTitle;
         cellData.description = newDesc;
-        cellData.cell_bg_color = newBgColor;
-        cellData.modal_header_bg_color = newModalHeaderBgColor;
+        cellData.cell_bg_color = newBgColor; // 現在可以是 null 或 #ffffff 或其他顏色
+        cellData.modal_header_bg_color = newModalHeaderBgColor; // 同上
 
         // 更新格子預覽
         const adminCellDiv = document.getElementById(`admin-cell-${index}`);
         if (adminCellDiv) {
             const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
             if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
+            // 如果是 null 或空字串，設置為 '' 來應用 CSS 預設，否則設置顏色
             adminCellDiv.style.backgroundColor = newBgColor || '';
         }
 
