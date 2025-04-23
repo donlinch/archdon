@@ -182,12 +182,7 @@ h1, h2, h3 {
     opacity: 0.6;
     cursor: not-allowed;
 }
-
 /* ===== 地圖樣式 ===== */
-#game-area {
-    flex: 0 0 auto;
-}
-
 #game-map {
     position: relative;
     height: 40vh; /* 調整為視窗高度的40% */
@@ -196,6 +191,9 @@ h1, h2, h3 {
     border-radius: 8px;
     overflow: hidden;
     background-color: #e8f5e9; /* 淡綠色背景 */
+    aspect-ratio: 1/1; /* 確保地圖是正方形 */
+    max-width: 90vmin; /* 限制最大寬度，保持正方形 */
+    margin: 0 auto; /* 水平居中 */
 }
 
 #map-container {
@@ -209,8 +207,6 @@ h1, h2, h3 {
 /* 大富翁風格地圖格子 */
 .map-cell {
     position: absolute;
-    width: calc(100% / 7);  /* 計算每個格子的寬度為父容器的七分之一 */
-    height: calc(100% / 4); /* 這樣會使格子的高度和寬度匹配 */
     background-color: white;
     border: 1px solid #4CAF50;
     display: flex;
@@ -223,9 +219,6 @@ h1, h2, h3 {
     transition: transform 0.2s, background-color 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
-
-
-
 
 .map-cell:hover, .map-cell:active {
     background-color: #e8f5e9;
@@ -250,50 +243,51 @@ h1, h2, h3 {
     color: #777;
 }
 
-/* 頂部一行格子 (0-6) */
-.map-cell.top-row {
-    top: 0;
+/* 計算每個方向的格子大小和位置 */
+/* 每一邊有 7 個格子 (0-6, 7-10, 11-17, 18-21) */
+/* 頂部和底部的格子寬度 */
+.map-cell.top-row,
+.map-cell.bottom-row {
+    width: calc(100% / 7);  /* 7個格子均分寬度 */
+    height: calc(100% / 7); /* 高度為地圖的1/7 */
 }
-.map-cell.top-row:nth-child(1) { left: 0%; }          /* 0 */
-.map-cell.top-row:nth-child(2) { left: 14.29%; }      /* 1 */
-.map-cell.top-row:nth-child(3) { left: 28.57%; }      /* 2 */
-.map-cell.top-row:nth-child(4) { left: 42.86%; }      /* 3 */
-.map-cell.top-row:nth-child(5) { left: 57.14%; }      /* 4 */
-.map-cell.top-row:nth-child(6) { left: 71.43%; }      /* 5 */
-.map-cell.top-row:nth-child(7) { left: 85.71%; }      /* 6 */
+
+/* 左側和右側的格子高度 */
+.map-cell.left-column,
+.map-cell.right-column {
+    width: calc(100% / 7);  /* 寬度為地圖的1/7 */
+    height: calc(100% / 7); /* 5個格子均分高度 */
+}
+
+/* 頂部一行格子 (0-6) */
+.map-cell.top-row:nth-child(1) { left: 0; top: 0; }                 /* 0 */
+.map-cell.top-row:nth-child(2) { left: calc(100% / 7); top: 0; }    /* 1 */
+.map-cell.top-row:nth-child(3) { left: calc(100% / 7 * 2); top: 0; }/* 2 */
+.map-cell.top-row:nth-child(4) { left: calc(100% / 7 * 3); top: 0; }/* 3 */
+.map-cell.top-row:nth-child(5) { left: calc(100% / 7 * 4); top: 0; }/* 4 */
+.map-cell.top-row:nth-child(6) { left: calc(100% / 7 * 5); top: 0; }/* 5 */
+.map-cell.top-row:nth-child(7) { left: calc(100% / 7 * 6); top: 0; }/* 6 */
 
 /* 右側一列格子 (7-10) */
-.map-cell.right-column {
-    right: 0;
-}
-.map-cell.right-column:nth-child(8) { top: 14.29%; }   /* 7 */
-.map-cell.right-column:nth-child(9) { top: 28.57%; }   /* 8 */
-.map-cell.right-column:nth-child(10) { top: 42.86%; }  /* 9 */
-.map-cell.right-column:nth-child(11) { top: 57.14%; }  /* 10 */
- 
-/* 底部一行格子 (11-17) */
-.map-cell.bottom-row {
-    bottom: 0;
-}
+.map-cell.right-column:nth-child(8) { top: calc(100% / 7); right: 0; }      /* 7 */
+.map-cell.right-column:nth-child(9) { top: calc(100% / 7 * 2); right: 0; }  /* 8 */
+.map-cell.right-column:nth-child(10) { top: calc(100% / 7 * 3); right: 0; } /* 9 */
+.map-cell.right-column:nth-child(11) { top: calc(100% / 7 * 4); right: 0; } /* 10 */
 
-.map-cell.bottom-row:nth-child(18) { left: 0%; width: 14%; }  /* 11 */
-.map-cell.bottom-row:nth-child(17) { left: 14.29%; }  /* 12 */
-.map-cell.bottom-row:nth-child(16) { left: 28.57%; }  /* 13 */
-.map-cell.bottom-row:nth-child(15) { left: 42.86%; }  /* 14 */
-.map-cell.bottom-row:nth-child(14) { left: 57.14%; }  /* 15 */
-.map-cell.bottom-row:nth-child(13) { left: 71.43%; }  /* 16 */
-.map-cell.bottom-row:nth-child(12) { left: 85.71%; }  /* 17 */
-
+/* 底部一行格子 (11-17) - 注意這裡順序是相反的 */
+.map-cell.bottom-row:nth-child(18) { right: 0; bottom: 0; }                   /* 11 */
+.map-cell.bottom-row:nth-child(17) { right: calc(100% / 7); bottom: 0; }      /* 12 */
+.map-cell.bottom-row:nth-child(16) { right: calc(100% / 7 * 2); bottom: 0; }  /* 13 */
+.map-cell.bottom-row:nth-child(15) { right: calc(100% / 7 * 3); bottom: 0; }  /* 14 */
+.map-cell.bottom-row:nth-child(14) { right: calc(100% / 7 * 4); bottom: 0; }  /* 15 */
+.map-cell.bottom-row:nth-child(13) { right: calc(100% / 7 * 5); bottom: 0; }  /* 16 */
+.map-cell.bottom-row:nth-child(12) { right: calc(100% / 7 * 6); bottom: 0; }  /* 17 */
 
 /* 左側一列格子 (18-21) */
-.map-cell.left-column {
-    left: 0;
-}
-.map-cell.left-column:nth-child(19) { top: 71.43%; }  /* 18 */
-.map-cell.left-column:nth-child(20) { top: 57.14%; }  /* 19 */
-.map-cell.left-column:nth-child(21) { top: 42.86%; }  /* 20 */
-.map-cell.left-column:nth-child(22) { top: 28.57%; }  /* 21 */
-.map-cell.left-column:nth-child(23) { top: 14.29%; }  /* 額外格子，如果需要 */
+.map-cell.left-column:nth-child(19) { bottom: calc(100% / 7); left: 0; }     /* 18 */
+.map-cell.left-column:nth-child(20) { bottom: calc(100% / 7 * 2); left: 0; } /* 19 */
+.map-cell.left-column:nth-child(21) { bottom: calc(100% / 7 * 3); left: 0; } /* 20 */
+.map-cell.left-column:nth-child(22) { bottom: calc(100% / 7 * 4); left: 0; } /* 21 */
 
 /* ===== 玩家標記樣式 ===== */
 #players-container {
