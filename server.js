@@ -81,9 +81,24 @@ app.post('/api/game-rooms', async (req, res) => {
     try {
         // 使用 dbClient.js 中的函數來創建房間
         const roomId = uuidv4(); // 生成唯一的房間 ID
+
+
+        const gameState = {
+            maxPlayers: maxPlayersInt,
+            players: {},
+            mapLoopSize: 42  // 明确设置为42
+        };
+
         console.log(`[API POST /api/game-rooms] Attempting to create room with ID: ${roomId}`);
 
        // 在server.js中的createRoom函数内
+
+
+
+
+
+
+
 const createdDbRoom = await dbClient.createRoom(roomId, roomName.trim(), maxPlayersInt, 42); // 添加mapLoopSize参数
         if (!createdDbRoom || !createdDbRoom.game_state) {
              console.error(`[API POST /api/game-rooms] dbClient.createRoom failed for roomId: ${roomId}`);
@@ -376,7 +391,8 @@ async function handleSimpleWalkerMessage(ws, message) {
 // 3. 计算新位置
 let currentPosition = gameState.players[playerId].position;
 let newPosition;
-const mapSize = gameState.mapLoopSize || 42; // 设置为42个格子的环形
+// ★★★ 这里的关键是确保使用正确的mapLoopSize ★★★
+const mapSize = gameState.mapLoopSize || 42; // 确保使用42而不是默认的10
 
 if (direction === 'forward') {
     newPosition = (currentPosition + 1) % mapSize;
