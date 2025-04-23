@@ -83,9 +83,8 @@ app.post('/api/game-rooms', async (req, res) => {
         const roomId = uuidv4(); // 生成唯一的房間 ID
         console.log(`[API POST /api/game-rooms] Attempting to create room with ID: ${roomId}`);
 
-        // 注意：dbClient.createRoom 返回的結構可能需要調整以匹配前端期望
-        const createdDbRoom = await dbClient.createRoom(roomId, roomName.trim(), maxPlayersInt);
-
+       // 在server.js中的createRoom函数内
+const createdDbRoom = await dbClient.createRoom(roomId, roomName.trim(), maxPlayersInt, 42); // 添加mapLoopSize参数
         if (!createdDbRoom || !createdDbRoom.game_state) {
              console.error(`[API POST /api/game-rooms] dbClient.createRoom failed for roomId: ${roomId}`);
              throw new Error('資料庫創建房間失敗或返回格式不正確');
@@ -365,7 +364,6 @@ async function handleSimpleWalkerMessage(ws, message) {
                 return;
             }
             const gameState = roomData.game_state;
-            const mapSize = gameState.mapLoopSize || 22; // 獲取地圖大小
 
             // 2. 確保玩家存在於狀態中
             if (!gameState.players || !gameState.players[playerId]) {
@@ -375,18 +373,19 @@ async function handleSimpleWalkerMessage(ws, message) {
                 ws.close(1011, "玩家資料不同步");
                 return;
             }
+// 3. 计算新位置
+let currentPosition = gameState.players[playerId].position;
+let newPosition;
+const mapSize = gameState.mapLoopSize || 42; // 设置为42个格子的环形
 
-            // 3. 計算新位置
-            let currentPosition = gameState.players[playerId].position;
-            let newPosition;
-            if (direction === 'forward') {
-                newPosition = (currentPosition + 1) % mapSize;
-            } else if (direction === 'backward') {
-                newPosition = (currentPosition - 1 + mapSize) % mapSize;
-            } else {
-                console.warn(`[WS Simple Walker Move] 無效的移動方向: ${direction}`);
-                return; // 忽略無效方向
-            }
+if (direction === 'forward') {
+    newPosition = (currentPosition + 1) % mapSize;
+} else if (direction === 'backward') {
+    newPosition = (currentPosition - 1 + mapSize) % mapSize;
+} else {
+    console.warn(`[WS Simple Walker Move] 无效的移动方向: ${direction}`);
+    return; // 忽略无效方向
+}
 
             // 4. 更新資料庫中的玩家位置
             console.log(`[WS Simple Walker Move] Updating position for ${playerId} in ${roomId} from ${currentPosition} to ${newPosition}`);

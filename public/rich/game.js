@@ -1,8 +1,9 @@
 // game.js - Simple Walker 遊戲頁面腳本
 
 // 遊戲狀態
+// 修改游戏状态中的地图大小
 let gameState = {
-    mapLoopSize: 22,
+    mapLoopSize: 42, // 7×6=42个格子
     maxPlayers: 5,
     players: {},
     gameStarted: false
@@ -103,21 +104,53 @@ function setupEventListeners() {
 }
 
 // 修改创建地图的函数
+
+// 修改创建地图的函数
 function createGameMap() {
     mapContainer.innerHTML = '';
     
-    // 创建22个格子的环形地图 (0-21)
-    for (let i = 0; i < 22; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'map-cell';
-        cell.id = `cell-${i}`;
-        
-        const cellNumber = document.createElement('span');
-        cellNumber.className = 'map-cell-number';
-        cellNumber.textContent = i;
-        
-        cell.appendChild(cellNumber);
-        mapContainer.appendChild(cell);
+    // 创建7×6的环形地图
+    for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 7; col++) {
+            // 计算格子在环中的索引位置
+            let index;
+            
+            // 第一行 (0-6)
+            if (row === 0) {
+                index = col;
+            }
+            // 最后一行 (35-41)，需要反向
+            else if (row === 5) {
+                index = 41 - col;
+            }
+            // 右侧列 (7-13)
+            else if (col === 6) {
+                index = 7 + (row - 1);
+            }
+            // 左侧列 (28-34)，需要反向
+            else if (col === 0) {
+                index = 34 - (row - 1);
+            }
+            // 中间部分不显示格子
+            else {
+                continue;
+            }
+            
+            const cell = document.createElement('div');
+            cell.className = 'map-cell';
+            cell.id = `cell-${index}`;
+            
+            // 根据行列设置位置
+            cell.style.gridRow = row + 1;
+            cell.style.gridColumn = col + 1;
+            
+            const cellNumber = document.createElement('span');
+            cellNumber.className = 'map-cell-number';
+            cellNumber.textContent = index;
+            
+            cell.appendChild(cellNumber);
+            mapContainer.appendChild(cell);
+        }
     }
 }
 
@@ -249,43 +282,40 @@ function updatePlayersList() {
         colorIndex++;
     });
 }
-
-// 更新玩家位置標記
+// 更新玩家位置标记
 function updatePlayerMarkers(oldState) {
     // 清空玩家容器
     playersContainer.innerHTML = '';
     
-    // 獲取格子位置信息
-    const cells = document.querySelectorAll('.map-cell');
-    
-    // 為每個玩家創建標記
+    // 为每个玩家创建标记
     let colorIndex = 1;
     for (const id in gameState.players) {
         const player = gameState.players[id];
         const oldPlayer = oldState.players && oldState.players[id];
         
-        // 創建玩家標記元素
+        // 创建玩家标记元素
         const marker = document.createElement('div');
         marker.className = `player-marker player-color-${colorIndex}`;
         marker.id = `player-${id}`;
         marker.textContent = player.name.charAt(0).toUpperCase();
         marker.title = player.name;
         
-        // 設置標記位置
-        const cellIndex = player.position;
-        const cellElement = cells[cellIndex];
-        if (cellElement) {
-            const cellRect = cellElement.getBoundingClientRect();
+        // 计算位置
+        const position = player.position;
+        const cell = document.getElementById(`cell-${position}`);
+        
+        if (cell) {
+            const cellRect = cell.getBoundingClientRect();
             const containerRect = playersContainer.getBoundingClientRect();
             
-            // 計算相對於容器的位置
-            const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - 15;
-            const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - 15;
+            // 计算相对于容器的位置
+            const left = cell.offsetLeft + (cell.offsetWidth / 2) - 15;
+            const top = cell.offsetTop + (cell.offsetHeight / 2) - 15;
             
             marker.style.left = `${left}px`;
             marker.style.top = `${top}px`;
             
-            // 如果位置變化了，添加動畫效果
+            // 如果位置变化了，添加动画效果
             if (oldPlayer && oldPlayer.position !== player.position) {
                 marker.classList.add('player-moving');
                 setTimeout(() => {
@@ -297,7 +327,7 @@ function updatePlayerMarkers(oldState) {
         playersContainer.appendChild(marker);
         colorIndex++;
         
-        // 最多支持5個玩家顏色
+        // 最多支持5个玩家颜色
         if (colorIndex > 5) colorIndex = 1;
     }
 }

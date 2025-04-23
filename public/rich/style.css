@@ -171,12 +171,14 @@ h1, h2, h3 {
 
 #map-container {
     display: grid;
-    grid-template-columns: repeat(11, 1fr); /* 可以调整列数，例如使用2行11列的布局 */
-    grid-template-rows: repeat(2, 1fr);
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
     gap: 5px;
     width: 100%;
-    max-width: 800px;
+    max-width: 700px;
     margin: 0 auto;
+    aspect-ratio: 7/6;
+    position: relative;
 }
 
 /* 地圖格子樣式 */
@@ -214,10 +216,11 @@ h1, h2, h3 {
     height: 30px;
     border-radius: 50%;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     color: white;
     font-weight: bold;
+    z-index: 10;
     transition: all 0.5s ease;
 }
 
@@ -290,7 +293,15 @@ h1, h2, h3 {
     }
     
     .map-cell {
-        height: 60px;
+        width: 40px;
+        height: 40px;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
     }
 }
 
