@@ -93,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 創建大富翁風格地圖
-// 創建大富翁風格地圖
 function createMonopolyMap() {
     mapContainer.innerHTML = '';
     
@@ -138,6 +137,7 @@ function createMonopolyMap() {
         mapContainer.appendChild(cell);
     }
 }
+
 // 顯示地點詳情彈窗
 function showLocationModal(cellIndex) {
     const cell = cellInfo[cellIndex];
