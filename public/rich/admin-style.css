@@ -1,159 +1,418 @@
-  /* 基礎樣式 - 強烈建議移至 admin-style.css */
-  :root {
-    /* CSS 變數，用於即時預覽，設定初始/預設值 */
-    --template-page-bg-color: #f5f5f5;
-    --template-primary-text-color: #333;
-    --template-primary-font-family: 'Microsoft JhengHei', sans-serif;
-    --template-header-bg-color: #4CAF50;
-    --template-header-text-color: #FFFFFF;
-    --template-room-info-color: #FFFFFF;
-    --template-board-border-color: #4CAF50;
-    --template-board-border-width: 2px;
-    --template-center-bg-color: #e8f5e9;
-    --template-center-image-url: none; /* 預設無圖片 */
-    --template-cell-default-bg: #FFFFFF;
-    --template-cell-default-border-color: #4CAF50;
-    --template-cell-default-border-width: 1px;
-    --template-cell-title-text-color: #333333;
-    --template-cell-number-text-color: #777777;
-    --template-cell-hover-bg-color: #e8f5e9;
-    --template-cell-hover-border-color: #3e8e41;
-    --template-modal-header-bg-color: #4CAF50; /* 彈窗頭部預設 */
-     /* ... (可為模板編輯器中所有可預覽的樣式添加變數) ... */
-}
+/* 移動版優化樣式 - 添加到現有的 admin-style.css 中 */
 
-body { font-family: var(--template-primary-font-family); padding: 15px; line-height: 1.6; background-color: var(--template-page-bg-color); color: var(--template-primary-text-color); }
-.admin-container { max-width: 1100px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-h1, h2 { text-align: center; margin-bottom: 20px; color: #333; }
-h2 { font-size: 1.5rem; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
-hr { border: none; border-top: 1px solid #eee; margin: 30px 0; }
-.hidden { display: none !important; }
-fieldset { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px 20px; border-radius: 5px; }
-legend { font-weight: bold; padding: 0 10px; font-size: 1.1rem; color: #555;}
-.form-group { margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;}
-.form-group label { min-width: 180px; text-align: right; font-size: 14px; color: #444; margin-right: 5px;}
-.form-group input[type="text"],
-.form-group input[type="url"],
-.form-group textarea { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 250px; }
-.form-group textarea { min-height: 50px; }
-.form-group input[type="color"] { border: 1px solid #ccc; padding: 0; height: 30px; width: 50px; vertical-align: middle; cursor: pointer; border-radius: 3px;}
-.form-group button { padding: 3px 8px; font-size: 12px; cursor: pointer; }
-.player-color-group { display: flex; align-items: center; gap: 5px; }
-.player-color-group label { margin-bottom: 0; }
-.player-color-group input[type="color"] { width: 30px; height: 30px; }
-button { padding: 10px 18px; cursor: pointer; margin: 5px; border-radius: 4px; border: 1px solid #ccc; background-color: #f0f0f0; font-size: 14px; }
-button:hover { background-color: #e0e0e0; }
-.btn-primary { background-color: #007bff; color: white; border-color: #007bff; }
-.btn-primary:hover { background-color: #0056b3; }
-.btn-danger { background-color: #dc3545; color: white; border-color: #dc3545; }
-.btn-danger:hover { background-color: #c82333; }
-#status-message { margin-top: 15px; padding: 12px; border-radius: 4px; text-align: center; font-weight: bold; }
-.status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-/* Admin 地圖網格預覽樣式 */
-#admin-map-grid-container {
-    width: 100%;
-    max-width: 700px; /* 加大預覽區 */
-    aspect-ratio: 1 / 1;
-    margin: 25px auto;
-    padding: 10px; /* 留出邊框空間 */
-    border: var(--template-board-border-width, 2px) solid var(--template-board-border-color, #ccc); /* 使用 CSS 變數 */
-    background-color: var(--template-center-bg-color, #eee); /* 使用 CSS 變數 */
-    box-sizing: border-box;
-    position: relative; /* 為了中央圖片定位 */
-    border-radius: 8px; /* 圓角 */
-    overflow: hidden; /* 隱藏超出邊界的內容 */
+/* 通用移動版響應式設置 */
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+        margin: 0;
+        background-color: #f5f5f5;
+        font-size: 14px;
+    }
+    
+    .admin-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 10px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    
+    h1 {
+        font-size: 1.6rem;
+        padding: 10px 5px;
+        margin-bottom: 15px;
+        line-height: 1.3;
+    }
+    
+    h2 {
+        font-size: 1.3rem;
+        margin-top: 20px;
+        text-align: left;
+        padding-left: 10px;
+    }
+    
+    /* 模板選擇區域優化 */
+    .template-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #template-select {
+        width: 100%;
+        height: 44px;
+        font-size: 16px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: white;
+    }
+    
+    #load-template-btn, #new-template-btn {
+        width: 100%;
+        height: 44px;
+        font-size: 16px;
+        padding: 10px;
+        margin: 5px 0;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+    
+    #load-template-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+    }
+    
+    #new-template-btn {
+        background-color: #2196F3;
+        color: white;
+        border: none;
+    }
+    
+    /* 表單字段優化 */
+    .form-group {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 18px;
+        padding: 0 8px;
+    }
+    
+    .form-group label {
+        min-width: 100%;
+        width: 100%;
+        text-align: left;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #444;
+        font-size: 15px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="url"],
+    .form-group textarea {
+        width: 100%;
+        min-width: unset;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+    
+    .form-group input[type="color"] {
+        width: 40px;
+        height: 40px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+    }
+    
+    /* 顏色輸入組合優化 */
+    .color-input-group {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .color-input-group input[type="color"] {
+        flex-shrink: 0;
+    }
+    
+    .color-input-group button {
+        flex-grow: 1;
+        height: 40px;
+        background-color: #f1f1f1;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    
+    /* 玩家顏色組優化 */
+    .player-color-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    
+    .player-color-group label {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .player-color-group input[type="color"] {
+        width: 40px;
+        height: 40px;
+        margin: 0 5px;
+    }
+    
+    /* Fieldset 折疊樣式 */
+    fieldset {
+        margin-bottom: 15px;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+    }
+    
+    fieldset fieldset {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f9f9f9;
+    }
+    
+    legend {
+        font-size: 16px;
+        padding: 0 10px;
+        font-weight: bold;
+    }
+    
+    .toggle-icon {
+        display: inline-block;
+        width: 20px;
+        text-align: center;
+        transition: transform 0.3s;
+    }
+    
+    /* 管理地圖網格優化 */
+    #admin-map-grid-container {
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 1 / 1;
+        margin: 15px auto;
+        padding: 5px;
+        border-width: 3px;
+        border-radius: 10px;
+    }
+    
+    .admin-map-cell {
+        min-height: 40px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .admin-cell-title {
+        font-size: 10px;
+        padding-top: 2px;
+    }
+    
+    .admin-cell-index {
+        font-size: 9px;
+    }
+    
+    /* 自適應網格大小 */
+    @media (max-width: 480px) {
+        .admin-cell-title {
+            font-size: 9px;
+        }
+        
+        .admin-cell-index {
+            font-size: 8px;
+        }
+    }
+    
+    /* 按鈕樣式調整 */
+    #save-template-btn {
+        width: 100%;
+        padding: 16px;
+        font-size: 18px;
+        margin: 20px 0 10px 0;
+        border-radius: 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    #delete-template-btn {
+        width: 100%;
+        margin: 10px 0;
+        padding: 14px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+    
+    /* 模態框優化 */
+    .modal-content {
+        width: 90%;
+        max-width: 450px;
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .modal-header {
+        padding-bottom: 15px;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px;
+        text-align: left;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .close-modal-btn {
+        font-size: 24px;
+        background-color: #f1f1f1;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-body {
+        padding: 10px 0;
+    }
+    
+    .modal-body .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .modal-body input[type="text"], 
+    .modal-body textarea {
+        font-size: 16px;
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .modal-body .color-input-group {
+        margin-top: 10px;
+    }
+    
+    .modal-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-footer button {
+        width: 100%;
+        height: 44px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+    
+    #save-modal-changes-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+    }
+    
+    /* 狀態訊息優化 */
+    #status-message {
+        margin: 15px 0;
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 15px;
+        line-height: 1.4;
+        text-align: left;
+    }
+    
+    .status-message .action-btn {
+        display: block;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #0056b3;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    /* 浮動工具欄 */
+    .mobile-toolbar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 900;
+    }
+    
+    .mobile-toolbar button {
+        width: 50px;
+        height: 50px;
+        border-radius: 25px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    
+    /* 移動設備提示 */
+    .mobile-tip {
+        background-color: #e8f5e9;
+        border-left: 4px solid #4CAF50;
+        padding: 12px;
+        margin: 15px 5px;
+        border-radius: 5px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    /* 高亮按鈕動畫 */
+    .highlight-btn {
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+        100% { transform: scale(1); }
+    }
+    
+    /* 加載動畫 */
+    #page-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        transition: opacity 0.3s;
+    }
+    
+    #page-loader.fade-out {
+        opacity: 0;
+    }
+    
+    .loader-content {
+        text-align: center;
+    }
+    
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #4CAF50;
+        border-radius: 50%;
+        margin: 0 auto 15px;
+        animation: spin 1s linear infinite;
+    }
+    
+    .loader-text {
+        color: #4CAF50;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 }
-#admin-map-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(7, 1fr);
-    width: 100%;
-    height: 100%;
-    gap: 3px; /* 格子間隙 */
-}
- #admin-map-center-image { /* 中央圖片預覽 */
-    position: absolute;
-    top: calc(100% / 7);
-    left: calc(100% / 7);
-    width: calc(100% * 5 / 7);
-    height: calc(100% * 5 / 7);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    pointer-events: none;
-    background-image: var(--template-center-image-url, none); /* 使用 CSS 變數 */
-    z-index: 1; /* 在格子背景之上 */
-}
-.admin-map-cell {
-    border: var(--template-cell-default-border-width, 1px) solid var(--template-cell-default-border-color, #aaa); /* 使用 CSS 變數 */
-    background-color: var(--template-cell-default-bg, #fff); /* 使用 CSS 變數 */
-    color: var(--template-cell-title-text-color, #333); /* 標題顏色 */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* 分散對齊 */
-    align-items: center;
-    text-align: center;
-    padding: 4px 2px; /* 調整內邊距 */
-    box-sizing: border-box;
-    cursor: pointer;
-    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease, border-color 0.2s ease;
-    overflow: hidden;
-    position: relative;
-    min-height: 60px; /* 確保格子有足夠高度 */
-}
-.admin-map-cell:hover {
-    transform: scale(1.03);
-    border-color: var(--template-cell-hover-border-color, #333);
-    background-color: var(--template-cell-hover-bg-color, #eee);
-    z-index: 10;
-    box-shadow: 0 0 8px rgba(0,0,0,0.2);
-}
-.admin-cell-title {
-    font-weight: bold;
-    font-size: 11px; /* 稍大字體 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: calc(100% - 4px);
-    margin-bottom: 2px; /* 標題和描述間距 */
-    line-height: 1.2;
-}
-.admin-cell-desc {
-    font-size: 9px;
-    color: #555; /* 描述文字顏色 */
-    line-height: 1.3;
-    overflow: hidden;
-    display: -webkit-box;
-     -webkit-line-clamp: 2; /* 最多顯示 2 行 */
-    -webkit-box-orient: vertical;
-    text-overflow: ellipsis;
-    width: calc(100% - 4px);
-    flex-grow: 1; /* 佔據剩餘空間 */
-    margin-bottom: 12px; /* 底部留空間給索引 */
-    word-break: break-all; /* 允許在任意字符處換行 */
-}
-.admin-cell-index {
-    font-size: 9px;
-    color: var(--template-cell-number-text-color, #777); /* 使用 CSS 變數 */
-    position: absolute;
-    bottom: 2px;
-    right: 3px;
-    font-weight: bold;
-}
-
-/* 彈窗樣式 */
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal.hidden { display: none; }
-.modal-content { background-color: white; padding: 25px; border-radius: 8px; min-width: 450px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 20px; }
-.modal-header h2 { margin: 0; font-size: 1.25rem; }
-.close-modal-btn { font-size: 26px; cursor: pointer; color: #6c757d; border: none; background: none; font-weight: bold; line-height: 1; padding: 0 5px;}
-.close-modal-btn:hover { color: #343a40; }
-.modal-body .form-group { margin-bottom: 18px; flex-wrap: wrap;}
-.modal-body label { min-width: 180px; margin-bottom: 5px; font-weight: bold; font-size: 14px;}
-.modal-body input[type="text"], .modal-body textarea { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
-.modal-body textarea { min-height: 80px; resize: vertical; }
-.modal-body input[type="color"] { margin-right: 5px; }
-.modal-footer { text-align: right; padding-top: 20px; border-top: 1px solid #dee2e6; margin-top: 20px; }
