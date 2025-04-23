@@ -2,7 +2,7 @@
 
 // 地圖格子資訊 - 每個格子有標題和描述
 // game.js
-const cellInfo = [
+let cellInfo = [
     { title: "起點", description: "每經過起點可以獲得一次獎勵。" },
     { title: "台北", description: "台灣的首都，這裡有著名的台北101和夜市文化。" },
     { title: "機會", description: "抽取一張機會卡，可能帶來好運或厄運。" },
