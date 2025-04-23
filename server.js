@@ -2349,7 +2349,7 @@ walkMapAdminRouter.put('/cells', async (req, res) => {
             ]);
             updatedCount += result.rowCount;
         }
-
+  
         await client.query('COMMIT');
         console.log(`[API PUT /admin/walk_map/cells] Updated ${updatedCount} cells.`);
         res.status(200).json({ success: true, message: `Successfully updated ${updatedCount} cells.` });
