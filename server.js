@@ -393,6 +393,19 @@ let currentPosition = gameState.players[playerId].position;
 let newPosition;
 // ★★★ 这里的关键是确保使用正确的mapLoopSize ★★★
 const mapSize = gameState.mapLoopSize || 42; // 确保使用42而不是默认的10
+console.log(`计算移动: 玩家 ${playerId}, 当前位置 ${currentPosition}, 方向 ${direction}, 地图大小 ${mapSize}`);
+
+
+
+
+
+
+
+
+
+
+
+
 
 if (direction === 'forward') {
     newPosition = (currentPosition + 1) % mapSize;
@@ -402,7 +415,7 @@ if (direction === 'forward') {
     console.warn(`[WS Simple Walker Move] 无效的移动方向: ${direction}`);
     return; // 忽略无效方向
 }
-
+console.log(`计算结果: 新位置 ${newPosition}`);
             // 4. 更新資料庫中的玩家位置
             console.log(`[WS Simple Walker Move] Updating position for ${playerId} in ${roomId} from ${currentPosition} to ${newPosition}`);
             const updatedRoomResult = await dbClient.updatePlayerPosition(roomId, playerId, newPosition);
@@ -416,6 +429,12 @@ if (direction === 'forward') {
             // 5. 獲取更新後的完整狀態並廣播
             const latestGameState = updatedRoomResult.game_state;
             const latestRoomName = updatedRoomResult.room_name; // 確保返回了 room_name
+
+
+// 在服务器端，当收到移动命令时记录日志
+console.log(`玩家移动: 当前位置 ${currentPosition} -> 新位置 ${newPosition}, 地图大小: ${mapSize}`);
+
+
 
             console.log(`[WS Simple Walker Move] Player ${playerId} moved to ${newPosition}. Broadcasting update.`);
             broadcastToSimpleWalkerRoom(roomId, {

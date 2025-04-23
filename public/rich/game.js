@@ -282,10 +282,19 @@ function updatePlayersList() {
         colorIndex++;
     });
 }
-// 更新玩家位置标记
+
+
+
+
+
+
+// 修改updatePlayerMarkers函数
 function updatePlayerMarkers(oldState) {
     // 清空玩家容器
     playersContainer.innerHTML = '';
+    
+    // 获取所有格子
+    const cells = document.querySelectorAll('.map-cell');
     
     // 为每个玩家创建标记
     let colorIndex = 1;
@@ -300,20 +309,25 @@ function updatePlayerMarkers(oldState) {
         marker.textContent = player.name.charAt(0).toUpperCase();
         marker.title = player.name;
         
-        // 计算位置
+        // 获取正确的格子索引和元素
         const position = player.position;
-        const cell = document.getElementById(`cell-${position}`);
+        const cellId = `cell-${position}`;
+        const cell = document.getElementById(cellId);
         
         if (cell) {
-            const cellRect = cell.getBoundingClientRect();
-            const containerRect = playersContainer.getBoundingClientRect();
+            // 获取格子的位置信息
+            const rect = cell.getBoundingClientRect();
+            const mapRect = mapContainer.getBoundingClientRect();
             
-            // 计算相对于容器的位置
+            // 计算相对位置（相对于地图容器）
             const left = cell.offsetLeft + (cell.offsetWidth / 2) - 15;
             const top = cell.offsetTop + (cell.offsetHeight / 2) - 15;
             
             marker.style.left = `${left}px`;
             marker.style.top = `${top}px`;
+            
+            // 记录日志，帮助调试
+            console.log(`玩家 ${player.name} 位置: ${position}, 坐标: (${left}, ${top}), 格子ID: ${cellId}`);
             
             // 如果位置变化了，添加动画效果
             if (oldPlayer && oldPlayer.position !== player.position) {
@@ -322,6 +336,8 @@ function updatePlayerMarkers(oldState) {
                     marker.classList.remove('player-moving');
                 }, 500);
             }
+        } else {
+            console.error(`找不到格子: cell-${position}`);
         }
         
         playersContainer.appendChild(marker);
@@ -331,6 +347,12 @@ function updatePlayerMarkers(oldState) {
         if (colorIndex > 5) colorIndex = 1;
     }
 }
+
+
+
+
+
+
 
 // 發送移動命令
 function sendMoveCommand(direction) {
