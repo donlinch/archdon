@@ -6,247 +6,144 @@
     <title>Simple Walker - 風格模板與地圖管理</title>
     <!-- 你需要創建 admin-style.css 來美化介面 -->
     <link rel="stylesheet" href="admin-style.css">
-    <style>
-        /* 基礎樣式，建議移到 admin-style.css */
-        body { font-family: sans-serif; padding: 15px; }
-        .admin-container { max-width: 1000px; margin: 0 auto; }
-        .hidden { display: none !important; }
-        fieldset { margin-bottom: 15px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; }
-        legend { font-weight: bold; padding: 0 5px; }
-        .form-group { margin-bottom: 10px; display: flex; align-items: center; gap: 10px;}
-        .form-group label { min-width: 150px; text-align: right; }
-        .form-group input[type="text"],
-        .form-group input[type="url"],
-        .form-group textarea { flex-grow: 1; padding: 5px; border: 1px solid #ccc; border-radius: 3px; }
-         .form-group input[type="color"] { border: none; padding: 0; height: 25px; width: 40px; vertical-align: middle; cursor: pointer;}
-        .form-group button { padding: 3px 8px; font-size: 12px; }
-        .player-color-group input[type="color"] { margin-right: 5px; }
-        button { padding: 8px 15px; cursor: pointer; margin: 5px; border-radius: 4px; border: 1px solid #ccc; }
-        .btn-primary { background-color: #007bff; color: white; border-color: #007bff; }
-        .btn-danger { background-color: #dc3545; color: white; border-color: #dc3545; }
-        #status-message { margin-top: 15px; padding: 10px; border-radius: 4px; }
-        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-        /* Admin Map Grid Styles (建議移到 admin-style.css) */
-        #admin-map-grid-container { width: 100%; max-width: 500px; aspect-ratio: 1 / 1; margin: 20px auto; padding: 5px; background-color: #eee; border: 1px solid #ccc; box-sizing: border-box; }
-        #admin-map-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(7, 1fr); width: 100%; height: 100%; gap: 2px; }
-        .admin-map-cell { border: 1px solid #aaa; background-color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 9px; padding: 1px; box-sizing: border-box; cursor: pointer; transition: transform 0.1s ease; overflow: hidden; position: relative; }
-        .admin-map-cell:hover { transform: scale(1.05); border-color: #333; z-index: 10; }
-        .admin-cell-index { font-size: 8px; color: #555; position: absolute; bottom: 1px; right: 2px;}
-        .admin-cell-title { font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: calc(100% - 4px); margin-top: 2px;}
-
-        /* Modal Styles (建議移到 admin-style.css) */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background-color: white; padding: 20px; border-radius: 8px; min-width: 400px; max-width: 90%; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-        .modal-header h2 { margin: 0; }
-        .close-modal-btn { font-size: 24px; cursor: pointer; color: #aaa; border: none; background: none;}
-        .modal-body .form-group { margin-bottom: 15px; flex-wrap: wrap;} /* Allow wrap */
-        .modal-body label { min-width: 180px; margin-bottom: 5px; }
-        .modal-body input[type="text"], .modal-body textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .modal-body textarea { min-height: 80px; resize: vertical; }
-        .modal-footer { text-align: right; padding-top: 15px; border-top: 1px solid #eee; margin-top: 15px; }
-    </style>
+    
 </head>
-<body>
-    <div class="admin-container">
-        <h1>Simple Walker - 風格模板與地圖管理</h1>
 
-        <!-- Template Selection -->
-        <div class="template-selector">
-            <label for="template-select">選擇模板:</label>
-            <select id="template-select">
-                <option value="">-- 請選擇或新增 --</option>
-            </select>
-            <button id="load-template-btn">載入編輯</button>
-            <button id="new-template-btn">新增模板</button>
-        </div>
-        <hr>
-
-        <!-- Template Editor -->
-        <div id="template-editor" class="hidden">
-            <h2>編輯模板樣式</h2>
-            <div class="form-group">
-                <label for="template-id">模板 ID (不可修改):</label>
-                <input type="text" id="template-id" readonly>
+    <body>
+        <div class="admin-container">
+            <h1>Simple Walker - 風格模板與地圖管理</h1>
+    
+            <!-- 模板選擇區 -->
+            <div class="template-selector">
+                <label for="template-select">選擇模板:</label>
+                <select id="template-select">
+                    <option value="">-- 請選擇或新增 --</option>
+                    <!-- JS 載入選項 -->
+                </select>
+                <button id="load-template-btn">載入編輯</button>
+                <button id="new-template-btn">新增模板</button>
             </div>
-            <div class="form-group">
-                <label for="template-name">模板名稱:</label>
-                <input type="text" id="template-name" placeholder="例如：經典綠">
-            </div>
-             <div class="form-group">
-                <label for="template-description">模板描述:</label>
-                <textarea id="template-description" rows="2"></textarea>
-            </div>
-
-            <fieldset>
-                <legend>[全局樣式 / General]</legend>
-                <div class="form-group"> <label for="general-pageBgColor">頁面背景色:</label> <input type="color" id="general-pageBgColor"> </div>
-                <div class="form-group"> <label for="general-primaryTextColor">主要文字顏色:</label> <input type="color" id="general-primaryTextColor"> </div>
-                <div class="form-group"> <label for="general-primaryFontFamily">主要字體:</label> <input type="text" id="general-primaryFontFamily" placeholder="例如: 'Microsoft JhengHei', sans-serif"> </div>
-            </fieldset>
-
-            <fieldset>
-                <legend>[遊戲標題區 / Header]</legend>
-                <div class="form-group"> <label for="header-headerBgColor">標題背景色:</label> <input type="color" id="header-headerBgColor"> </div>
-                <div class="form-group"> <label for="header-headerTextColor">標題文字顏色:</label> <input type="color" id="header-headerTextColor"> </div>
-                <div class="form-group"> <label for="header-roomInfoColor">房間資訊文字顏色:</label> <input type="color" id="header-roomInfoColor"> </div>
-            </fieldset>
-
-            <fieldset>
-                <legend>[遊戲地圖區 / Game Board]</legend>
-                <div class="form-group"> <label for="board-borderColor">地圖外框線顏色:</label> <input type="color" id="board-borderColor"> </div>
-                <div class="form-group"> <label for="board-borderWidth">地圖外框線寬度:</label> <input type="text" id="board-borderWidth" placeholder="例如: 2px"> </div>
-                <div class="form-group"> <label for="board-centerBgColor">地圖中央背景色:</label> <input type="color" id="board-centerBgColor"> </div>
-                <div class="form-group"> <label for="board-centerImageUrl">地圖中央圖片 URL:</label> <input type="url" id="board-centerImageUrl" placeholder="https://..."> </div>
-            </fieldset>
-
-             <fieldset>
-                <legend>[地圖格子 / Map Cell]</legend>
-                <div class="form-group"> <label for="mapCell-defaultBgColor">預設背景色:</label> <input type="color" id="mapCell-defaultBgColor"> </div>
-                <div class="form-group"> <label for="mapCell-defaultBorderColor">預設邊框顏色:</label> <input type="color" id="mapCell-defaultBorderColor"> </div>
-                <div class="form-group"> <label for="mapCell-defaultBorderWidth">預設邊框寬度:</label> <input type="text" id="mapCell-defaultBorderWidth" placeholder="例如: 1px"> </div>
-                <div class="form-group"> <label for="mapCell-titleTextColor">標題文字顏色:</label> <input type="color" id="mapCell-titleTextColor"> </div>
-                <div class="form-group"> <label for="mapCell-numberTextColor">編號文字顏色:</label> <input type="color" id="mapCell-numberTextColor"> </div>
-                <div class="form-group"> <label for="mapCell-hoverBgColor">滑鼠懸停背景色:</label> <input type="color" id="mapCell-hoverBgColor"> </div>
-                <div class="form-group"> <label for="mapCell-hoverBorderColor">滑鼠懸停邊框色:</label> <input type="color" id="mapCell-hoverBorderColor"> </div>
-            </fieldset>
-
-             <fieldset>
-                <legend>[玩家標記 / Player Marker]</legend>
-                <div class="form-group"> <label for="playerMarker-shape">標記形狀 (border-radius):</label> <input type="text" id="playerMarker-shape" placeholder="例如: 50%"> </div>
-                <div class="form-group"> <label for="playerMarker-textColor">標記文字顏色:</label> <input type="color" id="playerMarker-textColor"> </div>
-                <!-- 邊框顏色通常由玩家顏色決定，可選 -->
-                 <div class="form-group"> <label for="playerMarker-boxShadow">標記陰影 (CSS):</label> <input type="text" id="playerMarker-boxShadow" placeholder="例如: 0 2px 4px rgba(0,0,0,0.2)"> </div>
-                <div class="form-group player-color-group">
-                     <label>玩家顏色組 (最多5個):</label>
-                     <input type="color" id="playerMarker-color1">
-                     <input type="color" id="playerMarker-color2">
-                     <input type="color" id="playerMarker-color3">
-                     <input type="color" id="playerMarker-color4">
-                     <input type="color" id="playerMarker-color5">
-                </div>
-            </fieldset>
-
-             <fieldset>
-                <legend>[控制區 / Controller Area]</legend>
-                 <div class="form-group"> <label for="controller-panelBackground">面板背景色:</label> <input type="color" id="controller-panelBackground"> </div>
-                <div class="form-group"> <label for="controller-playerLabelColor">'玩家:' 文字顏色:</label> <input type="color" id="controller-playerLabelColor"> </div>
+            <hr>
+    
+            <!-- 模板編輯器 -->
+            <div id="template-editor" class="hidden">
+                <h2>編輯模板樣式 (修改會即時預覽下方地圖)</h2>
+                <div class="form-group"> <label for="template-id">模板 ID (不可修改):</label> <input type="text" id="template-id" readonly style="background-color:#e9ecef;"> </div>
+                <div class="form-group"> <label for="template-name">模板名稱:</label> <input type="text" id="template-name"> </div>
+                <div class="form-group"> <label for="template-description">模板描述:</label> <textarea id="template-description" rows="2"></textarea> </div>
+    
                 <fieldset>
-                    <legend>控制按鈕 / Control Buttons</legend>
-                    <div class="form-group"> <label for="controller-button-defaultBgColor">預設背景色:</label> <input type="color" id="controller-button-defaultBgColor"> </div>
-                    <div class="form-group"> <label for="controller-button-defaultTextColor">預設文字顏色:</label> <input type="color" id="controller-button-defaultTextColor"> </div>
-                    <div class="form-group"> <label for="controller-button-borderRadius">圓角大小:</label> <input type="text" id="controller-button-borderRadius" placeholder="例如: 5px"> </div>
-                    <div class="form-group"> <label for="controller-button-hoverBgColor">懸停背景色:</label> <input type="color" id="controller-button-hoverBgColor"> </div>
-                    <div class="form-group"> <label for="controller-button-cooldownOpacity">冷卻時不透明度:</label> <input type="text" id="controller-button-cooldownOpacity" placeholder="例如: 0.6"> </div>
-                 </fieldset>
-            </fieldset>
-
-             <fieldset>
-                 <legend>[資訊區 / Info Area]</legend>
-                 <div class="form-group"> <label for="info-panelBackground">面板背景色:</label> <input type="color" id="info-panelBackground"> </div>
-                 <div class="form-group"> <label for="info-sectionTitleColor">區塊標題顏色:</label> <input type="color" id="info-sectionTitleColor"> </div>
-                 <div class="form-group"> <label for="info-playerListText">玩家列表文字顏色:</label> <input type="color" id="info-playerListText"> </div>
-                 <div class="form-group"> <label for="info-staticTextColor">靜態文字顏色:</label> <input type="color" id="info-staticTextColor"> </div>
+                    <legend>[全局樣式]</legend>
+                    <div class="form-group"> <label for="general-pageBgColor">頁面背景色:</label> <input type="color" id="general-pageBgColor"> </div>
+                    <div class="form-group"> <label for="general-primaryTextColor">主要文字顏色:</label> <input type="color" id="general-primaryTextColor"> </div>
+                    <div class="form-group"> <label for="general-primaryFontFamily">主要字體:</label> <input type="text" id="general-primaryFontFamily"> </div>
+                </fieldset>
+                <fieldset>
+                    <legend>[遊戲標題區]</legend>
+                    <div class="form-group"> <label for="header-headerBgColor">標題背景色:</label> <input type="color" id="header-headerBgColor"> </div>
+                    <div class="form-group"> <label for="header-headerTextColor">標題文字色:</label> <input type="color" id="header-headerTextColor"> </div>
+                    <div class="form-group"> <label for="header-roomInfoColor">房間資訊文字色:</label> <input type="color" id="header-roomInfoColor"> </div>
+                </fieldset>
+                <fieldset>
+                    <legend>[遊戲地圖區]</legend>
+                    <div class="form-group"> <label for="board-borderColor">地圖外框線顏色:</label> <input type="color" id="board-borderColor"> </div>
+                    <div class="form-group"> <label for="board-borderWidth">地圖外框線寬度:</label> <input type="text" id="board-borderWidth"> </div>
+                    <div class="form-group"> <label for="board-centerBgColor">地圖中央背景色:</label> <input type="color" id="board-centerBgColor"> </div>
+                    <div class="form-group"> <label for="board-centerImageUrl">地圖中央圖片 URL:</label> <input type="url" id="board-centerImageUrl"> </div>
+                </fieldset>
                  <fieldset>
-                     <legend>離開遊戲按鈕 / Leave Button</legend>
-                    <div class="form-group"> <label for="info-leaveButton-defaultBgColor">預設背景色:</label> <input type="color" id="info-leaveButton-defaultBgColor"> </div>
-                    <div class="form-group"> <label for="info-leaveButton-defaultTextColor">預設文字顏色:</label> <input type="color" id="info-leaveButton-defaultTextColor"> </div>
-                 </fieldset>
-            </fieldset>
-
-             <fieldset>
-                <legend>[連線狀態 / Connection Status]</legend>
-                <div class="form-group"> <label for="connection-onlineBgColor">線上背景色:</label> <input type="color" id="connection-onlineBgColor"> </div>
-                <div class="form-group"> <label for="connection-onlineTextColor">線上文字顏色:</label> <input type="color" id="connection-onlineTextColor"> </div>
-                <div class="form-group"> <label for="connection-offlineBgColor">離線背景色:</label> <input type="color" id="connection-offlineBgColor"> </div>
-                <div class="form-group"> <label for="connection-offlineTextColor">離線文字顏色:</label> <input type="color" id="connection-offlineTextColor"> </div>
-                <div class="form-group"> <label for="connection-connectingBgColor">連接中背景色:</label> <input type="color" id="connection-connectingBgColor"> </div>
-                <div class="form-group"> <label for="connection-connectingTextColor">連接中文字顏色:</label> <input type="color" id="connection-connectingTextColor"> </div>
-            </fieldset>
-
-             <fieldset>
-                <legend>[地點彈窗 / Location Modal]</legend>
-                 <div class="form-group"> <label for="modal-overlayBgColor">遮罩背景色 (rgba):</label> <input type="text" id="modal-overlayBgColor" placeholder="例如: rgba(0, 0, 0, 0.7)"> </div>
-                 <div class="form-group"> <label for="modal-contentBgColor">彈窗內容背景色:</label> <input type="color" id="modal-contentBgColor"> </div>
-                 <div class="form-group"> <label for="modal-headerBgColor">彈窗頭部背景色 (預設):</label> <input type="color" id="modal-headerBgColor"> </div>
-                 <div class="form-group"> <label for="modal-headerTextColor">彈窗頭部文字色:</label> <input type="color" id="modal-headerTextColor"> </div>
-                 <div class="form-group"> <label for="modal-bodyTextColor">彈窗內文文字色:</label> <input type="color" id="modal-bodyTextColor"> </div>
-            </fieldset>
-
-            <button id="save-template-btn" class="btn-primary">儲存模板樣式</button>
-            <button id="delete-template-btn" class="btn-danger hidden">刪除此模板</button>
+                    <legend>[地圖格子]</legend>
+                    <div class="form-group"> <label for="mapCell-defaultBgColor">預設背景色:</label> <input type="color" id="mapCell-defaultBgColor"> </div>
+                    <div class="form-group"> <label for="mapCell-defaultBorderColor">預設邊框顏色:</label> <input type="color" id="mapCell-defaultBorderColor"> </div>
+                    <div class="form-group"> <label for="mapCell-defaultBorderWidth">預設邊框寬度:</label> <input type="text" id="mapCell-defaultBorderWidth"> </div>
+                    <div class="form-group"> <label for="mapCell-titleTextColor">標題文字色:</label> <input type="color" id="mapCell-titleTextColor"> </div>
+                    <div class="form-group"> <label for="mapCell-numberTextColor">編號文字色:</label> <input type="color" id="mapCell-numberTextColor"> </div>
+                    <div class="form-group"> <label for="mapCell-hoverBgColor">懸停背景色:</label> <input type="color" id="mapCell-hoverBgColor"> </div>
+                    <div class="form-group"> <label for="mapCell-hoverBorderColor">懸停邊框色:</label> <input type="color" id="mapCell-hoverBorderColor"> </div>
+                </fieldset>
+                 <fieldset>
+                    <legend>[玩家標記]</legend>
+                    <div class="form-group"> <label for="playerMarker-shape">形狀 (border-radius):</label> <input type="text" id="playerMarker-shape"> </div>
+                    <div class="form-group"> <label for="playerMarker-textColor">文字色:</label> <input type="color" id="playerMarker-textColor"> </div>
+                    <div class="form-group"> <label for="playerMarker-boxShadow">陰影 (CSS):</label> <input type="text" id="playerMarker-boxShadow"> </div>
+                    <div class="form-group player-color-group"> <label>玩家顏色組:</label> <div> <input type="color" id="playerMarker-color1"> <input type="color" id="playerMarker-color2"> <input type="color" id="playerMarker-color3"> <input type="color" id="playerMarker-color4"> <input type="color" id="playerMarker-color5"> </div> </div>
+                </fieldset>
+                <fieldset>
+                    <legend>[控制區]</legend>
+                     <div class="form-group"> <label for="controller-panelBackground">面板背景色:</label> <input type="color" id="controller-panelBackground"> </div>
+                     <div class="form-group"> <label for="controller-playerLabelColor">'玩家:' 文字色:</label> <input type="color" id="controller-playerLabelColor"> </div>
+                     <fieldset> <legend>控制按鈕</legend> <div class="form-group"> <label for="controller-button-defaultBgColor">背景色:</label> <input type="color" id="controller-button-defaultBgColor"> </div> <div class="form-group"> <label for="controller-button-defaultTextColor">文字色:</label> <input type="color" id="controller-button-defaultTextColor"> </div> <div class="form-group"> <label for="controller-button-borderRadius">圓角:</label> <input type="text" id="controller-button-borderRadius"> </div> <div class="form-group"> <label for="controller-button-hoverBgColor">懸停背景色:</label> <input type="color" id="controller-button-hoverBgColor"> </div> <div class="form-group"> <label for="controller-button-cooldownOpacity">冷卻透明度:</label> <input type="text" id="controller-button-cooldownOpacity"> </div> </fieldset>
+                </fieldset>
+                <fieldset>
+                     <legend>[資訊區]</legend>
+                     <div class="form-group"> <label for="info-panelBackground">面板背景色:</label> <input type="color" id="info-panelBackground"> </div>
+                     <div class="form-group"> <label for="info-sectionTitleColor">區塊標題色:</label> <input type="color" id="info-sectionTitleColor"> </div>
+                     <div class="form-group"> <label for="info-playerListText">玩家列表文字色:</label> <input type="color" id="info-playerListText"> </div>
+                     <div class="form-group"> <label for="info-staticTextColor">靜態文字色:</label> <input type="color" id="info-staticTextColor"> </div>
+                     <fieldset> <legend>離開按鈕</legend> <div class="form-group"> <label for="info-leaveButton-defaultBgColor">背景色:</label> <input type="color" id="info-leaveButton-defaultBgColor"> </div> <div class="form-group"> <label for="info-leaveButton-defaultTextColor">文字色:</label> <input type="color" id="info-leaveButton-defaultTextColor"> </div> </fieldset>
+                </fieldset>
+                <fieldset>
+                    <legend>[地點彈窗 (預設)]</legend>
+                     <div class="form-group"> <label for="modal-overlayBgColor">遮罩背景色(rgba):</label> <input type="text" id="modal-overlayBgColor"> </div>
+                     <div class="form-group"> <label for="modal-contentBgColor">內容背景色:</label> <input type="color" id="modal-contentBgColor"> </div>
+                     <div class="form-group"> <label for="modal-headerBgColor">頭部背景色:</label> <input type="color" id="modal-headerBgColor"> </div>
+                     <div class="form-group"> <label for="modal-headerTextColor">頭部文字色:</label> <input type="color" id="modal-headerTextColor"> </div>
+                     <div class="form-group"> <label for="modal-bodyTextColor">內文文字色:</label> <input type="color" id="modal-bodyTextColor"> </div>
+                </fieldset>
+    
+                <button id="save-template-btn" class="btn-primary">儲存模板樣式</button>
+                <button id="delete-template-btn" class="btn-danger hidden">刪除此模板</button>
+            </div>
+            <hr>
+    
+            <!-- 地圖格子編輯器 -->
+            <div id="cell-editor">
+                <h2>編輯地圖格子 (點擊下方格子進行編輯)</h2>
+                <p>(格子顏色設定將覆蓋模板預設值，清除顏色則使用模板預設)</p>
+                <div id="admin-map-grid-container">
+                    <div id="admin-map-grid">
+                        <!-- JS 動態生成 7x7 預覽格子 -->
+                    </div>
+                     <!-- 中央圖片預覽層 -->
+                     <div id="admin-map-center-image"></div>
+                </div>
+                <button id="save-all-cell-data-btn" class="btn-primary">儲存所有格子變更</button>
+            </div>
+    
+            <!-- 狀態訊息 -->
+            <div id="status-message"></div>
         </div>
-        <hr>
-
-        <!-- Map Cell Editor -->
-        <div id="cell-editor">
-            <h2>編輯地圖格子 (點擊下方格子進行編輯)</h2>
-            <p>(格子顏色設定將覆蓋模板預設值，清除顏色則使用模板預設)</p>
-            <div id="admin-map-grid-container">
-                <div id="admin-map-grid">
-                    <!-- JS generates grid here -->
+    
+        <!-- 格子編輯彈窗 -->
+        <div id="cell-edit-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-cell-title-display">編輯格子 <span id="modal-cell-index-display"></span></h2>
+                    <button class="close-modal-btn" onclick="closeCellEditModal()" title="關閉">×</button>
                 </div>
-            </div>
-            <button id="save-all-cell-data-btn" class="btn-primary">儲存所有格子變更</button>
-        </div>
-
-        <!-- Status Message -->
-        <div id="status-message"></div>
-    </div>
-
-    <!-- Cell Edit Modal -->
-    <div id="cell-edit-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-cell-title-display">編輯格子 <span id="modal-cell-index-display"></span></h2>
-                <button class="close-modal-btn" onclick="closeCellEditModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="editing-cell-index">
-                <div class="form-group">
-                    <label for="modal-cell-title-input">標題:</label>
-                    <input type="text" id="modal-cell-title-input">
+                <div class="modal-body">
+                    <input type="hidden" id="editing-cell-index">
+                    <div class="form-group"> <label for="modal-cell-title-input">標題:</label> <input type="text" id="modal-cell-title-input"> </div>
+                    <div class="form-group"> <label for="modal-cell-desc-textarea">內文描述:</label> <textarea id="modal-cell-desc-textarea" rows="4"></textarea> </div>
+                    <hr>
+                    <div class="form-group"> <label for="modal-cell-bg-color-input">格子背景色:</label> <input type="color" id="modal-cell-bg-color-input"> <button onclick="clearColorInput('modal-cell-bg-color-input')">清除 (使用預設)</button> </div>
+                    <div class="form-group"> <label for="modal-modal-header-bg-color-input">地點彈窗頭部背景色:</label> <input type="color" id="modal-modal-header-bg-color-input"> <button onclick="clearColorInput('modal-modal-header-bg-color-input')">清除 (使用預設)</button> </div>
                 </div>
-                <div class="form-group">
-                    <label for="modal-cell-desc-textarea">內文描述:</label>
-                    <textarea id="modal-cell-desc-textarea" rows="4"></textarea>
+                <div class="modal-footer">
+                    <button id="save-modal-changes-btn" class="btn-primary">儲存此格變更</button>
+                    <button onclick="closeCellEditModal()">取消</button>
                 </div>
-                <hr>
-                <div class="form-group">
-                    <label for="modal-cell-bg-color-input">格子背景色:</label>
-                    <input type="color" id="modal-cell-bg-color-input">
-                    <button onclick="clearColorInput('modal-cell-bg-color-input')">清除 (使用預設)</button>
-                </div>
-                 <div class="form-group">
-                    <label for="modal-modal-header-bg-color-input">地點彈窗頭部背景色:</label>
-                    <input type="color" id="modal-modal-header-bg-color-input">
-                    <button onclick="clearColorInput('modal-modal-header-bg-color-input')">清除 (使用預設)</button>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="save-modal-changes-btn" class="btn-primary">儲存此格變更</button>
-                <button onclick="closeCellEditModal()">取消</button>
             </div>
         </div>
-    </div>
-
-    <script src="rich-admin.js"></script>
-    <script>
-        // Simple helper functions for modal interaction
-        function closeCellEditModal() {
-            document.getElementById('cell-edit-modal').classList.add('hidden');
-        }
-        function clearColorInput(inputId) {
-            // Setting value to empty string might work for some browsers,
-            // but it's safer to handle this logic during save.
-            // Let's visually reset to white, and handle null on save.
-            const input = document.getElementById(inputId);
-            input.value = '#ffffff'; // Visually reset
-            // Add a marker or handle this '#ffffff' as null during save in JS
-            input.dataset.cleared = 'true'; // Mark as cleared
-        }
-    </script>
-</body>
-</html>
+    
+        <script src="rich-admin.js"></script>
+        <script>
+            // 全域輔助函數
+            function closeCellEditModal() { document.getElementById('cell-edit-modal').classList.add('hidden'); }
+            function clearColorInput(inputId) {
+                const input = document.getElementById(inputId);
+                if (input) { input.value = '#ffffff'; input.dataset.cleared = 'true'; } // 視覺重置並標記
+            }
+        </script>
+    </body>
+    </html>
