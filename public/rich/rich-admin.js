@@ -1,5 +1,52 @@
  // rich-admin.js - 移動裝置優化版
         document.addEventListener('DOMContentLoaded', () => {
+
+
+
+
+
+
+
+// 添加到 DOMContentLoaded 事件中
+// 為移動設備添加縮放控制功能
+if (isMobile) {
+    const zoomControls = document.createElement('div');
+    zoomControls.className = 'zoom-controls';
+    zoomControls.innerHTML = `
+        <button id="zoom-in" title="放大">+</button>
+        <button id="zoom-out" title="縮小">-</button>
+        <button id="zoom-reset" title="重置">1:1</button>
+    `;
+    
+    const gridSection = document.getElementById('cell-editor');
+    if (gridSection) {
+        gridSection.insertBefore(zoomControls, adminMapGrid.parentElement);
+        
+        let currentZoom = 1.0;
+        
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            currentZoom += 0.1;
+            adminMapGrid.style.transform = `scale(${currentZoom})`;
+            adminMapGrid.style.transformOrigin = 'center';
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            currentZoom = Math.max(0.5, currentZoom - 0.1);
+            adminMapGrid.style.transform = `scale(${currentZoom})`;
+            adminMapGrid.style.transformOrigin = 'center';
+        });
+        
+        document.getElementById('zoom-reset').addEventListener('click', () => {
+            currentZoom = 1.0;
+            adminMapGrid.style.transform = '';
+        });
+    }
+}
+
+
+
+
+
             // --- 添加移動設備檢測 ---
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
@@ -262,25 +309,45 @@
                 const isMobile = window.innerWidth <= 768;
                 
                 if (isMobile) {
-                    // 在移動設備上，使用更適合觸控的大小
+                    // 修改：改變移動設備上的佈局方式
                     gridContainer.style.maxWidth = '100%';
+                    gridContainer.style.overflow = 'auto'; // 添加滾動功能
+                    gridContainer.style.WebkitOverflowScrolling = 'touch'; // 提高iOS滾動性能
                     
-                    // 調整所有單元格的字體大小
+                    // 調整格子大小，使其在手機上更緊湊
                     const cells = document.querySelectorAll('.admin-map-cell');
                     cells.forEach(cell => {
+                        cell.style.minWidth = '40px'; // 減小最小寬度
+                        cell.style.minHeight = '40px'; // 減小最小高度
+                        
                         const title = cell.querySelector('.admin-cell-title');
                         const index = cell.querySelector('.admin-cell-index');
                         
-                        if (title) title.style.fontSize = '10px';
-                        if (index) index.style.fontSize = '9px';
+                        if (title) title.style.fontSize = '8px'; // 更小的字體
+                        if (index) index.style.fontSize = '7px'; // 更小的字體
                     });
+                    
+                    // 修改格子編輯彈窗大小
+                    const modal = document.getElementById('cell-edit-modal');
+                    if (modal) {
+                        const modalContent = modal.querySelector('.modal-content');
+                        if (modalContent) {
+                            modalContent.style.width = '95%';
+                            modalContent.style.maxHeight = '85vh';
+                            modalContent.style.overflow = 'auto';
+                        }
+                    }
                 } else {
                     // 恢復桌面大小
                     gridContainer.style.maxWidth = '700px';
+                    gridContainer.style.overflow = '';
                     
                     // 恢復默認字體大小
                     const cells = document.querySelectorAll('.admin-map-cell');
                     cells.forEach(cell => {
+                        cell.style.minWidth = '';
+                        cell.style.minHeight = '';
+                        
                         const title = cell.querySelector('.admin-cell-title');
                         const index = cell.querySelector('.admin-cell-index');
                         
@@ -823,58 +890,80 @@ function renderAdminGrid() {
     });
     applyGridPositioningCSS();
 }
-
 function applyGridPositioningCSS() {
+    // 檢測是否為移動設備
+    const isMobile = window.innerWidth <= 768;
     const cells = adminMapGrid.querySelectorAll('.admin-map-cell');
-    cells.forEach(cell => {
-        const i = parseInt(cell.dataset.cellIndex);
-        // ★★★ 格子位置設置 ★★★
-        if (i >= 0 && i <= 6) { // Top row (0-6)
-            cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
-        } else if (i >= 7 && i <= 11) { // Right column excluding corner (7-11)
-            cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
-        } else if (i === 12) { // Bottom right corner (12)
-             cell.style.gridArea = `7 / 7 / 8 / 8`;
-        } else if (i >= 13 && i <= 18) { // Bottom row (13-18)
-            cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`; // 調整計算基數
-        } else if (i >= 19 && i <= 23) { // Left column (19-23)
-             cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`; // 調整計算基數
-        }
-    });
-}
-
-function openCellEditModal(index) {
-     if (index < 0 || index >= currentCellInfo.length) {
-         displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-         return;
-     }
-     const cellData = currentCellInfo[index];
-
-    // 更新模態框標題顯示
-    document.getElementById('modal-cell-title-display').textContent = '編輯格子';
-    modalCellIndexDisplay.textContent = index;
-    editingCellIndexInput.value = index;
-    modalCellTitleInput.value = cellData.title || '';
-    modalCellDescTextarea.value = cellData.description || '';
-    modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
-    modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
-    modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
-    modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
-
-    cellEditModal.classList.remove('hidden');
     
-    // 在移動設備上，調整模態框的位置和大小
-    if (window.innerWidth <= 768) {
-        const modalContent = cellEditModal.querySelector('.modal-content');
-        if (modalContent) {
-            modalContent.style.width = '90%';
-            modalContent.style.maxHeight = '80vh';
-            modalContent.style.overflow = 'auto';
-            
-            // 確保輸入框自動聚焦
-            setTimeout(() => modalCellTitleInput.focus(), 100);
-        }
+    if (isMobile) {
+        // 在移動設備上使用更簡單的線性布局
+        adminMapGrid.style.display = 'grid';
+        adminMapGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        adminMapGrid.style.gridAutoRows = 'minmax(50px, auto)';
+        
+        cells.forEach(cell => {
+            // 移除之前的網格位置
+            cell.style.gridArea = '';
+        });
+    } else {
+        // 桌面版使用原始的棋盤布局
+        adminMapGrid.style.display = 'grid';
+        adminMapGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        adminMapGrid.style.gridTemplateRows = 'repeat(7, 1fr)';
+        
+        cells.forEach(cell => {
+            const i = parseInt(cell.dataset.cellIndex);
+            // ★★★ 格子位置設置 ★★★
+            if (i >= 0 && i <= 6) { // Top row (0-6)
+                cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
+            } else if (i >= 7 && i <= 11) { // Right column excluding corner (7-11)
+                cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
+            } else if (i === 12) { // Bottom right corner (12)
+                 cell.style.gridArea = `7 / 7 / 8 / 8`;
+            } else if (i >= 13 && i <= 18) { // Bottom row (13-18)
+                cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`;
+            } else if (i >= 19 && i <= 23) { // Left column (19-23)
+                 cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`;
+            }
+        });
     }
+}
+function openCellEditModal(index) {
+    if (index < 0 || index >= currentCellInfo.length) {
+        displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+        return;
+    }
+    const cellData = currentCellInfo[index];
+
+   // 更新模態框標題顯示
+   document.getElementById('modal-cell-title-display').textContent = '編輯格子';
+   modalCellIndexDisplay.textContent = index;
+   editingCellIndexInput.value = index;
+   modalCellTitleInput.value = cellData.title || '';
+   modalCellDescTextarea.value = cellData.description || '';
+   modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+   modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
+   modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+   modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
+
+   cellEditModal.classList.remove('hidden');
+   
+   // 在移動設備上，調整模態框的位置和大小
+   if (window.innerWidth <= 768) {
+       const modalContent = cellEditModal.querySelector('.modal-content');
+       if (modalContent) {
+           modalContent.style.width = '95%';
+           modalContent.style.maxHeight = '85vh';
+           modalContent.style.overflow = 'auto';
+           modalContent.style.position = 'fixed';
+           modalContent.style.top = '50%';
+           modalContent.style.left = '50%';
+           modalContent.style.transform = 'translate(-50%, -50%)';
+           
+           // 確保輸入框自動聚焦
+           setTimeout(() => modalCellTitleInput.focus(), 100);
+       }
+   }
 }
 
 function saveModalChangesToLocal() {
