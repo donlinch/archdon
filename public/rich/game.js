@@ -1,8 +1,34 @@
-// game.js - Simple Walker 遊戲頁面腳本
+// monopoly-game.js - 大富翁風格遊戲腳本
+
+// 地圖格子資訊 - 每個格子有標題和描述
+const cellInfo = [
+    { title: "起點", description: "每經過起點可以獲得一次獎勵。" },
+    { title: "台北", description: "台灣的首都，這裡有著名的台北101和夜市文化。" },
+    { title: "機會", description: "抽取一張機會卡，可能帶來好運或厄運。" },
+    { title: "台中", description: "台灣中部的大城市，有著舒適的生活步調。" },
+    { title: "繳稅", description: "必須支付所有資產20%的稅款。" },
+    { title: "高鐵", description: "快速交通系統，可以前往任意城市。" },
+    { title: "高雄", description: "台灣南部的港口城市，有壯觀的港口和熱情的氣氛。" },
+    { title: "命運", description: "抽取一張命運卡，看看命運將帶你何方。" },
+    { title: "花蓮", description: "台灣東部的城市，以太魯閣國家公園聞名。" },
+    { title: "台南", description: "台灣古都，有豐富的歷史和美食文化。" },
+    { title: "免費停車", description: "在此休息一回合，不會受到任何影響。" },
+    { title: "墾丁", description: "台灣南端的度假勝地，有美麗的海灘和陽光。" },
+    { title: "機會", description: "抽取一張機會卡，可能帶來好運或厄運。" },
+    { title: "宜蘭", description: "以溫泉和綠色自然風光著稱的城市。" },
+    { title: "罰款", description: "違規停車，支付罰款$150。" },
+    { title: "捷運", description: "便捷的城市交通，移動到前方3格。" },
+    { title: "金門", description: "台灣外島，有獨特的戰地風光和高粱酒。" },
+    { title: "命運", description: "抽取一張命運卡，看看命運將帶你何方。" },
+    { title: "澎湖", description: "美麗的島嶼群，有著澎湖藍的海洋風光。" },
+    { title: "進入醫院", description: "生病了！必須在醫院休養，暫停一回合。" },
+    { title: "綠島", description: "知名的離島，有美麗的海底風光和歷史遺跡。" },
+    { title: "小琉球", description: "台灣西南外海的珊瑚礁島嶼，生態豐富。" },
+];
 
 // 遊戲狀態
 let gameState = {
-    mapLoopSize: 22,  // 修改為 22 格
+    mapLoopSize: 22,  // 22格的環形地圖
     maxPlayers: 5,
     players: {},
     gameStarted: false
@@ -33,6 +59,12 @@ const moveForwardBtn = document.getElementById('move-forward');
 const moveBackwardBtn = document.getElementById('move-backward');
 const leaveGameBtn = document.getElementById('leave-game');
 
+// 彈窗元素
+const modal = document.getElementById('location-modal');
+const locationTitle = document.getElementById('location-title');
+const locationDescription = document.getElementById('location-description');
+const closeModalButtons = document.querySelectorAll('.close-modal, .close-btn');
+
 // 頁面載入時執行
 document.addEventListener('DOMContentLoaded', function() {
     // 獲取URL參數
@@ -50,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function() {
     playerNameDisplay.textContent = playerName;
     roomIdDisplay.textContent = roomId;
     
-    // 創建地圖
-    createGameMap();
+    // 創建大富翁風格地圖
+    createMonopolyMap();
     
     // 連接到WebSocket
     connectWebSocket();
@@ -60,79 +92,62 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// 設置按鈕事件
-function setupEventListeners() {
-    // 移動按鈕
-    moveForwardBtn.addEventListener('click', function() {
-        if (!isConnected || moveForwardBtn.classList.contains('btn-cooldown')) return;
-        
-        sendMoveCommand('forward');
-        applyButtonCooldown(moveForwardBtn);
-    });
-    
-    moveBackwardBtn.addEventListener('click', function() {
-        if (!isConnected || moveBackwardBtn.classList.contains('btn-cooldown')) return;
-        
-        sendMoveCommand('backward');
-        applyButtonCooldown(moveBackwardBtn);
-    });
-    
-    // 離開遊戲按鈕
-    leaveGameBtn.addEventListener('click', function() {
-        if (confirm('確定要離開遊戲嗎？')) {
-            // 清除保存的會話信息
-            sessionStorage.removeItem('currentRoom');
-            sessionStorage.removeItem('playerName');
-            
-            // 關閉WebSocket連接
-            if (ws) {
-                ws.close();
-            }
-            
-            // 返回首頁
-            window.location.href = 'index.html';
-        }
-    });
-    
-    // 窗口關閉時清理
-    window.addEventListener('beforeunload', function() {
-        if (ws) {
-            ws.close();
-        }
-    });
-}
-
-// 創建遊戲地圖 - 改為 22 格的環形地圖
-function createGameMap() {
+// 創建大富翁風格地圖
+function createMonopolyMap() {
     mapContainer.innerHTML = '';
     
     // 總格子數
     const totalCells = 22;
     
-    // 創建 22 個格子的環形地圖
+    // 創建環形地圖格子
     for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'map-cell';
         cell.id = `cell-${i}`;
+        cell.dataset.cellIndex = i;  // 添加索引屬性，用於彈窗顯示
         
-        // 添加定位類別，根據位置決定格子位於環形的哪個部分
-        if (i >= 0 && i <= 6) {
+        // 添加標題
+        const title = document.createElement('div');
+        title.className = 'cell-title';
+        title.textContent = cellInfo[i].title;
+        cell.appendChild(title);
+        
+        // 添加編號
+        const cellNumber = document.createElement('div');
+        cellNumber.className = 'cell-number';
+        cellNumber.textContent = i;
+        cell.appendChild(cellNumber);
+        
+        // 添加格子位置類別，定位格子在環形的位置
+        if (i >= 0 && i <= 7) {
             cell.classList.add('top-row');
-        } else if (i >= 7 && i <= 11) {
+        } else if (i >= 8 && i <= 13) {
             cell.classList.add('right-column');
-        } else if (i >= 12 && i <= 16) {
+        } else if (i >= 14 && i <= 21) {
             cell.classList.add('bottom-row');
         } else {
             cell.classList.add('left-column');
         }
         
-        const cellNumber = document.createElement('span');
-        cellNumber.className = 'map-cell-number';
-        cellNumber.textContent = i;
+        // 添加點擊事件，顯示格子詳情
+        cell.addEventListener('click', function() {
+            showLocationModal(i);
+        });
         
-        cell.appendChild(cellNumber);
         mapContainer.appendChild(cell);
     }
+}
+
+// 顯示地點詳情彈窗
+function showLocationModal(cellIndex) {
+    const cell = cellInfo[cellIndex];
+    
+    // 設置彈窗內容
+    locationTitle.textContent = cell.title;
+    locationDescription.textContent = cell.description;
+    
+    // 顯示彈窗
+    modal.classList.remove('hidden');
 }
 
 // 連接到WebSocket
@@ -173,6 +188,62 @@ function connectWebSocket() {
         console.error('WebSocket錯誤:', error);
         updateConnectionStatus('offline', '連接錯誤');
     };
+}
+
+// 設置按鈕事件
+function setupEventListeners() {
+    // 移動按鈕
+    moveForwardBtn.addEventListener('click', function() {
+        if (!isConnected || moveForwardBtn.classList.contains('btn-cooldown')) return;
+        
+        sendMoveCommand('forward');
+        applyButtonCooldown(moveForwardBtn);
+    });
+    
+    moveBackwardBtn.addEventListener('click', function() {
+        if (!isConnected || moveBackwardBtn.classList.contains('btn-cooldown')) return;
+        
+        sendMoveCommand('backward');
+        applyButtonCooldown(moveBackwardBtn);
+    });
+    
+    // 離開遊戲按鈕
+    leaveGameBtn.addEventListener('click', function() {
+        if (confirm('確定要離開遊戲嗎？')) {
+            // 清除保存的會話信息
+            sessionStorage.removeItem('currentRoom');
+            sessionStorage.removeItem('playerName');
+            
+            // 關閉WebSocket連接
+            if (ws) {
+                ws.close();
+            }
+            
+            // 返回首頁
+            window.location.href = 'index.html';
+        }
+    });
+    
+    // 關閉彈窗按鈕
+    closeModalButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            modal.classList.add('hidden');
+        });
+    });
+    
+    // 點擊彈窗外區域關閉彈窗
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+    
+    // 窗口關閉時清理
+    window.addEventListener('beforeunload', function() {
+        if (ws) {
+            ws.close();
+        }
+    });
 }
 
 // 處理收到的WebSocket消息
@@ -250,7 +321,10 @@ function updatePlayersList() {
     playerIds.forEach(id => {
         const player = gameState.players[id];
         const li = document.createElement('li');
-        li.textContent = `${player.name} (位置: ${player.position})`;
+        
+        // 添加玩家位置的地點名稱
+        const locationName = cellInfo[player.position].title;
+        li.textContent = `${player.name} (${locationName})`;
         li.style.borderColor = getPlayerColor(colorIndex);
         
         // 標記當前玩家
@@ -264,51 +338,16 @@ function updatePlayersList() {
     });
 }
 
-// 計算環狀地圖上的位置
-function calculatePositionOnCircle(cellIndex, totalCells) {
-    // 環形地圖布局計算
-    const mapWidth = mapContainer.clientWidth;
-    const mapHeight = mapContainer.clientHeight;
-    
-    // 中心點
-    const centerX = mapWidth / 2;
-    const centerY = mapHeight / 2;
-    
-    // 根據格子在環上的位置計算其x和y坐標
-    let x, y;
-    
-    if (cellIndex >= 0 && cellIndex <= 6) {
-        // 上方一行
-        x = (mapWidth / 7) * cellIndex;
-        y = 50; // 頂部有一點距離
-    } else if (cellIndex >= 7 && cellIndex <= 11) {
-        // 右邊一列
-        x = mapWidth - 50; // 距離右邊有一點距離
-        y = 50 + ((mapHeight - 100) / 5) * (cellIndex - 7);
-    } else if (cellIndex >= 12 && cellIndex <= 18) {
-        // 下方一行
-        x = mapWidth - ((mapWidth / 7) * (cellIndex - 12));
-        y = mapHeight - 50; // 距離底部有一點距離
-    } else {
-        // 左邊一列
-        x = 50; // 距離左邊有一點距離
-        y = mapHeight - 50 - ((mapHeight - 100) / 3) * (cellIndex - 19);
-    }
-    
-    return { x, y };
-}
-
 // 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
     // 清空玩家容器
     playersContainer.innerHTML = '';
     
-    // 獲取所有格子
-    const cells = document.querySelectorAll('.map-cell');
-    
     // 為每個玩家創建標記
     let colorIndex = 1;
-    for (const id in gameState.players) {
+    const playerIds = Object.keys(gameState.players);
+    
+    playerIds.forEach((id, index) => {
         const player = gameState.players[id];
         const oldPlayer = oldState.players && oldState.players[id];
         
@@ -321,17 +360,23 @@ function updatePlayerMarkers(oldState) {
         
         // 設置標記位置
         const cellIndex = player.position;
-        const cellElement = cells[cellIndex];
+        const cellElement = document.getElementById(`cell-${cellIndex}`);
+        
         if (cellElement) {
+            // 獲取格子位置
             const cellRect = cellElement.getBoundingClientRect();
-            const containerRect = playersContainer.getBoundingClientRect();
+            const mapRect = mapContainer.getBoundingClientRect();
             
-            // 計算相對於容器的位置
-            const left = cellElement.offsetLeft + (cellElement.offsetWidth / 2) - 15;
-            const top = cellElement.offsetTop + (cellElement.offsetHeight / 2) - 15;
+            // 計算相對於地圖的位置（在格子中央偏移）
+            const cellCenterX = cellElement.offsetLeft + (cellElement.offsetWidth / 2);
+            const cellCenterY = cellElement.offsetTop + (cellElement.offsetHeight / 2);
             
-            marker.style.left = `${left}px`;
-            marker.style.top = `${top}px`;
+            // 根據玩家索引偏移位置，使多個玩家不重疊
+            const offsetX = (index % 2) * 16 - 8; // -8px 或 +8px
+            const offsetY = Math.floor(index / 2) * 16 - 8; // -8px, 0px, 或 +8px
+            
+            marker.style.left = `${cellCenterX + offsetX - 12.5}px`; // 12.5px 是 marker 寬度的一半
+            marker.style.top = `${cellCenterY + offsetY - 12.5}px`; // 12.5px 是 marker 高度的一半
             
             // 如果位置變化了，添加動畫效果
             if (oldPlayer && oldPlayer.position !== player.position) {
@@ -347,7 +392,7 @@ function updatePlayerMarkers(oldState) {
         
         // 最多支持5個玩家顏色
         if (colorIndex > 5) colorIndex = 1;
-    }
+    });
 }
 
 // 發送移動命令

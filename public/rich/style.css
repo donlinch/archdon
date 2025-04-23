@@ -1,3 +1,5 @@
+/* monopoly-style.css - 大富翁風格遊戲樣式 */
+
 /* 通用樣式 */
 * {
     box-sizing: border-box;
@@ -10,122 +12,9 @@ body {
     background-color: #f5f5f5;
     color: #333;
     line-height: 1.6;
+    touch-action: manipulation;
 }
 
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-h1, h2, h3 {
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* 按鈕樣式 */
-.btn {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s, transform 0.1s;
-    margin: 5px;
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
-.btn-primary {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #3e8e41;
-}
-
-.btn-secondary {
-    background-color: #f1f1f1;
-    color: #333;
-}
-
-.btn-secondary:hover {
-    background-color: #ddd;
-}
-
-.btn-control {
-    font-size: 18px;
-    padding: 15px 25px;
-    margin: 10px;
-}
-
-/* 面板樣式 */
-.panel {
-    background-color: white;
-    border-radius: 10px;
-    padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-#error-message {
-    color: #d9534f;
-    padding: 10px;
-    margin-top: 15px;
-    background-color: #fdf7f7;
-    border-left: 3px solid #d9534f;
-    border-radius: 3px;
-}
-
-/* 房間列表樣式 */
-#room-list {
-    margin-top: 20px;
-}
-
-#active-rooms-list {
-    list-style-type: none;
-}
-
-#active-rooms-list li {
-    padding: 10px;
-    background-color: #f9f9f9;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-#active-rooms-list li:hover {
-    background-color: #e9e9e9;
-}
-
-/* 遊戲頁面樣式 */
 .game-container {
     max-width: 100%;
     margin: 0 auto;
@@ -133,40 +22,44 @@ h1, h2, h3 {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    overflow: hidden;
+}
+
+.game-header {
+    text-align: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 8px;
+}
+
+.game-header h1 {
+    margin-bottom: 5px;
+    font-size: 1.5rem;
 }
 
 .game-section {
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 10px;
+    padding: 10px;
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-#controller-area {
-    text-align: center;
-}
-
-.controller-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-}
-
+/* 地圖樣式 - 大富翁風格 */
 #game-area {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+    flex: 0 0 auto;
 }
 
 #game-map {
-    flex-grow: 1;
     position: relative;
-    min-height: 400px; /* 增加地圖高度 */
-    margin-top: 15px;
-    border: 2px solid #ddd;
+    height: 40vh; /* 調整為視窗高度的40% */
+    width: 100%;
+    border: 2px solid #4CAF50;
     border-radius: 8px;
     overflow: hidden;
+    background-color: #e8f5e9; /* 淡綠色背景 */
 }
 
 #map-container {
@@ -177,66 +70,98 @@ h1, h2, h3 {
     height: 100%;
 }
 
-/* 環形地圖的格子樣式 */
+/* 大富翁風格地圖格子 */
 .map-cell {
     position: absolute;
-    width: 40px;
-    height: 40px;
-    border: 1px solid #ccc;
-    background-color: #f9f9f9;
+    width: 12%;
+    height: 12%;
+    background-color: white;
+    border: 1px solid #4CAF50;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    border-radius: 4px;
+    text-align: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-/* 上方一行的格子 */
+.map-cell:hover, .map-cell:active {
+    background-color: #e8f5e9;
+    transform: scale(1.05);
+}
+
+/* 地圖格子標題 */
+.cell-title {
+    font-weight: bold;
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    padding: 0 2px;
+}
+
+/* 格子編號 */
+.cell-number {
+    font-size: 0.6rem;
+    color: #777;
+}
+
+/* 頂部格子 (0-7) */
 .map-cell.top-row {
-    top: 30px;
+    top: 0;
+    height: 14%;
 }
-.map-cell.top-row:nth-child(1) { left: 7%; }  /* 0 */
-.map-cell.top-row:nth-child(2) { left: 20%; } /* 1 */
-.map-cell.top-row:nth-child(3) { left: 33%; } /* 2 */
-.map-cell.top-row:nth-child(4) { left: 46%; } /* 3 */
-.map-cell.top-row:nth-child(5) { left: 59%; } /* 4 */
-.map-cell.top-row:nth-child(6) { left: 72%; } /* 5 */
-.map-cell.top-row:nth-child(7) { left: 85%; } /* 6 */
+.map-cell.top-row:nth-child(1) { left: 0; width: 14%; }  /* 0 */
+.map-cell.top-row:nth-child(2) { left: 14%; }  /* 1 */
+.map-cell.top-row:nth-child(3) { left: 26%; }  /* 2 */
+.map-cell.top-row:nth-child(4) { left: 38%; }  /* 3 */
+.map-cell.top-row:nth-child(5) { left: 50%; }  /* 4 */
+.map-cell.top-row:nth-child(6) { left: 62%; }  /* 5 */
+.map-cell.top-row:nth-child(7) { left: 74%; }  /* 6 */
+.map-cell.top-row:nth-child(8) { left: 86%; width: 14%; }  /* 7 */
 
-/* 右側的格子 */
+/* 右側格子 (8-10) */
 .map-cell.right-column {
-    right: 30px;
+    right: 0;
+    width: 14%;
 }
-.map-cell.right-column:nth-child(8) { top: 20%; }  /* 7 */
-.map-cell.right-column:nth-child(9) { top: 35%; }  /* 8 */
-.map-cell.right-column:nth-child(10) { top: 50%; } /* 9 */
-.map-cell.right-column:nth-child(11) { top: 65%; } /* 10 */
-.map-cell.right-column:nth-child(12) { top: 80%; } /* 11 */
+.map-cell.right-column:nth-child(9) { top: 14%; }  /* 8 */
+.map-cell.right-column:nth-child(10) { top: 26%; }  /* 9 */
+.map-cell.right-column:nth-child(11) { top: 38%; }  /* 10 */
+.map-cell.right-column:nth-child(12) { top: 50%; }  /* 11 */
+.map-cell.right-column:nth-child(13) { top: 62%; }  /* 12 */
+.map-cell.right-column:nth-child(14) { top: 74%; }  /* 13 */
 
-/* 下方一行的格子 */
+/* 底部格子 (14-21) */
 .map-cell.bottom-row {
-    bottom: 30px;
+    bottom: 0;
+    height: 14%;
 }
-.map-cell.bottom-row:nth-child(13) { right: 7%; }  /* 12 */
-.map-cell.bottom-row:nth-child(14) { right: 20%; } /* 13 */
-.map-cell.bottom-row:nth-child(15) { right: 33%; } /* 14 */
-.map-cell.bottom-row:nth-child(16) { right: 46%; } /* 15 */
-.map-cell.bottom-row:nth-child(17) { right: 59%; } /* 16 */
-.map-cell.bottom-row:nth-child(18) { right: 72%; } /* 17 */
-.map-cell.bottom-row:nth-child(19) { right: 85%; } /* 18 */
+.map-cell.bottom-row:nth-child(15) { right: 14%; }  /* 14 */
+.map-cell.bottom-row:nth-child(16) { right: 26%; }  /* 15 */
+.map-cell.bottom-row:nth-child(17) { right: 38%; }  /* 16 */
+.map-cell.bottom-row:nth-child(18) { right: 50%; }  /* 17 */
+.map-cell.bottom-row:nth-child(19) { right: 62%; }  /* 18 */
+.map-cell.bottom-row:nth-child(20) { right: 74%; }  /* 19 */
+.map-cell.bottom-row:nth-child(21) { right: 86%; }  /* 20 */
+.map-cell.bottom-row:nth-child(22) { right: 0; width: 14%; }  /* 21 */
 
-/* 左側的格子 */
+/* 左側格子 (22-25) */
 .map-cell.left-column {
-    left: 30px;
+    left: 0;
+    width: 14%;
 }
-.map-cell.left-column:nth-child(20) { bottom: 20%; } /* 19 */
-.map-cell.left-column:nth-child(21) { bottom: 50%; } /* 20 */
-.map-cell.left-column:nth-child(22) { bottom: 80%; } /* 21 */
-
-.map-cell-number {
-    position: absolute;
-    bottom: -20px;
-    font-size: 12px;
-}
+.map-cell.left-column:nth-child(23) { bottom: 14%; }  /* 22 */
+.map-cell.left-column:nth-child(24) { bottom: 26%; }  /* 23 */
+.map-cell.left-column:nth-child(25) { bottom: 38%; }  /* 24 */
+.map-cell.left-column:nth-child(26) { bottom: 50%; }  /* 25 */
+.map-cell.left-column:nth-child(27) { bottom: 62%; }  /* 26 */
+.map-cell.left-column:nth-child(28) { bottom: 74%; }  /* 27 */
 
 /* 玩家標記樣式 */
 #players-container {
@@ -250,8 +175,8 @@ h1, h2, h3 {
 
 .player-marker {
     position: absolute;
-    width: 30px;
-    height: 30px;
+    width: 25px;
+    height: 25px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -259,7 +184,8 @@ h1, h2, h3 {
     color: white;
     font-weight: bold;
     transition: all 0.5s ease;
-    z-index: 10; /* 確保玩家標記在最上層 */
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* 玩家標記移動動畫 */
@@ -280,21 +206,95 @@ h1, h2, h3 {
 .player-color-4 { background-color: #f39c12; }
 .player-color-5 { background-color: #9b59b6; }
 
+/* 控制器區域 */
+#controller-area {
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.player-info {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.controller-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* 按鈕樣式 */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.1s;
+    margin: 5px;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-control {
+    background-color: #4CAF50;
+    color: white;
+    font-size: 18px;
+    padding: 12px 20px;
+    margin: 5px;
+    width: 40%;
+    max-width: 150px;
+}
+
+.btn-control:hover {
+    background-color: #3e8e41;
+}
+
+.btn-secondary {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background-color: #ddd;
+}
+
+/* 按鈕冷卻樣式 */
+.btn-cooldown {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* 信息區域樣式 */
 #info-area {
+    flex: 1 1 auto;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
 
 .info-panel {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+}
+
+#players-info {
     margin-bottom: 15px;
+}
+
+#players-info h3 {
+    margin-bottom: 8px;
+    text-align: left;
+    font-size: 1rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
 }
 
 #players-list {
     list-style-type: none;
-    max-height: 150px;
+    max-height: 120px;
     overflow-y: auto;
 }
 
@@ -303,6 +303,20 @@ h1, h2, h3 {
     margin-bottom: 3px;
     border-left: 3px solid;
     padding-left: 10px;
+    font-size: 0.9rem;
+}
+
+#game-status {
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+#game-status p {
+    margin-bottom: 5px;
+}
+
+#leave-game {
+    margin-top: 10px;
 }
 
 /* 連接狀態指示器 */
@@ -314,6 +328,7 @@ h1, h2, h3 {
     border-radius: 3px;
     font-size: 12px;
     font-weight: bold;
+    z-index: 100;
 }
 
 #connection-status.online {
@@ -330,20 +345,99 @@ h1, h2, h3 {
     background-color: #fcf8e3;
     color: #8a6d3b;
 }
-  
+
+/* 地點詳情彈窗 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.modal-content {
+    background-color: white;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    position: relative;
+}
+
+.modal-header h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 1.3rem;
+}
+
+.close-modal {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 10px;
+    text-align: center;
+    border-top: 1px solid #eee;
+}
+
 /* 響應式設計 */
 @media (min-width: 768px) {
-    .game-container {
-        flex-direction: column;
+    .game-header h1 {
+        font-size: 2rem;
     }
     
-    #game-map {
-        min-height: 500px; /* 增加地圖高度 */
+    .info-panel {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    #players-info {
+        width: 60%;
+    }
+    
+    #game-status {
+        width: 35%;
+        text-align: right;
+    }
+    
+    .cell-title {
+        font-size: 0.8rem;
+    }
+    
+    .cell-number {
+        font-size: 0.7rem;
     }
 }
 
-/* 按鈕冷卻樣式 */
-.btn-cooldown {
-    opacity: 0.6;
-    cursor: not-allowed;
+@media (min-height: 700px) {
+    #game-map {
+        height: 45vh;
+    }
 }

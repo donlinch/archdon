@@ -3,23 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Walker - 遊戲頁面</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Simple Walker - 大富翁風格遊戲</title>
+    <link rel="stylesheet" href="monopoly-style.css">
 </head>
 <body>
     <div class="game-container">
-        <!-- 控制器區域 (手機版顯示在上方) -->
-        <div id="controller-area" class="game-section">
-            <h2 id="player-info">玩家: <span id="player-name-display">...</span></h2>
-            <div class="controller-buttons">
-                <button id="move-backward" class="btn btn-control">← 後退</button>
-                <button id="move-forward" class="btn btn-control">前進 →</button>
-            </div>
-        </div>
+        <!-- 遊戲標題 -->
+        <header class="game-header">
+            <h1>Simple Walker</h1>
+            <div id="room-info">房間: <span id="room-name-display">...</span></div>
+        </header>
 
-        <!-- 遊戲地圖區域 (顯示在中間) -->
+        <!-- 地圖區域 (顯示在最上方) -->
         <div id="game-area" class="game-section">
-            <h2 id="room-info">房間: <span id="room-name-display">...</span></h2>
             <div id="game-map">
                 <div id="map-container">
                     <!-- 地圖格子將由 JS 動態生成 -->
@@ -27,6 +23,17 @@
                 <div id="players-container">
                     <!-- 玩家標記將由 JS 動態生成 -->
                 </div>
+            </div>
+        </div>
+
+        <!-- 控制器區域 (顯示在中間) -->
+        <div id="controller-area" class="game-section">
+            <div class="player-info">
+                <span>玩家: <span id="player-name-display">...</span></span>
+            </div>
+            <div class="controller-buttons">
+                <button id="move-backward" class="btn btn-control">← 後退</button>
+                <button id="move-forward" class="btn btn-control">前進 →</button>
             </div>
         </div>
   
@@ -42,9 +49,9 @@
                 <div id="game-status">
                     <p>房間人數: <span id="player-count">0</span>/<span id="max-players">5</span></p>
                     <p>房間代碼: <span id="room-id-display">...</span></p>
+                    <button id="leave-game" class="btn btn-secondary">離開遊戲</button>
                 </div>
             </div>
-            <button id="leave-game" class="btn btn-secondary">離開遊戲</button>
         </div>
 
         <!-- 連接狀態指示器 -->
@@ -53,6 +60,22 @@
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <!-- 地點詳情彈窗 -->
+    <div id="location-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="location-title">地點標題</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="location-description">地點詳細描述...</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn close-btn">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="monopoly-game.js"></script>
 </body>
 </html>
