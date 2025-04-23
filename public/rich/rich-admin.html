@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Walker - 風格模板與地圖管理</title>
-    <!-- 你需要創建 admin-style.css 來美化介面 -->
     <link rel="stylesheet" href="admin-style.css">
-    
 </head>
 <body>
     <div class="admin-container">
@@ -23,12 +21,12 @@
         </div>
         <hr>
 
-        <!-- Template Editor -->
+        <!-- Template Editor (包含樣式和格子預覽) -->
         <div id="template-editor" class="hidden">
             <h2>編輯模板樣式</h2>
             <div class="form-group">
-                <label for="template-id">模板 ID (不可修改):</label>
-                <input type="text" id="template-id" readonly>
+                <label for="template-id">模板 ID:</label> <!-- 創建時可編輯，載入後只讀 -->
+                <input type="text" id="template-id" placeholder="小寫英文、數字、底線">
             </div>
             <div class="form-group">
                 <label for="template-name">模板名稱:</label>
@@ -39,6 +37,7 @@
                 <textarea id="template-description" rows="2"></textarea>
             </div>
 
+            <!-- 樣式設定 Fieldsets -->
             <fieldset>
                 <legend>[全局樣式 / General]</legend>
                 <div class="form-group"> <label for="general-pageBgColor">頁面背景色:</label> <input type="color" id="general-pageBgColor"> </div>
@@ -62,7 +61,7 @@
             </fieldset>
 
              <fieldset>
-                <legend>[地圖格子 / Map Cell]</legend>
+                <legend>[地圖格子 (預設樣式) / Map Cell Defaults]</legend>
                 <div class="form-group"> <label for="mapCell-defaultBgColor">預設背景色:</label> <input type="color" id="mapCell-defaultBgColor"> </div>
                 <div class="form-group"> <label for="mapCell-defaultBorderColor">預設邊框顏色:</label> <input type="color" id="mapCell-defaultBorderColor"> </div>
                 <div class="form-group"> <label for="mapCell-defaultBorderWidth">預設邊框寬度:</label> <input type="text" id="mapCell-defaultBorderWidth" placeholder="例如: 1px"> </div>
@@ -76,7 +75,6 @@
                 <legend>[玩家標記 / Player Marker]</legend>
                 <div class="form-group"> <label for="playerMarker-shape">標記形狀 (border-radius):</label> <input type="text" id="playerMarker-shape" placeholder="例如: 50%"> </div>
                 <div class="form-group"> <label for="playerMarker-textColor">標記文字顏色:</label> <input type="color" id="playerMarker-textColor"> </div>
-                <!-- 邊框顏色通常由玩家顏色決定，可選 -->
                  <div class="form-group"> <label for="playerMarker-boxShadow">標記陰影 (CSS):</label> <input type="text" id="playerMarker-boxShadow" placeholder="例如: 0 2px 4px rgba(0,0,0,0.2)"> </div>
                 <div class="form-group player-color-group">
                      <label>玩家顏色組 (最多5個):</label>
@@ -126,7 +124,7 @@
             </fieldset>
 
              <fieldset>
-                <legend>[地點彈窗 / Location Modal]</legend>
+                <legend>[地點彈窗 (預設樣式) / Location Modal Defaults]</legend>
                  <div class="form-group"> <label for="modal-overlayBgColor">遮罩背景色 (rgba):</label> <input type="text" id="modal-overlayBgColor" placeholder="例如: rgba(0, 0, 0, 0.7)"> </div>
                  <div class="form-group"> <label for="modal-contentBgColor">彈窗內容背景色:</label> <input type="color" id="modal-contentBgColor"> </div>
                  <div class="form-group"> <label for="modal-headerBgColor">彈窗頭部背景色 (預設):</label> <input type="color" id="modal-headerBgColor"> </div>
@@ -134,28 +132,34 @@
                  <div class="form-group"> <label for="modal-bodyTextColor">彈窗內文文字色:</label> <input type="color" id="modal-bodyTextColor"> </div>
             </fieldset>
 
-            <button id="save-template-btn" class="btn-primary">儲存模板樣式</button>
-            <button id="delete-template-btn" class="btn-danger hidden">刪除此模板</button>
-        </div>
-        <hr>
+            <hr> <!-- 分隔線 -->
 
-        <!-- Map Cell Editor -->
-        <div id="cell-editor">
-            <h2>編輯地圖格子 (點擊下方格子進行編輯)</h2>
-            <p>(格子顏色設定將覆蓋模板預設值，清除顏色則使用模板預設)</p>
-            <div id="admin-map-grid-container">
-                <div id="admin-map-grid">
-                    <!-- JS generates grid here -->
+            <!-- Map Cell Editor (現在是模板的一部分) -->
+            <div id="cell-editor">
+                <h2>編輯地圖格子 (點擊下方格子進行編輯)</h2>
+                <p>(格子顏色設定將覆蓋模板預設值，清除顏色則使用模板預設)</p>
+                <div id="admin-map-grid-container">
+                    <div id="admin-map-grid">
+                        <!-- JS 會在此生成格子預覽 -->
+                    </div>
                 </div>
+                <!-- ★★★ 移除了獨立的儲存格子按鈕 ★★★ -->
             </div>
-            <button id="save-all-cell-data-btn" class="btn-primary">儲存所有格子變更</button>
-        </div>
+
+            <hr> <!-- 分隔線 -->
+
+            <!-- 統一的儲存按鈕 -->
+            <button id="save-template-btn" class="btn-primary" style="width: 100%; padding: 15px; font-size: 18px; margin-top: 20px;">儲存模板 (包含樣式和格子變更)</button>
+            <button id="delete-template-btn" class="btn-danger hidden" style="width: 100%; margin-top: 10px;">刪除此模板</button>
+
+        </div> <!-- End of template-editor -->
+
 
         <!-- Status Message -->
         <div id="status-message"></div>
     </div>
 
-    <!-- Cell Edit Modal -->
+    <!-- Cell Edit Modal (保持不變) -->
     <div id="cell-edit-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -174,18 +178,18 @@
                 </div>
                 <hr>
                 <div class="form-group">
-                    <label for="modal-cell-bg-color-input">格子背景色:</label>
+                    <label for="modal-cell-bg-color-input">格子背景色 (覆蓋):</label>
                     <input type="color" id="modal-cell-bg-color-input">
                     <button onclick="clearColorInput('modal-cell-bg-color-input')">清除 (使用預設)</button>
                 </div>
                  <div class="form-group">
-                    <label for="modal-modal-header-bg-color-input">地點彈窗頭部背景色:</label>
+                    <label for="modal-modal-header-bg-color-input">彈窗頭部背景色 (覆蓋):</label>
                     <input type="color" id="modal-modal-header-bg-color-input">
                     <button onclick="clearColorInput('modal-modal-header-bg-color-input')">清除 (使用預設)</button>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="save-modal-changes-btn" class="btn-primary">儲存此格變更</button>
+                <button id="save-modal-changes-btn" class="btn-primary">儲存此格變更 (暫存)</button>
                 <button onclick="closeCellEditModal()">取消</button>
             </div>
         </div>
@@ -193,18 +197,14 @@
 
     <script src="rich-admin.js"></script>
     <script>
-        // Simple helper functions for modal interaction
+        // Helper functions (保持不變)
         function closeCellEditModal() {
             document.getElementById('cell-edit-modal').classList.add('hidden');
         }
         function clearColorInput(inputId) {
-            // Setting value to empty string might work for some browsers,
-            // but it's safer to handle this logic during save.
-            // Let's visually reset to white, and handle null on save.
             const input = document.getElementById(inputId);
-            input.value = '#ffffff'; // Visually reset
-            // Add a marker or handle this '#ffffff' as null during save in JS
-            input.dataset.cleared = 'true'; // Mark as cleared
+            input.value = '#ffffff';
+            input.dataset.cleared = 'true';
         }
     </script>
 </body>
