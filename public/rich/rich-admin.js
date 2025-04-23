@@ -464,51 +464,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    function openCellEditModal(index) {
+         if (index < 0 || index >= currentCellInfo.length) {
+             displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+             return;
+         }
+         const cellData = currentCellInfo[index];
 
+        modalCellIndexDisplay.textContent = index;
+        editingCellIndexInput.value = index;
+        modalCellTitleInput.value = cellData.title || '';
+        modalCellDescTextarea.value = cellData.description || '';
+        modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+        modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
+        modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+        modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
 
-
- // 開啟格子編輯彈窗
- function openCellEditModal(index) {
-    if (index < 0 || index >= currentCellInfo.length) {
-        displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-        return;
+        cellEditModal.classList.remove('hidden');
     }
-    const cellData = currentCellInfo[index];
-
-   modalCellIndexDisplay.textContent = index;
-   editingCellIndexInput.value = index;
-   modalCellTitleInput.value = cellData.title || '';
-   modalCellDescTextarea.value = cellData.description || '';
-
-   // 設定顏色並處理 null (顯示為白色，標記 cleared 狀態)
-   modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
-   modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color); // 如果是 null，cleared = 'true'
-   modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
-   modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color); // 如果是 null，cleared = 'true'
-
-   // --- ★ 新增：為顏色輸入框添加事件監聽器，以重設 cleared 狀態 ★ ---
-   const resetClearedOnInput = (event) => {
-       event.target.dataset.cleared = 'false';
-   };
-
-   // 先移除舊的監聽器，避免重複添加
-   modalCellBgColorInput.removeEventListener('input', resetClearedOnInput);
-   modalModalHeaderBgColorInput.removeEventListener('input', resetClearedOnInput);
-
-   // 添加新的監聽器
-   modalCellBgColorInput.addEventListener('input', resetClearedOnInput);
-   modalModalHeaderBgColorInput.addEventListener('input', resetClearedOnInput);
-   // --- ★ 結束新增 ★ ---
-
-   cellEditModal.classList.remove('hidden');
-}
-
-
-
-    
-
-
-
 
     function saveModalChangesToLocal() {
         const index = parseInt(editingCellIndexInput.value, 10);
