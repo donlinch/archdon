@@ -209,8 +209,8 @@ h1, h2, h3 {
 /* 大富翁風格地圖格子 */
 .map-cell {
     position: absolute;
-    width: 14%;
-    height: 14%;
+    width: calc(100% / 7);  /* 計算每個格子的寬度為父容器的七分之一 */
+    height: calc(100% / 4); /* 這樣會使格子的高度和寬度匹配 */
     background-color: white;
     border: 1px solid #4CAF50;
     display: flex;
@@ -225,11 +225,6 @@ h1, h2, h3 {
 }
 
 
-/* 修正每一排格子的具體位置 */
-.map-cell.top-row { top: 0%; } /* 上排的格子 */
-.map-cell.right-column { right: 0%; } /* 右排的格子 */
-.map-cell.bottom-row { bottom: 0%; } /* 下排的格子 */
-.map-cell.left-column { left: 0%; } /* 左排的格子 */
 
 
 .map-cell:hover, .map-cell:active {
@@ -275,28 +270,30 @@ h1, h2, h3 {
 .map-cell.right-column:nth-child(9) { top: 28.57%; }   /* 8 */
 .map-cell.right-column:nth-child(10) { top: 42.86%; }  /* 9 */
 .map-cell.right-column:nth-child(11) { top: 57.14%; }  /* 10 */
-
+.map-cell.right-column:nth-child(12) { top: 71.43%; }  /* 10 */
 /* 底部一行格子 (11-17) */
 .map-cell.bottom-row {
     bottom: 0;
 }
-.map-cell.bottom-row:nth-child(12) { left: 0%; width: 14%; }  /* 11 */
-.map-cell.bottom-row:nth-child(13) { left: 14.29%; }  /* 12 */
-.map-cell.bottom-row:nth-child(14) { left: 28.57%; }  /* 13 */
+
+.map-cell.bottom-row:nth-child(18) { left: 0%; width: 14%; }  /* 11 */
+.map-cell.bottom-row:nth-child(17) { left: 14.29%; }  /* 12 */
+.map-cell.bottom-row:nth-child(16) { left: 28.57%; }  /* 13 */
 .map-cell.bottom-row:nth-child(15) { left: 42.86%; }  /* 14 */
-.map-cell.bottom-row:nth-child(16) { left: 57.14%; }  /* 15 */
-.map-cell.bottom-row:nth-child(17) { left: 71.43%; }  /* 16 */
-.map-cell.bottom-row:nth-child(18) { left: 85.71%; }  /* 17 */
+.map-cell.bottom-row:nth-child(14) { left: 57.14%; }  /* 15 */
+.map-cell.bottom-row:nth-child(13) { left: 71.43%; }  /* 16 */
+.map-cell.bottom-row:nth-child(12) { left: 85.71%; }  /* 17 */
+
 
 /* 左側一列格子 (18-21) */
 .map-cell.left-column {
     left: 0;
 }
-.map-cell.left-column:nth-child(19) { top: 71.43%; }  /* 18 */
-.map-cell.left-column:nth-child(20) { top: 57.14%; }  /* 19 */
+.map-cell.left-column:nth-child(23) { top: 71.43%; }  /* 18 */
+.map-cell.left-column:nth-child(22) { top: 57.14%; }  /* 19 */
 .map-cell.left-column:nth-child(21) { top: 42.86%; }  /* 20 */
-.map-cell.left-column:nth-child(22) { top: 28.57%; }  /* 21 */
-.map-cell.left-column:nth-child(23) { top: 14.29%; }  /* 額外格子，如果需要 */
+.map-cell.left-column:nth-child(20) { top: 28.57%; }  /* 21 */
+.map-cell.left-column:nth-child(19) { top: 14.29%; }  /* 額外格子，如果需要 */
 
 /* ===== 玩家標記樣式 ===== */
 #players-container {
