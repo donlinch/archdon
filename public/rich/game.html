@@ -5,6 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Walker - 大富翁風格遊戲</title>
     <link rel="stylesheet" href="https://sunnyyummy.onrender.com/rich/style.css">
+    <style>
+        .template-selector {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .selector-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        
+        .selector-body {
+            padding: 16px;
+        }
+        
+        .template-dropdown {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .template-preview {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .preview-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .preview-image {
+            height: 120px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+        }
+        
+        .template-description {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .selector-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 16px;
+            border-top: 1px solid #eee;
+            gap: 12px;
+        }
+        
+        .template-selector-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 900;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            display: none;
+        }
+        </style>
+
+
+
 </head>
 <body>
     <div class="game-container">
@@ -83,5 +190,41 @@
     </div>
 
     <script src="game.js"></script>
+<div id="template-selector" class="template-selector">
+    <div class="selector-header">
+        <h3>選擇地圖風格</h3>
+        <button id="close-template-selector" class="btn-close">×</button>
+    </div>
+    <div class="selector-body">
+        <div class="loading-indicator">載入中...</div>
+        <select id="template-select" class="template-dropdown">
+            <option value="">-- 請選擇模板 --</option>
+        </select>
+        <div class="template-preview">
+            <div class="preview-title">預覽</div>
+            <div id="template-preview-image" class="preview-image">
+                選擇模板來預覽
+            </div>
+            <div id="template-description" class="template-description">
+                選擇一個模板以查看描述
+            </div>
+        </div>
+    </div>
+    <div class="selector-footer">
+        <button id="apply-template" class="btn btn-primary">套用模板</button>
+        <button id="cancel-template" class="btn btn-secondary">取消</button>
+    </div>
+</div>
+
+<!-- 模板選擇器按鈕 -->
+<button id="open-template-selector" class="template-selector-btn">
+    <span>更換主題</span>
+</button>
+
+<!-- 引入模板功能 JS -->
+<script src="template-functions.js"></script>
+
+
+
 </body>
 </html>

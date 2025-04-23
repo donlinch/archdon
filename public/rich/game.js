@@ -108,8 +108,7 @@ function createMonopolyMap() {
 
         const title = document.createElement('div');
         title.className = 'cell-title';
-        // ★★★ 確保 cellInfo 有 24 個條目 ★★★
-        // 如果 cellInfo[i] 不存在，提供一個預設標題
+        // ★★★ 確保 cellInfo[i] 有內容 ★★★
         title.textContent = cellInfo[i] ? cellInfo[i].title : `格 ${i}`;
         cell.appendChild(title);
 
@@ -118,7 +117,7 @@ function createMonopolyMap() {
         cellNumber.textContent = i;
         cell.appendChild(cellNumber);
 
-        // ★★★ 更新分配樣式類的邏輯 ★★★
+        // 位置樣式設置...
         if (i >= 0 && i <= 6) {        // 頂部行 (0-6)
             cell.classList.add('top-row');
         } else if (i >= 7 && i <= 12) {   // 右側列 (7-12)
@@ -128,9 +127,10 @@ function createMonopolyMap() {
         } else if (i >= 19 && i <= 23) { // ★★★ 左側列 (19-23) ★★★
             cell.classList.add('left-column');
         }
-        // 添加點擊事件監聽器
+        
+        // 添加點擊事件
         cell.addEventListener('click', function() {
-            // ★★★ 確保 cellInfo 有 24 個條目 ★★★
+            // 確保 cellInfo[i] 有內容
             if (cellInfo[i]) { // 檢查是否存在對應的格子信息
                  showLocationModal(i);
             } else {
@@ -249,7 +249,6 @@ function setupEventListeners() {
     });
 }
 
-// 處理收到的WebSocket消息
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
@@ -264,6 +263,16 @@ function handleWebSocketMessage(data) {
                 // 接收玩家ID和名稱確認
                 playerId = message.playerId;
                 console.log(`收到玩家ID: ${playerId}`);
+                break;
+            
+            case 'templateUpdate':
+                // 新增: 處理模板更新
+                if (message.templateId && message.templateData) {
+                    applyTemplateStyles(message.templateData.style_data);
+                    updateCellContents(message.templateData.cell_data);
+                    currentTemplateId = message.templateId;
+                    console.log(`服務器已更新模板: ${message.templateData.template_name}`);
+                }
                 break;
             
             case 'error':
