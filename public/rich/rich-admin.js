@@ -464,55 +464,87 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function openCellEditModal(index) {
-         if (index < 0 || index >= currentCellInfo.length) {
-             displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-             return;
-         }
-         const cellData = currentCellInfo[index];
 
-        modalCellIndexDisplay.textContent = index;
-        editingCellIndexInput.value = index;
-        modalCellTitleInput.value = cellData.title || '';
-        modalCellDescTextarea.value = cellData.description || '';
-        modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
-        modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
-        modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
-        modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
 
-        cellEditModal.classList.remove('hidden');
+
+ // 開啟格子編輯彈窗
+ function openCellEditModal(index) {
+    if (index < 0 || index >= currentCellInfo.length) {
+        displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+        return;
+    }
+    const cellData = currentCellInfo[index];
+
+   modalCellIndexDisplay.textContent = index;
+   editingCellIndexInput.value = index;
+   modalCellTitleInput.value = cellData.title || '';
+   modalCellDescTextarea.value = cellData.description || '';
+
+   // 設定顏色並處理 null (顯示為白色，標記 cleared 狀態)
+   modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+   modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color); // 如果是 null，cleared = 'true'
+   modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+   modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color); // 如果是 null，cleared = 'true'
+
+   // --- ★ 新增：為顏色輸入框添加事件監聽器，以重設 cleared 狀態 ★ ---
+   const resetClearedOnInput = (event) => {
+       event.target.dataset.cleared = 'false';
+   };
+
+   // 先移除舊的監聽器，避免重複添加
+   modalCellBgColorInput.removeEventListener('input', resetClearedOnInput);
+   modalModalHeaderBgColorInput.removeEventListener('input', resetClearedOnInput);
+
+   // 添加新的監聽器
+   modalCellBgColorInput.addEventListener('input', resetClearedOnInput);
+   modalModalHeaderBgColorInput.addEventListener('input', resetClearedOnInput);
+   // --- ★ 結束新增 ★ ---
+
+   cellEditModal.classList.remove('hidden');
+}
+
+
+
+    
+
+
+
+ // 將彈窗修改暫存到本地 currentCellInfo
+ function saveModalChangesToLocal() {
+    const index = parseInt(editingCellIndexInput.value, 10);
+    if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
+        displayStatus("錯誤：無效的格子索引，無法儲存。", true);
+        return;
+    }
+    const cellData = currentCellInfo[index];
+
+    const newTitle = modalCellTitleInput.value.trim();
+    const newDesc = modalCellDescTextarea.value.trim();
+
+    // 只有當 dataset.cleared 為 'true' 時才存 null，否則儲存選擇的顏色值
+    // 同時將儲存的值轉為小寫，增加一致性
+    let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
+                     ? null : modalCellBgColorInput.value.toLowerCase();
+    let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
+                              ? null : modalModalHeaderBgColorInput.value.toLowerCase();
+
+    // 更新本地陣列中的物件
+    cellData.title = newTitle;
+    cellData.description = newDesc;
+    cellData.cell_bg_color = newBgColor;
+    cellData.modal_header_bg_color = newModalHeaderBgColor;
+
+    // 更新格子預覽
+    const adminCellDiv = document.getElementById(`admin-cell-${index}`);
+    if (adminCellDiv) {
+        const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
+        if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
+        adminCellDiv.style.backgroundColor = newBgColor || ''; // null 或空字串會使用 CSS 預設
     }
 
-    function saveModalChangesToLocal() {
-        const index = parseInt(editingCellIndexInput.value, 10);
-        if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
-            displayStatus("錯誤：無效的格子索引，無法儲存。", true);
-            return;
-        }
-        const cellData = currentCellInfo[index];
-
-        const newTitle = modalCellTitleInput.value.trim();
-        const newDesc = modalCellDescTextarea.value.trim();
-        let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
-                         ? null : modalCellBgColorInput.value;
-        let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
-                                  ? null : modalModalHeaderBgColorInput.value;
-
-        cellData.title = newTitle;
-        cellData.description = newDesc;
-        cellData.cell_bg_color = newBgColor;
-        cellData.modal_header_bg_color = newModalHeaderBgColor;
-
-        const adminCellDiv = document.getElementById(`admin-cell-${index}`);
-        if (adminCellDiv) {
-            const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
-            if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
-            adminCellDiv.style.backgroundColor = newBgColor || '';
-        }
-
-        closeCellEditModal();
-        displayStatus(`格子 ${index} 變更已應用。點擊「儲存模板樣式」以儲存所有變更。`);
-    }
+    closeCellEditModal();
+    displayStatus(`格子 ${index} 變更已應用。點擊「儲存模板樣式」以儲存所有變更。`);
+}
 
     // --- 工具函數 ---
     function displayStatus(message, isError = false) {
