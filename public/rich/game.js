@@ -2,7 +2,7 @@
 
 // 遊戲狀態
 let gameState = {
-    mapLoopSize: 10,
+    mapLoopSize: 22,  // 修改為 22 格
     maxPlayers: 5,
     players: {},
     gameStarted: false
@@ -102,15 +102,29 @@ function setupEventListeners() {
     });
 }
 
-// 創建遊戲地圖
+// 創建遊戲地圖 - 改為 22 格的環形地圖
 function createGameMap() {
     mapContainer.innerHTML = '';
     
-    // 創建10個格子的環形地圖
-    for (let i = 0; i < 10; i++) {
+    // 總格子數
+    const totalCells = 22;
+    
+    // 創建 22 個格子的環形地圖
+    for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'map-cell';
         cell.id = `cell-${i}`;
+        
+        // 添加定位類別，根據位置決定格子位於環形的哪個部分
+        if (i >= 0 && i <= 6) {
+            cell.classList.add('top-row');
+        } else if (i >= 7 && i <= 11) {
+            cell.classList.add('right-column');
+        } else if (i >= 12 && i <= 16) {
+            cell.classList.add('bottom-row');
+        } else {
+            cell.classList.add('left-column');
+        }
         
         const cellNumber = document.createElement('span');
         cellNumber.className = 'map-cell-number';
@@ -250,12 +264,46 @@ function updatePlayersList() {
     });
 }
 
+// 計算環狀地圖上的位置
+function calculatePositionOnCircle(cellIndex, totalCells) {
+    // 環形地圖布局計算
+    const mapWidth = mapContainer.clientWidth;
+    const mapHeight = mapContainer.clientHeight;
+    
+    // 中心點
+    const centerX = mapWidth / 2;
+    const centerY = mapHeight / 2;
+    
+    // 根據格子在環上的位置計算其x和y坐標
+    let x, y;
+    
+    if (cellIndex >= 0 && cellIndex <= 6) {
+        // 上方一行
+        x = (mapWidth / 7) * cellIndex;
+        y = 50; // 頂部有一點距離
+    } else if (cellIndex >= 7 && cellIndex <= 11) {
+        // 右邊一列
+        x = mapWidth - 50; // 距離右邊有一點距離
+        y = 50 + ((mapHeight - 100) / 5) * (cellIndex - 7);
+    } else if (cellIndex >= 12 && cellIndex <= 18) {
+        // 下方一行
+        x = mapWidth - ((mapWidth / 7) * (cellIndex - 12));
+        y = mapHeight - 50; // 距離底部有一點距離
+    } else {
+        // 左邊一列
+        x = 50; // 距離左邊有一點距離
+        y = mapHeight - 50 - ((mapHeight - 100) / 3) * (cellIndex - 19);
+    }
+    
+    return { x, y };
+}
+
 // 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
     // 清空玩家容器
     playersContainer.innerHTML = '';
     
-    // 獲取格子位置信息
+    // 獲取所有格子
     const cells = document.querySelectorAll('.map-cell');
     
     // 為每個玩家創建標記

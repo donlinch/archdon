@@ -162,7 +162,7 @@ h1, h2, h3 {
 #game-map {
     flex-grow: 1;
     position: relative;
-    min-height: 300px;
+    min-height: 400px; /* 增加地圖高度 */
     margin-top: 15px;
     border: 2px solid #ddd;
     border-radius: 8px;
@@ -170,8 +170,6 @@ h1, h2, h3 {
 }
 
 #map-container {
-    display: flex;
-    justify-content: space-evenly;
     position: absolute;
     top: 0;
     left: 0;
@@ -179,18 +177,60 @@ h1, h2, h3 {
     height: 100%;
 }
 
-/* 地圖格子樣式 */
+/* 環形地圖的格子樣式 */
 .map-cell {
+    position: absolute;
+    width: 40px;
+    height: 40px;
     border: 1px solid #ccc;
     background-color: #f9f9f9;
-    width: 8%;
-    height: 40px;
-    margin: 30px 0;
-    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    border-radius: 4px;
 }
+
+/* 上方一行的格子 */
+.map-cell.top-row {
+    top: 30px;
+}
+.map-cell.top-row:nth-child(1) { left: 7%; }  /* 0 */
+.map-cell.top-row:nth-child(2) { left: 20%; } /* 1 */
+.map-cell.top-row:nth-child(3) { left: 33%; } /* 2 */
+.map-cell.top-row:nth-child(4) { left: 46%; } /* 3 */
+.map-cell.top-row:nth-child(5) { left: 59%; } /* 4 */
+.map-cell.top-row:nth-child(6) { left: 72%; } /* 5 */
+.map-cell.top-row:nth-child(7) { left: 85%; } /* 6 */
+
+/* 右側的格子 */
+.map-cell.right-column {
+    right: 30px;
+}
+.map-cell.right-column:nth-child(8) { top: 20%; }  /* 7 */
+.map-cell.right-column:nth-child(9) { top: 35%; }  /* 8 */
+.map-cell.right-column:nth-child(10) { top: 50%; } /* 9 */
+.map-cell.right-column:nth-child(11) { top: 65%; } /* 10 */
+.map-cell.right-column:nth-child(12) { top: 80%; } /* 11 */
+
+/* 下方一行的格子 */
+.map-cell.bottom-row {
+    bottom: 30px;
+}
+.map-cell.bottom-row:nth-child(13) { right: 7%; }  /* 12 */
+.map-cell.bottom-row:nth-child(14) { right: 20%; } /* 13 */
+.map-cell.bottom-row:nth-child(15) { right: 33%; } /* 14 */
+.map-cell.bottom-row:nth-child(16) { right: 46%; } /* 15 */
+.map-cell.bottom-row:nth-child(17) { right: 59%; } /* 16 */
+.map-cell.bottom-row:nth-child(18) { right: 72%; } /* 17 */
+.map-cell.bottom-row:nth-child(19) { right: 85%; } /* 18 */
+
+/* 左側的格子 */
+.map-cell.left-column {
+    left: 30px;
+}
+.map-cell.left-column:nth-child(20) { bottom: 20%; } /* 19 */
+.map-cell.left-column:nth-child(21) { bottom: 50%; } /* 20 */
+.map-cell.left-column:nth-child(22) { bottom: 80%; } /* 21 */
 
 .map-cell-number {
     position: absolute;
@@ -219,6 +259,18 @@ h1, h2, h3 {
     color: white;
     font-weight: bold;
     transition: all 0.5s ease;
+    z-index: 10; /* 確保玩家標記在最上層 */
+}
+
+/* 玩家標記移動動畫 */
+.player-moving {
+    animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
 
 /* 玩家顏色 */
@@ -286,11 +338,7 @@ h1, h2, h3 {
     }
     
     #game-map {
-        min-height: 400px;
-    }
-    
-    .map-cell {
-        height: 60px;
+        min-height: 500px; /* 增加地圖高度 */
     }
 }
 

@@ -25,7 +25,7 @@ async function getClient() {
  */
 async function createRoom(roomId, roomName, maxPlayers = 5) {
     const gameState = {
-        mapLoopSize: 10,
+        mapLoopSize: 22,
         maxPlayers: parseInt(maxPlayers),
         players: {},
         gameStarted: false
