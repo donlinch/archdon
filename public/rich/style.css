@@ -559,3 +559,39 @@ h1, h2, h3 {
         font-size: 0.9rem;
     }
 }
+
+/* ===== 地圖中央圖片樣式 ===== */
+#map-center-image-container {
+    position: absolute; /* 相對於 #game-map 定位 */
+    /* 計算中心位置 */
+    top: var(--cell-dim); /* 從頂部留出一個格子的距離 */
+    left: var(--cell-dim); /* 從左側留出一個格子的距離 */
+    /* 計算內部 5x5 區域的大小 */
+    width: calc(100% - 2 * var(--cell-dim)); /* 總寬度減去左右兩邊的格子寬度 */
+    height: calc(100% - 2 * var(--cell-dim)); /* 總高度減去上下兩邊的格子高度 */
+    /* 使用 Flexbox 將圖片置於容器正中央 (如果圖片本身較小) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* 確保圖片不超出容器 */
+    z-index: 1; /* 確保在格子背景之上，但在玩家標記 (z-index: 10) 之下 */
+    pointer-events: none; /* 讓滑鼠事件穿透到下方 */
+}
+
+#map-center-image-container img {
+    display: block; /* 移除圖片下方的額外空間 */
+    max-width: 100%; /* 圖片最大寬度為容器寬度 */
+    max-height: 100%; /* 圖片最大高度為容器高度 */
+    object-fit: contain; /* 保持圖片比例縮放，完整顯示 */
+    /* 如果希望圖片填滿但可能裁切，可以使用 object-fit: cover; */
+}
+
+/* 可選：微調 .map-cell 的背景，避免與中央圖片重疊處顏色衝突 */
+#map-container {
+    /* 原本 #game-map 的背景色移到這裡，讓中央圖片區域的背景是 #game-map 的 */
+    background-color: transparent; /* map-container 本身透明 */
+}
+#game-map {
+     background-color: #e8f5e9; /* 淡綠色背景應用到父容器 */
+     position: relative; /* 確保子元素的 absolute 定位相對於此 */
+}
