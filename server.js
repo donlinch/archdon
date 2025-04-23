@@ -2166,43 +2166,65 @@ walkMapAdminRouter.get('/templates', async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve templates' });
     }
 });
-
-// GET /api/admin/walk_map/templates/:templateId - Get single template details
+// GET /api/admin/walk_map/templates/:templateId - Get single template details (★ 修改 ★)
 walkMapAdminRouter.get('/templates/:templateId', async (req, res) => {
     const { templateId } = req.params;
     try {
-        const result = await pool.query('SELECT template_id, template_name, description, style_data FROM walk_map_templates WHERE template_id = $1', [templateId]);
+        // ★ 同時選取 style_data 和 cell_data ★
+        const result = await pool.query(
+            'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+            [templateId]
+        );
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        res.json(result.rows[0]);
+        const templateData = result.rows[0];
+        // ★ 確保 cell_data 是陣列 (如果 DB 是 NULL 或解析失敗) ★
+        if (templateData.cell_data && typeof templateData.cell_data === 'string') {
+             try { templateData.cell_data = JSON.parse(templateData.cell_data); } catch(e) { templateData.cell_data = []; }
+        } else if (!templateData.cell_data) {
+            templateData.cell_data = [];
+        }
+        // ★ 確保 style_data 是物件 (如果 DB 是 NULL 或解析失敗) ★
+        if (templateData.style_data && typeof templateData.style_data === 'string') {
+             try { templateData.style_data = JSON.parse(templateData.style_data); } catch(e) { templateData.style_data = {}; }
+        } else if (!templateData.style_data) {
+            templateData.style_data = {};
+        }
+
+        res.json(templateData); // 回傳包含 style 和 cell 資料的完整模板
     } catch (err) {
         console.error(`[API GET /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
         res.status(500).json({ error: 'Failed to retrieve template details' });
     }
 });
 
-// POST /api/admin/walk_map/templates - Create new template
+// POST /api/admin/walk_map/templates - Create new template (★ 修改 ★)
 walkMapAdminRouter.post('/templates', async (req, res) => {
-    const { template_id, template_name, description, style_data } = req.body;
-    if (!template_id || !template_name || !style_data) {
-        return res.status(400).json({ error: 'Missing required fields: template_id, template_name, style_data' });
+    // ★ 從請求中獲取 cell_data ★
+    const { template_id, template_name, description, style_data, cell_data } = req.body;
+
+    if (!template_id || !template_name || !style_data || !cell_data) { // ★ 檢查 cell_data ★
+        return res.status(400).json({ error: 'Missing required fields: template_id, template_name, style_data, cell_data' });
     }
+    // ★ 驗證 cell_data 格式 ★
+     if (!Array.isArray(cell_data) || cell_data.length !== 24) {
+         return res.status(400).json({ error: 'Invalid cell_data format. Expected an array of 24 cell objects.' });
+     }
+    // ... (保留 style_data 的 JSON 驗證邏輯) ...
+    let styleJson;
     try {
-        // Basic JSON validation
-        let styleJson;
-        if (typeof style_data === 'string') {
-           try { styleJson = JSON.parse(style_data); } catch (e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
-        } else if (typeof style_data === 'object') {
-            styleJson = style_data;
-        } else {
-             return res.status(400).json({ error: 'style_data must be a JSON object or string' });
-        }
+        if (typeof style_data === 'string') { styleJson = JSON.parse(style_data); }
+        else if (typeof style_data === 'object') { styleJson = style_data; }
+        else { throw new Error('style_data must be JSON object or string'); }
+    } catch(e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
 
 
+    try {
+        // ★ 在 INSERT 中加入 cell_data ★
         const result = await pool.query(
-            'INSERT INTO walk_map_templates (template_id, template_name, description, style_data) VALUES ($1, $2, $3, $4) RETURNING template_id, template_name',
-            [template_id, template_name, description || null, styleJson]
+            'INSERT INTO walk_map_templates (template_id, template_name, description, style_data, cell_data) VALUES ($1, $2, $3, $4, $5) RETURNING template_id, template_name',
+            [template_id, template_name, description || null, styleJson, JSON.stringify(cell_data)] // ★ 將 cell_data 轉為字串儲存 ★
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -2214,28 +2236,32 @@ walkMapAdminRouter.post('/templates', async (req, res) => {
     }
 });
 
-// PUT /api/admin/walk_map/templates/:templateId - Update existing template
+// PUT /api/admin/walk_map/templates/:templateId - Update existing template (★ 修改 ★)
 walkMapAdminRouter.put('/templates/:templateId', async (req, res) => {
     const { templateId } = req.params;
-    const { template_name, description, style_data } = req.body; // Note: template_id in URL is used, not from body
+    // ★ 從請求中獲取 cell_data ★
+    const { template_name, description, style_data, cell_data } = req.body;
 
-    if (!template_name || !style_data) {
-        return res.status(400).json({ error: 'Missing required fields: template_name, style_data' });
+    if (!template_name || !style_data || !cell_data) { // ★ 檢查 cell_data ★
+        return res.status(400).json({ error: 'Missing required fields: template_name, style_data, cell_data' });
     }
+    // ★ 驗證 cell_data 格式 ★
+    if (!Array.isArray(cell_data) || cell_data.length !== 24) {
+        return res.status(400).json({ error: 'Invalid cell_data format. Expected an array of 24 cell objects.' });
+    }
+     // ... (保留 style_data 的 JSON 驗證邏輯) ...
+     let styleJson;
      try {
-         // Basic JSON validation
-         let styleJson;
-         if (typeof style_data === 'string') {
-            try { styleJson = JSON.parse(style_data); } catch (e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
-         } else if (typeof style_data === 'object') {
-             styleJson = style_data;
-         } else {
-              return res.status(400).json({ error: 'style_data must be a JSON object or string' });
-         }
+         if (typeof style_data === 'string') { styleJson = JSON.parse(style_data); }
+         else if (typeof style_data === 'object') { styleJson = style_data; }
+         else { throw new Error('style_data must be JSON object or string'); }
+     } catch(e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
 
+    try {
+        // ★ 在 UPDATE 中加入 cell_data ★
         const result = await pool.query(
-            'UPDATE walk_map_templates SET template_name = $1, description = $2, style_data = $3, updated_at = NOW() WHERE template_id = $4 RETURNING template_id, template_name',
-            [template_name, description || null, styleJson, templateId]
+            'UPDATE walk_map_templates SET template_name = $1, description = $2, style_data = $3, cell_data = $4, updated_at = NOW() WHERE template_id = $5 RETURNING template_id, template_name',
+            [template_name, description || null, styleJson, JSON.stringify(cell_data), templateId] // ★ 將 cell_data 轉為字串儲存 ★
         );
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Template not found' });
@@ -2266,102 +2292,8 @@ walkMapAdminRouter.delete('/templates/:templateId', async (req, res) => {
 });
 
 // --- Map Cell API Endpoints ---
-
-// GET /api/admin/walk_map/cells - Get all cell data
-walkMapAdminRouter.get('/cells', async (req, res) => {
-    try {
-        // Ensure we get all cells, even if some haven't been customized yet
-        // We can use a LEFT JOIN with a generated series or rely on the initial insert
-        const result = await pool.query(
-            'SELECT cell_index, title, description, cell_bg_color, modal_header_bg_color FROM walk_map_cells ORDER BY cell_index'
-        );
-        // Ensure all 24 cells are present, add defaults if missing (shouldn't happen if initial insert runs)
-        const cells = result.rows;
-        const completeCells = [];
-        const existingIndices = new Set(cells.map(c => c.cell_index));
-        for(let i = 0; i < 24; i++) {
-             if(existingIndices.has(i)) {
-                 completeCells.push(cells.find(c => c.cell_index === i));
-             } else {
-                 // This case indicates missing data in the DB, provide a default structure
-                 completeCells.push({
-                     cell_index: i,
-                     title: `未定義 ${i}`,
-                     description: '',
-                     cell_bg_color: null,
-                     modal_header_bg_color: null
-                 });
-             }
-         }
-        res.json(completeCells);
-    } catch (err) {
-        console.error('[API GET /admin/walk_map/cells] Error:', err.stack || err);
-        res.status(500).json({ error: 'Failed to retrieve cell data' });
-    }
-});
-
-// PUT /api/admin/walk_map/cells - Update all cell data (Bulk Update)
-walkMapAdminRouter.put('/cells', async (req, res) => {
-    const allCellsData = req.body;
-
-    if (!Array.isArray(allCellsData) || allCellsData.length !== 24) {
-        return res.status(400).json({ error: 'Invalid data format. Expected an array of 24 cell objects.' });
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const updateQuery = `
-            UPDATE walk_map_cells
-            SET title = $1,
-                description = $2,
-                cell_bg_color = $3,
-                modal_header_bg_color = $4,
-                updated_at = NOW()
-            WHERE cell_index = $5
-        `;
-
-        let updatedCount = 0;
-        for (const cell of allCellsData) {
-            // Validate each cell object
-            if (typeof cell.cell_index !== 'number' || cell.cell_index < 0 || cell.cell_index > 23 ||
-                typeof cell.title !== 'string' ||
-                (cell.description !== null && typeof cell.description !== 'string') ||
-                (cell.cell_bg_color !== null && typeof cell.cell_bg_color !== 'string') || // Add further color validation if needed
-                (cell.modal_header_bg_color !== null && typeof cell.modal_header_bg_color !== 'string')
-               )
-            {
-                 console.warn("Invalid cell data format received:", cell);
-                 continue; // Skip invalid entries or throw error
-             }
-
-            // Ensure NULL is passed for empty/invalid colors
-            const bgColor = (cell.cell_bg_color && /^#[0-9A-Fa-f]{6}$/.test(cell.cell_bg_color)) ? cell.cell_bg_color : null;
-            const modalColor = (cell.modal_header_bg_color && /^#[0-9A-Fa-f]{6}$/.test(cell.modal_header_bg_color)) ? cell.modal_header_bg_color : null;
-
-            const result = await client.query(updateQuery, [
-                cell.title,
-                cell.description || null,
-                bgColor,
-                modalColor,
-                cell.cell_index
-            ]);
-            updatedCount += result.rowCount;
-        }
-  
-        await client.query('COMMIT');
-        console.log(`[API PUT /admin/walk_map/cells] Updated ${updatedCount} cells.`);
-        res.status(200).json({ success: true, message: `Successfully updated ${updatedCount} cells.` });
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('[API PUT /admin/walk_map/cells] Error during bulk update:', err.stack || err);
-        res.status(500).json({ error: 'Failed to update cell data', detail: err.message });
-    } finally {
-        client.release();
-    }
-});
+ 
+ 
 
 
 app.use('/api/admin/walk_map', walkMapAdminRouter); // <-- Add this line

@@ -1,6 +1,6 @@
 // rich-admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Elements ---
+    // --- DOM 元素 ---
     const templateSelect = document.getElementById('template-select');
     const loadTemplateBtn = document.getElementById('load-template-btn');
     const newTemplateBtn = document.getElementById('new-template-btn');
@@ -9,15 +9,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const templateEditor = document.getElementById('template-editor');
     const statusMessage = document.getElementById('status-message');
 
-    // Template Editor Inputs
+    // 樣式編輯器輸入框
     const templateIdInput = document.getElementById('template-id');
     const templateNameInput = document.getElementById('template-name');
     const templateDescriptionInput = document.getElementById('template-description');
-    // ... (Get ALL template input elements by their ID - Example for one section)
     const generalPageBgColorInput = document.getElementById('general-pageBgColor');
     const generalPrimaryTextColorInput = document.getElementById('general-primaryTextColor');
     const generalPrimaryFontFamilyInput = document.getElementById('general-primaryFontFamily');
-    // ... (Get inputs for Header, Board, MapCell, PlayerMarker, Controller, Info, Connection, Modal sections) ...
+    const headerHeaderBgColorInput = document.getElementById('header-headerBgColor');
+    const headerHeaderTextColorInput = document.getElementById('header-headerTextColor');
+    const headerRoomInfoColorInput = document.getElementById('header-roomInfoColor');
+    const boardBorderColorInput = document.getElementById('board-borderColor');
+    const boardBorderWidthInput = document.getElementById('board-borderWidth');
+    const boardCenterBgColorInput = document.getElementById('board-centerBgColor');
+    const boardCenterImageUrlInput = document.getElementById('board-centerImageUrl');
+    const mapCellDefaultBgColorInput = document.getElementById('mapCell-defaultBgColor');
+    const mapCellDefaultBorderColorInput = document.getElementById('mapCell-defaultBorderColor');
+    const mapCellDefaultBorderWidthInput = document.getElementById('mapCell-defaultBorderWidth');
+    const mapCellTitleTextColorInput = document.getElementById('mapCell-titleTextColor');
+    const mapCellNumberTextColorInput = document.getElementById('mapCell-numberTextColor');
+    const mapCellHoverBgColorInput = document.getElementById('mapCell-hoverBgColor');
+    const mapCellHoverBorderColorInput = document.getElementById('mapCell-hoverBorderColor');
+    const playerMarkerShapeInput = document.getElementById('playerMarker-shape');
+    const playerMarkerTextColorInput = document.getElementById('playerMarker-textColor');
+    const playerMarkerBoxShadowInput = document.getElementById('playerMarker-boxShadow');
     const playerMarkerColorInputs = [
         document.getElementById('playerMarker-color1'),
         document.getElementById('playerMarker-color2'),
@@ -25,13 +40,35 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('playerMarker-color4'),
         document.getElementById('playerMarker-color5'),
     ];
-    const modalHeaderBgColorInput_Template = document.getElementById('modal-headerBgColor'); // Template default
+    const controllerPanelBackgroundInput = document.getElementById('controller-panelBackground');
+    const controllerPlayerLabelColorInput = document.getElementById('controller-playerLabelColor');
+    const controllerButtonDefaultBgColorInput = document.getElementById('controller-button-defaultBgColor');
+    const controllerButtonDefaultTextColorInput = document.getElementById('controller-button-defaultTextColor');
+    const controllerButtonBorderRadiusInput = document.getElementById('controller-button-borderRadius');
+    const controllerButtonHoverBgColorInput = document.getElementById('controller-button-hoverBgColor');
+    const controllerButtonCooldownOpacityInput = document.getElementById('controller-button-cooldownOpacity');
+    const infoPanelBackgroundInput = document.getElementById('info-panelBackground');
+    const infoSectionTitleColorInput = document.getElementById('info-sectionTitleColor');
+    const infoPlayerListTextInput = document.getElementById('info-playerListText');
+    const infoStaticTextColorInput = document.getElementById('info-staticTextColor');
+    const infoLeaveButtonDefaultBgColorInput = document.getElementById('info-leaveButton-defaultBgColor');
+    const infoLeaveButtonDefaultTextColorInput = document.getElementById('info-leaveButton-defaultTextColor');
+    const connectionOnlineBgColorInput = document.getElementById('connection-onlineBgColor');
+    const connectionOnlineTextColorInput = document.getElementById('connection-onlineTextColor');
+    const connectionOfflineBgColorInput = document.getElementById('connection-offlineBgColor');
+    const connectionOfflineTextColorInput = document.getElementById('connection-offlineTextColor');
+    const connectionConnectingBgColorInput = document.getElementById('connection-connectingBgColor');
+    const connectionConnectingTextColorInput = document.getElementById('connection-connectingTextColor');
+    const modalOverlayBgColorInput = document.getElementById('modal-overlayBgColor');
+    const modalContentBgColorInput = document.getElementById('modal-contentBgColor');
+    const modalHeaderBgColorInput_Template = document.getElementById('modal-headerBgColor');
+    const modalHeaderTextColorInput = document.getElementById('modal-headerTextColor');
+    const modalBodyTextColorInput = document.getElementById('modal-bodyTextColor');
 
-    // Map Cell Editor Elements
+    // 地圖格子編輯器元素
     const adminMapGrid = document.getElementById('admin-map-grid');
-    const saveAllCellDataBtn = document.getElementById('save-all-cell-data-btn');
 
-    // Cell Edit Modal Elements
+    // 格子編輯彈窗元素
     const cellEditModal = document.getElementById('cell-edit-modal');
     const modalCellIndexDisplay = document.getElementById('modal-cell-index-display');
     const editingCellIndexInput = document.getElementById('editing-cell-index');
@@ -41,82 +78,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalModalHeaderBgColorInput = document.getElementById('modal-modal-header-bg-color-input');
     const saveModalChangesBtn = document.getElementById('save-modal-changes-btn');
 
-    // --- State Variables ---
-    let currentEditingTemplateId = null;
-    let currentCellInfo = []; // Stores cell data [{ title, description, cell_bg_color, modal_header_bg_color }, ...]
-    let cellDataChanged = false; // Flag for unsaved cell changes
+    // --- 狀態變數 ---
+    let currentEditingTemplateId = null; // 當前正在編輯的模板 ID
+    let currentCellInfo = []; // 當前載入模板的 24 個格子資料陣列
 
-    // --- Initialization ---
+    // --- 初始化 ---
     loadTemplateList();
-    loadCellDataAndRenderAdminGrid();
 
-    // --- Event Listeners ---
+    // --- 事件監聽器 ---
     loadTemplateBtn.addEventListener('click', handleLoadTemplate);
     newTemplateBtn.addEventListener('click', handleNewTemplate);
     saveTemplateBtn.addEventListener('click', handleSaveTemplate);
     deleteTemplateBtn.addEventListener('click', handleDeleteTemplate);
-    saveAllCellDataBtn.addEventListener('click', saveAllCellDataToBackend);
     saveModalChangesBtn.addEventListener('click', saveModalChangesToLocal);
 
-    // --- Template Functions ---
+    // --- 模板相關函數 ---
     async function loadTemplateList() {
         try {
             const response = await fetch('/api/admin/walk_map/templates');
-            if (!response.ok) throw new Error(`Failed to fetch templates: ${response.statusText}`);
+            if (!response.ok) throw new Error(`無法獲取模板列表: ${response.statusText}`);
             const templates = await response.json();
 
-            templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>'; // Reset
+            templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>';
             templates.forEach(t => {
                 const option = document.createElement('option');
                 option.value = t.template_id;
                 option.textContent = t.template_name;
                 templateSelect.appendChild(option);
             });
-            console.log("Template list loaded.");
+            console.log("模板列表已載入。");
         } catch (error) {
-            displayStatus(`Error loading templates: ${error.message}`, true);
+            displayStatus(`載入模板列表錯誤: ${error.message}`, true);
         }
     }
 
     async function handleLoadTemplate() {
         const selectedId = templateSelect.value;
         if (!selectedId) {
-            displayStatus("Please select a template to load.", true);
+            displayStatus("請選擇一個模板來載入。", true);
+            clearTemplateEditor();
+            adminMapGrid.innerHTML = '';
             return;
         }
-        clearTemplateEditor(); // Clear first
+        clearTemplateEditor();
         try {
             const response = await fetch(`/api/admin/walk_map/templates/${selectedId}`);
-            if (!response.ok) throw new Error(`Failed to load template ${selectedId}: ${response.statusText}`);
+            if (!response.ok) throw new Error(`無法載入模板 ${selectedId}: ${response.statusText}`);
             const template = await response.json();
+
+            // 填充樣式編輯器
             populateTemplateEditor(template);
+
+            // 儲存並渲染格子資料
+            currentCellInfo = template.cell_data || createDefaultCellData();
+            renderAdminGrid();
+
             templateEditor.classList.remove('hidden');
             deleteTemplateBtn.classList.remove('hidden');
-            currentEditingTemplateId = selectedId; // Track the loaded template
-            displayStatus(`Template "${template.template_name}" loaded.`);
+            currentEditingTemplateId = selectedId;
+            displayStatus(`模板 "${template.template_name}" 已載入。`);
         } catch (error) {
-            displayStatus(`Error loading template: ${error.message}`, true);
+            displayStatus(`載入模板錯誤: ${error.message}`, true);
             templateEditor.classList.add('hidden');
             deleteTemplateBtn.classList.add('hidden');
+            adminMapGrid.innerHTML = '';
+            currentCellInfo = [];
         }
     }
 
     function handleNewTemplate() {
         clearTemplateEditor();
-        templateIdInput.value = generateTemplateId(); // Generate a suggested ID
+        templateIdInput.value = '';
+        templateIdInput.readOnly = false; // 允許輸入新 ID
+        templateIdInput.placeholder = "請輸入英文ID (例如 new_style)";
         templateNameInput.value = "新的模板";
+
+        // 產生預設格子資料並渲染
+        currentCellInfo = createDefaultCellData();
+        renderAdminGrid();
+
         templateEditor.classList.remove('hidden');
         deleteTemplateBtn.classList.add('hidden');
-        currentEditingTemplateId = null; // Indicate new template
-        displayStatus("Enter settings for the new template.");
+        currentEditingTemplateId = null;
+        displayStatus("請為新模板輸入設定 (包含 ID)。格子資料已使用預設值。");
     }
 
     async function handleSaveTemplate() {
         const templateId = templateIdInput.value.trim();
         const templateName = templateNameInput.value.trim();
         if (!templateId || !templateName) {
-            displayStatus("Template ID and Name are required.", true);
+            displayStatus("模板 ID 和名稱為必填項。", true);
             return;
+        }
+        if (!/^[a-z0-9_]+$/.test(templateId)) {
+             displayStatus("模板 ID 只能包含小寫字母、數字和底線。", true);
+             return;
         }
 
         const styleData = collectStyleData();
@@ -124,23 +180,19 @@ document.addEventListener('DOMContentLoaded', () => {
             template_id: templateId,
             template_name: templateName,
             description: templateDescriptionInput.value.trim(),
-            style_data: styleData
+            style_data: styleData,
+            cell_data: currentCellInfo // 將當前格子資料一起打包
         };
 
-        const method = currentEditingTemplateId ? 'PUT' : 'POST';
-        const url = currentEditingTemplateId ? `/api/admin/walk_map/templates/${currentEditingTemplateId}` : '/api/admin/walk_map/templates';
+        const isCreating = !currentEditingTemplateId;
+        const method = isCreating ? 'POST' : 'PUT';
+        const url = isCreating ? '/api/admin/walk_map/templates' : `/api/admin/walk_map/templates/${currentEditingTemplateId}`;
 
-        // If it's a new template but the ID was changed by the user, use the new ID
-        if (!currentEditingTemplateId && templateId !== currentEditingTemplateId) {
-             // The URL needs to be POST, but data contains the user-provided ID
-             // Make sure the server handles creating with a specific ID (if allowed) or ignores it on POST
-             console.log("Saving new template with user-provided ID:", templateId);
-        } else if (currentEditingTemplateId && templateId !== currentEditingTemplateId) {
-            displayStatus("Cannot change the ID of an existing template.", true);
-            // Or, implement ID change logic if desired (more complex)
-            return;
-        }
-
+        if (!isCreating && templateId !== currentEditingTemplateId) {
+             displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
+             templateIdInput.value = currentEditingTemplateId;
+             return;
+         }
 
         try {
             const response = await fetch(url, {
@@ -149,20 +201,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(templateData)
             });
             if (!response.ok) {
-                const errorData = await response.json();
-                 throw new Error(errorData.error || `Failed to save template: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                 throw new Error(errorData.error || `儲存模板失敗: ${response.statusText}`);
             }
-            const savedTemplate = await response.json();
-            displayStatus(`Template "${savedTemplate.template_name}" saved successfully!`);
-            // If it was a new template, update the state and list
-            if (!currentEditingTemplateId) {
-                currentEditingTemplateId = savedTemplate.template_id; // Now it's an existing template
-                templateIdInput.value = savedTemplate.template_id; // Reflect saved ID if generated by server
-                loadTemplateList(); // Refresh the list
-                 templateSelect.value = savedTemplate.template_id; // Select the newly added one
-                 deleteTemplateBtn.classList.remove('hidden'); // Allow deletion now
+            const savedTemplateResult = await response.json(); // 後端應返回確認信息，如 ID 和 Name
+            displayStatus(`模板 "${templateData.template_name}" (ID: ${templateData.template_id}) 已成功儲存！`);
+
+            if (isCreating) {
+                currentEditingTemplateId = templateData.template_id;
+                templateIdInput.value = currentEditingTemplateId;
+                templateIdInput.readOnly = true;
+                deleteTemplateBtn.classList.remove('hidden');
+                await loadTemplateList(); // 使用 await 確保列表更新後再選中
+                templateSelect.value = currentEditingTemplateId; // 選中新建的模板
             } else {
-                // If name changed, update dropdown text
                  const option = templateSelect.querySelector(`option[value="${currentEditingTemplateId}"]`);
                  if (option && option.textContent !== templateName) {
                      option.textContent = templateName;
@@ -170,134 +222,111 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (error) {
-            displayStatus(`Error saving template: ${error.message}`, true);
+            displayStatus(`儲存模板錯誤: ${error.message}`, true);
         }
     }
 
     async function handleDeleteTemplate() {
-        if (!currentEditingTemplateId || !confirm(`Are you sure you want to delete the template "${templateNameInput.value}"? This cannot be undone.`)) {
+        if (!currentEditingTemplateId) {
+            displayStatus("未選擇要刪除的模板。", true);
+            return;
+        }
+
+        const currentName = templateNameInput.value || `ID: ${currentEditingTemplateId}`;
+
+        if (!confirm(`你確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
             return;
         }
 
         try {
             const response = await fetch(`/api/admin/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
             if (!response.ok) {
-                 if (response.status === 404) throw new Error("Template not found.");
-                 const errorData = await response.json().catch(() => ({})); // Try to get error details
-                 throw new Error(errorData.error || `Failed to delete template: ${response.statusText}`);
+                 if (response.status === 404) throw new Error("伺服器上找不到模板。");
+                 const errorData = await response.json().catch(() => ({}));
+                 throw new Error(errorData.error || `刪除模板失敗: ${response.statusText}`);
              }
-            displayStatus(`Template "${templateNameInput.value}" deleted successfully.`);
+            displayStatus(`模板 "${currentName}" 已成功刪除。`);
             clearTemplateEditor();
-            loadTemplateList(); // Refresh the list
+            adminMapGrid.innerHTML = '';
+            currentCellInfo = [];
+            await loadTemplateList(); // 使用 await 確保列表更新後再操作
+            templateSelect.value = ""; // 清空選擇
+
         } catch (error) {
-            displayStatus(`Error deleting template: ${error.message}`, true);
+            displayStatus(`刪除模板錯誤: ${error.message}`, true);
         }
     }
 
+    // 填充樣式編輯器 (僅處理 style_data)
     function populateTemplateEditor(template) {
-        templateIdInput.value = template.template_id;
-        templateNameInput.value = template.template_name || '';
-        templateDescriptionInput.value = template.description || '';
+         templateIdInput.value = template.template_id || '';
+         templateIdInput.readOnly = !!template.template_id; // 如果有 ID，設為只讀
+         templateNameInput.value = template.template_name || '';
+         templateDescriptionInput.value = template.description || '';
 
-        const styles = template.style_data || {}; // Ensure styles object exists
+         const styles = template.style_data || {};
 
-        // Populate General
-        const general = styles.general || {};
-        generalPageBgColorInput.value = general.pageBgColor || '#f5f5f5';
-        generalPrimaryTextColorInput.value = general.primaryTextColor || '#333333';
-        generalPrimaryFontFamilyInput.value = general.primaryFontFamily || '';
+         generalPageBgColorInput.value = styles.general?.pageBgColor || '#f5f5f5';
+         generalPrimaryTextColorInput.value = styles.general?.primaryTextColor || '#333333';
+         generalPrimaryFontFamilyInput.value = styles.general?.primaryFontFamily || '';
 
-        // Populate Header
-        const header = styles.header || {};
-        // ... (populate header inputs using header.headerBgColor etc. with defaults) ...
-        document.getElementById('header-headerBgColor').value = header.headerBgColor || '#4CAF50';
-        document.getElementById('header-headerTextColor').value = header.headerTextColor || '#FFFFFF';
-        document.getElementById('header-roomInfoColor').value = header.roomInfoColor || '#FFFFFF';
+         headerHeaderBgColorInput.value = styles.header?.headerBgColor || '#4CAF50';
+         headerHeaderTextColorInput.value = styles.header?.headerTextColor || '#FFFFFF';
+         headerRoomInfoColorInput.value = styles.header?.roomInfoColor || '#FFFFFF';
 
+         boardBorderColorInput.value = styles.board?.borderColor || '#4CAF50';
+         boardBorderWidthInput.value = styles.board?.borderWidth || '2px';
+         boardCenterBgColorInput.value = styles.board?.centerBgColor || '#e8f5e9';
+         boardCenterImageUrlInput.value = styles.board?.centerImageUrl || '';
 
-        // Populate Board
-        const board = styles.board || {};
-        // ... (populate board inputs) ...
-        document.getElementById('board-borderColor').value = board.borderColor || '#4CAF50';
-        document.getElementById('board-borderWidth').value = board.borderWidth || '2px';
-        document.getElementById('board-centerBgColor').value = board.centerBgColor || '#e8f5e9';
-        document.getElementById('board-centerImageUrl').value = board.centerImageUrl || '';
+         mapCellDefaultBgColorInput.value = styles.mapCell?.defaultBgColor || '#FFFFFF';
+         mapCellDefaultBorderColorInput.value = styles.mapCell?.defaultBorderColor || '#4CAF50';
+         mapCellDefaultBorderWidthInput.value = styles.mapCell?.defaultBorderWidth || '1px';
+         mapCellTitleTextColorInput.value = styles.mapCell?.titleTextColor || '#333333';
+         mapCellNumberTextColorInput.value = styles.mapCell?.numberTextColor || '#777777';
+         mapCellHoverBgColorInput.value = styles.mapCell?.hoverBgColor || '#e8f5e9';
+         mapCellHoverBorderColorInput.value = styles.mapCell?.hoverBorderColor || '#3e8e41';
 
+         playerMarkerShapeInput.value = styles.playerMarker?.shape || '50%';
+         playerMarkerTextColorInput.value = styles.playerMarker?.textColor || '#FFFFFF';
+         playerMarkerBoxShadowInput.value = styles.playerMarker?.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
+         const playerColors = styles.playerMarker?.playerColors || [];
+         playerMarkerColorInputs.forEach((input, i) => { input.value = playerColors[i] || '#cccccc'; });
 
-        // Populate MapCell
-        const mapCell = styles.mapCell || {};
-        // ... (populate mapCell inputs) ...
-        document.getElementById('mapCell-defaultBgColor').value = mapCell.defaultBgColor || '#FFFFFF';
-        document.getElementById('mapCell-defaultBorderColor').value = mapCell.defaultBorderColor || '#4CAF50';
-        document.getElementById('mapCell-defaultBorderWidth').value = mapCell.defaultBorderWidth || '1px';
-        document.getElementById('mapCell-titleTextColor').value = mapCell.titleTextColor || '#333333';
-        document.getElementById('mapCell-numberTextColor').value = mapCell.numberTextColor || '#777777';
-        document.getElementById('mapCell-hoverBgColor').value = mapCell.hoverBgColor || '#e8f5e9';
-        document.getElementById('mapCell-hoverBorderColor').value = mapCell.hoverBorderColor || '#3e8e41';
+         controllerPanelBackgroundInput.value = styles.controller?.panelBackground || '#FFFFFF';
+         controllerPlayerLabelColorInput.value = styles.controller?.playerLabelColor || '#333333';
+         controllerButtonDefaultBgColorInput.value = styles.controller?.controlButton?.defaultBgColor || '#4CAF50';
+         controllerButtonDefaultTextColorInput.value = styles.controller?.controlButton?.defaultTextColor || '#FFFFFF';
+         controllerButtonBorderRadiusInput.value = styles.controller?.controlButton?.borderRadius || '5px';
+         controllerButtonHoverBgColorInput.value = styles.controller?.controlButton?.hoverBgColor || '#3e8e41';
+         controllerButtonCooldownOpacityInput.value = styles.controller?.controlButton?.cooldownOpacity || '0.6';
 
+         infoPanelBackgroundInput.value = styles.info?.panelBackground || '#FFFFFF';
+         infoSectionTitleColorInput.value = styles.info?.sectionTitleColor || '#333333';
+         infoPlayerListTextInput.value = styles.info?.playerListText || '#333333';
+         infoStaticTextColorInput.value = styles.info?.staticTextColor || '#333333';
+         infoLeaveButtonDefaultBgColorInput.value = styles.info?.leaveButton?.defaultBgColor || '#f1f1f1';
+         infoLeaveButtonDefaultTextColorInput.value = styles.info?.leaveButton?.defaultTextColor || '#333333';
 
-        // Populate PlayerMarker
-        const playerMarker = styles.playerMarker || {};
-        // ... (populate playerMarker inputs) ...
-        document.getElementById('playerMarker-shape').value = playerMarker.shape || '50%';
-        document.getElementById('playerMarker-textColor').value = playerMarker.textColor || '#FFFFFF';
-        document.getElementById('playerMarker-boxShadow').value = playerMarker.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
-        const playerColors = playerMarker.playerColors || [];
-        playerMarkerColorInputs.forEach((input, i) => {
-            input.value = playerColors[i] || '#cccccc'; // Default grey if not enough colors
-        });
+         connectionOnlineBgColorInput.value = styles.connection?.onlineBgColor || '#dff0d8';
+         connectionOnlineTextColorInput.value = styles.connection?.onlineTextColor || '#3c763d';
+         connectionOfflineBgColorInput.value = styles.connection?.offlineBgColor || '#f2dede';
+         connectionOfflineTextColorInput.value = styles.connection?.offlineTextColor || '#a94442';
+         connectionConnectingBgColorInput.value = styles.connection?.connectingBgColor || '#fcf8e3';
+         connectionConnectingTextColorInput.value = styles.connection?.connectingTextColor || '#8a6d3b';
 
-
-        // Populate Controller
-        const controller = styles.controller || {};
-        // ... (populate controller inputs, including nested button styles) ...
-        document.getElementById('controller-panelBackground').value = controller.panelBackground || '#FFFFFF';
-        document.getElementById('controller-playerLabelColor').value = controller.playerLabelColor || '#333333';
-        const ctrlBtn = controller.controlButton || {};
-        document.getElementById('controller-button-defaultBgColor').value = ctrlBtn.defaultBgColor || '#4CAF50';
-        document.getElementById('controller-button-defaultTextColor').value = ctrlBtn.defaultTextColor || '#FFFFFF';
-        document.getElementById('controller-button-borderRadius').value = ctrlBtn.borderRadius || '5px';
-        document.getElementById('controller-button-hoverBgColor').value = ctrlBtn.hoverBgColor || '#3e8e41';
-        document.getElementById('controller-button-cooldownOpacity').value = ctrlBtn.cooldownOpacity || '0.6';
-
-
-        // Populate Info Area
-        const info = styles.info || {};
-         // ... (populate info inputs, including nested leave button styles) ...
-        document.getElementById('info-panelBackground').value = info.panelBackground || '#FFFFFF';
-        document.getElementById('info-sectionTitleColor').value = info.sectionTitleColor || '#333333';
-        document.getElementById('info-playerListText').value = info.playerListText || '#333333';
-        document.getElementById('info-staticTextColor').value = info.staticTextColor || '#333333';
-        const leaveBtn = info.leaveButton || {};
-        document.getElementById('info-leaveButton-defaultBgColor').value = leaveBtn.defaultBgColor || '#f1f1f1';
-        document.getElementById('info-leaveButton-defaultTextColor').value = leaveBtn.defaultTextColor || '#333333';
-
-
-        // Populate Connection Status
-        const connection = styles.connection || {};
-        // ... (populate connection inputs) ...
-         document.getElementById('connection-onlineBgColor').value = connection.onlineBgColor || '#dff0d8';
-         document.getElementById('connection-onlineTextColor').value = connection.onlineTextColor || '#3c763d';
-         document.getElementById('connection-offlineBgColor').value = connection.offlineBgColor || '#f2dede';
-         document.getElementById('connection-offlineTextColor').value = connection.offlineTextColor || '#a94442';
-         document.getElementById('connection-connectingBgColor').value = connection.connectingBgColor || '#fcf8e3';
-         document.getElementById('connection-connectingTextColor').value = connection.connectingTextColor || '#8a6d3b';
-
-
-        // Populate Modal
-        const modal = styles.modal || {};
-        // ... (populate modal inputs) ...
-        document.getElementById('modal-overlayBgColor').value = modal.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
-        document.getElementById('modal-contentBgColor').value = modal.contentBgColor || '#FFFFFF';
-        modalHeaderBgColorInput_Template.value = modal.headerBgColor || '#4CAF50'; // Template default
-        document.getElementById('modal-headerTextColor').value = modal.headerTextColor || '#FFFFFF';
-        document.getElementById('modal-bodyTextColor').value = modal.bodyTextColor || '#333333';
-
+         modalOverlayBgColorInput.value = styles.modal?.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
+         modalContentBgColorInput.value = styles.modal?.contentBgColor || '#FFFFFF';
+         modalHeaderBgColorInput_Template.value = styles.modal?.headerBgColor || '#4CAF50'; // 模板的彈窗頭預設
+         modalHeaderTextColorInput.value = styles.modal?.headerTextColor || '#FFFFFF';
+         modalBodyTextColorInput.value = styles.modal?.bodyTextColor || '#333333';
     }
 
-     function collectStyleData() {
-        // Collect data from all input fields and structure into the JSON format
-        const playerColors = playerMarkerColorInputs.map(input => input.value).filter(color => color); // Collect non-empty colors
+    // 收集樣式資料
+    function collectStyleData() {
+        const playerColors = playerMarkerColorInputs
+            .map(input => input.value)
+            .filter(color => color && color.toLowerCase() !== '#ffffff'); // 過濾掉白色預設值
 
         return {
             general: {
@@ -306,129 +335,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 primaryFontFamily: generalPrimaryFontFamilyInput.value.trim() || null,
             },
             header: {
-                headerBgColor: document.getElementById('header-headerBgColor').value,
-                headerTextColor: document.getElementById('header-headerTextColor').value,
-                roomInfoColor: document.getElementById('header-roomInfoColor').value,
+                headerBgColor: headerHeaderBgColorInput.value,
+                headerTextColor: headerHeaderTextColorInput.value,
+                roomInfoColor: headerRoomInfoColorInput.value,
             },
             board: {
-                 borderColor: document.getElementById('board-borderColor').value,
-                 borderWidth: document.getElementById('board-borderWidth').value.trim() || null,
-                 centerBgColor: document.getElementById('board-centerBgColor').value,
-                 centerImageUrl: document.getElementById('board-centerImageUrl').value.trim() || null,
+                 borderColor: boardBorderColorInput.value,
+                 borderWidth: boardBorderWidthInput.value.trim() || null,
+                 centerBgColor: boardCenterBgColorInput.value,
+                 centerImageUrl: boardCenterImageUrlInput.value.trim() || null,
             },
-            mapCell: {
-                 defaultBgColor: document.getElementById('mapCell-defaultBgColor').value,
-                 defaultBorderColor: document.getElementById('mapCell-defaultBorderColor').value,
-                 defaultBorderWidth: document.getElementById('mapCell-defaultBorderWidth').value.trim() || null,
-                 titleTextColor: document.getElementById('mapCell-titleTextColor').value,
-                 numberTextColor: document.getElementById('mapCell-numberTextColor').value,
-                 hoverBgColor: document.getElementById('mapCell-hoverBgColor').value,
-                 hoverBorderColor: document.getElementById('mapCell-hoverBorderColor').value,
+            mapCell: { // 格子預設樣式
+                 defaultBgColor: mapCellDefaultBgColorInput.value,
+                 defaultBorderColor: mapCellDefaultBorderColorInput.value,
+                 defaultBorderWidth: mapCellDefaultBorderWidthInput.value.trim() || null,
+                 titleTextColor: mapCellTitleTextColorInput.value,
+                 numberTextColor: mapCellNumberTextColorInput.value,
+                 hoverBgColor: mapCellHoverBgColorInput.value,
+                 hoverBorderColor: mapCellHoverBorderColorInput.value,
             },
             playerMarker: {
-                shape: document.getElementById('playerMarker-shape').value.trim() || null,
-                textColor: document.getElementById('playerMarker-textColor').value,
-                boxShadow: document.getElementById('playerMarker-boxShadow').value.trim() || null,
-                playerColors: playerColors,
+                shape: playerMarkerShapeInput.value.trim() || null,
+                textColor: playerMarkerTextColorInput.value,
+                boxShadow: playerMarkerBoxShadowInput.value.trim() || null,
+                playerColors: playerColors.length > 0 ? playerColors : ["#1e88e5", "#ef5350", "#4caf50", "#ffb300", "#7e57c2"], // 提供預設顏色組
             },
             controller: {
-                panelBackground: document.getElementById('controller-panelBackground').value,
-                playerLabelColor: document.getElementById('controller-playerLabelColor').value,
+                panelBackground: controllerPanelBackgroundInput.value,
+                playerLabelColor: controllerPlayerLabelColorInput.value,
                 controlButton: {
-                     defaultBgColor: document.getElementById('controller-button-defaultBgColor').value,
-                     defaultTextColor: document.getElementById('controller-button-defaultTextColor').value,
-                     borderRadius: document.getElementById('controller-button-borderRadius').value.trim() || null,
-                     hoverBgColor: document.getElementById('controller-button-hoverBgColor').value,
-                     cooldownOpacity: document.getElementById('controller-button-cooldownOpacity').value.trim() || null,
+                     defaultBgColor: controllerButtonDefaultBgColorInput.value,
+                     defaultTextColor: controllerButtonDefaultTextColorInput.value,
+                     borderRadius: controllerButtonBorderRadiusInput.value.trim() || null,
+                     hoverBgColor: controllerButtonHoverBgColorInput.value,
+                     cooldownOpacity: controllerButtonCooldownOpacityInput.value.trim() || null,
                 }
             },
             info: {
-                panelBackground: document.getElementById('info-panelBackground').value,
-                sectionTitleColor: document.getElementById('info-sectionTitleColor').value,
-                playerListText: document.getElementById('info-playerListText').value,
-                staticTextColor: document.getElementById('info-staticTextColor').value,
+                panelBackground: infoPanelBackgroundInput.value,
+                sectionTitleColor: infoSectionTitleColorInput.value,
+                playerListText: infoPlayerListTextInput.value,
+                staticTextColor: infoStaticTextColorInput.value,
                 leaveButton: {
-                    defaultBgColor: document.getElementById('info-leaveButton-defaultBgColor').value,
-                    defaultTextColor: document.getElementById('info-leaveButton-defaultTextColor').value,
+                    defaultBgColor: infoLeaveButtonDefaultBgColorInput.value,
+                    defaultTextColor: infoLeaveButtonDefaultTextColorInput.value,
                 }
             },
             connection: {
-                 onlineBgColor: document.getElementById('connection-onlineBgColor').value,
-                 onlineTextColor: document.getElementById('connection-onlineTextColor').value,
-                 offlineBgColor: document.getElementById('connection-offlineBgColor').value,
-                 offlineTextColor: document.getElementById('connection-offlineTextColor').value,
-                 connectingBgColor: document.getElementById('connection-connectingBgColor').value,
-                 connectingTextColor: document.getElementById('connection-connectingTextColor').value,
+                 onlineBgColor: connectionOnlineBgColorInput.value,
+                 onlineTextColor: connectionOnlineTextColorInput.value,
+                 offlineBgColor: connectionOfflineBgColorInput.value,
+                 offlineTextColor: connectionOfflineTextColorInput.value,
+                 connectingBgColor: connectionConnectingBgColorInput.value,
+                 connectingTextColor: connectionConnectingTextColorInput.value,
             },
-            modal: {
-                 overlayBgColor: document.getElementById('modal-overlayBgColor').value.trim() || null,
-                 contentBgColor: document.getElementById('modal-contentBgColor').value,
-                 headerBgColor: modalHeaderBgColorInput_Template.value, // Template default
-                 headerTextColor: document.getElementById('modal-headerTextColor').value,
-                 bodyTextColor: document.getElementById('modal-bodyTextColor').value,
+            modal: { // 彈窗預設樣式
+                 overlayBgColor: modalOverlayBgColorInput.value.trim() || null,
+                 contentBgColor: modalContentBgColorInput.value,
+                 headerBgColor: modalHeaderBgColorInput_Template.value, // 彈窗頭部預設
+                 headerTextColor: modalHeaderTextColorInput.value,
+                 bodyTextColor: modalBodyTextColorInput.value,
             }
-            // ... (Collect data for all other sections)
         };
     }
 
-
+    // 清除模板編輯器 (包含樣式和格子)
     function clearTemplateEditor() {
         templateIdInput.value = '';
+        templateIdInput.placeholder = '';
+        templateIdInput.readOnly = false;
         templateNameInput.value = '';
         templateDescriptionInput.value = '';
-        // Reset all input fields to their default values (or empty)
-        // This needs to reset ALL the inputs collected in collectStyleData()
-        // Example for one section:
-        generalPageBgColorInput.value = '#f5f5f5';
-        generalPrimaryTextColorInput.value = '#333333';
-        generalPrimaryFontFamilyInput.value = '';
-        // ... Reset ALL other inputs ...
-        playerMarkerColorInputs.forEach(input => input.value = '#cccccc');
-        modalHeaderBgColorInput_Template.value = '#4CAF50'; // Reset template default
+
+        // 使用空物件填充樣式輸入，達到重設效果
+        populateTemplateEditor({ style_data: {} });
+
+        adminMapGrid.innerHTML = ''; // 清除格子預覽
+        currentCellInfo = [];      // 清空本地格子資料
 
         templateEditor.classList.add('hidden');
         deleteTemplateBtn.classList.add('hidden');
         currentEditingTemplateId = null;
-         templateSelect.value = ""; // Reset dropdown selection
+        templateSelect.value = "";
     }
 
-    function generateTemplateId() {
-         // Simple suggestion, replace spaces with underscores, lowercase
-         const name = templateNameInput.value.trim() || "new_template";
-         return name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    }
+    // --- 地圖格子相關函數 ---
 
-
-    // --- Map Cell Functions ---
-    async function loadCellDataAndRenderAdminGrid() {
-        try {
-            const response = await fetch('/api/admin/walk_map/cells');
-            if (!response.ok) throw new Error(`Failed to fetch cell data: ${response.statusText}`);
-            currentCellInfo = await response.json();
-            renderAdminGrid(); // Call the rendering function
-            cellDataChanged = false; // Reset change flag
-             displayStatus("Map cell data loaded.");
-        } catch (error) {
-            displayStatus(`Error loading cell data: ${error.message}`, true);
-             // Initialize with empty array if load fails to prevent errors
-             currentCellInfo = Array(24).fill({}).map((_, i) => ({
-                cell_index: i,
-                title: `Error ${i}`,
-                description: 'Failed to load',
-                cell_bg_color: null,
-                modal_header_bg_color: null
-             }));
-             renderAdminGrid(); // Render with error state
-        }
-    }
-
+    // 渲染格子預覽 (從 currentCellInfo 讀取)
     function renderAdminGrid() {
-        adminMapGrid.innerHTML = ''; // Clear previous grid
-        const totalCells = 24; // Or get from config if dynamic
+        adminMapGrid.innerHTML = '';
+        const totalCells = 24;
 
+        if (!Array.isArray(currentCellInfo)) {
+            console.error("currentCellInfo 不是陣列!", currentCellInfo);
+            currentCellInfo = createDefaultCellData();
+        }
+        if (currentCellInfo.length !== totalCells) {
+             console.warn(`格子資料數量 (${currentCellInfo.length}) 不等於預期的 ${totalCells}，將使用預設值填充。`);
+             currentCellInfo = createDefaultCellData(); // 如果數量不對，強制使用預設
+        }
+
+        // 確保索引是 0 到 23
+        currentCellInfo.sort((a, b) => (a.cell_index || 0) - (b.cell_index || 0));
         for (let i = 0; i < totalCells; i++) {
-            const cellData = currentCellInfo.find(c => c.cell_index === i) || { title: `未定義 ${i}`, cell_bg_color: null };
+             // 再次檢查，如果排序後索引不對或缺少，用預設值替換
+             if (!currentCellInfo[i] || currentCellInfo[i].cell_index !== i) {
+                 console.warn(`修復/替換索引 ${i} 的格子資料。`);
+                 currentCellInfo[i] = {
+                    cell_index: i, title: `預設 ${i}`, description: '', cell_bg_color: null, modal_header_bg_color: null
+                 };
+             }
+        }
 
+        currentCellInfo.forEach((cellData, i) => {
             const cellDiv = document.createElement('div');
             cellDiv.className = 'admin-map-cell';
             cellDiv.id = `admin-cell-${i}`;
@@ -442,143 +461,125 @@ document.addEventListener('DOMContentLoaded', () => {
             indexSpan.className = 'admin-cell-index';
             indexSpan.textContent = i;
 
-
             cellDiv.appendChild(titleSpan);
-             cellDiv.appendChild(indexSpan);
+            cellDiv.appendChild(indexSpan);
 
-            // Apply specific background color if defined, otherwise rely on CSS default
-            cellDiv.style.backgroundColor = cellData.cell_bg_color || ''; // Empty string resets to CSS default
+            // 應用格子的特定背景色，否則繼承 CSS
+            cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
 
-            cellDiv.addEventListener('click', () => {
-                openCellEditModal(i);
-            });
-
+            cellDiv.addEventListener('click', () => { openCellEditModal(i); });
             adminMapGrid.appendChild(cellDiv);
-        }
-        // Apply CSS Grid positioning via classes (preferred) or JS if needed
+        });
         applyGridPositioningCSS();
     }
 
+    // 應用 CSS Grid 定位
     function applyGridPositioningCSS() {
-        // Add classes based on index to apply grid-area from CSS
          const cells = adminMapGrid.querySelectorAll('.admin-map-cell');
          cells.forEach(cell => {
             const i = parseInt(cell.dataset.cellIndex);
-             // Logic similar to game.js createMonopolyMap, but for admin grid
             if (i >= 0 && i <= 6) cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
             else if (i >= 7 && i <= 12) cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
             else if (i >= 13 && i <= 18) cell.style.gridArea = `${7} / ${7 - (i - 13)} / ${8} / ${7 - (i - 13) + 1}`;
             else if (i >= 19 && i <= 23) cell.style.gridArea = `${7 - (i - 19)} / ${1} / ${7 - (i - 19) + 1} / ${2}`;
          });
-         console.log("Applied grid positioning to admin map.");
     }
 
+    // 開啟格子編輯彈窗
     function openCellEditModal(index) {
-        const cellData = currentCellInfo.find(c => c.cell_index === index);
-        if (!cellData) {
-            displayStatus(`Cannot find data for cell index ${index}`, true);
-            return;
-        }
+         if (index < 0 || index >= currentCellInfo.length) {
+             displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+             return;
+         }
+         const cellData = currentCellInfo[index];
 
         modalCellIndexDisplay.textContent = index;
         editingCellIndexInput.value = index;
         modalCellTitleInput.value = cellData.title || '';
         modalCellDescTextarea.value = cellData.description || '';
 
-        // Reset color input "cleared" state and set value
-        modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff'; // Default to white if null
-        modalCellBgColorInput.dataset.cleared = 'false';
-        modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff'; // Default to white if null
-        modalModalHeaderBgColorInput.dataset.cleared = 'false';
-
+        // 設定顏色並處理 null (顯示為白色，標記 cleared 狀態)
+        modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+        modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
+        modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+        modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
 
         cellEditModal.classList.remove('hidden');
     }
 
+    // 將彈窗修改暫存到本地 currentCellInfo
     function saveModalChangesToLocal() {
         const index = parseInt(editingCellIndexInput.value, 10);
-        const cellData = currentCellInfo.find(c => c.cell_index === index);
-        if (isNaN(index) || !cellData) {
-            displayStatus("Error: Invalid cell index for saving.", true);
+        if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
+            displayStatus("錯誤：無效的格子索引，無法儲存。", true);
             return;
         }
+        const cellData = currentCellInfo[index];
 
         const newTitle = modalCellTitleInput.value.trim();
         const newDesc = modalCellDescTextarea.value.trim();
+        let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true' || modalCellBgColorInput.value.toLowerCase() === '#ffffff')
+                         ? null : modalCellBgColorInput.value;
+        let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true' || modalModalHeaderBgColorInput.value.toLowerCase() === '#ffffff')
+                                  ? null : modalModalHeaderBgColorInput.value;
 
-        // Handle color clearing: if marked as cleared or set to white (visual reset), save as null
-        let newBgColor = modalCellBgColorInput.value;
-        if (modalCellBgColorInput.dataset.cleared === 'true' || newBgColor === '#ffffff') {
-            newBgColor = null;
-        }
-        let newModalHeaderBgColor = modalModalHeaderBgColorInput.value;
-         if (modalModalHeaderBgColorInput.dataset.cleared === 'true' || newModalHeaderBgColor === '#ffffff') {
-            newModalHeaderBgColor = null;
-        }
-
-
-        // Update the local array
+        // 更新本地陣列中的物件
         cellData.title = newTitle;
         cellData.description = newDesc;
         cellData.cell_bg_color = newBgColor;
         cellData.modal_header_bg_color = newModalHeaderBgColor;
 
-        // Update the visual grid preview immediately
+        // 更新格子預覽
         const adminCellDiv = document.getElementById(`admin-cell-${index}`);
         if (adminCellDiv) {
             const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
             if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
-            adminCellDiv.style.backgroundColor = newBgColor || ''; // Reset to CSS default if null
+            adminCellDiv.style.backgroundColor = newBgColor || '';
         }
 
-        cellDataChanged = true; // Mark changes as pending save
         closeCellEditModal();
-        displayStatus(`Cell ${index} changes temporarily saved. Click "Save All Cell Changes" to commit.`);
+        displayStatus(`格子 ${index} 變更已應用。點擊「儲存模板樣式」以儲存所有變更。`);
     }
 
-    async function saveAllCellDataToBackend() {
-        if (!cellDataChanged) {
-             displayStatus("No cell changes to save.");
-             return;
-         }
-
-        try {
-            const response = await fetch('/api/admin/walk_map/cells', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(currentCellInfo) // Send the entire array
-            });
-            if (!response.ok) {
-                 const errorData = await response.json();
-                 throw new Error(errorData.error || `Failed to save cell data: ${response.statusText}`);
-             }
-            // const result = await response.json(); // Optional: check result if needed
-            cellDataChanged = false; // Reset flag after successful save
-            displayStatus("All cell changes saved successfully!");
-        } catch (error) {
-            displayStatus(`Error saving cell data: ${error.message}`, true);
-        }
-    }
-
-    // --- Utility Functions ---
+    // --- 工具函數 ---
     function displayStatus(message, isError = false) {
         statusMessage.textContent = message;
         statusMessage.className = isError ? 'status-error' : 'status-success';
-        // Auto-clear message after a few seconds
         setTimeout(() => {
-            if (statusMessage.textContent === message) { // Only clear if message hasn't changed
+            if (statusMessage.textContent === message) {
                  statusMessage.textContent = '';
                  statusMessage.className = '';
             }
         }, 5000);
     }
 
-     // Add window.closeCellEditModal for the inline onclick
-     window.closeCellEditModal = closeCellEditModal;
-     window.clearColorInput = (inputId) => {
+    // 產生預設的 24 個格子資料
+    function createDefaultCellData() {
+        const defaultCells = [];
+        const defaultTitles = [
+            "起點", "住宅區A", "機會", "住宅區B", "所得稅", "車站北站", "監獄(探訪)",
+            "商業區A", "命運", "商業區B", "商業區C", "電廠", "免費停車",
+            "住宅區D", "機會", "住宅區E", "車站西站", "公園", "命運", "住宅區F",
+            "進監獄", "豪宅區A", "水廠", "豪宅區B"
+        ];
+        for (let i = 0; i < 24; i++) {
+            defaultCells.push({
+                cell_index: i,
+                title: defaultTitles[i] || `格位 ${i}`,
+                description: `這裡是 ${defaultTitles[i] || `格位 ${i}`}。`,
+                cell_bg_color: null,
+                modal_header_bg_color: null
+            });
+        }
+        return defaultCells;
+    }
+
+    // 將函數掛載到 window 以便 HTML 中的 onclick 調用
+    window.closeCellEditModal = closeCellEditModal;
+    window.clearColorInput = (inputId) => {
          const input = document.getElementById(inputId);
-         input.value = '#ffffff'; // Visually reset to white
-         input.dataset.cleared = 'true'; // Mark as cleared for saving logic
+         input.value = '#ffffff'; // 視覺上重設為白色
+         input.dataset.cleared = 'true'; // 標記為已清除，儲存時會變 null
      };
 
 }); // End DOMContentLoaded
