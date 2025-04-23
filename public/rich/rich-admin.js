@@ -1,16 +1,15 @@
 // rich-admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // --- DOM 元素 ---
     const templateSelect = document.getElementById('template-select');
     const loadTemplateBtn = document.getElementById('load-template-btn');
     const newTemplateBtn = document.getElementById('new-template-btn');
     const saveTemplateBtn = document.getElementById('save-template-btn');
-    const saveAsNewTemplateBtn = document.getElementById('save-as-new-template-btn');
     const deleteTemplateBtn = document.getElementById('delete-template-btn');
     const templateEditor = document.getElementById('template-editor');
     const statusMessage = document.getElementById('status-message');
 
-    // Style Editor Inputs
+    // 樣式編輯器輸入框
     const templateIdInput = document.getElementById('template-id');
     const templateNameInput = document.getElementById('template-name');
     const templateDescriptionInput = document.getElementById('template-description');
@@ -66,11 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalHeaderTextColorInput = document.getElementById('modal-headerTextColor');
     const modalBodyTextColorInput = document.getElementById('modal-bodyTextColor');
 
-    // Map Cell Elements
+    // 地圖格子編輯器元素
     const adminMapGrid = document.getElementById('admin-map-grid');
-    const adminMapCenterText = document.getElementById('admin-map-center-text');
 
-    // Cell Edit Modal Elements
+    // 格子編輯彈窗元素
     const cellEditModal = document.getElementById('cell-edit-modal');
     const modalCellIndexDisplay = document.getElementById('modal-cell-index-display');
     const editingCellIndexInput = document.getElementById('editing-cell-index');
@@ -80,23 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalModalHeaderBgColorInput = document.getElementById('modal-modal-header-bg-color-input');
     const saveModalChangesBtn = document.getElementById('save-modal-changes-btn');
 
-    // State Variables
+    // --- 狀態變數 ---
     let currentEditingTemplateId = null;
     let currentCellInfo = [];
 
-    // Initialization
+    // --- 初始化 ---
     loadTemplateList();
 
-    // Event Listeners
+    // --- 事件監聽器 ---
     loadTemplateBtn.addEventListener('click', handleLoadTemplate);
     newTemplateBtn.addEventListener('click', handleNewTemplate);
     saveTemplateBtn.addEventListener('click', handleSaveTemplate);
-    saveAsNewTemplateBtn.addEventListener('click', handleSaveAsNewTemplate);
     deleteTemplateBtn.addEventListener('click', handleDeleteTemplate);
     saveModalChangesBtn.addEventListener('click', saveModalChangesToLocal);
-    templateDescriptionInput.addEventListener('input', updateCenterTextPreview);
 
-    // --- Template Functions ---
+    // --- 模板相關函數 ---
     async function loadTemplateList() {
         try {
             const response = await fetch('/api/admin/walk_map/templates');
@@ -122,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
             displayStatus("請選擇一個模板來載入。", true);
             clearTemplateEditor();
             adminMapGrid.innerHTML = '';
-            adminMapCenterText.textContent = '';
             return;
         }
         clearTemplateEditor();
@@ -134,20 +129,16 @@ document.addEventListener('DOMContentLoaded', () => {
             populateTemplateEditor(template);
             currentCellInfo = template.cell_data || createDefaultCellData();
             renderAdminGrid();
-            adminMapCenterText.textContent = template.description || '';
 
             templateEditor.classList.remove('hidden');
-            saveAsNewTemplateBtn.classList.remove('hidden');
             deleteTemplateBtn.classList.remove('hidden');
             currentEditingTemplateId = selectedId;
             displayStatus(`模板 "${template.template_name}" 已載入。`);
         } catch (error) {
             displayStatus(`載入模板錯誤: ${error.message}`, true);
             templateEditor.classList.add('hidden');
-            saveAsNewTemplateBtn.classList.add('hidden');
             deleteTemplateBtn.classList.add('hidden');
             adminMapGrid.innerHTML = '';
-            adminMapCenterText.textContent = '';
             currentCellInfo = [];
         }
     }
@@ -161,10 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentCellInfo = createDefaultCellData();
         renderAdminGrid();
-        adminMapCenterText.textContent = '';
 
         templateEditor.classList.remove('hidden');
-        saveAsNewTemplateBtn.classList.add('hidden');
         deleteTemplateBtn.classList.add('hidden');
         currentEditingTemplateId = null;
         displayStatus("請為新模板輸入設定 (包含 ID)。格子資料已使用預設值。");
@@ -218,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentEditingTemplateId = templateData.template_id;
                 templateIdInput.value = currentEditingTemplateId;
                 templateIdInput.readOnly = true;
-                saveAsNewTemplateBtn.classList.remove('hidden');
                 deleteTemplateBtn.classList.remove('hidden');
                 await loadTemplateList();
                 templateSelect.value = currentEditingTemplateId;
@@ -228,83 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
                      option.textContent = templateName;
                  }
             }
+
         } catch (error) {
             displayStatus(`儲存模板錯誤: ${error.message}`, true);
-        }
-    }
-
-    async function handleSaveAsNewTemplate() {
-        const originalTemplateId = currentEditingTemplateId || templateIdInput.value.trim();
-        if (!originalTemplateId) {
-            displayStatus("請先載入一個模板，或在創建新模板時輸入 ID。", true);
-            return;
-        }
-
-        const newTemplateId = prompt(`請輸入新模板的 ID (只能用小寫英文、數字、底線，且必須與 '${originalTemplateId}' 不同):`);
-        if (!newTemplateId) return;
-        const trimmedNewId = newTemplateId.trim();
-        if (!/^[a-z0-9_]+$/.test(trimmedNewId)) {
-             displayStatus("新模板 ID 格式錯誤！只能包含小寫字母、數字和底線。", true);
-             return;
-        }
-        if (trimmedNewId === originalTemplateId) {
-            displayStatus("新模板 ID 不能與原始模板 ID 相同！", true);
-            return;
-        }
-
-        const originalName = templateNameInput.value.trim();
-        const newTemplateName = prompt(`請輸入新模板的名稱 (建議與 '${originalName}' 不同):`, `${originalName} (副本)`);
-        if (!newTemplateName) return;
-        const trimmedNewName = newTemplateName.trim();
-        if (!trimmedNewName) {
-            displayStatus("新模板名稱不能為空！", true);
-            return;
-        }
-
-        const styleData = collectStyleData();
-        const cellData = currentCellInfo;
-        const description = templateDescriptionInput.value.trim();
-
-        const newTemplateData = {
-            template_id: trimmedNewId,
-            template_name: trimmedNewName,
-            description: description,
-            style_data: styleData,
-            cell_data: cellData
-        };
-
-        displayStatus("正在另存為新模板...");
-        try {
-            const response = await fetch('/api/admin/walk_map/templates', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newTemplateData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-                if (response.status === 409) {
-                    throw new Error(`無法另存：模板 ID '${trimmedNewId}' 或名稱 '${trimmedNewName}' 已存在。請使用不同的 ID 或名稱。`);
-                }
-                throw new Error(errorData.error || `另存為新模板失敗: ${response.statusText}`);
-            }
-
-            const savedCopyResult = await response.json();
-            displayStatus(`模板 "${trimmedNewName}" (ID: ${trimmedNewId}) 已成功另存！`);
-
-            currentEditingTemplateId = trimmedNewId;
-            templateIdInput.value = trimmedNewId;
-            templateIdInput.readOnly = true;
-            templateNameInput.value = trimmedNewName;
-
-            await loadTemplateList();
-            templateSelect.value = trimmedNewId;
-
-            saveAsNewTemplateBtn.classList.remove('hidden');
-            deleteTemplateBtn.classList.remove('hidden');
-
-        } catch (error) {
-            displayStatus(`另存為新模板時出錯: ${error.message}`, true);
         }
     }
 
@@ -326,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
              }
             displayStatus(`模板 "${currentName}" 已成功刪除。`);
             clearTemplateEditor();
+            adminMapGrid.innerHTML = '';
+            currentCellInfo = [];
             await loadTemplateList();
             templateSelect.value = "";
         } catch (error) {
@@ -473,16 +389,14 @@ document.addEventListener('DOMContentLoaded', () => {
         templateDescriptionInput.value = '';
         populateTemplateEditor({ style_data: {} });
         adminMapGrid.innerHTML = '';
-        adminMapCenterText.textContent = '';
         currentCellInfo = [];
         templateEditor.classList.add('hidden');
-        saveAsNewTemplateBtn.classList.add('hidden');
         deleteTemplateBtn.classList.add('hidden');
         currentEditingTemplateId = null;
         templateSelect.value = "";
     }
 
-    // --- Map Cell Functions ---
+    // --- 地圖格子相關函數 ---
     function renderAdminGrid() {
         adminMapGrid.innerHTML = '';
         const totalCells = 24;
@@ -516,102 +430,133 @@ document.addEventListener('DOMContentLoaded', () => {
             titleSpan.className = 'admin-cell-title';
             titleSpan.textContent = cellData.title || '(無標題)';
 
-            const descSpan = document.createElement('span');
-            descSpan.className = 'admin-cell-desc';
-            descSpan.textContent = cellData.description || '';
 
-            const indexSpan = document.createElement('span');
-            indexSpan.className = 'admin-cell-index';
-            indexSpan.textContent = i;
+   // --- ★ 新增：創建並添加描述元素 ★ ---
+   const descSpan = document.createElement('span'); // 或者用 'p' 元素
+   descSpan.className = 'admin-cell-desc';
+   descSpan.textContent = cellData.description || ''; // 顯示描述，如果沒有則為空字串
+   // --- ★ 結束新增 ★ ---
 
-            cellDiv.appendChild(titleSpan);
-            cellDiv.appendChild(descSpan);
-            cellDiv.appendChild(indexSpan);
-            cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
+   const indexSpan = document.createElement('span');
+   indexSpan.className = 'admin-cell-index';
+   indexSpan.textContent = i;
 
-            cellDiv.addEventListener('click', () => { openCellEditModal(i); });
-            adminMapGrid.appendChild(cellDiv);
-        });
-        applyGridPositioningCSS();
+   // --- ★ 修改：調整附加順序 ★ ---
+   cellDiv.appendChild(titleSpan);
+   cellDiv.appendChild(descSpan); // 將描述加在標題下面
+   cellDiv.appendChild(indexSpan);
+   // --- ★ 結束修改 ★ ---
+
+   cellDiv.style.backgroundColor = cellData.cell_bg_color || '';
+   cellDiv.addEventListener('click', () => { openCellEditModal(i); });
+   adminMapGrid.appendChild(cellDiv);
+});
+applyGridPositioningCSS();
     }
 
     function applyGridPositioningCSS() {
          const cells = adminMapGrid.querySelectorAll('.admin-map-cell');
          cells.forEach(cell => {
             const i = parseInt(cell.dataset.cellIndex);
-            if (i >= 0 && i <= 6) {
+            // ★★★ 修正右下角和左下角的邏輯 ★★★
+            if (i >= 0 && i <= 6) { // Top row (0-6)
                 cell.style.gridArea = `${1} / ${i + 1} / ${2} / ${i + 2}`;
-            } else if (i >= 7 && i <= 11) {
+            } else if (i >= 7 && i <= 11) { // Right column excluding corner (7-11)
                 cell.style.gridArea = `${i - 7 + 2} / ${7} / ${i - 7 + 3} / ${8}`;
-            } else if (i === 12) {
+            } else if (i === 12) { // Bottom right corner (12)
                  cell.style.gridArea = `7 / 7 / 8 / 8`;
-            } else if (i >= 13 && i <= 18) {
-                cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`;
-            } else if (i >= 19 && i <= 23) {
-                 cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`;
+            } else if (i >= 13 && i <= 18) { // Bottom row (13-18)
+                cell.style.gridArea = `${7} / ${7 - (i - 12)} / ${8} / ${7 - (i - 12) + 1}`; // 調整計算基數
+            } else if (i >= 19 && i <= 23) { // Left column (19-23)
+                 cell.style.gridArea = `${7 - (i - 18)} / ${1} / ${7 - (i - 18) + 1} / ${2}`; // 調整計算基數
             }
          });
     }
 
-    function openCellEditModal(index) {
-         if (index < 0 || index >= currentCellInfo.length) {
-             displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-             return;
-         }
-         const cellData = currentCellInfo[index];
 
-        modalCellIndexDisplay.textContent = index;
-        editingCellIndexInput.value = index;
-        modalCellTitleInput.value = cellData.title || '';
-        modalCellDescTextarea.value = cellData.description || '';
-        modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
-        modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color);
-        modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
-        modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color);
 
-        const resetClearedOnInput = (event) => {
-            event.target.dataset.cleared = 'false';
-        };
-        modalCellBgColorInput.removeEventListener('input', resetClearedOnInput);
-        modalModalHeaderBgColorInput.removeEventListener('input', resetClearedOnInput);
-        modalCellBgColorInput.addEventListener('input', resetClearedOnInput);
-        modalModalHeaderBgColorInput.addEventListener('input', resetClearedOnInput);
 
-        cellEditModal.classList.remove('hidden');
+
+ // 開啟格子編輯彈窗
+ function openCellEditModal(index) {
+    if (index < 0 || index >= currentCellInfo.length) {
+        displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+        return;
+    }
+    const cellData = currentCellInfo[index];
+
+   modalCellIndexDisplay.textContent = index;
+   editingCellIndexInput.value = index;
+   modalCellTitleInput.value = cellData.title || '';
+   modalCellDescTextarea.value = cellData.description || '';
+
+   // 設定顏色並處理 null (顯示為白色，標記 cleared 狀態)
+   modalCellBgColorInput.value = cellData.cell_bg_color || '#ffffff';
+   modalCellBgColorInput.dataset.cleared = String(!cellData.cell_bg_color); // 如果是 null，cleared = 'true'
+   modalModalHeaderBgColorInput.value = cellData.modal_header_bg_color || '#ffffff';
+   modalModalHeaderBgColorInput.dataset.cleared = String(!cellData.modal_header_bg_color); // 如果是 null，cleared = 'true'
+
+   // --- ★ 新增：為顏色輸入框添加事件監聽器，以重設 cleared 狀態 ★ ---
+   const resetClearedOnInput = (event) => {
+       event.target.dataset.cleared = 'false';
+   };
+
+   // 先移除舊的監聽器，避免重複添加
+   modalCellBgColorInput.removeEventListener('input', resetClearedOnInput);
+   modalModalHeaderBgColorInput.removeEventListener('input', resetClearedOnInput);
+
+   // 添加新的監聽器
+   modalCellBgColorInput.addEventListener('input', resetClearedOnInput);
+   modalModalHeaderBgColorInput.addEventListener('input', resetClearedOnInput);
+   // --- ★ 結束新增 ★ ---
+
+   cellEditModal.classList.remove('hidden');
+}
+
+
+
+    
+
+
+
+ // 將彈窗修改暫存到本地 currentCellInfo
+ function saveModalChangesToLocal() {
+    const index = parseInt(editingCellIndexInput.value, 10);
+    if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
+        displayStatus("錯誤：無效的格子索引，無法儲存。", true);
+        return;
+    }
+    const cellData = currentCellInfo[index];
+
+    const newTitle = modalCellTitleInput.value.trim();
+    const newDesc = modalCellDescTextarea.value.trim();
+
+    // 只有當 dataset.cleared 為 'true' 時才存 null，否則儲存選擇的顏色值
+    // 同時將儲存的值轉為小寫，增加一致性
+    let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
+                     ? null : modalCellBgColorInput.value.toLowerCase();
+    let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
+                              ? null : modalModalHeaderBgColorInput.value.toLowerCase();
+
+    // 更新本地陣列中的物件
+    cellData.title = newTitle;
+    cellData.description = newDesc;
+    cellData.cell_bg_color = newBgColor;
+    cellData.modal_header_bg_color = newModalHeaderBgColor;
+
+    // 更新格子預覽
+    const adminCellDiv = document.getElementById(`admin-cell-${index}`);
+    if (adminCellDiv) {
+        const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
+        if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
+        adminCellDiv.style.backgroundColor = newBgColor || ''; // null 或空字串會使用 CSS 預設
     }
 
-    function saveModalChangesToLocal() {
-        const index = parseInt(editingCellIndexInput.value, 10);
-        if (isNaN(index) || index < 0 || index >= currentCellInfo.length) {
-            displayStatus("錯誤：無效的格子索引，無法儲存。", true);
-            return;
-        }
-        const cellData = currentCellInfo[index];
+    closeCellEditModal();
+    displayStatus(`格子 ${index} 變更已應用。點擊「儲存模板樣式」以儲存所有變更。`);
+}
 
-        const newTitle = modalCellTitleInput.value.trim();
-        const newDesc = modalCellDescTextarea.value.trim();
-        let newBgColor = (modalCellBgColorInput.dataset.cleared === 'true')
-                         ? null : modalCellBgColorInput.value.toLowerCase();
-        let newModalHeaderBgColor = (modalModalHeaderBgColorInput.dataset.cleared === 'true')
-                                  ? null : modalModalHeaderBgColorInput.value.toLowerCase();
-
-        cellData.title = newTitle;
-        cellData.description = newDesc;
-        cellData.cell_bg_color = newBgColor;
-        cellData.modal_header_bg_color = newModalHeaderBgColor;
-
-        const adminCellDiv = document.getElementById(`admin-cell-${index}`);
-        if (adminCellDiv) {
-            const titleSpan = adminCellDiv.querySelector('.admin-cell-title');
-            if (titleSpan) titleSpan.textContent = newTitle || '(無標題)';
-            adminCellDiv.style.backgroundColor = newBgColor || '';
-        }
-
-        closeCellEditModal();
-        displayStatus(`格子 ${index} 變更已應用。點擊「儲存模板樣式」以儲存所有變更。`);
-    }
-
-    // --- Utility Functions ---
+    // --- 工具函數 ---
     function displayStatus(message, isError = false) {
         statusMessage.textContent = message;
         statusMessage.className = isError ? 'status-error' : 'status-success';
@@ -643,14 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return defaultCells;
     }
 
-    function updateCenterTextPreview() {
-        adminMapCenterText.textContent = templateDescriptionInput.value;
-    }
-
-    window.closeCellEditModal = () => {
-        document.getElementById('cell-edit-modal').classList.add('hidden');
-    };
-
+    window.closeCellEditModal = closeCellEditModal;
     window.clearColorInput = (inputId) => {
          const input = document.getElementById(inputId);
          input.value = '#ffffff';
