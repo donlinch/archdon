@@ -132,6 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     saveTemplateBtn.addEventListener('click', handleSaveTemplate);
     deleteTemplateBtn.addEventListener('click', handleDeleteTemplate);
     saveModalChangesBtn.addEventListener('click', saveModalChangesToLocal);
+
+    const saveAsTemplateBtn = document.getElementById('save-as-template-btn');
+    saveAsTemplateBtn.addEventListener('click', handleSaveAsTemplate);
+
+    
     
     // 為顏色輸入添加實時預覽
     addColorPreviewHandlers();
@@ -177,6 +182,97 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+
+
+
+
+// 添加另存新檔功能的處理函數
+async function handleSaveAsTemplate() {
+    // 如果沒有正在編輯的模板，無法執行另存新檔
+    if (!templateEditor.classList.contains('hidden')) {
+        // 獲取目前模板數據
+        const currentStyleData = collectStyleData();
+        
+        // 創建輸入框讓用戶輸入新的模板 ID 和名稱
+        const newTemplateId = prompt(
+            "請輸入新模板的 ID (僅限小寫英文、數字和底線):", 
+            `${currentEditingTemplateId || 'new_template'}_copy`
+        );
+        
+        // 檢查用戶是否取消輸入或輸入為空
+        if (!newTemplateId) return;
+        
+        // 驗證 ID 格式
+        if (!/^[a-z0-9_]+$/.test(newTemplateId)) {
+            displayStatus("模板 ID 只能包含小寫字母、數字和底線。", true);
+            return;
+        }
+        
+        const newTemplateName = prompt(
+            "請輸入新模板的名稱:", 
+            `${templateNameInput.value || '新模板'} 副本`
+        );
+        
+        // 檢查用戶是否取消輸入或輸入為空
+        if (!newTemplateName) return;
+        
+        // 準備新模板數據
+        const newTemplateData = {
+            template_id: newTemplateId,
+            template_name: newTemplateName,
+            description: templateDescriptionInput.value + ' (複製自 ' + (currentEditingTemplateId || '草稿') + ')',
+            style_data: currentStyleData,
+            cell_data: JSON.parse(JSON.stringify(currentCellInfo)) // 深拷貝格子數據
+        };
+        
+        try {
+            showLoader();
+            // 發送創建請求
+            const response = await fetch('/api/admin/walk_map/templates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTemplateData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(errorData.error || `另存新檔失敗: ${response.statusText}`);
+            }
+            
+            const savedTemplateResult = await response.json();
+            hideLoader();
+            
+            // 更新模板列表
+            await loadTemplateList();
+            
+            // 切換到新創建的模板
+            templateSelect.value = newTemplateId;
+            currentEditingTemplateId = newTemplateId;
+            templateIdInput.value = newTemplateId;
+            templateIdInput.readOnly = true;
+            templateNameInput.value = newTemplateName;
+            deleteTemplateBtn.classList.remove('hidden');
+            
+            displayStatus(`模板已另存為 "${newTemplateName}" (ID: ${newTemplateId})`);
+            
+            // 在移動設備上顯示成功通知並滾動到頂部
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                templateSelect.classList.add('highlight-select');
+                setTimeout(() => templateSelect.classList.remove('highlight-select'), 2000);
+            }
+            
+        } catch (error) {
+            hideLoader();
+            displayStatus(`另存新檔錯誤: ${error.message}`, true);
+        }
+    } else {
+        displayStatus("請先開啟一個模板或創建新模板後再使用另存新檔功能。", true);
+    }
+}
+
+
 
     // --- 響應式 UI 設置 ---
     function setupResponsiveUI() {

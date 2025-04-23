@@ -640,3 +640,29 @@ button:hover { background-color: #e0e0e0; }
         font-size: 14px;
     }
 }
+
+
+/* 另存新檔按鈕樣式 */
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+}
+.btn-info:hover {
+    background-color: #138496;
+}
+
+/* 移動版按鈕優化 */
+@media (max-width: 768px) {
+    #save-as-template-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 16px;
+        margin: 10px 0;
+        border-radius: 10px;
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        font-weight: bold;
+    }
+}
