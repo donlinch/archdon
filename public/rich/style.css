@@ -291,16 +291,27 @@ h1, h2, h3 {
 .map-cell.bottom-row:nth-child(19) { left: calc(var(--cell-dim) * 0); } /* 格子 18 - 這才是醫院的位置 */
 /* 格子 19 (左下角, 第20個元素) */
  
+/* --- 修正後的左側列 CSS --- */
 
-/* 左側列 (格子 20-23) -> 對應 :nth-child(21) 到 :nth-child(24) */
-.map-cell.left-column { left: 0; } /* 左側對齊 */
-/* 格子 19 (nth-child(20)) 由 bottom-row 處理，不需要 left-column 規則 */
-.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 5); } /* 格子 20 */
-.map-cell.left-column:nth-child(20) { top: calc(var(--cell-dim) * 6); } /* 格子 19 (放在格子20的下方) */
-.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 4); } /* 格子 21 */
-.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 3); } /* 格子 22 */
-.map-cell.left-column:nth-child(24) { top: calc(var(--cell-dim) * 2); } /* 格子 23 */
-.map-cell.left-column:nth-child(25) { top: calc(var(--cell-dim) * 1); } /* 格子 24 */
+/* 左側列 (索引 19-23) -> 對應 :nth-child(20) 到 :nth-child(24) */
+.map-cell.left-column { left: 0; } /* 靠左對齊 */
+
+/* 格子 19 (第 20 個元素) */
+.map-cell.left-column:nth-child(20) { top: calc(var(--cell-dim) * 5); } /* 應在第 5 行 (底部上來第一格) */
+
+/* 格子 20 (第 21 個元素) */
+.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 4); } /* 第 4 行 */
+
+/* 格子 21 (第 22 個元素) */
+.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 3); } /* 第 3 行 */
+
+/* 格子 22 (第 23 個元素) */
+.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 2); } /* 第 2 行 */
+
+/* 格子 23 (第 24 個元素) */
+.map-cell.left-column:nth-child(24) { top: calc(var(--cell-dim) * 1); } /* 第 1 行 (頂部下來第一格) */
+
+/* 移除了無效的 :nth-child(25) 規則 */
 
 /* ===== 玩家標記樣式 ===== */
 #players-container {
