@@ -258,9 +258,11 @@ h1, h2, h3 {
 
 /* --- 格子定位 (總共 24 格, 索引 0-23) --- */
 /* CSS 的 nth-child 是從 1 開始計數 */
+/* --- 格子定位 (總共 24 格, 索引 0-23) --- */
+/* CSS 的 nth-child 是從 1 開始計數 */
 
 /* 頂部行 (格子 0-6) -> 對應 :nth-child(1) 到 :nth-child(7) */
-.map-cell.top-row { top: 0; } /* 頂部對齊 */
+.map-cell.top-row { top: 0; }
 .map-cell.top-row:nth-child(1) { left: calc(var(--cell-dim) * 0); } /* 格子 0 */
 .map-cell.top-row:nth-child(2) { left: calc(var(--cell-dim) * 1); } /* 格子 1 */
 .map-cell.top-row:nth-child(3) { left: calc(var(--cell-dim) * 2); } /* 格子 2 */
@@ -270,7 +272,7 @@ h1, h2, h3 {
 .map-cell.top-row:nth-child(7) { left: calc(var(--cell-dim) * 6); } /* 格子 6 (右上角) */
 
 /* 右側列 (格子 7-12) -> 對應 :nth-child(8) 到 :nth-child(13) */
-.map-cell.right-column { right: 0; } /* 右側對齊 */
+.map-cell.right-column { right: 0; }
 .map-cell.right-column:nth-child(8)  { top: calc(var(--cell-dim) * 1); } /* 格子 7 */
 .map-cell.right-column:nth-child(9)  { top: calc(var(--cell-dim) * 2); } /* 格子 8 */
 .map-cell.right-column:nth-child(10) { top: calc(var(--cell-dim) * 3); } /* 格子 9 */
@@ -279,22 +281,24 @@ h1, h2, h3 {
 .map-cell.right-column:nth-child(13) { top: calc(var(--cell-dim) * 6); } /* 格子 12 (右下角) */
 
 /* 底部行 (格子 13-19) -> 對應 :nth-child(14) 到 :nth-child(20) */
-.map-cell.bottom-row { top: calc(var(--cell-dim) * (var(--grid-size) - 1)); } /* 定位在頂部第 6 個格子的高度處 */
+.map-cell.bottom-row { top: calc(var(--cell-dim) * (var(--grid-size) - 1)); }
 .map-cell.bottom-row:nth-child(14) { left: calc(var(--cell-dim) * 5); } /* 格子 13 */
 .map-cell.bottom-row:nth-child(15) { left: calc(var(--cell-dim) * 4); } /* 格子 14 */
 .map-cell.bottom-row:nth-child(16) { left: calc(var(--cell-dim) * 3); } /* 格子 15 */
 .map-cell.bottom-row:nth-child(17) { left: calc(var(--cell-dim) * 2); } /* 格子 16 */
 .map-cell.bottom-row:nth-child(18) { left: calc(var(--cell-dim) * 1); } /* 格子 17 */
-.map-cell.bottom-row:nth-child(19) { left: calc(var(--cell-dim) * 0); } /* 格子 18 */
-
+/* 格子 18 (第19個元素) */
+.map-cell.bottom-row:nth-child(19) { left: calc(var(--cell-dim) * 0); } /* 格子 18 - 這才是醫院的位置 */
+/* 格子 19 (左下角, 第20個元素) */
+.map-cell.bottom-row:nth-child(20) { left: calc(var(--cell-dim) * 0); } /* 格子 19 (左下角) */
 
 /* 左側列 (格子 20-23) -> 對應 :nth-child(21) 到 :nth-child(24) */
 .map-cell.left-column { left: 0; } /* 左側對齊 */
-.map-cell.left-column:nth-child(20)  { top: calc(var(--cell-dim) * 5); } /* 格子 19 (左下角) */
-.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 4); } /* 格子 20 */
-.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 3); } /* 格子 21 */
-.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 2); } /* 格子 22 */
-.map-cell.left-column:nth-child(24) { top: calc(var(--cell-dim) * 1); } /* 格子 23 */
+/* 格子 19 (nth-child(20)) 由 bottom-row 處理，不需要 left-column 規則 */
+.map-cell.left-column:nth-child(21) { top: calc(var(--cell-dim) * 5); } /* 格子 20 (綠島) */
+.map-cell.left-column:nth-child(22) { top: calc(var(--cell-dim) * 4); } /* 格子 21 (小琉球) */
+.map-cell.left-column:nth-child(23) { top: calc(var(--cell-dim) * 3); } /* 格子 22 (新地點A) */
+.map-cell.left-column:nth-child(24) { top: calc(var(--cell-dim) * 1); } /* 格子 23 (新地點B) */
 
 /* ===== 玩家標記樣式 ===== */
 #players-container {
