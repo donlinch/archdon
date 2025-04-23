@@ -2,7 +2,7 @@
 
 // 遊戲狀態
 let gameState = {
-    mapLoopSize: 10,
+    mapLoopSize: 22,
     maxPlayers: 5,
     players: {},
     gameStarted: false
@@ -102,12 +102,12 @@ function setupEventListeners() {
     });
 }
 
-// 創建遊戲地圖
+// 修改创建地图的函数
 function createGameMap() {
     mapContainer.innerHTML = '';
     
-    // 創建10個格子的環形地圖
-    for (let i = 0; i < 10; i++) {
+    // 创建22个格子的环形地图 (0-21)
+    for (let i = 0; i < 22; i++) {
         const cell = document.createElement('div');
         cell.className = 'map-cell';
         cell.id = `cell-${i}`;

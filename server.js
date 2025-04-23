@@ -365,7 +365,7 @@ async function handleSimpleWalkerMessage(ws, message) {
                 return;
             }
             const gameState = roomData.game_state;
-            const mapSize = gameState.mapLoopSize || 10; // 獲取地圖大小
+            const mapSize = gameState.mapLoopSize || 22; // 獲取地圖大小
 
             // 2. 確保玩家存在於狀態中
             if (!gameState.players || !gameState.players[playerId]) {
