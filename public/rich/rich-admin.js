@@ -728,18 +728,19 @@ function clearTemplateEditor() {
         document.body.appendChild(loader);
         document.body.classList.add('loading');
     }
-
     function hideLoader() {
         const loader = document.getElementById('page-loader');
         if (loader) {
             loader.classList.add('fade-out');
             setTimeout(() => {
-                document.body.removeChild(loader);
+                // Check if the element still exists and is still attached to the document
+                if (document.body.contains(loader)) {
+                    document.body.removeChild(loader);
+                }
                 document.body.classList.remove('loading');
             }, 300);
         }
     }
-
      
 function renderAdminGrid() {
     adminMapGrid.innerHTML = '';
