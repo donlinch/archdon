@@ -576,3 +576,67 @@ button:hover { background-color: #e0e0e0; }
         100% { transform: rotate(360deg); }
     }
 }
+
+
+@media (max-width: 768px) {
+    /* 模態框優化 */
+    .modal-content {
+        width: 85%;
+        max-width: 400px;
+        padding: 15px;
+        border-radius: 12px;
+    }
+    
+    .modal-header {
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-header h2 {
+        font-size: 16px;
+        text-align: left;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .close-modal-btn {
+        font-size: 22px;
+        right: 10px;
+        top: 10px;
+    }
+    
+    .modal-body {
+        padding: 0;
+    }
+    
+    .modal-body .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .modal-body label {
+        min-width: 100%;
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+    
+    .modal-body input[type="text"], 
+    .modal-body textarea {
+        font-size: 15px;
+        padding: 8px;
+        height: auto;
+    }
+    
+    .modal-body textarea {
+        max-height: 80px;
+    }
+    
+    .modal-footer {
+        padding-top: 12px;
+        margin-top: 12px;
+    }
+    
+    .modal-footer button {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}

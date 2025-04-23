@@ -867,13 +867,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function openCellEditModal(index) {
         if (index < 0 || index >= currentCellInfo.length) {
-             displayStatus(`錯誤：無效的格子索引 ${index}`, true);
-             return;
+            displayStatus(`錯誤：無效的格子索引 ${index}`, true);
+            return;
         }
         const cellData = currentCellInfo[index];
     
         // 更新模態框標題顯示
-        document.getElementById('modal-cell-title-display').innerHTML = `<i class="fas fa-edit"></i> 編輯格子 <span id="modal-cell-index-display">${index}</span>`;
+        document.getElementById('modal-cell-title-display').innerHTML = `<i class="fas fa-edit"></i> 編輯格子 ${index}`;
         modalCellIndexDisplay.textContent = index;
         editingCellIndexInput.value = index;
         modalCellTitleInput.value = cellData.title || '';
@@ -889,9 +889,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.innerWidth <= 768) {
             const modalContent = cellEditModal.querySelector('.modal-content');
             if (modalContent) {
-                modalContent.style.width = '90%';
-                modalContent.style.maxHeight = '80vh';
+                modalContent.style.width = '85%';  // 縮小寬度
+                modalContent.style.maxHeight = '70vh';  // 控制最大高度
                 modalContent.style.overflow = 'auto';
+                
+                // 調整字型大小和內邊距
+                const modalHeader = modalContent.querySelector('.modal-header');
+                if (modalHeader) {
+                    modalHeader.style.padding = '8px 0';
+                }
+                
+                const formGroups = modalContent.querySelectorAll('.form-group');
+                formGroups.forEach(group => {
+                    group.style.marginBottom = '12px';
+                });
                 
                 // 確保輸入框自動聚焦
                 setTimeout(() => modalCellTitleInput.focus(), 100);
