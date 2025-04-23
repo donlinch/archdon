@@ -98,57 +98,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    const cloneTemplateBtn = document.getElementById('clone-template-btn');
-    cloneTemplateBtn.addEventListener('click', handleCloneTemplate);
-    
-    async function handleCloneTemplate() {
-        if (!currentEditingTemplateId) {
-            displayStatus("目前尚未載入任何模板，無法另存。", true);
-            return;
-        }
-    
-        const originalId = templateIdInput.value.trim();
-        const newId = prompt("請輸入新的模板 ID（只能包含小寫英文字母、數字與底線）：", originalId + "_copy");
-        if (!newId || !/^[a-z0-9_]+$/.test(newId)) {
-            displayStatus("無效的模板 ID，另存失敗。", true);
-            return;
-        }
-    
-        const newName = prompt("請輸入新的模板名稱：", templateNameInput.value + " (副本)");
-        if (!newName) {
-            displayStatus("模板名稱不可為空，另存失敗。", true);
-            return;
-        }
-    
-        const styleData = collectStyleData();
-        const cloneData = {
-            template_id: newId,
-            template_name: newName,
-            description: templateDescriptionInput.value.trim(),
-            style_data: styleData,
-            cell_data: structuredClone(currentCellInfo)
-        };
-    
-        try {
-            const response = await fetch('/api/admin/walk_map/templates', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(cloneData)
-            });
-    
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || "另存新檔失敗");
-            }
-    
-            displayStatus(`成功另存為新模板 "${newName}" (ID: ${newId})`);
-            await loadTemplateList();
-            templateSelect.value = newId;
-        } catch (error) {
-            displayStatus(`另存新檔錯誤：${error.message}`, true);
-        }
+const cloneTemplateBtn = document.getElementById('clone-template-btn');
+cloneTemplateBtn.addEventListener('click', handleCloneTemplate);
+
+async function handleCloneTemplate() {
+    if (!currentEditingTemplateId) {
+        displayStatus("目前尚未載入任何模板，無法另存。", true);
+        return;
     }
-    
+
+    const originalId = templateIdInput.value.trim();
+    const newId = prompt("請輸入新的模板 ID（只能包含小寫英文字母、數字與底線）：", originalId + "_copy");
+    if (!newId || !/^[a-z0-9_]+$/.test(newId)) {
+        displayStatus("無效的模板 ID，另存失敗。", true);
+        return;
+    }
+
+    const newName = prompt("請輸入新的模板名稱：", templateNameInput.value + " (副本)");
+    if (!newName) {
+        displayStatus("模板名稱不可為空，另存失敗。", true);
+        return;
+    }
+
+    const styleData = collectStyleData();
+    const cloneData = {
+        template_id: newId,
+        template_name: newName,
+        description: templateDescriptionInput.value.trim(),
+        style_data: styleData,
+        cell_data: structuredClone(currentCellInfo)
+    };
+
+    try {
+        const response = await fetch('/api/admin/walk_map/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cloneData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || "另存新檔失敗");
+        }
+
+        displayStatus(`成功另存為新模板 "${newName}" (ID: ${newId})`);
+        await loadTemplateList();
+        templateSelect.value = newId;
+    } catch (error) {
+        displayStatus(`另存新檔錯誤：${error.message}`, true);
+    }
+}
+
 
 
 
