@@ -7,6 +7,35 @@
 
 
 
+
+
+
+
+
+            // --- 添加移動設備檢測 ---
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                document.body.classList.add('mobile-view');
+            }
+            
+            // --- DOM 元素 ---
+            const templateSelect = document.getElementById('template-select');
+            const loadTemplateBtn = document.getElementById('load-template-btn');
+            const newTemplateBtn = document.getElementById('new-template-btn');
+            const saveTemplateBtn = document.getElementById('save-template-btn');
+            const deleteTemplateBtn = document.getElementById('delete-template-btn');
+            const templateEditor = document.getElementById('template-editor');
+            const statusMessage = document.getElementById('status-message');
+        
+            // --- 添加移動裝置的工具欄 ---
+            if (isMobile) {
+                createMobileToolbar();
+            }
+        
+
+
+
+
 // 添加到 DOMContentLoaded 事件中
 // 為移動設備添加縮放控制功能
 if (isMobile) {
@@ -47,26 +76,7 @@ if (isMobile) {
 
 
 
-            // --- 添加移動設備檢測 ---
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                document.body.classList.add('mobile-view');
-            }
-            
-            // --- DOM 元素 ---
-            const templateSelect = document.getElementById('template-select');
-            const loadTemplateBtn = document.getElementById('load-template-btn');
-            const newTemplateBtn = document.getElementById('new-template-btn');
-            const saveTemplateBtn = document.getElementById('save-template-btn');
-            const deleteTemplateBtn = document.getElementById('delete-template-btn');
-            const templateEditor = document.getElementById('template-editor');
-            const statusMessage = document.getElementById('status-message');
-        
-            // --- 添加移動裝置的工具欄 ---
-            if (isMobile) {
-                createMobileToolbar();
-            }
-        
+
             // 樣式編輯器輸入框
             const templateIdInput = document.getElementById('template-id');
             const templateNameInput = document.getElementById('template-name');
