@@ -122,9 +122,9 @@ function createMonopolyMap() {
         // 添加格子位置類別，定位格子在環形的位置
         if (i >= 0 && i <= 6) {
             cell.classList.add('top-row');
-        } else if (i >= 7 && i <= 11) {
+        } else if (i >= 7 && i <= 10) {
             cell.classList.add('right-column');
-        } else if (i >= 12 && i <= 17) {
+        } else if (i >= 11 && i <= 17) {
             cell.classList.add('bottom-row');
         } else if (i >= 18 && i <= 21) {
             cell.classList.add('left-column');
