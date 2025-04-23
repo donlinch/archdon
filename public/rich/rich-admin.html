@@ -145,17 +145,22 @@
                     
                 <!-- ★★★ 移除了獨立的儲存格子按鈕 ★★★ -->
             </div>
+ 
+ </div>
+
  <!-- ★★★ 新增：用於顯示模板描述的 Div ★★★ -->
  <div id="admin-map-center-text"></div>
  <!-- ★★★ 結束新增 ★★★ -->
- </div>
             <hr> <!-- 分隔線 -->
+<!-- 統一的儲存按鈕 -->
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;"> <!-- 使用 flex 佈局按鈕 -->
+    <button id="save-template-btn" class="btn-primary" style="flex-grow: 1;">儲存當前模板</button>
+    <!-- ★★★ 新增：另存為按鈕 ★★★ -->
+    <button id="clone-template-btn" class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px; margin-top: 10px;">另存為新模板</button>
 
-            <!-- 統一的儲存按鈕 -->
-            <button id="save-template-btn" class="btn-primary" style="width: 100%; padding: 15px; font-size: 18px; margin-top: 20px;">儲存模板 (包含樣式和格子變更)</button>
-            <button id="delete-template-btn" class="btn-danger hidden" style="width: 100%; margin-top: 10px;">刪除此模板</button>
-
-        </div> <!-- End of template-editor -->
+    <!-- ★★★ 結束新增 ★★★ -->
+    <button id="delete-template-btn" class="btn-danger hidden" style="width: 100%; margin-top: 5px;">刪除此模板</button>
+</div>
 
 
         <!-- Status Message -->
