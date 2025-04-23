@@ -119,16 +119,15 @@ function createMonopolyMap() {
         cell.appendChild(cellNumber);
 
         // ★★★ 更新分配樣式類的邏輯 ★★★
-        if (i >= 0 && i <= 6) { // 頂部行 (0-6)
+        if (i >= 0 && i <= 6) {        // 頂部行 (0-6)
             cell.classList.add('top-row');
-        } else if (i >= 7 && i <= 12) { // 右側列 (7-12)
+        } else if (i >= 7 && i <= 12) {   // 右側列 (7-12)
             cell.classList.add('right-column');
-        } else if (i >= 13 && i <= 19) { // 底部行 (13-19)
+        } else if (i >= 13 && i <= 18) { // ★★★ 底部行 (13-18) ★★★
             cell.classList.add('bottom-row');
-        } else if (i >= 20 && i <= 23) { // 左側列 (20-23)
+        } else if (i >= 19 && i <= 23) { // ★★★ 左側列 (19-23) ★★★
             cell.classList.add('left-column');
         }
-
         // 添加點擊事件監聽器
         cell.addEventListener('click', function() {
             // ★★★ 確保 cellInfo 有 24 個條目 ★★★
