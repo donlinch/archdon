@@ -112,7 +112,8 @@ app.post('/api/game-rooms', async (req, res) => {
     }
 });
 
-
+// 在 Express 路由設定區域添加
+app.use('/api/storemarket', storeRoutes);
 // --- 獲取活躍房間列表 API ---
 app.get('/api/game-rooms', async (req, res) => {
     try {
@@ -4818,5 +4819,3 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 
 });
 
-// 在 Express 路由設定區域添加
-app.use('/api/storemarket', storeRoutes);
