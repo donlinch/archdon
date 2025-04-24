@@ -352,6 +352,35 @@ async function handleSimpleWalkerMessage(ws, message) {
         const parsedMessage = JSON.parse(message);
         console.log(`[WS Simple Walker] Received message from ${playerId} in room ${roomId}:`, parsedMessage);
 
+
+
+
+  // ← INSERT HERE ───────────────────────────────────────────────────
+  if (parsedMessage.type === 'toggleVisibility') {
+    const { visible } = parsedMessage;
+    // 1. 讀取當前 room state
+    const roomData = await dbClient.getRoom(ws.roomId);
+    const gameState = roomData.game_state;
+    // 2. 更新該玩家 visibility
+    if (gameState.players[ws.playerId]) {
+      gameState.players[ws.playerId].visible = !!visible;
+      // 3. 寫回資料庫
+      const updated = await dbClient.updateRoomState(ws.roomId, gameState);
+      // 4. 廣播給所有人
+      broadcastToSimpleWalkerRoom(ws.roomId, {
+        type: 'gameStateUpdate',
+        roomName: updated.room_name,
+        gameState: updated.game_state
+      });
+    }
+    return;
+  }
+
+
+
+
+
+
         // 只處理 'moveCommand' 類型的消息
         if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
             const direction = parsedMessage.direction; // 'forward' 或 'backward'

@@ -73,9 +73,8 @@ app.post('/api/game-rooms', async (req, res) => {
     }
 
     const maxPlayersInt = parseInt(maxPlayers, 10);
-    if (isNaN(maxPlayersInt) || maxPlayersInt < 2 || maxPlayersInt > 5) { // 假設最大 5
-        console.error('[API POST /api/game-rooms] Bad Request: Invalid maxPlayers', maxPlayers);
-        return res.status(400).json({ error: '無效的最大玩家數 (需介於 2-5 之間)' });
+    if (isNaN(maxPlayersInt) || maxPlayersInt < 2 || maxPlayersInt > 20) {
+        return res.status(400).json({ error: '無效的最大玩家數 (需介於 2-20 之間)' });
     }
 
     try {
@@ -2152,6 +2151,172 @@ app.get('/api/samegame/play/:templateId', async (req, res) => {
 
 
 
+const walkMapAdminRouter = express.Router();
+// walkMapAdminRouter.use(basicAuthMiddleware);
+
+
+// GET /api/admin/walk_map/templates - List all templates
+walkMapAdminRouter.get('/templates', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT template_id, template_name FROM walk_map_templates ORDER BY template_name');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /admin/walk_map/templates] Error:', err.stack || err);
+        res.status(500).json({ error: 'Failed to retrieve templates' });
+    }
+});
+// GET /api/admin/walk_map/templates/:templateId - Get single template details (★ 修改 ★)
+walkMapAdminRouter.get('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    try {
+        // ★ 同時選取 style_data 和 cell_data ★
+        const result = await pool.query(
+            'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+            [templateId]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        const templateData = result.rows[0];
+        // ★ 確保 cell_data 是陣列 (如果 DB 是 NULL 或解析失敗) ★
+        if (templateData.cell_data && typeof templateData.cell_data === 'string') {
+             try { templateData.cell_data = JSON.parse(templateData.cell_data); } catch(e) { templateData.cell_data = []; }
+        } else if (!templateData.cell_data) {
+            templateData.cell_data = [];
+        }
+        // ★ 確保 style_data 是物件 (如果 DB 是 NULL 或解析失敗) ★
+        if (templateData.style_data && typeof templateData.style_data === 'string') {
+             try { templateData.style_data = JSON.parse(templateData.style_data); } catch(e) { templateData.style_data = {}; }
+        } else if (!templateData.style_data) {
+            templateData.style_data = {};
+        }
+
+        res.json(templateData); // 回傳包含 style 和 cell 資料的完整模板
+    } catch (err) {
+        console.error(`[API GET /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to retrieve template details' });
+    }
+});
+
+// POST /api/admin/walk_map/templates - Create new template (★ 修改 ★)
+walkMapAdminRouter.post('/templates', async (req, res) => {
+    // ★ 從請求中獲取 cell_data ★
+    const { template_id, template_name, description, style_data, cell_data } = req.body;
+
+    if (!template_id || !template_name || !style_data || !cell_data) { // ★ 檢查 cell_data ★
+        return res.status(400).json({ error: 'Missing required fields: template_id, template_name, style_data, cell_data' });
+    }
+    // ★ 驗證 cell_data 格式 ★
+     if (!Array.isArray(cell_data) || cell_data.length !== 24) {
+         return res.status(400).json({ error: 'Invalid cell_data format. Expected an array of 24 cell objects.' });
+     }
+    // ... (保留 style_data 的 JSON 驗證邏輯) ...
+    let styleJson;
+    try {
+        if (typeof style_data === 'string') { styleJson = JSON.parse(style_data); }
+        else if (typeof style_data === 'object') { styleJson = style_data; }
+        else { throw new Error('style_data must be JSON object or string'); }
+    } catch(e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
+
+
+    try {
+        // ★ 在 INSERT 中加入 cell_data ★
+        const result = await pool.query(
+            'INSERT INTO walk_map_templates (template_id, template_name, description, style_data, cell_data) VALUES ($1, $2, $3, $4, $5) RETURNING template_id, template_name',
+            [template_id, template_name, description || null, styleJson, JSON.stringify(cell_data)] // ★ 將 cell_data 轉為字串儲存 ★
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[API POST /admin/walk_map/templates] Error:', err.stack || err);
+         if (err.code === '23505') { // Unique violation
+            return res.status(409).json({ error: 'Template ID or Name already exists' });
+        }
+        res.status(500).json({ error: 'Failed to create template', detail: err.message });
+    }
+});
+
+// PUT /api/admin/walk_map/templates/:templateId - Update existing template (★ 修改 ★)
+walkMapAdminRouter.put('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    // ★ 從請求中獲取 cell_data ★
+    const { template_name, description, style_data, cell_data } = req.body;
+
+    if (!template_name || !style_data || !cell_data) { // ★ 檢查 cell_data ★
+        return res.status(400).json({ error: 'Missing required fields: template_name, style_data, cell_data' });
+    }
+    // ★ 驗證 cell_data 格式 ★
+    if (!Array.isArray(cell_data) || cell_data.length !== 24) {
+        return res.status(400).json({ error: 'Invalid cell_data format. Expected an array of 24 cell objects.' });
+    }
+     // ... (保留 style_data 的 JSON 驗證邏輯) ...
+     let styleJson;
+     try {
+         if (typeof style_data === 'string') { styleJson = JSON.parse(style_data); }
+         else if (typeof style_data === 'object') { styleJson = style_data; }
+         else { throw new Error('style_data must be JSON object or string'); }
+     } catch(e) { return res.status(400).json({ error: 'Invalid style_data JSON format' }); }
+
+    try {
+        // ★ 在 UPDATE 中加入 cell_data ★
+        const result = await pool.query(
+            'UPDATE walk_map_templates SET template_name = $1, description = $2, style_data = $3, cell_data = $4, updated_at = NOW() WHERE template_id = $5 RETURNING template_id, template_name',
+            [template_name, description || null, styleJson, JSON.stringify(cell_data), templateId] // ★ 將 cell_data 轉為字串儲存 ★
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        if (err.code === '23505') { // Unique violation on name
+           return res.status(409).json({ error: 'Template Name already exists for another template' });
+       }
+        res.status(500).json({ error: 'Failed to update template', detail: err.message });
+    }
+});
+
+// DELETE /api/admin/walk_map/templates/:templateId - Delete template
+walkMapAdminRouter.delete('/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM walk_map_templates WHERE template_id = $1', [templateId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        res.status(204).send(); // No content on successful delete
+    } catch (err) {
+        console.error(`[API DELETE /admin/walk_map/templates/${templateId}] Error:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to delete template' });
+    }
+});
+
+// --- Map Cell API Endpoints ---
+ 
+ 
+
+
+app.use('/api/admin/walk_map', walkMapAdminRouter); // <-- Add this line
+
+
+
+
+
+
+
+
+app.get('/rich-admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.html'));
+  });
+  app.use('/rich-admin.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.js'));
+  });
+  app.use('/admin-style.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-style.css'));
+  });
+
+
+
+
 
 
 
@@ -2172,6 +2337,13 @@ app.use([
     '/inventory-admin.html',
     '/store/report/report-admin.html'
 ], basicAuthMiddleware);
+
+
+
+
+
+
+
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
@@ -2233,6 +2405,13 @@ function updateGameState(roomId, updates) {
         }
     });
 }
+
+
+
+
+
+
+
 
 
 
@@ -2461,6 +2640,20 @@ app.delete('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除報告。', detail: err.message });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

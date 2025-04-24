@@ -316,50 +316,66 @@ function updateGameState(message) {
     updatePlayerMarkers(oldState);
 }
 
-// 更新玩家列表
+
+
+
+
+
 function updatePlayersList() {
     playersList.innerHTML = '';
   
-    // 原本的 key 列表
+    // 先把所有 IDs 拿出來
     const allIds = Object.keys(gameState.players);
-    // 先把自己的 ID 放前面，再拼回其他 IDs
+    // 排一遍，讓自己排第一（可選）
     const orderedIds = [
       ...allIds.filter(id => id === playerId),
       ...allIds.filter(id => id !== playerId)
     ];
   
-    let colorIndex = 1;
     orderedIds.forEach(id => {
       const player = gameState.players[id];
       const li = document.createElement('li');
+  
+      // 顯示名字和位置
       const locationName = cellInfo[player.position].title;
       li.textContent = `${player.name} (${locationName})`;
-  
-      // 標記自己
       if (id === playerId) {
         li.textContent += ' (你)';
         li.style.fontWeight = 'bold';
+  
+        // 新增：顯示/隱藏按鈕
+        const btn = document.createElement('button');
+        btn.textContent = player.visible ? '隱藏' : '顯示';
+        btn.className = 'btn-toggle-visibility';
+        btn.onclick = () => {
+          ws.send(JSON.stringify({
+            type: 'toggleVisibility',
+            visible: !player.visible
+          }));
+        };
+        li.appendChild(btn);
       }
   
-      // (可選) 給不同玩家不同顏色
-      li.style.borderColor = getPlayerColor(colorIndex++);
       playersList.appendChild(li);
     });
   }
   
+  
 
 // 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
-    // 清空玩家容器
+    // 清空所有舊的 marker DOM
     playersContainer.innerHTML = '';
-    
-    // 為每個玩家創建標記
-    let colorIndex = 1;
+  
+    // 取得所有玩家 ID
     const playerIds = Object.keys(gameState.players);
-    
-    playerIds.forEach((id, index) => {
-        const player = gameState.players[id];
-        const oldPlayer = oldState.players && oldState.players[id];
+    let colorIndex = 1;
+  
+    playerIds.forEach(id => {
+      const player = gameState.players[id];
+  
+      // ← 新增：如果 visible === false，就不畫這個玩家的 marker
+      if (player.visible === false) return;
         
         // 創建玩家標記元素
         const marker = document.createElement('div');

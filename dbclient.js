@@ -114,7 +114,8 @@ async function addPlayerToRoom(roomId, playerId, playerName) {
     // 添加玩家
     gameState.players[playerId] = {
         name: playerName,
-        position: 0 // 初始位置
+        position: 0 ,// 初始位置
+        visible: true   // 新增
     };
     
     // 更新房間狀態
