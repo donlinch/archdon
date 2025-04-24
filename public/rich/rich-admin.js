@@ -1,6 +1,5 @@
 // 移動設備優化的 JavaScript 代碼
-// rich-admin.js 頂部添加
-const API_BASE_URL = 'https://sunnyyummy.onrender.com';  // 或指定為 'https://sunnyyummy.onrender.com'
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- 添加移動設備檢測 ---
     const isMobile = window.innerWidth <= 768;
@@ -156,104 +155,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 250));
 
-   
-// 增强 initializeColorHexFields 函數 - 確保顏色同步更新
-function initializeColorHexFields() {
-    const colorInputs = document.querySelectorAll('input[type="color"]');
-    const hexInputs = document.querySelectorAll('.color-hex');
-    
-    // 顏色選擇器更改時更新文本框
-    colorInputs.forEach(input => {
-        // 移除之前的事件監聽器以避免重複
-        input.removeEventListener('input', updateHexFromColor);
-        input.addEventListener('input', updateHexFromColor);
+    // 初始化顏色輸入框和十六進制值同步
+    function initializeColorHexFields() {
+        const colorInputs = document.querySelectorAll('input[type="color"]');
+        const hexInputs = document.querySelectorAll('.color-hex');
         
-        // 初始化賦值
-        if (input.value) {
-            updateHexFromColorElement(input);
-        }
-    });
-    
-    // 文本框更改時更新顏色選擇器
-    hexInputs.forEach(input => {
-        // 移除之前的事件監聽器以避免重複
-        input.removeEventListener('input', updateColorFromHex);
-        input.addEventListener('input', updateColorFromHex);
-    });
-}
-
-
-
-
-
-// 從顏色選擇器更新十六進制值
-function updateHexFromColor() {
-    const hexInput = document.querySelector(`.color-hex[data-color-for="${this.id}"]`);
-    if (hexInput) {
-        hexInput.value = this.value.toUpperCase();
+        // 顏色選擇器更改時更新文本框
+        colorInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const hexInput = document.querySelector(`.color-hex[data-color-for="${this.id}"]`);
+                if (hexInput) {
+                    hexInput.value = this.value.toUpperCase();
+                }
+            });
+        });
+        
+        // 文本框更改時更新顏色選擇器
+        hexInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const colorId = this.getAttribute('data-color-for');
+                const colorInput = document.getElementById(colorId);
+                if (colorInput && /^#[0-9A-F]{6}$/i.test(this.value)) {
+                    colorInput.value = this.value;
+                    colorInput.dispatchEvent(new Event('input'));
+                }
+            });
+        });
     }
-}
-
-// 為單個元素更新十六進制值
-function updateHexFromColorElement(element) {
-    const hexInput = document.querySelector(`.color-hex[data-color-for="${element.id}"]`);
-    if (hexInput) {
-        hexInput.value = element.value.toUpperCase();
-    }
-}
-
-// 從十六進制輸入更新顏色選擇器
-function updateColorFromHex() {
-    const colorId = this.getAttribute('data-color-for');
-    const colorInput = document.getElementById(colorId);
-    if (colorInput && /^#[0-9A-F]{6}$/i.test(this.value)) {
-        colorInput.value = this.value;
-    }
-}
 
 
-// 添加 API 回應檢查函數 - 載入模板時使用
-async function loadTemplateWithErrorCheck(templateId) {
-    try {
-        showLoader();
-        const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${templateId}`);        // 檢查響應
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('找不到指定的模板。模板可能已被刪除或ID無效。');
-            }
-            if (response.status === 403) {
-                throw new Error('無權限訪問此模板。請確認您的管理員權限。');
-            }
-            throw new Error(`載入模板失敗: HTTP 狀態 ${response.status}`);
-        }
-        
-        // 嘗試解析 JSON
-        let template;
-        try {
-            template = await response.json();
-        } catch (e) {
-            throw new Error('解析模板數據失敗，服務器返回了無效的 JSON 格式。');
-        }
-        
-        // 檢查模板數據結構
-        if (!template || !template.template_id) {
-            throw new Error('收到的模板數據不完整或無效。');
-        }
-        
-        // 檢查樣式數據
-        if (!template.style_data) {
-            console.warn('警告: 模板中無樣式數據，將使用默認值');
-            template.style_data = {};
-        }
-        
-        hideLoader();
-        return template;
-    } catch (error) {
-        hideLoader();
-        displayStatus(`載入模板錯誤: ${error.message}`, true);
-        throw error;
-    }
-}
 
 
 
@@ -299,7 +229,7 @@ async function handleSaveAsTemplate() {
         try {
             showLoader();
             // 發送創建請求
-            const response = await fetch('/api/walk_map/templates', {
+            const response = await fetch('/api/admin/walk_map/templates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newTemplateData)
@@ -315,12 +245,6 @@ async function handleSaveAsTemplate() {
             
             // 更新模板列表
             await loadTemplateList();
-            const templateExists = Array.from(templateSelect.options).some(option => option.value === currentEditingTemplateId);
-            
-            if (!templateExists) {
-                displayStatus("要刪除的模板不存在或已被刪除。", true);
-                return;
-            }
             
             // 切換到新創建的模板
             templateSelect.value = newTemplateId;
@@ -565,349 +489,70 @@ async function handleSaveAsTemplate() {
             });
         });
     }
-// 修改 loadTemplateList 函數（約在rich-admin.js的第360行附近）
-async function loadTemplateList() {
-    try {
-        showLoader();
-        
-        // 嘗試修正API路徑
-        // 原始路徑
-        // const response = await fetch(`${API_BASE_URL}/api/walk_map/templates`);
-        
-        // 嘗試其他可能的路徑 (任選其一測試)
-        const response = await fetch(`${API_BASE_URL}/api/walk_map/templates`);
-        // const response = await fetch(`${API_BASE_URL}/api/templates`);
-        // const response = await fetch(`${API_BASE_URL}/api/walk_map/template_list`);
-        
-        // 添加詳細的錯誤處理和日誌
-        console.log('API請求URL:', `${API_BASE_URL}/api/walk_map/templates`);
-        console.log('回應狀態:', response.status);
-        
-        if (!response.ok) {
-            console.error(`伺服器回應錯誤: ${response.status} ${response.statusText}`);
-            // 嘗試讀取詳細錯誤信息
-            const errorText = await response.text();
-            console.error('錯誤詳情:', errorText);
-            throw new Error(`取得模板列表失敗: ${response.statusText}`);
-        }
-        
-        const templates = await response.json();
-        hideLoader();
-        
-        // 填充下拉選單
-        templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>';
-        templates.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.template_id;
-            option.textContent = t.template_name;
-            templateSelect.appendChild(option);
-        });
-        
-        displayStatus("模板列表已載入", false);
-    } catch (error) {
-        hideLoader();
-        console.error('載入模板列表錯誤:', error);
-        
-        // 如果伺服器連接失敗，加載本地備用數據
-        console.log('嘗試載入本地備用模板數據');
-        loadDefaultTemplates();
-        
-        // 顯示錯誤但仍然保持功能性
-        displayStatus(`載入模板列表失敗: ${error.message}。已切換至本地模式，基本功能仍可使用。`, true);
-    }
-}
 
+    // --- 模板相關函數 ---
+    async function loadTemplateList() {
+        try {
+            showLoader();
+            const response = await fetch('/api/admin/walk_map/templates');
+            hideLoader();
+            
+            if (!response.ok) throw new Error(`無法獲取模板列表: ${response.statusText}`);
+            const templates = await response.json();
 
-    // API 連接檢查
-async function checkApiConnection() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/health-check`, { 
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            // 添加較短的超時時間
-            signal: AbortSignal.timeout(3000)
-        });
-        
-        if (response.ok) {
-            console.log('API 連接正常');
-            return true;
-        } else {
-            console.error('API 連接異常:', response.status, response.statusText);
-            displayStatus('伺服器連接問題，部分功能可能受限', true);
-            return false;
-        }
-    } catch (error) {
-        console.error('API 連接檢查失敗:', error);
-        displayStatus('無法連接到伺服器，請確認網路狀態', true);
-        return false;
-    }
-}
-
-// 在 DOMContentLoaded 中調用
-document.addEventListener('DOMContentLoaded', () => {
-    // 檢查 API 連接
-    checkApiConnection().then(isConnected => {
-        // 即使連接失敗也繼續加載頁面基本功能
-        setupResponsiveUI();
-        loadTemplateList();  // 即使失敗也會顯示基本 UI
-        initializeColorHexFields();
-    });
-    
-    // 其他初始化代碼...
-});
-
-// 改進DEFAULT_TEMPLATES，提供更完整的備用數據
-const DEFAULT_TEMPLATES = [
-    { 
-        template_id: "local_default", 
-        template_name: "本地預設模板", 
-        description: "API連接失敗時的備用模板",
-        style_data: {
-            general: {
-                pageBgColor: "#f5f5f5",
-                primaryTextColor: "#333333",
-                primaryFontFamily: "'Microsoft JhengHei', 'Noto Sans TC', sans-serif"
-            },
-            header: {
-                headerBgColor: "#4CAF50",
-                headerTextColor: "#FFFFFF",
-                roomInfoColor: "#E8F5E9"
-            },
-            board: {
-                borderColor: "#CCCCCC",
-                borderWidth: "2px",
-                centerBgColor: "#F9FBE7",
-                centerImageUrl: ""
-            },
-            mapCell: {
-                defaultBgColor: "#E3F2FD",
-                defaultBorderColor: "#BBDEFB",
-                defaultBorderWidth: "1px",
-                titleTextColor: "#0D47A1",
-                numberTextColor: "#757575",
-                hoverBgColor: "#BBDEFB",
-                hoverBorderColor: "#64B5F6"
-            },
-            playerMarker: {
-                shape: "50%",
-                textColor: "#FFFFFF",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                playerColors: ["#1e88e5", "#ef5350", "#4caf50", "#ffb300", "#7e57c2"]
-            },
-            controller: {
-                panelBackground: "#F5F5F5",
-                playerLabelColor: "#424242",
-                controlButton: {
-                    defaultBgColor: "#E0E0E0",
-                    defaultTextColor: "#212121",
-                    borderRadius: "4px",
-                    hoverBgColor: "#BDBDBD",
-                    cooldownOpacity: "0.6"
-                }
-            },
-            info: {
-                panelBackground: "#F5F5F5",
-                sectionTitleColor: "#424242",
-                playerListText: "#616161",
-                staticTextColor: "#757575",
-                leaveButton: {
-                    defaultBgColor: "#F44336",
-                    defaultTextColor: "#FFFFFF"
-                }
-            },
-            connection: {
-                onlineBgColor: "#4CAF50",
-                onlineTextColor: "#FFFFFF",
-                offlineBgColor: "#F44336",
-                offlineTextColor: "#FFFFFF",
-                connectingBgColor: "#FFC107",
-                connectingTextColor: "#212121"
-            },
-            modal: {
-                overlayBgColor: "rgba(0, 0, 0, 0.7)",
-                contentBgColor: "#FFFFFF",
-                headerBgColor: "#4CAF50",
-                headerTextColor: "#FFFFFF",
-                bodyTextColor: "#212121"
-            }
-        },
-        cell_data: createDefaultCellData() // 使用預設格子數據
-    },
-    { 
-        template_id: "local_blue", 
-        template_name: "本地藍色主題", 
-        description: "藍色主題的本地備用模板",
-        style_data: {
-            general: {
-                pageBgColor: "#E3F2FD",
-                primaryTextColor: "#333333",
-                primaryFontFamily: "'Microsoft JhengHei', 'Noto Sans TC', sans-serif"
-            },
-            header: {
-                headerBgColor: "#1976D2",
-                headerTextColor: "#FFFFFF",
-                roomInfoColor: "#E3F2FD"
-            },
-            // 其他屬性類似於預設模板，但使用藍色系
+            templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>';
+            templates.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.template_id;
+                option.textContent = t.template_name;
+                templateSelect.appendChild(option);
+            });
+            console.log("模板列表已載入。");
+        } catch (error) {
+            hideLoader();
+            displayStatus(`載入模板列表錯誤: ${error.message}`, true);
         }
     }
-];
 
-// 新增純本地模式的保存功能
-function saveTemplateLocally() {
-    try {
-        const templateId = templateIdInput.value.trim();
-        const templateName = templateNameInput.value.trim();
-        if (!templateId || !templateName) {
-            displayStatus("模板 ID 和名稱為必填項。", true);
+    async function handleLoadTemplate() {
+        const selectedId = templateSelect.value;
+        if (!selectedId) {
+            displayStatus("請選擇一個模板來載入。", true);
+            clearTemplateEditor();
+            adminMapGrid.innerHTML = '';
             return;
         }
-        
-        const styleData = collectStyleData();
-        const templateData = {
-            template_id: templateId,
-            template_name: templateName,
-            description: templateDescriptionInput.value.trim(),
-            style_data: styleData,
-            cell_data: currentCellInfo
-        };
-        
-        // 保存到 localStorage
-        let savedTemplates = JSON.parse(localStorage.getItem('sw_local_templates') || '[]');
-        
-        // 檢查是更新還是新建
-        const existingIndex = savedTemplates.findIndex(t => t.template_id === templateId);
-        if (existingIndex >= 0) {
-            savedTemplates[existingIndex] = templateData;
-        } else {
-            savedTemplates.push(templateData);
-        }
-        
-        localStorage.setItem('sw_local_templates', JSON.stringify(savedTemplates));
-        
-        // 更新模板列表
-        loadLocalTemplates();
-        
-        // 更新界面
-        currentEditingTemplateId = templateId;
-        templateIdInput.readOnly = true;
-        deleteTemplateBtn.classList.remove('hidden');
-        
-        displayStatus(`模板 "${templateName}" 已成功保存到本地儲存。注意：這只是臨時存儲，不會同步到伺服器。`, false);
-        
-    } catch (error) {
-        displayStatus(`本地保存失敗: ${error.message}`, true);
-    }
-}
-
-
-
-
-
-
-
-
-
-// 載入本地保存的模板
-function loadLocalTemplates() {
-    const savedTemplates = JSON.parse(localStorage.getItem('sw_local_templates') || '[]');
-    
-    // 合併預設模板和用戶保存的模板
-    const allTemplates = [...DEFAULT_TEMPLATES, ...savedTemplates];
-    
-    templateSelect.innerHTML = '<option value="">-- 本地模式：請選擇或新增 --</option>';
-    allTemplates.forEach(t => {
-        const option = document.createElement('option');
-        option.value = t.template_id;
-        option.textContent = `${t.template_name} (本地)`;
-        templateSelect.appendChild(option);
-    });
-}
-
-// 從本地加載特定模板
-function loadTemplateFromLocal(templateId) {
-    const savedTemplates = JSON.parse(localStorage.getItem('sw_local_templates') || '[]');
-    const defaultTemplate = DEFAULT_TEMPLATES.find(t => t.template_id === templateId);
-    
-    const template = savedTemplates.find(t => t.template_id === templateId) || defaultTemplate;
-    
-    if (template) {
-        populateTemplateEditor(template);
-        currentCellInfo = template.cell_data || createDefaultCellData();
-        renderAdminGrid();
-        
-        templateEditor.classList.remove('hidden');
-        deleteTemplateBtn.classList.remove('hidden');
-        currentEditingTemplateId = templateId;
-        displayStatus(`本地模板 "${template.template_name}" 已載入。`);
-        return true;
-    }
-    
-    return false;
-}
-
-
-
-
-
-
-
-
-
-// 在載入模板列表失敗時使用
-function loadDefaultTemplates() {
-    templateSelect.innerHTML = '<option value="">-- 使用本地模板 --</option>';
-    DEFAULT_TEMPLATES.forEach(t => {
-        const option = document.createElement('option');
-        option.value = t.template_id;
-        option.textContent = t.template_name + ' (本地)';
-        templateSelect.appendChild(option);
-    });
-}
-
-// 修改 handleLoadTemplate 函數以支持本地模式
-async function handleLoadTemplate() {
-    const selectedId = templateSelect.value;
-    if (!selectedId) {
-        displayStatus("請選擇一個模板來載入。", true);
         clearTemplateEditor();
-        adminMapGrid.innerHTML = '';
-        return;
-    }
-    
-    clearTemplateEditor();
-    
-    // 首先嘗試從本地加載
-    if (loadTemplateFromLocal(selectedId)) {
-        return; // 如果本地加載成功，直接返回
-    }
-    
-    // 如果本地沒有，嘗試從伺服器加載
-    try {
-        const template = await loadTemplateWithErrorCheck(selectedId);
-        
-        populateTemplateEditor(template);
-        currentCellInfo = template.cell_data || createDefaultCellData();
-        renderAdminGrid();
+        try {
+            showLoader();
+            const response = await fetch(`/api/admin/walk_map/templates/${selectedId}`);
+            hideLoader();
+            
+            if (!response.ok) throw new Error(`無法載入模板 ${selectedId}: ${response.statusText}`);
+            const template = await response.json();
 
-        templateEditor.classList.remove('hidden');
-        deleteTemplateBtn.classList.remove('hidden');
-        currentEditingTemplateId = selectedId;
-        displayStatus(`模板 "${template.template_name}" 已載入。`);
-        
-        // 移動設備上聚焦到模板名稱
-        if (window.innerWidth <= 768) {
-            templateNameInput.scrollIntoView({ behavior: 'smooth' });
+            populateTemplateEditor(template);
+            currentCellInfo = template.cell_data || createDefaultCellData();
+            renderAdminGrid();
+
+            templateEditor.classList.remove('hidden');
+            deleteTemplateBtn.classList.remove('hidden');
+            currentEditingTemplateId = selectedId;
+            displayStatus(`模板 "${template.template_name}" 已載入。`);
+            
+            // 移動設備上聚焦到模板名稱
+            if (window.innerWidth <= 768) {
+                templateNameInput.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            hideLoader();
+            displayStatus(`載入模板錯誤: ${error.message}`, true);
+            templateEditor.classList.add('hidden');
+            deleteTemplateBtn.classList.add('hidden');
+            adminMapGrid.innerHTML = '';
+            currentCellInfo = [];
         }
-    } catch (error) {
-        console.error('載入模板失敗:', error);
-        displayStatus(`伺服器載入失敗: ${error.message}`, true);
-        templateEditor.classList.add('hidden');
-        deleteTemplateBtn.classList.add('hidden');
-        adminMapGrid.innerHTML = '';
-        currentCellInfo = [];
     }
-}
 
     function handleNewTemplate() {
         clearTemplateEditor();
@@ -931,164 +576,102 @@ async function handleLoadTemplate() {
         }
     }
 
-// 修改 handleSaveTemplate 函數以支持本地模式
-async function handleSaveTemplate() {
-    const templateId = templateIdInput.value.trim();
-    const templateName = templateNameInput.value.trim();
-    if (!templateId || !templateName) {
-        displayStatus("模板 ID 和名稱為必填項。", true);
-        return;
-    }
-    if (!/^[a-z0-9_]+$/.test(templateId)) {
-         displayStatus("模板 ID 只能包含小寫字母、數字和底線。", true);
-         return;
-    }
-    
-    // 檢查是否在本地模式
-    const isLocalMode = document.querySelector('#local-mode-indicator')?.textContent === '本地模式已啟用';
-    
-    if (isLocalMode) {
-        saveTemplateLocally();
-        return;
-    }
-    
-    // 以下是原始的伺服器保存邏輯
-    const styleData = collectStyleData();
-    const templateData = {
-        template_id: templateId,
-        template_name: templateName,
-        description: templateDescriptionInput.value.trim(),
-        style_data: styleData,
-        cell_data: currentCellInfo
-    };
-
-    const isCreating = !currentEditingTemplateId;
-    const method = isCreating ? 'POST' : 'PUT';
-    const url = isCreating 
-    ? `${API_BASE_URL}/api/walk_map/templates` 
-    : `${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`;
-
-    if (!isCreating && templateId !== currentEditingTemplateId) {
-         displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
-         templateIdInput.value = currentEditingTemplateId;
-         return;
-    }
-
-    try {
-        showLoader();
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(templateData)
-        });
-        hideLoader();
-        
-        if (!response.ok) {
-            // 如果伺服器保存失敗，自動切換到本地模式
-            console.warn('伺服器保存失敗，自動切換到本地模式');
-            enableLocalMode();
-            saveTemplateLocally();
+    async function handleSaveTemplate() {
+        const templateId = templateIdInput.value.trim();
+        const templateName = templateNameInput.value.trim();
+        if (!templateId || !templateName) {
+            displayStatus("模板 ID 和名稱為必填項。", true);
             return;
         }
-        
-        const savedTemplateResult = await response.json();
-        displayStatus(`模板 "${templateData.template_name}" (ID: ${templateData.template_id}) 已成功儲存！`);
-
-        if (isCreating) {
-            currentEditingTemplateId = templateData.template_id;
-            templateIdInput.value = currentEditingTemplateId;
-            templateIdInput.readOnly = true;
-            deleteTemplateBtn.classList.remove('hidden');
-            await loadTemplateList();
-            templateSelect.value = currentEditingTemplateId;
-        } else {
-             const option = templateSelect.querySelector(`option[value="${currentEditingTemplateId}"]`);
-             if (option && option.textContent !== templateName) {
-                 option.textContent = templateName;
-             }
+        if (!/^[a-z0-9_]+$/.test(templateId)) {
+             displayStatus("模板 ID 只能包含小寫字母、數字和底線。", true);
+             return;
         }
 
-        // 在移動設備上顯示一條成功通知，並滾動到頂部以查看更新後的標題
-        if (window.innerWidth <= 768) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            // 添加短暫高亮效果
-            templateSelect.classList.add('highlight-select');
-            setTimeout(() => templateSelect.classList.remove('highlight-select'), 2000);
+        const styleData = collectStyleData();
+        const templateData = {
+            template_id: templateId,
+            template_name: templateName,
+            description: templateDescriptionInput.value.trim(),
+            style_data: styleData,
+            cell_data: currentCellInfo
+        };
+
+        const isCreating = !currentEditingTemplateId;
+        const method = isCreating ? 'POST' : 'PUT';
+        const url = isCreating ? '/api/admin/walk_map/templates' : `/api/admin/walk_map/templates/${currentEditingTemplateId}`;
+
+        if (!isCreating && templateId !== currentEditingTemplateId) {
+             displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
+             templateIdInput.value = currentEditingTemplateId;
+             return;
         }
 
-    } catch (error) {
-        hideLoader();
-        displayStatus(`儲存模板錯誤: ${error.message}。嘗試切換到本地模式...`, true);
-        
-        // 自動切換到本地模式並保存
-        enableLocalMode();
-        saveTemplateLocally();
-    }
-}
-function enableLocalMode() {
-    // 創建本地模式指示器
-    if (!document.querySelector('#local-mode-indicator')) {
-        const indicator = document.createElement('div');
-        indicator.id = 'local-mode-indicator';
-        indicator.className = 'local-mode-indicator';
-        indicator.textContent = '本地模式已啟用';
-        indicator.title = '當前在本地模式下工作，變更僅保存在此瀏覽器中';
-        document.querySelector('.admin-container').prepend(indicator);
-        
-        // 添加樣式
-        const style = document.createElement('style');
-        style.textContent = `
-            .local-mode-indicator {
-                background-color: #ff9800;
-                color: white;
-                padding: 8px 12px;
-                text-align: center;
-                font-weight: bold;
-                margin-bottom: 15px;
-                border-radius: 4px;
+        try {
+            showLoader();
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(templateData)
+            });
+            hideLoader();
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(errorData.error || `儲存模板失敗: ${response.statusText}`);
             }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // 加載本地模板
-    loadLocalTemplates();
-}
+            const savedTemplateResult = await response.json();
+            displayStatus(`模板 "${templateData.template_name}" (ID: ${templateData.template_id}) 已成功儲存！`);
 
+            if (isCreating) {
+                currentEditingTemplateId = templateData.template_id;
+                templateIdInput.value = currentEditingTemplateId;
+                templateIdInput.readOnly = true;
+                deleteTemplateBtn.classList.remove('hidden');
+                await loadTemplateList();
+                templateSelect.value = currentEditingTemplateId;
+            } else {
+                 const option = templateSelect.querySelector(`option[value="${currentEditingTemplateId}"]`);
+                 if (option && option.textContent !== templateName) {
+                     option.textContent = templateName;
+                 }
+            }
 
-async function checkAndInitLocalMode() {
-    try {
-        const isConnected = await checkApiConnection();
-        if (!isConnected) {
-            console.log('無法連接到伺服器，啟用本地模式');
-            enableLocalMode();
-            return true;
+            // 在移動設備上顯示一條成功通知，並滾動到頂部以查看更新後的標題
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // 添加短暫高亮效果
+                templateSelect.classList.add('highlight-select');
+                setTimeout(() => templateSelect.classList.remove('highlight-select'), 2000);
+            }
+
+        } catch (error) {
+            hideLoader();
+            displayStatus(`儲存模板錯誤: ${error.message}`, true);
         }
-        return false;
-    } catch (error) {
-        console.error('連接檢查失敗:', error);
-        enableLocalMode();
-        return true;
     }
-}
 
     async function handleDeleteTemplate() {
         if (!currentEditingTemplateId) {
             displayStatus("未選擇要刪除的模板。", true);
             return;
         }
+        const currentName = templateNameInput.value || `ID: ${currentEditingTemplateId}`;
         
-        // 保存當前模板名稱供確認使用
-        const currentName = templateNameInput.value || currentEditingTemplateId;
-        
-        // 確認對話框
-        if (!confirm(`確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
-            return;
+        // 優化移動版確認對話框
+        if (window.innerWidth <= 768) {
+            if (!confirm(`確定要刪除「${currentName}」嗎？\n\n此操作無法復原！`)) {
+                return;
+            }
+        } else {
+            if (!confirm(`你確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
+                return;
+            }
         }
         
         try {
             showLoader();
-            const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
+            const response = await fetch(`/api/admin/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
             hideLoader();
             
             if (!response.ok) {
@@ -1102,6 +685,11 @@ async function checkAndInitLocalMode() {
             currentCellInfo = [];
             await loadTemplateList();
             templateSelect.value = "";
+            
+            // 在移動設備上滾動到頂部
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } catch (error) {
             hideLoader();
             displayStatus(`刪除模板錯誤: ${error.message}`, true);
@@ -1184,126 +772,36 @@ async function checkAndInitLocalMode() {
         };
     }
     
-// 替换 populateTemplateEditor 函数 - 确保完整载入所有颜色值
-function populateTemplateEditor(template) {
-    // Check if template exists
-    if (!template) {
-        console.error("無法填充模板編輯器：模板數據為空");
-        return;
-    }
-
-    // Log the received template data to debug
-    console.log("接收到的模板數據:", JSON.stringify(template));
-    
-    // Template basic info
-    templateIdInput.value = template.template_id || '';
-    templateIdInput.readOnly = !!template.template_id;
-    templateNameInput.value = template.template_name || '';
-    templateDescriptionInput.value = template.description || '';
-
-    const styles = template.style_data || {};
-    
-    // For debugging, log the styles object
-    console.log("模板樣式數據:", JSON.stringify(styles));
-
-    // General section
-    if (styleInputs.general) {
-        styleInputs.general.pageBgColor.value = styles.general?.pageBgColor || '#f5f5f5';
-        styleInputs.general.primaryTextColor.value = styles.general?.primaryTextColor || '#333333';
-        styleInputs.general.primaryFontFamily.value = styles.general?.primaryFontFamily || '';
-    }
-
-    // Header section
-    if (styleInputs.header) {
-        styleInputs.header.headerBgColor.value = styles.header?.headerBgColor || '#4CAF50';
-        styleInputs.header.headerTextColor.value = styles.header?.headerTextColor || '#FFFFFF';
-        styleInputs.header.roomInfoColor.value = styles.header?.roomInfoColor || '#E8F5E9';
-    }
-
-    // Board section
-    if (styleInputs.board) {
-        styleInputs.board.borderColor.value = styles.board?.borderColor || '#CCCCCC';
-        styleInputs.board.borderWidth.value = styles.board?.borderWidth || '2px';
-        styleInputs.board.centerBgColor.value = styles.board?.centerBgColor || '#F9FBE7';
-        styleInputs.board.centerImageUrl.value = styles.board?.centerImageUrl || '';
-    }
-
-    // Map Cell section
-    if (styleInputs.mapCell) {
-        styleInputs.mapCell.defaultBgColor.value = styles.mapCell?.defaultBgColor || '#E3F2FD';
-        styleInputs.mapCell.defaultBorderColor.value = styles.mapCell?.defaultBorderColor || '#BBDEFB';
-        styleInputs.mapCell.defaultBorderWidth.value = styles.mapCell?.defaultBorderWidth || '1px';
-        styleInputs.mapCell.titleTextColor.value = styles.mapCell?.titleTextColor || '#0D47A1';
-        styleInputs.mapCell.numberTextColor.value = styles.mapCell?.numberTextColor || '#757575';
-        styleInputs.mapCell.hoverBgColor.value = styles.mapCell?.hoverBgColor || '#BBDEFB';
-        styleInputs.mapCell.hoverBorderColor.value = styles.mapCell?.hoverBorderColor || '#64B5F6';
-    }
-
-    // Player Marker section
-    if (styleInputs.playerMarker) {
-        styleInputs.playerMarker.shape.value = styles.playerMarker?.shape || '50%';
-        styleInputs.playerMarker.textColor.value = styles.playerMarker?.textColor || '#FFFFFF';
-        styleInputs.playerMarker.boxShadow.value = styles.playerMarker?.boxShadow || '0 2px 4px rgba(0,0,0,0.2)';
-        
-        // 處理玩家顏色組
-        const playerColors = styles.playerMarker?.playerColors || ["#1e88e5", "#ef5350", "#4caf50", "#ffb300", "#7e57c2"];
-        for (let i = 0; i < styleInputs.playerMarker.colors.length && i < playerColors.length; i++) {
-            styleInputs.playerMarker.colors[i].value = playerColors[i];
+    function populateTemplateEditor(template) {
+        // Check if template exists
+        if (!template) {
+            console.error("無法填充模板編輯器：模板數據為空");
+            return;
         }
-    }
-
-    // Controller section
-    if (styleInputs.controller) {
-        styleInputs.controller.panelBackground.value = styles.controller?.panelBackground || '#F5F5F5';
-        styleInputs.controller.playerLabelColor.value = styles.controller?.playerLabelColor || '#424242';
-        
-        if (styleInputs.controller.button) {
-            styleInputs.controller.button.defaultBgColor.value = styles.controller?.controlButton?.defaultBgColor || '#E0E0E0';
-            styleInputs.controller.button.defaultTextColor.value = styles.controller?.controlButton?.defaultTextColor || '#212121';
-            styleInputs.controller.button.borderRadius.value = styles.controller?.controlButton?.borderRadius || '4px';
-            styleInputs.controller.button.hoverBgColor.value = styles.controller?.controlButton?.hoverBgColor || '#BDBDBD';
-            styleInputs.controller.button.cooldownOpacity.value = styles.controller?.controlButton?.cooldownOpacity || '0.6';
-        }
-    }
-
-    // Info section
-    if (styleInputs.info) {
-        styleInputs.info.panelBackground.value = styles.info?.panelBackground || '#F5F5F5';
-        styleInputs.info.sectionTitleColor.value = styles.info?.sectionTitleColor || '#424242';
-        styleInputs.info.playerListText.value = styles.info?.playerListText || '#616161';
-        styleInputs.info.staticTextColor.value = styles.info?.staticTextColor || '#757575';
-        
-        if (styleInputs.info.leaveButton) {
-            styleInputs.info.leaveButton.defaultBgColor.value = styles.info?.leaveButton?.defaultBgColor || '#F44336';
-            styleInputs.info.leaveButton.defaultTextColor.value = styles.info?.leaveButton?.defaultTextColor || '#FFFFFF';
-        }
-    }
-
-    // Connection section
-    if (styleInputs.connection) {
-        styleInputs.connection.onlineBgColor.value = styles.connection?.onlineBgColor || '#4CAF50';
-        styleInputs.connection.onlineTextColor.value = styles.connection?.onlineTextColor || '#FFFFFF';
-        styleInputs.connection.offlineBgColor.value = styles.connection?.offlineBgColor || '#F44336';
-        styleInputs.connection.offlineTextColor.value = styles.connection?.offlineTextColor || '#FFFFFF';
-        styleInputs.connection.connectingBgColor.value = styles.connection?.connectingBgColor || '#FFC107';
-        styleInputs.connection.connectingTextColor.value = styles.connection?.connectingTextColor || '#212121';
-    }
-
-    // Modal section
-    if (styleInputs.modal) {
-        styleInputs.modal.overlayBgColor.value = styles.modal?.overlayBgColor || 'rgba(0, 0, 0, 0.7)';
-        styleInputs.modal.contentBgColor.value = styles.modal?.contentBgColor || '#FFFFFF';
-        styleInputs.modal.headerBgColor.value = styles.modal?.headerBgColor || '#4CAF50';
-        styleInputs.modal.headerTextColor.value = styles.modal?.headerTextColor || '#FFFFFF';
-        styleInputs.modal.bodyTextColor.value = styles.modal?.bodyTextColor || '#212121';
-    }
-
-    // Update all hex inputs with corresponding color values
-    updateColorHexInputs();
     
-    // Update preview variables
-    updatePreviewVariables();
-}
+        // Template basic info
+        templateIdInput.value = template.template_id || '';
+        templateIdInput.readOnly = !!template.template_id;
+        templateNameInput.value = template.template_name || '';
+        templateDescriptionInput.value = template.description || '';
+    
+        const styles = template.style_data || {};
+    
+        // General section - 使用簡化版，不再重複所有部分
+        if (styleInputs.general) {
+            styleInputs.general.pageBgColor.value = styles.general?.pageBgColor || '#f5f5f5';
+            styleInputs.general.primaryTextColor.value = styles.general?.primaryTextColor || '#333333';
+            styleInputs.general.primaryFontFamily.value = styles.general?.primaryFontFamily || '';
+        }
+        
+        // 其他部分保持原有代碼...
+        
+        // 重要：更新所有顏色輸入框對應的十六進制文本框
+        updateColorHexInputs();
+        
+        // 更新預覽變數
+        updatePreviewVariables();
+    }
     
     // 更新所有顏色輸入框對應的十六進制文本框
     function updateColorHexInputs() {
@@ -1362,37 +860,6 @@ function populateTemplateEditor(template) {
         }
     }
      
-
-
-
-
-// 修改 clearColorInput 函數 - 確保清除時也更新十六進制輸入框
-function clearColorInput(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    
-    input.value = '#ffffff';
-    input.dataset.cleared = 'true';
-    
-    // 更新對應的十六進制輸入框
-    const hexInput = document.querySelector(`.color-hex[data-color-for="${inputId}"]`);
-    if (hexInput) {
-        hexInput.value = '#FFFFFF (已清除)';
-    }
-    
-    // 如果有對應的預覽變數，也要更新
-    const label = input.closest('.form-group')?.querySelector('label');
-    if (label) {
-        const varName = label.textContent.split(':')[0].trim().toLowerCase().replace(/\s+/g, '-');
-        if (typeof updatePreviewColor === 'function') {
-            updatePreviewColor(varName, '');
-        }
-    }
-}
-
-
-
-
     // 添加加載提示功能
     function showLoader() {
         // 檢查是否已存在加載器
@@ -1822,10 +1289,6 @@ function clearColorInput(inputId) {
         // 防止iOS中的默認縮放手勢
     });
     
-
-    window.clearColorInput = clearColorInput;
-
-
     // 初始化調整所有顏色填充顯示
     updateColorHexInputs();
 }); // End DOMContentLoaded
