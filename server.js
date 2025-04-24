@@ -352,6 +352,76 @@ async function handleSimpleWalkerMessage(ws, message) {
         const parsedMessage = JSON.parse(message);
         console.log(`[WS Simple Walker] Received message from ${playerId} in room ${roomId}:`, parsedMessage);
 
+
+
+// 處理模板應用請求 - 添加到 handleSimpleWalkerMessage 函數中 "// ← INSERT HERE" 位置
+if (parsedMessage.type === 'applyTemplate') {
+    const { templateId } = parsedMessage;
+    
+    if (!templateId) {
+      console.warn(`[WS Simple Walker] 收到無效的模板應用請求: ${JSON.stringify(parsedMessage)}`);
+      return;
+    }
+    
+    console.log(`[WS Simple Walker] 玩家 ${playerId} 請求應用模板 ${templateId} 到房間 ${roomId}`);
+    
+    try {
+      // 1. 從資料庫獲取模板詳情
+      const templateResult = await pool.query(
+        'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+        [templateId]
+      );
+      
+      if (templateResult.rows.length === 0) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: '找不到指定的模板'
+        }));
+        return;
+      }
+      
+      const templateData = templateResult.rows[0];
+      
+      // 2. 更新房間狀態 - 添加模板 ID (可選，如果你想追蹤每個房間使用的模板)
+      const roomData = await dbClient.getRoom(roomId);
+      if (!roomData || !roomData.game_state) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: '無法更新房間：找不到房間狀態'
+        }));
+        return;
+      }
+      
+      // 將模板 ID 添加到房間狀態（假設 gameState 有個 templateId 屬性）
+      const gameState = roomData.game_state;
+      gameState.templateId = templateId;
+      
+      // 更新資料庫中的房間狀態
+      const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
+      
+      // 3. 廣播模板更新消息給房間內所有玩家
+      broadcastToSimpleWalkerRoom(roomId, {
+        type: 'templateUpdate',
+        templateId: templateId,
+        templateData: templateData
+      });
+      /api/admin/walk_map/template
+      console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
+    } catch (err) {
+      console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: '應用模板時發生錯誤'
+      }));
+    }
+    
+    return; // 處理完畢，結束函數
+  }
+
+
+
+
+
         // 只處理 'moveCommand' 類型的消息
         if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
             const direction = parsedMessage.direction; // 'forward' 或 'backward'
@@ -896,7 +966,57 @@ app.delete('/api/wheel-game/themes/:id', async (req, res) => {
 
 
 
- 
+ // 創建公開的模板 API 路由（這段代碼應該添加到 server.js 中 "// ← INSERT HERE" 的位置）
+// 公開的模板 API 路由
+app.get('/api/walk_map/templates', async (req, res) => {
+    try {
+      // 從資料庫獲取模板列表
+      const result = await pool.query('SELECT template_id, template_name, description FROM walk_map_templates ORDER BY template_name');
+      res.json(result.rows);
+    } catch (err) {
+      console.error('[API GET /api/walk_map/templates] Error:', err.stack || err);
+      res.status(500).json({ error: '取得模板列表失敗' });
+    }
+  });
+  
+  // 獲取單個模板詳情
+  app.get('/api/walk_map/templates/:templateId', async (req, res) => {
+    const { templateId } = req.params;
+    try {
+      // 同時選取 style_data 和 cell_data
+      const result = await pool.query(
+        'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+        [templateId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '找不到模板' });
+      }
+      
+      const templateData = result.rows[0];
+      
+      // 確保 cell_data 是陣列 (如果 DB 是 NULL 或解析失敗)
+      if (templateData.cell_data && typeof templateData.cell_data === 'string') {
+        try { templateData.cell_data = JSON.parse(templateData.cell_data); } 
+        catch(e) { templateData.cell_data = []; }
+      } else if (!templateData.cell_data) {
+        templateData.cell_data = [];
+      }
+      
+      // 確保 style_data 是物件 (如果 DB 是 NULL 或解析失敗)
+      if (templateData.style_data && typeof templateData.style_data === 'string') {
+        try { templateData.style_data = JSON.parse(templateData.style_data); } 
+        catch(e) { templateData.style_data = {}; }
+      } else if (!templateData.style_data) {
+        templateData.style_data = {};
+      }
+  
+      res.json(templateData); // 回傳包含 style 和 cell 資料的完整模板
+    } catch (err) {
+      console.error(`[API GET /api/walk_map/templates/${templateId}] Error:`, err.stack || err);
+      res.status(500).json({ error: '取得模板詳情失敗' });
+    }
+  });
 
 
 

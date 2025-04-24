@@ -16,8 +16,7 @@ async function loadTemplateList() {
         loadingIndicator.style.display = 'block';
         
         // 发送请求获取模板列表
-        const response = await fetch('/api/walk_map/templates');
-        
+        const response = await fetch('/api/admin/walk_map/templates');        
         if (!response.ok) {
             throw new Error(`无法获取模板列表: ${response.statusText}`);
         }
@@ -425,8 +424,7 @@ function initTemplateSelector() {
             }
             
             try {
-                const response = await fetch(`/api/walk_map/templates/${selectedTemplateId}`);
-                if (!response.ok) {
+                const response = await fetch(`/api/admin/walk_map/templates/${selectedTemplateId}`);                if (!response.ok) {
                     throw new Error(`无法获取模板预览: ${response.statusText}`);
                 }
                 
