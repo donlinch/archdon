@@ -216,7 +216,7 @@ function updateColorFromHex() {
 async function loadTemplateWithErrorCheck(templateId) {
     try {
         showLoader();
-        const response = await fetch(`/api/admin/walk_map/templates/${templateId}`);
+        const response = await fetch(`/api/walk_map/templates${templateId}`);
         
         // 檢查響應
         if (!response.ok) {
@@ -301,7 +301,7 @@ async function handleSaveAsTemplate() {
         try {
             showLoader();
             // 發送創建請求
-            const response = await fetch('/api/admin/walk_map/templates', {
+            const response = await fetch('/api/walk_map/templates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newTemplateData)
@@ -567,7 +567,7 @@ async function handleSaveAsTemplate() {
             showLoader();
             
             // 嘗試從伺服器載入
-            const response = await fetch(`${API_BASE_URL}/api/admin/walk_map/templates`);
+            const response = await fetch(`${API_BASE_URL}/api/walk_map/templates`);
             
             // 添加詳細的錯誤處理
             if (!response.ok) {
@@ -753,7 +753,7 @@ async function handleLoadTemplate() {
 
         const isCreating = !currentEditingTemplateId;
         const method = isCreating ? 'POST' : 'PUT';
-        const url = isCreating ? '/api/admin/walk_map/templates' : `/api/admin/walk_map/templates/${currentEditingTemplateId}`;
+        const url = isCreating ? '/api/walk_map/templates' : `/api/walk_map/templates/${currentEditingTemplateId}`;
 
         if (!isCreating && templateId !== currentEditingTemplateId) {
              displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
@@ -825,7 +825,7 @@ async function handleLoadTemplate() {
         
         try {
             showLoader();
-            const response = await fetch(`/api/admin/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
+            const response = await fetch(`/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
             hideLoader();
             
             if (!response.ok) {
