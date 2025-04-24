@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商店管理</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .product-image-preview {
+            max-width: 150px;
+            max-height: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>商店管理</h1>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">商品列表</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="add-tab" data-bs-toggle="tab" data-bs-target="#add" type="button" role="tab">新增商品</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="myTabContent">
+            <!-- 商品列表 -->
+            <div class="tab-pane fade show active" id="products" role="tabpanel">
+                <div class="d-flex justify-content-between mb-3">
+                    <h3>商品列表</h3>
+                    <button id="refreshProducts" class="btn btn-outline-primary">刷新列表</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>圖片</th>
+                                <th>名稱</th>
+                                <th>價格</th>
+                                <th>庫存</th>
+                                <th>類別</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsList">
+                            <!-- 商品列表會透過 JavaScript 動態產生 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="productsEmpty" class="alert alert-info" style="display: none;">
+                    目前沒有商品資料，請新增商品。
+                </div>
+            </div>
+            
+            <!-- 新增商品表單 -->
+            <div class="tab-pane fade" id="add" role="tabpanel">
+                <h3>新增商品</h3>
+                <form id="addProductForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">商品名稱 *</label>
+                        <input type="text" class="form-control" id="productName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productDescription" class="form-label">商品描述</label>
+                        <textarea class="form-control" id="productDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productPrice" class="form-label">價格 *</label>
+                        <input type="number" class="form-control" id="productPrice" name="price" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productStock" class="form-label">庫存數量</label>
+                        <input type="number" class="form-control" id="productStock" name="stock" min="0" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="productCategory" class="form-label">類別</label>
+                        <input type="text" class="form-control" id="productCategory" name="category">
+                    </div>
+                    <div class="mb-3">
+                        <label for="productImage" class="form-label">商品圖片</label>
+                        <input type="file" class="form-control" id="productImage" name="image" accept="image/*">
+                        <div id="imagePreview" class="mt-2"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">新增商品</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯商品的模態框 -->
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">編輯商品</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProductForm" enctype="multipart/form-data">
+                        <input type="hidden" id="editProductId" name="id">
+                        <div class="mb-3">
+                            <label for="editProductName" class="form-label">商品名稱 *</label>
+                            <input type="text" class="form-control" id="editProductName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductDescription" class="form-label">商品描述</label>
+                            <textarea class="form-control" id="editProductDescription" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductPrice" class="form-label">價格 *</label>
+                            <input type="number" class="form-control" id="editProductPrice" name="price" step="0.01" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductStock" class="form-label">庫存數量</label>
+                            <input type="number" class="form-control" id="editProductStock" name="stock" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductCategory" class="form-label">類別</label>
+                            <input type="text" class="form-control" id="editProductCategory" name="category">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductImage" class="form-label">商品圖片</label>
+                            <input type="file" class="form-control" id="editProductImage" name="image" accept="image/*">
+                            <div id="editImagePreview" class="mt-2"></div>
+                            <small class="text-muted">留空表示不更改圖片</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveEditBtn">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API 端點
+        const API_BASE = '/api/storemarket';
+
+        // DOM 元素
+        const productsList = document.getElementById('productsList');
+        const productsEmpty = document.getElementById('productsEmpty');
+        const refreshProductsBtn = document.getElementById('refreshProducts');
+        const addProductForm = document.getElementById('addProductForm');
+        const productImage = document.getElementById('productImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const editProductForm = document.getElementById('editProductForm');
+        const editProductImage = document.getElementById('editProductImage');
+        const editImagePreview = document.getElementById('editImagePreview');
+        const saveEditBtn = document.getElementById('saveEditBtn');
+        
+        // 當頁面載入時獲取商品列表
+        document.addEventListener('DOMContentLoaded', fetchProducts);
+        
+        // 刷新商品列表按鈕
+        refreshProductsBtn.addEventListener('click', fetchProducts);
+        
+        // 獲取商品列表
+        async function fetchProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/products`);
+                if (!response.ok) throw new Error('獲取商品列表失敗');
+                
+                const products = await response.json();
+                
+                // 清空商品列表
+                productsList.innerHTML = '';
+                
+                if (products.length === 0) {
+                    productsEmpty.style.display = 'block';
+                } else {
+                    productsEmpty.style.display = 'none';
+                    
+                    // 渲染商品列表
+                    products.forEach(product => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.id}</td>
+                            <td>${product.image ? `<img src="${product.image}" class="product-image-preview" alt="${product.name}">` : '無圖片'}</td>
+                            <td>${product.name}</td>
+                            <td>$${product.price.toFixed(2)}</td>
+                            <td>${product.stock}</td>
+                            <td>${product.category || '無類別'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary edit-product" data-id="${product.id}">編輯</button>
+                                <button class="btn btn-sm btn-danger delete-product" data-id="${product.id}">刪除</button>
+                            </td>
+                        `;
+                        productsList.appendChild(row);
+                    });
+                    
+                    // 添加編輯商品事件監聽器
+                    document.querySelectorAll('.edit-product').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const productId = button.getAttribute('data-id');
+                            openEditModal(productId);
+                        });
+                    });
+                    
+                    // 添加刪除商品事件監聽器
+                    document.querySelectorAll('.delete-product').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const productId = button.getAttribute('data-id');
+                            deleteProduct(productId);
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('獲取商品列表錯誤:', error);
+                alert('無法獲取商品列表: ' + error.message);
+            }
+        }
+        
+        // 添加商品表單提交
+        addProductForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const formData = new FormData(addProductForm);
+                
+                const response = await fetch(`${API_BASE}/products`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '新增商品失敗');
+                }
+                
+                // 重置表單
+                addProductForm.reset();
+                imagePreview.innerHTML = '';
+                
+                // 切換到商品列表標籤
+                const productsTab = document.getElementById('products-tab');
+                bootstrap.Tab.getInstance(productsTab).show();
+                
+                // 刷新商品列表
+                fetchProducts();
+                
+                alert('商品新增成功！');
+            } catch (error) {
+                console.error('新增商品錯誤:', error);
+                alert('新增商品失敗: ' + error.message);
+            }
+        });
+        
+        // 圖片預覽功能
+        productImage.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    imagePreview.innerHTML = `<img src="${e.target.result}" class="product-image-preview" alt="預覽圖片">`;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.innerHTML = '';
+            }
+        });
+
+        editProductImage.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    editImagePreview.innerHTML = `<img src="${e.target.result}" class="product-image-preview" alt="預覽圖片">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 打開編輯模態框
+        async function openEditModal(productId) {
+            try {
+                const response = await fetch(`${API_BASE}/products/${productId}`);
+                if (!response.ok) throw new Error('獲取商品詳情失敗');
+                
+                const product = await response.json();
+                
+                // 填充表單
+                document.getElementById('editProductId').value = product.id;
+                document.getElementById('editProductName').value = product.name;
+                document.getElementById('editProductDescription').value = product.description || '';
+                document.getElementById('editProductPrice').value = product.price;
+                document.getElementById('editProductStock').value = product.stock;
+                document.getElementById('editProductCategory').value = product.category || '';
+                
+                // 顯示現有圖片
+                if (product.image) {
+                    editImagePreview.innerHTML = `<img src="${product.image}" class="product-image-preview" alt="${product.name}">`;
+                } else {
+                    editImagePreview.innerHTML = '無圖片';
+                }
+                
+                // 打開模態框
+                const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                modal.show();
+            } catch (error) {
+                console.error('獲取商品詳情錯誤:', error);
+                alert('無法獲取商品詳情: ' + error.message);
+            }
+        }
+        
+        // 保存編輯
+        saveEditBtn.addEventListener('click', async () => {
+            try {
+                const productId = document.getElementById('editProductId').value;
+                const formData = new FormData(editProductForm);
+                
+                // 如果沒有選擇新圖片，則移除圖片字段
+                if (!editProductImage.files.length) {
+                    formData.delete('image');
+                }
+                
+                const response = await fetch(`${API_BASE}/products/${productId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '更新商品失敗');
+                }
+                
+                // 關閉模態框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editProductModal'));
+                modal.hide();
+                
+                // 刷新商品列表
+                fetchProducts();
+                
+                alert('商品更新成功！');
+            } catch (error) {
+                console.error('更新商品錯誤:', error);
+                alert('更新商品失敗: ' + error.message);
+            }
+        });
+        
+        // 刪除商品
+        async function deleteProduct(productId) {
+            if (!confirm('確定要刪除這個商品嗎？此操作無法撤銷。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/products/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '刪除商品失敗');
+                }
+                
+                // 刷新商品列表
+                fetchProducts();
+                
+                alert('商品已成功刪除！');
+            } catch (error) {
+                console.error('刪除商品錯誤:', error);
+                alert('刪除商品失敗: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
