@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
-const storeDb = require('./store-db');
+const storeDb = require('./public/store/store-db');
 const storeRoutes = require('./public/store/store-routes');
 
 
@@ -4817,3 +4817,6 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
     // ---> 添加結束 <---
 
 });
+
+// 在 Express 路由設定區域添加
+app.use('/api/storemarket', storeRoutes);
