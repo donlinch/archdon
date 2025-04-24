@@ -15,6 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
+const storeDb = require('./store-db');
+const storeRoutes = require('./store-routes');
 
 
 
@@ -4799,6 +4801,19 @@ app.use((err, req, res, next) => {
 // --- END OF FILE server.js ---
 
  
-server.listen(PORT, () => {
-    console.log(`✅ Server is running and listening on port ${PORT}`);
-  });
+server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
+    console.log(`Server running on port ${PORT}`);
+    // 可能還有其他現有的啟動代碼
+
+    // ---> 添加以下代碼來初始化商店數據庫 <---
+    try {
+        await storeDb.initStoreDatabase();
+        // 初始化成功日誌已在 storeDb.initStoreDatabase 內部處理
+    } catch (err) {
+        // 錯誤日誌已在 storeDb.initStoreDatabase 內部處理
+        // 您可以選擇在這裡添加額外的錯誤處理，例如退出應用
+        console.error('*** 商店數據庫初始化失敗，應用可能無法正常運行商店功能 ***');
+    }
+    // ---> 添加結束 <---
+
+});
