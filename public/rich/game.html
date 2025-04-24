@@ -425,6 +425,40 @@
     display: none;
   }
 
+
+
+  /* ===== 地圖中央圖片樣式修正 ===== */
+#map-center-image-container {
+    position: absolute; /* 相對於 #game-map 定位 */
+    /* 計算中心位置 - 考慮邊框格子 */
+    top: var(--cell-dim);     /* 從頂部留出一個格子的距離 */
+    left: var(--cell-dim);    /* 從左側留出一個格子的距離 */
+    /* 計算內部 5x5 區域的大小 */
+    width: calc(100% - 2 * var(--cell-dim));  /* 總寬度減去左右兩邊的格子寬度 */
+    height: calc(100% - 2 * var(--cell-dim)); /* 總高度減去上下兩邊的格子高度 */
+    
+    /* 設置顯示方式，確保圖片居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    /* 其他樣式 */
+    overflow: hidden;         /* 確保圖片不超出容器 */
+    z-index: 1;               /* 確保在格子背景之上，但在玩家標記之下 */
+    pointer-events: none;     /* 讓滑鼠事件穿透到下方 */
+    background-color: transparent; /* 預設透明背景 */
+}
+
+#map-center-image-container img {
+    max-width: 100%;          /* 圖片最大寬度為容器寬度 */
+    max-height: 100%;         /* 圖片最大高度為容器高度 */
+    object-fit: contain;      /* 保持圖片比例，完整顯示 */
+    display: block;           /* 移除圖片下方的額外空間 */
+    
+    /* 添加過渡效果，使圖片變化更平滑 */
+    transition: all 0.3s ease-in-out;
+}
+
         </style>
 
 

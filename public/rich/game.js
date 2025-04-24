@@ -248,7 +248,7 @@ function setupEventListeners() {
         }
     });
 }
-
+// 修改 handleWebSocketMessage 函数，正确处理模板更新
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
@@ -266,12 +266,36 @@ function handleWebSocketMessage(data) {
                 break;
             
             case 'templateUpdate':
-                // 新增: 處理模板更新
+                // 处理模板更新 - 增强版
                 if (message.templateId && message.templateData) {
-                    applyTemplateStyles(message.templateData.style_data);
-                    updateCellContents(message.templateData.cell_data);
+                    console.log(`接收模板更新: ${message.templateId}`);
+                    
+                    // 应用样式数据
+                    if (message.templateData.style_data) {
+                        applyTemplateStyles(message.templateData.style_data);
+                        
+                        // 特别处理中央图片
+                        if (message.templateData.style_data.board && 
+                            message.templateData.style_data.board.centerImageUrl) {
+                            const centerImageContainer = document.getElementById('map-center-image-container');
+                            if (centerImageContainer) {
+                                const centerImage = centerImageContainer.querySelector('img');
+                                if (centerImage) {
+                                    centerImage.src = message.templateData.style_data.board.centerImageUrl;
+                                    console.log('已更新中央图片:', message.templateData.style_data.board.centerImageUrl);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 更新格子内容
+                    if (message.templateData.cell_data) {
+                        updateCellContents(message.templateData.cell_data);
+                    }
+                    
+                    // 保存当前模板ID
                     currentTemplateId = message.templateId;
-                    console.log(`服務器已更新模板: ${message.templateData.template_name}`);
+                    console.log(`服务器已更新模板: ${message.templateData.template_name}`);
                 }
                 break;
             
