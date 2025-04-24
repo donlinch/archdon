@@ -111,22 +111,7 @@
         }
 
 
- /* 浮動按鈕 */
-    #rollBtn {
-      position: fixed;
-      bottom: 100px; /* 調高度 */
-      right: 20px;
-      padding: 8px 28px; 
-      font-size: 0.8rem;
-      color: #fff;
-      background-color: #4c91af;
-      border: none;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      cursor: pointer;
-      z-index: 1001;
-      transition: background-color .2s, transform .1s;
-    }
+  
 
 
     #rollBtn:hover {
@@ -282,7 +267,7 @@
 
 /* 確保原始浮動按鈕不可見 */
 button[id="rollBtn"][style*="position: fixed"] {
-  display: none !important;
+  display: none  
 }
 
         </style>
@@ -418,20 +403,49 @@ button[id="rollBtn"][style*="position: fixed"] {
 <script src="template-functions.js"></script>
 
 <script>
- document.addEventListener('DOMContentLoaded', () => {
-  // 找到已存在的擲骰子按鈕
-  const rollBtn = document.querySelector('.controller-buttons #rollBtn');
-  const modal = document.getElementById('modal');
-  const modalDice = document.getElementById('modalDice');
-  
-  // 如果這些元素都存在，添加點擊事件
-  if (rollBtn && modal && modalDice) {
-    // 移除任何可能存在的舊事件監聽器
-    const newRollBtn = rollBtn.cloneNode(true);
-    rollBtn.parentNode.replaceChild(newRollBtn, rollBtn);
+document.addEventListener('DOMContentLoaded', () => {
+  // 移除原來的浮動按鈕
+  const floatingRollBtn = document.getElementById('rollBtn');
+  if (floatingRollBtn && floatingRollBtn.parentNode) {
+    floatingRollBtn.parentNode.removeChild(floatingRollBtn);
+  }
+
+  // 確保控制按鈕區域有擲骰子按鈕
+  const controllerButtons = document.querySelector('.controller-buttons');
+  if (controllerButtons) {
+    // 檢查是否已經存在擲骰子按鈕
+    let rollBtn = controllerButtons.querySelector('#rollBtn');
     
-    // 添加新的事件監聽器
-    newRollBtn.addEventListener('click', () => {
+    // 如果不存在，創建新的擲骰子按鈕
+    if (!rollBtn) {
+      rollBtn = document.createElement('button');
+      rollBtn.id = 'rollBtn';
+      rollBtn.className = 'btn btn-dice';
+      
+      const img = document.createElement('img');
+      img.src = 'https://sunnyyummy.onrender.com/uploads/1745474305689-68824.png';
+      img.alt = '擲骰子';
+      img.width = 32;
+      img.height = 32;
+      
+      rollBtn.appendChild(img);
+      
+      // 將擲骰子按鈕插入到後退按鈕之後
+      const moveBackwardBtn = controllerButtons.querySelector('#move-backward');
+      if (moveBackwardBtn) {
+        moveBackwardBtn.after(rollBtn);
+      } else {
+        controllerButtons.appendChild(rollBtn);
+      }
+    }
+    
+    // 保留原有的點擊功能
+    rollBtn.addEventListener('click', () => {
+      const modal = document.getElementById('modal');
+      const modalDice = document.getElementById('modalDice');
+      
+      if (!modal || !modalDice) return;
+      
       // 轉動動畫 GIF
       const rollingGif = 'https://sunnyyummy.onrender.com/uploads/1745476566663-61932.gif';
       // 點數靜態圖
@@ -445,7 +459,7 @@ button[id="rollBtn"][style*="position: fixed"] {
       ];
       
       // 按鈕失能
-      newRollBtn.disabled = true;
+      rollBtn.disabled = true;
       modalDice.src = rollingGif;
       modal.classList.add('show');
       
@@ -453,15 +467,9 @@ button[id="rollBtn"][style*="position: fixed"] {
       setTimeout(() => {
         const idx = Math.floor(Math.random() * 6);
         modalDice.src = faces[idx];
-        newRollBtn.disabled = false;
+        rollBtn.disabled = false;
       }, 1500);
     });
-  }
-  
-  // 隱藏任何可能存在的浮動按鈕
-  const floatingRollBtn = document.querySelector('button#rollBtn[style*="position: fixed"]');
-  if (floatingRollBtn) {
-    floatingRollBtn.style.display = 'none';
   }
 });
   </script>
