@@ -1,5 +1,6 @@
 // 移動設備優化的 JavaScript 代碼
-
+// rich-admin.js 頂部添加
+const API_BASE_URL = window.location.origin; // 或指定為 'https://sunnyyummy.onrender.com'
 document.addEventListener('DOMContentLoaded', () => {
     // --- 添加移動設備檢測 ---
     const isMobile = window.innerWidth <= 768;
@@ -561,16 +562,23 @@ async function handleSaveAsTemplate() {
         });
     }
 
-    // --- 模板相關函數 ---
     async function loadTemplateList() {
         try {
             showLoader();
-            const response = await fetch('/api/admin/walk_map/templates');
+            
+            // 嘗試從伺服器載入
+            const response = await fetch(`${API_BASE_URL}/api/admin/walk_map/templates`);
+            
+            // 添加詳細的錯誤處理
+            if (!response.ok) {
+                console.error(`伺服器回應錯誤: ${response.status} ${response.statusText}`);
+                throw new Error(`取得模板列表失敗: ${response.statusText}`);
+            }
+            
+            const templates = await response.json();
             hideLoader();
             
-            if (!response.ok) throw new Error(`無法獲取模板列表: ${response.statusText}`);
-            const templates = await response.json();
-
+            // 填充下拉選單
             templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>';
             templates.forEach(t => {
                 const option = document.createElement('option');
@@ -578,12 +586,91 @@ async function handleSaveAsTemplate() {
                 option.textContent = t.template_name;
                 templateSelect.appendChild(option);
             });
-            console.log("模板列表已載入。");
+            
+            displayStatus("模板列表已載入", false);
         } catch (error) {
             hideLoader();
-            displayStatus(`載入模板列表錯誤: ${error.message}`, true);
+            console.error('載入模板列表錯誤:', error);
+            
+            // 顯示錯誤但仍然保持功能性
+            displayStatus(`載入模板列表失敗: ${error.message}。請確認網路連接或重新載入頁面。`, true);
+            
+            // 仍然啟用新增模板功能
+            templateSelect.innerHTML = '<option value="">-- 載入失敗，但您仍可新增模板 --</option>';
         }
     }
+
+
+
+    // API 連接檢查
+async function checkApiConnection() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/health-check`, { 
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            // 添加較短的超時時間
+            signal: AbortSignal.timeout(3000)
+        });
+        
+        if (response.ok) {
+            console.log('API 連接正常');
+            return true;
+        } else {
+            console.error('API 連接異常:', response.status, response.statusText);
+            displayStatus('伺服器連接問題，部分功能可能受限', true);
+            return false;
+        }
+    } catch (error) {
+        console.error('API 連接檢查失敗:', error);
+        displayStatus('無法連接到伺服器，請確認網路狀態', true);
+        return false;
+    }
+}
+
+// 在 DOMContentLoaded 中調用
+document.addEventListener('DOMContentLoaded', () => {
+    // 檢查 API 連接
+    checkApiConnection().then(isConnected => {
+        // 即使連接失敗也繼續加載頁面基本功能
+        setupResponsiveUI();
+        loadTemplateList();  // 即使失敗也會顯示基本 UI
+        initializeColorHexFields();
+    });
+    
+    // 其他初始化代碼...
+});
+
+
+
+
+// 添加默認模板數據
+const DEFAULT_TEMPLATES = [
+    { 
+        template_id: "local_default", 
+        template_name: "本地預設模板", 
+        description: "API連接失敗時的備用模板",
+        style_data: {
+            // 複製自已知正常工作的模板
+            general: {
+                pageBgColor: "#f5f5f5",
+                primaryTextColor: "#333333",
+                primaryFontFamily: "'Microsoft JhengHei', 'Noto Sans TC', sans-serif"
+            },
+            // ... 其他默認樣式
+        }
+    }
+];
+
+// 在載入模板列表失敗時使用
+function loadDefaultTemplates() {
+    templateSelect.innerHTML = '<option value="">-- 使用本地模板 --</option>';
+    DEFAULT_TEMPLATES.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.template_id;
+        option.textContent = t.template_name + ' (本地)';
+        templateSelect.appendChild(option);
+    });
+}
 
 // 修改 handleLoadTemplate 函數使用新的載入函數
 async function handleLoadTemplate() {
@@ -1017,6 +1104,37 @@ function populateTemplateEditor(template) {
         }
     }
      
+
+
+
+
+// 修改 clearColorInput 函數 - 確保清除時也更新十六進制輸入框
+function clearColorInput(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    input.value = '#ffffff';
+    input.dataset.cleared = 'true';
+    
+    // 更新對應的十六進制輸入框
+    const hexInput = document.querySelector(`.color-hex[data-color-for="${inputId}"]`);
+    if (hexInput) {
+        hexInput.value = '#FFFFFF (已清除)';
+    }
+    
+    // 如果有對應的預覽變數，也要更新
+    const label = input.closest('.form-group')?.querySelector('label');
+    if (label) {
+        const varName = label.textContent.split(':')[0].trim().toLowerCase().replace(/\s+/g, '-');
+        if (typeof updatePreviewColor === 'function') {
+            updatePreviewColor(varName, '');
+        }
+    }
+}
+
+
+
+
     // 添加加載提示功能
     function showLoader() {
         // 檢查是否已存在加載器
@@ -1446,6 +1564,10 @@ function populateTemplateEditor(template) {
         // 防止iOS中的默認縮放手勢
     });
     
+
+    window.clearColorInput = clearColorInput;
+
+
     // 初始化調整所有顏色填充顯示
     updateColorHexInputs();
 }); // End DOMContentLoaded
