@@ -23,7 +23,7 @@ async function getClient() {
  * @param {number} maxPlayers 最大玩家數
  * @returns {Promise<Object>} 創建的房間資訊
  */
-async function createRoom(roomId, roomName, maxPlayers = 5) {
+async function createRoom(roomId, roomName, maxPlayers = 20) {
     const gameState = {
         mapLoopSize: 24,
         maxPlayers: parseInt(maxPlayers),

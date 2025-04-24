@@ -73,9 +73,8 @@ app.post('/api/game-rooms', async (req, res) => {
     }
 
     const maxPlayersInt = parseInt(maxPlayers, 10);
-    if (isNaN(maxPlayersInt) || maxPlayersInt < 2 || maxPlayersInt > 5) { // 假設最大 5
-        console.error('[API POST /api/game-rooms] Bad Request: Invalid maxPlayers', maxPlayers);
-        return res.status(400).json({ error: '無效的最大玩家數 (需介於 2-5 之間)' });
+    if (isNaN(maxPlayersInt) || maxPlayersInt < 2 || maxPlayersInt > 20) {
+        return res.status(400).json({ error: '無效的最大玩家數 (需介於 2-20 之間)' });
     }
 
     try {
