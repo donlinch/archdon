@@ -374,22 +374,42 @@ function updatePlayersList() {
       playersList.appendChild(li);
     });
 }
-
-/// 更新玩家位置標記
+// 更新玩家位置標記 - 優化版
 function updatePlayerMarkers(oldState) {
     // 清空所有舊的 marker DOM
     playersContainer.innerHTML = '';
   
-    // 取得所有玩家 ID
+    // 取得所有玩家 ID 及可見玩家
     const playerIds = Object.keys(gameState.players);
+    const visiblePlayers = playerIds.filter(id => gameState.players[id].visible !== false);
+    
+    // 計算每個格子上有多少玩家
+    const cellPlayerCount = {};
+    visiblePlayers.forEach(id => {
+        const position = gameState.players[id].position;
+        if (!cellPlayerCount[position]) {
+            cellPlayerCount[position] = 0;
+        }
+        cellPlayerCount[position]++;
+    });
+    
+    // 每個格子的玩家計數器
+    const cellPlayerIndex = {};
+    
+    // 開始生成玩家標記
     let colorIndex = 1;
-  
-    playerIds.forEach((id, index) => {  // 新增 index 參數在這裡
-      const player = gameState.players[id];
-      const oldPlayer = oldState.players ? oldState.players[id] : null;
-  
-      // 如果 visible === false，就不畫這個玩家的 marker
-      if (player.visible === false) return;
+    
+    visiblePlayers.forEach(id => {
+        const player = gameState.players[id];
+        const oldPlayer = oldState.players ? oldState.players[id] : null;
+        const cellPosition = player.position;
+        
+        // 計算此玩家是該格子的第幾個玩家
+        if (!cellPlayerIndex[cellPosition]) {
+            cellPlayerIndex[cellPosition] = 0;
+        }
+        const playerIndexInCell = cellPlayerIndex[cellPosition]++;
+        const totalPlayersInCell = cellPlayerCount[cellPosition];
         
         // 創建玩家標記元素
         const marker = document.createElement('div');
@@ -399,22 +419,40 @@ function updatePlayerMarkers(oldState) {
         marker.title = player.name;
         
         // 設置標記位置
-        const cellIndex = player.position;
-        const cellElement = document.getElementById(`cell-${cellIndex}`);
+        const cellElement = document.getElementById(`cell-${cellPosition}`);
         
         if (cellElement) {
-            // 獲取格子位置
-            const cellRect = cellElement.getBoundingClientRect();
-            const mapRect = mapContainer.getBoundingClientRect();
-            
-            // 計算相對於地圖的位置（在格子中央偏移）
+            // 獲取格子位置和大小
             const cellCenterX = cellElement.offsetLeft + (cellElement.offsetWidth / 2);
             const cellCenterY = cellElement.offsetTop + (cellElement.offsetHeight / 2);
             
-            // 根據玩家索引偏移位置，使多個玩家不重疊
-            const offsetX = (index % 2) * 16 - 8; // -8px 或 +8px
-            const offsetY = Math.floor(index / 2) * 16 - 8; // -8px, 0px, 或 +8px
+            // 根據該格子玩家數量計算偏移
+            let offsetX, offsetY;
             
+            if (totalPlayersInCell <= 1) {
+                // 只有一個玩家，放在中間
+                offsetX = 0;
+                offsetY = 0;
+            } else if (totalPlayersInCell <= 5) {
+                // 2-5個玩家，環形排列
+                const radius = 16;
+                const angle = (2 * Math.PI * playerIndexInCell) / totalPlayersInCell;
+                offsetX = Math.sin(angle) * radius;
+                offsetY = -Math.cos(angle) * radius;
+            } else {
+                // 6-20個玩家，雙環排列
+                const isInnerRing = playerIndexInCell < 5;
+                const ringIndex = isInnerRing ? 0 : 1;
+                const indexInRing = isInnerRing ? playerIndexInCell : (playerIndexInCell - 5) % 15;
+                const playersInRing = isInnerRing ? Math.min(totalPlayersInCell, 5) : Math.min(totalPlayersInCell - 5, 15);
+                
+                const radius = isInnerRing ? 14 : 28;
+                const angle = (2 * Math.PI * indexInRing) / playersInRing;
+                offsetX = Math.sin(angle) * radius;
+                offsetY = -Math.cos(angle) * radius;
+            }
+            
+            // 應用偏移
             marker.style.left = `${cellCenterX + offsetX - 12.5}px`; // 12.5px 是 marker 寬度的一半
             marker.style.top = `${cellCenterY + offsetY - 12.5}px`; // 12.5px 是 marker 高度的一半
             
@@ -424,6 +462,12 @@ function updatePlayerMarkers(oldState) {
                 setTimeout(() => {
                     marker.classList.remove('player-moving');
                 }, 500);
+            }
+            
+            // 當前玩家標記加粗顯示
+            if (id === playerId) {
+                marker.style.fontWeight = 'bold';
+                marker.style.border = '2px solid white';
             }
         }
         
