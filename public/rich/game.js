@@ -248,7 +248,8 @@ function setupEventListeners() {
         }
     });
 }
-// 修改 handleWebSocketMessage 函数，正确处理模板更新
+
+
 function handleWebSocketMessage(data) {
     try {
         const message = JSON.parse(data);
@@ -266,36 +267,45 @@ function handleWebSocketMessage(data) {
                 break;
             
             case 'templateUpdate':
-                // 处理模板更新 - 增强版
+                // 處理模板更新 - 增強版
                 if (message.templateId && message.templateData) {
                     console.log(`接收模板更新: ${message.templateId}`);
                     
-                    // 应用样式数据
+                    // 應用樣式數據
                     if (message.templateData.style_data) {
                         applyTemplateStyles(message.templateData.style_data);
                         
-                        // 特别处理中央图片
+                        // 特別處理中央圖片
                         if (message.templateData.style_data.board && 
                             message.templateData.style_data.board.centerImageUrl) {
                             const centerImageContainer = document.getElementById('map-center-image-container');
                             if (centerImageContainer) {
                                 const centerImage = centerImageContainer.querySelector('img');
                                 if (centerImage) {
+                                    // 保存原圖片URL以便處理錯誤
+                                    const originalSrc = centerImage.src;
                                     centerImage.src = message.templateData.style_data.board.centerImageUrl;
-                                    console.log('已更新中央图片:', message.templateData.style_data.board.centerImageUrl);
+                                    console.log('已更新中央圖片:', message.templateData.style_data.board.centerImageUrl);
+                                    
+                                    // 添加錯誤處理
+                                    centerImage.onerror = function() {
+                                        console.error('圖片載入失敗:', centerImage.src);
+                                        centerImage.src = originalSrc; // 恢復原圖片
+                                        console.log('已恢復原圖片');
+                                    };
                                 }
                             }
                         }
                     }
                     
-                    // 更新格子内容
+                    // 更新格子內容
                     if (message.templateData.cell_data) {
                         updateCellContents(message.templateData.cell_data);
                     }
                     
-                    // 保存当前模板ID
+                    // 保存當前模板ID
                     currentTemplateId = message.templateId;
-                    console.log(`服务器已更新模板: ${message.templateData.template_name}`);
+                    console.log(`伺服器已更新模板: ${message.templateData.template_name}`);
                 }
                 break;
             
