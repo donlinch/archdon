@@ -1,6 +1,6 @@
 // 移動設備優化的 JavaScript 代碼
 // rich-admin.js 頂部添加
-const API_BASE_URL = window.location.origin; // 或指定為 'https://sunnyyummy.onrender.com'
+const API_BASE_URL = 'https://sunnyyummy.onrender.com';  // 或指定為 'https://sunnyyummy.onrender.com'
 document.addEventListener('DOMContentLoaded', () => {
     // --- 添加移動設備檢測 ---
     const isMobile = window.innerWidth <= 768;
