@@ -405,7 +405,7 @@ if (parsedMessage.type === 'applyTemplate') {
         templateId: templateId,
         templateData: templateData
       });
-      /api/admin/walk_map/template
+      /api/walk_map/template
       console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
     } catch (err) {
       console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
