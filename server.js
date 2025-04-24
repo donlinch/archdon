@@ -2153,7 +2153,7 @@ app.get('/api/samegame/play/:templateId', async (req, res) => {
 
 
 const walkMapAdminRouter = express.Router();
-walkMapAdminRouter.use(basicAuthMiddleware);
+// walkMapAdminRouter.use(basicAuthMiddleware);
 
 
 // GET /api/admin/walk_map/templates - List all templates
@@ -2305,6 +2305,15 @@ app.use('/api/admin/walk_map', walkMapAdminRouter); // <-- Add this line
 
 
 
+app.get('/rich-admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.html'));
+  });
+  app.use('/rich-admin.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.js'));
+  });
+  app.use('/admin-style.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-style.css'));
+  });
 
 
 
@@ -2333,15 +2342,6 @@ app.use([
 
 
 
-app.get('/rich-admin.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'rich-admin.html'));
-  });
-  app.use('/rich-admin.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'rich-admin.js'));
-  });
-  app.use('/admin-style.css', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin-style.css'));
-  });
 
 
 
