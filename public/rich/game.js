@@ -317,14 +317,14 @@ function updateGameState(message) {
 }
 
 
-
+// 修復玩家可見性切換按鈕消失的問題
 
 function updatePlayersList() {
     playersList.innerHTML = '';
   
     // 先把所有 IDs 拿出來
     const allIds = Object.keys(gameState.players);
-    // 排一遍，讓自己排第一（可選）
+    // 排序，讓自己排第一
     const orderedIds = [
       ...allIds.filter(id => id === playerId),
       ...allIds.filter(id => id !== playerId)
@@ -343,37 +343,40 @@ function updatePlayersList() {
         playerInfo.textContent += ' (你)';
         playerInfo.style.fontWeight = 'bold';
         
-        // 顯示/隱藏按鈕
+        // 顯示/隱藏按鈕 - 無論玩家狀態如何，都應該顯示此按鈕
         const btn = document.createElement('button');
         const isVisible = player.visible !== false; // 預設為 true
         
+        // 根據目前可見性狀態設定按鈕樣式
         btn.className = `btn-toggle-visibility ${isVisible ? 'visible' : 'hidden'}`;
-        
-        // 按鈕文字
         btn.textContent = isVisible ? '👁️ 顯示中' : '👁️‍🗨️ 已隱藏';
         
-        // 點擊事件
+        // 點擊事件 - 使用當前的 player.visible 屬性而非閉包中的常數
         btn.onclick = () => {
-          const newVisibility = !player.visible;
+          // 直接從 gameState 獲取最新的可見性狀態
+          const currentVisibility = gameState.players[playerId].visible !== false;
+          const newVisibility = !currentVisibility;
+          
+          // 發送切換可見性的請求給伺服器
           ws.send(JSON.stringify({
             type: 'toggleVisibility',
             visible: newVisibility
           }));
           
-          // 即時視覺反饋 (實際狀態仍由伺服器更新)
+          // 即時更新按鈕外觀以提供視覺反饋
           btn.className = `btn-toggle-visibility ${newVisibility ? 'visible' : 'hidden'}`;
           btn.textContent = newVisibility ? '👁️ 顯示中' : '👁️‍🗨️ 已隱藏';
         };
         
         li.appendChild(playerInfo);
-        li.appendChild(btn);
+        li.appendChild(btn); // 無論狀態如何，都添加按鈕
       } else {
         li.appendChild(playerInfo);
       }
       
       playersList.appendChild(li);
     });
-}
+  }
 // 更新玩家位置標記 - 優化版
 function updatePlayerMarkers(oldState) {
     // 清空所有舊的 marker DOM
