@@ -362,7 +362,7 @@ function updatePlayersList() {
   
   
 
-// 更新玩家位置標記
+/// 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
     // 清空所有舊的 marker DOM
     playersContainer.innerHTML = '';
@@ -371,10 +371,11 @@ function updatePlayerMarkers(oldState) {
     const playerIds = Object.keys(gameState.players);
     let colorIndex = 1;
   
-    playerIds.forEach(id => {
+    playerIds.forEach((id, index) => {  // 新增 index 參數在這裡
       const player = gameState.players[id];
+      const oldPlayer = oldState.players ? oldState.players[id] : null;
   
-      // ← 新增：如果 visible === false，就不畫這個玩家的 marker
+      // 如果 visible === false，就不畫這個玩家的 marker
       if (player.visible === false) return;
         
         // 創建玩家標記元素

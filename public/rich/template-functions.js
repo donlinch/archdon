@@ -583,6 +583,9 @@ async function loadDefaultTemplate() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', initTemplateSelector);
+
+
 // 在頁面載入後初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 延遲初始化，確保其他 DOM 元素已加載
