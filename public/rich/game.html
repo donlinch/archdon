@@ -108,6 +108,54 @@
             color: #888;
             display: none;
         }
+
+
+ /* 浮動按鈕 */
+    #rollBtn {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      color: #fff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      z-index: 1001;
+      transition: background-color .2s, transform .1s;
+    }
+    #rollBtn:hover {
+      background-color: #45a049;
+    }
+    #rollBtn:disabled {
+      background-color: #999;
+      cursor: default;
+    }
+
+    /* 透明彈窗 */
+    #modal {
+      display: none;               /* 預設隱藏 */
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0,0,0,0); /* 完全透明 */
+      z-index: 1000;
+    }
+    #modal.show {
+      display: flex;               /* 加入 .show 之後顯示 */
+    }
+    #modal img {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+    }
+
+
+
         </style>
 
 
@@ -120,7 +168,10 @@
             <h1>Simple Walker</h1>
             <div id="room-info">房間: <span id="room-name-display">...</span></div>
         </header>
-
+ <!-- 透明彈窗 -->
+  <div id="modal">
+    <img id="modalDice" src="" alt="擲骰子結果">
+  </div>
         <!-- 地圖區域 (顯示在最上方) -->
         <div id="game-area" class="game-section">
             <div id="game-map">
@@ -166,6 +217,9 @@
                 </div>
             </div>
         </div>
+ <!-- 浮動「擲骰子」按鈕 -->
+  <button id="rollBtn">擲骰子</button>
+
 
         <!-- 連接狀態指示器 -->
         <div id="connection-status" class="offline">
@@ -223,6 +277,57 @@
 
 <!-- 引入模板功能 JS -->
 <script src="template-functions.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const rollBtn   = document.getElementById('rollBtn');
+      const modal     = document.getElementById('modal');
+      const modalDice = document.getElementById('modalDice');
+
+      // 如果找不到必要元素，就直接退出
+      if (!rollBtn || !modal || !modalDice) return;
+
+      // 轉動動畫 GIF
+      const rollingGif = 'https://sunnyyummy.onrender.com/uploads/1745476566663-61932.gif';
+      // 1~6 點靜態圖
+      const faces = [
+        'https://sunnyyummy.onrender.com/uploads/1745474305689-68824.png',
+        'https://sunnyyummy.onrender.com/uploads/1745474311543-12469.png',
+        'https://sunnyyummy.onrender.com/uploads/1745474318057-68575.png',
+        'https://sunnyyummy.onrender.com/uploads/1745474323298-59620.png',
+        'https://sunnyyummy.onrender.com/uploads/1745474329045-37372.png',
+        'https://sunnyyummy.onrender.com/uploads/1745474334296-40514.png'
+      ];
+      let timerId = null;
+
+      rollBtn.addEventListener('click', () => {
+        // 防止重複計時器
+        if (timerId) clearTimeout(timerId);
+
+        // 按鈕失能，顯示轉動 GIF
+        rollBtn.disabled = true;
+        modalDice.src = rollingGif;
+        modal.classList.add('show');
+
+        // 2 秒後顯示隨機點數，並解除按鈕鎖定
+        timerId = setTimeout(() => {
+          const idx = Math.floor(Math.random() * 6);
+          modalDice.src = faces[idx];
+          rollBtn.disabled = false;
+        }, 1500);
+      });
+
+      // 點擊彈窗任何地方都可關閉
+      modal.addEventListener('click', () => {
+        if (timerId) clearTimeout(timerId);
+        modal.classList.remove('show');
+        rollBtn.disabled = false;
+      });
+    });
+  </script>
+
+
+
 
 
 
