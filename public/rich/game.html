@@ -90,7 +90,7 @@
         
         .template-selector-btn {
             position: fixed;
-            bottom: 60px;
+            bottom: 60px;    /* 調高度 */
             right: 20px;
             padding: 8px 20px;   /* 刪除最底 */
             background-color: #4caf50;
@@ -114,9 +114,9 @@
  /* 浮動按鈕 */
     #rollBtn {
       position: fixed;
-      bottom: 100px;
+      bottom: 100px; /* 調高度 */
       right: 20px;
-      padding: 8px 28px;
+      padding: 8px 28px; 
       font-size: 0.8rem;
       color: #fff;
       background-color: #4c91af;
@@ -156,6 +156,51 @@
       height: 180px;
       object-fit: contain;
     }
+
+
+
+
+
+ .btn-toggle-visibility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 4px 8px;
+  height: 24px;
+  font-size: 0.8rem;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-toggle-visibility.visible {
+  background-color: #4CAF50; /* 綠色 - 表示玩家目前可見 */
+}
+
+.btn-toggle-visibility.hidden {
+  background-color: #F44336; /* 紅色 - 表示玩家目前隱藏 */
+}
+
+.btn-toggle-visibility:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.btn-toggle-visibility:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-toggle-visibility i {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+
 
 
 

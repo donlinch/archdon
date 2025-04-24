@@ -339,27 +339,48 @@ function updatePlayersList() {
       // 顯示名字和位置
       const locationName = cellInfo[player.position].title;
       li.textContent = `${player.name} (${locationName})`;
+
+
       if (id === playerId) {
-        li.textContent += ' (你)';
-        li.style.fontWeight = 'bold';
-  
-        // 新增：顯示/隱藏按鈕
+        playerInfo.textContent += ' (你)';
+        playerInfo.style.fontWeight = 'bold';
+        
+        // 新版顯示/隱藏按鈕
         const btn = document.createElement('button');
-        btn.textContent = player.visible ? '隱藏' : '顯示';
-        btn.className = 'btn-toggle-visibility';
+        const isVisible = player.visible !== false; // 預設為 true
+        
+        btn.className = `btn-toggle-visibility ${isVisible ? 'visible' : 'hidden'}`;
+        
+        // 使用圖標 (如果您不想使用 Font Awesome 或其他圖標庫，可以省略這一行)
+        // const icon = document.createElement('i');
+        // icon.className = isVisible ? 'fa fa-eye' : 'fa fa-eye-slash';
+        // btn.appendChild(icon);
+        
+        // 按鈕文字
+        btn.textContent = isVisible ? '🔓' : '🔒顯示位置';
+        
+        // 點擊事件
         btn.onclick = () => {
+          const newVisibility = !player.visible;
           ws.send(JSON.stringify({
             type: 'toggleVisibility',
-            visible: !player.visible
+            visible: newVisibility
           }));
+          
+          // 即時視覺反饋 (實際狀態仍由伺服器更新)
+          btn.className = `btn-toggle-visibility ${newVisibility ? 'visible' : 'hidden'}`;
+          btn.textContent = newVisibility ? '🔓' : '🔒顯示位置';
         };
+        
+        li.appendChild(playerInfo);
         li.appendChild(btn);
+      } else {
+        li.appendChild(playerInfo);
       }
-  
+      
       playersList.appendChild(li);
     });
   }
-  
   
 
 /// 更新玩家位置標記
