@@ -315,6 +315,12 @@ async function handleSaveAsTemplate() {
             
             // 更新模板列表
             await loadTemplateList();
+            const templateExists = Array.from(templateSelect.options).some(option => option.value === currentEditingTemplateId);
+            
+            if (!templateExists) {
+                displayStatus("要刪除的模板不存在或已被刪除。", true);
+                return;
+            }
             
             // 切換到新創建的模板
             templateSelect.value = newTemplateId;
@@ -810,21 +816,18 @@ async function handleLoadTemplate() {
             displayStatus("未選擇要刪除的模板。", true);
             return;
         }
-        const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });        
-        // 優化移動版確認對話框
-        if (window.innerWidth <= 768) {
-            if (!confirm(`確定要刪除「${currentName}」嗎？\n\n此操作無法復原！`)) {
-                return;
-            }
-        } else {
-            if (!confirm(`你確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
-                return;
-            }
+        
+        // 保存當前模板名稱供確認使用
+        const currentName = templateNameInput.value || currentEditingTemplateId;
+        
+        // 確認對話框
+        if (!confirm(`確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
+            return;
         }
         
         try {
             showLoader();
-            const response = await fetch(`/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
             hideLoader();
             
             if (!response.ok) {
@@ -838,11 +841,6 @@ async function handleLoadTemplate() {
             currentCellInfo = [];
             await loadTemplateList();
             templateSelect.value = "";
-            
-            // 在移動設備上滾動到頂部
-            if (window.innerWidth <= 768) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
         } catch (error) {
             hideLoader();
             displayStatus(`刪除模板錯誤: ${error.message}`, true);
