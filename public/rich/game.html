@@ -111,7 +111,71 @@
         }
 
 
-  
+ /* 浮動按鈕
+
+    #rollBtn {
+      position: fixed;
+      bottom: 100px; 
+      right: 20px;
+      padding: 8px 28px; 
+      font-size: 0.8rem;
+      color: #fff;
+      background-color: #4c91af;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      z-index: 1001;
+      transition: background-color .2s, transform .1s;
+    }
+
+
+    */
+
+
+    #rollBtn {
+      
+      
+      
+       
+       
+      color: #fff;
+      background-color: #4c91af;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      z-index: 1001;
+      transition: background-color .2s, transform .1s;
+    }
+
+
+  /* 透明彈窗 */
+  .modal-overlay {
+    display: none;               /* 預設隱藏 */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0,0,0,0.1); /* 略微可見的背景 */
+    z-index: 1000;
+    cursor: pointer;            /* 指示可點擊 */
+  }
+
+
+
+  .modal-overlay.show {
+    display: flex;              /* 加入 .show 之後顯示 */
+  }
+
+
+  .modal-overlay img {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    pointer-events: none;       /* 圖片不接收點擊事件，讓事件傳遞到背景 */
+  }
 
 
     #rollBtn:hover {
@@ -233,43 +297,6 @@
     display: none;
   }
 
-
-  /* 控制按鈕區域樣式 */
-.controller-buttons {
-  display: flex;
-  justify-content: center;  /* 改為居中 */
-  align-items: center;
-  gap: 15px;               /* 增加間距 */
-  margin: 15px auto;       /* 增加上下外邊距 */
-  width: 100%;
-  max-width: 400px;
-}
-
-/* 擲骰子按鈕樣式 */
-.btn-dice {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 0;              /* 減少內邊距 */
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex: 0.5;               /* 讓它比其他按鈕小一些 */
-}
-
-/* 正常控制按鈕樣式 */
-.btn-control {
-  flex: 1;
-  height: 40px;
-}
-
-/* 確保原始浮動按鈕不可見 */
-button[id="rollBtn"][style*="position: fixed"] {
-  display: none  
-}
-
         </style>
 
 
@@ -313,13 +340,13 @@ button[id="rollBtn"][style*="position: fixed"] {
                 <span>玩家: <span id="player-name-display">...</span></span>
             </div>
            <!-- 找到控制按鈕區域 -->
-           <div class="controller-buttons">
-            <button id="move-backward" class="btn btn-control">← 後退</button>
-            <button id="rollBtn" class="btn btn-dice">
-              <img src="https://sunnyyummy.onrender.com/uploads/1745474305689-68824.png" alt="擲骰子" width="32" height="32">
-            </button>
-            <button id="move-forward" class="btn btn-control">前進 →</button>
-          </div>
+<div class="controller-buttons">
+  <button id="move-backward" class="btn btn-control">← 後退</button>
+  <button id="rollBtn" class="btn btn-dice">
+    <img src="https://sunnyyummy.onrender.com/uploads/1745474305689-68824.png" alt="擲骰子" width="32" height="32">
+  </button>
+  <button id="move-forward" class="btn btn-control">前進 →</button>
+</div>
         </div>
   
 
@@ -403,48 +430,38 @@ button[id="rollBtn"][style*="position: fixed"] {
 <script src="template-functions.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // 移除原來的浮動按鈕
-  const floatingRollBtn = document.getElementById('rollBtn');
-  if (floatingRollBtn && floatingRollBtn.parentNode) {
-    floatingRollBtn.parentNode.removeChild(floatingRollBtn);
-  }
-
-  // 確保控制按鈕區域有擲骰子按鈕
-  const controllerButtons = document.querySelector('.controller-buttons');
-  if (controllerButtons) {
-    // 檢查是否已經存在擲骰子按鈕
-    let rollBtn = controllerButtons.querySelector('#rollBtn');
+ document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('modal');
+  const modalDice = document.getElementById('modalDice');
+  const rollBtn = document.getElementById('rollBtn');
+  
+  if (modal && modalDice && rollBtn) {
+    // 清除原有的點擊事件（避免重複綁定）
+    const newModal = modal.cloneNode(true);
+    modal.parentNode.replaceChild(newModal, modal);
     
-    // 如果不存在，創建新的擲骰子按鈕
-    if (!rollBtn) {
-      rollBtn = document.createElement('button');
-      rollBtn.id = 'rollBtn';
-      rollBtn.className = 'btn btn-dice';
-      
-      const img = document.createElement('img');
-      img.src = 'https://sunnyyummy.onrender.com/uploads/1745474305689-68824.png';
-      img.alt = '擲骰子';
-      img.width = 32;
-      img.height = 32;
-      
-      rollBtn.appendChild(img);
-      
-      // 將擲骰子按鈕插入到後退按鈕之後
-      const moveBackwardBtn = controllerButtons.querySelector('#move-backward');
-      if (moveBackwardBtn) {
-        moveBackwardBtn.after(rollBtn);
-      } else {
-        controllerButtons.appendChild(rollBtn);
+    // 重新獲取元素引用
+    const updatedModal = document.getElementById('modal');
+    const updatedModalDice = document.getElementById('modalDice');
+    
+    // 點擊彈窗任何地方都可關閉
+    updatedModal.addEventListener('click', () => {
+      console.log('Modal clicked, closing...');
+      updatedModal.classList.remove('show');
+      // 如果有計時器，需要清除
+      if (window.diceRollTimer) {
+        clearTimeout(window.diceRollTimer);
+        window.diceRollTimer = null;
       }
-    }
+      // 確保按鈕啟用
+      if (rollBtn.disabled) {
+        rollBtn.disabled = false;
+      }
+    });
     
-    // 保留原有的點擊功能
-    rollBtn.addEventListener('click', () => {
-      const modal = document.getElementById('modal');
-      const modalDice = document.getElementById('modalDice');
-      
-      if (!modal || !modalDice) return;
+    // 修改骰子點擊功能
+    rollBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // 防止事件冒泡
       
       // 轉動動畫 GIF
       const rollingGif = 'https://sunnyyummy.onrender.com/uploads/1745476566663-61932.gif';
@@ -460,16 +477,21 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // 按鈕失能
       rollBtn.disabled = true;
-      modalDice.src = rollingGif;
-      modal.classList.add('show');
+      updatedModalDice.src = rollingGif;
+      updatedModal.classList.add('show');
       
-      // 2秒後顯示隨機點數
-      setTimeout(() => {
+      // 儲存計時器引用，以便能夠在需要時清除
+      window.diceRollTimer = setTimeout(() => {
         const idx = Math.floor(Math.random() * 6);
-        modalDice.src = faces[idx];
+        updatedModalDice.src = faces[idx];
         rollBtn.disabled = false;
+        window.diceRollTimer = null;
       }, 1500);
     });
+    
+    console.log('Modal click event listeners successfully attached');
+  } else {
+    console.error('Required elements not found for modal functionality');
   }
 });
   </script>
