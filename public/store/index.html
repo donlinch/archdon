@@ -6,22 +6,186 @@
     <title>Sunny Yummy 商店</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --background-color: #f8f9fa;
+            --text-color: #2d3436;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .navbar {
+            background-color: white !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: var(--text-color) !important;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+        }
+
+        .nav-link.active {
+            color: var(--primary-color) !important;
+        }
+
         .product-card {
-            transition: transform 0.2s;
+            transition: all 0.3s ease;
+            border: none;
+            background: white;
+            box-shadow: var(--card-shadow);
+            border-radius: 12px;
+            overflow: hidden;
         }
+
         .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-10px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
+
+        .product-card .card-img-top {
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .card-img-top {
+            transform: scale(1.05);
+        }
+
+        .product-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .product-card .card-title {
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text-color);
+        }
+
+        .product-card .card-text {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #ff5252;
+            border-color: #ff5252;
+            transform: translateY(-2px);
+        }
+
         .cart-badge {
-            position: relative;
-            top: -8px;
-            right: 8px;
+            background-color: var(--primary-color) !important;
+            border: 2px solid white;
+            font-weight: 500;
         }
+
         .sticky-cart {
-            position: sticky;
-            top: 20px;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: none;
+        }
+
+        .sticky-cart .card-title {
+            color: var(--text-color);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .cart-summary p {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+
+        .cart-summary span {
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .offcanvas {
+            border-radius: 12px 0 0 12px;
+        }
+
+        .offcanvas-header {
+            background-color: var(--background-color);
+            padding: 1.5rem;
+        }
+
+        .offcanvas-title {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .offcanvas-body {
+            padding: 1.5rem;
+        }
+
+        #cartItems .card {
+            border-radius: 8px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #cartItems .card img {
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .btn-danger {
+            background-color: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background-color: #ff5252;
+            border-color: #ff5252;
+        }
+
+        .price-tag {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .sticky-cart {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                border-radius: 12px 12px 0 0;
+                margin: 0;
+            }
         }
     </style>
 </head>
@@ -113,24 +277,45 @@
         const products = [
             {
                 id: 1,
-                name: "商品 1",
-                price: 100,
-                image: "https://via.placeholder.com/300",
-                description: "這是商品 1 的描述"
+                name: "精選咖啡豆禮盒",
+                price: 880,
+                image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=500",
+                description: "嚴選來自世界各地的優質咖啡豆，完美烘焙，香醇可口"
             },
             {
                 id: 2,
-                name: "商品 2",
-                price: 200,
-                image: "https://via.placeholder.com/300",
-                description: "這是商品 2 的描述"
+                name: "手工餅乾組合",
+                price: 320,
+                image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=500",
+                description: "使用天然食材製作，口感酥脆，完美下午茶點心"
             },
             {
                 id: 3,
-                name: "商品 3",
-                price: 300,
-                image: "https://via.placeholder.com/300",
-                description: "這是商品 3 的描述"
+                name: "有機蜂蜜",
+                price: 450,
+                image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500",
+                description: "純天然野生蜂蜜，無添加，營養豐富"
+            },
+            {
+                id: 4,
+                name: "手工巧克力禮盒",
+                price: 580,
+                image: "https://images.unsplash.com/photo-1481391319762-47dff72954d9?w=500",
+                description: "比利時進口可可豆製作，口感細膩，香醇濃郁"
+            },
+            {
+                id: 5,
+                name: "養生茶包組合",
+                price: 280,
+                image: "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=500",
+                description: "精選花草茶包，舒緩身心，健康養生"
+            },
+            {
+                id: 6,
+                name: "手工果醬禮盒",
+                price: 420,
+                image: "https://images.unsplash.com/photo-1590590470233-195e8f23fe6d?w=500",
+                description: "使用新鮮水果製作，無添加防腐劑，純天然美味"
             }
         ];
 
