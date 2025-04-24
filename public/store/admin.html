@@ -183,7 +183,7 @@
                             <td>${product.id}</td>
                             <td>${product.image ? `<img src="${product.image}" class="product-image-preview" alt="${product.name}">` : '無圖片'}</td>
                             <td>${product.name}</td>
-                            <td>$${product.price.toFixed(2)}</td>
+                            <td>$${Number(product.price).toFixed(2)}</td>
                             <td>${product.stock}</td>
                             <td>${product.category || '無類別'}</td>
                             <td>
