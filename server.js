@@ -400,19 +400,11 @@ if (parsedMessage.type === 'applyTemplate') {
       const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
       
       // 3. 廣播模板更新消息給房間內所有玩家
-      broadcastToSimpleWalkerRoom(roomId, {
-        type: 'templateUpdate',
-        templateId: templateId,
-        templateData: templateData
-      });
-      /api/walk_map/template
-      console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
+      
+     
+      
     } catch (err) {
-      console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: '應用模板時發生錯誤'
-      }));
+       
     }
     
     return; // 處理完畢，結束函數
