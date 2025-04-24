@@ -723,57 +723,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 示例商品數據
-        const products = [
-            {
-                id: 1,
-                name: "精選咖啡豆禮盒",
-                price: 880,
-                image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=500",
-                description: "嚴選來自世界各地的優質咖啡豆，完美烘焙，香醇可口",
-                category: "gift"
-            },
-            {
-                id: 2,
-                name: "手工餅乾組合",
-                price: 320,
-                image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=500",
-                description: "使用天然食材製作，口感酥脆，完美下午茶點心",
-                category: "food"
-            },
-            {
-                id: 3,
-                name: "有機蜂蜜",
-                price: 450,
-                image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500",
-                description: "純天然野生蜂蜜，無添加，營養豐富",
-                category: "organic"
-            },
-            {
-                id: 4,
-                name: "手工巧克力禮盒",
-                price: 580,
-                image: "https://images.unsplash.com/photo-1481391319762-47dff72954d9?w=500",
-                description: "比利時進口可可豆製作，口感細膩，香醇濃郁",
-                category: "gift"
-            },
-            {
-                id: 5,
-                name: "養生茶包組合",
-                price: 280,
-                image: "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=500",
-                description: "精選花草茶包，舒緩身心，健康養生",
-                category: "drink"
-            },
-            {
-                id: 6,
-                name: "手工果醬禮盒",
-                price: 420,
-                image: "https://images.unsplash.com/photo-1590590470233-195e8f23fe6d?w=500",
-                description: "使用新鮮水果製作，無添加防腐劑，純天然美味",
-                category: "gift"
-            }
-        ];
+        // API 端點
+        const API_BASE = '/api/storemarket';
+        
+        // 商品數據
+        let products = [];
+        let categories = [];
 
         // 購物車狀態
         let cart = {
@@ -785,11 +740,21 @@
         let favorites = [];
 
         // 初始化頁面
-        document.addEventListener('DOMContentLoaded', () => {
-            // 顯示載入動畫 2 秒
-            setTimeout(() => {
-                const loader = document.getElementById('pageLoader');
-                loader.classList.add('hidden');
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 顯示載入動畫
+            const loader = document.getElementById('pageLoader');
+            if (loader) {
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                }, 1000);
+            }
+            
+            try {
+                // 獲取商品數據
+                await fetchProducts();
+                
+                // 獲取類別數據並更新類別導航
+                await fetchCategories();
                 
                 // 顯示產品
                 renderProducts();
@@ -815,13 +780,91 @@
                         btn.classList.add('active');
                     });
                 });
-            }, 1500);
+            } catch (error) {
+                console.error('初始化錯誤:', error);
+                alert('載入商品數據失敗，請重新整理頁面或稍後再試。');
+            }
         });
+
+        // 從 API 獲取商品數據
+        async function fetchProducts(category = '') {
+            try {
+                let url = `${API_BASE}/products`;
+                if (category && category !== 'all') {
+                    url += `?category=${category}`;
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('獲取商品數據失敗');
+                
+                products = await response.json();
+                return products;
+            } catch (error) {
+                console.error('獲取商品錯誤:', error);
+                throw error;
+            }
+        }
+
+        // 從 API 獲取類別數據
+        async function fetchCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories`);
+                if (!response.ok) throw new Error('獲取類別數據失敗');
+                
+                categories = await response.json();
+                
+                // 更新類別導航
+                updateCategoryPills();
+                
+                return categories;
+            } catch (error) {
+                console.error('獲取類別錯誤:', error);
+                // 如果獲取類別失敗，使用默認類別
+                return [];
+            }
+        }
+
+        // 更新類別導航
+        function updateCategoryPills() {
+            const categoryContainer = document.querySelector('.category-container');
+            if (!categoryContainer) return;
+            
+            // 保留"全部"類別
+            categoryContainer.innerHTML = '<div class="category-pill active" data-category="all">全部</div>';
+            
+            // 添加從 API 獲取的類別
+            if (categories && categories.length > 0) {
+                categories.forEach(category => {
+                    const pill = document.createElement('div');
+                    pill.className = 'category-pill';
+                    pill.setAttribute('data-category', category.name || category);
+                    pill.textContent = category.name || category;
+                    pill.addEventListener('click', () => {
+                        document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+                        pill.classList.add('active');
+                        filterProductsByCategory(pill.dataset.category);
+                    });
+                    categoryContainer.appendChild(pill);
+                });
+            }
+        }
 
         // 渲染商品列表
         function renderProducts(filteredProducts = products) {
             const productList = document.getElementById('productList');
+            if (!productList) return;
+            
             productList.innerHTML = '';
+            
+            if (!filteredProducts || filteredProducts.length === 0) {
+                productList.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-search" style="font-size: 3rem; color: #dee2e6;"></i>
+                        <p class="mt-3 text-muted">沒有找到相關商品</p>
+                    </div>
+                `;
+                return;
+            }
             
             filteredProducts.forEach(product => {
                 const isFavorite = favorites.includes(product.id);
@@ -833,12 +876,12 @@
                             <i class="bi ${isFavorite ? 'bi-heart-fill' : 'bi-heart'}"></i>
                         </button>
                         <div class="position-relative">
-                            <img src="${product.image}" class="card-img-top" alt="${product.name}">
-                            <span class="price-badge">$${product.price}</span>
+                            <img src="${product.image || 'https://via.placeholder.com/300x200?text=No+Image'}" class="card-img-top" alt="${product.name}">
+                            <span class="price-badge">$${Number(product.price).toFixed(2)}</span>
                         </div>
                         <div class="card-body p-2">
                             <h5 class="card-title fs-6 mb-1">${product.name}</h5>
-                            <p class="card-text small mb-2">${product.description}</p>
+                            <p class="card-text small mb-2">${product.description || '無商品描述'}</p>
                         </div>
                         <div class="add-hint">
                             <i class="bi bi-plus-circle"></i> 點擊加入購物車
@@ -849,47 +892,63 @@
             });
         }
 
-        // 添加商品到購物車
+        // 添加到購物車
         function addToCart(productId, event) {
+            // 防止事件冒泡，避免重複執行
+            if (event && event.target.classList.contains('favorite-btn')) {
+                return;
+            }
+            
             const product = products.find(p => p.id === productId);
             if (!product) return;
-
+            
+            // 檢查購物車中是否已存在此商品
             const existingItem = cart.items.find(item => item.productId === productId);
+            
             if (existingItem) {
                 existingItem.quantity += 1;
             } else {
                 cart.items.push({
-                    productId,
-                    quantity: 1,
-                    price: product.price,
+                    productId: product.id,
                     name: product.name,
-                    image: product.image
+                    price: Number(product.price),
+                    image: product.image || 'https://via.placeholder.com/300x200?text=No+Image',
+                    quantity: 1
                 });
             }
-
-            // 添加動畫效果
-            const card = event.currentTarget;
-            card.classList.add('animate__animated', 'animate__pulse');
-            setTimeout(() => {
-                card.classList.remove('animate__animated', 'animate__pulse');
-            }, 500);
-
+            
+            // 更新購物車
             updateCartTotal();
             updateCartDisplay();
+            
+            // 顯示添加成功的提示
+            const toast = document.createElement('div');
+            toast.className = 'toast show position-fixed start-50 translate-middle-x';
+            toast.style.zIndex = '1050';
+            toast.style.bottom = '20px';
+            toast.style.minWidth = '250px';
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <strong class="me-auto">已添加到購物車</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${product.name} 已成功添加到購物車
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            // 3秒後自動消失
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
 
-        // 從購物車移除商品
+        // 從購物車移除
         function removeFromCart(productId) {
-            const itemElement = document.querySelector(`[data-product-id="${productId}"]`);
-            if (itemElement) {
-                itemElement.classList.add('animate__animated', 'animate__fadeOutRight');
-                itemElement.addEventListener('animationend', () => {
-                    cart.items = cart.items.filter(item => item.productId !== productId);
-                    updateCartTotal();
-                    updateCartDisplay();
-                });
-            } else {
-                cart.items = cart.items.filter(item => item.productId !== productId);
+            const index = cart.items.findIndex(item => item.productId === productId);
+            if (index !== -1) {
+                cart.items.splice(index, 1);
                 updateCartTotal();
                 updateCartDisplay();
             }
@@ -914,6 +973,8 @@
 
             // 更新購物車側邊欄
             const cartItems = document.getElementById('cartItems');
+            if (!cartItems) return;
+            
             cartItems.innerHTML = '';
             
             if (cart.items.length === 0) {
@@ -936,7 +997,7 @@
                             <div class="col-8">
                                 <div class="card-body py-2">
                                     <h5 class="cart-item-title">${item.name}</h5>
-                                    <p class="cart-item-price">$${item.price}</p>
+                                    <p class="cart-item-price">$${item.price.toFixed(2)}</p>
                                     <div class="quantity-control">
                                         <button class="quantity-btn" onclick="updateItemQuantity(${item.productId}, ${item.quantity - 1})">-</button>
                                         <input type="text" class="quantity-input" value="${item.quantity}" readonly>
@@ -954,9 +1015,13 @@
             }
 
             // 更新購物車摘要
-            document.getElementById('cartItemCount').textContent = itemCount;
-            document.getElementById('cartTotal').textContent = `$${cart.total}`;
-            document.getElementById('cartTotalSidebar').textContent = `$${cart.total}`;
+            const cartItemCountElement = document.getElementById('cartItemCount');
+            const cartTotalElement = document.getElementById('cartTotal');
+            const cartTotalSidebarElement = document.getElementById('cartTotalSidebar');
+            
+            if (cartItemCountElement) cartItemCountElement.textContent = itemCount;
+            if (cartTotalElement) cartTotalElement.textContent = `$${cart.total.toFixed(2)}`;
+            if (cartTotalSidebarElement) cartTotalSidebarElement.textContent = `$${cart.total.toFixed(2)}`;
         }
 
         // 更新商品數量
@@ -1003,21 +1068,25 @@
             
             const filtered = products.filter(product => 
                 product.name.toLowerCase().includes(searchTerm) || 
-                product.description.toLowerCase().includes(searchTerm)
+                (product.description && product.description.toLowerCase().includes(searchTerm))
             );
             
             renderProducts(filtered);
         }
 
         // 按類別過濾商品
-        function filterProductsByCategory(category) {
-            if (category === 'all') {
+        async function filterProductsByCategory(category) {
+            try {
+                if (category === 'all') {
+                    await fetchProducts();
+                } else {
+                    await fetchProducts(category);
+                }
                 renderProducts();
-                return;
+            } catch (error) {
+                console.error('過濾商品錯誤:', error);
+                alert('過濾商品失敗，請稍後再試。');
             }
-            
-            const filtered = products.filter(product => product.category === category);
-            renderProducts(filtered);
         }
 
         // 結帳功能
@@ -1027,7 +1096,7 @@
                 return;
             }
             // TODO: 實現結帳功能
-            alert('準備進行結帳...');
+            alert('準備進行結帳...\n此功能尚未實現');
         }
     </script>
 </body>
