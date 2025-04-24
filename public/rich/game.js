@@ -319,36 +319,34 @@ function updateGameState(message) {
 // 更新玩家列表
 function updatePlayersList() {
     playersList.innerHTML = '';
-    
-    const playerIds = Object.keys(gameState.players);
-    if (playerIds.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = '沒有玩家連接';
-        playersList.appendChild(li);
-        return;
-    }
-    
-    // 為每個玩家創建一個列表項
+  
+    // 原本的 key 列表
+    const allIds = Object.keys(gameState.players);
+    // 先把自己的 ID 放前面，再拼回其他 IDs
+    const orderedIds = [
+      ...allIds.filter(id => id === playerId),
+      ...allIds.filter(id => id !== playerId)
+    ];
+  
     let colorIndex = 1;
-    playerIds.forEach(id => {
-        const player = gameState.players[id];
-        const li = document.createElement('li');
-        
-        // 添加玩家位置的地點名稱
-        const locationName = cellInfo[player.position].title;
-        li.textContent = `${player.name} (${locationName})`;
-        li.style.borderColor = getPlayerColor(colorIndex);
-        
-        // 標記當前玩家
-        if (id === playerId) {
-            li.textContent += ' (你)';
-            li.style.fontWeight = 'bold';
-        }
-        
-        playersList.appendChild(li);
-        colorIndex++;
+    orderedIds.forEach(id => {
+      const player = gameState.players[id];
+      const li = document.createElement('li');
+      const locationName = cellInfo[player.position].title;
+      li.textContent = `${player.name} (${locationName})`;
+  
+      // 標記自己
+      if (id === playerId) {
+        li.textContent += ' (你)';
+        li.style.fontWeight = 'bold';
+      }
+  
+      // (可選) 給不同玩家不同顏色
+      li.style.borderColor = getPlayerColor(colorIndex++);
+      playersList.appendChild(li);
     });
-}
+  }
+  
 
 // 更新玩家位置標記
 function updatePlayerMarkers(oldState) {
