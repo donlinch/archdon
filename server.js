@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 const storeDb = require('./store-db');
-const storeRoutes = require('./store-routes');
+const storeRoutes = require('./public/store/store-routes');
 
 
 
