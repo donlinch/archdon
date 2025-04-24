@@ -216,9 +216,7 @@ function updateColorFromHex() {
 async function loadTemplateWithErrorCheck(templateId) {
     try {
         showLoader();
-        const response = await fetch(`/api/walk_map/templates${templateId}`);
-        
-        // 檢查響應
+        const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${templateId}`);        // 檢查響應
         if (!response.ok) {
             if (response.status === 404) {
                 throw new Error('找不到指定的模板。模板可能已被刪除或ID無效。');
@@ -753,7 +751,9 @@ async function handleLoadTemplate() {
 
         const isCreating = !currentEditingTemplateId;
         const method = isCreating ? 'POST' : 'PUT';
-        const url = isCreating ? '/api/walk_map/templates' : `/api/walk_map/templates/${currentEditingTemplateId}`;
+        const url = isCreating 
+        ? `${API_BASE_URL}/api/walk_map/templates` 
+        : `${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`;
 
         if (!isCreating && templateId !== currentEditingTemplateId) {
              displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
@@ -810,8 +810,7 @@ async function handleLoadTemplate() {
             displayStatus("未選擇要刪除的模板。", true);
             return;
         }
-        const currentName = templateNameInput.value || `ID: ${currentEditingTemplateId}`;
-        
+        const response = await fetch(`${API_BASE_URL}/api/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });        
         // 優化移動版確認對話框
         if (window.innerWidth <= 768) {
             if (!confirm(`確定要刪除「${currentName}」嗎？\n\n此操作無法復原！`)) {
