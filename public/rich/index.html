@@ -9,21 +9,23 @@
     <meta name="description" content="在 SunnyYummy 的 Simple Walker 中體驗刺激的多人環形路徑遊戲！加入房間，與朋友一起競賽、移動棋子並享受簡單而有趣的桌遊體驗。">
     <meta name="keywords" content="Simple Walker, 環形路徑遊戲, 多人遊戲, 棋盤遊戲, SunnyYummy, 網頁遊戲, 線上桌遊">
     
-    <!-- 規範連結 -->
-    <link rel="canonical" href="https://sunnyyummy.onrender.com/games/simple-walker.html" />
+   <!-- 規範連結 -->
+   <link rel="canonical" href="https://sunnyyummy.onrender.com/game.html" />
     
-    <!-- Open Graph 社群標籤 -->
-    <meta property="og:title" content="Simple Walker - 多人環形路徑遊戲 | SunnyYummy">
-    <meta property="og:description" content="加入 Simple Walker 遊戲房間，與朋友一起競賽，體驗簡單而有趣的環形路徑遊戲！">
-    <meta property="og:image" content="https://sunnyyummy.onrender.com/images/simple-walker-og.png">
-    <meta property="og:url" content="https://sunnyyummy.onrender.com/games/simple-walker.html">
-    <meta property="og:type" content="website">
-    
-    <!-- Twitter 卡片 -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Simple Walker - 多人環形路徑遊戲 | SunnyYummy">
-    <meta name="twitter:description" content="加入 Simple Walker 遊戲房間，與朋友一起競賽，體驗簡單而有趣的環形路徑遊戲！">
-    <meta name="twitter:image" content="https://sunnyyummy.onrender.com/images/simple-walker-og.png">
+   <!-- Open Graph 社群標籤 -->
+   <meta property="og:title" content="Simple Walker - 大富翁風格遊戲 | SunnyYummy">
+   <meta property="og:description" content="在線上玩大富翁！遊覽台灣各地景點，與朋友同樂，免費加入 Simple Walker 遊戲房間。">
+   <meta property="og:image" content="https://sunnyyummy.onrender.com/uploads/1745497877299-30680.png">
+   <meta property="og:url" content="https://sunnyyummy.onrender.com/game.html">
+   <meta property="og:type" content="website">
+   <meta property="og:site_name" content="SunnyYummy">
+   <meta property="og:locale" content="zh_TW">
+   
+   <!-- Twitter 卡片 -->
+   <meta name="twitter:card" content="summary_large_image">
+   <meta name="twitter:title" content="Simple Walker - 大富翁風格遊戲 | SunnyYummy">
+   <meta name="twitter:description" content="在線上玩大富翁！遊覽台灣各地景點，與朋友同樂，免費加入 Simple Walker 遊戲房間。">
+   <meta name="twitter:image" content="https://sunnyyummy.onrender.com/uploads/1745497877299-30680.png">
     
     <!-- 結構化資料 - 遊戲 -->
     <script type="application/ld+json">
@@ -48,9 +50,15 @@
         "availability": "https://schema.org/InStock"
       }
     }
+
+
+
+
+
+
     </script>
     
-   
+  
     
     <!-- 字體 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,12 +71,387 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
     <link rel="stylesheet" href="style.css">
+
+
+    <style>
+
+/* 遊戲指南樣式 - 添加到style.css文件 */
+
+/* --- 基本樣式修正 --- */
+body {
+    padding-bottom: 70px; /* 為底部導航留出空間 */
+    background-color: #fff5f7; /* 淡粉色背景與scores頁面相符 */
+    overflow-x: hidden; /* 防止水平滾動 */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    padding: 20px 0;
+    background-color: #FFB74D; /* 橙色背景與scores頁面相符 */
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 0; /* 移除原有的圓角 */
+}
+
+/* --- 遊戲指南容器 --- */
+.game-guide-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.guide-title {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.6rem;
+    color: #FFB74D; /* 與scores頁面相符 */
+    position: relative;
+}
+
+.guide-title::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: #FFB74D; /* 與scores頁面相符 */
+    border-radius: 3px;
+}
+
+.guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.guide-step {
+    display: flex;
+    align-items: flex-start;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.guide-step:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+
+.step-icon {
+    flex: 0 0 40px;
+    height: 40px;
+    background-color: #FFB74D; /* 與scores頁面相符 */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    margin-right: 15px;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-content h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.step-content p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+.step-content a {
+    color: #FFB74D; /* 與scores頁面相符 */
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.step-content a:hover {
+    text-decoration: underline;
+}
+
+/* --- 遊戲截圖 --- */
+.game-screenshots {
+    margin-top: 30px;
+}
+
+.screenshots-title {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.screenshots-container {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 5px 0 15px 0;
+    scroll-snap-type: x mandatory;
+}
+
+.screenshot {
+    flex: 0 0 250px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    scroll-snap-align: start;
+    position: relative;
+}
+
+.screenshot img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+
+.screenshot-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    padding: 8px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* --- 行動呼籲按鈕 --- */
+.cta-container {
+    text-align: center;
+    margin-top: 25px;
+}
+
+.cta-button {
+    background-color: #FFB74D; /* 與scores頁面相符 */
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 4px 8px rgba(255, 183, 77, 0.3);
+}
+
+.cta-button:hover {
+    background-color: #FFA726;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(255, 183, 77, 0.4);
+}
+
+.cta-button:active {
+    transform: translateY(1px);
+}
+
+/* --- 底部導航 --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 1000;
+    padding: 5px 0;
+}
+
+.bottom-nav ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bottom-nav li {
+    text-align: center;
+}
+
+.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px;
+    text-decoration: none;
+    color: #777;
+    font-size: 0.7rem;
+    transition: all 0.3s;
+}
+
+.bottom-nav a.active {
+    color: #FFB74D; /* 與scores頁面相符 */
+    background-color: rgba(255, 183, 77, 0.1);
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+}
+
+.bottom-nav .icon {
+    font-size: 1.5rem;
+    margin-bottom: 3px;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* --- 返回頂部按鈕 --- */
+.back-to-top {
+    position: fixed;
+    right: 16px;
+    bottom: 76px;
+    background: white;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+    transition: all 0.3s;
+    z-index: 999;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.back-to-top:hover {
+    transform: scale(1.1);
+}
+
+.back-to-top:active {
+    transform: scale(0.95);
+}
+
+.logo-circle {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #FFD54F, #FFB74D);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -2px 5px rgba(0,0,0,0.1);
+}
+
+.logo-circle img {
+    width: 65%;
+    height: 65%;
+    object-fit: contain;
+}
+
+/* --- 頁腳樣式 --- */
+.desktop-footer {
+    background-color: #f8f8f8;
+    padding: 20px 0;
+    margin-top: 30px;
+    display: block;
+}
+
+.footer-copyright {
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* --- 響應式設計 --- */
+@media (max-width: 767px) {
+    .game-guide-container {
+        padding: 15px;
+        margin: 15px;
+    }
+    
+    .guide-title {
+        font-size: 1.4rem;
+    }
+    
+    .step-icon {
+        flex: 0 0 35px;
+        height: 35px;
+        font-size: 1.2rem;
+    }
+    
+    .step-content h3 {
+        font-size: 1rem;
+    }
+    
+    .step-content p {
+        font-size: 0.9rem;
+    }
+    
+    .screenshots-container {
+        flex-wrap: nowrap;
+    }
+    
+    .screenshot {
+        flex: 0 0 80%;
+    }
+    
+    .cta-button {
+        width: 100%;
+        padding: 12px 0;
+    }
+    
+    .desktop-footer {
+        display: none; /* 手機版隱藏桌面頁腳 */
+    }
+}
+
+@media (min-width: 768px) {
+    .desktop-footer {
+        display: block; /* 顯示桌面頁腳 */
+    }
+    
+    .back-to-top {
+        bottom: 20px; /* 調整位置 */
+    }
+}
+
+
+
+    </style>
+
 </head>
 <body>
     <div class="container">
         <h1>開走啦～大富翁！</h1>
         <div id="welcome-panel" class="panel">
-            <h2>歡迎</h2>
+             
             <div class="form-group">
                 <button id="create-room-btn" class="btn btn-primary">創建房間</button>
                 <button id="join-room-btn" class="btn btn-secondary">加入房間</button>
@@ -129,6 +512,99 @@
 
         <div id="error-message" class="hidden"></div>
     </div>
+
+    <!-- 遊戲指南部分 - 添加到index.html的歡迎面板下方 -->
+<div class="game-guide-container">
+    <h2 class="guide-title">✨ 遊戲指南 ✨</h2>
+    
+    <div class="guide-steps">
+        <div class="guide-step">
+            <div class="step-icon">🏠</div>
+            <div class="step-content">
+                <h3>創建或加入</h3>
+                <p>可創建房間，也可以加入現有的房間，與朋友一起遊玩</p>
+            </div>
+        </div>
+        
+        <div class="guide-step">
+            <div class="step-icon">🎲</div>
+            <div class="step-content">
+                <h3>結合實體遊戲</h3>
+                <p>這是要結合真實版的大富翁來玩，讓遊戲更加有趣</p>
+            </div>
+        </div>
+        
+        <div class="guide-step">
+            <div class="step-icon">🗺️</div>
+            <div class="step-content">
+                <h3>自定義地圖</h3>
+                <p>未來將開放建立自己獨特的地圖，打造專屬遊戲體驗</p>
+            </div>
+        </div>
+        
+        <div class="guide-step">
+            <div class="step-icon">📺</div>
+            <div class="step-content">
+                <h3>更多玩法</h3>
+                <p>具體請看<a href="#" target="_blank">吃貨們頻道</a>的大富翁系列影片教學</p>
+            </div>
+        </div>
+        
+        <div class="guide-step">
+            <div class="step-icon">✉️</div>
+            <div class="step-content">
+                <h3>地圖設計</h3>
+                <p>想要幫我們設計地圖？發送郵件至 <a href="mailto:contact@sunnyyummy.com">contact@sunnyyummy.com</a> 來獲得管理地圖的網址</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-screenshots">
+        <h3 class="screenshots-title">遊戲畫面預覽</h3>
+        <div class="screenshots-container">
+            <div class="screenshot">
+                <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="遊戲畫面預覽" onerror="this.src='https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png'">
+                <span class="screenshot-caption">豐富多彩的遊戲地圖</span>
+            </div>
+            <div class="screenshot">
+                <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="多人遊戲" onerror="this.src='https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png'">
+                <span class="screenshot-caption">多人同樂的遊戲體驗</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="cta-container">
+        <button class="cta-button" id="start-game-btn">立即開始遊戲</button>
+    </div>
+</div>
+
+<!-- 底部導航 -->
+<nav class="bottom-nav">
+    <ul>
+        <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
+        <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
+        <li><a href="/news.html"><span class="icon">📢</span><span>消息</span></a></li>
+        <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
+        <li><a href="/games.html" class="active"><span class="icon">🎮</span><span>遊戲</span></a></li>
+        <li><a href="/guestbook.html"><span class="icon">💬</span><span>留言</span></a></li>
+    </ul>
+</nav>
+
+<!-- 頁腳 - 在大屏幕設備上顯示 -->
+<footer class="desktop-footer">
+    <div class="footer-copyright">
+        <p>© 2025 SunnyYummy. All rights reserved.</p>
+        <p>信箱：contact@sunnyyummy.com</p>
+        <p>客服時間：週一～週五 08:00～17:00</p>
+    </div>
+</footer>
+
+<!-- 返回頂部按鈕 -->
+<button id="back-to-top" class="back-to-top">
+    <div class="logo-circle">
+        <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy" />
+    </div>
+</button>
 
     <script src="client.js"></script>
 </body>
