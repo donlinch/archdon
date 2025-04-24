@@ -2329,6 +2329,22 @@ app.use([
     '/inventory-admin.html',
     '/store/report/report-admin.html'
 ], basicAuthMiddleware);
+
+
+
+
+app.get('/rich-admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.html'));
+  });
+  app.use('/rich-admin.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rich-admin.js'));
+  });
+  app.use('/admin-style.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-style.css'));
+  });
+
+
+
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
 app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
 
