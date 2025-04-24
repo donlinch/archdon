@@ -221,3 +221,83 @@ async function handleStartGame() {
         showError(`錯誤: ${error.message}`);
     }
 }
+
+
+// 添加到 client.js 文件末尾或創建一個新的 guide.js 文件
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 返回頂部按鈕功能
+    const backToTopBtn = document.getElementById('back-to-top');
+    if (backToTopBtn) {
+        // 滾動超過 200px 時顯示按鈕
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 200) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+        
+        // 點擊按鈕返回頂部
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // 行動呼籲按鈕功能
+    const startGameBtn = document.getElementById('start-game-btn');
+    if (startGameBtn) {
+        startGameBtn.addEventListener('click', function() {
+            // 滾動到表單區域或顯示創建房間面板
+            const welcomePanel = document.getElementById('welcome-panel');
+            if (welcomePanel) {
+                welcomePanel.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
+    
+    // 為遊戲步驟添加入場動畫
+    const guideSteps = document.querySelectorAll('.guide-step');
+    if (guideSteps.length > 0) {
+        // 使用 Intersection Observer API 檢測元素是否進入視圖
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // 當元素進入視圖時添加動畫效果
+                    entry.target.style.opacity = '0';
+                    entry.target.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(() => {
+                        entry.target.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, 100);
+                    
+                    // 元素已經被觀察到，不需要再次觀察
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            root: null,  // 使用視窗作為觀察器的根元素
+            rootMargin: '0px',
+            threshold: 0.1  // 當元素10%進入視圖時觸發
+        });
+        
+        // 觀察每個遊戲步驟元素
+        guideSteps.forEach(step => {
+            observer.observe(step);
+        });
+    }
+    
+    // 為圖片添加載入錯誤處理
+    const screenshots = document.querySelectorAll('.screenshot img');
+    screenshots.forEach(img => {
+        // 當圖片載入失敗時使用備用圖片
+        img.addEventListener('error', function() {
+            this.src = 'https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png';
+        });
+    });
+});
