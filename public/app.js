@@ -135,48 +135,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         productList.forEach(product => {
-            const cardLink = document.createElement('a');
-            cardLink.className = 'product-card';
-            cardLink.href = product.seven_eleven_url || '#';
+            // Create the main card container div (instead of a link)
+            const cardContainer = document.createElement('div');
+            // Add product-card class and animation class
+            cardContainer.className = 'product-card animate__animated animate__fadeIn'; 
+
+            // Set the click behavior (open link and record click)
             if (product.seven_eleven_url) {
-                cardLink.target = '_blank';
-                cardLink.rel = 'noopener noreferrer';
-            }
-            
-            // 添加點擊事件
-            cardLink.addEventListener('click', (event) => {
-                if (product.seven_eleven_url && product.id) {
+                cardContainer.style.cursor = 'pointer'; // Ensure cursor indicates clickability
+                cardContainer.addEventListener('click', (event) => {
+                    // Prevent click if favorite button is clicked (if added later)
+                    // if (event.target.closest('.favorite-btn')) return;
+                    
                     event.preventDefault();
                     
-                    // 發送點擊記錄請求
-                    fetch(`/api/products/${product.id}/click`, { method: 'POST' })
-                        .catch(err => {
-                            console.error(`記錄商品 ${product.id} 點擊時網路錯誤:`, err);
-                        });
-                    
-                    // 在新視窗打開商品連結
+                    // Record click
+                    if (product.id) {
+                        fetch(`/api/products/${product.id}/click`, { method: 'POST' })
+                            .catch(err => {
+                                console.error(`記錄商品 ${product.id} 點擊時網路錯誤:`, err);
+                            });
+                    }
+                    // Open link
                     window.open(product.seven_eleven_url, '_blank');
-                }
-            });
-            
-            // 創建商品卡片內容
-            cardLink.innerHTML = `
-                <div class="image-container">
-                    <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || '商品圖片'}">
+                });
+            }
+
+            // Create the card content using the new structure
+            cardContainer.innerHTML = `
+                <div class="position-relative">
+                    <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
+                    ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
+                    <!-- Placeholder for favorite button if needed -->
+                    <!-- <button class="favorite-btn">
+                        <i class="bi bi-heart"></i> 
+                    </button> -->
                 </div>
-                <div class="card-content">
-                    <h3>${product.name || '未命名商品'}</h3>
-                    <p class="price">${product.price !== null ? `NT$ ${Math.floor(product.price)}` : '價格洽詢'}</p>
+                <div class="card-body">
+                    <h5 class="card-title">${product.name || '未命名商品'}</h5>
+                    ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>' /* Add placeholder for consistent height */} 
                 </div>
+                 <!-- Placeholder for add hint if needed -->
+                 <!-- <div class="add-hint">
+                     <i class="bi bi-plus-circle"></i> 點擊加入購物車 
+                 </div> -->
             `;
             
-            grid.appendChild(cardLink);
+            // Append the new card structure to the grid
+            grid.appendChild(cardContainer);
         });
         
-        // 使用漸入效果顯示商品
-        animateProductsIn();
+        // Use the existing fade-in animation logic (or switch to CSS animation)
+        // Keep existing JS animation for now
+        animateProductsIn(); 
     }
-     /**
+    
+    /**
      * 商品卡片漸入動畫
      */
     function animateProductsIn() {
