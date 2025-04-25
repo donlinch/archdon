@@ -176,9 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>' /* 如果沒有描述，用空格佔位以維持高度 */}
                 </div>
                  <!-- 未來如果需要，可以在這裡放 "加入購物車" 提示 -->
-                 <!-- <div class="add-hint">
-                     <i class="bi bi-plus-circle"></i> 點擊加入購物車
-                 </div> -->
+                 <div class="add-hint">
+                     <i class="bi bi-plus-circle"></i> 點擊加入購物車 
+                 </div> 
             `;
 
             // 將創建好的卡片添加到商品網格中
