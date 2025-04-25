@@ -678,6 +678,10 @@ async function loadCategories() {
       });
     }
     
+    // --- DEBUGGING ---
+    console.log('Executing fetchNews from catch block due to category load failure.'); 
+    // --- END DEBUGGING ---
+    
     // 确保新闻内容能够正常加载
     fetchNews(1);
   }
