@@ -387,19 +387,33 @@ function updatePlayersList() {
         
         // 點擊事件 - 使用當前的 player.visible 屬性而非閉包中的常數
         btn.onclick = () => {
-          // 直接從 gameState 獲取最新的可見性狀態
-          const currentVisibility = gameState.players[playerId].visible !== false;
-          const newVisibility = !currentVisibility;
-          
-          // 發送切換可見性的請求給伺服器
-          ws.send(JSON.stringify({
-            type: 'toggleVisibility',
-            visible: newVisibility
-          }));
-          
-          // 即時更新按鈕外觀以提供視覺反饋
-          btn.className = `btn-toggle-visibility ${newVisibility ? 'visible' : 'hidden'}`;
-          btn.textContent = newVisibility ? '👁️ 顯示中' : '👁️‍🗨️ 已隱藏';
+          console.log(`Toggle button clicked for player ID: ${playerId}`); // Log entry
+          try {
+            // 直接從 gameState 獲取最新的可見性狀態
+            if (!gameState.players[playerId]) {
+              console.error(`Player with ID ${playerId} not found in gameState.`);
+              return; // Exit if player data is missing
+            }
+            const currentVisibility = gameState.players[playerId].visible !== false;
+            console.log(`Current visibility: ${currentVisibility}`); // Log current state
+
+            const newVisibility = !currentVisibility;
+            console.log(`New visibility to send: ${newVisibility}`); // Log new state
+
+            // 發送切換可見性的請求給伺服器
+            ws.send(JSON.stringify({
+              type: 'toggleVisibility',
+              visible: newVisibility
+            }));
+            console.log("Sent toggleVisibility message to server."); // Log send confirmation
+
+            // 即時更新按鈕外觀以提供視覺反饋
+            btn.className = `btn-toggle-visibility ${newVisibility ? 'visible' : 'hidden'}`;
+            btn.textContent = newVisibility ? '👁️ 顯示中' : '👁️‍🗨️ 已隱藏';
+            console.log(`Button updated immediately. Class: ${btn.className}, Text: ${btn.textContent}`); // Log UI update
+          } catch (error) {
+            console.error("Error in toggleVisibility click handler:", error); // Log any errors
+          }
         };
         
         li.appendChild(playerInfo);
