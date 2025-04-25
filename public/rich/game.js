@@ -277,41 +277,59 @@ function handleWebSocketMessage(data) {
                 if (message.templateId && message.templateData) {
                     console.log(`接收模板更新: ${message.templateId}`);
                     
-                    // 應用樣式數據
-                    if (message.templateData.style_data) {
-                        applyTemplateStyles(message.templateData.style_data);
-                        
-                        // 特別處理中央圖片
-                        if (message.templateData.style_data.board && 
-                            message.templateData.style_data.board.centerImageUrl) {
-                            const centerImageContainer = document.getElementById('map-center-image-container');
-                            if (centerImageContainer) {
-                                const centerImage = centerImageContainer.querySelector('img');
-                                if (centerImage) {
-                                    // 保存原圖片URL以便處理錯誤
-                                    const originalSrc = centerImage.src;
-                                    centerImage.src = message.templateData.style_data.board.centerImageUrl;
-                                    console.log('已更新中央圖片:', message.templateData.style_data.board.centerImageUrl);
-                                    
-                                    // 添加錯誤處理
-                                    centerImage.onerror = function() {
-                                        console.error('圖片載入失敗:', centerImage.src);
-                                        centerImage.src = originalSrc; // 恢復原圖片
-                                        console.log('已恢復原圖片');
-                                    };
+                    try {
+                        // 應用樣式數據
+                        if (message.templateData.style_data) {
+                            applyTemplateStyles(message.templateData.style_data);
+                            
+                            // 特別處理中央圖片
+                            if (message.templateData.style_data.board && 
+                                message.templateData.style_data.board.centerImageUrl) {
+                                const centerImageContainer = document.getElementById('map-center-image-container');
+                                if (centerImageContainer) {
+                                    const centerImage = centerImageContainer.querySelector('img');
+                                    if (centerImage) {
+                                        // 保存原圖片URL以便處理錯誤
+                                        const originalSrc = centerImage.src;
+                                        centerImage.src = message.templateData.style_data.board.centerImageUrl;
+                                        console.log('已更新中央圖片:', message.templateData.style_data.board.centerImageUrl);
+                                        
+                                        // 添加錯誤處理
+                                        centerImage.onerror = function() {
+                                            console.error('圖片載入失敗:', centerImage.src);
+                                            centerImage.src = originalSrc; // 恢復原圖片
+                                            console.log('已恢復原圖片');
+                                        };
+                                    }
                                 }
                             }
                         }
+                        
+                        // 更新格子內容
+                        if (message.templateData.cell_data && Array.isArray(message.templateData.cell_data)) {
+                            // 確保 cellInfo 已經定義
+                            if (typeof cellInfo === 'undefined') {
+                                console.warn('cellInfo 未定義，嘗試初始化後更新格子內容');
+                                window.cellInfo = [];
+                            }
+                            
+                            // 嘗試更新格子內容
+                            try {
+                                updateCellContents(message.templateData.cell_data);
+                                console.log('已更新格子內容');
+                            } catch (cellError) {
+                                console.error('更新格子內容時出錯:', cellError);
+                            }
+                        } else {
+                            console.warn('模板數據中無有效的格子數據');
+                        }
+                        
+                        // 保存當前模板ID
+                        currentTemplateId = message.templateId;
+                        console.log(`伺服器已更新模板: ${message.templateData.template_name}`);
+                    } catch (templateError) {
+                        console.error('處理模板更新時出錯:', templateError);
                     }
-                    
-                    // 更新格子內容
-                    if (message.templateData.cell_data) {
-                        updateCellContents(message.templateData.cell_data);
-                    }
-                    
-                    // 保存當前模板ID
-                    currentTemplateId = message.templateId;
-                    console.log(`伺服器已更新模板: ${message.templateData.template_name}`);
                 }
                 break;
             
