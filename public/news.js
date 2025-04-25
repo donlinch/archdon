@@ -613,37 +613,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 获取并显示新闻分类
     async function loadCategories() {
-        const categoryNav = document.getElementById('category-nav');
-        if (!categoryNav) return; // 元素不存在则退出
-
         try {
-            const response = await fetch('/api/news-categories'); // 请求无参数的分类 API
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            const response = await fetch('/api/news-categories');
+            if (!response.ok) throw new Error('API請求失敗');
             const categories = await response.json();
-
-            // 清空现有按钮（保留"全部消息"）
-            categoryNav.innerHTML = `<button class="category-btn active" data-category="">全部消息</button>`;
-
-            // 添加从 API 获取的分类按钮
-            categories.forEach(category => {
-                categoryNav.innerHTML += `
-                    <button class="category-btn" data-category="${category.id}" data-slug="${category.slug}">
-                        ${category.name}
-                    </button>
-                `;
-            });
-
-            // 重新绑定所有按钮的点击事件
-            bindCategoryButtons();
-
+            renderCategories(categories);
         } catch (error) {
-            console.error('加载分类失败:', error);
-            // 分类加载失败，仅保留"全部消息"按钮，并确保事件绑定
-            categoryNav.innerHTML = `<button class="category-btn active" data-category="">全部消息</button>`;
-            bindCategoryButtons(); // 仍然需要绑定"全部消息"的事件
+            console.error('加載分類失敗:', error);
+            // 使用硬編碼的備用分類
+            renderCategories([
+                { id: 'all', name: '全部消息', slug: 'all' },
+                { id: 1, name: '最新消息', slug: 'latest' },
+                { id: 2, name: '活動預告', slug: 'events' },
+                { id: 3, name: '媒體報導', slug: 'media' }
+            ]);
         }
+        loadNews(1);
     }
 
     // 获取并显示新闻列表（支持分页和分类）
