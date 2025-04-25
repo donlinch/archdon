@@ -1,6 +1,6 @@
 // news.js
 document.addEventListener('DOMContentLoaded', () => {
-    // 加载分类
+    // 先尝试加载分类，即使失败也会在后面加载新闻
     loadCategories();
     
     // 獲取DOM元素
@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 初始化各功能
     initSwiper();
-    fetchNews(1);
     setupSortLinks();
     setupBackToTop();
     setupCharacterInteractions();
@@ -614,3 +613,92 @@ document.addEventListener('DOMContentLoaded', () => {
     // 窗口尺寸改變時重新檢測
     window.addEventListener('resize', detectDevice);
 });
+
+// 修改后的loadCategories函数
+async function loadCategories() {
+  try {
+    const response = await fetch('/api/news-categories?active=true');
+    
+    if (!response.ok) {
+      throw new Error('加载分类失败');
+    }
+    
+    const categories = await response.json();
+    const categoryNav = document.getElementById('category-nav');
+    
+    // 清空现有按钮
+    categoryNav.innerHTML = '';
+    
+    // 添加"全部"选项
+    categoryNav.innerHTML += `<button class="category-btn active" data-category="">全部消息</button>`;
+    
+    // 添加各分类按钮
+    categories.forEach(category => {
+      categoryNav.innerHTML += `
+        <button class="category-btn" data-category="${category.id}" data-slug="${category.slug}">
+          ${category.name}
+        </button>
+      `;
+    });
+    
+    // 添加点击事件监听
+    document.querySelectorAll('.category-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const categoryId = this.getAttribute('data-category');
+        loadNews(categoryId);
+      });
+    });
+    
+    // 加载所有新闻
+    loadNews();
+  } catch (error) {
+    console.error('加载分类失败:', error);
+    
+    // 即使分类加载失败，也显示默认分类
+    const categoryNav = document.getElementById('category-nav');
+    if (categoryNav) {
+      categoryNav.innerHTML = `
+        <button class="category-btn active" data-category="">全部消息</button>
+        <button class="category-btn" data-category="news">最新消息</button>
+        <button class="category-btn" data-category="events">活動預告</button>
+        <button class="category-btn" data-category="promo">合作推廣</button>
+      `;
+      
+      // 添加默认分类点击事件
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          // 使用filter筛选，而不是categoryId
+          const filter = this.getAttribute('data-category') || '';
+          fetchNewsByFilter(filter);
+        });
+      });
+    }
+    
+    // 确保新闻内容能够正常加载
+    fetchNews(1);
+  }
+}
+
+// 添加一个按筛选器加载新闻的函数
+function fetchNewsByFilter(filter) {
+  if (!filter || filter === '') {
+    fetchNews(1); // 加载所有新闻
+    return;
+  }
+  
+  // 根据不同类型筛选
+  currentPage = 1;
+  if (filter === 'events') {
+    currentSortBy = 'upcoming';
+  } else if (filter === 'promo') {
+    currentSortBy = 'cooperation';
+  } else {
+    currentSortBy = 'latest';
+  }
+  
+  fetchNews(1);
+}
