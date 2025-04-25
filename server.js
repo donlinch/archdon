@@ -441,7 +441,7 @@ if (parsedMessage.type === 'applyTemplate') {
 
 
 
-        // 只處理 'moveCommand' 類型的消息
+        // 根據消息類型進行不同處理
         if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
             const direction = parsedMessage.direction; // 'forward' 或 'backward'
 
@@ -497,6 +497,50 @@ if (parsedMessage.type === 'applyTemplate') {
                 gameState: latestGameState
             }); // 廣播給所有人 (包括自己，以便確認)
 
+        } 
+        // 處理 toggleVisibility 消息
+        else if (parsedMessage.type === 'toggleVisibility' && parsedMessage.visible !== undefined) {
+            // 1. 獲取當前遊戲狀態
+            const roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state) {
+                console.warn(`[WS Simple Walker] 找不到房間 ${roomId} 的狀態`);
+                return;
+            }
+            const gameState = roomData.game_state;
+
+            // 2. 確保玩家存在於狀態中
+            if (!gameState.players || !gameState.players[playerId]) {
+                console.warn(`[WS Simple Walker] 玩家 ${playerId} 不在房間 ${roomId} 的狀態中`);
+                ws.send(JSON.stringify({ type: 'error', message: '伺服器狀態錯誤，找不到您的玩家資料' }));
+                return;
+            }
+
+            // 3. 更新玩家的可見性狀態
+            const newVisibility = parsedMessage.visible;
+            console.log(`[WS Simple Walker] 更新玩家 ${playerId} 的可見性為: ${newVisibility}`);
+            
+            // 設置玩家的 visible 屬性
+            gameState.players[playerId].visible = newVisibility;
+            
+            // 4. 更新資料庫中的遊戲狀態
+            const updatedRoomResult = await dbClient.updateRoomState(roomId, gameState);
+            
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                console.error(`[WS Simple Walker] 更新玩家 ${playerId} 可見性失敗`);
+                ws.send(JSON.stringify({ type: 'error', message: '更新可見性失敗' }));
+                return;
+            }
+            
+            // 5. 獲取更新後的完整狀態並廣播
+            const latestGameState = updatedRoomResult.game_state;
+            const latestRoomName = updatedRoomResult.room_name;
+            
+            console.log(`[WS Simple Walker] Player ${playerId} visibility changed to ${newVisibility}. Broadcasting update.`);
+            broadcastToSimpleWalkerRoom(roomId, {
+                type: 'gameStateUpdate',
+                roomName: latestRoomName,
+                gameState: latestGameState
+            });
         } else {
             console.warn(`[WS Simple Walker] 收到未知類型的消息，忽略: ${parsedMessage.type}`);
         }
