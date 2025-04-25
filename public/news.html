@@ -738,33 +738,23 @@
 
     .category-buttons {
         display: flex;
+        justify-content: center;
         gap: 10px;
-        padding: 0 15px; /* 左右留白 */
+        margin: 20px 0;
     }
 
     .category-btn {
-        background-color: #f0f0f0; /* 浅灰色背景 */
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: #f0f0f0;
         border: none;
-        border-radius: 25px; /* 圆角 */
-        padding: 8px 18px; /* 内边距 */
-        font-size: 14px;
-        font-weight: 500;
-        color: #555; /* 深灰色文字 */
         cursor: pointer;
-        transition: all 0.3s ease;
-        white-space: nowrap; /* 防止文字换行 */
-        flex-shrink: 0; /* 防止按钮被压缩 */
-    }
-
-    .category-btn:hover {
-        background-color: #e0e0e0; /* 悬停时加深背景色 */
-        transform: translateY(-1px); /* 轻微上移 */
+        transition: all 0.3s;
     }
 
     .category-btn.active {
-        background-color: var(--primary-color, #4d59fb); /* 使用主题色 */
-        color: white; /* 白色文字 */
-        box-shadow: 0 2px 8px rgba(77, 89, 251, 0.3);
+        background: #6c5ce7;
+        color: white;
     }
 
     /* 滚动条样式 (可选，美化滚动条) */
@@ -793,11 +783,7 @@
     
     <!-- 分类导航按钮 -->
     <div class="category-navigation">
-        <div id="category-nav" class="category-buttons">
-            <!-- 分类按钮将由 JavaScript 动态填充 -->
-            <button class="category-btn active" data-category="">全部消息</button> 
-            <!-- 初始默认显示"全部消息" -->
-        </div>
+        <div id="category-nav" class="category-buttons"></div>
     </div>
     
     <!-- 分類導航 -->
