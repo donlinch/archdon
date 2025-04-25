@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteNews = async function(id) { // *** 修改函數名 ***
         if (confirm(`確定要刪除消息 ID: ${id} 嗎？`)) {
             try {
-                const response = await fetch(`/api/news/${id}`, { method: 'DELETE' }); // *** 修改 API URL ***
+                const response = await fetch(`/api/admin/news/${id}`, { method: 'DELETE' }); // *** 修改 API URL ***
                 if (response.status === 204 || response.ok) {
                     await fetchAndDisplayNews(); // *** 修改調用函數 ***
                 } else {
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 可以添加更多驗證...
 
             try { // *** 發送 PUT 請求到 /api/news/:id ***
-                const response = await fetch(`/api/news/${newsId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) });
+                const response = await fetch(`/api/admin/news/${newsId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) });
                 if (!response.ok) { let errorMsg = `儲存失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 closeEditNewsModal(); // *** 修改調用函數 ***
                 await fetchAndDisplayNews(); // *** 修改調用函數 ***
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
              // 可以添加更多驗證...
 
             try { // *** 發送 POST 請求到 /api/news ***
-                const response = await fetch(`/api/news`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newNewsData) });
+                const response = await fetch(`/api/admin/news`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newNewsData) });
                 if (!response.ok) { let errorMsg = `新增失敗 (HTTP ${response.status})`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 closeAddNewsModal(); // *** 修改調用函數 ***
                 await fetchAndDisplayNews(); // *** 修改調用函數 ***
