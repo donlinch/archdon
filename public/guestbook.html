@@ -140,54 +140,58 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: white;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-            padding: 5px 0;
+            padding: 8px 0;
         }
 
         .bottom-nav ul {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
             list-style: none;
             margin: 0;
-            padding: 0;
+            padding: 0 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .bottom-nav li {
+            flex: 1;
+            max-width: 80px;
             text-align: center;
         }
 
-        .bottom-nav a {
+        .bottom-nav .nav-link {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 5px;
             text-decoration: none;
-            color: #777;
-            font-size: 0.7rem;
-            transition: all 0.3s;
+            color: #666;
+            font-size: 12px;
+            padding: 4px;
+            transition: color 0.3s ease;
         }
 
-        .bottom-nav a.active {
-            color: #FFB74D;
-            background-color: rgba(255, 183, 77, 0.1);
-            border-radius: 20px;
-            animation: pulse 2s infinite;
+        .bottom-nav .nav-link:hover,
+        .bottom-nav .nav-link.active {
+            color: #ff6b6b;
         }
 
         .bottom-nav .icon {
-            font-size: 1.5rem;
-            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        .bottom-nav .icon i {
+            font-size: 20px;
+        }
+
+        @media screen and (min-width: 768px) {
+            .bottom-nav {
+                display: none;
+            }
         }
 
         /* --- 留言板內容容器 --- */
@@ -680,6 +684,13 @@
     .bottom-nav {
         display: block; /* none 隱藏底部導航 */
     }
+
+    .bottom-nav .icon {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        margin-bottom: 3px;
+    }
             
             .back-to-top {
                 bottom: 20px;
@@ -819,12 +830,42 @@
     <!-- 底部導航 -->
     <nav class="bottom-nav">
         <ul>
-            <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
-            <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
-            <li><a href="/news.html"><span class="icon">📢</span><span>消息</span></a></li>
-            <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
-            <li><a href="/games.html"><span class="icon">🎮</span><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html" class="active"><span class="icon">💬</span><span>留言</span></a></li>
+            <li>
+                <a href="/store" class="nav-link">
+                    <span class="icon"><i class="fas fa-store"></i></span>
+                    商品
+                </a>
+            </li>
+            <li>
+                <a href="/music" class="nav-link">
+                    <span class="icon"><i class="fas fa-music"></i></span>
+                    音樂
+                </a>
+            </li>
+            <li>
+                <a href="/messages" class="nav-link">
+                    <span class="icon"><i class="fas fa-envelope"></i></span>
+                    消息
+                </a>
+            </li>
+            <li>
+                <a href="/scores" class="nav-link">
+                    <span class="icon"><i class="fas fa-scroll"></i></span>
+                    樂譜
+                </a>
+            </li>
+            <li>
+                <a href="/games" class="nav-link">
+                    <span class="icon"><i class="fas fa-gamepad"></i></span>
+                    遊戲
+                </a>
+            </li>
+            <li>
+                <a href="/guestbook" class="nav-link active">
+                    <span class="icon"><i class="fas fa-comments"></i></span>
+                    留言
+                </a>
+            </li>
         </ul>
     </nav>
     
