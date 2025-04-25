@@ -127,67 +127,66 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function displayProducts(productList) {
         if (!grid) return;
-        grid.innerHTML = '';
-        
+        grid.innerHTML = ''; // 清空現有商品
+
         if (!productList || productList.length === 0) {
             grid.innerHTML = '<p class="no-products">目前沒有商品可顯示。</p>';
             return;
         }
-        
-        productList.forEach(product => {
-            // Create the main card container div (instead of a link)
-            const cardContainer = document.createElement('div');
-            // Add product-card class and animation class
-            cardContainer.className = 'product-card animate__animated animate__fadeIn'; 
 
-            // Set the click behavior (open link and record click)
+        productList.forEach(product => {
+            // 創建卡片容器 div (取代之前的 a 標籤)
+            const cardContainer = document.createElement('div');
+            // 添加 product-card 和動畫 class
+            cardContainer.className = 'product-card animate__animated animate__fadeIn';
+
+            // 設置點擊事件 (打開連結並記錄點擊)
             if (product.seven_eleven_url) {
-                cardContainer.style.cursor = 'pointer'; // Ensure cursor indicates clickability
+                cardContainer.style.cursor = 'pointer'; // 確保滑鼠指標是可點擊的樣式
                 cardContainer.addEventListener('click', (event) => {
-                    // Prevent click if favorite button is clicked (if added later)
+                    // 如果未來添加了收藏按鈕，防止點擊按鈕時也觸發卡片點擊
                     // if (event.target.closest('.favorite-btn')) return;
-                    
-                    event.preventDefault();
-                    
-                    // Record click
+
+                    event.preventDefault(); // 阻止可能的默認行為
+
+                    // 記錄點擊 (如果商品有 ID)
                     if (product.id) {
                         fetch(`/api/products/${product.id}/click`, { method: 'POST' })
                             .catch(err => {
                                 console.error(`記錄商品 ${product.id} 點擊時網路錯誤:`, err);
                             });
                     }
-                    // Open link
+                    // 在新分頁打開連結
                     window.open(product.seven_eleven_url, '_blank');
                 });
             }
 
-            // Create the card content using the new structure
+            // 使用新的 HTML 結構創建卡片內容
             cardContainer.innerHTML = `
                 <div class="position-relative">
                     <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
                     ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
-                    <!-- Placeholder for favorite button if needed -->
+                    <!-- 未來如果需要，可以在這裡放收藏按鈕 -->
                     <!-- <button class="favorite-btn">
-                        <i class="bi bi-heart"></i> 
+                        <i class="bi bi-heart"></i>
                     </button> -->
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">${product.name || '未命名商品'}</h5>
-                    ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>' /* Add placeholder for consistent height */} 
+                    ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>' /* 如果沒有描述，用空格佔位以維持高度 */}
                 </div>
-                 <!-- Placeholder for add hint if needed -->
+                 <!-- 未來如果需要，可以在這裡放 "加入購物車" 提示 -->
                  <!-- <div class="add-hint">
-                     <i class="bi bi-plus-circle"></i> 點擊加入購物車 
+                     <i class="bi bi-plus-circle"></i> 點擊加入購物車
                  </div> -->
             `;
-            
-            // Append the new card structure to the grid
+
+            // 將創建好的卡片添加到商品網格中
             grid.appendChild(cardContainer);
         });
-        
-        // Use the existing fade-in animation logic (or switch to CSS animation)
-        // Keep existing JS animation for now
-        animateProductsIn(); 
+
+        // 繼續使用現有的 JavaScript 漸入動畫函式
+        animateProductsIn();
     }
     
     /**
