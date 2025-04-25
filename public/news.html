@@ -722,6 +722,59 @@
             -webkit-line-clamp: 2;
         }
     }
+
+    .category-navigation {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        overflow-x: auto; /* 水平滚动，以防分类过多 */
+        padding: 10px 0;
+        background-color: rgba(255, 255, 255, 0.9); /* 稍微透明的背景 */
+        position: sticky; /* 滚动时固定在顶部 */
+        top: 0;
+        z-index: 50; /* 确保在 banner 之上，但在 modal 之下 */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .category-buttons {
+        display: flex;
+        gap: 10px;
+        padding: 0 15px; /* 左右留白 */
+    }
+
+    .category-btn {
+        background-color: #f0f0f0; /* 浅灰色背景 */
+        border: none;
+        border-radius: 25px; /* 圆角 */
+        padding: 8px 18px; /* 内边距 */
+        font-size: 14px;
+        font-weight: 500;
+        color: #555; /* 深灰色文字 */
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap; /* 防止文字换行 */
+        flex-shrink: 0; /* 防止按钮被压缩 */
+    }
+
+    .category-btn:hover {
+        background-color: #e0e0e0; /* 悬停时加深背景色 */
+        transform: translateY(-1px); /* 轻微上移 */
+    }
+
+    .category-btn.active {
+        background-color: var(--primary-color, #4d59fb); /* 使用主题色 */
+        color: white; /* 白色文字 */
+        box-shadow: 0 2px 8px rgba(77, 89, 251, 0.3);
+    }
+
+    /* 滚动条样式 (可选，美化滚动条) */
+    .category-navigation::-webkit-scrollbar {
+        height: 4px;
+    }
+    .category-navigation::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+    }
 </style>
 </head>
 <body>
@@ -735,6 +788,15 @@
             <div class="swiper-pagination"></div>
             <div class="swiper-button-prev"></div>
             <div class="swiper-button-next"></div>
+        </div>
+    </div>
+    
+    <!-- 分类导航按钮 -->
+    <div class="category-navigation">
+        <div id="category-nav" class="category-buttons">
+            <!-- 分类按钮将由 JavaScript 动态填充 -->
+            <button class="category-btn active" data-category="">全部消息</button> 
+            <!-- 初始默认显示"全部消息" -->
         </div>
     </div>
     

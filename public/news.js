@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSortBy = 'latest'; // 預設為最新消息
     let itemsPerPage = 10;
     let totalPages = 1;
+    let currentCategoryId = null; // 当前选中的分类ID
     
     // 初始化各功能
     initSwiper();
-    fetchNews(1);
     setupSortLinks();
     setupBackToTop();
     setupCharacterInteractions();
@@ -610,4 +610,114 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 窗口尺寸改變時重新檢測
     window.addEventListener('resize', detectDevice);
+
+    // 获取并显示新闻分类
+    async function loadCategories() {
+        const categoryNav = document.getElementById('category-nav');
+        if (!categoryNav) return; // 元素不存在则退出
+
+        try {
+            const response = await fetch('/api/news-categories'); // 请求无参数的分类 API
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const categories = await response.json();
+
+            // 清空现有按钮（保留"全部消息"）
+            categoryNav.innerHTML = `<button class="category-btn active" data-category="">全部消息</button>`;
+
+            // 添加从 API 获取的分类按钮
+            categories.forEach(category => {
+                categoryNav.innerHTML += `
+                    <button class="category-btn" data-category="${category.id}" data-slug="${category.slug}">
+                        ${category.name}
+                    </button>
+                `;
+            });
+
+            // 重新绑定所有按钮的点击事件
+            bindCategoryButtons();
+
+        } catch (error) {
+            console.error('加载分类失败:', error);
+            // 分类加载失败，仅保留"全部消息"按钮，并确保事件绑定
+            categoryNav.innerHTML = `<button class="category-btn active" data-category="">全部消息</button>`;
+            bindCategoryButtons(); // 仍然需要绑定"全部消息"的事件
+        }
+    }
+
+    // 获取并显示新闻列表（支持分页和分类）
+    async function loadNews(page = 1, categoryId = null) {
+        const newsListContainer = document.getElementById('news-list');
+        const paginationControls = document.getElementById('pagination-controls');
+        if (!newsListContainer || !paginationControls) return;
+
+        currentPage = page;
+        currentCategoryId = categoryId; // 更新当前分类
+
+        newsListContainer.innerHTML = '<p>正在加載最新消息...</p>';
+        paginationControls.innerHTML = '';
+
+        try {
+            let url = `/api/news?page=${currentPage}&limit=${itemsPerPage}`;
+            if (currentCategoryId !== null && currentCategoryId !== '') {
+                url += `&category=${currentCategoryId}`; // 后端使用 'category' 参数
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`获取新闻失败 (HTTP ${response.status})`);
+            }
+
+            const data = await response.json();
+            totalPages = data.totalPages;
+
+            if (data.news.length === 0) {
+                newsListContainer.innerHTML = '<p>此分類暫無相關消息</p>';
+                renderPagination(0, 1);
+                return;
+            }
+
+            renderNewsCards(data.news); // 调用你现有的渲染函数
+            renderPagination(totalPages, currentPage); // 调用你现有的分页函数
+            animateNewsIn(); // 调用你现有的动画函数
+
+        } catch (error) {
+            console.error('获取新闻失败:', error);
+            newsListContainer.innerHTML = `<p class="error-text">無法加載最新消息，請稍後再試。</p>`;
+            renderPagination(0, 1);
+        }
+    }
+
+    // 绑定分类按钮点击事件的辅助函数
+    function bindCategoryButtons() {
+        const categoryNav = document.getElementById('category-nav');
+        if (!categoryNav) return;
+
+        categoryNav.querySelectorAll('.category-btn').forEach(btn => {
+            // 移除旧监听器（如果有）
+            btn.removeEventListener('click', handleCategoryClick); 
+            // 添加新监听器
+            btn.addEventListener('click', handleCategoryClick);
+        });
+    }
+
+    // 分类按钮点击处理函数
+    function handleCategoryClick() {
+        // 'this' 指向被点击的按钮
+        const categoryNav = document.getElementById('category-nav');
+        if (!categoryNav) return;
+
+        // 更新按钮激活状态
+        categoryNav.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        // 获取分类 ID 并加载新闻
+        const categoryId = this.getAttribute('data-category');
+        loadNews(1, categoryId); // 点击分类时，总是加载第一页
+    }
+
+    // *** 修改点：调用新的初始化函数 ***
+    loadCategories(); // 首先加载分类
+    loadNews(1);      // 然后加载第一页的全部新闻
 });
