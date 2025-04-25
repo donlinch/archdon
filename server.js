@@ -4972,6 +4972,34 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 
 });
 
+
+
+
+console.log('註冊路由: /api/news-categories');
+
+// 修改API處理函數
+app.get('/api/news-categories', async (req, res) => {
+    console.log('收到請求: GET /api/news-categories'); // 添加此行
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order 
+            FROM news_categories 
+            WHERE is_active = TRUE
+            ORDER BY display_order ASC, name ASC
+        `);
+        console.log('查詢成功，返回分類數據'); // 添加此行
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('獲取新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
+
+
+
+
 // --- 分類 API (非管理，用於前台展示) ---
 app.get('/api/news-categories', async (req, res) => {
     try {
