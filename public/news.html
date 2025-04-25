@@ -722,6 +722,39 @@
             -webkit-line-clamp: 2;
         }
     }
+
+    .category-navigation {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+
+    .category-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .category-btn {
+        background-color: #f8f8f8;
+        border: none;
+        border-radius: 25px;
+        padding: 8px 20px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .category-btn:hover {
+        background-color: #e0e0e0;
+    }
+
+    .category-btn.active {
+        background-color: #4d59fb;
+        color: white;
+    }
 </style>
 </head>
 <body>
@@ -738,12 +771,17 @@
         </div>
     </div>
     
-    <!-- 分類導航 -->
-    <div class="category-tabs">
-        <a href="#news" class="sort-link active" data-sort="latest">最新消息</a>
-        <a href="#upcoming" class="sort-link" data-sort="upcoming">活動預告</a>
-        <a href="#cooperation" class="sort-link" data-sort="cooperation">合作推廣</a>
+  <!-- 分类导航按钮 -->
+<div class="category-navigation">
+    <div id="category-nav" class="category-buttons">
+      <!-- 这里会通过JavaScript动态填充分类按钮 -->
     </div>
+  </div>
+  
+  <!-- 消息列表容器 -->
+  <div id="news-list" class="news-container">
+    <!-- 消息项将通过JavaScript动态填充 -->
+  </div>
     
     <!-- 浮動角色 -->
     <div class="floating-character pink-character"></div>
@@ -810,5 +848,94 @@
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="news.js"></script>
+    <script>
+
+
+// 获取分类并动态生成导航按钮
+async function loadCategories() {
+  try {
+    const response = await fetch('/api/news-categories?active=true');
+    if (!response.ok) throw new Error('无法加载分类');
+    
+    const categories = await response.json();
+    const categoryNav = document.getElementById('category-nav');
+    
+    // 清空现有按钮
+    categoryNav.innerHTML = '';
+    
+    // 添加"全部"选项
+    categoryNav.innerHTML += `<button class="category-btn active" data-category="">全部消息</button>`;
+    
+    // 添加各分类按钮
+    categories.forEach(category => {
+      categoryNav.innerHTML += `
+        <button class="category-btn" data-category="${category.id}" data-slug="${category.slug}">
+          ${category.name}
+        </button>
+      `;
+    });
+    
+    // 添加点击事件监听
+    document.querySelectorAll('.category-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        // 移除所有按钮的active类
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        // 添加当前按钮的active类
+        this.classList.add('active');
+        // 加载该分类的消息
+        const categoryId = this.getAttribute('data-category');
+        loadNews(categoryId);
+      });
+    });
+  } catch (error) {
+    console.error('加载分类失败:', error);
+  }
+}
+
+// 根据分类ID加载消息
+async function loadNews(categoryId = '') {
+  try {
+    // 构建API URL，如果有分类ID则添加筛选
+    const url = categoryId 
+      ? `/api/news?category_id=${categoryId}&limit=10` 
+      : '/api/news?limit=10';
+      
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('无法加载消息');
+    
+    const data = await response.json();
+    renderNewsList(data.news);
+  } catch (error) {
+    console.error('加载消息失败:', error);
+  }
+}
+
+// 渲染消息列表
+function renderNewsList(newsList) {
+  const newsContainer = document.getElementById('news-list');
+  newsContainer.innerHTML = '';
+  
+  if (newsList.length === 0) {
+    newsContainer.innerHTML = '<p class="no-news">该分类下暂无消息</p>';
+    return;
+  }
+  
+  newsList.forEach(newsItem => {
+    // 这里使用与原页面相似的HTML结构渲染每个消息项
+    // ...现有的渲染逻辑
+  });
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', () => {
+  loadCategories();
+  // 初始加载所有消息
+  loadNews();
+});
+
+
+
+
+    </script>
 </body>
 </html>
