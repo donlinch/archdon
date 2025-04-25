@@ -2753,10 +2753,12 @@ app.delete('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
 
         // 檢查是否有資料被刪除
         if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的報告。' });
+            // 通常不視為錯誤，可能已經被刪除
+            console.warn(`[API DELETE /api/admin/reports] 嘗試刪除報告 ID ${reportId}，但資料庫中找不到。`);
+        } else {
+             console.log(`[API DELETE /api/admin/reports] 報告 ID ${reportId} la成功從資料庫刪除。`);
         }
 
-        console.log(`[API DELETE /api/admin/reports] 報告 ID ${id} la成功從資料庫刪除。`);
         res.status(204).send(); // 成功刪除，無內容返回
     } catch (err) {
         console.error(`[API DELETE /api/admin/reports/${id}] 刪除報告時發生錯誤:`, err);
@@ -3655,18 +3657,51 @@ app.get('/api/music/:id', async (req, res) => {
 app.get('/api/news', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    if (page <= 0 || limit <= 0) { return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); }
+    const category = req.query.category || null; // 新增分類參數
+    
+    if (page <= 0 || limit <= 0) { 
+        return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); 
+    }
+    
     const offset = (page - 1) * limit;
     try {
-        const countResult = await pool.query('SELECT COUNT(*) FROM news');
+        let whereClause = '';
+        const queryParams = [];
+        let paramIndex = 1;
+        
+        // 添加分類過濾條件
+        if (category) {
+            whereClause = `WHERE (c.slug = $${paramIndex} OR c.id = $${paramIndex})`;
+            queryParams.push(category);
+            paramIndex++;
+        }
+        
+        // 首先查詢總數
+        const countQuery = `
+            SELECT COUNT(*) 
+            FROM news n
+            LEFT JOIN news_categories c ON n.category_id = c.id
+            ${whereClause}
+        `;
+        const countResult = await pool.query(countQuery, queryParams);
         const totalItems = parseInt(countResult.rows[0].count);
-
-        const newsResult = await pool.query(`
-            SELECT id, title, event_date, summary, thumbnail_url, like_count, updated_at
-            FROM news
-            ORDER BY event_date DESC, id DESC
-            LIMIT $1 OFFSET $2
-        `, [limit, offset]);
+        
+        // 複製查詢參數，添加limit和offset
+        const dataQueryParams = [...queryParams];
+        dataQueryParams.push(limit, offset);
+        
+        // 獲取新聞列表，包含分類信息
+        const newsQuery = `
+            SELECT n.id, n.title, n.event_date, n.summary, n.thumbnail_url, 
+                   n.like_count, n.updated_at,
+                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+            FROM news n
+            LEFT JOIN news_categories c ON n.category_id = c.id
+            ${whereClause}
+            ORDER BY n.event_date DESC, n.id DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+        const newsResult = await pool.query(newsQuery, dataQueryParams);
 
         const totalPages = Math.ceil(totalItems / limit);
         res.status(200).json({
@@ -3681,18 +3716,35 @@ app.get('/api/news', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+// 修改獲取單個新聞API，添加分類信息
 app.get('/api/news/:id', async (req, res) => {
     const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的消息 ID 格式。' }); 
+    }
+    
     try {
-        const result = await pool.query('SELECT id, title, event_date, summary, content, thumbnail_url, image_url, like_count, updated_at FROM news WHERE id = $1', [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到該消息。' }); }
+        const result = await pool.query(`
+            SELECT n.id, n.title, n.event_date, n.summary, n.content, 
+                   n.thumbnail_url, n.image_url, n.like_count, n.updated_at,
+                   c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+            FROM news n
+            LEFT JOIN news_categories c ON n.category_id = c.id
+            WHERE n.id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) { 
+            return res.status(404).json({ error: '找不到該消息。' }); 
+        }
+        
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error(`獲取消息 ID ${id} 時出錯:`, err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
 app.post('/api/news/:id/like', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
@@ -4157,15 +4209,35 @@ adminRouter.get('/news/:id', async (req, res) => {
     }
 });
 adminRouter.post('/news', async (req, res) => {
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    if (!title || title.trim() === '') { return res.status(400).json({ error: '消息標題為必填項。' }); }
+    const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
+    
+    if (!title || title.trim() === '') { 
+        return res.status(400).json({ error: '消息標題為必填項。' }); 
+    }
+    
     try {
-        const result = await pool.query(
-            `INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-             RETURNING *`,
-            [ title.trim(), event_date || null, summary ? summary.trim() : null, content ? content.trim() : null, thumbnail_url ? thumbnail_url.trim() : null, image_url ? image_url.trim() : null ]
-        );
+        // 如果提供了category_id，檢查該分類是否存在
+        if (category_id) {
+            const categoryCheck = await pool.query('SELECT 1 FROM news_categories WHERE id = $1', [category_id]);
+            if (categoryCheck.rowCount === 0) {
+                return res.status(400).json({ error: '所選分類不存在。' });
+            }
+        }
+        
+        const result = await pool.query(`
+            INSERT INTO news (title, event_date, summary, content, thumbnail_url, image_url, category_id, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            RETURNING *
+        `, [ 
+            title.trim(), 
+            event_date || null, 
+            summary ? summary.trim() : null, 
+            content ? content.trim() : null, 
+            thumbnail_url ? thumbnail_url.trim() : null, 
+            image_url ? image_url.trim() : null,
+            category_id || null
+        ]);
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('[受保護 API 錯誤] 新增消息時出錯:', err.stack || err);
@@ -4175,18 +4247,46 @@ adminRouter.post('/news', async (req, res) => {
 adminRouter.put('/news/:id', async (req, res) => {
     const { id } = req.params;
     const newsId = parseInt(id);
-    if (isNaN(newsId)) { return res.status(400).json({ error: '無效的消息 ID 格式。' }); }
-    const { title, event_date, summary, content, thumbnail_url, image_url } = req.body;
-    if (!title || title.trim() === '') { return res.status(400).json({ error: '消息標題為必填項。' }); }
+    if (isNaN(newsId)) { 
+        return res.status(400).json({ error: '無效的消息 ID 格式。' }); 
+    }
+    
+    const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
+    
+    if (!title || title.trim() === '') { 
+        return res.status(400).json({ error: '消息標題為必填項。' }); 
+    }
+    
     try {
-        const result = await pool.query(
-            `UPDATE news
-             SET title = $1, event_date = $2, summary = $3, content = $4, thumbnail_url = $5, image_url = $6, updated_at = NOW()
-             WHERE id = $7
-             RETURNING *`,
-            [ title.trim(), event_date || null, summary ? summary.trim() : null, content ? content.trim() : null, thumbnail_url ? thumbnail_url.trim() : null, image_url ? image_url.trim() : null, newsId ]
-        );
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要更新的消息。' }); }
+        // 如果提供了category_id，檢查該分類是否存在
+        if (category_id) {
+            const categoryCheck = await pool.query('SELECT 1 FROM news_categories WHERE id = $1', [category_id]);
+            if (categoryCheck.rowCount === 0) {
+                return res.status(400).json({ error: '所選分類不存在。' });
+            }
+        }
+        
+        const result = await pool.query(`
+            UPDATE news
+            SET title = $1, event_date = $2, summary = $3, content = $4, 
+                thumbnail_url = $5, image_url = $6, category_id = $7, updated_at = NOW()
+            WHERE id = $8
+            RETURNING *
+        `, [ 
+            title.trim(), 
+            event_date || null, 
+            summary ? summary.trim() : null, 
+            content ? content.trim() : null, 
+            thumbnail_url ? thumbnail_url.trim() : null, 
+            image_url ? image_url.trim() : null,
+            category_id || null,
+            newsId 
+        ]);
+        
+        if (result.rowCount === 0) { 
+            return res.status(404).json({ error: '找不到要更新的消息。' }); 
+        }
+        
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error(`[受保護 API 錯誤] 更新消息 ID ${id} 時出錯:`, err.stack || err);
@@ -4817,5 +4917,133 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
     }
     // ---> 添加結束 <---
 
+});
+
+// --- 分類 API (非管理，用於前台展示) ---
+app.get('/api/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order 
+            FROM news_categories 
+            WHERE is_active = TRUE
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('獲取新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// --- 分類管理 API (需要身份驗證) ---
+adminRouter.get('/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
+            FROM news_categories 
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
+    }
+});
+
+adminRouter.post('/news-categories', async (req, res) => {
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
+    }
+});
+
+adminRouter.put('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE news_categories
+            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
+            WHERE id = $6
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false, categoryId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的分類。' });
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
+    }
+});
+
+adminRouter.delete('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查該分類是否有關聯的新聞
+        const checkResult = await pool.query('SELECT COUNT(*) FROM news WHERE category_id = $1', [categoryId]);
+        if (parseInt(checkResult.rows[0].count) > 0) {
+            return res.status(400).json({ 
+                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。' 
+            });
+        }
+        
+        const result = await pool.query('DELETE FROM news_categories WHERE id = $1', [categoryId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的分類。' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 刪除分類 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
+    }
 });
 
