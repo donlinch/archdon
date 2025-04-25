@@ -3,127 +3,653 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>消息管理 - SunnyYummy</title> <!-- 修改 Title -->
+    <title>消息管理 - SunnyYummy</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 管理頁面通用樣式 (與其他 admin 頁面類似) */
-        body { background-color: #fff; color: #333; }
-        .admin-container { max-width: 1100px; margin: 2rem auto; padding: 1.5rem; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        #news-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; } /* 修改 ID */
-        #news-list-table th, #news-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* 修改 ID */
-        #news-list-table th { background-color: #e9ecef; } /* 修改 ID */
-        /* 列寬調整 */
+        :root {
+            --primary-color: #4d59fb;
+            --secondary-color: #05c2c9;
+            --accent-color: #ff7e5f;
+            --background-color: #f7f9fc;
+            --text-color: #323649;
+            --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+            --border-radius: 12px;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            padding-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Admin Navigation */
+        .admin-nav {
+            background-color: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 0.5rem 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-nav a {
+            padding: 0.8rem 1.2rem;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: var(--border-radius);
+            transition: all var(--transition-speed) ease;
+        }
+
+        .admin-nav a:hover {
+            color: var(--primary-color);
+            background-color: rgba(77, 89, 251, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .admin-nav a.active {
+            color: white;
+            background-color: var(--primary-color);
+        }
+
+        /* Container for admin content */
+        .admin-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Page title and actions */
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .page-title {
+            margin: 0;
+            color: var(--text-color);
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .home-link {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            transition: all var(--transition-speed) ease;
+            font-weight: 500;
+        }
+
+        .home-link:hover {
+            background-color: #f0f0f0;
+        }
+
+        .home-link i {
+            margin-right: 0.5rem;
+        }
+
+        .add-news-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: all var(--transition-speed) ease;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .add-news-btn:hover {
+            background-color: #3842d4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(77, 89, 251, 0.2);
+        }
+
+        /* Table styling */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        #news-list-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 0;
+            background-color: white;
+            table-layout: fixed;
+        }
+
+        #news-list-table th, 
+        #news-list-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        #news-list-table th {
+            background-color: #f8f9fa;
+            color: var(--text-color);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            box-shadow: 0 1px 0 #eee;
+        }
+
+        #news-list-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        #news-list-table tr:hover td {
+            background-color: rgba(77, 89, 251, 0.02);
+        }
+
+        /* Table column widths */
         #news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 8%; }  /* ID */
         #news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 30%; } /* 標題 */
         #news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 15%; } /* 活動日期 */
-        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 12%; text-align: center;} /* 縮圖 */
+        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 12%; text-align: center; } /* 縮圖 */
         #news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 15%; } /* 更新時間 */
-        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
+        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 20%; text-align: center; } /* 操作 */
 
-        .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;}
-        .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
-        .delete-btn { background-color: #dc3545; border-color: #dc3545; color: white; }
-        .add-news-btn { display: inline-block; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-bottom: 1.5rem; } /* 修改 Class 和顏色 */
+        /* Table thumbnail */
+        .thumbnail-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            transition: transform var(--transition-speed) ease;
+        }
 
-        /* --- Modal 樣式 (與其他 admin 頁面相同) --- */
-        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; padding-top: 50px; }
-        .modal[style*="display: flex"] { display: flex !important; }
-        .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; max-width: 700px; width: 90%; margin: auto; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); } /* 加寬 Modal */
-        .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 28px; font-weight: bold; color: #aaa; line-height: 1; }
-        .close-btn:hover { color: #333; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555; }
-        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="url"], .form-group input[type="date"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .form-group textarea { resize: vertical; min-height: 100px; } /* 增加 textarea 高度 */
-        .form-actions { margin-top: 1.5rem; text-align: right; padding-top: 1rem; border-top: 1px solid #eee; }
-        .form-actions .action-btn { padding: 10px 15px; margin-left: 10px; border-radius: 5px; }
-        .form-actions .save-btn { background-color: #28a745; border-color: #28a745; color: white; }
-        .form-actions .cancel-btn { background-color: #6c757d; border-color: #6c757d; color: white; }
-        #edit-news-thumbnail-preview, #add-news-thumbnail-preview { max-width: 100px; max-height: 100px; display: none; margin-top: 5px; border: 1px solid #eee; } /* 修改 ID */
-        #edit-news-thumbnail-preview[src], #add-news-thumbnail-preview[src] { display: block; } /* 修改 ID */
-        #edit-news-form-error, #add-news-form-error { color: red; margin-top: 10px; font-size: 0.9em; min-height: 1.2em; } /* 修改 ID */
+        .thumbnail-preview:hover {
+            transform: scale(1.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Action buttons */
+        .action-btn-group {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all var(--transition-speed) ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+        }
+
+        .edit-btn {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .edit-btn:hover {
+            background-color: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        /* Loading state */
+        .loading-text {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            margin-right: 0.5rem;
+            animation: spinner 1s linear infinite;
+        }
+
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal styling */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal[style*="display: flex"] {
+            display: flex !important;
+            animation: modalFadeIn 0.3s;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translate(0, -20px); }
+            to { opacity: 1; transform: translate(0, 0); }
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            max-width: 700px;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: #adb5bd;
+            transition: color var(--transition-speed) ease;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .close-btn:hover {
+            color: #212529;
+            background-color: #f8f9fa;
+        }
+
+        /* Form styling */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(77, 89, 251, 0.15);
+            outline: none;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .thumbnail-preview-container {
+            margin-top: 0.75rem;
+        }
+
+        #edit-news-thumbnail-preview,
+        #add-news-thumbnail-preview {
+            max-width: 120px;
+            max-height: 120px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            display: none;
+            object-fit: cover;
+        }
+
+        #edit-news-thumbnail-preview[src],
+        #add-news-thumbnail-preview[src] {
+            display: block;
+        }
+
+        .form-actions {
+            margin-top: 2rem;
+            text-align: right;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .save-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .save-btn:hover {
+            background-color: #3842d4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(77, 89, 251, 0.2);
+        }
+
+        .cancel-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .cancel-btn:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .form-error {
+            color: #dc3545;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            background-color: rgba(220, 53, 69, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border-left: 3px solid #dc3545;
+            display: none;
+        }
+
+        .form-error:not(:empty) {
+            display: block;
+        }
+
+        /* Helper text and notifications */
+        .helper-text {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .helper-text i {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+            color: var(--primary-color);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .action-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+            }
+
+            #news-list-table {
+                font-size: 0.9rem;
+            }
+
+            #news-list-table th,
+            #news-list-table td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .thumbnail-preview {
+                width: 40px;
+                height: 40px;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- *** 新增: 管理分頁導覽 *** -->
+
     <nav class="admin-nav">
-        <a href="/admin.html">商品管理</a>
+        <a href="/admin.html" class="active">商品管理</a> <!-- 原本就有，設為 active -->
         <a href="/music-admin.html">音樂管理</a>
-        <a href="/news-admin.html" class="active">消息管理</a> 
+        <a href="/news-admin.html" class="active">消息管理</a>
         <a href="/banner-admin.html">輪播圖管理</a>
-        <a href="/figures-admin.html">庫存管理</a>  
-        <!-- 當前頁面設為 active -->        <a href="/games-admin.html" >遊戲管理</a>
-        <a href="/store/report/report-admin.html"  >html報告管理</a>
+        <a href="/figures-admin.html">庫存管理</a> 
         <a href="/sales-report.html"  >銷售報告</a>
+        <a href="/guestbook-admin.html"  >留言管理</a>
+        <a href="/rich/rich-admin.html"  >大富翁管理</a>
+        <a href="/games-admin.html" >遊戲管理</a>
+        <a href="/file-admin.html"  >檔案管理</a>
+        <a href="/store/report/report-admin.html"  >html報告管理</a>
+         <!-- 新增連結 -->
     </nav>
 
+ 
+
     <div class="admin-container">
-        <h1>消息管理</h1>
-        <a href="/" style="display: inline-block; margin-bottom: 1rem;">返回首頁</a>
-        <button class="add-news-btn" onclick="showAddNewsForm()">新增消息</button>
-        <!-- ... rest of the content ... -->
-    </div>
-    <small>若要連結到特定消息，請使用格式： /news/[消息ID] (例如: /news/4)。請到「消息管理」頁面查看 ID。</small>
-        <h2>現有消息列表</h2> <!-- 修改標題 -->
-        <div id="news-list-container"> <!-- 修改 ID -->
-            <p>正在加載消息...</p> <!-- 修改文字 -->
-            <table id="news-list-table" style="display: none;"> <!-- 修改 ID -->
-                <thead>
-                    <tr> <!-- 修改表頭 -->
-                        <th>ID</th>
-                        <th>標題</th>
-                        <th>活動日期</th>
-                        <th>縮圖預覽</th>
-                        <th>更新時間</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- 消息列將由 JavaScript 動態填入 -->
-                </tbody>
-            </table>
+        <!-- Page header with title and actions -->
+        <div class="page-header">
+            <h1 class="page-title">消息管理</h1>
+            <div class="page-actions">
+                <a href="/" class="home-link"><i class="bi bi-house"></i>返回首頁</a>
+                <button class="add-news-btn" onclick="showAddNewsForm()">
+                    <i class="bi bi-plus-lg"></i>新增消息
+                </button>
+            </div>
         </div>
-    </div> <!-- End of admin-container -->
+
+        <!-- Helper text for users -->
+        <div class="helper-text">
+            <i class="bi bi-info-circle"></i>
+            <span>若要連結到特定消息，請使用格式： /news/[消息ID] (例如: /news/4)</span>
+        </div>
+
+        <!-- News list section -->
+        <h2>現有消息列表</h2>
+        <div id="news-list-container">
+            <div class="loading-text">
+                <i class="bi bi-arrow-repeat spinner"></i>正在加載消息...
+            </div>
+            <div class="table-container">
+                <table id="news-list-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>標題</th>
+                            <th>活動日期</th>
+                            <th>縮圖預覽</th>
+                            <th>更新時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 消息列將由 JavaScript 動態填入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Add News Modal -->
-    <div id="add-news-modal" class="modal"> <!-- 修改 ID -->
+    <div id="add-news-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeAddNewsModal()">×</span> <!-- 修改 onclick -->
-            <h2>新增消息</h2> <!-- 修改標題 -->
-            <form id="add-news-form"> <!-- 修改 ID -->
-                <div class="form-group"> <label for="add-news-title">標題:</label> <input type="text" id="add-news-title" name="title" required> </div>
-                <div class="form-group"> <label for="add-news-event-date">活動日期 (可選):</label> <input type="date" id="add-news-event-date" name="event_date"> </div>
-                <div class="form-group"> <label for="add-news-summary">簡述 (列表顯示):</label> <textarea id="add-news-summary" name="summary" rows="3"></textarea> </div>
-                <div class="form-group"> <label for="add-news-content">完整內容 (彈窗顯示):</label> <textarea id="add-news-content" name="content" rows="6"></textarea> </div>
-                <div class="form-group"> <label for="add-news-thumbnail-url">縮圖路徑:</label> <input type="text" id="add-news-thumbnail-url" name="thumbnail_url" placeholder="例如: /images/news_thumb.jpg"> <img id="add-news-thumbnail-preview" src="" alt="縮圖預覽"> </div>
-                <div class="form-group"> <label for="add-news-image-url">大圖路徑 (彈窗用):</label> <input type="text" id="add-news-image-url" name="image_url" placeholder="例如: /images/news_large.jpg"> </div>
-                <!-- Like Count 由後端管理，不在這裡新增 -->
-                <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddNewsModal()">取消</button> </div>
-                <p id="add-news-form-error"></p> <!-- 修改 ID -->
+            <div class="modal-header">
+                <h2 class="modal-title">新增消息</h2>
+                <button type="button" class="close-btn" onclick="closeAddNewsModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="add-news-form">
+                <div class="form-group">
+                    <label for="add-news-title">標題:</label>
+                    <input type="text" id="add-news-title" name="title" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-news-event-date">活動日期 (可選):</label>
+                    <input type="date" id="add-news-event-date" name="event_date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="add-news-summary">簡述 (列表顯示):</label>
+                    <textarea id="add-news-summary" name="summary" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="add-news-content">完整內容 (彈窗顯示):</label>
+                    <textarea id="add-news-content" name="content" class="form-control" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="add-news-thumbnail-url">縮圖路徑:</label>
+                    <input type="text" id="add-news-thumbnail-url" name="thumbnail_url" class="form-control" placeholder="例如: /images/news_thumb.jpg">
+                    <div class="thumbnail-preview-container">
+                        <img id="add-news-thumbnail-preview" src="" alt="縮圖預覽">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="add-news-image-url">大圖路徑 (彈窗用):</label>
+                    <input type="text" id="add-news-image-url" name="image_url" class="form-control" placeholder="例如: /images/news_large.jpg">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="action-btn cancel-btn" onclick="closeAddNewsModal()">
+                        <i class="bi bi-x"></i>取消
+                    </button>
+                    <button type="submit" class="action-btn save-btn">
+                        <i class="bi bi-check2"></i>確認新增
+                    </button>
+                </div>
+                <div id="add-news-form-error" class="form-error"></div>
             </form>
         </div>
     </div>
 
     <!-- Edit News Modal -->
-    <div id="edit-news-modal" class="modal"> <!-- 修改 ID -->
+    <div id="edit-news-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeEditNewsModal()">×</span> <!-- 修改 onclick -->
-            <h2>編輯消息</h2> <!-- 修改標題 -->
-            <form id="edit-news-form"> <!-- 修改 ID -->
+            <div class="modal-header">
+                <h2 class="modal-title">編輯消息</h2>
+                <button type="button" class="close-btn" onclick="closeEditNewsModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="edit-news-form">
                 <input type="hidden" id="edit-news-id">
-                <div class="form-group"> <label for="edit-news-title">標題:</label> <input type="text" id="edit-news-title" name="title" required> </div>
-                <div class="form-group"> <label for="edit-news-event-date">活動日期 (可選):</label> <input type="date" id="edit-news-event-date" name="event_date"> </div>
-                <div class="form-group"> <label for="edit-news-summary">簡述 (列表顯示):</label> <textarea id="edit-news-summary" name="summary" rows="3"></textarea> </div>
-                <div class="form-group"> <label for="edit-news-content">完整內容 (彈窗顯示):</label> <textarea id="edit-news-content" name="content" rows="6"></textarea> </div>
-                <div class="form-group"> <label for="edit-news-thumbnail-url">縮圖路徑:</label> <input type="text" id="edit-news-thumbnail-url" name="thumbnail_url"> <img id="edit-news-thumbnail-preview" src="" alt="縮圖預覽"> </div>
-                <div class="form-group"> <label for="edit-news-image-url">大圖路徑 (彈窗用):</label> <input type="text" id="edit-news-image-url" name="image_url"> </div>
-                 <!-- Like Count 通常不在這裡編輯，可以在列表查看 -->
-                <div class="form-actions"> <button type="submit" class="action-btn save-btn">儲存變更</button> <button type="button" class="action-btn cancel-btn" onclick="closeEditNewsModal()">取消</button> </div>
-                <p id="edit-news-form-error"></p> <!-- 修改 ID -->
+                <div class="form-group">
+                    <label for="edit-news-title">標題:</label>
+                    <input type="text" id="edit-news-title" name="title" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-news-event-date">活動日期 (可選):</label>
+                    <input type="date" id="edit-news-event-date" name="event_date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit-news-summary">簡述 (列表顯示):</label>
+                    <textarea id="edit-news-summary" name="summary" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-news-content">完整內容 (彈窗顯示):</label>
+                    <textarea id="edit-news-content" name="content" class="form-control" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-news-thumbnail-url">縮圖路徑:</label>
+                    <input type="text" id="edit-news-thumbnail-url" name="thumbnail_url" class="form-control">
+                    <div class="thumbnail-preview-container">
+                        <img id="edit-news-thumbnail-preview" src="" alt="縮圖預覽">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-news-image-url">大圖路徑 (彈窗用):</label>
+                    <input type="text" id="edit-news-image-url" name="image_url" class="form-control">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="action-btn cancel-btn" onclick="closeEditNewsModal()">
+                        <i class="bi bi-x"></i>取消
+                    </button>
+                    <button type="submit" class="action-btn save-btn">
+                        <i class="bi bi-check2"></i>儲存變更
+                    </button>
+                </div>
+                <div id="edit-news-form-error" class="form-error"></div>
             </form>
         </div>
     </div>
 
-    <script src="news-admin.js"></script> <!-- 修改 JS 文件名 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="news-admin.js"></script>
 </body>
 </html>
