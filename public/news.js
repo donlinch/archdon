@@ -1,5 +1,8 @@
 // news.js
 document.addEventListener('DOMContentLoaded', () => {
+    // 加载分类
+    loadCategories();
+    
     // 獲取DOM元素
     const newsListContainer = document.getElementById('news-list');
     const paginationControls = document.getElementById('pagination-controls');

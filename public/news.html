@@ -779,25 +779,17 @@
   </div>
   
   <!-- 消息列表容器 -->
-  <div id="news-list" class="news-container">
-    <!-- 消息项将通过JavaScript动态填充 -->
+  <div class="news-container">
+    <div id="news-list" class="news-list">
+      <!-- 这里会加载新闻 -->
+    </div>
+    <div id="pagination-controls" class="pagination"></div>
   </div>
     
     <!-- 浮動角色 -->
     <div class="floating-character pink-character"></div>
     <div class="floating-character blue-character"></div>
     <div class="floating-character yellow-character"></div>
-    
-    <!-- 新聞列表 -->
-    <div class="news-container">
-        <div id="news-list" class="news-list">
-            <!-- 新聞將由 JavaScript 動態載入 -->
-            <p>正在加載最新消息...</p>
-        </div>
-        
-        <!-- 分頁控制 -->
-        <div id="pagination-controls" class="pagination"></div>
-    </div>
     
     <!-- 消息詳情 Modal -->
     <div id="news-detail-modal" class="modal">
