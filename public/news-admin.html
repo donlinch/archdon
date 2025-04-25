@@ -483,6 +483,69 @@
                 height: 40px;
             }
         }
+
+        /* 分類管理相關樣式 */
+        .category-management-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+        }
+
+        .section-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .status-inactive {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+        }
+
+        /* 分類表格 */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 0;
+            background-color: white;
+            table-layout: fixed;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .data-table th, 
+        .data-table td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background-color: #f8f9fa;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background-color: rgba(77, 89, 251, 0.02);
+        }
     </style>
 </head>
 <body>
@@ -522,6 +585,47 @@
             <span>若要連結到特定消息，請使用格式： /news/[消息ID] (例如: /news/4)</span>
         </div>
 
+        <!-- 在admin-container內，新聞列表之前添加分類管理區塊 -->
+        <div class="category-management-section">
+            <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                <h3>分類管理 <span class="badge bg-primary" id="category-count">0</span></h3>
+                <button class="add-btn" onclick="showAddCategoryForm()">
+                    <i class="bi bi-plus-lg"></i>新增分類
+                </button>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <span>分類用於對消息進行分組和過濾。您可以在此管理分類，然後在新增/編輯消息時使用它們。</span>
+            </div>
+
+            <div id="category-list-container">
+                <div class="loading-text" id="category-loading">
+                    <i class="bi bi-arrow-repeat spinner"></i>正在加載分類...
+                </div>
+                <div class="table-container">
+                    <table id="category-list-table" class="data-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">ID</th>
+                                <th style="width: 20%;">名稱</th>
+                                <th style="width: 15%;">標識符</th>
+                                <th style="width: 30%;">描述</th>
+                                <th style="width: 10%;">顯示順序</th>
+                                <th style="width: 10%;">狀態</th>
+                                <th style="width: 15%; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 分類列表將由JavaScript動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+        </div>
+
         <!-- News list section -->
         <h2>現有消息列表</h2>
         <div id="news-list-container">
@@ -534,6 +638,7 @@
                         <tr>
                             <th>ID</th>
                             <th>標題</th>
+                            <th>分類</th>
                             <th>活動日期</th>
                             <th>縮圖預覽</th>
                             <th>更新時間</th>
@@ -584,6 +689,13 @@
                 <div class="form-group">
                     <label for="add-news-image-url">大圖路徑 (彈窗用):</label>
                     <input type="text" id="add-news-image-url" name="image_url" class="form-control" placeholder="例如: /images/news_large.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="add-news-category">分類:</label>
+                    <select id="add-news-category" name="category_id" class="form-control">
+                        <option value="">-- 選擇分類 --</option>
+                        <!-- 分類選項將由JavaScript動態填充 -->
+                    </select>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="action-btn cancel-btn" onclick="closeAddNewsModal()">
@@ -636,6 +748,13 @@
                     <label for="edit-news-image-url">大圖路徑 (彈窗用):</label>
                     <input type="text" id="edit-news-image-url" name="image_url" class="form-control">
                 </div>
+                <div class="form-group">
+                    <label for="edit-news-category">分類:</label>
+                    <select id="edit-news-category" name="category_id" class="form-control">
+                        <option value="">-- 選擇分類 --</option>
+                        <!-- 分類選項將由JavaScript動態填充 -->
+                    </select>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="action-btn cancel-btn" onclick="closeEditNewsModal()">
                         <i class="bi bi-x"></i>取消
@@ -645,6 +764,97 @@
                     </button>
                 </div>
                 <div id="edit-news-form-error" class="form-error"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加分類管理模態框 -->
+    <div id="add-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">新增分類</h2>
+                <button type="button" class="close-btn" onclick="closeAddCategoryModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="add-category-form">
+                <div class="form-group">
+                    <label for="add-category-name">名稱:</label>
+                    <input type="text" id="add-category-name" name="name" class="form-control" required>
+                    <small class="text-muted">顯示給用戶的分類名稱，如「最新消息」、「活動公告」等</small>
+                </div>
+                <div class="form-group">
+                    <label for="add-category-slug">標識符:</label>
+                    <input type="text" id="add-category-slug" name="slug" class="form-control" required>
+                    <small class="text-muted">用於URL的標識符，如 news、events 等。只能包含小寫字母、數字和連字符</small>
+                </div>
+                <div class="form-group">
+                    <label for="add-category-description">描述:</label>
+                    <textarea id="add-category-description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="add-category-order">顯示順序:</label>
+                    <input type="number" id="add-category-order" name="display_order" class="form-control" min="0" value="0">
+                    <small class="text-muted">數字越小排序越前面</small>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="add-category-active" name="is_active" class="form-check-input" checked>
+                    <label for="add-category-active" class="form-check-label">啟用此分類</label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="action-btn cancel-btn" onclick="closeAddCategoryModal()">
+                        <i class="bi bi-x"></i>取消
+                    </button>
+                    <button type="submit" class="action-btn save-btn">
+                        <i class="bi bi-check2"></i>確認新增
+                    </button>
+                </div>
+                <div id="add-category-form-error" class="form-error"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 編輯分類模態框 -->
+    <div id="edit-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">編輯分類</h2>
+                <button type="button" class="close-btn" onclick="closeEditCategoryModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form id="edit-category-form">
+                <input type="hidden" id="edit-category-id">
+                <div class="form-group">
+                    <label for="edit-category-name">名稱:</label>
+                    <input type="text" id="edit-category-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category-slug">標識符:</label>
+                    <input type="text" id="edit-category-slug" name="slug" class="form-control" required>
+                    <small class="text-muted">用於URL的標識符，如 news、events 等。只能包含小寫字母、數字和連字符</small>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category-description">描述:</label>
+                    <textarea id="edit-category-description" name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category-order">顯示順序:</label>
+                    <input type="number" id="edit-category-order" name="display_order" class="form-control" min="0">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="edit-category-active" name="is_active" class="form-check-input">
+                    <label for="edit-category-active" class="form-check-label">啟用此分類</label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="action-btn cancel-btn" onclick="closeEditCategoryModal()">
+                        <i class="bi bi-x"></i>取消
+                    </button>
+                    <button type="submit" class="action-btn save-btn">
+                        <i class="bi bi-check2"></i>儲存變更
+                    </button>
+                </div>
+                <div id="edit-category-form-error" class="form-error"></div>
             </form>
         </div>
     </div>
