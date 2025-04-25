@@ -340,11 +340,25 @@ function updateCellContents(cellData) {
         return;
     }
     
-    // 更新全局格子信息
-    window.cellInfo = cellData.map(cell => ({
-        title: cell.title || '格子',
-        description: cell.description || '这是一个游戏格子。'
-    }));
+    // 先保存原始的 cellInfo (用於保持沒有更新的格子數據)
+    const originalCellInfo = [...window.cellInfo];
+    
+    // 更新全局格子信息 - 只更新有數據的格子，不影響其他格子
+    cellData.forEach(cell => {
+        const cellIndex = cell.cell_index;
+        
+        // 確保 cellIndex 有效且在範圍內
+        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < originalCellInfo.length) {
+            // 更新格子数据，保留不需要更新的數據
+            originalCellInfo[cellIndex] = {
+                title: cell.title || originalCellInfo[cellIndex].title || '格子',
+                description: cell.description || originalCellInfo[cellIndex].description || '这是一个游戏格子。'
+            };
+        }
+    });
+    
+    // 將更新後的數據賦值給 window.cellInfo
+    window.cellInfo = originalCellInfo;
     
     // 更新 DOM 中的格子
     cellData.forEach(cell => {
@@ -368,7 +382,7 @@ function updateCellContents(cellData) {
         }
     });
     
-    console.log('格子内容已成功更新');
+    console.log('格子内容已成功更新', window.cellInfo);
 }
 
 // 加载模板和初始化模板选择器
