@@ -3657,7 +3657,7 @@ app.get('/api/music/:id', async (req, res) => {
 app.get('/api/news', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const category = req.query.category || null; // 新增分類參數
+    const category = req.query.category || null;
     
     if (page <= 0 || limit <= 0) { 
         return res.status(400).json({ error: '頁碼和每頁數量必須是正整數。' }); 
@@ -3669,10 +3669,18 @@ app.get('/api/news', async (req, res) => {
         const queryParams = [];
         let paramIndex = 1;
         
-        // 添加分類過濾條件
+        // 添加分類過濾條件 - 修改這部分
         if (category) {
-            whereClause = `WHERE (c.slug = $${paramIndex} OR c.id = $${paramIndex})`;
-            queryParams.push(category);
+            // 檢查是否為數字類型
+            if (!isNaN(category)) {
+                // 數字類型，與 ID 比較，使用整數比較
+                whereClause = `WHERE c.id = $${paramIndex}`;
+                queryParams.push(parseInt(category));
+            } else {
+                // 非數字，與 slug 比較，使用字符串比較
+                whereClause = `WHERE c.slug = $${paramIndex}`;
+                queryParams.push(category);
+            }
             paramIndex++;
         }
         
