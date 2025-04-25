@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 修改后的loadCategories函数
 async function loadCategories() {
   try {
-    const response = await fetch('/api/news-categories?active=true');
+    const response = await fetch('/api/news-categories'); 
     
     if (!response.ok) {
       throw new Error('加载分类失败');
@@ -625,6 +625,7 @@ async function loadCategories() {
     
     const categories = await response.json();
     const categoryNav = document.getElementById('category-nav');
+    if (!categoryNav) return; // If nav doesn't exist, exit
     
     // 清空现有按钮
     categoryNav.innerHTML = '';
@@ -647,12 +648,12 @@ async function loadCategories() {
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         const categoryId = this.getAttribute('data-category');
-        loadNews(categoryId);
+        loadNews(1, categoryId); // Always load page 1 when category changes
       });
     });
     
     // 加载所有新闻
-    loadNews();
+    loadNews(1);
   } catch (error) {
     console.error('加载分类失败:', error);
     
@@ -666,24 +667,21 @@ async function loadCategories() {
         <button class="category-btn" data-category="promo">合作推廣</button>
       `;
       
-      // 添加默认分类点击事件
+      // 添加默认分类点击事件 (使用 fetchNewsByFilter 可能不再需要，改為直接調用 loadNews)
       document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
-          // 使用filter筛选，而不是categoryId
-          const filter = this.getAttribute('data-category') || '';
-          fetchNewsByFilter(filter);
+          const categoryId = this.getAttribute('data-category'); // 'news', 'events', 'promo' or ''
+          // --- FIX: Call loadNews with category ID ---
+          loadNews(1, categoryId); // Assuming backend handles slugs or IDs
         });
       });
     }
     
-    // --- DEBUGGING ---
     console.log('Executing fetchNews from catch block due to category load failure.'); 
-    // --- END DEBUGGING ---
-    
-    // 确保新闻内容能够正常加载
-    fetchNews(1);
+    // --- FIX: Ensure fetchNews is called with correct parameters ---
+    loadNews(1); // Load page 1 of all news if categories fail
   }
 }
 
@@ -706,3 +704,51 @@ function fetchNewsByFilter(filter) {
   
   fetchNews(1);
 }
+
+// --- Function to Fetch and Display ALL News in the Table ---
+// --- FIX: Added categoryId parameter and updated URL construction ---
+async function loadNews(page = 1, categoryId = null) { 
+    const newsListContainer = document.getElementById('news-list');
+    const paginationControls = document.getElementById('pagination-controls');
+    if (!newsListContainer || !paginationControls) {
+        console.error("Element not found for news list or pagination");
+        return;
+    }
+    
+    currentPage = page;
+    newsListContainer.innerHTML = '<p>正在加載最新消息...</p>';
+    paginationControls.innerHTML = '';
+    
+    try {
+        // --- FIX: Construct URL correctly ---
+        let url = `/api/news?page=${page}&limit=${itemsPerPage}`;
+        if (categoryId !== null && categoryId !== '') { // Check if categoryId is provided and not empty
+             url += `&category=${categoryId}`; // Use 'category' query param as per backend
+        }
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`獲取新聞失敗 (HTTP ${response.status})`);
+        }
+        
+        const data = await response.json();
+        totalPages = data.totalPages;
+        
+        if (data.news.length === 0) {
+            newsListContainer.innerHTML = '<p>此分類暫無相關消息</p>';
+            renderPagination(0, 1); // Pass 0 total pages
+            return;
+        }
+        
+        renderNewsCards(data.news);
+        renderPagination(totalPages, currentPage);
+        animateNewsIn();
+        
+    } catch (error) {
+        console.error('獲取新聞失敗:', error);
+        newsListContainer.innerHTML = `<p class="error-text">無法加載最新消息，請稍後再試。</p>`;
+        renderPagination(0, 1); // Clear pagination on error
+    }
+}
+
+// ... (rest of the functions: initSwiper, renderNewsCards, renderPagination, openNewsDetailModal, etc.) ...
