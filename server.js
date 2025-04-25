@@ -3761,41 +3761,6 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
-    // --- 在 server.js 的 adminRouter 部分添加 ---
-
-    // GET /api/admin/news-categories/:id - 獲取單個分類進行編輯
-    adminRouter.get('/news-categories/:id', async (req, res) => {
-        const { id } = req.params;
-        const categoryId = parseInt(id);
-
-        // 驗證 ID 是否為有效數字
-        if (isNaN(categoryId)) {
-            return res.status(400).json({ error: '無效的分類 ID 格式。' });
-        }
-
-        try {
-            // 從資料庫查詢特定 ID 的分類
-            const result = await pool.query(
-                `SELECT id, name, slug, description, display_order, is_active 
-                 FROM news_categories 
-                 WHERE id = $1`,
-                [categoryId]
-            );
-
-            // 檢查是否找到分類
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: '找不到該分類。' }); // 返回 404
-            }
-
-            // 返回找到的分類數據
-            res.status(200).json(result.rows[0]);
-
-        } catch (err) {
-            console.error(`[受保護 API 錯誤] 獲取管理分類 ID ${id} 時出錯:`, err.stack || err);
-            res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類詳情' });
-        }
-    });
- 
 
 
 
@@ -4056,6 +4021,55 @@ adminRouter.delete('/identities/:id', async (req, res) => {
         if (result.rowCount === 0) return res.status(404).json({ error: '找不到要刪除的身份' }); res.status(204).send();
     } catch (err) { console.error(`[API DELETE /admin/identities/${id}] Error:`, err); res.status(500).json({ error: '無法刪除身份' }); }
 });
+
+
+
+
+
+
+
+
+    // --- 在 server.js 的 adminRouter 部分添加 ---
+
+    // GET /api/admin/news-categories/:id - 獲取單個分類進行編輯
+    adminRouter.get('/news-categories/:id', async (req, res) => {
+        const { id } = req.params;
+        const categoryId = parseInt(id);
+
+        // 驗證 ID 是否為有效數字
+        if (isNaN(categoryId)) {
+            return res.status(400).json({ error: '無效的分類 ID 格式。' });
+        }
+
+        try {
+            // 從資料庫查詢特定 ID 的分類
+            const result = await pool.query(
+                `SELECT id, name, slug, description, display_order, is_active 
+                 FROM news_categories 
+                 WHERE id = $1`,
+                [categoryId]
+            );
+
+            // 檢查是否找到分類
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: '找不到該分類。' }); // 返回 404
+            }
+
+            // 返回找到的分類數據
+            res.status(200).json(result.rows[0]);
+
+        } catch (err) {
+            console.error(`[受保護 API 錯誤] 獲取管理分類 ID ${id} 時出錯:`, err.stack || err);
+            res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類詳情' });
+        }
+    });
+ 
+
+
+
+
+
+
 
 // --- ★ 新增: 管理員發表新留言 API ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
