@@ -702,6 +702,35 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNews(1, categoryId); // 点击分类时，总是加载第一页
     }
 
+    // 在 loadNews 函數之前添加
+    function renderCategories(categories) {
+        const categoryNav = document.getElementById('category-nav');
+        if (!categoryNav) return;
+        
+        categoryNav.innerHTML = '';
+        
+        // 添加"全部"按鈕
+        const allButton = document.createElement('button');
+        allButton.className = 'category-btn active';
+        allButton.setAttribute('data-category', '');
+        allButton.textContent = '全部消息';
+        categoryNav.appendChild(allButton);
+        
+        // 添加其他分類按鈕
+        categories.forEach(category => {
+            if (category.id === 'all') return; // 跳過已添加的"全部"選項
+            
+            const button = document.createElement('button');
+            button.className = 'category-btn';
+            button.setAttribute('data-category', category.id);
+            button.textContent = category.name;
+            categoryNav.appendChild(button);
+        });
+        
+        // 綁定點擊事件
+        bindCategoryButtons();
+    }
+
     // *** 修改点：调用新的初始化函数 ***
     loadCategories(); // 首先加载分类
     loadNews(1);      // 然后加载第一页的全部新闻
