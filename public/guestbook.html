@@ -140,58 +140,61 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: #ffffff;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
             z-index: 1000;
-            padding: 8px 0;
+            padding: 5px 0;
         }
 
         .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
             list-style: none;
             margin: 0;
-            padding: 0 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 0;
         }
 
         .bottom-nav li {
-            flex: 1;
-            max-width: 80px;
             text-align: center;
         }
 
-        .bottom-nav .nav-link {
+        .bottom-nav a {
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 5px;
             text-decoration: none;
-            color: #666;
-            font-size: 12px;
-            padding: 4px;
-            transition: color 0.3s ease;
+            color: #777;
+            font-size: 0.7rem;
+            transition: all 0.3s;
         }
 
-        .bottom-nav .nav-link:hover,
-        .bottom-nav .nav-link.active {
-            color: #ff6b6b;
+        .bottom-nav a.active {
+            color: #FFB74D; /* 與scores頁面相符 */
+            background-color: rgba(255, 183, 77, 0.1);
+            border-radius: 20px;
+            animation: pulse 2s infinite;
         }
 
         .bottom-nav .icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 4px;
+            font-size: 1.5rem; /* 保留原來的尺寸定義，但下方新增了 img 的 icon */
+            margin-bottom: 3px;
         }
 
-        .bottom-nav .icon i {
-            font-size: 20px;
+        .bottom-nav .icon { /* 從 rich/index.html 複製過來的 img icon 樣式 */
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            margin-bottom: 3px;
         }
 
-        @media screen and (min-width: 768px) {
-            .bottom-nav {
-                display: none;
-            }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         /* --- 留言板內容容器 --- */
