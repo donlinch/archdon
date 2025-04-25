@@ -2,7 +2,7 @@
 
 // 地圖格子資訊 - 每個格子有標題和描述
 // game.js
-let cellInfo = [
+window.cellInfo = [
     { title: "起點", description: "每經過起點可以獲得一次獎勵。" },
     { title: "台北", description: "台灣的首都，這裡有著名的台北101和夜市文化。" },
     { title: "機會", description: "抽取一張機會卡，可能帶來好運或厄運。" },
@@ -108,8 +108,8 @@ function createMonopolyMap() {
 
         const title = document.createElement('div');
         title.className = 'cell-title';
-        // ★★★ 確保 cellInfo[i] 有內容 ★★★
-        title.textContent = cellInfo[i] ? cellInfo[i].title : `格 ${i}`;
+        // ★★★ 確保 cellInfo 和 cellInfo[i] 有內容 ★★★
+        title.textContent = cellInfo && cellInfo[i] ? cellInfo[i].title : `格 ${i}`;
         cell.appendChild(title);
 
         const cellNumber = document.createElement('div');
@@ -130,8 +130,8 @@ function createMonopolyMap() {
         
         // 添加點擊事件
         cell.addEventListener('click', function() {
-            // 確保 cellInfo[i] 有內容
-            if (cellInfo[i]) { // 檢查是否存在對應的格子信息
+            // 確保 cellInfo 和 cellInfo[i] 有內容
+            if (cellInfo && cellInfo[i]) { // 檢查是否存在對應的格子信息
                  showLocationModal(i);
             } else {
                  console.warn(`找不到索引 ${i} 的格子資訊`);
@@ -143,6 +143,12 @@ function createMonopolyMap() {
 }
 // 顯示地點詳情彈窗
 function showLocationModal(cellIndex) {
+    // 確保 cellInfo 和索引有效
+    if (!cellInfo || !cellInfo[cellIndex]) {
+        console.error(`無法顯示格子詳情：找不到索引 ${cellIndex} 的格子資訊`);
+        return;
+    }
+    
     const cell = cellInfo[cellIndex];
     
     // 設置彈窗內容
@@ -370,7 +376,12 @@ function updatePlayersList() {
   
       // 顯示名字和位置
       const playerInfo = document.createElement('span');
-      const locationName = cellInfo[player.position].title;
+      // 安全地存取 cellInfo
+      const position = player.position;
+      let locationName = "未知位置";
+      if (cellInfo && cellInfo[position] && cellInfo[position].title) {
+        locationName = cellInfo[position].title;
+      }
       playerInfo.textContent = `${player.name} (${locationName})`;
       
       if (id === playerId) {

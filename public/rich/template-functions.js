@@ -340,49 +340,52 @@ function updateCellContents(cellData) {
         return;
     }
     
-    // 先保存原始的 cellInfo (用於保持沒有更新的格子數據)
-    const originalCellInfo = [...window.cellInfo];
-    
-    // 更新全局格子信息 - 只更新有數據的格子，不影響其他格子
-    cellData.forEach(cell => {
-        const cellIndex = cell.cell_index;
-        
-        // 確保 cellIndex 有效且在範圍內
-        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < originalCellInfo.length) {
-            // 更新格子数据，保留不需要更新的數據
-            originalCellInfo[cellIndex] = {
-                title: cell.title || originalCellInfo[cellIndex].title || '格子',
-                description: cell.description || originalCellInfo[cellIndex].description || '这是一个游戏格子。'
-            };
-        }
-    });
-    
-    // 將更新後的數據賦值給 window.cellInfo
-    window.cellInfo = originalCellInfo;
-    
-    // 更新 DOM 中的格子
-    cellData.forEach(cell => {
-        const cellElement = document.getElementById(`cell-${cell.cell_index}`);
-        if (!cellElement) return;
-        
-        // 更新标题
-        const titleElement = cellElement.querySelector('.cell-title');
-        if (titleElement) {
-            titleElement.textContent = cell.title || '格子';
-        }
-        
-        // 应用自定义背景颜色 (如果有)
-        if (cell.cell_bg_color) {
-            cellElement.style.backgroundColor = cell.cell_bg_color;
-            cellElement.setAttribute('data-custom-style', 'true');
+    try {
+        // 直接使用 cellData 更新全局 cellInfo 变量
+        // 检查 cellInfo 是否是一个有效的全局变量
+        if (typeof cellInfo !== 'undefined') {
+            // 根据 cell_index 更新目标格子
+            cellData.forEach(cell => {
+                const index = cell.cell_index;
+                if (index !== undefined && index >= 0 && index < cellInfo.length) {
+                    cellInfo[index] = {
+                        title: cell.title || '格子',
+                        description: cell.description || '这是一个游戏格子。'
+                    };
+                }
+            });
+            
+            console.log('格子信息已更新', cellInfo);
         } else {
-            cellElement.removeAttribute('data-custom-style');
-            // 恢复为模板默认颜色
-            cellElement.style.backgroundColor = '';
+            console.error('全局 cellInfo 变量不存在，无法更新');
         }
-    });
-    
-    console.log('格子内容已成功更新', window.cellInfo);
+        
+        // 更新 DOM 中的格子
+        cellData.forEach(cell => {
+            const cellElement = document.getElementById(`cell-${cell.cell_index}`);
+            if (!cellElement) return;
+            
+            // 更新标题
+            const titleElement = cellElement.querySelector('.cell-title');
+            if (titleElement) {
+                titleElement.textContent = cell.title || '格子';
+            }
+            
+            // 应用自定义背景颜色 (如果有)
+            if (cell.cell_bg_color) {
+                cellElement.style.backgroundColor = cell.cell_bg_color;
+                cellElement.setAttribute('data-custom-style', 'true');
+            } else {
+                cellElement.removeAttribute('data-custom-style');
+                // 恢复为模板默认颜色
+                cellElement.style.backgroundColor = '';
+            }
+        });
+        
+        console.log('DOM 格子内容已成功更新');
+    } catch (error) {
+        console.error('更新格子内容时发生错误:', error);
+    }
 }
 
 // 加载模板和初始化模板选择器
