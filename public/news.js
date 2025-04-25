@@ -675,26 +675,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 绑定分类按钮点击事件的辅助函数
-    function bindCategoryButtons() {
-        const categoryNav = document.getElementById('category-nav');
-        if (!categoryNav) return;
+    function bindCategoryLinks() {
+        const categoryTabs = document.getElementById('category-tabs');
+        if (!categoryTabs) return;
 
-        categoryNav.querySelectorAll('.category-btn').forEach(btn => {
+        categoryTabs.querySelectorAll('.category-link').forEach(link => {
             // 移除旧监听器（如果有）
-            btn.removeEventListener('click', handleCategoryClick); 
+            link.removeEventListener('click', handleCategoryClick); 
             // 添加新监听器
-            btn.addEventListener('click', handleCategoryClick);
+            link.addEventListener('click', handleCategoryClick);
         });
     }
 
     // 分类按钮点击处理函数
-    function handleCategoryClick() {
-        // 'this' 指向被点击的按钮
-        const categoryNav = document.getElementById('category-nav');
-        if (!categoryNav) return;
+    function handleCategoryClick(event) {
+        event.preventDefault();
+        
+        // 'this' 指向被点击的链接
+        const categoryTabs = document.getElementById('category-tabs');
+        if (!categoryTabs) return;
 
-        // 更新按钮激活状态
-        categoryNav.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        // 更新链接激活状态
+        categoryTabs.querySelectorAll('.category-link').forEach(l => l.classList.remove('active'));
         this.classList.add('active');
 
         // 获取分类 ID 并加载新闻
@@ -704,31 +706,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 在 loadNews 函數之前添加
     function renderCategories(categories) {
-        const categoryNav = document.getElementById('category-nav');
-        if (!categoryNav) return;
+        const categoryTabs = document.getElementById('category-tabs');
+        if (!categoryTabs) return;
         
-        categoryNav.innerHTML = '';
+        categoryTabs.innerHTML = '';
         
-        // 添加"全部"按鈕
-        const allButton = document.createElement('button');
-        allButton.className = 'category-btn active';
-        allButton.setAttribute('data-category', '');
-        allButton.textContent = '全部消息';
-        categoryNav.appendChild(allButton);
+        // 添加"全部"链接
+        const allLink = document.createElement('a');
+        allLink.className = 'category-link active';
+        allLink.setAttribute('data-category', '');
+        allLink.href = '#';
+        allLink.textContent = '全部消息';
+        categoryTabs.appendChild(allLink);
         
-        // 添加其他分類按鈕
+        // 添加其他分類链接
         categories.forEach(category => {
             if (category.id === 'all') return; // 跳過已添加的"全部"選項
             
-            const button = document.createElement('button');
-            button.className = 'category-btn';
-            button.setAttribute('data-category', category.id);
-            button.textContent = category.name;
-            categoryNav.appendChild(button);
+            const link = document.createElement('a');
+            link.className = 'category-link';
+            link.setAttribute('data-category', category.id);
+            link.href = '#';
+            link.textContent = category.name;
+            categoryTabs.appendChild(link);
         });
         
         // 綁定點擊事件
-        bindCategoryButtons();
+        bindCategoryLinks();
     }
 
     // *** 修改点：调用新的初始化函数 ***

@@ -722,49 +722,6 @@
             -webkit-line-clamp: 2;
         }
     }
-
-    .category-navigation {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 20px;
-        overflow-x: auto; /* 水平滚动，以防分类过多 */
-        padding: 10px 0;
-        background-color: rgba(255, 255, 255, 0.9); /* 稍微透明的背景 */
-        position: sticky; /* 滚动时固定在顶部 */
-        top: 0;
-        z-index: 50; /* 确保在 banner 之上，但在 modal 之下 */
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-
-    .category-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        margin: 20px 0;
-    }
-
-    .category-btn {
-        padding: 8px 16px;
-        border-radius: 20px;
-        background: #f0f0f0;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-    .category-btn.active {
-        background: #6c5ce7;
-        color: white;
-    }
-
-    /* 滚动条样式 (可选，美化滚动条) */
-    .category-navigation::-webkit-scrollbar {
-        height: 4px;
-    }
-    .category-navigation::-webkit-scrollbar-thumb {
-        background: #ccc;
-        border-radius: 2px;
-    }
 </style>
 </head>
 <body>
@@ -781,13 +738,11 @@
         </div>
     </div>
     
-    <!-- 分类导航按钮 -->
-    <div class="category-navigation">
-        <div id="category-nav" class="category-buttons"></div>
+    <!-- 分類導航 (Modified to match index.html) -->
+    <div id="category-tabs" class="category-tabs">
+        <!-- Category links/buttons will be dynamically inserted here by news.js -->
+        <a href="#" class="active">載入中...</a> <!-- Placeholder -->
     </div>
-    
-    <!-- 分類導航 -->
-   
     
     <!-- 浮動角色 -->
     <div class="floating-character pink-character"></div>
