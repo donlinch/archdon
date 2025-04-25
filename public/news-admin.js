@@ -523,4 +523,43 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndDisplayNews(); // *** 修改調用函數 ***
     fetchAndDisplayCategories();
 
+    // 分页切换功能
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // 初始化显示默认标签页
+    showTabContent('news-management');
+
+    // 为标签按钮添加点击事件
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.getAttribute('data-target');
+            
+            // 更新按钮状态
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // 显示对应内容
+            showTabContent(targetId);
+        });
+    });
+
+    // 显示特定标签页内容
+    function showTabContent(targetId) {
+        tabContents.forEach(content => {
+            if (content.id === targetId) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+        
+        // 根据当前标签页加载相应数据
+        if (targetId === 'news-management') {
+            fetchAndDisplayNews();
+        } else if (targetId === 'category-management') {
+            fetchAndDisplayCategories();
+        }
+    }
+
 }); // End of DOMContentLoaded 
