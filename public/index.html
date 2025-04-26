@@ -22,6 +22,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     
     <!-- Favicon -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
@@ -93,6 +95,7 @@ body {
 .category-tabs {
     display: flex;
     justify-content: center;
+    align-items: center; /* 垂直居中 */
     padding: 12px 16px;
     background-color: rgba(255, 255, 255, 0.95);
     position: sticky;
@@ -100,36 +103,46 @@ body {
     z-index: 30;
     backdrop-filter: blur(8px);
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    flex-wrap: wrap; /* 允許換行 */
+    gap: 8px; /* 按鈕間隙 */
 }
 
-.category-tabs a {
+/* 分類/排序按鈕共享樣式 */
+.filter-btn {
     padding: 8px 16px;
-    margin: 0 6px;
+    margin: 0; /* 移除舊的 margin */
     border-radius: 20px;
     text-decoration: none;
     font-weight: bold;
     font-size: 14px;
     transition: all 0.3s;
+    border: none; /* 移除可能的邊框 */
+    cursor: pointer;
+    background-color: #90CAF9; /* 預設藍色 */
+    color: white;
+    display: inline-block; /* 確保正確顯示 */
 }
 
-.category-tabs a.active {
+.filter-btn.active {
     background-color: #FFB74D; /* 黃色 */
     color: white;
     box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
 }
 
-.category-tabs a:not(.active) {
-    background-color: #90CAF9; /* 藍色 */
-    color: white;
-}
-
-.category-tabs a:hover {
+.filter-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.category-tabs a:active {
+.filter-btn:active {
     transform: translateY(1px);
+}
+
+/* 排序和分類按鈕之間的間隔 (可選) */
+#category-filter-buttons {
+    margin-left: 10px;
+    display: inline-flex; /* 讓內部按鈕水平排列 */
+    gap: 8px; /* 分類按鈕內部間隙 */
 }
 
 /* --- 浮動角色 --- */
@@ -719,10 +732,14 @@ body {
         </div>
     </div>
     
-    <!-- 分類導航 -->
+    <!-- 分類/排序標籤 -->
     <div class="category-tabs">
-        <a href="#latest" class="sort-link active" data-sort="latest">最新商品</a>
-        <a href="#popular" class="sort-link" data-sort="popular">熱門商品</a>
+        <!-- 排序按鈕 -->
+        <button class="filter-btn sort-link active" data-sort="latest">最新</button>
+        <button class="filter-btn sort-link" data-sort="popular">熱門</button>
+        
+        <!-- 分類按鈕容器 (JavaScript 將填入按鈕) -->
+        <div id="category-filter-buttons"></div> 
     </div>
     
     <!-- 浮動角色 -->
@@ -779,7 +796,7 @@ body {
     </footer>
     
     <!-- Swiper JS -->
-    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

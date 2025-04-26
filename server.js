@@ -3631,15 +3631,44 @@ app.get('/api/products/categories', async (req, res) => {
 });
 
 app.get('/api/products', async (req, res) => {
+    // 同時讀取 sort 和 category 參數
     const sortBy = req.query.sort || 'latest';
+    const category = req.query.category || null; // 獲取分類參數
+    
+    let queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products`;
+    const queryParams = [];
+    let paramIndex = 1;
+    
+    // 構建 WHERE 子句
+    let whereClauses = [];
+    if (category && category !== 'All') { // 如果提供了分類且不是 'All'
+        whereClauses.push(`category = $${paramIndex++}`);
+        queryParams.push(category);
+    }
+    // 如果未來有其他篩選條件，可以在這裡加入 whereClauses.push(...)
+    
+    if (whereClauses.length > 0) {
+        queryText += ' WHERE ' + whereClauses.join(' AND ');
+    }
+    
+    // 構建 ORDER BY 子句
     let orderByClause = 'ORDER BY created_at DESC, id DESC';
     if (sortBy === 'popular') {
         orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC';
     }
+    queryText += ` ${orderByClause}`;
+    
+    // (可選) 添加分頁邏輯
+    // const limit = parseInt(req.query.limit) || 20; // 例如每頁20個
+    // const page = parseInt(req.query.page) || 1;
+    // const offset = (page - 1) * limit;
+    // queryText += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    // queryParams.push(limit, offset);
+    
+    console.log("Executing SQL:", queryText, queryParams); // 調試用
+    
     try {
-        // 修改：在 SELECT 語句中加入 category
-        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products ${orderByClause}`;
-        const result = await pool.query(queryText);
+        const result = await pool.query(queryText, queryParams);
         res.json(result.rows);
     } catch (err) {
         console.error('獲取商品列表時出錯:', err);

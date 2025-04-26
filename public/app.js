@@ -4,10 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const grid = document.getElementById('product-grid');
     const sortLinks = document.querySelectorAll('.sort-link');
     const backToTopButton = document.getElementById('back-to-top');
+    const categoryFilterContainer = document.getElementById('category-filter-buttons');
+    
+    // 新增: 追蹤當前狀態
+    let currentSort = 'latest'; 
+    let currentCategory = 'All'; // 預設顯示全部
     
     // 初始化各功能
     initSwiper();
-    fetchProducts('latest');
+    fetchCategoriesAndProducts();
     setupSortLinks();
     setupBackToTop();
     setupCharacterInteractions();
@@ -99,7 +104,61 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 從API獲取商品數據
      */
-    async function fetchProducts(sortBy = 'latest') {
+    async function fetchCategoriesAndProducts() {
+        await fetchAndDisplayCategories();
+        fetchProducts(currentSort, currentCategory);
+    }
+    
+    async function fetchAndDisplayCategories() {
+        if (!categoryFilterContainer) return;
+        
+        categoryFilterContainer.innerHTML = '';
+        
+        // 創建 "全部" 按鈕
+        const allButton = createCategoryButton('All', '全部');
+        allButton.classList.add('active');
+        categoryFilterContainer.appendChild(allButton);
+        
+        try {
+            const response = await fetch('/api/products/categories');
+            if (!response.ok) throw new Error(`無法獲取分類 (HTTP ${response.status})`);
+            const categories = await response.json();
+            
+            categories.forEach(category => {
+                const button = createCategoryButton(category, category);
+                categoryFilterContainer.appendChild(button);
+            });
+            
+        } catch (error) {
+            console.error('獲取分類列表失敗:', error);
+        }
+    }
+    
+    function createCategoryButton(categoryValue, categoryText) {
+        const button = document.createElement('button');
+        button.classList.add('filter-btn', 'category-link');
+        button.dataset.category = categoryValue;
+        button.textContent = categoryText;
+        button.addEventListener('click', handleCategoryClick);
+        return button;
+    }
+    
+    function handleCategoryClick(event) {
+        const selectedCategory = event.target.dataset.category;
+        if (selectedCategory === currentCategory) return;
+        
+        currentCategory = selectedCategory;
+        
+        document.querySelectorAll('.category-link').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        fetchProducts(currentSort, currentCategory);
+    }
+    
+    /**
+     * 從API獲取商品數據
+     */
+    async function fetchProducts(sortBy = 'latest', category = 'All') {
         if (!grid) {
             console.error("商品格線元素未找到！");
             return;
@@ -107,7 +166,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         grid.innerHTML = '<p class="loading-text">正在加載商品...</p>';
         
-        let apiUrl = `/api/products${sortBy === 'popular' ? '?sort=popular' : ''}`;
+        currentSort = sortBy;
+        currentCategory = category;
+        
+        let apiUrl = '/api/products';
+        const params = new URLSearchParams();
+        if (sortBy === 'popular') {
+            params.append('sort', 'popular');
+        }
+        if (category && category !== 'All') {
+            params.append('category', category);
+        }
+        const queryString = params.toString();
+        if (queryString) {
+            apiUrl += `?${queryString}`;
+        }
+        
+        console.log("Fetching products from:", apiUrl);
         
         try {
             const response = await fetch(apiUrl);
@@ -127,65 +202,52 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function displayProducts(productList) {
         if (!grid) return;
-        grid.innerHTML = ''; // 清空現有商品
+        grid.innerHTML = '';
 
         if (!productList || productList.length === 0) {
-            grid.innerHTML = '<p class="no-products">目前沒有商品可顯示。</p>';
+            grid.innerHTML = '<p class="no-products">目前沒有符合條件的商品。</p>';
             return;
         }
 
         productList.forEach(product => {
-            // 創建卡片容器 div (取代之前的 a 標籤)
             const cardContainer = document.createElement('div');
-            // 添加 product-card 和動畫 class
             cardContainer.className = 'product-card animate__animated animate__fadeIn';
 
-            // 設置點擊事件 (打開連結並記錄點擊)
             if (product.seven_eleven_url) {
-                cardContainer.style.cursor = 'pointer'; // 確保滑鼠指標是可點擊的樣式
+                cardContainer.style.cursor = 'pointer';
                 cardContainer.addEventListener('click', (event) => {
-                    // 如果未來添加了收藏按鈕，防止點擊按鈕時也觸發卡片點擊
-                    // if (event.target.closest('.favorite-btn')) return;
-
-                    event.preventDefault(); // 阻止可能的默認行為
-
-                    // 記錄點擊 (如果商品有 ID)
+                    if (event.target.closest('.favorite-btn')) return;
+                    event.preventDefault();
                     if (product.id) {
                         fetch(`/api/products/${product.id}/click`, { method: 'POST' })
                             .catch(err => {
                                 console.error(`記錄商品 ${product.id} 點擊時網路錯誤:`, err);
                             });
                     }
-                    // 在新分頁打開連結
                     window.open(product.seven_eleven_url, '_blank');
                 });
             }
 
-            // 使用新的 HTML 結構創建卡片內容
-            cardContainer.innerHTML = `
-                <div class="position-relative">
-                    <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
-                    ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
-                    <!-- 未來如果需要，可以在這裡放收藏按鈕 -->
-                    <!-- <button class="favorite-btn">
-                        <i class="bi bi-heart"></i>
-                    </button> -->
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">${product.name || '未命名商品'}</h5>
-                    ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>' /* 如果沒有描述，用空格佔位以維持高度 */}
-                </div>
-                 <!-- 未來如果需要，可以在這裡放 "加入購物車" 提示 -->
-                 <div class="add-hint">
-                     <i class="bi bi-plus-circle"></i> 點擊加入購物車 
-                 </div> 
-            `;
+             // *** 檢查這段程式碼的結尾 ***
+             cardContainer.innerHTML = ` 
+             <div class="position-relative">
+                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
+                 ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
+                 <!-- (可選) 在此顯示分類 -->
+                 ${product.category ? `<span class="category-badge">${product.category}</span>` : ''} 
+             </div>
+             <div class="card-body">
+                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
+                 ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>'}
+             </div>
+              <div class="add-hint">
+                  <i class="bi bi-plus-circle"></i> 點擊加入購物車 
+              </div> 
+         `; // <--- 確保這個反引號存在且位置正確
 
-            // 將創建好的卡片添加到商品網格中
             grid.appendChild(cardContainer);
         });
 
-        // 繼續使用現有的 JavaScript 漸入動畫函式
         animateProductsIn();
     }
     
@@ -216,21 +278,15 @@ document.addEventListener('DOMContentLoaded', () => {
             sortLinks.forEach(link => {
                 link.addEventListener('click', (event) => {
                     event.preventDefault();
+                    const clickedSort = link.dataset.sort;
+                    if (clickedSort === currentSort) return;
                     
-                    // 移除所有連結的 active 類
                     sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
-                    // 為當前點擊的連結添加 active 類
                     link.classList.add('active');
                     
-                    // 獲取排序方式
-                    const sortBy = link.dataset.sort;
+                    currentSort = clickedSort;
                     
-                    if (sortBy) {
-                        fetchProducts(sortBy);
-                    } else {
-                        console.warn("排序連結缺少 data-sort 屬性:", link);
-                        fetchProducts();
-                    }
+                    fetchProducts(currentSort, currentCategory);
                 });
             });
         }
@@ -349,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 從API獲取角色設定
             const response = await fetch('/api/floating-characters');
             if (!response.ok) {
-                throw new Error(`獲取浮動角色失敗: HTTP ${response.status}`);
+                throw new Error(`獲取浮動角色設定失敗: HTTP ${response.status}`);
             }
             
             const charactersData = await response.json();
@@ -359,109 +415,83 @@ document.addEventListener('DOMContentLoaded', () => {
             const blueCharacter = document.querySelector('.blue-character');
             const yellowCharacter = document.querySelector('.yellow-character');
             
+            // 清除舊的交互（如果有的話）
+            [pinkCharacter, blueCharacter, yellowCharacter].forEach(el => {
+                if (el) {
+                    const oldBubble = el.querySelector('.character-speech');
+                    if (oldBubble) el.removeChild(oldBubble);
+                    // 移除舊的監聽器是比較複雜的，這裡假設重新設置即可
+                    // 如果遇到問題，可能需要更複雜的事件處理管理
+                }
+            });
+            
             // 設定角色顯示/隱藏
             charactersData.forEach(character => {
                 let characterElement;
                 
                 switch(character.character_type) {
-                    case 'pink':
-                        characterElement = pinkCharacter;
-                        break;
-                    case 'blue':
-                        characterElement = blueCharacter;
-                        break;
-                    case 'yellow':
-                        characterElement = yellowCharacter;
-                        break;
+                    case 'pink': characterElement = pinkCharacter; break;
+                    case 'blue': characterElement = blueCharacter; break;
+                    case 'yellow': characterElement = yellowCharacter; break;
                 }
                 
                 if (characterElement) {
-                    // 設置顯示/隱藏
                     characterElement.style.display = character.is_visible ? 'block' : 'none';
-                    
-                    // 更新圖片
                     if (character.image_url) {
                         characterElement.style.backgroundImage = `url('${character.image_url}')`;
                     }
-                    
-                    // 設置位置
                     if (character.position_top) characterElement.style.top = character.position_top;
                     if (character.position_left) characterElement.style.left = character.position_left;
                     if (character.position_right) characterElement.style.right = character.position_right;
                     
-                    // 設置動畫
+                    characterElement.classList.remove('float1', 'float2', 'float3');
                     if (character.animation_type) {
-                        // 移除所有動畫類
-                        characterElement.classList.remove('float1', 'float2', 'float3');
-                        // 添加新動畫類
                         characterElement.classList.add(character.animation_type);
                     }
                     
-                    // 如果角色可見，設置交互功能
                     if (character.is_visible) {
-                        // 創建對話氣泡
                         const speechBubble = document.createElement('div');
                         speechBubble.className = 'character-speech';
                         characterElement.appendChild(speechBubble);
                         
-                        // 設置對話內容
-                        let speeches = ['嗨！']; // 默認對話
+                        let speeches = ['嗨！'];
                         try {
                             if (character.speech_phrases) {
                                 speeches = JSON.parse(character.speech_phrases);
-                                if (!Array.isArray(speeches)) speeches = ['嗨！'];
+                                if (!Array.isArray(speeches) || speeches.length === 0) speeches = ['嗨！'];
                             }
-                        } catch (e) {
-                            console.warn(`解析角色對話內容時出錯:`, e);
-                        }
+                        } catch (e) { console.warn(`解析角色對話內容時出錯:`, e); }
                         
-                        // 觸摸/點擊事件處理
-                        characterElement.addEventListener('touchstart', handleInteraction, { passive: true });
-                        characterElement.addEventListener('click', handleInteraction);
-                        
-                        function handleInteraction(e) {
-                            // 防止事件冒泡和默認行為
+                        const handleInteraction = (e) => { // 使用箭頭函數以便移除
                             e.stopPropagation();
                             if (e.type === 'click') e.preventDefault();
+                            if (characterElement.classList.contains('touched') || characterElement.classList.contains('bounce-back')) return;
                             
-                            // 已經被觸摸，忽略
-                            if (characterElement.classList.contains('touched') || 
-                                characterElement.classList.contains('bounce-back')) return;
-                            
-                            // 添加觸摸效果
                             characterElement.classList.add('touched');
-                            
-                            // 隨機選擇一句對話
                             const randomSpeech = speeches[Math.floor(Math.random() * speeches.length)];
-                            
-                            // 顯示對話氣泡
                             speechBubble.textContent = randomSpeech;
                             speechBubble.classList.add('visible');
                             
-                            // 1秒後移除觸摸效果，添加彈回動畫
                             setTimeout(() => {
                                 characterElement.classList.remove('touched');
                                 characterElement.classList.add('bounce-back');
-                                
-                                // 1.5秒後隱藏對話氣泡
-                                setTimeout(() => {
-                                    speechBubble.classList.remove('visible');
-                                }, 1500);
-                                
-                                // 動畫結束後移除彈回類
-                                setTimeout(() => {
-                                    characterElement.classList.remove('bounce-back');
-                                }, 800);
+                                setTimeout(() => { speechBubble.classList.remove('visible'); }, 1500);
+                                setTimeout(() => { characterElement.classList.remove('bounce-back'); }, 800);
                             }, 1000);
-                        }
+                        };
+                        
+                        // 移除舊監聽器（雖然可能效果有限）並添加新監聽器
+                        characterElement.removeEventListener('touchstart', handleInteraction);
+                        characterElement.removeEventListener('click', handleInteraction);
+                        characterElement.addEventListener('touchstart', handleInteraction, { passive: true });
+                        characterElement.addEventListener('click', handleInteraction);
                     }
                 }
             });
             
         } catch (err) {
-            console.error('獲取浮動角色設定時出錯:', err);
-            // 使用預設設定作為備份
-            setupDefaultCharacterInteractions();
+            console.error('獲取或設置浮動角色設定時出錯:', err);
+            setupDefaultCharacterInteractions(); // 出錯時使用預設
         }
     }
     
@@ -470,65 +500,47 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function setupDefaultCharacterInteractions() {
         const characters = document.querySelectorAll('.floating-character');
-        
-        // 定義每個角色的對話內容
         const speeches = {
             'pink-character': ['哈囉！', '點我有獎勵哦！', '好可愛～'],
             'blue-character': ['嗨！你好！', '今天過得如何？', '有什麼新商品？'],
             'yellow-character': ['耶！找到我了！', '我們一起玩吧！', '超級開心！']
         };
         
-        // 為每個角色創建對話氣泡元素
         characters.forEach(character => {
-            // 創建對話氣泡
-            const speechBubble = document.createElement('div');
-            speechBubble.className = 'character-speech';
-            character.appendChild(speechBubble);
+            // 確保每個角色只有一個 speechBubble
+            let speechBubble = character.querySelector('.character-speech');
+            if (!speechBubble) {
+                 speechBubble = document.createElement('div');
+                 speechBubble.className = 'character-speech';
+                 character.appendChild(speechBubble);
+            }
+
+            const characterType = Array.from(character.classList).find(cls => cls.includes('-character') && cls !== 'floating-character');
             
-            // 獲取角色類型
-            const characterType = Array.from(character.classList)
-                .find(cls => cls.includes('-character') && cls !== 'floating-character');
-            
-            // 觸摸/點擊事件處理
-            character.addEventListener('touchstart', handleInteraction, { passive: true });
-            character.addEventListener('click', handleInteraction);
-            
-            function handleInteraction(e) {
-                // 防止事件冒泡和默認行為
+            const handleInteraction = (e) => {
                 e.stopPropagation();
                 if (e.type === 'click') e.preventDefault();
+                if (character.classList.contains('touched') || character.classList.contains('bounce-back')) return;
                 
-                // 已經被觸摸，忽略
-                if (character.classList.contains('touched') || 
-                    character.classList.contains('bounce-back')) return;
-                
-                // 添加觸摸效果
                 character.classList.add('touched');
-                
-                // 隨機選擇一句對話
                 const possibleSpeeches = speeches[characterType] || ['嗨！'];
                 const randomSpeech = possibleSpeeches[Math.floor(Math.random() * possibleSpeeches.length)];
-                
-                // 顯示對話氣泡
                 speechBubble.textContent = randomSpeech;
                 speechBubble.classList.add('visible');
                 
-                // 1秒後移除觸摸效果，添加彈回動畫
                 setTimeout(() => {
                     character.classList.remove('touched');
                     character.classList.add('bounce-back');
-                    
-                    // 1.5秒後隱藏對話氣泡
-                    setTimeout(() => {
-                        speechBubble.classList.remove('visible');
-                    }, 1500);
-                    
-                    // 動畫結束後移除彈回類
-                    setTimeout(() => {
-                        character.classList.remove('bounce-back');
-                    }, 800);
+                    setTimeout(() => { speechBubble.classList.remove('visible'); }, 1500);
+                    setTimeout(() => { character.classList.remove('bounce-back'); }, 800);
                 }, 1000);
-            }
+            };
+            
+            // 移除可能存在的舊監聽器並添加
+            character.removeEventListener('touchstart', handleInteraction);
+            character.removeEventListener('click', handleInteraction);
+            character.addEventListener('touchstart', handleInteraction, { passive: true });
+            character.addEventListener('click', handleInteraction);
         });
     }
     
@@ -545,4 +557,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 窗口尺寸改變時重新檢測
     window.addEventListener('resize', detectDevice);
-});
+
+}); // --- End of DOMContentLoaded ---
