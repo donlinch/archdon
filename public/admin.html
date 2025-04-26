@@ -118,6 +118,7 @@
         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; } /* 分類 */
         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 15%; text-align: center;} /* 圖片 */
         #product-list-table th:nth-child(7), #product-list-table td:nth-child(7) { width: 17%; text-align: center;} /* 操作 */
+        #product-list-table th:nth-child(8), #product-list-table td:nth-child(8) { width: 10%; text-align: center;} /* 標籤 */
         
 
  /* --- 標籤管理區塊樣式 (可選) --- */
@@ -533,6 +534,70 @@
         .home-link:hover {
             color: var(--primary-color);
         }
+
+        /* 標籤複選框樣式 */
+        .tags-checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            background-color: #f9f9f9;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .tag-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            background-color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+
+        .tag-checkbox-wrapper:hover {
+            background-color: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .tag-checkbox-wrapper input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+        .tag-checkbox-wrapper label {
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .no-tags-message {
+            color: #888;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            font-size: 0.9em;
+        }
+
+        .product-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+
+        
+
+        
     </style>
 </head>
 <body>
@@ -566,6 +631,7 @@
                        <th>點擊數</th>
                        <th>分類</th>
                        <th>圖片預覽</th>
+                       <th>標籤</th>
                        <th>操作</th>
                    </tr>
                </thead>
@@ -703,6 +769,13 @@
                    <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://...">
                </div>
                
+               <div class="form-group">
+                   <label for="add-tags-container">標籤選擇:</label>
+                   <div id="add-tags-container" class="tags-checkbox-container">
+                       <!-- 將動態填入標籤複選框 -->
+                   </div>
+               </div>
+               
                <div id="add-form-error"></div>
                
                <div class="form-actions">
@@ -751,6 +824,13 @@
                <div class="form-group">
                    <label for="edit-product-seven-eleven-url">7-11 連結:</label>
                    <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://...">
+               </div>
+               
+               <div class="form-group">
+                   <label for="edit-tags-container">標籤選擇:</label>
+                   <div id="edit-tags-container" class="tags-checkbox-container">
+                       <!-- 將動態填入標籤複選框 -->
+                   </div>
                </div>
                
                <div class="form-group">
