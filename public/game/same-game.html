@@ -960,8 +960,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化事件監聽器
     initEventListeners();
     
-    // 直接載入預設模板 (ID: 1)
-    loadGameTemplate('1');
+    // 顯示模板選擇模態框
+    showTemplateSelectionModal();
 });
 
 // 初始化事件監聽器
@@ -1025,21 +1025,39 @@ function initEventListeners() {
 
 // 載入遊戲模板列表
 function loadTemplates() {
+    elements.templatesList.innerHTML = `
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="mt-3">正在載入模板...</p>
+        </div>
+    `;
+    
     fetch('/api/samegame/active-templates')
         .then(response => {
             if (!response.ok) {
-                throw new Error('無法載入模板列表');
+                throw new Error(`無法載入模板列表: ${response.status} ${response.statusText}`);
             }
             return response.json();
         })
-        .then(templates => {
-            renderTemplateSelection(templates);
+        .then(data => {
+            console.log('Templates data:', data);
+            
+            // 檢查數據結構
+            if (!Array.isArray(data)) {
+                if (data.templates && Array.isArray(data.templates)) {
+                    renderTemplateSelection(data.templates);
+                } else {
+                    throw new Error('不正確的模板數據格式');
+                }
+            } else {
+                renderTemplateSelection(data);
+            }
         })
         .catch(error => {
             console.error('載入模板列表出錯:', error);
             elements.templatesList.innerHTML = `
                 <div class="text-center py-4">
-                    <p class="text-danger">載入模板失敗</p>
+                    <p class="text-danger">載入模板失敗: ${error.message}</p>
                     <p class="text-muted">請稍後再試</p>
                 </div>
             `;
@@ -1059,13 +1077,30 @@ function renderTemplateSelection(templates) {
     
     let html = '';
     templates.forEach(template => {
-        // 從模板的關卡中隨機選擇一張圖片
-        const randomLevel = template.levels[Math.floor(Math.random() * template.levels.length)];
-        const randomImage = randomLevel ? randomLevel.images[Math.floor(Math.random() * randomLevel.images.length)] : '';
+        // 嘗試獲取圖片
+        let previewImage = '';
+        
+        // 選項1: 直接使用 cover_image 屬性
+        if (template.cover_image) {
+            previewImage = template.cover_image;
+        } 
+        // 選項2: 嘗試從預覽圖屬性獲取
+        else if (template.preview_image) {
+            previewImage = template.preview_image;
+        }
+        // 選項3: 嘗試從第一個關卡的第一張圖片獲取
+        else if (template.levels && template.levels.length > 0 && 
+                template.levels[0].images && template.levels[0].images.length > 0) {
+            previewImage = template.levels[0].images[0];
+        }
+        // 選項4: 使用預設圖片
+        else {
+            previewImage = '/images/game_placeholder.png';
+        }
         
         html += `
             <div class="template-card" data-id="${template.id}">
-                <div class="template-preview" style="background-image: url(${randomImage})"></div>
+                <div class="template-preview" style="background-image: url(${previewImage})"></div>
                 <div class="template-info">
                     <div class="template-title">${escapeHtml(template.name)}</div>
                     <p class="template-description">${escapeHtml(template.description || '無描述')}</p>
@@ -1113,15 +1148,26 @@ function loadGameTemplate(templateId) {
     fetch(`/api/samegame/play/${templateId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('無法載入遊戲模板數據');
+                throw new Error(`無法載入遊戲模板數據: ${response.status} ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
+            console.log('Template data:', data);
+            
+            // 確認數據結構
+            if (!data.template) {
+                throw new Error('返回的數據中沒有模板信息');
+            }
+            
+            if (!data.levels || !Array.isArray(data.levels) || data.levels.length === 0) {
+                throw new Error('返回的數據中沒有關卡信息或關卡為空');
+            }
+            
             // 保存遊戲數據
             gameState.templateId = data.template.id;
             gameState.templateName = data.template.name;
-            gameState.levels = data.levels || [];
+            gameState.levels = data.levels;
             gameState.maxLevel = gameState.levels.length;
             gameState.leaderboard = data.leaderboard || [];
             
@@ -1139,9 +1185,9 @@ function loadGameTemplate(templateId) {
             console.error('載入遊戲模板出錯:', error);
             elements.loadingContainer.innerHTML = `
                 <div class="text-center">
-                    <p class="text-danger">載入遊戲模板失敗</p>
+                    <p class="text-danger">載入遊戲模板失敗: ${error.message}</p>
                     <p class="text-muted">請稍後再試</p>
-                    <button class="template-btn mt-3" onclick="window.location.reload()">返回</button>
+                    <button class="template-btn mt-3" onclick="showTemplateSelectionModal()">選擇其他模板</button>
                 </div>
             `;
         });
@@ -1169,41 +1215,58 @@ function initializeLevel(levelNum) {
     elements.nextLevelBtn.style.display = 'none';
     elements.fireworksContainer.style.display = 'none';
     
-    // 獲取當前關卡數據
-    const level = gameState.levels.find(l => l.level === levelNum);
-    
-    if (!level) {
-        console.error(`找不到關卡數據: ${levelNum}`);
-        return;
+    try {
+        // 獲取當前關卡數據
+        const level = gameState.levels.find(l => l.level === levelNum);
+        
+        if (!level) {
+            throw new Error(`找不到關卡數據: ${levelNum}`);
+        }
+        
+        // 檢查圖片數據
+        if (!level.images || !Array.isArray(level.images) || level.images.length === 0) {
+            throw new Error(`關卡 ${levelNum} 沒有圖片數據`);
+        }
+        
+        // 設置網格大小 - 針對第1和第2關使用直式佈局
+        if (levelNum <= 2) {
+            elements.gameBoard.className = 'game-board vertical-layout';
+        } else {
+            elements.gameBoard.className = 'game-board';
+            // 檢查並使用關卡列數，如果沒有則使用預設值
+            const columns = level.columns || Math.ceil(Math.sqrt(level.images.length * 2));
+            elements.gameBoard.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+        }
+        
+        // 生成卡片
+        const cardImages = level.images;
+        
+        // 製作牌組 (兩張相同的牌)
+        let cardContents = [...cardImages, ...cardImages];
+        
+        // 洗牌
+        shuffleArray(cardContents);
+        
+        // 創建卡片對象
+        gameState.cards = cardContents.map((content, index) => ({
+            id: index,
+            content: content,
+            flipped: false,
+            matched: false
+        }));
+        
+        // 渲染遊戲板
+        renderGameBoard();
+    } catch (error) {
+        console.error('初始化關卡出錯:', error);
+        elements.gameBoard.innerHTML = `
+            <div class="text-center py-4">
+                <p class="text-danger">初始化關卡失敗: ${error.message}</p>
+                <p class="text-muted">請嘗試重新選擇模板</p>
+                <button class="template-btn mt-3" onclick="showTemplateSelectionModal()">選擇其他模板</button>
+            </div>
+        `;
     }
-    
-    // 設置網格大小 - 針對第1和第2關使用直式佈局
-    if (levelNum <= 2) {
-        elements.gameBoard.className = 'game-board vertical-layout';
-    } else {
-        elements.gameBoard.className = 'game-board';
-        elements.gameBoard.style.gridTemplateColumns = `repeat(${level.columns}, 1fr)`;
-    }
-    
-    // 生成卡片
-    const cardImages = level.images || [];
-    
-    // 製作牌組 (兩張相同的牌)
-    let cardContents = [...cardImages, ...cardImages];
-    
-    // 洗牌
-    shuffleArray(cardContents);
-    
-    // 創建卡片對象
-    gameState.cards = cardContents.map((content, index) => ({
-        id: index,
-        content: content,
-        flipped: false,
-        matched: false
-    }));
-    
-    // 渲染遊戲板
-    renderGameBoard();
 }
 
 // 洗牌算法 (Fisher-Yates)
@@ -1468,6 +1531,11 @@ function showTemplateSelectionModal() {
     
     // 顯示模態框
     showModal(elements.templateSelectionModal);
+    
+    // 如果遊戲區域是隱藏的，隱藏載入容器
+    if (elements.gameArea.style.display === 'none') {
+        elements.loadingContainer.style.display = 'none';
+    }
 }
 
 // 顯示模態框
