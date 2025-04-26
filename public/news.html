@@ -46,9 +46,10 @@
     /* --- Banner 樣式 --- */
     .banner-container {
         width: 100%;
-        padding-bottom: 56.25%; /* 16:9 比例 */
-        position: relative;
-        overflow: hidden;
+    height: 16rem; /* 手機版高度 */
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
     }
 
     .swiper-container {
@@ -666,6 +667,13 @@
         .desktop-footer {
             display: none;
         }
+
+        .banner-container {
+        height: 16rem; /* 平板高度 */
+        max-width: 28rem;
+        margin: 0 auto;
+    }
+
     }
 
     @media (min-width: 768px) {
@@ -676,7 +684,10 @@
         .news-card .thumbnail {
             width: 150px;
             height: 150px;
+            
         }
+
+        
         
         body {
         padding-bottom: 70px; /* 為底部導航留出空間 */
@@ -723,6 +734,11 @@
             font-size: 1rem;
             -webkit-line-clamp: 2;
         }
+        .banner-container {
+        height: 20rem; /* 桌面版高度 */
+        max-width: 36rem;
+        margin: 0 auto;
+    }
     }
 </style>
 </head>
