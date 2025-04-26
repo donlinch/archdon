@@ -769,6 +769,37 @@ body {
     margin-bottom: 3px;
 }
 
+.template-selection-area {
+    padding: 15px 0;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #424242;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.template-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.template-card {
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 15px;
+}
+
     </style>
 </head>
 <body>
@@ -778,11 +809,16 @@ body {
         </header>
         
         <main class="game-container">
-            <!-- 模板選擇 -->
-            <div class="template-selector">
-                <button id="templateSelectorBtn" class="template-btn">
-                    選擇遊戲模板
-                </button>
+            <!-- 模板選擇 (初始畫面) -->
+            <div id="templateSelectionArea" class="template-selection-area">
+                <h2 class="section-title">選擇遊戲模板</h2>
+                <div id="templatesList" class="template-grid">
+                    <!-- 模板卡片將通過 JavaScript 動態生成 -->
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-3">正在載入模板...</p>
+                    </div>
+                </div>
             </div>
             
             <!-- 遊戲區域 (初始隱藏) -->
@@ -810,7 +846,7 @@ body {
                 
                 <!-- Game Controls -->
                 <div class="game-controls">
-                    <button id="resetBtn" class="reset-btn">重新開始</button>
+                    <button id="exitBtn" class="reset-btn">退出</button>
                     <button id="nextLevelBtn" class="next-level-btn" style="display: none;">進入下一關</button>
                 </div>
                 
@@ -824,7 +860,7 @@ body {
             </div>
             
             <!-- 載入中顯示 -->
-            <div id="loadingContainer" class="loading-container">
+            <div id="loadingContainer" class="loading-container" style="display: none;">
                 <div class="loading-spinner"></div>
                 <p class="mt-3">正在載入遊戲資源...</p>
             </div>
@@ -833,27 +869,6 @@ body {
         <footer class="footer">
             <p>© 2025 SunnyYummy. All rights reserved.</p>
         </footer>
-    </div>
-    
-    <!-- 模板選擇模態框 -->
-    <div id="templateSelectionModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">選擇遊戲模板</h2>
-            </div>
-            
-            <div id="templatesList" class="template-grid">
-                <!-- 模板卡片將通過 JavaScript 動態生成 -->
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p class="mt-3">正在載入模板...</p>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button id="closeTemplateModalBtn" class="close-modal-btn">關閉</button>
-            </div>
-        </div>
     </div>
     
     <!-- 排行榜模態框 -->
@@ -928,12 +943,10 @@ const gameState = {
 
 // DOM 元素
 const elements = {
+    templateSelectionArea: document.getElementById('templateSelectionArea'),
     gameArea: document.getElementById('gameArea'),
     loadingContainer: document.getElementById('loadingContainer'),
-    templateSelectorBtn: document.getElementById('templateSelectorBtn'),
-    templateSelectionModal: document.getElementById('templateSelectionModal'),
     templatesList: document.getElementById('templatesList'),
-    closeTemplateModalBtn: document.getElementById('closeTemplateModalBtn'),
     templateNameDisplay: document.getElementById('templateNameDisplay'),
     gameBoard: document.getElementById('gameBoard'),
     currentLevel: document.getElementById('currentLevel'),
@@ -941,7 +954,7 @@ const elements = {
     winMessage: document.getElementById('winMessage'),
     winMessageText: document.getElementById('winMessageText'),
     levelMoves: document.getElementById('levelMoves'),
-    resetBtn: document.getElementById('resetBtn'),
+    exitBtn: document.getElementById('exitBtn'),
     nextLevelBtn: document.getElementById('nextLevelBtn'),
     fireworksContainer: document.getElementById('fireworksContainer'),
     leaderboardBtn: document.getElementById('leaderboardBtn'),
@@ -959,24 +972,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化事件監聽器
     initEventListeners();
     
-    // 顯示模板選擇模態框
-    showTemplateSelectionModal();
+    // 載入模板列表
+    loadTemplates();
 });
 
 // 初始化事件監聽器
 function initEventListeners() {
-    // 模板選擇按鈕
-    elements.templateSelectorBtn.addEventListener('click', () => {
-        showTemplateSelectionModal();
-    });
-    
-    // 關閉模板選擇模態框
-    elements.closeTemplateModalBtn.addEventListener('click', () => {
-        hideModal(elements.templateSelectionModal);
-    });
-    
-    // 重置按鈕
-    elements.resetBtn.addEventListener('click', resetLevel);
+    // 退出按鈕
+    elements.exitBtn.addEventListener('click', exitToTemplateSelection);
     
     // 下一關按鈕
     elements.nextLevelBtn.addEventListener('click', goToNextLevel);
@@ -1003,12 +1006,6 @@ function initEventListeners() {
     });
     
     // 點擊模態框背景關閉
-    elements.templateSelectionModal.addEventListener('click', (e) => {
-        if (e.target === elements.templateSelectionModal) {
-            hideModal(elements.templateSelectionModal);
-        }
-    });
-    
     elements.leaderboardModal.addEventListener('click', (e) => {
         if (e.target === elements.leaderboardModal) {
             hideModal(elements.leaderboardModal);
@@ -1020,6 +1017,18 @@ function initEventListeners() {
             hideModal(elements.nameInputModal);
         }
     });
+}
+
+// 退出到模板選擇畫面
+function exitToTemplateSelection() {
+    // 隱藏遊戲區域
+    elements.gameArea.style.display = 'none';
+    
+    // 顯示模板選擇區域
+    elements.templateSelectionArea.style.display = 'block';
+    
+    // 重新載入模板列表
+    loadTemplates();
 }
 
 // 載入遊戲模板列表
@@ -1157,20 +1166,14 @@ function renderTemplateSelection(templates) {
     document.querySelectorAll('.template-card').forEach(card => {
         card.addEventListener('click', () => {
             const templateId = card.dataset.id;
-            hideModal(elements.templateSelectionModal);
+            
+            // 隱藏模板選擇區域
+            elements.templateSelectionArea.style.display = 'none';
+            
+            // 載入選擇的遊戲模板
             loadGameTemplate(templateId);
         });
     });
-}
-
-// 根據難度獲取 CSS 類名
-function getDifficultyClass(difficulty) {
-    switch (difficulty) {
-        case '簡單': return 'difficulty-easy';
-        case '普通': return 'difficulty-normal';
-        case '困難': return 'difficulty-hard';
-        default: return 'difficulty-normal';
-    }
 }
 
 // 載入遊戲模板
@@ -1184,7 +1187,6 @@ function loadGameTemplate(templateId) {
     gameState.currentLevel = 1;
     
     // 顯示載入中
-    elements.gameArea.style.display = 'none';
     elements.loadingContainer.style.display = 'block';
     
     fetch(`/api/samegame/play/${templateId}`)
@@ -1229,7 +1231,7 @@ function loadGameTemplate(templateId) {
                 <div class="text-center">
                     <p class="text-danger">載入遊戲模板失敗: ${error.message}</p>
                     <p class="text-muted">請稍後再試</p>
-                    <button class="template-btn mt-3" onclick="showTemplateSelectionModal()">選擇其他模板</button>
+                    <button class="template-btn mt-3" onclick="exitToTemplateSelection()">返回模板選擇</button>
                 </div>
             `;
         });
@@ -1305,7 +1307,7 @@ function initializeLevel(levelNum) {
             <div class="text-center py-4">
                 <p class="text-danger">初始化關卡失敗: ${error.message}</p>
                 <p class="text-muted">請嘗試重新選擇模板</p>
-                <button class="template-btn mt-3" onclick="showTemplateSelectionModal()">選擇其他模板</button>
+                <button class="template-btn mt-3" onclick="exitToTemplateSelection()">返回模板選擇</button>
             </div>
         `;
     }
@@ -1523,11 +1525,21 @@ function submitPlayerName() {
                 gameState.leaderboard = leaderboardData;
                 renderLeaderboard();
                 showModal(elements.leaderboardModal);
+                
+                // 等待用戶關閉排行榜後，自動返回到模板選擇畫面
+                document.getElementById('closeLeaderboardBtn').onclick = function() {
+                    hideModal(elements.leaderboardModal);
+                    exitToTemplateSelection();
+                };
             });
     })
     .catch(error => {
         console.error('提交排行榜時出錯:', error);
         alert('提交排行榜失敗，請稍後再試');
+        
+        // 即使提交失敗也返回到模板選擇畫面
+        hideModal(elements.nameInputModal);
+        exitToTemplateSelection();
     });
 }
 
@@ -1540,6 +1552,9 @@ function resetLevel() {
 function goToNextLevel() {
     if (gameState.currentLevel < gameState.maxLevel) {
         initializeLevel(gameState.currentLevel + 1);
+    } else {
+        // 如果已經是最後一關，返回到模板選擇畫面
+        exitToTemplateSelection();
     }
 }
 
@@ -1564,20 +1579,6 @@ function renderLeaderboard() {
     }
     
     elements.leaderboardBody.innerHTML = html;
-}
-
-// 顯示模板選擇模態框
-function showTemplateSelectionModal() {
-    // 載入模板列表
-    loadTemplates();
-    
-    // 顯示模態框
-    showModal(elements.templateSelectionModal);
-    
-    // 如果遊戲區域是隱藏的，隱藏載入容器
-    if (elements.gameArea.style.display === 'none') {
-        elements.loadingContainer.style.display = 'none';
-    }
 }
 
 // 顯示模態框
