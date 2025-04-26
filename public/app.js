@@ -6,9 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToTopButton = document.getElementById('back-to-top');
     const categoryFilterContainer = document.getElementById('category-filter-buttons');
     
-    // 新增: 追蹤當前狀態
+    // 修改: 初始狀態
     let currentSort = 'latest'; 
-    let currentCategory = 'All'; // 預設顯示全部
+    let currentCategory = null; // 使用 null 代表未選擇/全部
     
     // 初始化各功能
     initSwiper();
@@ -114,23 +114,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         categoryFilterContainer.innerHTML = '';
         
-        // 創建 "全部" 按鈕
-        const allButton = createCategoryButton('All', '全部');
-        allButton.classList.add('active');
-        categoryFilterContainer.appendChild(allButton);
-        
         try {
             const response = await fetch('/api/products/categories');
             if (!response.ok) throw new Error(`無法獲取分類 (HTTP ${response.status})`);
             const categories = await response.json();
             
-            categories.forEach(category => {
-                const button = createCategoryButton(category, category);
-                categoryFilterContainer.appendChild(button);
-            });
+            if (categories.length > 0) {
+                categories.forEach((category, index) => {
+                    const button = createCategoryButton(category, category);
+                    categoryFilterContainer.appendChild(button);
+                });
+            } else {
+                // 如果沒有分類，可以選擇隱藏容器或顯示提示
+                 categoryFilterContainer.innerHTML = '<span style="font-size: 14px; color: #888;"></span>';
+            }
             
         } catch (error) {
             console.error('獲取分類列表失敗:', error);
+            categoryFilterContainer.innerHTML = '<span style="font-size: 14px; color: red;">無法載入分類</span>';
         }
     }
     
@@ -144,21 +145,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleCategoryClick(event) {
-        const selectedCategory = event.target.dataset.category;
-        if (selectedCategory === currentCategory) return;
+        const clickedButton = event.target;
+        const selectedCategory = clickedButton.dataset.category;
         
-        currentCategory = selectedCategory;
+        // 如果點擊的是當前已選中的分類，則取消選中，顯示全部
+        if (clickedButton.classList.contains('active')) {
+            currentCategory = null; // 設為 null 代表全部
+            clickedButton.classList.remove('active');
+        } else {
+            // 否則，選中點擊的分類
+            currentCategory = selectedCategory;
+            // 更新按鈕 active 狀態
+            document.querySelectorAll('.category-link').forEach(btn => btn.classList.remove('active'));
+            clickedButton.classList.add('active');
+        }
         
-        document.querySelectorAll('.category-link').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        
+        // 根據新的分類和當前的排序重新獲取商品
         fetchProducts(currentSort, currentCategory);
     }
     
     /**
      * 從API獲取商品數據
      */
-    async function fetchProducts(sortBy = 'latest', category = 'All') {
+    async function fetchProducts(sortBy = 'latest', category = null) {
         if (!grid) {
             console.error("商品格線元素未找到！");
             return;
@@ -173,8 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams();
         if (sortBy === 'popular') {
             params.append('sort', 'popular');
+        } else {
+             params.append('sort', 'latest'); // 確保總是有 sort 參數或預設行為
         }
-        if (category && category !== 'All') {
+        if (category) { 
             params.append('category', category);
         }
         const queryString = params.toString();
@@ -279,14 +290,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 link.addEventListener('click', (event) => {
                     event.preventDefault();
                     const clickedSort = link.dataset.sort;
-                    if (clickedSort === currentSort) return;
+                    if (clickedSort === currentSort) return; 
                     
                     sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
                     link.classList.add('active');
                     
-                    currentSort = clickedSort;
+                    currentSort = clickedSort; 
                     
-                    fetchProducts(currentSort, currentCategory);
+                    fetchProducts(currentSort, currentCategory); 
                 });
             });
         }
