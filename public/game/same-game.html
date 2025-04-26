@@ -649,9 +649,9 @@ body {
 
 /* Template Selection Modal */
 .template-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
     margin-top: 20px;
 }
 
@@ -662,10 +662,13 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 15px;
 }
 
 .template-card:hover {
-    transform: translateY(-5px);
+    transform: translateX(5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -673,45 +676,31 @@ body {
     border: 3px solid #4caf50;
 }
 
-.template-card-header {
-    background-color: #FFB74D;
-    color: white;
-    padding: 15px;
-    text-align: center;
-    font-weight: 600;
+.template-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    margin-right: 15px;
+    flex-shrink: 0;
 }
 
-.template-card-body {
-    padding: 15px;
+.template-info {
+    flex-grow: 1;
+}
+
+.template-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #424242;
+    margin-bottom: 5px;
 }
 
 .template-description {
     font-size: 0.9rem;
     color: #666;
-    margin-bottom: 10px;
-}
-
-.template-difficulty {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.difficulty-easy {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-}
-
-.difficulty-normal {
-    background-color: #fff3e0;
-    color: #e65100;
-}
-
-.difficulty-hard {
-    background-color: #ffebee;
-    color: #b71c1c;
+    margin: 0;
 }
 
 /* Responsive design */
@@ -1070,16 +1059,16 @@ function renderTemplateSelection(templates) {
     
     let html = '';
     templates.forEach(template => {
-        const difficultyClass = getDifficultyClass(template.difficulty);
+        // 從模板的關卡中隨機選擇一張圖片
+        const randomLevel = template.levels[Math.floor(Math.random() * template.levels.length)];
+        const randomImage = randomLevel ? randomLevel.images[Math.floor(Math.random() * randomLevel.images.length)] : '';
         
         html += `
             <div class="template-card" data-id="${template.id}">
-                <div class="template-card-header">${escapeHtml(template.name)}</div>
-                <div class="template-card-body">
+                <div class="template-preview" style="background-image: url(${randomImage})"></div>
+                <div class="template-info">
+                    <div class="template-title">${escapeHtml(template.name)}</div>
                     <p class="template-description">${escapeHtml(template.description || '無描述')}</p>
-                    <div class="template-difficulty ${difficultyClass}">
-                        ${escapeHtml(template.difficulty || '普通')}
-                    </div>
                 </div>
             </div>
         `;
