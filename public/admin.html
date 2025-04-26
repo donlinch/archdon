@@ -17,8 +17,9 @@
          #product-list-table th:nth-child(2), #product-list-table td:nth-child(2) { width: 30%; } /* 名稱 */
          #product-list-table th:nth-child(3), #product-list-table td:nth-child(3) { width: 12%; } /* 價格 */
          #product-list-table th:nth-child(4), #product-list-table td:nth-child(4) { width: 15%; text-align: center;} /* 點擊數 - 新增 */
-         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; text-align: center;} /* 圖片 */
-         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 20%; text-align: center;} /* 操作 */
+         #product-list-table th:nth-child(5), #product-list-table td:nth-child(5) { width: 15%; } /* 新增：分類 */
+         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 15%; text-align: center;} /* 圖片 */
+         #product-list-table th:nth-child(7), #product-list-table td:nth-child(7) { width: 17%; text-align: center;} /* 操作 - 調整寬度 */
 
          .action-btn { padding: 5px 8px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; white-space: nowrap;} /* 調整按鈕 padding */
          .edit-btn { background-color: #ffc107; border-color: #ffc107; color: #333; }
@@ -189,6 +190,7 @@
                          <th>名稱</th>
                          <th>價格</th>
                          <th>點擊數</th> <!-- *** 新增標題 *** -->
+                         <th>分類</th> <!-- *** 新增分類標題 *** -->
                          <th>圖片預覽</th>
                          <th>操作</th>
                      </tr>
@@ -209,6 +211,10 @@
                 <div class="form-group"> <label for="add-product-name">商品名稱:</label> <input type="text" id="add-product-name" name="name" required> </div>
                 <div class="form-group"> <label for="add-product-description">商品描述:</label> <textarea id="add-product-description" name="description" rows="3"></textarea> </div>
                 <div class="form-group"> <label for="add-product-price">價格:</label> <input type="number" id="add-product-price" name="price" step="0.01" placeholder="例如: 490" required> </div>
+                <div class="form-group">
+                    <label for="add-product-category">分類:</label>
+                    <input list="categoryOptions" id="add-product-category" name="category" placeholder="輸入或選擇分類">
+                </div>
                 <div class="form-group"> <label for="add-product-image-url">圖片路徑:</label> <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg"> <img id="add-image-preview" src="" alt="圖片預覽"> </div>
                 <div class="form-group"> <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label> <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://..."> </div>
                 <div class="form-actions"> <button type="submit" class="action-btn save-btn">確認新增</button> <button type="button" class="action-btn cancel-btn" onclick="closeAddModal()">取消</button> </div>
@@ -227,6 +233,10 @@
                  <div class="form-group"> <label for="edit-product-name">商品名稱:</label> <input type="text" id="edit-product-name" name="name" required> </div>
                  <div class="form-group"> <label for="edit-product-description">商品描述:</label> <textarea id="edit-product-description" name="description" rows="3"></textarea> </div>
                  <div class="form-group"> <label for="edit-product-price">價格:</label> <input type="number" id="edit-product-price" name="price" step="0.01" required> </div>
+                 <div class="form-group">
+                     <label for="edit-product-category">分類:</label>
+                     <input list="categoryOptions" id="edit-product-category" name="category" placeholder="輸入或選擇分類">
+                 </div>
                  <div class="form-group"> <label for="edit-product-image-url">圖片路徑:</label> <input type="text" id="edit-product-image-url" name="image_url"> <img id="edit-image-preview" src="" alt="圖片預覽"> </div>
                  <div class="form-group"> <label for="edit-product-seven-eleven-url">7-11 連結:</label> <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url"> </div>
                  <div class="form-group"> <label>點擊次數:</label> <span id="edit-product-click-count" style="font-weight: bold; padding: 8px 0; display: inline-block;">-</span> </div>
@@ -235,6 +245,12 @@
              </form>
          </div>
      </div>
+
+    <!-- *** 新增 Datalist 元素 *** -->
+    <datalist id="categoryOptions">
+        <!-- 分類選項將由 JavaScript 動態填入 -->
+    </datalist>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- *** 確保 admin.js 的 script 標籤在 Chart.js 之後 *** -->

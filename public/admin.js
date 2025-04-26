@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editImagePreview = document.getElementById('edit-image-preview');
     const editProductSevenElevenUrl = document.getElementById('edit-product-seven-eleven-url');
     const editProductClickCount = document.getElementById('edit-product-click-count');
+    const editProductCategory = document.getElementById('edit-product-category');
     const editFormError = document.getElementById('edit-form-error');
 
     const addModal = document.getElementById('add-modal');
@@ -23,9 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const addProductName = document.getElementById('add-product-name');
     const addProductDescription = document.getElementById('add-product-description');
     const addProductPrice = document.getElementById('add-product-price');
+    const addProductCategory = document.getElementById('add-product-category');
     const addProductImageUrl = document.getElementById('add-product-image-url');
     const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
     const addFormError = document.getElementById('add-form-error');
+    
+    const categoryOptionsDatalist = document.getElementById('categoryOptions');
 
     // --- *** 圖表相關元素 *** ---
     const trafficChartCanvas = document.getElementById('traffic-chart');
@@ -87,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             productListBody.innerHTML = ''; 
             if (products.length === 0) { 
-                productListBody.innerHTML = '<tr><td colspan="6">目前沒有商品。</td></tr>'; 
+                productListBody.innerHTML = '<tr><td colspan="7">目前沒有商品。</td></tr>'; 
                 return; 
             } 
             
@@ -99,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${product.name || ''}</td>
                     <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
                     <td>${product.click_count !== null ? product.click_count : '0'}</td>
+                    <td>${product.category || '未分類'}</td>
                     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
                     <td>
                         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
@@ -116,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Function to Open and Populate the Edit Modal ---
     async function openEditModal(id) {
-        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editFormError]; 
+        const requiredEditElements = [editModal, editForm, editProductId, editProductName, editProductDescription, editProductPrice, editProductImageUrl, editImagePreview, editProductSevenElevenUrl, editProductClickCount, editProductCategory, editFormError]; 
         
         if (requiredEditElements.some(el => !el)) { 
             console.error("一個或多個編輯 Modal 元件在 HTML 中缺失。"); 
@@ -144,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             editProductImageUrl.value = product.image_url || ''; 
             editProductSevenElevenUrl.value = product.seven_eleven_url || ''; 
             editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0'; 
+            editProductCategory.value = product.category || '';
             
             if (product.image_url) { 
                 editImagePreview.src = product.image_url; 
@@ -182,10 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
 window.deleteProduct = async function(id) { 
     if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { 
         try { 
-            // 修改這一行：從 /api/products/${id} 改為 /api/admin/products/${id}
-            const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' }); 
+            const response = await fetch(`/api/products/${id}`, { method: 'DELETE' }); 
             if (response.status === 204 || response.ok) { 
                 await fetchAndDisplayProducts(); 
+                await fetchCategories();
             } else { 
                 let errorMsg = `刪除失敗 (HTTP ${response.status})`; 
                 try { 
@@ -203,7 +209,7 @@ window.deleteProduct = async function(id) {
 };
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddForm = function() {
-        const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductImageUrl, addProductSevenElevenUrl, addFormError]; 
+        const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductCategory, addProductImageUrl, addProductSevenElevenUrl, addFormError]; 
         
         if (requiredAddElements.some(el => !el)) { 
             alert("新增視窗元件錯誤，無法開啟。請檢查 admin.html 檔案。"); 
@@ -241,6 +247,7 @@ window.deleteProduct = async function(id) {
                 name: editProductName.value.trim(), 
                 description: editProductDescription.value.trim(), 
                 price: priceValue, 
+                category: editProductCategory.value.trim() || null,
                 image_url: editProductImageUrl.value.trim() || null, 
                 seven_eleven_url: editProductSevenElevenUrl.value.trim() || null 
             }; 
@@ -261,13 +268,13 @@ window.deleteProduct = async function(id) {
             } 
             
             const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); 
-            if (!isBasicUrlValid(updatedData.seven_eleven_url)) { 
-                editFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; 
-                return; 
+            if (!isBasicUrlValid(updatedData.image_url) || !isBasicUrlValid(updatedData.seven_eleven_url)) {
+                editFormError.textContent = '圖片路徑或 7-11 連結格式不正確 (應以 http://, https:// 或 / 開頭)。';
+                return;
             } 
             
             try { 
-                const response = await fetch(`/api/admin/products/${productId}`, {
+                const response = await fetch(`/api/products/${productId}`, {
                     method: 'PUT', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(updatedData) 
@@ -283,7 +290,8 @@ window.deleteProduct = async function(id) {
                 } 
                 
                 closeModal(); 
-                await fetchAndDisplayProducts(); 
+                await fetchAndDisplayProducts();
+                await fetchCategories();
             } catch (error) { 
                 editFormError.textContent = `儲存錯誤：${error.message}`; 
             }
@@ -299,41 +307,41 @@ if (addForm) {
         addFormError.textContent = ''; 
         
         let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value); 
-        const newProductData = { 
+        const newData = { 
             name: addProductName.value.trim(), 
             description: addProductDescription.value.trim(), 
             price: priceValue, 
+            category: addProductCategory.value.trim() || null,
             image_url: addProductImageUrl.value.trim() || null, 
             seven_eleven_url: addProductSevenElevenUrl.value.trim() || null 
         }; 
         
-        if (!newProductData.name) { 
+        if (!newData.name) { 
             addFormError.textContent = '商品名稱不能為空。'; 
             return; 
         } 
         
-        if (newProductData.price !== null && isNaN(newProductData.price)) { 
+        if (newData.price !== null && isNaN(newData.price)) { 
             addFormError.textContent = '價格必須是有效的數字。'; 
             return; 
         } 
         
-        if (newProductData.price !== null && newProductData.price < 0) { 
+        if (newData.price !== null && newData.price < 0) { 
             addFormError.textContent = '價格不能是負數。'; 
             return; 
         } 
         
         const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); 
-        if (!isBasicUrlValid(newProductData.seven_eleven_url)) { 
-            addFormError.textContent = '7-11 連結格式不正確 (應為 http/https 開頭)。'; 
-            return; 
+        if (!isBasicUrlValid(newData.image_url) || !isBasicUrlValid(newData.seven_eleven_url)) {
+            addFormError.textContent = '圖片路徑或 7-11 連結格式不正確 (應以 http://, https:// 或 / 開頭)。';
+            return;
         } 
         
         try { 
-            // 修改這一行：從 /api/products 改為 /api/admin/products
-            const response = await fetch(`/api/admin/products`, { 
+            const response = await fetch('/api/products', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(newProductData) 
+                body: JSON.stringify(newData) 
             }); 
             
             if (!response.ok) { 
@@ -346,7 +354,8 @@ if (addForm) {
             } 
             
             closeAddModal(); 
-            await fetchAndDisplayProducts(); 
+            await fetchAndDisplayProducts();
+            await fetchCategories();
         } catch (error) { 
             addFormError.textContent = `新增錯誤：${error.message}`; 
         }
@@ -751,5 +760,25 @@ initializePageSelect(); // 初始化頁面選擇器
 setTimeout(() => {
     displayTrafficChart('daily'); // 預設載入每日流量圖表
 }, 300);
+
+// --- *** 新增: 獲取並填充分類 Datalist *** ---
+async function fetchCategories() {
+    if (!categoryOptionsDatalist) return; // 如果 datalist 不存在則跳過
+    try {
+        const response = await fetch('/api/products/categories');
+        if (!response.ok) throw new Error(`無法獲取分類列表 (HTTP ${response.status})`);
+        const categories = await response.json();
+
+        categoryOptionsDatalist.innerHTML = ''; // 清空舊選項
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            categoryOptionsDatalist.appendChild(option);
+        });
+    } catch (error) {
+        console.error('獲取分類列表失敗:', error);
+        // 即使失敗也允許繼續，只是沒有分類建議
+    }
+}
 
 }); // --- End of DOMContentLoaded ---
