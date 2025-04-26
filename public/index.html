@@ -275,7 +275,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
-    padding: 20px;
+    padding: 20px 20px 0; /* 移除底部填充 */
 }
 
 /* --- New Product Card Styles from store/index.html --- */
@@ -286,7 +286,7 @@ body {
     box-shadow: var(--card-shadow);
     border-radius: 16px;
     overflow: hidden;
-    margin-bottom: 1rem; /* Add margin like in store */
+    margin-bottom: 0; /* 移除底部邊距 */
     position: relative;
     cursor: pointer; /* Add pointer cursor */
     text-decoration: none; /* Remove underline if it was an 'a' tag */
@@ -382,7 +382,7 @@ body {
 }
 
 .product-card .card-body {
-    padding: 0.75rem 1rem 0.5rem; /* Reduced bottom padding */
+    padding: 0.75rem 1rem 0rem; /* 移除底部填充 */
     text-align: left; /* Align text to left for consistency */
     flex-grow: 0; /* Don't allow body to grow beyond content */
     display: flex;
@@ -400,7 +400,7 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: -1px; /* 稍微調整位置確保完全附著在底部 */
     background-color: rgba(255, 183, 77, 0.95); /* Match the tag color */
     color: #333; /* Darker text for consistency */
     text-align: center;

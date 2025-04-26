@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="card-body">
                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
-                ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>'}
+                ${product.description ? `<p class="card-text">${product.description}</p>` : ''}
             </div>
         `; // <--- 確保這個反引號存在且位置正確
 
