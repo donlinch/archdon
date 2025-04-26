@@ -3854,7 +3854,8 @@ app.post('/api/news/:id/like', async (req, res) => {
 // --- 更新商品 API (這應該要放在你的 server.js 中) ---
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, image_url, seven_eleven_url } = req.body;
+    // 修改：從 req.body 接收 category
+    const { name, description, price, image_url, seven_eleven_url, category } = req.body; 
     
     if (isNaN(parseInt(id))) { 
         return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
@@ -3866,6 +3867,7 @@ app.put('/api/products/:id', async (req, res) => {
     }
 
     try {
+        // 修改：在 UPDATE 語句中加入 category
         const result = await pool.query(
             `UPDATE products 
              SET name = $1, 
@@ -3873,8 +3875,9 @@ app.put('/api/products/:id', async (req, res) => {
                  price = $3, 
                  image_url = $4, 
                  seven_eleven_url = $5, 
+                 category = $6, -- 新增 category
                  updated_at = NOW() 
-             WHERE id = $6 
+             WHERE id = $7 -- id 的參數索引變為 7
              RETURNING *`,
             [
                 name.trim(), 
@@ -3882,6 +3885,7 @@ app.put('/api/products/:id', async (req, res) => {
                 price, 
                 image_url || null, 
                 seven_eleven_url || null, 
+                category || null, // 新增 category 參數 (如果為空或未定義，設為 null)
                 id
             ]
         );
