@@ -402,10 +402,12 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        width: 100%; /* 確保與 wrapper 寬度一致 */
         min-width: 80px;
         padding: 10px;
         background-color: #E57373;
         color: white;
+        box-sizing: border-box; /* 確保 padding 不會增加元素寬度 */
     }
 
     .news-card .date-tag .month {
@@ -430,6 +432,7 @@
         flex-direction: column;
         flex-shrink: 0;
         min-width: 80px;
+        width: 80px; /* 固定寬度與日曆標籤一致 */
     }
 
     .category-label {
@@ -442,6 +445,10 @@
         border-bottom-right-radius: 8px;
         margin-top: -8px;
         width: 100%;
+        box-sizing: border-box; /* 確保 padding 不會增加元素寬度 */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1;
     }
     
     /* 五種分類顏色 */
@@ -686,6 +693,7 @@
         
         .news-card .date-tag {
             min-width: 60px;
+            width: 100%;
             padding: 8px 5px;
         }
         
@@ -695,6 +703,7 @@
         
         .date-category-wrapper {
             min-width: 60px;
+            width: 60px;
         }
         
         .category-label {
@@ -806,6 +815,7 @@
         
         .date-category-wrapper {
             min-width: 100px;
+            width: 100px;
         }
         
         .category-label {

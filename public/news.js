@@ -236,52 +236,25 @@ document.addEventListener('DOMContentLoaded', () => {
             let categoryType = 'cat-other';
             let categoryText = '其他';
             
-            if (news.category_id) {
-                // 使用現有分類ID
-                switch (news.category_id.toString()) {
-                    case '1':
-                        categoryType = 'cat-news';
-                        categoryText = '最新消息';
-                        break;
-                    case '2':
-                        categoryType = 'cat-events';
-                        categoryText = '活動預告';
-                        break;
-                    case '3':
-                        categoryType = 'cat-media';
-                        categoryText = '媒體報導';
-                        break;
-                    default:
-                        // 默認檢查內容決定分類
-                        if ((news.title && news.title.includes('合作')) || 
-                            (news.summary && news.summary.includes('合作')) ||
-                            (news.title && news.title.includes('推廣')) || 
-                            (news.summary && news.summary.includes('推廣'))) {
-                            categoryType = 'cat-cooperation';
-                            categoryText = '合作推廣';
-                        }
-                }
+            // 簡化分類邏輯，優先使用標題和摘要中的關鍵詞來判斷
+            if ((news.title && news.title.includes('合作')) || 
+                (news.summary && news.summary.includes('合作')) ||
+                (news.title && news.title.includes('推廣')) || 
+                (news.summary && news.summary.includes('推廣'))) {
+                categoryType = 'cat-cooperation';
+                categoryText = '合作推廣';
+            } else if ((news.title && news.title.includes('報導')) || 
+                (news.summary && news.summary.includes('報導')) ||
+                (news.title && news.title.includes('媒體')) || 
+                (news.summary && news.summary.includes('媒體'))) {
+                categoryType = 'cat-media';
+                categoryText = '媒體報導';
+            } else if (new Date(news.event_date) > new Date()) {
+                categoryType = 'cat-events';
+                categoryText = '活動預告';
             } else {
-                // 如果沒有分類ID，嘗試從內容判斷
-                if (new Date(news.event_date) > new Date()) {
-                    categoryType = 'cat-events';
-                    categoryText = '活動預告';
-                } else if ((news.title && news.title.includes('合作')) || 
-                          (news.summary && news.summary.includes('合作')) ||
-                          (news.title && news.title.includes('推廣')) || 
-                          (news.summary && news.summary.includes('推廣'))) {
-                    categoryType = 'cat-cooperation';
-                    categoryText = '合作推廣';
-                } else if ((news.title && news.title.includes('報導')) || 
-                          (news.summary && news.summary.includes('報導')) ||
-                          (news.title && news.title.includes('媒體')) || 
-                          (news.summary && news.summary.includes('媒體'))) {
-                    categoryType = 'cat-media';
-                    categoryText = '媒體報導';
-                } else {
-                    categoryType = 'cat-news';
-                    categoryText = '最新消息';
-                }
+                categoryType = 'cat-news';
+                categoryText = '最新消息';
             }
             
             categoryLabel.classList.add(categoryType);
