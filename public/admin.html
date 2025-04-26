@@ -214,6 +214,9 @@
                 <div class="form-group">
                     <label for="add-product-category">分類:</label>
                     <input list="categoryOptions" id="add-product-category" name="category" placeholder="輸入或選擇分類">
+                    <!-- *** 新增: 顯示現有分類的容器 *** -->
+                    <div class="existing-categories-display" id="add-existing-categories"></div>
+                    <!-- *** 容器結束 *** -->
                 </div>
                 <div class="form-group"> <label for="add-product-image-url">圖片路徑:</label> <input type="text" id="add-product-image-url" name="image_url" placeholder="例如: /images/new_product.jpg"> <img id="add-image-preview" src="" alt="圖片預覽"> </div>
                 <div class="form-group"> <label for="add-product-seven-eleven-url">7-11 連結 (可選):</label> <input type="url" id="add-product-seven-eleven-url" name="seven_eleven_url" placeholder="https://..."> </div>
@@ -236,6 +239,9 @@
                  <div class="form-group">
                      <label for="edit-product-category">分類:</label>
                      <input list="categoryOptions" id="edit-product-category" name="category" placeholder="輸入或選擇分類">
+                     <!-- *** 新增: 顯示現有分類的容器 *** -->
+                     <div class="existing-categories-display" id="edit-existing-categories"></div>
+                     <!-- *** 容器結束 *** -->
                  </div>
                  <div class="form-group"> <label for="edit-product-image-url">圖片路徑:</label> <input type="text" id="edit-product-image-url" name="image_url"> <img id="edit-image-preview" src="" alt="圖片預覽"> </div>
                  <div class="form-group"> <label for="edit-product-seven-eleven-url">7-11 連結:</label> <input type="url" id="edit-product-seven-eleven-url" name="seven_eleven_url"> </div>

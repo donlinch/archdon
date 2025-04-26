@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editProductClickCount = document.getElementById('edit-product-click-count');
     const editProductCategory = document.getElementById('edit-product-category');
     const editFormError = document.getElementById('edit-form-error');
+    const editExistingCategoriesDiv = document.getElementById('edit-existing-categories');
 
     const addModal = document.getElementById('add-modal');
     const addForm = document.getElementById('add-product-form');
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addProductImageUrl = document.getElementById('add-product-image-url');
     const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
     const addFormError = document.getElementById('add-form-error');
+    const addExistingCategoriesDiv = document.getElementById('add-existing-categories');
     
     const categoryOptionsDatalist = document.getElementById('categoryOptions');
 
@@ -753,31 +755,77 @@ if (updateComparisonBtn && pageSelectMulti) {
 
 // --- Initial Load ---
 fetchAndDisplayProducts(); // 載入商品列表
-initializeDatePickers(); // 初始化日期選擇器
-initializePageSelect(); // 初始化頁面選擇器
+fetchCategories();         
+initializeDatePickers(); 
+initializePageSelect(); 
+setTimeout(() => { displayTrafficChart('daily'); }, 300);
 
-// 延遲載入圖表，避免同時初始化多個圖表
-setTimeout(() => {
-    displayTrafficChart('daily'); // 預設載入每日流量圖表
-}, 300);
-
-// --- *** 新增: 獲取並填充分類 Datalist *** ---
+// --- *** 新增: 獲取並填充分類 (Datalist + 顯示標籤) *** ---
 async function fetchCategories() {
-    if (!categoryOptionsDatalist) return; // 如果 datalist 不存在則跳過
+    if (!categoryOptionsDatalist) return;
+    // 同時檢查顯示標籤的 div 是否存在
+    const displayDivsExist = addExistingCategoriesDiv && editExistingCategoriesDiv;
+
     try {
         const response = await fetch('/api/products/categories');
         if (!response.ok) throw new Error(`無法獲取分類列表 (HTTP ${response.status})`);
         const categories = await response.json();
 
-        categoryOptionsDatalist.innerHTML = ''; // 清空舊選項
+        // 清空舊選項 (Datalist 和顯示區)
+        categoryOptionsDatalist.innerHTML = ''; 
+        if (displayDivsExist) {
+            addExistingCategoriesDiv.innerHTML = '';
+            editExistingCategoriesDiv.innerHTML = '';
+        }
+
         categories.forEach(category => {
+            // 填充 Datalist
             const option = document.createElement('option');
             option.value = category;
             categoryOptionsDatalist.appendChild(option);
+
+            // 如果顯示區存在，則創建並添加可點擊標籤
+            if (displayDivsExist) {
+                const tag = document.createElement('a'); // 使用 a 標籤方便樣式和點擊
+                tag.href = '#'; // 避免頁面跳轉
+                tag.classList.add('category-tag');
+                tag.textContent = category;
+                tag.dataset.category = category; // 將分類名存在 data-* 屬性中
+
+                // 為標籤添加點擊事件 (Add Modal)
+                const addTagClone = tag.cloneNode(true);
+                addTagClone.addEventListener('click', (e) => {
+                    e.preventDefault(); // 阻止 a 標籤的默認行為
+                    if (addProductCategory) {
+                        addProductCategory.value = e.target.dataset.category;
+                    }
+                });
+                addExistingCategoriesDiv.appendChild(addTagClone);
+
+                // 為標籤添加點擊事件 (Edit Modal)
+                const editTagClone = tag.cloneNode(true);
+                editTagClone.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (editProductCategory) {
+                        editProductCategory.value = e.target.dataset.category;
+                    }
+                });
+                editExistingCategoriesDiv.appendChild(editTagClone);
+            }
         });
+        
+        // 如果沒有分類，可以顯示提示 (可選)
+        if (categories.length === 0 && displayDivsExist) {
+             addExistingCategoriesDiv.innerHTML = '<small style="color: #888;">尚無現有分類</small>';
+             editExistingCategoriesDiv.innerHTML = '<small style="color: #888;">尚無現有分類</small>';
+        }
+
     } catch (error) {
         console.error('獲取分類列表失敗:', error);
-        // 即使失敗也允許繼續，只是沒有分類建議
+        if (displayDivsExist) {
+            addExistingCategoriesDiv.innerHTML = '<small style="color: red;">無法載入分類</small>';
+            editExistingCategoriesDiv.innerHTML = '<small style="color: red;">無法載入分類</small>';
+        }
     }
 }
 
