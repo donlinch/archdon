@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字遊戲 - 單行顯示</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        
+        .input-area {
+            padding: 15px;
+            background-color: #4a90e2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #text-input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        
+        .return-btn {
+            padding: 10px 15px;
+            background-color: #ffffff;
+            color: #4a90e2;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .return-btn:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .display-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        #text-display {
+            white-space: nowrap; /* 強制單行顯示 */
+            font-weight: bold;
+            color: #000;
+            display: block;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="input-area">
+        <a href="/public/game.html" class="return-btn">返回遊戲頁面</a>
+        <input type="text" id="text-input" placeholder="請輸入文字..." autocomplete="off">
+    </div>
+    
+    <div class="display-area">
+        <div id="text-display"></div>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('text-input');
+        const textDisplay = document.getElementById('text-display');
+        const displayArea = document.querySelector('.display-area');
+        
+        // 當頁面加載完成時執行
+        window.addEventListener('DOMContentLoaded', function() {
+            updateDisplayText();
+        });
+        
+        function updateDisplayText() {
+            // 獲取輸入文字
+            const text = textInput.value;
+            
+            // 設置顯示文字
+            textDisplay.textContent = text || "請輸入文字...";
+            
+            // 獲取容器尺寸
+            const containerWidth = displayArea.clientWidth * 0.9;  // 使用90%的寬度
+            const containerHeight = displayArea.clientHeight * 0.7; // 使用70%的高度
+            
+            // 計算最適合的字體大小
+            const fontSize = calculateFontSize(text || "請輸入文字...", containerWidth, containerHeight);
+            
+            // 應用字體大小
+            textDisplay.style.fontSize = fontSize + 'px';
+            console.log("最終字體大小:", fontSize);
+        }
+        
+        function calculateFontSize(text, maxWidth, maxHeight) {
+            // 簡單方法：先從小尺寸開始，然後逐漸增加
+            let fontSize = 10;
+            textDisplay.style.fontSize = fontSize + 'px';
+            
+            // 每次嘗試增加字體大小
+            const step = 2;
+            let fits = true;
+            
+            do {
+                fontSize += step;
+                textDisplay.style.fontSize = fontSize + 'px';
+                
+                fits = (textDisplay.offsetWidth <= maxWidth) && 
+                       (textDisplay.offsetHeight <= maxHeight);
+                       
+            } while (fits && fontSize < 800);
+            
+            // 如果超出了邊界，回退一步
+            if (!fits) {
+                fontSize -= step;
+            }
+            
+            return fontSize;
+        }
+        
+        // 當輸入框內容變化時更新顯示
+        textInput.addEventListener('input', updateDisplayText);
+        
+        // 當視窗大小改變時重新調整
+        window.addEventListener('resize', updateDisplayText);
+        
+        // 偵測設備方向變化
+        window.addEventListener('orientationchange', function() {
+            // 給一點時間讓方向變化完成
+            setTimeout(updateDisplayText, 300);
+        });
+    </script>
+</body>
+</html>
