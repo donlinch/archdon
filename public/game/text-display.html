@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文字遊戲 - 單行顯示</title>
+    <title>文字遊戲 - 單行顯示與繪圖功能</title>
     <style>
         body {
             margin: 0;
@@ -23,10 +23,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         
         #text-input {
             flex: 1;
+            min-width: 150px;
             padding: 10px;
             font-size: 16px;
             border: none;
@@ -34,7 +36,7 @@
             box-sizing: border-box;
         }
         
-        .return-btn {
+        .return-btn, .control-btn {
             padding: 10px 15px;
             background-color: #ffffff;
             color: #4a90e2;
@@ -46,7 +48,7 @@
             text-decoration: none;
         }
         
-        .return-btn:hover {
+        .return-btn:hover, .control-btn:hover {
             background-color: #f0f0f0;
         }
         
@@ -57,6 +59,8 @@
             align-items: center;
             padding: 20px;
             box-sizing: border-box;
+            position: relative;
+            background-color: #ffffff;
         }
         
         #text-display {
@@ -67,6 +71,86 @@
             text-align: center;
             margin: 0;
             padding: 0;
+            position: relative;
+            z-index: 2; /* 確保文字在上層 */
+            pointer-events: none; /* 讓點擊事件穿透到下方的畫布 */
+        }
+        
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* 畫布在下層 */
+            cursor: crosshair;
+        }
+        
+        /* 工具按鈕容器 */
+        .tools-container {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        /* 隱藏繪圖工具的初始狀態 */
+        .drawing-tools {
+            display: none;
+        }
+        
+        /* 顯示繪圖工具的狀態 */
+        .drawing-tools.active {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        /* 顏色選擇按鈕 */
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.selected {
+            border: 2px solid #000;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .color-btn.red {
+            background-color: #FF0000;
+        }
+        
+        .color-btn.green {
+            background-color: #00FF00;
+        }
+        
+        .color-btn.black {
+            background-color: #000000;
+        }
+        
+        .color-btn.yellow {
+            background-color: #FFFF00;
+        }
+        
+        .color-btn.blue {
+            background-color: #0000FF;
+        }
+        
+        /* 顏色標籤 */
+        .color-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -74,22 +158,62 @@
     <div class="input-area">
         <a href="/public/game.html" class="return-btn">返回遊戲頁面</a>
         <input type="text" id="text-input" placeholder="請輸入文字..." autocomplete="off">
+        <div class="tools-container">
+            <button id="draw-toggle" class="control-btn">繪圖功能</button>
+            <div id="drawing-tools" class="drawing-tools">
+                <button id="clear-canvas" class="control-btn">清除畫布</button>
+                <span class="color-label">顏色：</span>
+                <div id="red-btn" class="color-btn red selected" data-color="#FF0000"></div>
+                <div id="green-btn" class="color-btn green" data-color="#00FF00"></div>
+                <div id="black-btn" class="color-btn black" data-color="#000000"></div>
+                <div id="yellow-btn" class="color-btn yellow" data-color="#FFFF00"></div>
+                <div id="blue-btn" class="color-btn blue" data-color="#0000FF"></div>
+            </div>
+        </div>
     </div>
     
     <div class="display-area">
         <div id="text-display"></div>
+        <canvas id="drawing-canvas"></canvas>
     </div>
 
     <script>
         const textInput = document.getElementById('text-input');
         const textDisplay = document.getElementById('text-display');
         const displayArea = document.querySelector('.display-area');
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const drawToggle = document.getElementById('draw-toggle');
+        const drawingTools = document.getElementById('drawing-tools');
+        const clearCanvas = document.getElementById('clear-canvas');
+        const colorButtons = document.querySelectorAll('.color-btn');
+        
+        // 繪圖狀態
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let drawingEnabled = false;
+        let lineColor = '#FF0000'; // 默認紅色
         
         // 當頁面加載完成時執行
         window.addEventListener('DOMContentLoaded', function() {
+            setCanvasDimensions();
             updateDisplayText();
         });
         
+        // 設置畫布尺寸
+        function setCanvasDimensions() {
+            canvas.width = displayArea.clientWidth;
+            canvas.height = displayArea.clientHeight;
+            
+            // 設置線條樣式
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = lineColor;
+        }
+        
+        // 更新顯示文字
         function updateDisplayText() {
             // 獲取輸入文字
             const text = textInput.value;
@@ -109,6 +233,7 @@
             console.log("最終字體大小:", fontSize);
         }
         
+        // 計算字體大小 - 保留原始功能
         function calculateFontSize(text, maxWidth, maxHeight) {
             // 簡單方法：先從小尺寸開始，然後逐漸增加
             let fontSize = 10;
@@ -135,16 +260,134 @@
             return fontSize;
         }
         
+        // 繪圖功能
+        function startDrawing(e) {
+            if (!drawingEnabled) return;
+            
+            isDrawing = true;
+            
+            // 獲取位置 (支持觸摸和滑鼠)
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            // 獲取相對於畫布的位置
+            const rect = canvas.getBoundingClientRect();
+            lastX = clientX - rect.left;
+            lastY = clientY - rect.top;
+        }
+        
+        function draw(e) {
+            if (!isDrawing || !drawingEnabled) return;
+            
+            // 獲取位置 (支持觸摸和滑鼠)
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            // 獲取相對於畫布的位置
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            
+            // 繪製線條
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // 更新位置
+            lastX = x;
+            lastY = y;
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+        }
+        
+        // 切換繪圖模式
+        function toggleDrawingMode() {
+            drawingEnabled = !drawingEnabled;
+            
+            if (drawingEnabled) {
+                drawToggle.textContent = "關閉繪圖";
+                drawingTools.classList.add('active');
+                canvas.style.cursor = 'crosshair';
+            } else {
+                drawToggle.textContent = "繪圖功能";
+                drawingTools.classList.remove('active');
+                canvas.style.cursor = 'default';
+            }
+        }
+        
+        // 清除畫布
+        function clearCanvasContent() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // 選擇顏色
+        function selectColor(e) {
+            // 移除所有選中狀態
+            colorButtons.forEach(btn => btn.classList.remove('selected'));
+            
+            // 添加當前選中狀態
+            this.classList.add('selected');
+            
+            // 設置顏色
+            lineColor = this.getAttribute('data-color');
+            ctx.strokeStyle = lineColor;
+        }
+        
         // 當輸入框內容變化時更新顯示
         textInput.addEventListener('input', updateDisplayText);
         
+        // 繪圖功能開關
+        drawToggle.addEventListener('click', toggleDrawingMode);
+        
+        // 清除畫布按鈕
+        clearCanvas.addEventListener('click', clearCanvasContent);
+        
+        // 顏色選擇按鈕
+        colorButtons.forEach(button => {
+            button.addEventListener('click', selectColor);
+        });
+        
+        // 畫布繪圖事件
+        
+        // 鼠標事件
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // 觸摸事件
+        canvas.addEventListener('touchstart', function(e) {
+            if (drawingEnabled) {
+                e.preventDefault(); // 只有在繪圖模式下才阻止默認行為
+            }
+            startDrawing(e);
+        });
+        
+        canvas.addEventListener('touchmove', function(e) {
+            if (drawingEnabled) {
+                e.preventDefault(); // 只有在繪圖模式下才阻止默認行為
+            }
+            draw(e);
+        });
+        
+        canvas.addEventListener('touchend', stopDrawing);
+        
         // 當視窗大小改變時重新調整
-        window.addEventListener('resize', updateDisplayText);
+        window.addEventListener('resize', function() {
+            setCanvasDimensions();
+            updateDisplayText();
+        });
         
         // 偵測設備方向變化
         window.addEventListener('orientationchange', function() {
             // 給一點時間讓方向變化完成
-            setTimeout(updateDisplayText, 300);
+            setTimeout(function() {
+                setCanvasDimensions();
+                updateDisplayText();
+            }, 300);
         });
     </script>
 </body>
