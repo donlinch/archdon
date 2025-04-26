@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editProductCategory = document.getElementById('edit-product-category');
     const editFormError = document.getElementById('edit-form-error');
     const editExistingCategoriesDiv = document.getElementById('edit-existing-categories');
+    // 標籤相關元素 - 編輯表單
+    const editTagsContainer = document.getElementById('edit-tags-container');
 
     const addModal = document.getElementById('add-modal');
     const addForm = document.getElementById('add-product-form');
@@ -30,8 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const addProductSevenElevenUrl = document.getElementById('add-product-seven-eleven-url');
     const addFormError = document.getElementById('add-form-error');
     const addExistingCategoriesDiv = document.getElementById('add-existing-categories');
+    // 標籤相關元素 - 新增表單
+    const addTagsContainer = document.getElementById('add-tags-container');
     
     const categoryOptionsDatalist = document.getElementById('categoryOptions');
+
+    // 標籤管理相關元素
+    const tagManagementSection = document.getElementById('tag-management-section');
+    const tagsList = document.getElementById('tags-list');
+    const addTagForm = document.getElementById('add-tag-form');
+    const addTagInput = document.getElementById('add-tag-input');
+    const tagManagementError = document.getElementById('tag-management-error');
 
     // --- *** 圖表相關元素 *** ---
     const trafficChartCanvas = document.getElementById('traffic-chart');
@@ -160,6 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 editImagePreview.style.display = 'none'; 
             } 
             
+            // 填充標籤選項
+            if (editTagsContainer) {
+                await populateTagCheckboxes(editTagsContainer, product.tags || []);
+            }
+            
             editModal.style.display = 'flex'; 
         } catch (error) { 
             console.error(`獲取商品 ${id} 進行編輯時出錯:`, error); 
@@ -220,6 +236,12 @@ window.deleteProduct = async function(id) {
         
         addFormError.textContent = ''; 
         addForm.reset(); 
+        
+        // 填充標籤選項 - 新增表單
+        if (addTagsContainer) {
+            populateTagCheckboxes(addTagsContainer, []);
+        }
+        
         addModal.style.display = 'flex';
     }
 
@@ -253,6 +275,16 @@ window.deleteProduct = async function(id) {
                 image_url: editProductImageUrl.value.trim() || null, 
                 seven_eleven_url: editProductSevenElevenUrl.value.trim() || null 
             }; 
+            
+            // 收集已勾選的標籤
+            if (editTagsContainer) {
+                const selectedTags = [];
+                const checkboxes = editTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
+                checkboxes.forEach(checkbox => {
+                    selectedTags.push(checkbox.value);
+                });
+                updatedData.tags = selectedTags;
+            }
             
             if (!updatedData.name) { 
                 editFormError.textContent = '商品名稱不能為空。'; 
@@ -317,6 +349,16 @@ if (addForm) {
             image_url: addProductImageUrl.value.trim() || null, 
             seven_eleven_url: addProductSevenElevenUrl.value.trim() || null 
         }; 
+        
+        // 收集已勾選的標籤
+        if (addTagsContainer) {
+            const selectedTags = [];
+            const checkboxes = addTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                selectedTags.push(checkbox.value);
+            });
+            newData.tags = selectedTags;
+        }
         
         if (!newData.name) { 
             addFormError.textContent = '商品名稱不能為空。'; 
@@ -829,4 +871,366 @@ async function fetchCategories() {
     }
 }
 
+// --- *** 標籤相關功能 *** ---
+
+// 填充標籤複選框
+async function populateTagCheckboxes(container, selectedTags = []) {
+    if (!container) return;
+    
+    try {
+        container.innerHTML = '<div class="tag-loading">載入中...</div>';
+        
+        const response = await fetch('/api/tags');
+        if (!response.ok) throw new Error(`無法獲取標籤 (HTTP ${response.status})`);
+        
+        const tags = await response.json();
+        container.innerHTML = '';
+        
+        if (tags.length === 0) {
+            container.innerHTML = '<p class="no-tags-message">尚無標籤，請先在標籤管理頁面新增標籤。</p>';
+            return;
+        }
+        
+        // 創建複選框
+        tags.forEach(tag => {
+            const checkboxId = `tag-${container.id}-${tag.id}`;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tag-checkbox-wrapper';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = checkboxId;
+            checkbox.value = tag.id;
+            checkbox.checked = selectedTags.includes(tag.id);
+            
+            const label = document.createElement('label');
+            label.htmlFor = checkboxId;
+            label.textContent = tag.name;
+            
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
+        });
+    } catch (error) {
+        console.error('載入標籤失敗:', error);
+        container.innerHTML = `<p class="error-message">無法載入標籤: ${error.message}</p>`;
+    }
+}
+
+// 獲取並顯示所有標籤
+async function fetchAndDisplayTags() {
+    if (!tagsList) return;
+    
+    try {
+        tagsList.innerHTML = '<div class="loading-tags">載入標籤中...</div>';
+        
+        const response = await fetch('/api/tags');
+        if (!response.ok) throw new Error(`載入標籤失敗 (HTTP ${response.status})`);
+        
+        const tags = await response.json();
+        tagsList.innerHTML = '';
+        
+        if (tags.length === 0) {
+            tagsList.innerHTML = '<p class="no-tags">尚無標籤，請使用上方表單新增標籤。</p>';
+            return;
+        }
+        
+        tags.forEach(tag => {
+            const tagItem = document.createElement('div');
+            tagItem.className = 'tag-item';
+            tagItem.dataset.tagId = tag.id;
+            
+            tagItem.innerHTML = `
+                <span class="tag-name">${tag.name}</span>
+                <div class="tag-actions">
+                    <button class="edit-tag-btn" onclick="editTag(${tag.id}, '${tag.name}')">編輯</button>
+                    <button class="delete-tag-btn" onclick="deleteTag(${tag.id})">刪除</button>
+                </div>
+            `;
+            
+            tagsList.appendChild(tagItem);
+        });
+    } catch (error) {
+        console.error('獲取標籤失敗:', error);
+        tagsList.innerHTML = `<p class="error-message">無法載入標籤: ${error.message}</p>`;
+    }
+}
+
+// 新增標籤功能
+if (addTagForm) {
+    addTagForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        if (tagManagementError) tagManagementError.textContent = '';
+        
+        const tagName = addTagInput.value.trim();
+        if (!tagName) {
+            if (tagManagementError) tagManagementError.textContent = '標籤名稱不能為空';
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: tagName })
+            });
+            
+            if (!response.ok) {
+                let errorMsg = `無法新增標籤 (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            
+            addTagInput.value = '';
+            await fetchAndDisplayTags();
+        } catch (error) {
+            console.error('新增標籤失敗:', error);
+            if (tagManagementError) tagManagementError.textContent = `新增標籤錯誤: ${error.message}`;
+        }
+    });
+}
+
+// 編輯標籤（全局函數）
+window.editTag = async function(id, currentName) {
+    const newName = prompt('請輸入新的標籤名稱:', currentName);
+    if (newName === null || newName.trim() === '') return;
+    
+    try {
+        const response = await fetch(`/api/tags/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName.trim() })
+        });
+        
+        if (!response.ok) {
+            let errorMsg = `無法更新標籤 (HTTP ${response.status})`;
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+            } catch (e) {}
+            throw new Error(errorMsg);
+        }
+        
+        await fetchAndDisplayTags();
+    } catch (error) {
+        console.error(`更新標籤 ${id} 失敗:`, error);
+        alert(`更新標籤失敗: ${error.message}`);
+    }
+};
+
+// 刪除標籤（全局函數）
+window.deleteTag = async function(id) {
+    if (confirm(`確定要刪除此標籤嗎？此操作無法復原，並會從所有使用此標籤的商品中移除。`)) {
+        try {
+            const response = await fetch(`/api/tags/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                let errorMsg = `無法刪除標籤 (HTTP ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            
+            await fetchAndDisplayTags();
+            await fetchAndDisplayProducts(); // 更新商品列表，因為標籤可能有變化
+        } catch (error) {
+            console.error(`刪除標籤 ${id} 失敗:`, error);
+            alert(`刪除標籤失敗: ${error.message}`);
+        }
+    }
+};
+
+// 在標籤管理頁籤切換時更新標籤列表
+const tabButtons = document.querySelectorAll('.tab-button');
+if (tabButtons.length > 0) {
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // 隱藏所有內容區域
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // 移除所有按鈕的 active 類別
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 顯示目標內容區域
+            document.getElementById(targetTab).style.display = 'block';
+            
+            // 將點擊的按鈕設為 active
+            this.classList.add('active');
+            
+            // 如果切換到標籤管理頁籤，刷新標籤列表
+            if (targetTab === 'tag-management-tab') {
+                fetchAndDisplayTags();
+            }
+        });
+    });
+}
+
+// --- Initial Load ---
+fetchAndDisplayProducts(); // 載入商品列表
+fetchCategories();         
+initializeDatePickers(); 
+initializePageSelect(); 
+setTimeout(() => { displayTrafficChart('daily'); }, 300);
+
+// 如果標籤管理部分可見，載入標籤
+if (document.getElementById('tag-management-tab') && 
+    document.getElementById('tag-management-tab').style.display !== 'none') {
+    fetchAndDisplayTags();
+}
+
+// --- *** 新增: 獲取並填充分類 (Datalist + 顯示標籤) *** ---
+async function fetchCategories() {
+    if (!categoryOptionsDatalist) return;
+    // 同時檢查顯示標籤的 div 是否存在
+    const displayDivsExist = addExistingCategoriesDiv && editExistingCategoriesDiv;
+
+    try {
+        const response = await fetch('/api/products/categories');
+        if (!response.ok) throw new Error(`無法獲取分類列表 (HTTP ${response.status})`);
+        const categories = await response.json();
+
+        // 清空舊選項 (Datalist 和顯示區)
+        categoryOptionsDatalist.innerHTML = ''; 
+        if (displayDivsExist) {
+            addExistingCategoriesDiv.innerHTML = '';
+            editExistingCategoriesDiv.innerHTML = '';
+        }
+
+        categories.forEach(category => {
+            // 填充 Datalist
+            const option = document.createElement('option');
+            option.value = category;
+            categoryOptionsDatalist.appendChild(option);
+
+            // 如果顯示區存在，則創建並添加可點擊標籤
+            if (displayDivsExist) {
+                const tag = document.createElement('a'); // 使用 a 標籤方便樣式和點擊
+                tag.href = '#'; // 避免頁面跳轉
+                tag.classList.add('category-tag');
+                tag.textContent = category;
+                tag.dataset.category = category; // 將分類名存在 data-* 屬性中
+
+                // 為標籤添加點擊事件 (Add Modal)
+                const addTagClone = tag.cloneNode(true);
+                addTagClone.addEventListener('click', (e) => {
+                    e.preventDefault(); // 阻止 a 標籤的默認行為
+                    if (addProductCategory) {
+                        addProductCategory.value = e.target.dataset.category;
+                    }
+                });
+                addExistingCategoriesDiv.appendChild(addTagClone);
+
+                // 為標籤添加點擊事件 (Edit Modal)
+                const editTagClone = tag.cloneNode(true);
+                editTagClone.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (editProductCategory) {
+                        editProductCategory.value = e.target.dataset.category;
+                    }
+                });
+                editExistingCategoriesDiv.appendChild(editTagClone);
+            }
+        });
+        
+        // 如果沒有分類，可以顯示提示 (可選)
+        if (categories.length === 0 && displayDivsExist) {
+             addExistingCategoriesDiv.innerHTML = '<small style="color: #888;">尚無現有分類</small>';
+             editExistingCategoriesDiv.innerHTML = '<small style="color: #888;">尚無現有分類</small>';
+        }
+
+    } catch (error) {
+        console.error('獲取分類列表失敗:', error);
+        if (displayDivsExist) {
+            addExistingCategoriesDiv.innerHTML = '<small style="color: red;">無法載入分類</small>';
+            editExistingCategoriesDiv.innerHTML = '<small style="color: red;">無法載入分類</small>';
+        }
+    }
+}
+
 }); // --- End of DOMContentLoaded ---
+
+// 切換標籤管理視圖的全局函數
+window.showTagManagement = function() {
+    // 隱藏所有內容區域
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // 移除所有按鈕的 active 類別
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // 顯示標籤管理內容區域
+    const tagManagementTab = document.getElementById('tag-management-tab');
+    if (tagManagementTab) {
+        tagManagementTab.style.display = 'block';
+        
+        // 將對應按鈕設為 active
+        const tagTabButton = document.querySelector('.tab-button[data-tab="tag-management-tab"]');
+        if (tagTabButton) {
+            tagTabButton.classList.add('active');
+        }
+        
+        // 刷新標籤列表
+        const tagsList = document.getElementById('tags-list');
+        if (tagsList) {
+            // 檢查是否有全局函數
+            if (typeof fetchAndDisplayTags === 'function') {
+                fetchAndDisplayTags();
+            } else {
+                // 直接在這裡實現載入標籤的邏輯
+                (async function() {
+                    try {
+                        tagsList.innerHTML = '<div class="loading-tags">載入標籤中...</div>';
+                        
+                        const response = await fetch('/api/tags');
+                        if (!response.ok) throw new Error(`載入標籤失敗 (HTTP ${response.status})`);
+                        
+                        const tags = await response.json();
+                        tagsList.innerHTML = '';
+                        
+                        if (tags.length === 0) {
+                            tagsList.innerHTML = '<p class="no-tags">尚無標籤，請使用上方表單新增標籤。</p>';
+                            return;
+                        }
+                        
+                        tags.forEach(tag => {
+                            const tagItem = document.createElement('div');
+                            tagItem.className = 'tag-item';
+                            tagItem.dataset.tagId = tag.id;
+                            
+                            tagItem.innerHTML = `
+                                <span class="tag-name">${tag.name}</span>
+                                <div class="tag-actions">
+                                    <button class="edit-tag-btn" onclick="editTag(${tag.id}, '${tag.name}')">編輯</button>
+                                    <button class="delete-tag-btn" onclick="deleteTag(${tag.id})">刪除</button>
+                                </div>
+                            `;
+                            
+                            tagsList.appendChild(tagItem);
+                        });
+                    } catch (error) {
+                        console.error('獲取標籤失敗:', error);
+                        tagsList.innerHTML = `<p class="error-message">無法載入標籤: ${error.message}</p>`;
+                    }
+                })();
+            }
+        }
+    }
+}
