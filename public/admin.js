@@ -893,7 +893,7 @@ async function populateTagCheckboxes(container, selectedTags = []) {
         
         // 創建複選框
         tags.forEach(tag => {
-            const checkboxId = `tag-${container.id}-${tag.id}`;
+            const checkboxId = `tag-${container.id}-${tag.tag_id}`;
             
             const wrapper = document.createElement('div');
             wrapper.className = 'tag-checkbox-wrapper';
@@ -901,12 +901,12 @@ async function populateTagCheckboxes(container, selectedTags = []) {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = checkboxId;
-            checkbox.value = tag.id;
-            checkbox.checked = selectedTags.includes(tag.id);
+            checkbox.value = tag.tag_id;
+            checkbox.checked = selectedTags.includes(tag.tag_id);
             
             const label = document.createElement('label');
             label.htmlFor = checkboxId;
-            label.textContent = tag.name;
+            label.textContent = tag.tag_name;
             
             wrapper.appendChild(checkbox);
             wrapper.appendChild(label);
@@ -939,13 +939,13 @@ async function fetchAndDisplayTags() {
         tags.forEach(tag => {
             const tagItem = document.createElement('div');
             tagItem.className = 'tag-item';
-            tagItem.dataset.tagId = tag.id;
+            tagItem.dataset.tagId = tag.tag_id;
             
             tagItem.innerHTML = `
-                <span class="tag-name">${tag.name}</span>
+                <span class="tag-name">${tag.tag_name}</span>
                 <div class="tag-actions">
-                    <button class="edit-tag-btn" onclick="editTag(${tag.id}, '${tag.name}')">編輯</button>
-                    <button class="delete-tag-btn" onclick="deleteTag(${tag.id})">刪除</button>
+                    <button class="edit-tag-btn" onclick="editTag(${tag.tag_id}, '${tag.tag_name}')">編輯</button>
+                    <button class="delete-tag-btn" onclick="deleteTag(${tag.tag_id})">刪除</button>
                 </div>
             `;
             
@@ -974,7 +974,7 @@ if (addTagForm) {
             const response = await fetch('/api/tags', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: tagName })
+                body: JSON.stringify({ tag_name: tagName })
             });
             
             if (!response.ok) {
@@ -1004,7 +1004,7 @@ window.editTag = async function(id, currentName) {
         const response = await fetch(`/api/tags/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newName.trim() })
+            body: JSON.stringify({ tag_name: newName.trim() })
         });
         
         if (!response.ok) {
@@ -1213,13 +1213,13 @@ window.showTagManagement = function() {
                         tags.forEach(tag => {
                             const tagItem = document.createElement('div');
                             tagItem.className = 'tag-item';
-                            tagItem.dataset.tagId = tag.id;
+                            tagItem.dataset.tagId = tag.tag_id;
                             
                             tagItem.innerHTML = `
-                                <span class="tag-name">${tag.name}</span>
+                                <span class="tag-name">${tag.tag_name}</span>
                                 <div class="tag-actions">
-                                    <button class="edit-tag-btn" onclick="editTag(${tag.id}, '${tag.name}')">編輯</button>
-                                    <button class="delete-tag-btn" onclick="deleteTag(${tag.id})">刪除</button>
+                                    <button class="edit-tag-btn" onclick="editTag(${tag.tag_id}, '${tag.tag_name}')">編輯</button>
+                                    <button class="delete-tag-btn" onclick="deleteTag(${tag.tag_id})">刪除</button>
                                 </div>
                             `;
                             
