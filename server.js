@@ -3616,6 +3616,20 @@ app.get('/api/banners', async (req, res) => {
 });
 
 // --- 商品 API ---
+
+// 新增：獲取所有不重複的商品分類
+app.get('/api/products/categories', async (req, res) => {
+    try {
+        const queryText = 'SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category <> \'\' ORDER BY category ASC';
+        const result = await pool.query(queryText);
+        const categories = result.rows.map(row => row.category);
+        res.json(categories);
+    } catch (err) {
+        console.error('獲取商品分類列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
 app.get('/api/products', async (req, res) => {
     const sortBy = req.query.sort || 'latest';
     let orderByClause = 'ORDER BY created_at DESC, id DESC';
@@ -3623,7 +3637,8 @@ app.get('/api/products', async (req, res) => {
         orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC';
     }
     try {
-        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products ${orderByClause}`;
+        // 修改：在 SELECT 語句中加入 category
+        const queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products ${orderByClause}`;
         const result = await pool.query(queryText);
         res.json(result.rows);
     } catch (err) {
@@ -3635,7 +3650,8 @@ app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
     try {
-        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
+        // 修改：在 SELECT 語句中加入 category
+        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products WHERE id = $1', [id]);
         if (result.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
         res.json(result.rows[0]);
     } catch (err) {
