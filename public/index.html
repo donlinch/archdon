@@ -326,6 +326,34 @@ body {
     z-index: 5;
 }
 
+/* Product Tags Container */
+.product-card .tags-container {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 70%; /* Ensure it doesn't overlap with price */
+    z-index: 5;
+}
+
+/* Individual Product Tag */
+.product-card .product-tag {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
 .product-card .card-body {
     padding: 0.75rem 1rem; /* Consistent padding */
     text-align: left; /* Align text to left for consistency */

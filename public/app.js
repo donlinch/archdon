@@ -239,22 +239,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-             // *** 檢查這段程式碼的結尾 ***
-             cardContainer.innerHTML = ` 
-             <div class="position-relative">
-                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
-                 ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
-                 <!-- (可選) 在此顯示分類 -->
-                 ${product.category ? `<span class="category-badge">${product.category}</span>` : ''} 
-             </div>
-             <div class="card-body">
-                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
-                 ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>'}
-             </div>
-              <div class="add-hint">
-                  <i class="bi bi-plus-circle"></i> 點擊加入購物車 
-              </div> 
-         `; // <--- 確保這個反引號存在且位置正確
+            // Create tags HTML if product has tags
+            let tagsHtml = '';
+            if (product.tags && product.tags.length > 0) {
+                tagsHtml = `
+                <div class="tags-container">
+                    ${product.tags.map(tag => `<span class="product-tag">${tag.tag_name}</span>`).join('')}
+                </div>`;
+            }
+
+            // *** 檢查這段程式碼的結尾 ***
+            cardContainer.innerHTML = ` 
+            <div class="position-relative">
+                <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
+                ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
+                ${tagsHtml}
+                <!-- (可選) 在此顯示分類 -->
+                ${product.category ? `<span class="category-badge">${product.category}</span>` : ''} 
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">${product.name || '未命名商品'}</h5>
+                ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>'}
+            </div>
+             <div class="add-hint">
+                 <i class="bi bi-plus-circle"></i> 點擊加入購物車 
+             </div> 
+        `; // <--- 確保這個反引號存在且位置正確
 
             grid.appendChild(cardContainer);
         });
