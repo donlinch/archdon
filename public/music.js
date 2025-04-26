@@ -566,16 +566,18 @@ async function fetchAndDisplayArtists() {
                 coverImg.alt = music.title || '專輯封面';
                 coverDiv.appendChild(coverImg);
 
+                // 歌手名稱 - 放在 cover-image 裡
+                const artistElem = document.createElement('p');
+                artistElem.className = 'artist';
+                artistElem.textContent = music.artist || '未知歌手';
+                coverDiv.appendChild(artistElem);
+                
                 // 專輯資訊
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'album-info';
                 
                 const title = document.createElement('h3');
                 title.textContent = music.title || '未知專輯';
-                
-                const artist = document.createElement('p');
-                artist.className = 'artist';
-                artist.textContent = music.artist || '未知歌手';
                 
                 const date = document.createElement('p');
                 date.className = 'release-date';
@@ -584,7 +586,6 @@ async function fetchAndDisplayArtists() {
                     : '發行日期未知';
 
                 infoDiv.appendChild(title);
-                infoDiv.appendChild(artist);
                 infoDiv.appendChild(date);
 
                 albumCard.appendChild(coverDiv);
@@ -681,16 +682,18 @@ async function fetchAndDisplayArtists() {
             coverImg.alt = music.title || '專輯封面';
             coverDiv.appendChild(coverImg);
             
+            // 歌手名稱 - 放在 cover-image 裡
+            const artistElem = document.createElement('p');
+            artistElem.className = 'artist';
+            artistElem.textContent = music.artist || '未知歌手';
+            coverDiv.appendChild(artistElem);
+            
             // 專輯資訊
             const infoDiv = document.createElement('div');
             infoDiv.className = 'album-info';
             
             const title = document.createElement('h3');
             title.textContent = music.title || '未知專輯';
-            
-            const artistElem = document.createElement('p');
-            artistElem.className = 'artist';
-            artistElem.textContent = music.artist || '未知歌手';
             
             const date = document.createElement('p');
             date.className = 'release-date';
@@ -699,7 +702,6 @@ async function fetchAndDisplayArtists() {
                 : '發行日期未知';
             
             infoDiv.appendChild(title);
-            infoDiv.appendChild(artistElem);
             infoDiv.appendChild(date);
             
             albumCard.appendChild(coverDiv);

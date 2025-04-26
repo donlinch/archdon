@@ -814,6 +814,7 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     z-index: 5;
     backdrop-filter: blur(2px);
+    transform: translateZ(0); /* Fix for Safari rendering */
 }
 
 /* Add a small music icon before the artist name */
@@ -1211,5 +1212,6 @@ body {
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="music.js" type="module"></script>
+    <script src="js-fix.js"></script>
 </body>
 </html>
