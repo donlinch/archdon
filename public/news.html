@@ -99,23 +99,69 @@
         transition: all 0.3s;
         border: none;
         cursor: pointer;
-        background-color: #90CAF9; /* 藍色 */
-        color: white;
-    }
-
-    .category-tabs a.active, .category-tabs button.active {
-        background-color: #FFB74D; /* 黃色 */
-        color: white;
-        box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+        background-color: #f0f0f0; /* 默認淺灰色背景 */
+        color: #666;
     }
 
     .category-tabs a:hover, .category-tabs button:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        opacity: 0.9;
     }
 
-    .category-tabs a:active, .category-tabs button:active {
-        transform: translateY(1px);
+    /* 分類標籤顏色 */
+    .category-tabs a[data-category="all"].active {
+        background-color: #9575CD; /* 紫色 - 全部消息 */
+        color: white;
+    }
+
+    .category-tabs a[data-category="1"].active,
+    .category-tabs a[data-category="latest"].active {
+        background-color: #4DB6AC; /* 青綠色 - 最新消息 */
+        color: white;
+    }
+
+    .category-tabs a[data-category="2"].active,
+    .category-tabs a[data-category="events"].active {
+        background-color: #FFB74D; /* 橙色 - 活動預告 */
+        color: white;
+    }
+
+    .category-tabs a[data-category="3"].active,
+    .category-tabs a[data-category="media"].active {
+        background-color: #7986CB; /* 藍色 - 媒體報導 */
+        color: white;
+    }
+
+    .category-tabs a[data-category="4"].active,
+    .category-tabs a[data-category="cooperation"].active {
+        background-color: #F06292; /* 粉紅色 - 合作推廣 */
+        color: white;
+    }
+
+    /* 日曆下方的分類標籤顏色 */
+    .category-label.cat-news {
+        background-color: #4DB6AC; /* 青綠色 - 最新消息 */
+    }
+
+    .category-label.cat-events {
+        background-color: #FFB74D; /* 橙色 - 活動預告 */
+    }
+
+    .category-label.cat-media {
+        background-color: #7986CB; /* 藍色 - 媒體報導 */
+    }
+
+    .category-label.cat-cooperation {
+        background-color: #F06292; /* 粉紅色 - 合作推廣 */
+    }
+
+    .category-label.cat-other {
+        background-color: #9575CD; /* 紫色 - 其他 */
+    }
+
+    .category-tabs a.active {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     /* --- 浮動角色 --- */
