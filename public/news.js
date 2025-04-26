@@ -232,29 +232,70 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryLabel = document.createElement('div');
             categoryLabel.className = 'category-label';
             
-            // 根據新聞類型決定標籤顏色和文字
+            // 根據新聞分類決定標籤顏色和文字
             let categoryType = 'cat-other';
             let categoryText = '其他';
             
-            // 簡化分類邏輯，優先使用標題和摘要中的關鍵詞來判斷
-            if ((news.title && news.title.includes('合作')) || 
-                (news.summary && news.summary.includes('合作')) ||
-                (news.title && news.title.includes('推廣')) || 
-                (news.summary && news.summary.includes('推廣'))) {
-                categoryType = 'cat-cooperation';
-                categoryText = '合作推廣';
-            } else if ((news.title && news.title.includes('報導')) || 
-                (news.summary && news.summary.includes('報導')) ||
-                (news.title && news.title.includes('媒體')) || 
-                (news.summary && news.summary.includes('媒體'))) {
-                categoryType = 'cat-media';
-                categoryText = '媒體報導';
-            } else if (new Date(news.event_date) > new Date()) {
-                categoryType = 'cat-events';
-                categoryText = '活動預告';
-            } else {
-                categoryType = 'cat-news';
-                categoryText = '最新消息';
+            // 優先使用API返回的分類
+            if (news.category_id && news.category_name) {
+                categoryText = news.category_name;
+                
+                // 根據分類slug或名稱決定樣式
+                if (news.category_slug) {
+                    switch(news.category_slug) {
+                        case 'news':
+                        case 'latest':
+                            categoryType = 'cat-news';
+                            break;
+                        case 'events':
+                        case 'upcoming':
+                            categoryType = 'cat-events';
+                            break;
+                        case 'media':
+                            categoryType = 'cat-media';
+                            break;
+                        case 'cooperation':
+                            categoryType = 'cat-cooperation';
+                            break;
+                        default:
+                            categoryType = 'cat-other';
+                    }
+                }
+                // 沒有slug時，嘗試從名稱判斷
+                else {
+                    const name = news.category_name.toLowerCase();
+                    if (name.includes('最新') || name.includes('消息')) {
+                        categoryType = 'cat-news';
+                    } else if (name.includes('活動') || name.includes('預告')) {
+                        categoryType = 'cat-events';
+                    } else if (name.includes('媒體') || name.includes('報導')) {
+                        categoryType = 'cat-media';
+                    } else if (name.includes('合作') || name.includes('推廣')) {
+                        categoryType = 'cat-cooperation';
+                    }
+                }
+            } 
+            // 備用方案：如果沒有分類信息，根據內容猜測分類
+            else {
+                if ((news.title && news.title.includes('合作')) || 
+                    (news.summary && news.summary.includes('合作')) ||
+                    (news.title && news.title.includes('推廣')) || 
+                    (news.summary && news.summary.includes('推廣'))) {
+                    categoryType = 'cat-cooperation';
+                    categoryText = '合作推廣';
+                } else if ((news.title && news.title.includes('報導')) || 
+                    (news.summary && news.summary.includes('報導')) ||
+                    (news.title && news.title.includes('媒體')) || 
+                    (news.summary && news.summary.includes('媒體'))) {
+                    categoryType = 'cat-media';
+                    categoryText = '媒體報導';
+                } else if (new Date(news.event_date) > new Date()) {
+                    categoryType = 'cat-events';
+                    categoryText = '活動預告';
+                } else {
+                    categoryType = 'cat-news';
+                    categoryText = '最新消息';
+                }
             }
             
             categoryLabel.classList.add(categoryType);
@@ -654,19 +695,37 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/news-categories');
             if (!response.ok) throw new Error('API請求失敗');
+            
             const categories = await response.json();
-            renderCategories(categories);
+            
+            // 檢查分類數據是否有效
+            if (Array.isArray(categories) && categories.length > 0) {
+                // 確保每個分類有必要的字段
+                const validCategories = categories.filter(cat => cat && cat.id && cat.name);
+                renderCategories(validCategories);
+            } else {
+                // 使用硬編碼的備用分類
+                console.warn('API返回的分類數據無效或為空，使用備用分類');
+                useBackupCategories();
+            }
         } catch (error) {
             console.error('加載分類失敗:', error);
-            // 使用硬編碼的備用分類
-            renderCategories([
-                { id: 'all', name: '全部消息', slug: 'all' },
-                { id: 1, name: '最新消息', slug: 'latest' },
-                { id: 2, name: '活動預告', slug: 'events' },
-                { id: 3, name: '媒體報導', slug: 'media' }
-            ]);
+            useBackupCategories();
         }
+        
+        // 加載第一頁新聞（不過濾分類）
         loadNews(1);
+    }
+    
+    // 使用備用分類
+    function useBackupCategories() {
+        renderCategories([
+            { id: 'all', name: '全部消息', slug: 'all' },
+            { id: 1, name: '最新消息', slug: 'latest' },
+            { id: 2, name: '活動預告', slug: 'events' },
+            { id: 3, name: '媒體報導', slug: 'media' },
+            { id: 4, name: '合作推廣', slug: 'cooperation' }
+        ]);
     }
 
     // 获取并显示新闻列表（支持分页和分类）
@@ -683,8 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             let url = `/api/news?page=${currentPage}&limit=${itemsPerPage}`;
-            if (currentCategoryId !== null && currentCategoryId !== '') {
-                url += `&category=${currentCategoryId}`; // 后端使用 'category' 参数
+            if (currentCategoryId && currentCategoryId !== 'all' && currentCategoryId !== '') {
+                url += `&category=${currentCategoryId}`; // 使用 category 参数传递分类 ID
             }
 
             const response = await fetch(url);
@@ -701,9 +760,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            renderNewsCards(data.news); // 调用你现有的渲染函数
-            renderPagination(totalPages, currentPage); // 调用你现有的分页函数
-            animateNewsIn(); // 调用你现有的动画函数
+            renderNewsCards(data.news); // 调用渲染函数，确保它可以处理分类信息
+            renderPagination(totalPages, currentPage); 
+            animateNewsIn(); 
 
         } catch (error) {
             console.error('获取新闻失败:', error);
@@ -739,27 +798,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 获取分类 ID 并加载新闻
         const categoryId = this.getAttribute('data-category');
-        loadNews(1, categoryId); // 点击分类时，总是加载第一页
+        
+        // 如果是"全部"分类，传递 null 或空字符串
+        if (categoryId === 'all') {
+            loadNews(1, null);
+        } else {
+            loadNews(1, categoryId); // 点击分类时，总是加载第一页
+        }
     }
 
-    // 在 loadNews 函數之前添加
+    // 渲染分類標籤
     function renderCategories(categories) {
         const categoryTabs = document.getElementById('category-tabs');
         if (!categoryTabs) return;
         
         categoryTabs.innerHTML = '';
         
-        // 添加"全部"链接
+        // 添加"全部"鏈接
         const allLink = document.createElement('a');
         allLink.className = 'category-link active';
-        allLink.setAttribute('data-category', '');
+        allLink.setAttribute('data-category', 'all');
         allLink.href = '#';
         allLink.textContent = '全部消息';
         categoryTabs.appendChild(allLink);
         
-        // 添加其他分類链接
+        // 添加其他分類鏈接
         categories.forEach(category => {
-            if (category.id === 'all') return; // 跳過已添加的"全部"選項
+            // 跳過已添加的"全部"選項或無效分類
+            if (category.id === 'all' || !category.id) return;
             
             const link = document.createElement('a');
             link.className = 'category-link';
@@ -773,7 +839,6 @@ document.addEventListener('DOMContentLoaded', () => {
         bindCategoryLinks();
     }
 
-    // *** 修改点：调用新的初始化函数 ***
-    loadCategories(); // 首先加载分类
-    loadNews(1);      // 然后加载第一页的全部新闻
+    // 初始化
+    loadCategories(); // 加載分類並自動加載第一頁新聞
 });
