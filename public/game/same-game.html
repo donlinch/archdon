@@ -7,7 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <style>
 
 
@@ -1043,15 +1042,55 @@ function loadTemplates() {
             console.log('Templates data:', data);
             
             // 檢查數據結構
+            let templates = [];
             if (!Array.isArray(data)) {
                 if (data.templates && Array.isArray(data.templates)) {
-                    renderTemplateSelection(data.templates);
+                    templates = data.templates;
                 } else {
                     throw new Error('不正確的模板數據格式');
                 }
             } else {
-                renderTemplateSelection(data);
+                templates = data;
             }
+
+            // 針對每個模板，如果沒有圖像，預先載入一個關卡及其圖像
+            const templatePromises = templates.map(template => {
+                // 如果模板已經有圖像，則不需要額外請求
+                if (template.cover_image || template.preview_image || 
+                    (template.levels && template.levels.length > 0 && 
+                     template.levels[0].images && template.levels[0].images.length > 0)) {
+                    return Promise.resolve(template);
+                }
+                
+                // 否則，請求這個模板的完整數據來獲取圖像
+                return fetch(`/api/samegame/play/${template.id}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            // 如果請求失敗，保持原樣
+                            console.warn(`無法載入模板 ${template.id} 的圖像`);
+                            return template;
+                        }
+                        return response.json();
+                    })
+                    .then(fullData => {
+                        // 嘗試從完整數據中提取第一個關卡的第一張圖片
+                        if (fullData.levels && fullData.levels.length > 0 && 
+                            fullData.levels[0].images && fullData.levels[0].images.length > 0) {
+                            template.preview_image = fullData.levels[0].images[0];
+                        }
+                        return template;
+                    })
+                    .catch(error => {
+                        console.warn(`載入模板 ${template.id} 圖像時出錯:`, error);
+                        return template;
+                    });
+            });
+            
+            // 等待所有模板請求完成
+            return Promise.all(templatePromises);
+        })
+        .then(templatesWithImages => {
+            renderTemplateSelection(templatesWithImages);
         })
         .catch(error => {
             console.error('載入模板列表出錯:', error);
@@ -1075,6 +1114,9 @@ function renderTemplateSelection(templates) {
         return;
     }
     
+    // 預設圖片 - 使用 Data URI 替代檔案引用
+    const defaultImageDataURI = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGZpbGw9IiNGRkI3NEQiIGQ9Ik0wIDBoODB2ODBIMHoiLz48dGV4dCBmb250LWZhbWlseT0iLVdlYktpdC1TeXN0ZW0tRm9udCwgU2FuIEZyYW5jaXNjbywgSGVsdmV0aWNhIE5ldWUsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIj48dHNwYW4geD0iMTUiIHk9IjQ3Ij5HYW1lPC90c3Bhbj48L3RleHQ+PC9nPjwvc3ZnPg==';
+    
     let html = '';
     templates.forEach(template => {
         // 嘗試獲取圖片
@@ -1095,7 +1137,7 @@ function renderTemplateSelection(templates) {
         }
         // 選項4: 使用預設圖片
         else {
-            previewImage = '/images/game_placeholder.png';
+            previewImage = defaultImageDataURI;
         }
         
         html += `
