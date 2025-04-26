@@ -729,13 +729,13 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(0deg, 
-        rgba(0,0,0,0.7) 0%, 
-        rgba(0,0,0,0.4) 30%, 
-        rgba(0,0,0,0.2) 50%, 
-        rgba(0,0,0,0.4) 70%, 
-        rgba(0,0,0,0.7) 100%);
-    opacity: 0.7;
+        rgba(0,0,0,0.5) 0%, 
+        rgba(0,0,0,0.0) 30%, 
+        rgba(0,0,0,0.0) 70%, 
+        rgba(0,0,0,0.5) 100%);
+    opacity: 0.5;
     pointer-events: none;
+    z-index: 1;
 }
 
 .album-card .album-info {
@@ -759,6 +759,9 @@ body {
     margin: 0;
     z-index: 3;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    background-color: rgba(0,0,0,0.4);
+    padding: 5px 8px;
+    border-radius: 5px;
 }
 
 .album-card .artist {
@@ -777,6 +780,9 @@ body {
     z-index: 3;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     text-align: right;
+    background-color: rgba(0,0,0,0.4);
+    padding: 4px 8px;
+    border-radius: 5px;
 }
 
 .album-card .release-date {
@@ -817,12 +823,14 @@ body {
         top: 8px;
         left: 8px;
         -webkit-line-clamp: 2;
+        padding: 3px 6px;
     }
     
     .album-card .artist {
         font-size: 12px;
         bottom: 8px;
         right: 8px;
+        padding: 3px 6px;
     }
     
     .album-card:hover {
