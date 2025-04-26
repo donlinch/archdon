@@ -511,12 +511,18 @@
                 editGameFormElement.addEventListener('submit', handleEditGameSubmit);
             } else { console.error("Edit game form not found."); }
             
-            document.getElementById('add-game-image-url')?.addEventListener('input', function() {
-                previewImage('add-image-preview', this.value);
-            });
-            document.getElementById('edit-game-image-url')?.addEventListener('input', function() {
-                previewImage('edit-image-preview', this.value);
-            });
+            const addGameImageUrl = document.getElementById('add-game-image-url');
+            if (addGameImageUrl) {
+                addGameImageUrl.addEventListener('input', function() {
+                    previewImage('add-image-preview', this.value);
+                });
+            }
+            const editGameImageUrl = document.getElementById('edit-game-image-url');
+            if (editGameImageUrl) {
+                editGameImageUrl.addEventListener('input', function() {
+                    previewImage('edit-image-preview', this.value);
+                });
+            }
 
             // --- Same Game Logic ---
             loadTemplates(); // Load same-game templates list
@@ -608,16 +614,20 @@
                 
                 previewImage('edit-image-preview', game.image_url);
                 
-                document.getElementById('editGameForm')?.style.display = 'block';
-                document.querySelector('.admin-container')?.style.display = 'none';
+                const editGameForm = document.getElementById('editGameForm');
+                if (editGameForm) editGameForm.style.display = 'block';
+                const adminContainer = document.querySelector('.admin-container');
+                if (adminContainer) adminContainer.style.display = 'none';
             })
             .catch(error => { alert(`載入一般遊戲資料時出錯: ${error.message}`); });
         }
 
         // Needs to be global for onclick
         window.closeEditForm = function() {
-            document.getElementById('editGameForm')?.style.display = 'none';
-            document.querySelector('.admin-container')?.style.display = 'block';
+            const editGameForm = document.getElementById('editGameForm');
+            if (editGameForm) editGameForm.style.display = 'none';
+            const adminContainer = document.querySelector('.admin-container');
+            if (adminContainer) adminContainer.style.display = 'block';
         }
 
         // Needs to be global for onclick
@@ -1023,7 +1033,8 @@
              
              const images = [];
              $('#imageList .image-list-item').each(function() {
-                 const url = $(this).find('.image-url-input').val()?.trim();
+                 const urlInput = $(this).find('.image-url-input').val();
+                 const url = urlInput ? urlInput.trim() : '';
                  if (url) {
                      images.push({ image_url: url });
                  }
@@ -1262,8 +1273,11 @@
 
             // Special handling: Ensure the parent 'same-game' tab is active if a sub-tab is selected
             if (Array.from(document.querySelectorAll('.same-game-tabs .tab-item')).includes(currentTabItem)) {
-                 document.querySelector('.tab-item[data-tab="same-game"]')?.classList.add('active');
-                 document.getElementById('same-game')?.classList.add('active');
+                const sameGameTab = document.querySelector('.tab-item[data-tab="same-game"]');
+                if (sameGameTab) sameGameTab.classList.add('active');
+                
+                const sameGameContent = document.getElementById('same-game');
+                if (sameGameContent) sameGameContent.classList.add('active');
             }
         }
 
