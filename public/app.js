@@ -262,9 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
                 ${product.description ? `<p class="card-text">${product.description}</p>` : '<p class="card-text">&nbsp;</p>'}
             </div>
-             <div class="add-hint">
-                 <i class="bi bi-plus-circle"></i> 點擊加入購物車 
-             </div> 
         `; // <--- 確保這個反引號存在且位置正確
 
             grid.appendChild(cardContainer);
