@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCategories();          // 商品分類 (用於表單)
     fetchAndDisplayProducts();  // 商品列表
     fetchAndDisplayTags();        // 標籤列表
-    setupSortLinks();             // 商品排序
+    // setupSortLinks();             // 商品排序 (TODO: Function missing)
     setupBackToTop();             // 回頂部按鈕
     setupCharacterInteractions(); // 浮動角色
     initializeDatePickers();      // 日期選擇器 (圖表)
