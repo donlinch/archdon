@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${product.click_count !== null ? product.click_count : '0'}</td>
                     <td>${product.category || '未分類'}</td>
                     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                    <td>${product.tags && product.tags.length ? product.tags.map(tag => 
+                         `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
                     <td>
                         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
                         <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
