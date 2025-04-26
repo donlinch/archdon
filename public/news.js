@@ -1,4 +1,8 @@
 // news.js
+
+// 用於存儲 category.id -> index 的映射
+let categoryIndexMap = {}; 
+
 document.addEventListener('DOMContentLoaded', () => {
     // 獲取DOM元素
     const newsListContainer = document.getElementById('news-list');
@@ -25,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupBackToTop();
     setupCharacterInteractions();
     setupNewsModal();
+    detectDevice();
+    window.addEventListener('resize', detectDevice);
     
     /**
      * 初始化Swiper輪播
@@ -230,76 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 分類標籤
             const categoryLabel = document.createElement('div');
-            categoryLabel.className = 'category-label';
+            let labelClass = 'cat-other'; // 默認 class
+            let labelText = '其他';
             
-            // 根據新聞分類決定標籤顏色和文字
-            let categoryType = 'cat-other';
-            let categoryText = '其他';
-            
-            // 優先使用API返回的分類
             if (news.category_id && news.category_name) {
-                categoryText = news.category_name;
-                
-                // 根據分類slug或名稱決定樣式
-                if (news.category_slug) {
-                    switch(news.category_slug) {
-                        case 'news':
-                        case 'latest':
-                            categoryType = 'cat-news';
-                            break;
-                        case 'events':
-                        case 'upcoming':
-                            categoryType = 'cat-events';
-                            break;
-                        case 'media':
-                            categoryType = 'cat-media';
-                            break;
-                        case 'cooperation':
-                            categoryType = 'cat-cooperation';
-                            break;
-                        default:
-                            categoryType = 'cat-other';
-                    }
-                }
-                // 沒有slug時，嘗試從名稱判斷
-                else {
-                    const name = news.category_name.toLowerCase();
-                    if (name.includes('最新') || name.includes('消息')) {
-                        categoryType = 'cat-news';
-                    } else if (name.includes('活動') || name.includes('預告')) {
-                        categoryType = 'cat-events';
-                    } else if (name.includes('媒體') || name.includes('報導')) {
-                        categoryType = 'cat-media';
-                    } else if (name.includes('合作') || name.includes('推廣')) {
-                        categoryType = 'cat-cooperation';
-                    }
-                }
-            } 
-            // 備用方案：如果沒有分類信息，根據內容猜測分類
-            else {
-                if ((news.title && news.title.includes('合作')) || 
-                    (news.summary && news.summary.includes('合作')) ||
-                    (news.title && news.title.includes('推廣')) || 
-                    (news.summary && news.summary.includes('推廣'))) {
-                    categoryType = 'cat-cooperation';
-                    categoryText = '合作推廣';
-                } else if ((news.title && news.title.includes('報導')) || 
-                    (news.summary && news.summary.includes('報導')) ||
-                    (news.title && news.title.includes('媒體')) || 
-                    (news.summary && news.summary.includes('媒體'))) {
-                    categoryType = 'cat-media';
-                    categoryText = '媒體報導';
-                } else if (new Date(news.event_date) > new Date()) {
-                    categoryType = 'cat-events';
-                    categoryText = '活動預告';
-                } else {
-                    categoryType = 'cat-news';
-                    categoryText = '最新消息';
+                labelText = news.category_name;
+                const categoryIndex = categoryIndexMap[news.category_id]; // 查找索引
+                if (categoryIndex !== undefined) {
+                    labelClass = `cat-index-${categoryIndex}`; // 使用基於索引的 class
                 }
             }
             
-            categoryLabel.classList.add(categoryType);
-            categoryLabel.textContent = categoryText;
+            categoryLabel.className = `category-label ${labelClass}`; // 應用 class
+            categoryLabel.textContent = labelText;
             
             // 縮圖
             const thumbnail = document.createElement('div');
@@ -684,58 +633,57 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.toggle('is-mobile', isMobile);
     }
     
-    // 初始化檢測設備類型
-    detectDevice();
-    
-    // 窗口尺寸改變時重新檢測
-    window.addEventListener('resize', detectDevice);
-
     // 获取并显示新闻分类
     async function loadCategories() {
+        categoryIndexMap = {}; // 重置映射
         try {
-            const response = await fetch('/api/news-categories');
+            const response = await fetch('/api/news-categories'); // API應按所需順序返回分類
             if (!response.ok) throw new Error('API請求失敗');
-            
             const categories = await response.json();
-            
-            // 檢查分類數據是否有效
+
             if (Array.isArray(categories) && categories.length > 0) {
-                // 確保每個分類有必要的字段
                 const validCategories = categories.filter(cat => cat && cat.id && cat.name);
-                renderCategories(validCategories);
+                // 建立索引映射
+                validCategories.forEach((category, index) => {
+                    categoryIndexMap[category.id] = index; 
+                });
+                renderCategories(validCategories); 
             } else {
-                // 使用硬編碼的備用分類
                 console.warn('API返回的分類數據無效或為空，使用備用分類');
-                useBackupCategories();
+                useBackupCategories(); 
             }
         } catch (error) {
             console.error('加載分類失敗:', error);
-            useBackupCategories();
+            useBackupCategories(); 
         }
-        
-        // 加載第一頁新聞（不過濾分類）
-        loadNews(1);
+        // loadNews(1); // 不在這裡調用，讓 loadNews 在 loadCategories 完成後被正確觸發
     }
-    
+
     // 使用備用分類
     function useBackupCategories() {
-        renderCategories([
-            { id: 'all', name: '全部消息', slug: 'all' },
+         const backupCats = [
             { id: 1, name: '最新消息', slug: 'latest' },
             { id: 2, name: '活動預告', slug: 'events' },
             { id: 3, name: '媒體報導', slug: 'media' },
             { id: 4, name: '合作推廣', slug: 'cooperation' }
-        ]);
+         ];
+         categoryIndexMap = {}; // 重置
+         backupCats.forEach((category, index) => {
+            categoryIndexMap[category.id] = index;
+         });
+         renderCategories(backupCats);
+         // 在備用分類渲染後加載新聞
+         loadNews(1); 
     }
 
-    // 获取并显示新闻列表（支持分页和分类）
+    // 获取并显示新闻列表（支持分页和分类）(修改此函數，確保在分類加載後調用)
     async function loadNews(page = 1, categoryId = null) {
         const newsListContainer = document.getElementById('news-list');
         const paginationControls = document.getElementById('pagination-controls');
         if (!newsListContainer || !paginationControls) return;
 
         currentPage = page;
-        currentCategoryId = categoryId; // 更新当前分类
+        currentCategoryId = categoryId; 
 
         newsListContainer.innerHTML = '<p>正在加載最新消息...</p>';
         paginationControls.innerHTML = '';
@@ -743,14 +691,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let url = `/api/news?page=${currentPage}&limit=${itemsPerPage}`;
             if (currentCategoryId && currentCategoryId !== 'all' && currentCategoryId !== '') {
-                url += `&category=${currentCategoryId}`; // 使用 category 参数传递分类 ID
+                url += `&category=${currentCategoryId}`; 
             }
 
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`获取新闻失败 (HTTP ${response.status})`);
             }
-
             const data = await response.json();
             totalPages = data.totalPages;
 
@@ -759,11 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPagination(0, 1);
                 return;
             }
-
-            renderNewsCards(data.news); // 调用渲染函数，确保它可以处理分类信息
+            renderNewsCards(data.news);
             renderPagination(totalPages, currentPage); 
             animateNewsIn(); 
-
         } catch (error) {
             console.error('获取新闻失败:', error);
             newsListContainer.innerHTML = `<p class="error-text">無法加載最新消息，請稍後再試。</p>`;
@@ -807,38 +752,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 渲染分類標籤
+    // 渲染分類標籤 (修改此函數)
     function renderCategories(categories) {
         const categoryTabs = document.getElementById('category-tabs');
         if (!categoryTabs) return;
-        
         categoryTabs.innerHTML = '';
-        
-        // 添加"全部"鏈接
+
         const allLink = document.createElement('a');
-        allLink.className = 'category-link active';
+        allLink.className = 'category-link active category-index-all'; // "全部" 的 class
         allLink.setAttribute('data-category', 'all');
         allLink.href = '#';
         allLink.textContent = '全部消息';
         categoryTabs.appendChild(allLink);
-        
-        // 添加其他分類鏈接
+
         categories.forEach(category => {
-            // 跳過已添加的"全部"選項或無效分類
-            if (category.id === 'all' || !category.id) return;
-            
+            const categoryIndex = categoryIndexMap[category.id]; // 獲取索引
+            if (categoryIndex === undefined) return; // 如果映射中沒有，跳過
+
             const link = document.createElement('a');
-            link.className = 'category-link';
-            link.setAttribute('data-category', category.id);
+            link.className = `category-link category-index-${categoryIndex}`; // 基於索引的 class
+            link.setAttribute('data-category', category.id); 
             link.href = '#';
             link.textContent = category.name;
             categoryTabs.appendChild(link);
         });
-        
-        // 綁定點擊事件
         bindCategoryLinks();
+        
+        // 在分類渲染完成後，加載第一頁新聞
+        if (!document.body.classList.contains('backup-categories-used')) { // 避免重複加載
+            loadNews(1); 
+        }
     }
 
     // 初始化
-    loadCategories(); // 加載分類並自動加載第一頁新聞
+    loadCategories(); // loadCategories 會在成功或失敗後觸發 loadNews
 });

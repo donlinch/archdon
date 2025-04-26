@@ -110,58 +110,70 @@
     }
 
     /* 分類標籤顏色 */
-    .category-tabs a[data-category="all"].active {
+    .category-tabs a.category-index-all.active {
         background-color: #9575CD; /* 紫色 - 全部消息 */
         color: white;
     }
 
-    .category-tabs a[data-category="1"].active,
-    .category-tabs a[data-category="latest"].active {
-        background-color: #4DB6AC; /* 青綠色 - 最新消息 */
+    .category-tabs a.category-index-0.active {
+        background-color: #4DB6AC; /* 青綠色 - 順序 1 */
         color: white;
     }
 
-    .category-tabs a[data-category="2"].active,
-    .category-tabs a[data-category="events"].active {
-        background-color: #FFB74D; /* 橙色 - 活動預告 */
+    .category-tabs a.category-index-1.active {
+        background-color: #FFB74D; /* 橙色 - 順序 2 */
         color: white;
     }
 
-    .category-tabs a[data-category="3"].active,
-    .category-tabs a[data-category="media"].active {
-        background-color: #7986CB; /* 藍色 - 媒體報導 */
+    .category-tabs a.category-index-2.active {
+        background-color: #7986CB; /* 藍色 - 順序 3 */
         color: white;
     }
 
-    .category-tabs a[data-category="4"].active,
-    .category-tabs a[data-category="cooperation"].active {
-        background-color: #F06292; /* 粉紅色 - 合作推廣 */
+    .category-tabs a.category-index-3.active {
+        background-color: #F06292; /* 粉紅色 - 順序 4 */
         color: white;
+    }
+
+    /* 順序 5 及以後的分類，或未匹配的 active 標籤，使用灰色 */
+    .category-tabs a.active:not(.category-index-all):not(.category-index-0):not(.category-index-1):not(.category-index-2):not(.category-index-3) {
+        background-color: #B0BEC5; /* 灰色 */
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 保持陰影 */
+    }
+    /* 確保特定索引的顏色優先級更高 */
+    .category-tabs a.category-index-all.active,
+    .category-tabs a.category-index-0.active,
+    .category-tabs a.category-index-1.active,
+    .category-tabs a.category-index-2.active,
+    .category-tabs a.category-index-3.active {
+         box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 添加陰影 */
     }
 
     /* 日曆下方的分類標籤顏色 */
-    .category-label.cat-news {
-        background-color: #4DB6AC; /* 青綠色 - 最新消息 */
+    .category-label.cat-index-0 {
+        background-color: #4DB6AC; /* 青綠色 */
     }
 
-    .category-label.cat-events {
-        background-color: #FFB74D; /* 橙色 - 活動預告 */
+    .category-label.cat-index-1 {
+        background-color: #FFB74D; /* 橙色 */
     }
 
-    .category-label.cat-media {
-        background-color: #7986CB; /* 藍色 - 媒體報導 */
+    .category-label.cat-index-2 {
+        background-color: #7986CB; /* 藍色 */
     }
 
-    .category-label.cat-cooperation {
-        background-color: #F06292; /* 粉紅色 - 合作推廣 */
+    .category-label.cat-index-3 {
+        background-color: #F06292; /* 粉紅色 */
     }
 
-    .category-label.cat-other {
-        background-color: #9575CD; /* 紫色 - 其他 */
-    }
-
-    .category-tabs a.active {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    /* 順序 5 及以後，或未匹配到的分類 (cat-other) */
+    .category-label.cat-other,
+    .category-label.cat-index-4, /* 假設第5個開始用灰色 */
+    .category-label.cat-index-5,
+    /* 你可以繼續添加更多索引，或者讓 cat-other 涵蓋所有未指定的 */
+    .category-label:not(.cat-index-0):not(.cat-index-1):not(.cat-index-2):not(.cat-index-3) {
+        background-color: #B0BEC5; /* 灰色 */
     }
 
     /* --- 浮動角色 --- */
@@ -497,27 +509,6 @@
         z-index: 1;
     }
     
-    /* 五種分類顏色 */
-    .category-label.cat-news {
-        background-color: #4DB6AC; /* 淺綠松石色 */
-    }
-    
-    .category-label.cat-events {
-        background-color: #FFB74D; /* 橙色 - 與主題色調一致 */
-    }
-    
-    .category-label.cat-media {
-        background-color: #7986CB; /* 淺靛藍色 */
-    }
-    
-    .category-label.cat-cooperation {
-        background-color: #FF8A65; /* 珊瑚色 */
-    }
-    
-    .category-label.cat-other {
-        background-color: #9575CD; /* 淺紫色 */
-    }
-
     .news-card .content-wrapper {
         flex-grow: 1;
         padding: 15px;
