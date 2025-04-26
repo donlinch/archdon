@@ -287,13 +287,19 @@ body {
     border-radius: 16px;
     overflow: hidden;
     margin-bottom: 1rem; /* Add margin like in store */
-    /* height: 100%; /* Let content define height for CSS grid */
     position: relative;
     cursor: pointer; /* Add pointer cursor */
     text-decoration: none; /* Remove underline if it was an 'a' tag */
     color: inherit; /* Ensure text color is inherited */
     display: flex; /* Use flex for better internal layout */
     flex-direction: column; /* Stack image and body vertically */
+}
+
+/* Add style for the position-relative container that holds the image */
+.product-card .position-relative {
+    position: relative;
+    overflow: hidden;
+    height: 140px; /* Match the image height */
 }
 
 .product-card:hover {
@@ -323,7 +329,7 @@ body {
     font-weight: 700;
     font-size: 0.7rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 5;
+    z-index: 6; /* Ensure it's above the image */
 }
 
 /* Product Tags Container */
@@ -624,6 +630,10 @@ body {
     .product-card .card-img-top {
         height: 130px; /* Even smaller on phones */
     }
+    /* Match container height to image */
+    .product-card .position-relative {
+        height: 130px;
+    }
     .desktop-footer {
         display: block;
     }
@@ -659,6 +669,10 @@ body {
     .product-card .card-img-top {
         height: 180px;
     }
+    /* Match container height to image */
+    .product-card .position-relative {
+        height: 180px;
+    }
     .banner-container {
         height: 16rem; /* 平板高度 */
         max-width: 28rem;
@@ -682,6 +696,10 @@ body {
     /* Adjust card image height for desktop */
     .product-card .card-img-top {
         height: 200px; /* Example height adjustment */
+    }
+    /* Match container height to image */
+    .product-card .position-relative {
+        height: 200px;
     }
 }
 
