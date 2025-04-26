@@ -302,7 +302,7 @@ body {
 }
 
 .product-card .card-img-top {
-    height: 120px; /* Adjust as needed, consistent with store */
+    height: 160px; /* Adjust as needed, consistent with store 160px */
     object-fit: cover; /* Use 'cover' for better filling */
     transition: transform 0.5s ease;
     width: 100%; /* Ensure image takes full width */
@@ -376,31 +376,36 @@ body {
 }
 
 .product-card .card-body {
-    padding: 0.75rem 1rem; /* Consistent padding */
+    padding: 0.75rem 1rem 0.5rem; /* Reduced bottom padding */
     text-align: left; /* Align text to left for consistency */
-    flex-grow: 1; /* Allow body to grow */
+    flex-grow: 0; /* Don't allow body to grow beyond content */
     display: flex;
     flex-direction: column;
+    /* Remove temporary styling */
+    background-color: transparent;
 }
 
 .product-card .card-title {
     font-weight: 600;
-    margin-bottom: 1rem; /* Adjust margin */
+    margin-bottom: 0.5rem; /* Reduced margin */
     color: var(--text-color);
     font-size: 0.9rem; /* Adjust size */
-    /* Removed fixed height for title */
+    /* Remove temporary styling */
+    background-color: transparent;
 }
 
 .product-card .card-text { /* For potential description */
     color: #6c757d;
-    margin-bottom: 1rem;
+    margin-bottom: 0; /* Remove bottom margin */
     font-size: 0.7rem;
     display: -webkit-box;
     -webkit-line-clamp: 2; /* Limit description to 2 lines */
     -webkit-box-orient: vertical;
     overflow: hidden;
-    /* height: 42px; Remove fixed height */
-    flex-grow: 1; /* Allow description to take space */
+    flex-grow: 0; /* Don't allow text to expand */
+    /* Remove temporary styling */
+    background-color: transparent;
+    min-height: auto; /* Use natural height */
 }
 
 /* Add favorite button style (optional, can be removed if not used) */
