@@ -3615,7 +3615,266 @@ app.get('/api/banners', async (req, res) => {
     }
 });
 
+
+
+// 新增：獲取所有可用標籤
+app.get('/api/tags', async (req, res) => {
+    try {
+        const queryText = 'SELECT tag_id, tag_name FROM tags ORDER BY tag_id ASC'; // 或按 tag_name 排序
+        const result = await pool.query(queryText);
+        res.json(result.rows); // 回傳包含 tag_id 和 tag_name 的陣列
+    } catch (err) {
+        console.error('獲取標籤列表時出錯:', err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取標籤列表。' });
+    }
+});
+
 // --- 商品 API ---
+
+
+// 新增：建立新標籤
+app.post('/api/tags', async (req, res) => {
+    const { tag_name } = req.body; // 從請求 body 獲取 tag_name
+
+    // 驗證輸入
+    if (!tag_name || tag_name.trim() === '') {
+        return res.status(400).json({ error: '標籤名稱不能為空。' });
+    }
+
+    try {
+        // 插入新標籤到資料庫，並返回插入的記錄
+        const queryText = 'INSERT INTO tags (tag_name) VALUES ($1) RETURNING *';
+        const result = await pool.query(queryText, [tag_name.trim()]);
+        
+        // 成功，回傳 201 Created 和新標籤物件
+        res.status(201).json(result.rows[0]); 
+
+    } catch (err) {
+        console.error('新增標籤時出錯:', err);
+        // 處理可能的錯誤，例如名稱重複
+        if (err.code === '23505') { // PostgreSQL unique violation code
+            return res.status(409).json({ error: '此標籤名稱已存在。' }); // 409 Conflict
+        }
+        // 其他伺服器錯誤
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增標籤。' });
+    }
+});
+
+
+// 新增：更新標籤名稱
+app.put('/api/tags/:tag_id', async (req, res) => {
+    const { tag_id } = req.params; // 從路徑參數獲取 tag_id
+    const { tag_name } = req.body; // 從請求 body 獲取新的 tag_name
+
+    // 驗證輸入
+    if (isNaN(parseInt(tag_id))) {
+        return res.status(400).json({ error: '無效的標籤 ID 格式。' });
+    }
+    if (!tag_name || tag_name.trim() === '') {
+        return res.status(400).json({ error: '標籤名稱不能為空。' });
+    }
+
+    try {
+        // 更新資料庫中的標籤名稱，並返回更新後的記錄
+        const queryText = 'UPDATE tags SET tag_name = $1 WHERE tag_id = $2 RETURNING *';
+        const result = await pool.query(queryText, [tag_name.trim(), tag_id]);
+
+        // 檢查是否有記錄被更新
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的標籤。' }); // 404 Not Found
+        }
+
+        // 成功，回傳 200 OK 和更新後的標籤物件
+        res.status(200).json(result.rows[0]); 
+
+    } catch (err) {
+        console.error(`更新標籤 ID ${tag_id} 時出錯:`, err);
+        // 處理可能的錯誤，例如名稱重複
+        if (err.code === '23505') { // PostgreSQL unique violation code
+            return res.status(409).json({ error: '此標籤名稱已存在。' }); // 409 Conflict
+        }
+        // 其他伺服器錯誤
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新標籤。' });
+    }
+});
+
+
+
+// --- 標籤 API ---
+// ... (GET, POST, PUT /api/tags) ...
+// 新增：刪除標籤
+app.delete('/api/tags/:tag_id', async (req, res) => {
+    const { tag_id } = req.params; // 從路徑參數獲取 tag_id
+
+    // 驗證輸入
+    if (isNaN(parseInt(tag_id))) {
+        return res.status(400).json({ error: '無效的標籤 ID 格式。' });
+    }
+
+    // --- 使用交易 (可選但推薦，保持一致性) ---
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // **重要說明:** 
+        // 由於我們在建立 product_tags 表時設定了 FOREIGN KEY(tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+        // 當我們從 tags 表刪除一個標籤時，資料庫會自動幫我們刪除 product_tags 表中所有引用了該 tag_id 的記錄。
+        // 所以我們 *不需要* 在這裡手動執行 "DELETE FROM product_tags WHERE tag_id = $1"。
+        // 如果當時沒有設定 ON DELETE CASCADE，則需要先執行手動刪除關聯。
+
+        // 嘗試從 tags 表刪除記錄
+        const deleteTagQuery = 'DELETE FROM tags WHERE tag_id = $1';
+        const result = await client.query(deleteTagQuery, [tag_id]);
+
+        // 檢查是否有記錄被刪除
+        if (result.rowCount === 0) {
+            // 雖然沒找到，但刪除操作本身是成功的（目標狀態已達成），所以可以返回成功
+            // 如果您希望更嚴格，可以返回 404
+            console.log(`嘗試刪除不存在的標籤 ID: ${tag_id}`);
+            // return res.status(404).json({ error: '找不到要刪除的標籤。' });
+        }
+        
+        await client.query('COMMIT'); // 提交交易
+        
+        // 成功，回傳 204 No Content
+        res.status(204).send(); 
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // 出錯時回滾
+        console.error(`刪除標籤 ID ${tag_id} 時出錯:`, err);
+        // 這裡不太可能遇到 23503 (外鍵錯誤)，因為是先刪 tags。
+        // 如果有關聯的其他表（除了 product_tags）且沒有設定 CASCADE，才可能出錯。
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除標籤。' });
+    } finally {
+        client.release(); // 釋放連接
+    }
+});
+
+// --- 商品 API ---
+// ...
+
+
+// 新增：更新標籤名稱
+app.put('/api/tags/:tag_id', async (req, res) => {
+    const { tag_id } = req.params;
+    const { tag_name } = req.body;
+
+    if (isNaN(parseInt(tag_id))) {
+        return res.status(400).json({ error: '無效的標籤 ID 格式。' });
+    }
+    if (!tag_name || tag_name.trim() === '') {
+        return res.status(400).json({ error: '標籤名稱不能為空。' });
+    }
+
+    try {
+        const queryText = 'UPDATE tags SET tag_name = $1 WHERE tag_id = $2 RETURNING *';
+        const result = await pool.query(queryText, [tag_name.trim(), tag_id]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的標籤。' });
+        }
+
+        res.status(200).json(result.rows[0]); // 回傳更新後的標籤
+    } catch (err) {
+        console.error(`更新標籤 ID ${tag_id} 時出錯:`, err);
+        if (err.code === '23505') { // Unique violation
+            return res.status(409).json({ error: '此標籤名稱已存在。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新標籤。' });
+    }
+});
+
+
+// --- 商品 API ---
+// ... (這裡應該有 GET /api/tags, GET /api/products, GET /api/products/:id 的程式碼) ...
+
+// 新增：建立新商品 (包含處理標籤)
+app.post('/api/products', async (req, res) => {
+    // 從 req.body 接收商品資料，假設 tags 是 tag_id 的陣列，例如 [1, 3, 5]
+    // 注意：如果前端是送 FormData (因為圖片上傳)，處理方式會不同。
+    //       但根據您之前的回覆，您是直接傳 image_url，所以這裡假設是 JSON body。
+    const { name, description, price, image_url, category, seven_eleven_url, tags } = req.body; 
+
+    // --- 基本驗證 ---
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '商品名稱不能為空。' });
+    }
+    // 驗證 tags 是否為陣列 (如果提供了)
+    if (tags && !Array.isArray(tags)) {
+        return res.status(400).json({ error: '標籤資料格式不正確，應為陣列。' });
+    }
+    // 驗證 tags 陣列中的元素是否為數字 (tag_id)
+    if (tags && tags.some(tag => typeof tag !== 'number' || !Number.isInteger(tag))) {
+         return res.status(400).json({ error: '標籤 ID 必須是整數。' });
+    }
+    // 可以添加更多驗證...
+
+    // --- 資料庫交易 ---
+    const client = await pool.connect(); // 從連接池獲取一個客戶端
+
+    try {
+        await client.query('BEGIN'); // 開始交易
+
+        // 1. 插入商品基本資料到 products 表
+        const productInsertQuery = `
+            INSERT INTO products (name, description, price, image_url, category, seven_eleven_url, click_count, created_at, updated_at) 
+            VALUES ($1, $2, $3, $4, $5, $6, 0, NOW(), NOW()) 
+            RETURNING id, name, description, price, image_url, category, seven_eleven_url, click_count, created_at, updated_at`; 
+        
+        const productResult = await client.query(productInsertQuery, [
+            name.trim(),
+            description || null,
+            price, 
+            image_url || null,
+            category || null,
+            seven_eleven_url || null
+        ]);
+        
+        const newProduct = productResult.rows[0]; 
+        const newProductId = newProduct.id;
+
+        // 2. 如果前端傳來了 tags 陣列，則插入 product_tags 關聯
+        let insertedTagNames = []; // 用於最後回傳給前端
+        const validTags = tags ? tags.filter(tagId => typeof tagId === 'number' && Number.isInteger(tagId)) : []; // 確保只處理有效的 tag_id
+
+        if (validTags.length > 0) {
+            // 準備插入 product_tags 的查詢
+            const tagInsertQuery = `
+                INSERT INTO product_tags (product_id, tag_id)
+                SELECT $1, tag_id FROM UNNEST($2::int[]) AS t(tag_id)
+                ON CONFLICT (product_id, tag_id) DO NOTHING -- 如果組合已存在則忽略
+            `;
+            await client.query(tagInsertQuery, [newProductId, validTags]);
+
+            // 查詢剛插入的標籤名稱以便回傳
+            const tagNamesQuery = 'SELECT tag_name FROM tags WHERE tag_id = ANY($1::int[])';
+            const tagNamesResult = await client.query(tagNamesQuery, [validTags]);
+            insertedTagNames = tagNamesResult.rows.map(row => row.tag_name);
+        }
+        
+        await client.query('COMMIT'); // 提交交易
+
+        // 將標籤名稱陣列加入回傳的商品物件中
+        newProduct.tags = insertedTagNames; 
+
+        res.status(201).json(newProduct); // 回傳新增的商品資料 (包含 tags)
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // 如果出錯，回滾交易
+        console.error('新增商品時出錯 (交易已回滾):', err);
+        // 可以根據 err.code 判斷錯誤類型
+        if (err.code === '23503') { // Foreign key violation
+             return res.status(400).json({ error: '提交的標籤 ID 無效或不存在。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增商品。' });
+    } finally {
+        client.release(); // 釋放客戶端回連接池
+    }
+});
+
+// ... (繼續放置 PUT /api/products/:id, DELETE /api/products/:id 等路由) ...
+
+
 
 // 新增：獲取所有不重複的商品分類
 app.get('/api/products/categories', async (req, res) => {
@@ -3629,47 +3888,65 @@ app.get('/api/products/categories', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
-
 app.get('/api/products', async (req, res) => {
     // 同時讀取 sort 和 category 參數
     const sortBy = req.query.sort || 'latest';
     const category = req.query.category || null; // 獲取分類參數
     
-    let queryText = `SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products`;
+    // *** 修改 SQL 查詢以包含標籤 ***
+    // 使用 LEFT JOIN 以確保即使商品沒有標籤也能被選出
+    // 使用 COALESCE(json_agg(...) FILTER (...), '[]'::json) 來處理沒有標籤的情況，返回空JSON數組
+    let queryText = `
+        SELECT 
+            p.id, p.name, p.description, p.price, p.image_url, 
+            p.seven_eleven_url, p.click_count, p.category,
+            COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
+        FROM products p
+        LEFT JOIN product_tags pt ON p.id = pt.product_id
+        LEFT JOIN tags t ON pt.tag_id = t.tag_id
+    `;
+    
     const queryParams = [];
     let paramIndex = 1;
-    
-    // 構建 WHERE 子句
     let whereClauses = [];
+
+    // 構建 WHERE 子句 (處理分類篩選)
     if (category && category !== 'All') { // 如果提供了分類且不是 'All'
-        whereClauses.push(`category = $${paramIndex++}`);
+        // *** 重要：因為 JOIN 了多張表，欄位需要指定來自哪個表，例如 p.category ***
+        whereClauses.push(`p.category = $${paramIndex++}`);
         queryParams.push(category);
     }
-    // 如果未來有其他篩選條件，可以在這裡加入 whereClauses.push(...)
-    
+    // 可以添加其他篩選條件，例如 WHERE p.name LIKE $... 等
+
     if (whereClauses.length > 0) {
         queryText += ' WHERE ' + whereClauses.join(' AND ');
     }
-    
+
+    // *** GROUP BY 子句，確保每個商品只出現一次 ***
+    // 必須 GROUP BY products 表中所有被 SELECT 的非聚合欄位
+    queryText += ` GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category`; 
+
     // 構建 ORDER BY 子句
-    let orderByClause = 'ORDER BY created_at DESC, id DESC';
+    // *** 重要：排序欄位也需要指定表別名 ***
+    let orderByClause = ' ORDER BY p.created_at DESC, p.id DESC'; // 指定 p.id
     if (sortBy === 'popular') {
-        orderByClause = 'ORDER BY click_count DESC, created_at DESC, id DESC';
+        orderByClause = ' ORDER BY p.click_count DESC, p.created_at DESC, p.id DESC'; // 指定 p.click_count, p.created_at
     }
-    queryText += ` ${orderByClause}`;
+    queryText += orderByClause;
     
-    // (可選) 添加分頁邏輯
-    // const limit = parseInt(req.query.limit) || 20; // 例如每頁20個
+    // (可選) 添加分頁邏輯 (如果需要，也要調整 GROUP BY 和 ORDER BY 的處理)
+    // const limit = parseInt(req.query.limit) || 20; 
     // const page = parseInt(req.query.page) || 1;
     // const offset = (page - 1) * limit;
     // queryText += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     // queryParams.push(limit, offset);
     
-    console.log("Executing SQL:", queryText, queryParams); // 調試用
+    console.log("Executing SQL for product list:", queryText, queryParams); // 調試用
     
     try {
         const result = await pool.query(queryText, queryParams);
-        res.json(result.rows);
+        // json_agg 會返回 JSON 數組字符串，前端 JS可以直接 JSON.parse() 或直接使用
+        res.json(result.rows); 
     } catch (err) {
         console.error('獲取商品列表時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
@@ -3678,11 +3955,31 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
+    
+    // *** 修改 SQL 查詢以包含標籤 ***
+    // 與獲取列表類似，使用 LEFT JOIN 和 json_agg
+    const queryText = `
+        SELECT 
+            p.id, p.name, p.description, p.price, p.image_url, 
+            p.seven_eleven_url, p.click_count, p.category,
+            COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
+        FROM products p
+        LEFT JOIN product_tags pt ON p.id = pt.product_id
+        LEFT JOIN tags t ON pt.tag_id = t.tag_id
+        WHERE p.id = $1  -- 篩選特定商品 ID
+        GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category -- 同樣需要 GROUP BY
+    `;
+    
+    console.log("Executing SQL for single product:", queryText, [id]); // 調試用
+
     try {
-        // 修改：在 SELECT 語句中加入 category
-        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count, category FROM products WHERE id = $1', [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到商品。' }); }
-        res.json(result.rows[0]);
+        const result = await pool.query(queryText, [id]);
+        if (result.rows.length === 0) { 
+            // 考慮到 JOIN 可能不會返回任何行如果 ID 不存在，這個檢查仍然有效
+            return res.status(404).json({ error: '找不到商品。' }); 
+        }
+        // json_agg 返回的 tags 是 JSON 數組字符串
+        res.json(result.rows[0]); // 回傳單一商品物件，包含 tags 陣列
     } catch (err) {
         console.error(`獲取商品 ID ${id} 時出錯:`, err);
         res.status(500).json({ error: '伺服器內部錯誤' });
@@ -3879,57 +4176,106 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
-
-// --- 更新商品 API (這應該要放在你的 server.js 中) ---
+// 修改：更新商品 (包含處理標籤更新)
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    // 修改：從 req.body 接收 category
-    const { name, description, price, image_url, seven_eleven_url, category } = req.body; 
-    
+    // 從 req.body 接收商品資料，假設 tags 是 tag_id 的陣列，例如 [1, 3] 或 [] 或 null
+    const { name, description, price, image_url, category, seven_eleven_url, tags } = req.body; 
+
+    // --- 基本驗證 ---
     if (isNaN(parseInt(id))) { 
         return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
     }
-    
-    // 驗證必填欄位
     if (!name || name.trim() === '') {
         return res.status(400).json({ error: '商品名稱不能為空。' });
     }
+    if (tags && !Array.isArray(tags)) {
+        return res.status(400).json({ error: '標籤資料格式不正確，應為陣列。' });
+    }
+     if (tags && tags.some(tag => typeof tag !== 'number' || !Number.isInteger(tag))) {
+         return res.status(400).json({ error: '標籤 ID 必須是整數。' });
+    }
+    // ... 其他驗證 ...
+
+    // --- 資料庫交易 ---
+    const client = await pool.connect();
 
     try {
-        // 修改：在 UPDATE 語句中加入 category
-        const result = await pool.query(
-            `UPDATE products 
-             SET name = $1, 
-                 description = $2, 
-                 price = $3, 
-                 image_url = $4, 
-                 seven_eleven_url = $5, 
-                 category = $6, -- 新增 category
-                 updated_at = NOW() 
-             WHERE id = $7 -- id 的參數索引變為 7
-             RETURNING *`,
-            [
-                name.trim(), 
-                description || null, 
-                price, 
-                image_url || null, 
-                seven_eleven_url || null, 
-                category || null, // 新增 category 參數 (如果為空或未定義，設為 null)
-                id
-            ]
-        );
+        await client.query('BEGIN'); // 開始交易
+
+        // 1. 更新 products 表的基本資料
+        const productUpdateQuery = `
+            UPDATE products 
+            SET name = $1, 
+                description = $2, 
+                price = $3, 
+                image_url = $4, 
+                category = $5, 
+                seven_eleven_url = $6,
+                updated_at = NOW() 
+            WHERE id = $7`;
         
-        if (result.rowCount === 0) { 
-            return res.status(404).json({ error: '找不到商品，無法更新。' }); 
+        await client.query(productUpdateQuery, [
+            name.trim(), 
+            description || null, 
+            price, 
+            image_url || null, 
+            category || null, 
+            seven_eleven_url || null,
+            id
+        ]);
+        
+        // 2. 刪除該商品所有舊的標籤關聯
+        const deleteTagsQuery = 'DELETE FROM product_tags WHERE product_id = $1';
+        await client.query(deleteTagsQuery, [id]);
+
+        // 3. 如果新的 tags 陣列存在且不為空，則插入新的關聯
+        const validTags = tags ? tags.filter(tagId => typeof tagId === 'number' && Number.isInteger(tagId)) : []; // 再次驗證
+        if (validTags.length > 0) {
+            const insertTagsQuery = `
+                INSERT INTO product_tags (product_id, tag_id)
+                SELECT $1, tag_id FROM UNNEST($2::int[]) AS t(tag_id)
+                ON CONFLICT (product_id, tag_id) DO NOTHING`; // 忽略可能的重複 (理論上不會，因為先刪了)
+            await client.query(insertTagsQuery, [id, validTags]);
         }
-        
-        res.status(200).json(result.rows[0]);
+
+        await client.query('COMMIT'); // 提交交易
+
+        // 4. 查詢更新後的完整商品資料 (包含最新的標籤) 回傳給前端
+        //    使用我們之前修改好的 GET /api/products/:id 的查詢邏輯
+         const getUpdatedProductQuery = `
+            SELECT 
+                p.id, p.name, p.description, p.price, p.image_url, 
+                p.seven_eleven_url, p.click_count, p.category,
+                COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
+            FROM products p
+            LEFT JOIN product_tags pt ON p.id = pt.product_id
+            LEFT JOIN tags t ON pt.tag_id = t.tag_id
+            WHERE p.id = $1
+            GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category
+        `;
+        const updatedResult = await pool.query(getUpdatedProductQuery, [id]); // 注意：這裡用 pool 查詢即可，交易已提交
+
+        if (updatedResult.rows.length === 0) {
+             // 理論上不應該發生，因為我們是先更新再查詢
+             return res.status(404).json({ error: '更新後找不到商品。' });
+        }
+
+        res.status(200).json(updatedResult.rows[0]); // 回傳更新後的商品資料
+
     } catch (err) {
-        console.error(`更新商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
+        await client.query('ROLLBACK'); // 出錯時回滾
+        console.error(`更新商品 ID ${id} 時出錯 (交易已回滾):`, err);
+         if (err.code === '23503') { // Foreign key violation on insert
+             return res.status(400).json({ error: '提交的標籤 ID 無效或不存在。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新商品。' });
+    } finally {
+        client.release(); // 釋放連接
     }
 });
 
+ 
 
 
 
@@ -4049,7 +4395,7 @@ app.get('/api/analytics/traffic', async (req, res) => {
             count: parseInt(row.count) 
         }));
         res.status(200).json(trafficData);
-    } catch (err) { 
+    } catch (err) {
         console.error('獲取流量數據時發生錯誤:', err); 
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); 
     }

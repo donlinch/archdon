@@ -119,6 +119,24 @@
         #product-list-table th:nth-child(6), #product-list-table td:nth-child(6) { width: 15%; text-align: center;} /* 圖片 */
         #product-list-table th:nth-child(7), #product-list-table td:nth-child(7) { width: 17%; text-align: center;} /* 操作 */
         
+
+ /* --- 標籤管理區塊樣式 (可選) --- */
+ .tag-management-container {
+             margin-top: 2rem; /* 與上方區塊間隔 */
+         }
+         #tags-list-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+         #tags-list-table th, #tags-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+         #tags-list-table th { background-color: #e9ecef; }
+         #tags-list-table th:nth-child(1), #tags-list-table td:nth-child(1) { width: 15%; } /* ID */
+         #tags-list-table th:nth-child(2), #tags-list-table td:nth-child(2) { width: 60%; } /* 名稱 */
+         #tags-list-table th:nth-child(3), #tags-list-table td:nth-child(3) { width: 25%; text-align: center;} /* 操作 */
+
+         #add-tag-form { margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: flex-end; }
+         #add-tag-form .form-group { margin-bottom: 0; flex-grow: 1; }
+         #add-tag-form button { white-space: nowrap; padding: 10px 15px; } /* 調整按鈕 padding */
+         #add-tag-error { color: red; font-size: 0.9em; min-height: 1.2em; margin-top: 5px; }
+
+
         /* Buttons */
         .action-btn { 
             padding: 8px 12px; 
@@ -558,6 +576,66 @@
        </div>
    </div>
 
+
+
+    <!-- ========================== -->
+    <!-- *** 新增: 標籤管理區塊 *** -->
+    <!-- ========================== -->
+    <div class="admin-container tag-management-container">
+        <h2>標籤管理</h2>
+
+        <!-- 新增標籤表單 -->
+        <form id="add-tag-form">
+            <div class="form-group">
+                <label for="new-tag-name">新增標籤名稱:</label>
+                <input type="text" id="new-tag-name" name="tag_name" required>
+            </div>
+            <button type="submit" class="action-btn save-btn">新增標籤</button>
+        </form>
+        <p id="add-tag-error"></p>
+
+        <!-- 現有標籤列表 -->
+        <h3>現有標籤列表</h3>
+        <div id="tags-list-container">
+             <p>正在加載標籤...</p>
+             <table id="tags-list-table" style="display: none;">
+                 <thead>
+                     <tr>
+                         <th>標籤 ID</th>
+                         <th>標籤名稱</th>
+                         <th>操作</th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                     <!-- 標籤列將由 JavaScript 動態填入 -->
+                 </tbody>
+             </table>
+         </div>
+    </div> <!-- End of tag-management-container -->
+
+    <!-- ========================== -->
+    <!-- *** 新增: 編輯標籤 Modal *** -->
+    <!-- ========================== -->
+    <div id="edit-tag-modal" class="modal">
+         <div class="modal-content">
+             <span class="close-btn" onclick="closeEditTagModal()">×</span>
+             <h2>編輯標籤</h2>
+             <form id="edit-tag-form">
+                 <input type="hidden" id="edit-tag-id">
+                 <div class="form-group">
+                     <label for="edit-tag-name">標籤名稱:</label>
+                     <input type="text" id="edit-tag-name" name="tag_name" required>
+                 </div>
+                 <div class="form-actions">
+                     <button type="submit" class="action-btn save-btn">儲存變更</button>
+                     <button type="button" class="action-btn cancel-btn" onclick="closeEditTagModal()">取消</button>
+                 </div>
+                 <p id="edit-tag-error"></p>
+             </form>
+         </div>
+     </div>
+
+
    <div class="admin-container">
        <h1>流量分析儀表板</h1>
        
@@ -603,6 +681,62 @@
        <p id="chart-loading-msg" style="text-align: center; display: none;">正在加載圖表數據...</p>
        <p id="chart-error-msg" style="text-align: center; color: red; display: none;"></p>
    </div>
+ <!-- ========================== -->
+    <!-- *** 新增: 標籤管理區塊 *** -->
+    <!-- ========================== -->
+    <div class="admin-container tag-management-container">
+        <h2>標籤管理</h2>
+
+        <!-- 新增標籤表單 -->
+        <form id="add-tag-form">
+            <div class="form-group">
+                <label for="new-tag-name">新增標籤名稱:</label>
+                <input type="text" id="new-tag-name" name="tag_name" required>
+            </div>
+            <button type="submit" class="action-btn save-btn">新增標籤</button>
+        </form>
+        <p id="add-tag-error"></p>
+
+        <!-- 現有標籤列表 -->
+        <h3>現有標籤列表</h3>
+        <div id="tags-list-container">
+             <p>正在加載標籤...</p>
+             <table id="tags-list-table" style="display: none;">
+                 <thead>
+                     <tr>
+                         <th>標籤 ID</th>
+                         <th>標籤名稱</th>
+                         <th>操作</th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                     <!-- 標籤列將由 JavaScript 動態填入 -->
+                 </tbody>
+             </table>
+         </div>
+    </div> <!-- End of tag-management-container -->
+
+    <!-- ========================== -->
+    <!-- *** 新增: 編輯標籤 Modal *** -->
+    <!-- ========================== -->
+    <div id="edit-tag-modal" class="modal">
+         <div class="modal-content">
+             <span class="close-btn" onclick="closeEditTagModal()">×</span>
+             <h2>編輯標籤</h2>
+             <form id="edit-tag-form">
+                 <input type="hidden" id="edit-tag-id">
+                 <div class="form-group">
+                     <label for="edit-tag-name">標籤名稱:</label>
+                     <input type="text" id="edit-tag-name" name="tag_name" required>
+                 </div>
+                 <div class="form-actions">
+                     <button type="submit" class="action-btn save-btn">儲存變更</button>
+                     <button type="button" class="action-btn cancel-btn" onclick="closeEditTagModal()">取消</button>
+                 </div>
+                 <p id="edit-tag-error"></p>
+             </form>
+         </div>
+     </div>
 
    <!-- Add Product Modal -->
    <div id="add-modal" class="modal">
