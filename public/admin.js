@@ -90,7 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCategory = null;
 
     // === Initialization ===
-    fetchCategoriesAndProducts(); // 商品分類和列表
+    fetchCategories();          // 商品分類 (用於表單)
+    fetchAndDisplayProducts();  // 商品列表
     fetchAndDisplayTags();        // 標籤列表
     setupSortLinks();             // 商品排序
     setupBackToTop();             // 回頂部按鈕
