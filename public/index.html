@@ -59,7 +59,7 @@ body {
 /* --- Banner 樣式 --- */
 .banner-container {
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 比例 */
+    height: 12rem; /* 手機版高度 */
     position: relative;
     overflow: hidden;
 }
@@ -610,6 +610,9 @@ body {
     .product-card .card-img-top {
         height: 180px;
     }
+    .banner-container {
+        height: 16rem; /* 平板高度 */
+    }
 }
 
 @media (min-width: 1024px) {
@@ -621,6 +624,7 @@ body {
         height: 80px;
     }
     .banner-container {
+        height: 20rem; /* 桌面版高度 */
         max-width: 1200px;
         margin: 0 auto;
     }
