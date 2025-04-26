@@ -257,8 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
                 ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
                 ${tagsHtml}
-                <!-- (可選) 在此顯示分類 -->
-                ${product.category ? `<span class="category-badge">${product.category}</span>` : ''} 
             </div>
             <div class="card-body">
                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
