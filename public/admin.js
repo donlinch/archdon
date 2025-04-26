@@ -283,7 +283,7 @@ window.deleteProduct = async function(id) {
                 const selectedTags = [];
                 const checkboxes = editTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
                 checkboxes.forEach(checkbox => {
-                    selectedTags.push(checkbox.value);
+                    selectedTags.push(parseInt(checkbox.value, 10));
                 });
                 updatedData.tags = selectedTags;
             }
@@ -357,7 +357,7 @@ if (addForm) {
             const selectedTags = [];
             const checkboxes = addTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
             checkboxes.forEach(checkbox => {
-                selectedTags.push(checkbox.value);
+                selectedTags.push(parseInt(checkbox.value, 10));
             });
             newData.tags = selectedTags;
         }
