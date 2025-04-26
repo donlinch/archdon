@@ -255,8 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cardContainer.innerHTML = ` 
             <div class="position-relative">
                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
-                ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
                 ${tagsHtml}
+                ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
             </div>
             <div class="card-body">
                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
