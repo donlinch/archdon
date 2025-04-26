@@ -341,17 +341,38 @@ body {
 /* Individual Product Tag */
 .product-card .product-tag {
     display: inline-block;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.65rem;
+    background-color: rgba(255, 183, 77, 0.85); /* Using the FFB74D color with transparency */
+    color: #333; /* Darker text for better readability */
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.6rem;
     font-weight: 500;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100px;
+    max-width: 80px;
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle white border */
+    backdrop-filter: blur(2px); /* Slight blur effect for modern look */
+    transition: all 0.2s ease;
+    animation: tagFadeIn 0.5s ease-out forwards;
+    opacity: 0;
+    transform: translateY(3px);
+}
+
+/* Stagger tag animations */
+.product-card .product-tag:nth-child(1) { animation-delay: 0.1s; }
+.product-card .product-tag:nth-child(2) { animation-delay: 0.2s; }
+.product-card .product-tag:nth-child(3) { animation-delay: 0.3s; }
+
+.product-card:hover .product-tag {
+    background-color: rgba(255, 183, 77, 0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes tagFadeIn {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .product-card .card-body {

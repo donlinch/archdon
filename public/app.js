@@ -244,11 +244,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (product.tags && product.tags.length > 0) {
                 tagsHtml = `
                 <div class="tags-container">
-                    ${product.tags.map(tag => `<span class="product-tag">${tag.tag_name}</span>`).join('')}
+                    ${product.tags.map(tag => {
+                        // Handle different possible tag formats
+                        const tagName = tag.tag_name || tag.name || tag;
+                        return `<span class="product-tag">${tagName}</span>`;
+                    }).join('')}
                 </div>`;
             }
 
-            // *** 檢查這段程式碼的結尾 ***
             cardContainer.innerHTML = ` 
             <div class="position-relative">
                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
