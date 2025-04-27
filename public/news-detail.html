@@ -44,39 +44,6 @@
           overflow-x: hidden; /* 防止水平滾動 */
       }
 
-      /* --- Banner 樣式 --- */
-      .banner-container {
-          width: 100%;
-          height: 16rem; /* 手機版高度 */
-          max-width: 28rem;
-          position: relative;
-          overflow: hidden;
-          margin: 0 auto;
-      }
-
-      .swiper-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-      }
-
-      .swiper-slide img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-      }
-
-      .swiper-pagination-bullet-active {
-          background-color: #FFB74D !important; /* 黃色分頁點 */
-      }
-
-      .swiper-button-prev,
-      .swiper-button-next {
-          color: #FFB74D !important; /* 黃色導航箭頭 */
-      }
-
       /* --- 分類標籤樣式 --- */
       .category-tabs {
           display: flex;
@@ -483,11 +450,6 @@
 
       /* 响應式設計 */
       @media (max-width: 767px) {
-          .banner-container {
-              height: 16rem;
-              max-width: 28rem;
-          }
-
           body {
               padding-bottom: 70px;
           }
@@ -498,11 +460,6 @@
       }
 
       @media (min-width: 768px) {
-          .banner-container {
-              height: 18rem;
-              max-width: 32rem;
-          }
-
           body {
               padding-bottom: 70px;
           }
@@ -518,11 +475,6 @@
       }
 
       @media (min-width: 1024px) {
-          .banner-container {
-              height: 20rem;
-              max-width: 36rem;
-          }
-
           .news-detail-container {
               margin: 30px auto;
           }
@@ -534,19 +486,6 @@
     </style>
 </head>
 <body>
-    <!-- Banner -->
-    <div class="banner-container">
-        <div id="news-banner-carousel" class="swiper-container">
-            <div class="swiper-wrapper">
-                <!-- Banner slides 將由JavaScript動態插入 -->
-                <div class="swiper-slide"><img src="/images/loading-banner.png" alt="載入中..."></div>
-            </div>
-            <div class="swiper-pagination"></div>
-            <div class="swiper-button-prev"></div>
-            <div class="swiper-button-next"></div>
-        </div>
-    </div>
-    
     <!-- 分類導航 -->
     <div id="category-tabs" class="category-tabs">
         <!-- Category links/buttons will be dynamically inserted here by news.js -->

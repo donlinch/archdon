@@ -423,6 +423,14 @@ document.addEventListener('DOMContentLoaded', () => {
         detailMeta.innerHTML = '';
         detailBody.textContent = '';
         
+        // 更新分享連結的 ID
+        const shareLink = document.querySelector('#news-share-link a');
+        const newsIdSpan = document.querySelector('#news-share-link .news-id');
+        if (shareLink && newsIdSpan) {
+            shareLink.href = `https://sunnyyummy.onrender.com/news/${newsId}`;
+            newsIdSpan.textContent = newsId;
+        }
+        
         // 顯示模態框
         detailModal.style.display = 'flex';
         document.body.style.overflow = 'hidden'; // 防止背景滾動
