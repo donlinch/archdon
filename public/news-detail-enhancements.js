@@ -6,94 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryTabsContainer = document.getElementById('category-tabs');
 
     // 初始化各功能
-    initSwiper();
     setupBackToTop();
     setupCharacterInteractions();
     loadCategories();
-
-    /**
-     * 初始化Swiper輪播
-     */
-    function initSwiper() {
-        // 獲取banner數據
-        fetch('/api/banners?page=news')
-            .then(response => response.json())
-            .then(banners => {
-                const swiperWrapper = document.querySelector('.swiper-wrapper');
-                
-                // 清空現有內容
-                swiperWrapper.innerHTML = '';
-                
-                // 添加輪播項
-                if (banners.length === 0) {
-                    // 如果沒有banner，顯示默認
-                    swiperWrapper.innerHTML = `
-                        <div class="swiper-slide">
-                            <img src="/images/SunnyYummy.png" alt="SunnyYummy">
-                        </div>
-                    `;
-                } else {
-                    // 創建每個輪播項
-                    banners.forEach(banner => {
-                        const slide = document.createElement('div');
-                        slide.className = 'swiper-slide';
-                        
-                        if (banner.link_url) {
-                            slide.innerHTML = `
-                                <a href="${banner.link_url}" target="_blank" rel="noopener noreferrer">
-                                    <img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">
-                                </a>
-                            `;
-                        } else {
-                            slide.innerHTML = `
-                                <img src="${banner.image_url}" alt="${banner.alt_text || 'Banner'}">
-                            `;
-                        }
-                        
-                        swiperWrapper.appendChild(slide);
-                    });
-                }
-                
-                // 初始化Swiper
-                new Swiper('#news-banner-carousel', {
-                    loop: true,
-                    autoplay: {
-                        delay: 5000,
-                        disableOnInteraction: false,
-                    },
-                    effect: 'fade',
-                    fadeEffect: {
-                        crossFade: true
-                    },
-                    pagination: {
-                        el: '.swiper-pagination',
-                        clickable: true,
-                    },
-                    navigation: {
-                        nextEl: '.swiper-button-next',
-                        prevEl: '.swiper-button-prev',
-                    },
-                });
-            })
-            .catch(error => {
-                console.error('獲取Banner時出錯:', error);
-                const swiperWrapper = document.querySelector('.swiper-wrapper');
-                swiperWrapper.innerHTML = `
-                    <div class="swiper-slide">
-                        <img src="/images/SunnyYummy.png" alt="SunnyYummy">
-                    </div>
-                `;
-                
-                // 即使出錯也初始化Swiper
-                new Swiper('#news-banner-carousel', {
-                    loop: false,
-                    pagination: {
-                        el: '.swiper-pagination',
-                        clickable: true,
-                    },
-                });
-            });
-    }
 
     /**
      * 載入分類標籤
@@ -102,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (!categoryTabsContainer) return;
             
-            const response = await fetch('/api/categories');
+            const response = await fetch('/api/news-categories');
             if (!response.ok) {
                 throw new Error(`獲取分類失敗 (HTTP ${response.status})`);
             }
@@ -127,11 +42,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!categoryTabsContainer) return;
         
         const backupCategories = [
-            { id: 'all', name: '全部消息' },
-            { id: 'news', name: '最新消息' },
-            { id: 'events', name: '活動預告' },
-            { id: 'collaborations', name: '合作推廣' }
+            { id: 1, name: '最新消息', slug: 'latest' },
+            { id: 2, name: '活動預告', slug: 'events' },
+            { id: 3, name: '媒體報導', slug: 'media' },
+            { id: 4, name: '合作推廣', slug: 'cooperation' }
         ];
+        
+        // 建立分類索引映射
+        const categoryIndexMap = {};
+        backupCategories.forEach((category, index) => {
+            categoryIndexMap[category.id] = index;
+        });
         
         renderCategories(backupCategories);
     }
@@ -148,19 +69,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const allLink = document.createElement('a');
         allLink.href = '/news.html';
         allLink.textContent = '全部消息';
-        allLink.classList.add('category-index-all');
-        allLink.classList.add('active');
+        allLink.classList.add('category-link', 'category-index-all', 'active');
+        allLink.setAttribute('data-category', 'all');
         categoryTabsContainer.appendChild(allLink);
         
-        // 添加其他分類
+        // 建立分類索引映射
+        const categoryIndexMap = {};
         categories.forEach((category, index) => {
-            if (category.id === 'all') return; // 跳過全部，因為已經添加了
+            categoryIndexMap[category.id] = index;
+        });
+        
+        // 添加其他分類
+        categories.forEach(category => {
+            const categoryIndex = categoryIndexMap[category.id];
+            if (categoryIndex === undefined) return;
             
             const categoryLink = document.createElement('a');
             categoryLink.href = `/news.html?category=${category.id}`;
             categoryLink.textContent = category.name;
-            categoryLink.setAttribute('data-category-id', category.id);
-            categoryLink.classList.add(`category-index-${index}`);
+            categoryLink.classList.add('category-link', `category-index-${categoryIndex}`);
+            categoryLink.setAttribute('data-category', category.id);
             categoryTabsContainer.appendChild(categoryLink);
         });
     }
