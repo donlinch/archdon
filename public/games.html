@@ -187,16 +187,27 @@
 
         .page-title-header {
             text-align: center;
-            padding: 20px 0;
-            background-color: #FFB74D;
+            padding: 0;
+            background-color: transparent; /* 移除橘色背景 */
             color: white;
             margin-bottom: 0px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: none; /* 移除陰影 */
+            overflow: hidden; /* 確保圖片不會溢出 */
+            width: 100%;
         }
 
         .page-title {
             font-size: 1.8rem;
             margin: 0;
+        }
+        
+        /* 標題圖片樣式 */
+        .page-title img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            border-radius: 0; /* 移除邊角效果 */
         }
 
         /* 遊戲卡片格狀視圖 */
@@ -488,7 +499,7 @@
 </head>
 <body>
     <header class="page-title-header">
-        <h1 class="page-title">SunnyYummy 互動遊戲集</h1>
+        <h1 class="page-title"><img src="/images/gameH1.jpg" alt="SunnyYummy 互動遊戲集"></h1>
     </header>
     
     <!-- 分類標籤 -->
