@@ -435,6 +435,12 @@ document.addEventListener('DOMContentLoaded', () => {
         detailModal.style.display = 'flex';
         document.body.style.overflow = 'hidden'; // 防止背景滾動
         
+        // 重置內容區域的滾動位置
+        const modalContent = detailModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+        
         try {
             const response = await fetch(`/api/news/${newsId}`);
             if (!response.ok) {

@@ -562,7 +562,7 @@
         top: 0;
         width: 100%;
         height: 100%;
-        overflow: auto;
+        overflow: hidden; /* 防止背景滾動 */
         background-color: rgba(0,0,0,0.5);
         align-items: center;
         justify-content: center;
@@ -574,10 +574,12 @@
         border-radius: 16px;
         max-width: 800px;
         width: 100%;
-        overflow-y: auto; /* 改為整個content可滾動 */
+        overflow-y: auto; /* 內容可滾動 */
         animation: modalOpen 0.3s forwards;
         max-height: 90vh;
-        display: block; /* 改為block而非flex布局 */
+        position: relative;
+        margin: 30px auto; /* 水平居中 */
+        padding-bottom: 20px; /* 底部留出一些空間 */
     }
 
     @keyframes modalOpen {
@@ -585,8 +587,13 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
+    .modal.active {
+        display: flex; /* 顯示時使用flex佈局 */
+    }
+
     .modal-header {
         padding: 0;
+        width: 100%;
     }
 
     .modal-header img {
@@ -966,5 +973,52 @@
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="news.js"></script>
+    <script>
+        // 處理模態窗口的滾動問題
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('news-detail-modal');
+            const modalContent = modal.querySelector('.modal-content');
+            const closeButton = modal.querySelector('.modal-close');
+            
+            // 確保模態窗口在打開時使用正確的display屬性
+            const newsCards = document.querySelectorAll('.news-card');
+            newsCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // 點擊時阻止事件冒泡
+                    e.stopPropagation();
+                });
+            });
+            
+            // 阻止模態窗口背景的點擊事件冒泡
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // 阻止模態內容的點擊事件冒泡
+            modalContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // 監聽ESC按鍵關閉模態窗口
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.style.display !== 'none') {
+                    closeModal();
+                }
+            });
+            
+            // 關閉按鈕事件
+            if (closeButton) {
+                closeButton.addEventListener('click', closeModal);
+            }
+            
+            // 關閉模態窗口並恢復滾動
+            function closeModal() {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
 </body>
 </html>
