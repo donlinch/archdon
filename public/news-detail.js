@@ -54,11 +54,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 使用 textContent 以防止 XSS，如果內容確定是安全的 HTML，可以用 innerHTML
         if (newsItem.content) {
-            // 簡單處理換行符，替換為 <br> 或 <p>
-            const formattedContent = newsItem.content
-                .replace(/\n\n/g, '</p><p>')
-                .replace(/\n/g, '<br>');
-            detailBody.innerHTML = `<p>${formattedContent}</p>`;
+            // 將 textContent 改為 innerHTML 來渲染 HTML
+            detailBody.innerHTML = newsItem.content; 
+            // 移除 pre-wrap 樣式，因為 HTML 自身會處理格式
+            // detailBody.style.whiteSpace = 'pre-wrap'; 
         } else {
             detailBody.textContent = '沒有詳細內容。';
         }
@@ -132,8 +131,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString('zh-TW')}`;
         detailMeta.textContent = metaText;
         if (newsItem.content) {
-            detailBody.textContent = newsItem.content;
-            detailBody.style.whiteSpace = 'pre-wrap'; // 保留換行
+            // 將 textContent 改為 innerHTML 來渲染 HTML
+            detailBody.innerHTML = newsItem.content; 
+            // 移除 pre-wrap 樣式，因為 HTML 自身會處理格式
+            // detailBody.style.whiteSpace = 'pre-wrap'; 
         } else {
             detailBody.textContent = '沒有詳細內容。';
         }
