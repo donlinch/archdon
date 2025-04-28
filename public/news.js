@@ -475,24 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 處理內容中的連結
             if (news.content) {
-                // 先進行 HTML 轉義
-                const escapedContent = news.content
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-                
-                // 換行符轉為 <br>
-                let formattedContent = escapedContent.replace(/\n/g, '<br>');
-                
-                // 轉換 URL 為可點擊連結
-                formattedContent = formattedContent.replace(
-                    /(https?:\/\/[^\s<]+)/g,
-                    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
-                );
-                
-                detailBody.innerHTML = formattedContent;
+                // 直接渲染 HTML 內容而不進行轉義
+                detailBody.innerHTML = news.content;
             } else {
                 detailBody.textContent = '沒有詳細內容。';
             }
