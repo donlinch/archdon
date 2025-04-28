@@ -481,8 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 newsIdSpan.textContent = newsId; // 設置新聞ID
                 const shareLink = newsIdSpan.closest('a');
                 if(shareLink) {
-                    shareLink.href = `https://sunnyyummy.onrender.com/news.html?id=${newsId}`;
-                    shareLink.innerHTML = `🔗 分享此消息：https://sunnyyummy.onrender.com/news.html?id=<span class="news-id">${newsId}</span>`; // 確保顯示完整 URL
+                    shareLink.href = `https://sunnyyummy.onrender.com/news/${newsId}`;
+                    shareLink.innerHTML = `🔗 分享此消息：https://sunnyyummy.onrender.com/news/<span class="news-id">${newsId}</span>`; // 確保顯示完整 URL
                 }
             } else {
                 // 如果 span 不存在，可能是 HTML 結構問題

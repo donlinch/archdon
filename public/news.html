@@ -586,20 +586,18 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .modal-header {
+    .modal-body {
         padding: 0;
+        overflow-y: auto; /* 恢復原始狀態 */
     }
 
-    .modal-header img {
+    #detail-image {
         width: 100%;
         max-height: 400px;
         object-fit: cover;
         display: block;
-    }
-
-    .modal-body {
-        padding: 20px;
-        overflow-y: auto; /* 恢復原始狀態 */
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
     }
 
     .modal-title {
@@ -607,6 +605,7 @@
         font-weight: bold;
         color: #333;
         margin-bottom: 1rem;
+        padding: 20px 20px 0 20px;
     }
 
     .modal-meta {
@@ -615,6 +614,7 @@
         margin-bottom: 1rem;
         color: #666;
         font-size: 0.9rem;
+        padding: 0 20px;
     }
 
     .modal-meta .event-date {
@@ -624,15 +624,17 @@
     .modal-content-text {
         line-height: 1.7;
         color: #444;
-        white-space: pre-wrap;
+        padding: 0 20px;
     }
 
     /* 分享連結樣式 */
     .news-share-link {
         margin-top: 30px;
+        margin-bottom: 20px;
         padding-top: 15px;
         border-top: 1px dashed #ddd;
         text-align: center;
+        padding: 15px 20px 20px;
     }
 
     .news-share-link a {
@@ -922,10 +924,8 @@
     <div id="news-detail-modal" class="modal">
         <button class="modal-close">&times;</button>
         <div class="modal-content">
-            <div class="modal-header">
-                <img id="detail-image" src="" alt="消息圖片">
-            </div>
             <div class="modal-body">
+                <img id="detail-image" src="" alt="消息圖片">
                 <h2 id="detail-title" class="modal-title"></h2>
                 <div id="detail-meta" class="modal-meta"></div>
                 <div id="detail-body" class="modal-content-text"></div>
