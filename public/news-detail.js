@@ -58,8 +58,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString('zh-TW')}`;
         detailMeta.textContent = metaText;
         if (newsItem.content) {
-            // 直接渲染 HTML 內容而不進行轉義
-            detailBody.innerHTML = newsItem.content; 
+            // Process content as in news.html
+            let contentToRender = newsItem.content || '';
+            
+            // 處理可能的文字格式問題
+            // 1. 移除多餘的空行
+            contentToRender = contentToRender.replace(/\n{3,}/g, "\n\n");
+            
+            // 2. 確保 <br> 標籤不會產生多餘的空行
+            contentToRender = contentToRender.replace(/<br>\s*<br>\s*<br>/gi, '<br><br>');
+            
+            // 3. 空段落處理
+            contentToRender = contentToRender.replace(/<p>\s*<\/p>/gi, '');
+            
+            // 4. 標準化段落間距
+            contentToRender = contentToRender.replace(/<\/p>\s*<p>/gi, '</p><p>');
+            
+            // 5. 處理可能的空白問題
+            contentToRender = contentToRender.trim();
+            
+            // 渲染處理後的內容
+            detailBody.innerHTML = contentToRender;
+            
+            // 確保所有鏈接在新標籤打開
+            const links = detailBody.querySelectorAll('a');
+            links.forEach(link => {
+                if (!link.hasAttribute('target')) {
+                    link.setAttribute('target', '_blank');
+                }
+            });
         } else {
             detailBody.textContent = '沒有詳細內容。';
         }

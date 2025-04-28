@@ -390,8 +390,12 @@
 
       #news-detail-body {
           line-height: 1.7;
-          color: #333;
+          color: #444;
           font-size: 1.05rem;
+          white-space: normal;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          padding: 0;
       }
 
       /* 增強 HTML 內容渲染支持 */
@@ -432,6 +436,7 @@
       
       #news-detail-body p {
           margin-bottom: 1rem;
+          margin-top: 0;
       }
       
       #news-detail-body ul, 
@@ -471,6 +476,30 @@
       #news-detail-body th {
           background-color: #f5f5f5;
       }
+
+      /* Prevent unwanted spacing with HTML elements */
+      #news-detail-body br {
+          line-height: 1;
+      }
+
+      #news-detail-body > *:first-child {
+          margin-top: 0;
+      }
+
+      /* Handle empty paragraphs and prevent unwanted spacing */
+      #news-detail-body p:empty {
+          display: none;
+      }
+
+      /* Ensure consecutive paragraphs have consistent spacing */
+      #news-detail-body p + p {
+          margin-top: 0;
+      }
+
+      /* Can be helpful for debugging - remove after testing
+      #news-detail-body * {
+          border: 1px dotted rgba(255,0,0,0.2);
+      } */
 
       /* 可選: 為複製按鈕添加一點樣式 */
       .copy-link-button {
