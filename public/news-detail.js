@@ -77,6 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 5. 處理可能的空白問題
             contentToRender = contentToRender.trim();
             
+            // 添加這一步來完全移除所有換行符
+            contentToRender = contentToRender.replace(/\n/g, '');
+            
             // 渲染處理後的內容
             detailBody.innerHTML = contentToRender;
             
