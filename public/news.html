@@ -562,12 +562,11 @@
         top: 0;
         width: 100%;
         height: 100%;
-        overflow-y: auto; /* 允許整個 modal 滾動 */
+        overflow: auto; /* 恢復原始狀態 */
         background-color: rgba(0,0,0,0.5);
-        /* 移除 align-items: center; 以便內容從頂部開始 */
+        align-items: center;
         justify-content: center;
-        padding: 30px 20px; /* 添加垂直 padding */
-        box-sizing: border-box; /* 防止 padding 影響寬高 */
+        padding: 20px;
     }
 
     .modal-content {
@@ -575,12 +574,11 @@
         border-radius: 16px;
         max-width: 800px;
         width: 100%;
-        /* 移除 overflow-y: auto; 因為 modal 會滾動 */
+        overflow: hidden; /* 恢復原始狀態 */
         animation: modalOpen 0.3s forwards;
-        /* 移除 max-height: 90vh; */
-        position: relative;
-        margin: 0 auto; /* 水平居中 */
-        /* padding-bottom: 20px; /* 移到 modal-body */
+        max-height: 90vh;
+        display: flex; /* 恢復原始狀態 */
+        flex-direction: column; /* 恢復原始狀態 */
     }
 
     @keyframes modalOpen {
@@ -588,15 +586,8 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .modal.active {
-        display: flex; /* 顯示時使用flex佈局 */
-    }
-
     .modal-header {
         padding: 0;
-        width: 100%;
-        /* 確保圖片不會破壞佈局 */
-        line-height: 0;
     }
 
     .modal-header img {
@@ -604,13 +595,11 @@
         max-height: 400px;
         object-fit: cover;
         display: block;
-        border-top-left-radius: 16px; /* 保持圓角 */
-        border-top-right-radius: 16px;
     }
 
     .modal-body {
         padding: 20px;
-        padding-bottom: 40px; /* 為分享連結增加空間 */
+        overflow-y: auto; /* 恢復原始狀態 */
     }
 
     .modal-title {
@@ -664,7 +653,7 @@
     }
 
     .modal-close {
-        position: fixed; /* 改為 fixed 相對於 viewport */
+        position: absolute; /* Reverted from fixed */
         top: 15px;
         right: 15px;
         width: 30px;
@@ -679,7 +668,6 @@
         justify-content: center;
         cursor: pointer;
         transition: background 0.3s;
-        z-index: 1051; /* 確保在內容之上 */
     }
 
     .modal-close:hover {
@@ -800,7 +788,6 @@
         
         .modal-content {
             width: 95%;
-            margin: 0 auto; /* 確保在小屏幕也水平居中 */
         }
         
         .desktop-footer {
@@ -815,15 +802,6 @@
 
         body {
             padding-bottom: 0; /* 移除手機版的底部間距 */
-        }
-        
-        .modal {
-            padding: 20px 10px; /* 手機上減少 padding */
-        }
-        
-        .modal-close {
-            top: 10px;
-            right: 10px;
         }
     }
 
@@ -989,79 +967,5 @@
     <!-- JavaScript -->
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="news.js"></script>
-    <script>
-        // 處理模態窗口的滾動問題
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('news-detail-modal');
-            const modalContent = modal.querySelector('.modal-content');
-            const closeButton = modal.querySelector('.modal-close');
-            
-            // 確保模態窗口在打開時使用正確的display屬性
-            const newsCards = document.querySelectorAll('.news-card');
-            newsCards.forEach(card => {
-                card.addEventListener('click', function(e) {
-                    // 點擊時阻止事件冒泡
-                    e.stopPropagation();
-                });
-            });
-            
-            // 阻止模態窗口背景的點擊事件冒泡
-            modal.addEventListener('click', function(e) {
-                // Check if the click is on the modal backdrop itself, not the content
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-            
-            // 阻止模態內容的點擊事件冒泡
-            modalContent.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-            
-            // 監聽ESC按鍵關閉模態窗口
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.style.display !== 'none') {
-                    closeModal();
-                }
-            });
-            
-            // 關閉按鈕事件
-            if (closeButton) {
-                closeButton.addEventListener('click', closeModal);
-            }
-            
-            // 關閉模態窗口並恢復滾動
-            function closeModal() {
-                // Add animation for closing
-                modal.style.animation = 'modalClose 0.3s forwards';
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                    modal.style.animation = ''; // Reset animation
-                    document.body.style.overflow = ''; // Restore body scroll
-                }, 300); // Match animation duration
-            }
-            
-            // Add modal close animation CSS
-            const styleSheet = document.createElement("style");
-            styleSheet.type = "text/css";
-            styleSheet.innerText = `
-                @keyframes modalClose {
-                    from { opacity: 1; transform: translateY(0); }
-                    to { opacity: 0; transform: translateY(15px); }
-                }
-                body.modal-open {
-                    overflow: hidden; /* Prevent body scroll when modal is open */
-                }
-            `;
-            document.head.appendChild(styleSheet);
-
-            // Ensure body scroll is handled correctly when opening modal
-            // (Assuming you have an openModal function elsewhere)
-            // Inside your openModal function, add:
-            // document.body.classList.add('modal-open');
-            // Inside your closeModal function, add:
-            // document.body.classList.remove('modal-open');
-        });
-    </script>
 </body>
 </html>

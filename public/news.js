@@ -491,7 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 顯示 Modal
             detailModal.style.display = 'flex';
-            detailModal.scrollTop = 0; // **Ensure scroll position is at the top**
             document.body.style.overflow = 'hidden'; // 防止背景滾動
 
         } catch (error) {
@@ -500,7 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
             detailBody.textContent = '無法加載新聞詳情，請稍後再試。';
             detailImage.style.display = 'none'; // 加載失敗也隱藏圖片
             detailModal.style.display = 'flex'; // 即使失敗也要顯示Modal以告知用戶
-            detailModal.scrollTop = 0; // **Ensure scroll position is at the top**
             document.body.style.overflow = 'hidden';
         }
     }
