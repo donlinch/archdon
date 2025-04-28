@@ -412,86 +412,96 @@ document.addEventListener('DOMContentLoaded', () => {
      * 打開新聞詳情模態框
      */
     async function openNewsDetailModal(newsId) {
-        if (!detailModal || !detailImage || !detailTitle || !detailMeta || !detailBody) {
-            console.error("Modal elements not found");
-            return;
-        }
-        
-        // 重置模態框內容
-        detailImage.src = '';
-        detailTitle.textContent = '加載中...';
+        if (!detailModal) return;
+
+        // 顯示加載指示
+        detailTitle.textContent = '載入中...';
+        detailImage.src = '/images/loading-banner.png'; // 預設載入圖片
+        detailImage.style.display = 'block'; // 確保圖片容器可見
         detailMeta.innerHTML = '';
         detailBody.textContent = '';
-        
-        // 更新分享連結的 ID
-        const shareLink = document.querySelector('#news-share-link a');
-        const newsIdSpan = document.querySelector('#news-share-link .news-id');
-        if (shareLink && newsIdSpan) {
-            shareLink.href = `https://sunnyyummy.onrender.com/news/${newsId}`;
-            newsIdSpan.textContent = newsId;
-        }
-        
-        // 顯示模態框
-        detailModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // 防止背景滾動
-        
-        // 重置內容區域的滾動位置
-        const modalContent = detailModal.querySelector('.modal-content');
-        if (modalContent) {
-            modalContent.scrollTop = 0;
-        }
+        // 清空舊的分享連結ID
+        const newsIdSpan = detailModal.querySelector('.news-share-link .news-id');
+        if (newsIdSpan) newsIdSpan.textContent = '';
         
         try {
             const response = await fetch(`/api/news/${newsId}`);
             if (!response.ok) {
                 throw new Error(`獲取新聞詳情失敗 (HTTP ${response.status})`);
             }
+            const newsDetail = await response.json();
+
+            // 更新 Modal 內容
+            detailTitle.textContent = newsDetail.title;
             
-            const news = await response.json();
-            
-            // 填充詳情內容
-            if (news.image_url) {
-                detailImage.src = news.image_url;
-                detailImage.alt = news.title || '新聞圖片';
-                detailImage.style.display = 'block';
+            // 處理圖片：如果沒有圖片，則隱藏圖片容器
+            if (newsDetail.image_url) {
+                detailImage.src = newsDetail.image_url;
+                detailImage.style.display = 'block'; // 有圖片時顯示
             } else {
-                detailImage.style.display = 'none';
+                detailImage.src = ''; // 清空 src
+                detailImage.style.display = 'none'; // 沒有圖片時隱藏
             }
-            
-            detailTitle.textContent = news.title || '未知標題';
-            
-            // 格式化日期
-            const eventDate = news.event_date ? new Date(news.event_date) : null;
-            const updateDate = news.updated_at ? new Date(news.updated_at) : new Date();
-            
-            // 創建日期元素
-            detailMeta.innerHTML = '';
-            
-            if (eventDate) {
-                const eventDateSpan = document.createElement('span');
-                eventDateSpan.className = 'event-date';
-                eventDateSpan.textContent = `活動日期: ${eventDate.toLocaleDateString('zh-TW')}`;
-                detailMeta.appendChild(eventDateSpan);
-            }
-            
-            const updateDateSpan = document.createElement('span');
-            updateDateSpan.className = 'update-date';
-            updateDateSpan.textContent = `更新時間: ${updateDate.toLocaleDateString('zh-TW')}`;
-            detailMeta.appendChild(updateDateSpan);
-            
-            // 處理內容中的連結
-            if (news.content) {
-                // 直接渲染 HTML 內容而不進行轉義
-                detailBody.innerHTML = news.content;
+
+            // 創建並添加日期信息
+            const dateToShow = newsDetail.event_date ? new Date(newsDetail.event_date) : new Date(newsDetail.created_at);
+            const formattedDate = dateToShow.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const eventDateSpan = document.createElement('span');
+            eventDateSpan.className = 'event-date';
+            eventDateSpan.textContent = `📅 ${formattedDate}`;
+
+            // 創建並添加分類信息
+            const categorySpan = document.createElement('span');
+            categorySpan.className = 'category-name';
+            if (newsDetail.category_name) {
+                // 查找分類索引以應用正確的顏色
+                const categoryIndex = categoryIndexMap[newsDetail.category_id];
+                let categoryClass = 'cat-other'; // 默認
+                if (categoryIndex !== undefined) {
+                    categoryClass = `cat-index-${categoryIndex}`;
+                }
+                categorySpan.innerHTML = `<span class="category-label ${categoryClass}" style="padding: 2px 6px; font-size: 0.8rem; border-radius: 10px; color: white;">${newsDetail.category_name}</span>`;
             } else {
-                detailBody.textContent = '沒有詳細內容。';
+                categorySpan.innerHTML = ''; // 如果沒有分類名則不顯示
             }
+
+            detailMeta.innerHTML = ''; // 清空之前的 meta
+            detailMeta.appendChild(eventDateSpan);
+            detailMeta.appendChild(categorySpan);
             
+            // 處理詳細內容
+            detailBody.textContent = newsDetail.content || '暫無詳細內容。'; // 保留換行符
+
+            // 更新分享連結
+            if (newsIdSpan) {
+                newsIdSpan.textContent = newsId; // 設置新聞ID
+                const shareLink = newsIdSpan.closest('a');
+                if(shareLink) {
+                    shareLink.href = `https://sunnyyummy.onrender.com/news.html?id=${newsId}`;
+                    shareLink.innerHTML = `🔗 分享此消息：https://sunnyyummy.onrender.com/news.html?id=<span class="news-id">${newsId}</span>`; // 確保顯示完整 URL
+                }
+            } else {
+                // 如果 span 不存在，可能是 HTML 結構問題
+                console.error("Share link news-id span not found.");
+            }
+
+            // 顯示 Modal
+            detailModal.style.display = 'flex';
+            detailModal.scrollTop = 0; // **Ensure scroll position is at the top**
+            document.body.style.overflow = 'hidden'; // 防止背景滾動
+
         } catch (error) {
-            console.error('獲取新聞詳情失敗:', error);
+            console.error('加載新聞詳情時出錯:', error);
             detailTitle.textContent = '加載失敗';
-            detailBody.textContent = `無法加載新聞詳情: ${error.message}`;
-            detailImage.style.display = 'none';
+            detailBody.textContent = '無法加載新聞詳情，請稍後再試。';
+            detailImage.style.display = 'none'; // 加載失敗也隱藏圖片
+            detailModal.style.display = 'flex'; // 即使失敗也要顯示Modal以告知用戶
+            detailModal.scrollTop = 0; // **Ensure scroll position is at the top**
+            document.body.style.overflow = 'hidden';
         }
     }
     
