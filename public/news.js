@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detailImage.src = '/images/loading-banner.png'; // 預設載入圖片
         detailImage.style.display = 'block'; // 確保圖片容器可見
         detailMeta.innerHTML = '';
-        detailBody.textContent = '';
+        detailBody.innerHTML = '';
         // 清空舊的分享連結ID
         const newsIdSpan = detailModal.querySelector('.news-share-link .news-id');
         if (newsIdSpan) newsIdSpan.textContent = '';
@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
             detailMeta.appendChild(categorySpan);
             
             // 處理詳細內容
-            detailBody.textContent = newsDetail.content || '暫無詳細內容。'; // 保留換行符
+            detailBody.innerHTML = newsDetail.content || '暫無詳細內容。';
 
             // 更新分享連結
             if (newsIdSpan) {
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('加載新聞詳情時出錯:', error);
             detailTitle.textContent = '加載失敗';
-            detailBody.textContent = '無法加載新聞詳情，請稍後再試。';
+            detailBody.innerHTML = '無法加載新聞詳情，請稍後再試。';
             detailImage.style.display = 'none'; // 加載失敗也隱藏圖片
             detailModal.style.display = 'flex'; // 即使失敗也要顯示Modal以告知用戶
             document.body.style.overflow = 'hidden';
