@@ -562,22 +562,19 @@ async function handleSaveAsTemplate() {
         try {
             showLoader();
             const response = await fetch('/api/admin/walk_map/templates');
+            hideLoader();
             
-            if (!response.ok) {
-                throw new Error(`獲取模板列表失敗: ${response.status} ${response.statusText}`);
-            }
-            
+            if (!response.ok) throw new Error(`無法獲取模板列表: ${response.statusText}`);
             const templates = await response.json();
+
             templateSelect.innerHTML = '<option value="">-- 請選擇或新增 --</option>';
-            
-            templates.forEach(template => {
+            templates.forEach(t => {
                 const option = document.createElement('option');
-                option.value = template.template_id;
-                option.textContent = template.name || `未命名模板 (${template.template_id})`;
+                option.value = t.template_id;
+                option.textContent = t.template_name;
                 templateSelect.appendChild(option);
             });
-            
-            hideLoader();
+            console.log("模板列表已載入。");
         } catch (error) {
             hideLoader();
             displayStatus(`載入模板列表錯誤: ${error.message}`, true);
@@ -586,39 +583,37 @@ async function handleSaveAsTemplate() {
 
 // 修改 handleLoadTemplate 函數使用新的載入函數
 async function handleLoadTemplate() {
-    // 獲取選擇的模板ID
-    const templateId = templateSelect.value;
-    if (!templateId) {
-        displayStatus('請先選擇一個模板', true);
+    const selectedId = templateSelect.value;
+    if (!selectedId) {
+        displayStatus("請選擇一個模板來載入。", true);
+        clearTemplateEditor();
+        adminMapGrid.innerHTML = '';
         return;
     }
     
+    clearTemplateEditor();
     try {
-        showLoader();
-        // Change endpoint from /api/rich-map/templates/ to /api/admin/walk_map/templates/
-        const response = await fetch(`/api/admin/walk_map/templates/${templateId}`);
+        const template = await loadTemplateWithErrorCheck(selectedId);
         
-        if (!response.ok) {
-            throw new Error(`載入模板失敗: ${response.status} ${response.statusText}`);
-        }
-        
-        const template = await response.json();
-        
-        // 檢查模板數據結構
-        if (!template || !template.template_id) {
-            throw new Error('收到的模板數據不完整或無效');
-        }
-        
-        // 顯示模板編輯區
         populateTemplateEditor(template);
+        currentCellInfo = template.cell_data || createDefaultCellData();
+        renderAdminGrid();
+
         templateEditor.classList.remove('hidden');
         deleteTemplateBtn.classList.remove('hidden');
-        currentEditingTemplateId = template.template_id;
+        currentEditingTemplateId = selectedId;
+        displayStatus(`模板 "${template.template_name}" 已載入。`);
         
-        hideLoader();
+        // 移動設備上聚焦到模板名稱
+        if (window.innerWidth <= 768) {
+            templateNameInput.scrollIntoView({ behavior: 'smooth' });
+        }
     } catch (error) {
-        hideLoader();
-        displayStatus(`載入模板錯誤: ${error.message}`, true);
+        console.error('載入模板失敗:', error);
+        templateEditor.classList.add('hidden');
+        deleteTemplateBtn.classList.add('hidden');
+        adminMapGrid.innerHTML = '';
+        currentCellInfo = [];
     }
 }
 
@@ -672,120 +667,122 @@ function clearColorInput(inputId) {
     }
 }
     async function handleSaveTemplate() {
-        // 從輸入獲取模板ID和名稱
         const templateId = templateIdInput.value.trim();
         const templateName = templateNameInput.value.trim();
-        
-        // 驗證必填字段
-        if (!templateId) {
-            displayStatus('請輸入模板 ID', true);
-            templateIdInput.focus();
+        if (!templateId || !templateName) {
+            displayStatus("模板 ID 和名稱為必填項。", true);
             return;
         }
-        
-        if (!templateName) {
-            displayStatus('請輸入模板名稱', true);
-            templateNameInput.focus();
-            return;
-        }
-        
-        // 檢查 ID 格式 (只允許小寫字母、數字和底線)
         if (!/^[a-z0-9_]+$/.test(templateId)) {
-            displayStatus('模板 ID 只能包含小寫字母、數字和底線', true);
-            templateIdInput.focus();
-            return;
+             displayStatus("模板 ID 只能包含小寫字母、數字和底線。", true);
+             return;
         }
-        
-        // 準備模板數據
-        const isCreating = !currentEditingTemplateId;
+
+        const styleData = collectStyleData();
         const templateData = {
             template_id: templateId,
-            name: templateName,
+            template_name: templateName,
             description: templateDescriptionInput.value.trim(),
-            style_data: collectStyleData(),
+            style_data: styleData,
             cell_data: currentCellInfo
         };
-        
+
+        const isCreating = !currentEditingTemplateId;
+        const method = isCreating ? 'POST' : 'PUT';
+        const url = isCreating ? '/api/admin/walk_map/templates' : `/api/admin/walk_map/templates/${currentEditingTemplateId}`;
+
+        if (!isCreating && templateId !== currentEditingTemplateId) {
+             displayStatus("錯誤：無法在此表單更改現有模板的 ID。", true);
+             templateIdInput.value = currentEditingTemplateId;
+             return;
+        }
+
         try {
             showLoader();
-            // 使用 PUT 更新或 POST 創建
-            const method = isCreating ? 'POST' : 'PUT';
-            const url = isCreating ? '/api/admin/walk_map/templates' : `/api/admin/walk_map/templates/${currentEditingTemplateId}`;
-            
             const response = await fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(templateData)
             });
+            hideLoader();
             
             if (!response.ok) {
-                throw new Error(`儲存模板失敗: ${response.status} ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                throw new Error(errorData.error || `儲存模板失敗: ${response.statusText}`);
             }
-            
-            // 保存成功後更新當前編輯模板ID
-            currentEditingTemplateId = templateId;
-            
-            // 顯示成功消息
-            displayStatus(`模板 "${templateName}" 已成功${isCreating ? '新增' : '更新'}！`);
-            
-            // 重新載入模板列表
-            await loadTemplateList();
-            
-            // 選中當前模板
-            const templateOptions = Array.from(templateSelect.options);
-            const targetOption = templateOptions.find(option => option.value === templateId);
-            if (targetOption) {
-                templateSelect.value = templateId;
+            const savedTemplateResult = await response.json();
+            displayStatus(`模板 "${templateData.template_name}" (ID: ${templateData.template_id}) 已成功儲存！`);
+
+            if (isCreating) {
+                currentEditingTemplateId = templateData.template_id;
+                templateIdInput.value = currentEditingTemplateId;
+                templateIdInput.readOnly = true;
+                deleteTemplateBtn.classList.remove('hidden');
+                await loadTemplateList();
+                templateSelect.value = currentEditingTemplateId;
+            } else {
+                 const option = templateSelect.querySelector(`option[value="${currentEditingTemplateId}"]`);
+                 if (option && option.textContent !== templateName) {
+                     option.textContent = templateName;
+                 }
             }
-            
-            // 顯示刪除按鈕
-            deleteTemplateBtn.classList.remove('hidden');
-            
-            hideLoader();
+
+            // 在移動設備上顯示一條成功通知，並滾動到頂部以查看更新後的標題
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // 添加短暫高亮效果
+                templateSelect.classList.add('highlight-select');
+                setTimeout(() => templateSelect.classList.remove('highlight-select'), 2000);
+            }
+
         } catch (error) {
             hideLoader();
-            displayStatus(`儲存模板失敗: ${error.message}`, true);
+            displayStatus(`儲存模板錯誤: ${error.message}`, true);
         }
     }
 
     async function handleDeleteTemplate() {
         if (!currentEditingTemplateId) {
-            displayStatus('錯誤：無模板被選中，無法刪除', true);
+            displayStatus("未選擇要刪除的模板。", true);
             return;
         }
+        const currentName = templateNameInput.value || `ID: ${currentEditingTemplateId}`;
         
-        // 確認刪除
-        if (!confirm(`確定要刪除模板 "${templateNameInput.value}"?\n此操作無法撤銷!`)) {
-            return;
+        // 優化移動版確認對話框
+        if (window.innerWidth <= 768) {
+            if (!confirm(`確定要刪除「${currentName}」嗎？\n\n此操作無法復原！`)) {
+                return;
+            }
+        } else {
+            if (!confirm(`你確定要刪除模板 "${currentName}" (ID: ${currentEditingTemplateId}) 嗎？此操作無法復原。`)) {
+                return;
+            }
         }
         
         try {
             showLoader();
-            const response = await fetch(`/api/admin/walk_map/templates/${currentEditingTemplateId}`, { 
-                method: 'DELETE' 
-            });
+            const response = await fetch(`/api/admin/walk_map/templates/${currentEditingTemplateId}`, { method: 'DELETE' });
+            hideLoader();
             
             if (!response.ok) {
-                throw new Error(`刪除模板失敗: ${response.status} ${response.statusText}`);
-            }
-            
-            // 成功刪除後，清空編輯器並重設狀態
+                 if (response.status === 404) throw new Error("伺服器上找不到模板。");
+                 const errorData = await response.json().catch(() => ({}));
+                 throw new Error(errorData.error || `刪除模板失敗: ${response.statusText}`);
+             }
+            displayStatus(`模板 "${currentName}" 已成功刪除。`);
             clearTemplateEditor();
-            templateEditor.classList.add('hidden');
-            deleteTemplateBtn.classList.add('hidden');
-            currentEditingTemplateId = null;
+            adminMapGrid.innerHTML = '';
             currentCellInfo = [];
-            
-            // 重新載入模板列表
             await loadTemplateList();
+            templateSelect.value = "";
             
-            displayStatus(`模板已成功刪除`);
-            hideLoader();
+            // 在移動設備上滾動到頂部
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } catch (error) {
             hideLoader();
-            displayStatus(`刪除模板失敗: ${error.message}`, true);
+            displayStatus(`刪除模板錯誤: ${error.message}`, true);
         }
     }
 
