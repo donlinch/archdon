@@ -189,13 +189,7 @@ async function deleteCurrentTemplate() {
         return;
     }
 
-    // 增加保護，不允許刪除 ID=1
-    if (currentTemplateId === 1) {
-        alert("錯誤：不允許刪除預設模板 (ID=1)！");
-        return;
-    }
-
-    const templateName = templateSelect.options[templateSelect.selectedIndex]?.text || `ID: ${currentTemplateId}`; // 獲取當前選中模板的名稱
+    const templateName = templateSelect.options[templateSelect.selectedIndex]?.text || `ID: ${currentTemplateId}`;
     if (!confirm(`確定要永久刪除模板 "${templateName}" 嗎？\n這個操作無法復原！`)) {
         return; // 使用者取消
     }
@@ -205,7 +199,8 @@ async function deleteCurrentTemplate() {
     deleteTemplateBtn.textContent = '刪除中...';
 
     try {
-        const response = await fetch(`/api/rich-map/templates/${currentTemplateId}`, {
+        // 使用 admin API 路徑
+        const response = await fetch(`/api/admin/walk_map/templates/${currentTemplateId}`, {
             method: 'DELETE'
         });
 
@@ -222,9 +217,9 @@ async function deleteCurrentTemplate() {
             if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請選擇或建立模板</td></tr>';
             applyTemplateBackgroundColor('#fff0f5');
             saveTemplateBtn.disabled = true; // 禁用儲存
-            await fetchTemplateList(); // 刷新下拉選單 (會自動載入第一個)
+            await fetchTemplateList(); // 刷新下拉選單
         } else {
-            // 如果伺服器回傳錯誤 (例如 404, 500)
+            // 如果伺服器回傳錯誤
             const errData = await response.json().catch(() => ({}));
             throw new Error(`刪除失敗 ${response.status}: ${errData.error || response.statusText}`);
         }
@@ -232,7 +227,7 @@ async function deleteCurrentTemplate() {
         console.error('❌ 刪除模板失敗:', err);
         alert(`刪除模板失敗：\n${err.message}`);
     } finally {
-        // 恢復按鈕狀態 (如果按鈕還存在的話)
+        // 恢復按鈕狀態
         if (deleteTemplateBtn) {
             deleteTemplateBtn.disabled = false;
             deleteTemplateBtn.textContent = '🗑️ 刪除目前版本';
@@ -302,193 +297,148 @@ function saveCellChanges() {
 
 // 獲取並填充模板列表
 async function fetchTemplateList(selectId = null) {
-    if (!templateSelect || !loadTemplateBtn) {
-        console.error("模板選擇器的 DOM 元素未找到！");
-        return;
-    }
     try {
-        const response = await fetch('/api/rich-map/templates');
+        // Update to use the admin API endpoint
+        const response = await fetch('/api/admin/walk_map/templates');
+        
         if (!response.ok) {
             throw new Error(`獲取模板列表失敗: ${response.status} ${response.statusText}`);
         }
+        
         const templates = await response.json();
-        templateSelect.innerHTML = '';
-
-        if (!Array.isArray(templates) || templates.length === 0) {
-            templateSelect.innerHTML = '<option value="">-- 沒有可用模板 --</option>';
-            loadTemplateBtn.disabled = true;
-            saveTemplateBtn.disabled = true;
-            if (board) board.innerHTML = '';
-            if (logoUrlInput) logoUrlInput.value = '';
-            if (logoPreview) logoPreview.src = '';
-            applyTemplateBackgroundColor('#fff0f5');
-            if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">請先建立模板</td></tr>'; // 清空玩家表格
-            return;
-        }
-
+        
+        // 清空並重新填充下拉選單
+        templateSelect.innerHTML = '<option value="">-- 選擇模板 --</option>';
+        
         templates.forEach(template => {
             const option = document.createElement('option');
-            option.value = template.id;
-            option.textContent = `${template.template_name} (ID: ${template.id})`;
+            option.value = template.template_id;
+            option.textContent = template.name || `未命名模板 (${template.template_id})`;
             templateSelect.appendChild(option);
         });
         
-        // 決定要選中哪個 ID
-        let idToSelect = selectId; // 優先使用傳入的 ID
-        if (!idToSelect && templates.length > 0) {
-            idToSelect = templates[0].id; // 否則選中第一個
+        // 如果有指定 ID，則選擇該項
+        if (selectId) {
+            templateSelect.value = selectId;
         }
-
-        if (idToSelect) {
-            templateSelect.value = idToSelect; // 設置選中項
-            loadTemplateBtn.disabled = false;
-            // 如果是新建或另存後刷新，則自動載入新選中的模板
-            if (selectId) {
-                await loadTemplate(idToSelect);
-            } else if (templates.length > 0 && templateSelect.value == templates[0].id){
-                // 如果是頁面首次載入，且有模板，自動載入第一個
-                await loadTemplate(templates[0].id);
-            } else {
-                // 否則，只更新下拉選單，不自動載入 (例如，只是刷新列表)
-                saveTemplateBtn.disabled = true; // 需要手動載入後才能儲存
-            }
-        } else {
-            loadTemplateBtn.disabled = true;
-            saveTemplateBtn.disabled = true;
-        }
-    } catch (err) {
-        console.error('❌ 獲取模板列表時出錯:', err);
-        alert(`獲取模板列表失敗：\n${err.message}`);
-        templateSelect.innerHTML = '<option value="">-- 載入失敗 --</option>';
-        loadTemplateBtn.disabled = true;
-        saveTemplateBtn.disabled = true;
+        
+        // 根據選擇狀態啟用/禁用按鈕
+        const hasSelection = templateSelect.value !== '';
+        saveTemplateBtn.disabled = !hasSelection;
+        loadTemplateBtn.disabled = !hasSelection;
+        deleteTemplateBtn.disabled = !hasSelection;
+        
+        return templates;
+    } catch (error) {
+        console.error('載入模板列表失敗:', error);
+        alert(`無法載入模板列表: ${error.message}`);
+        return [];
     }
 }
 
 // 載入選定模板的完整資料
 async function loadTemplate(templateId) {
     if (!templateId) {
-        console.warn("載入模板時未提供 ID");
-        alert("請先選擇一個模板！");
+        console.error('無法載入模板：未提供 ID');
         return;
     }
-    console.log(`正在載入模板 ID: ${templateId}...`);
-    currentTemplateId = templateId;
-
-    if (board) board.innerHTML = '<p style="text-align: center;">載入中...</p>';
-    if (logoUrlInput) logoUrlInput.value = '';
-    if (logoPreview) logoPreview.src = '';
-    backgroundColor = '#fff0f5';
-    applyTemplateBackgroundColor(backgroundColor);
-    saveTemplateBtn.disabled = true;
-    if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4">載入中...</td></tr>'; // 清空舊玩家表格
-
+    
     try {
-        const response = await fetch(`/api/rich-map/templates/${currentTemplateId}/full`);
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(`伺服器錯誤 ${response.status}: ${errData.error || response.statusText}`);
-        }
-        const data = await response.json();
-        console.log("載入的模板資料:", data);
-
-        // 套用背景顏色
-        applyTemplateBackgroundColor(data.background_color);
-        backgroundColor = data.background_color || '#fff0f5';
+        // 使用 admin API 路徑
+        const response = await fetch(`/api/admin/walk_map/templates/${templateId}/full`);
         
-        // 確保每個格子都有 x 和 y 座標
-        // 如果服務器返回的數據中沒有座標，就為它們分配座標
-        if (data.cells && Array.isArray(data.cells)) {
-            // 檢查是否有格子缺少 x 和 y 座標
-            const needCoordinates = data.cells.some(cell => (
-                cell.x === undefined || cell.y === undefined || 
-                cell.x === null || cell.y === null ||
-                isNaN(Number(cell.x)) || isNaN(Number(cell.y))
-            ));
-            
-            if (needCoordinates) {
-                console.log("有些格子缺少座標，重新分配座標...");
-                // 重新分配座標 - 遊戲板外圍的格子佈局
-                // 假設最多 21 個格子 (7x3)，製作一個圍繞中央的棋盤佈局
-                const totalCells = data.cells.length;
-                
-                for (let i = 0; i < totalCells; i++) {
-                    if (i < 7) {
-                        // 頂部一排 (從左到右)
-                        data.cells[i].x = i;
-                        data.cells[i].y = 0;
-                    } else if (i < 14) {
-                        // 底部一排 (從左到右)
-                        data.cells[i].x = i - 7;
-                        data.cells[i].y = 5;
-                    } else if (i < 18) {
-                        // 左側 (從上到下)
-                        data.cells[i].x = 0;
-                        data.cells[i].y = i - 13; // 1, 2, 3, 4
-                    } else {
-                        // 右側 (從上到下)
-                        data.cells[i].x = 6;
-                        data.cells[i].y = i - 17; // 1, 2, 3, 4
-                    }
-                }
+        if (!response.ok) {
+            throw new Error(`獲取模板失敗: ${response.status} ${response.statusText}`);
+        }
+        
+        const templateData = await response.json();
+        
+        // 處理載入的數據
+        currentTemplateId = templateId;
+        cells = templateData.cell_data || [];
+        
+        // 設置背景顏色 (從樣式數據中獲取，如果存在)
+        if (templateData.style_data && templateData.style_data.general && templateData.style_data.general.pageBgColor) {
+            backgroundColor = templateData.style_data.general.pageBgColor;
+            if (backgroundColorInput) backgroundColorInput.value = backgroundColor;
+            if (backgroundColorPreview) backgroundColorPreview.textContent = backgroundColor;
+            if (colorPreviewBox) colorPreviewBox.style.backgroundColor = backgroundColor;
+        }
+        
+        // 應用背景顏色
+        applyTemplateBackgroundColor(backgroundColor);
+        
+        // 設置 Logo URL (如果存在)
+        if (templateData.logo_url) {
+            currentLogoUrl = templateData.logo_url;
+            if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
+            if (logoPreview) {
+                logoPreview.src = currentLogoUrl;
+                logoPreview.style.display = 'block';
+            }
+        } else {
+            currentLogoUrl = '';
+            if (logoUrlInput) logoUrlInput.value = '';
+            if (logoPreview) {
+                logoPreview.src = '';
+                logoPreview.style.display = 'none';
             }
         }
         
-        cells = data.cells || [];
-        currentLogoUrl = data.logo_url || '';
+        // 設置玩家配置 (如果存在)
+        if (templateData.players && Array.isArray(templateData.players)) {
+            currentPlayers = templateData.players;
+        } else {
+            currentPlayers = [];
+        }
         
-        if (logoUrlInput) logoUrlInput.value = currentLogoUrl;
-        if (logoPreview) logoPreview.src = currentLogoUrl;
-
-        // 更新背景顏色輸入框
-        if (backgroundColorInput) backgroundColorInput.value = backgroundColor;
-        if (backgroundColorPreview) backgroundColorPreview.textContent = backgroundColor;
-        if (colorPreviewBox) colorPreviewBox.style.backgroundColor = backgroundColor;
-
-        currentPlayers = data.players || []; // 處理玩家資料
-        renderPlayerConfigUI(); // 渲染玩家UI
-
+        // 更新玩家配置 UI
+        renderPlayerConfigUI();
+        
+        // 渲染地圖格子
         renderBoard();
-        saveTemplateBtn.disabled = false;
-    } catch (err) {
-        console.error('❌ 載入模板失敗:', err);
-        alert(`無法載入模板資料 (ID: ${currentTemplateId})：\n${err.message}\n請檢查後端 API 是否正常運作，以及模板 ID 是否存在。`);
-        if (board) board.innerHTML = '<p style="color: red; text-align: center;">載入地圖失敗</p>';
-        cells = [];
-        currentLogoUrl = '';
-        if (logoUrlInput) logoUrlInput.value = '';
-        if (logoPreview) logoPreview.src = '';
-        currentPlayers = []; // 清空玩家
-        if (playerConfigTableBody) playerConfigTableBody.innerHTML = '<tr><td colspan="4" style="color:red;">載入玩家設定失敗</td></tr>';
-        saveTemplateBtn.disabled = true;
-        currentTemplateId = null;
+        
+        // 啟用儲存按鈕
+        if (saveTemplateBtn) saveTemplateBtn.disabled = false;
+        if (deleteTemplateBtn) deleteTemplateBtn.disabled = false;
+        
+        return templateData;
+    } catch (error) {
+        console.error('載入模板失敗:', error);
+        alert(`載入模板失敗: ${error.message}`);
+        if (saveTemplateBtn) saveTemplateBtn.disabled = true;
+        return null;
     }
 }
 
 // 處理新建/另存的核心 API 呼叫函數
 async function createNewTemplateInAPI(payload) {
-    console.log("準備發送 POST 請求創建模板:", payload);
     try {
-        const response = await fetch('/api/rich-map/templates', {
+        // 顯示進度
+        showTemporaryMessage("創建新模板中...");
+        
+        // 使用 admin API 路徑
+        const response = await fetch('/api/admin/walk_map/templates', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(payload)
         });
-
-        const result = await response.json(); // 嘗試解析回應
-
+        
         if (!response.ok) {
-            throw new Error(result.error || `伺服器錯誤 ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`創建模板失敗 (${response.status}): ${errorData.error || response.statusText}`);
         }
-
-        console.log("模板創建/另存成功:", result);
-        alert(`✅ 操作成功！\n新模板名稱: ${result.newTemplate.template_name}\n新模板 ID: ${result.newTemplate.id}`);
-
-        // 刷新模板列表並選中新創建的模板
-        await fetchTemplateList(result.newTemplate.id); // 將新 ID 傳過去
-    } catch (err) {
-        console.error('❌ 創建/另存模板失敗:', err);
-        alert(`操作失敗：\n${err.message}`);
+        
+        const result = await response.json();
+        
+        // 返回新建的模板數據
+        return result;
+    } catch (error) {
+        console.error('創建模板失敗:', error);
+        alert(`無法創建新模板: ${error.message}`);
+        throw error;
     }
 }
 
@@ -581,54 +531,53 @@ function handlePlayerInputChange(event) {
 // 保存所有變更到伺服器
 function saveAllChanges() {
     if (!currentTemplateId) {
-        console.error("儲存時沒有當前模板 ID");
-        alert("錯誤：沒有載入模板，無法儲存！");
+        alert('請先選擇或建立一個模板');
         return;
     }
     
-    // 確保 cells 資料包含 note 欄位
-    const cellsToSave = cells.map(cell => ({
-        ...cell, 
-        note: cell.note || null // 確保 note 欄位存在且值有效
-    }));
-    
-    const body = JSON.stringify({
+    // 準備要發送的數據
+    const templateData = {
+        cell_data: cells,
         background_color: backgroundColor,
-        logo_url: currentLogoUrl,
-        cells: cellsToSave, // 使用包含備註的格子資料
+        logo_url: logoUrlInput ? logoUrlInput.value : currentLogoUrl,
         players: currentPlayers
-    });
-
+    };
+    
+    // 顯示儲存狀態
     saveTemplateBtn.disabled = true;
     saveTemplateBtn.textContent = '儲存中...';
-
-    fetch(`/api/rich-map/templates/${currentTemplateId}/full`, {
+    
+    // 使用 admin API 路徑
+    fetch(`/api/admin/walk_map/templates/${currentTemplateId}/full`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(templateData)
     })
-    .then(res => {
-        if (res.ok) {
-            return res.json();
-        } else {
-            return res.json().then(errData => {
-                throw new Error(`伺服器錯誤 ${res.status}: ${errData.error || '未知錯誤'}`);
-            }).catch(() => {
-                throw new Error(`伺服器錯誤 ${res.status}`);
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(`儲存失敗 (${response.status}): ${errData.error || response.statusText}`);
             });
         }
+        return response.json();
     })
     .then(data => {
-        console.log("儲存成功回應:", data);
-        alert(`✅ 儲存成功！ (${data.message || ''})`);
-    })
-    .catch(err => {
-        console.error('❌ 儲存失敗:', err);
-        alert(`儲存失敗：\n${err.message}\n請檢查後端連線及伺服器日誌。`);
-    })
-    .finally(() => {
+        showTemporaryMessage('✅ 儲存成功！');
+        console.log('模板已儲存:', data);
+        
+        // 恢復按鈕狀態
+        saveTemplateBtn.textContent = '💾 儲存變更';
         saveTemplateBtn.disabled = false;
-        saveTemplateBtn.textContent = '💾 儲存目前版本';
+    })
+    .catch(error => {
+        alert(`儲存失敗: ${error.message}`);
+        console.error('儲存錯誤:', error);
+        
+        // 恢復按鈕狀態
+        saveTemplateBtn.textContent = '💾 儲存變更';
+        saveTemplateBtn.disabled = false;
     });
 }
 
