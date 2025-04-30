@@ -592,8 +592,6 @@
     </div>
     
     <div class="controls">
-      <button class="button hint" id="hint-button">提示</button>
-      <button class="button" id="show-answers-button">顯示所有答案</button>
       <button class="button reset" id="reset-button">重新開始</button>
     </div>
   </div>
@@ -1893,6 +1891,72 @@ async function getRandomLevels() {
           alert('網路錯誤，無法刪除圖片');
         }
       });
+    }
+
+    // Helper function to format seconds into MM:SS
+    function formatTime(totalSeconds) {
+        if (totalSeconds === null || totalSeconds === undefined) return 'N/A';
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Helper function to format date
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            // Return YYYY-MM-DD format
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            return 'Invalid Date';
+        }
+    }
+
+    // ----- 初始調用 與 按鈕事件 ----- //
+    window.onload = async function() { // Make async
+      // Initialize editor first (to populate selector)
+      await populateLevelSelector(); // Wait for selector to be populated
+
+      // Then setup the game (which might depend on selector/initial load)
+      await setupNewGame(); // Wait for game setup
+
+      // Set up event listeners that depend on elements being ready
+      nextLevelButton.addEventListener('click', loadNextLevel);
+      resetButton.addEventListener('click', setupNewGame);
+
+      // **Remove Hint Button Listener (if it exists - hintButton might be null if element removed)**
+      // const hintButtonElement = document.getElementById('hint-button');
+      // if (hintButtonElement) {
+      //    // We need to remove the specific listener function, 
+      //    // but it's defined anonymously inline. 
+      //    // Easiest is to replace the element or its event handling entirely.
+      //    // For now, we just won't add the hint listener again.
+      // }
+
+      // **Add Leaderboard Button Listener**
+      const leaderboardButton = document.getElementById('leaderboard-toggle-button'); // Use the new ID
+      if (leaderboardButton) {
+        leaderboardButton.addEventListener('click', displayLeaderboardDirectly);
+      }
+
+      // Ensure editor output area is initially updated
+      updateOutput(); // Call this after potential initial editor load
+    };
+
+    // Function to fetch and display leaderboard directly
+    async function displayLeaderboardDirectly() {
+      let leaderboard = [];
+      try {
+        const res = await fetch('/api/diffrent-game/leaderboard'); // Fetch current data
+        if (!res.ok) throw new Error('Failed to fetch leaderboard');
+        leaderboard = await res.json();
+        // Call showLeaderboard, explicitly setting canSubmit to false and no score
+        showLeaderboard(leaderboard, false, null);
+      } catch (e) {
+        alert('無法取得排行榜，請稍後再試');
+        console.error("Error fetching leaderboard directly:", e);
+      }
     }
   </script>
 </body>
