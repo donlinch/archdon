@@ -616,10 +616,11 @@
     <div class="controls">
       <button class="button reset" id="clear-editor">清除所有</button>
       <button class="button" id="save-editor" style="background-color: #28a745;">保存</button>
-      <div class="level-select">
-        <select id="level-selector"><button class="button" id="delete-level" style="background-color: #dc3545;">刪除圖片</button>
+      <div class="level-select" style="display: flex; align-items: center; gap: 8px;">
+        <select id="level-selector">
           <!-- 選項將由JavaScript動態填充 -->
         </select>
+        <button class="button" id="delete-level" style="background-color: #dc3545;">刪除圖片</button>
       </div>
       <button class="button" id="add-new-level" style="background-color: #0275d8;">新增圖片</button>
       
@@ -1804,9 +1805,12 @@ async function getRandomLevels() {
         document.getElementById('submit-score').onclick = async function() {
           const name = document.getElementById('player-name').value.trim();
           if (!name) { alert('請輸入名字'); return; }
-          await submitScore(name, mySeconds);
-          nameEntry.style.display = 'none';
-          await checkLeaderboardAndShow(); // 重新載入排行榜
+          const ok = await submitScore(name, mySeconds);
+          if (ok) {
+            nameEntry.style.display = 'none';
+            await checkLeaderboardAndShow(); // 重新載入排行榜
+          }
+          // 如果失敗，停留在輸入框，讓使用者可以再試一次
         };
       } else {
         nameEntry.style.display = 'none';
@@ -1824,13 +1828,20 @@ async function getRandomLevels() {
 
     async function submitScore(name, seconds) {
       try {
-        await fetch('/api/diffrent-game/leaderboard', {
+        const res = await fetch('/api/diffrent-game/leaderboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, time_seconds: seconds })
         });
+        if (!res.ok) {
+          const err = await res.text();
+          alert('送出成績失敗：' + err);
+          return false;
+        }
+        return true;
       } catch (e) {
         alert('送出成績失敗');
+        return false;
       }
     }
 
