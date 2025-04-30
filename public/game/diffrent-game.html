@@ -1178,7 +1178,7 @@ async function getRandomLevels() {
               label.classList.add('show');
             });
 
-            messageElement.textContent = `找到了: ${diff.description || `差異點 ${dataId}`}`; // Use description from diff
+            messageElement.textContent = `找到了！`; // Use description from diff
 
             // 檢查是否找到所有差異點
             if (foundCount === level.differences.length) {
@@ -1749,12 +1749,14 @@ async function getRandomLevels() {
         nextLevelButton.textContent = `開始第 ${currentLevel + 2} 關`;
         nextLevelButton.disabled = false;
       } else {
-        // 全部完成，檢查是否進排行榜
         levelTransition.querySelector('p').textContent = `你已經完成所有關卡！`;
-        nextLevelButton.textContent = `全部完成`;
-        nextLevelButton.disabled = true;
-
-        setTimeout(checkLeaderboardAndShow, 1200); // 1.2秒後自動檢查排行榜
+        nextLevelButton.textContent = `重新開始`;
+        nextLevelButton.disabled = false;
+        nextLevelButton.onclick = function() {
+          levelTransition.classList.remove('show');
+          setupNewGame();
+        };
+        setTimeout(checkLeaderboardAndShow, 1200);
       }
       levelTransition.classList.add('show');
     }
@@ -1804,7 +1806,10 @@ async function getRandomLevels() {
         // 綁定送出事件（只需綁一次）
         document.getElementById('submit-score').onclick = async function() {
           const name = document.getElementById('player-name').value.trim();
-          if (!name) { alert('請輸入名字'); return; }
+          if (!name || name.length > 20) {
+            alert('名字不能空白且最多 20 字');
+            return false;
+          }
           const ok = await submitScore(name, mySeconds);
           if (ok) {
             nameEntry.style.display = 'none';
@@ -1827,20 +1832,36 @@ async function getRandomLevels() {
     }
 
     async function submitScore(name, seconds) {
+      if (!name || name.length > 20) {
+        alert('名字不能空白且最多 20 字');
+        return false;
+      }
       try {
+        console.log('送出排行榜資料:', { player_name: name, time_seconds: seconds });
+
         const res = await fetch('/api/diffrent-game/leaderboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, time_seconds: seconds })
+          body: JSON.stringify({ player_name: name, time_seconds: seconds }) // 這裡修正
         });
+
+        let responseData;
+        try {
+          responseData = await res.json();
+        } catch (jsonErr) {
+          responseData = await res.text();
+        }
+
+        console.log('排行榜 API 回應:', res.status, responseData);
+
         if (!res.ok) {
-          const err = await res.text();
-          alert('送出成績失敗：' + err);
+          alert('送出成績失敗：' + (responseData.error || responseData || res.statusText));
           return false;
         }
         return true;
       } catch (e) {
-        alert('送出成績失敗');
+        alert('送出成績失敗（網路或程式錯誤）');
+        console.error(e);
         return false;
       }
     }
