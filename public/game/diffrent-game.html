@@ -758,6 +758,12 @@ async function getRandomLevels() {
   try {
     const response = await fetch('/api/diffrent-game/levels/random');
     const levels = await response.json();
+    
+    if (!levels || !Array.isArray(levels) || levels.length === 0) {
+      console.warn('API未返回有效關卡，使用默認關卡');
+      return allLevels; // 使用默認關卡
+    }
+    
     // 格式化確保每個level有正確的屬性
     const formattedLevels = levels.map(level => ({
       id: level.id,
@@ -769,7 +775,8 @@ async function getRandomLevels() {
     return formattedLevels;
   } catch (error) {
     console.error('無法獲取隨機關卡:', error);
-    return []; // 返回空數組以防錯誤
+    console.warn('使用默認關卡作為備用');
+    return allLevels; // 失敗時使用默認關卡
   }
 }
 
@@ -810,23 +817,24 @@ async function getRandomLevels() {
 
     // 初始化遊戲
     window.onload = function() {
-      setupNewGame();
-      // 設置關卡轉換按鈕事件
-      nextLevelButton.addEventListener('click', loadNextLevel);
-      // 設置重置按鈕事件
-      resetButton.addEventListener('click', setupNewGame);
-      // 初始化編輯器選項
-      populateLevelSelector();
-      // 確保編輯器輸出區域初始為空或提示
-      updateOutput();
+      // 異步調用setupNewGame
+      (async function() {
+        await setupNewGame();
+        // 設置關卡轉換按鈕事件
+        nextLevelButton.addEventListener('click', loadNextLevel);
+        // 設置重置按鈕事件
+        resetButton.addEventListener('click', setupNewGame);
+        // 初始化編輯器選項
+        populateLevelSelector();
+        // 確保編輯器輸出區域初始為空或提示
+        updateOutput();
+      })();
     };
 
     // 設置新遊戲或重置遊戲
-    function setupNewGame() {
+    async function setupNewGame() {
       console.log("Setting up new game...");
-      gameLevels = getRandomLevels(); // 獲取新的隨機關卡列表
-      currentLevel = 0;
-
+      
       // 重置遊戲狀態
       foundDifferences.clear();
       foundCount = 0;
@@ -840,10 +848,26 @@ async function getRandomLevels() {
       timerRunning = false;
       totalElapsedTime = 0;
       timerDisplay.textContent = '00:00';
-      startTimer(); // 啟動計時器
-
-      // 加載第一個關卡
-      loadLevel(currentLevel);
+      
+      // 確保先有遊戲數據再開始計時器
+      try {
+        gameLevels = await getRandomLevels(); // 獲取新的隨機關卡列表
+        
+        if (!gameLevels || gameLevels.length === 0) {
+          console.error("無法獲取遊戲關卡");
+          messageElement.textContent = "載入遊戲關卡失敗，請重新整理頁面";
+          return;
+        }
+        
+        currentLevel = 0;
+        startTimer(); // 啟動計時器
+        
+        // 加載第一個關卡
+        loadLevel(currentLevel);
+      } catch (error) {
+        console.error("初始化遊戲失敗:", error);
+        messageElement.textContent = "初始化遊戲失敗，請重新整理頁面";
+      }
     }
 
     // 加載指定索引的關卡
@@ -881,7 +905,7 @@ async function getRandomLevels() {
       console.log(`Level data loaded from API for level ${level.id}?`, loadedFromAPI);
 
       // 根據更新後的 level.differences 和 level.savedDots 創建差異點
-      createDifferencePoints();
+      createDifferencePoints(leftImageElement, rightImageElement, level.differences);
     }
 
 
@@ -920,13 +944,20 @@ async function getRandomLevels() {
     async function loadDifferencesFromAPI(level) {
       try {
         const response = await fetch(`/api/diffrent-game/differences/${level.id}`);
+        
+        if (!response.ok) {
+          throw new Error(`API响應錯誤: ${response.status}`);
+        }
+        
         const differences = await response.json();
         
-        if (differences.length > 0) {
+        if (differences && Array.isArray(differences) && differences.length > 0) {
+          console.log(`從API獲取到 ${differences.length} 個差異點`);
+          
           // 處理差異點格式以符合前端需求
           level.differences = differences.map(diff => ({
             id: `diff${diff.id}`,
-            description: diff.description
+            description: diff.description || `差異點 ${diff.id}`
           }));
           
           level.savedDots = differences.map(diff => ({
@@ -938,11 +969,31 @@ async function getRandomLevels() {
           }));
           
           return true;
+        } else {
+          console.warn(`關卡 ${level.id} 沒有差異點數據，嘗試使用默認值`);
+          
+          // 如果沒有差異點數據，檢查是否有默認值
+          const defaultLevel = allLevels.find(l => l.levelId === level.id || l.id === level.id);
+          if (defaultLevel && defaultLevel.differences && defaultLevel.differences.length > 0) {
+            console.log(`使用默認差異點數據 (${defaultLevel.differences.length} 個點)`);
+            level.differences = defaultLevel.differences;
+            return true;
+          }
+          
+          console.error(`關卡 ${level.id} 沒有差異點數據且找不到默認值`);
+          return false;
         }
-        
-        return false;
       } catch (error) {
         console.error(`從API載入關卡 ${level.id} 數據錯誤:`, error);
+        
+        // 嘗試使用默認數據
+        const defaultLevel = allLevels.find(l => l.levelId === level.id || l.id === level.id);
+        if (defaultLevel && defaultLevel.differences && defaultLevel.differences.length > 0) {
+          console.log(`API錯誤，使用默認差異點數據 (${defaultLevel.differences.length} 個點)`);
+          level.differences = defaultLevel.differences;
+          return true;
+        }
+        
         return false;
       }
     }
@@ -958,88 +1009,50 @@ async function getRandomLevels() {
       console.log("Game display reset (dots and labels removed).");
     }
 
-    // 創建差異點
-    function createDifferencePoints() {
-      const level = gameLevels[currentLevel]; // 獲取當前關卡物件
-
-      // 再次檢查 level 和 differences
-      if (!level || !level.differences || !Array.isArray(level.differences)) {
-          console.error("無法創建差異點：缺少關卡數據或有效的差異點定義", level);
-          messageElement.textContent = "錯誤：無法載入關卡差異點！";
-          return;
+    // 創建差異點並添加到圖像上
+    function createDifferencePoints(leftImage, rightImage, differences) {
+      if (!differences || differences.length === 0) {
+        console.warn('No differences provided to createDifferencePoints');
+        return;
       }
-      if (level.differences.length === 0) {
-          console.warn(`關卡 ${level.levelId} 沒有定義差異點，將不創建任何點。`);
-          messageElement.textContent = "此關卡尚未設置差異點。";
-          foundCountElement.textContent = `0`;
-          totalCountElement.textContent = `${level.differences.length}`; // 使用單獨的元素顯示總數
-          return;
+      
+      // 清除現有點
+      document.querySelectorAll('.dot').forEach(dot => dot.remove());
+      
+      const leftContainer = document.getElementById('left-image');
+      const rightContainer = document.getElementById('right-image');
+      
+      if (!leftContainer || !rightContainer) {
+        console.error('Image containers not found');
+        return;
       }
-
-      console.log(`為關卡 ${level.levelId} 創建 ${level.differences.length} 個差異點`);
-      foundCountElement.textContent = `0`;
-      totalCountElement.textContent = `${level.differences.length}`; // 使用單獨的元素顯示總數
-
-      // 獲取保存的位置數據 (如果存在)
-      const positionsData = level.savedDots || [];
-      console.log("Using saved positions data:", positionsData);
-
-      // 創建位置查找表 (基於點的數字 id)
-      const positionMap = {};
-      positionsData.forEach(dot => {
-        const dataId = parseInt(dot.id); // savedDots 裡存的是數字 id
-        if (!isNaN(dataId) && dot.rightPosition) {
-           positionMap[dataId] = dot.rightPosition;
-        } else {
-           console.warn("保存的位置數據格式不正確或缺少 ID/Position:", dot);
+      
+      // 為每個差異創建點
+      differences.forEach((diff, index) => {
+        const id = index + 1; // 差異 ID 從 1 開始
+        
+        // 確保位置格式正確
+        const position = {
+          top: diff.position.top.includes('%') ? diff.position.top : `${diff.position.top}%`,
+          left: diff.position.left.includes('%') ? diff.position.left : `${diff.position.left}%`
+        };
+        
+        // 為左右圖創建點
+        const leftDot = createDotElement(leftContainer, `diff${id}`, id, position);
+        const rightDot = createDotElement(rightContainer, `diff${id}-right`, id, position);
+        
+        // 創建標籤
+        createLabelElement(leftContainer, `label${id}`, id, position);
+        createLabelElement(rightContainer, `label${id}-right`, id, position);
+        
+        // 如果該點已經被找到，則顯示
+        if (foundDifferences.has(String(id))) {
+          leftDot.style.display = 'block';
+          rightDot.style.display = 'block';
+          leftDot.classList.add('found');
+          rightDot.classList.add('found');
         }
       });
-       console.log("Constructed position map:", positionMap);
-
-
-      // 遍歷當前關卡的 differences 陣列來創建 DOM 元素
-      level.differences.forEach((diff, index) => {
-         // 從 diff.id (例如 "diff3") 中提取數字 ID
-         const diffIdMatch = diff.id ? String(diff.id).match(/\d+$/) : null;
-         // **** 修改: 確保 diff.id 存在且是字符串或數字 ****
-         if (!diff.id) {
-             console.error("Difference definition is missing 'id':", diff);
-             return; // 跳過這個無效的差異點
-         }
-         const dataId = diffIdMatch ? parseInt(diffIdMatch[0]) : (index + 1); // 如果 ID 格式不對，使用索引+1 作為備用
-
-         if (isNaN(dataId)) {
-           console.error("無法從差異點 ID 中提取數字:", diff.id);
-           return; // 跳過這個差異點
-         }
-
-         // 查找該差異點的位置
-         let position = positionMap[dataId];
-         // 如果 localStorage 中沒有這個點的位置，嘗試從 differences 自身的定義中獲取
-         if (!position && diff.position) {
-             position = diff.position;
-             console.log(`Using default position from definition for diff ${dataId}`);
-         }
-         // 如果兩者都沒有，提供一個簡單的預設分佈作為最後手段
-         if (!position) {
-             position = { top: `${15 + index * 15}%`, left: `${20 + index * 10}%` };
-             console.warn(`Position not found for diff ${dataId}, using fallback position.`);
-         }
-
-
-         // --- 創建 DOM 元素 ---
-         const dotIdBase = `diff${dataId}`;
-         const labelIdBase = `label${dataId}`;
-
-         // 左圖點和標籤
-         createDotElement(leftImageContainer, dotIdBase, dataId, position);
-         createLabelElement(leftImageContainer, labelIdBase, dataId, position);
-
-         // 右圖點和標籤
-         createDotElement(rightImageContainer, `${dotIdBase}-right`, dataId, position);
-         createLabelElement(rightImageContainer, `${labelIdBase}-right`, dataId, position);
-      });
-       console.log("Difference points created in DOM.");
     }
 
     // 輔助函數：創建點元素
@@ -1048,15 +1061,24 @@ async function getRandomLevels() {
       dot.className = 'dot';
       dot.id = id;
       dot.setAttribute('data-id', dataId); // 使用數字 ID 作為 data-id
-      dot.style.top = position.top;
-      dot.style.left = position.left;
-      dot.style.display = 'none'; // 初始隱藏
-      // 檢查是否已找到 (雖然重置時會清除 set，但以防萬一)
+      
+      // 確保使用百分比位置
+      dot.style.top = position.top ? position.top : '0%';
+      dot.style.left = position.left ? position.left : '0%';
+      
+      // 初始隱藏所有點，只有在找到或顯示答案時才顯示
+      dot.style.display = 'none';
+      
+      // 只有在已找到時才顯示
       if (foundDifferences.has(String(dataId))) {
-          dot.style.display = 'block';
-          dot.classList.add('found');
+        dot.style.display = 'block';
+        dot.classList.add('found');
       }
+      
+      // 將點添加到提供的容器中（左或右圖）
       container.appendChild(dot);
+      
+      return dot;
     }
 
     // 輔助函數：創建標籤元素
@@ -1406,47 +1428,57 @@ async function getRandomLevels() {
       async function loadDifferencesFromAPI(level) {
         try {
           const response = await fetch(`/api/diffrent-game/differences/${level.id}`);
+          
+          if (!response.ok) {
+            throw new Error(`API响應錯誤: ${response.status}`);
+          }
+          
           const differences = await response.json();
           
-          if (differences.length > 0) {
+          if (differences && Array.isArray(differences) && differences.length > 0) {
             console.log(`從API獲取到 ${differences.length} 個差異點`);
             
-            // 重置計數器
-            dotCounter = 1;
+            // 處理差異點格式以符合前端需求
+            level.differences = differences.map(diff => ({
+              id: `diff${diff.id}`,
+              description: diff.description || `差異點 ${diff.id}`
+            }));
             
-            // 處理差異點數據
-            differences.forEach(diff => {
-              const position = {
+            level.savedDots = differences.map(diff => ({
+              id: diff.id,
+              rightPosition: {
                 top: diff.position_top,
                 left: diff.position_left
-              };
-              
-              // 創建編輯器點元素
-              createEditorDotElements(diff.id, position);
-              
-              // 更新內部數據
-              editorDots.push({
-                id: diff.id,
-                description: diff.description || `差異點 ${diff.id}`,
-                rightPosition: position
-              });
-              
-              // 更新計數器
-              if (parseInt(diff.id) >= dotCounter) {
-                dotCounter = parseInt(diff.id) + 1;
               }
-            });
+            }));
             
-            // 更新輸出顯示
-            updateOutput();
-            console.log(`成功從API載入 ${editorDots.length} 個差異點到編輯器`);
+            return true;
           } else {
-            console.log(`未找到關卡 ${level.id} 的差異點數據，編輯器將為空。`);
-            updateOutput();
+            console.warn(`關卡 ${level.id} 沒有差異點數據，嘗試使用默認值`);
+            
+            // 如果沒有差異點數據，檢查是否有默認值
+            const defaultLevel = allLevels.find(l => l.levelId === level.id || l.id === level.id);
+            if (defaultLevel && defaultLevel.differences && defaultLevel.differences.length > 0) {
+              console.log(`使用默認差異點數據 (${defaultLevel.differences.length} 個點)`);
+              level.differences = defaultLevel.differences;
+              return true;
+            }
+            
+            console.error(`關卡 ${level.id} 沒有差異點數據且找不到默認值`);
+            return false;
           }
         } catch (error) {
-          console.error(`從API載入關卡 ${level.id} 差異點數據錯誤:`, error);
-          alert(`載入第 ${level.id} 張圖片的差異點時發生錯誤！`);
+          console.error(`從API載入關卡 ${level.id} 數據錯誤:`, error);
+          
+          // 嘗試使用默認數據
+          const defaultLevel = allLevels.find(l => l.levelId === level.id || l.id === level.id);
+          if (defaultLevel && defaultLevel.differences && defaultLevel.differences.length > 0) {
+            console.log(`API錯誤，使用默認差異點數據 (${defaultLevel.differences.length} 個點)`);
+            level.differences = defaultLevel.differences;
+            return true;
+          }
+          
+          return false;
         }
       }
 
@@ -1886,6 +1918,54 @@ async function getRandomLevels() {
       
       // 顯示排行榜視窗
       leaderboardContainer.classList.add('show');
+    }
+
+    // 顯示排行榜數據
+    async function displayLeaderboard(highlightTimeSeconds) {
+      try {
+        // 清空現有排行榜行
+        leaderboardRows.innerHTML = '';
+        
+        // 載入排行榜數據
+        const leaderboardData = await loadLeaderboardData();
+        
+        if (!leaderboardData || leaderboardData.length === 0) {
+          leaderboardRows.innerHTML = '<tr><td colspan="4">暫無排行榜數據</td></tr>';
+          return;
+        }
+        
+        // 填充排行榜表格
+        leaderboardData.forEach((entry, index) => {
+          const row = document.createElement('tr');
+          
+          // 如果需要高亮當前玩家成績
+          if (highlightTimeSeconds && entry.time_seconds === highlightTimeSeconds) {
+            row.style.backgroundColor = '#ffffcc';
+            row.style.fontWeight = 'bold';
+          }
+          
+          // 格式化時間
+          const minutes = Math.floor(entry.time_seconds / 60);
+          const seconds = entry.time_seconds % 60;
+          const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          
+          // 格式化日期 (如果有)
+          const date = entry.date_created ? new Date(entry.date_created) : new Date();
+          const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+          
+          row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${entry.player_name}</td>
+            <td>${formattedTime}</td>
+            <td>${formattedDate}</td>
+          `;
+          
+          leaderboardRows.appendChild(row);
+        });
+      } catch (error) {
+        console.error('顯示排行榜錯誤:', error);
+        leaderboardRows.innerHTML = '<tr><td colspan="4">加載排行榜失敗</td></tr>';
+      }
     }
 
     // 顯示/隱藏新增圖片表單
