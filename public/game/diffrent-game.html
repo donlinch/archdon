@@ -815,22 +815,7 @@ async function getRandomLevels() {
     leftImageContainer.appendChild(levelIndicator); // 添加到左圖容器
 
 
-    // 初始化遊戲
-    window.onload = function() {
-      // 異步調用setupNewGame
-      (async function() {
-        await setupNewGame();
-        // 設置關卡轉換按鈕事件
-        nextLevelButton.addEventListener('click', loadNextLevel);
-        // 設置重置按鈕事件
-        resetButton.addEventListener('click', setupNewGame);
-        // 初始化編輯器選項
-        populateLevelSelector();
-        // 確保編輯器輸出區域初始為空或提示
-        updateOutput();
-      })();
-    };
-
+    
     // 設置新遊戲或重置遊戲
     async function setupNewGame() {
       console.log("Setting up new game...");
@@ -880,21 +865,21 @@ async function getRandomLevels() {
       }
       console.log(`Loading level index: ${levelIndex}`);
       const level = gameLevels[levelIndex]; // level has { id, levelId, leftImage, rightImage }
-      
+
       if (!level || !level.id || !level.leftImage || !level.rightImage) {
         console.error("關卡對象缺少必要屬性:", level);
         messageElement.textContent = "無法載入關卡，數據不完整";
         return;
       }
-      
+
       // 更新圖片
       leftImageElement.src = level.leftImage;
       rightImageElement.src = level.rightImage;
       levelIndicator.textContent = `關卡 ${levelIndex + 1}`;
-      
+
       // 清空舊的差異點顯示
       resetGameDisplay();
-      
+
       // 從API加載當前關卡的差異點數據
       const { success, differences: apiDifferences, savedDots: apiSavedDots } = await loadDifferencesFromAPI(level.id);
       
@@ -1330,7 +1315,7 @@ async function getRandomLevels() {
 
     // 編輯器變數 (保持不變)
     let editorDots = []; // { id: number, description: string, rightPosition: {top: string, left: string} }
-    let dotCounter = 1;
+      let dotCounter = 1;
 
 
     // **** Define Editor Functions Globally ****
@@ -1339,22 +1324,22 @@ async function getRandomLevels() {
       if (!levelSelector) {
           console.warn("Level selector element not found, cannot populate.");
           return;
-      }
-      try {
-        const response = await fetch('/api/diffrent-game/levels');
+        }
+        try {
+          const response = await fetch('/api/diffrent-game/levels');
         if (!response.ok) throw new Error('Failed to fetch levels');
-        const levels = await response.json();
-
-        levelSelector.innerHTML = ''; // 清空現有選項
-        levels.forEach(level => {
-          const option = document.createElement('option');
+          const levels = await response.json();
+          
+          levelSelector.innerHTML = ''; // 清空現有選項
+          levels.forEach(level => {
+            const option = document.createElement('option');
           option.value = level.id; // Use API ID
           option.textContent = `ID:${level.id} - ${level.level_name || `圖片 ${level.id}`}`; // Use name from API
-          levelSelector.appendChild(option);
-        });
-
+            levelSelector.appendChild(option);
+          });
+          
         // 如果有關卡，自動觸發載入第一個
-        if (levels.length > 0) {
+          if (levels.length > 0) {
           levelSelector.dispatchEvent(new Event('change')); // Trigger loading for the first level
         } else {
            // Handle case with no levels
@@ -1362,10 +1347,10 @@ async function getRandomLevels() {
            if (editRightImg) editRightImg.src = "";
            clearEditorDisplay(); // Call clear function which should also check elements
            console.warn("No levels found to populate editor selector.");
-        }
-      } catch (error) {
-        console.error('獲取關卡列表失敗:', error);
-        alert('無法載入關卡列表，請刷新頁面再試');
+          }
+        } catch (error) {
+          console.error('獲取關卡列表失敗:', error);
+          alert('無法載入關卡列表，請刷新頁面再試');
         // Clear editor state if levels fail to load
         if (editLeftImg) editLeftImg.src = "";
         if (editRightImg) editRightImg.src = "";
@@ -1383,7 +1368,7 @@ async function getRandomLevels() {
       console.log(`Loading level ${levelId} into editor...`);
       clearEditorDisplay(); // Clear previous state first
 
-      try {
+        try {
         // 1. Fetch Level Images
         const levelResponse = await fetch(`/api/diffrent-game/levels/${levelId}`);
         if (!levelResponse.ok) throw new Error(`Failed to fetch level details for ID ${levelId}`);
@@ -1410,144 +1395,144 @@ async function getRandomLevels() {
 
            // Reset dotCounter based on loaded dots
            const maxId = editorDots.reduce((max, dot) => Math.max(max, dot.id || 0), 0);
-           dotCounter = maxId + 1;
+                   dotCounter = maxId + 1;
 
            // Create DOM elements for loaded dots
            editorDots.forEach(dotData => {
-               createEditorDotElements(dotData.id, dotData.rightPosition);
-           });
+                        createEditorDotElements(dotData.id, dotData.rightPosition);
+                   });
 
-        } else {
+              } else {
            console.log(`No differences found in API for level ${levelId}. Editor starts empty.`);
            // editorDots is already cleared by clearEditorDisplay
            dotCounter = 1; // Reset counter for new dots
-        }
+              }
 
         updateOutput(); // Update the HTML code output
 
-      } catch (error) {
+          } catch (error) {
          console.error(`Error loading level ${levelId} into editor:`, error);
          alert(`無法載入圖片 ${levelId} 的編輯數據。`);
          // Clear editor in case of error
          editLeftImg.src = "";
          editRightImg.src = "";
          clearEditorDisplay();
-      }
+          }
     }
 
-    function clearEditorDisplay() {
-        document.querySelectorAll('#editor-tab .editor-dot').forEach(dot => {
-          dot.remove();
-        });
-        editorDots = [];
+      function clearEditorDisplay() {
+          document.querySelectorAll('#editor-tab .editor-dot').forEach(dot => {
+            dot.remove();
+          });
+          editorDots = [];
         dotCounter = 1; // Reset counter
         updateOutput(); // Update output to show empty state
-        console.log("Editor display cleared.");
-    }
+          console.log("Editor display cleared.");
+      }
 
-    function addEditorDot(e) {
+      function addEditorDot(e) {
       // Add check for necessary element
       if (!editRightImg) return;
 
       if (editorDots.length >= 5) { // Limit check is good
-        alert('最多只能添加5個差異點！');
-        return;
-      }
-      const rect = editRightImg.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      const position = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
+          alert('最多只能添加5個差異點！');
+          return;
+        }
+        const rect = editRightImg.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        const position = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
       const newDotId = dotCounter; // Use the counter
 
-      console.log(`Adding editor dot ${newDotId} at`, position);
+        console.log(`Adding editor dot ${newDotId} at`, position);
 
       // Create DOM elements
-      createEditorDotElements(newDotId, position);
+        createEditorDotElements(newDotId, position);
 
       // Update internal data (editorDots)
-      editorDots.push({
+        editorDots.push({
         id: newDotId, // Store the number ID
         description: `差異點 ${newDotId}`, // Temporary description
-        rightPosition: position
-      });
+          rightPosition: position
+        });
       dotCounter++; // Increment counter
 
       updateOutput(); // Update HTML output
-    }
+      }
 
-    function createEditorDotElements(id, position) {
+      function createEditorDotElements(id, position) {
         // Add checks for necessary elements
         if (!editRightContainer || !editLeftContainer) return;
 
-        const rightDot = document.createElement('div');
-        rightDot.className = 'editor-dot';
-        rightDot.setAttribute('data-id', id);
-        rightDot.style.top = position.top;
-        rightDot.style.left = position.left;
-        editRightContainer.appendChild(rightDot);
+          const rightDot = document.createElement('div');
+          rightDot.className = 'editor-dot';
+          rightDot.setAttribute('data-id', id);
+          rightDot.style.top = position.top;
+          rightDot.style.left = position.left;
+          editRightContainer.appendChild(rightDot);
         makeDotDraggable(rightDot);
 
-        const leftDot = document.createElement('div');
+          const leftDot = document.createElement('div');
         leftDot.className = 'editor-dot reference';
         leftDot.setAttribute('data-id', id);
-        leftDot.style.top = position.top;
-        leftDot.style.left = position.left;
-        editLeftContainer.appendChild(leftDot);
-    }
+          leftDot.style.top = position.top;
+          leftDot.style.left = position.left;
+          editLeftContainer.appendChild(leftDot);
+      }
 
-    function makeDotDraggable(element) {
-      element.addEventListener('mousedown', startDragDot);
-      element.addEventListener('touchstart', startDragDot, { passive: false }); // passive: false for preventDefault
-    }
+      function makeDotDraggable(element) {
+        element.addEventListener('mousedown', startDragDot);
+        element.addEventListener('touchstart', startDragDot, { passive: false }); // passive: false for preventDefault
+      }
 
-    function startDragDot(e) {
+      function startDragDot(e) {
       // e.preventDefault(); // Consider if needed
       e.stopPropagation();
 
-      const dot = e.target;
+        const dot = e.target;
       if (!dot.classList.contains('editor-dot') || dot.classList.contains('reference') || !editRightImg || !editLeftContainer) {
         return; // Ensure it's a draggable dot and containers exist
-      }
+        }
 
-      const dotId = dot.getAttribute('data-id');
-      const referenceDot = editLeftContainer.querySelector(`.editor-dot.reference[data-id="${dotId}"]`);
-      const containerRect = editRightImg.getBoundingClientRect();
+        const dotId = dot.getAttribute('data-id');
+        const referenceDot = editLeftContainer.querySelector(`.editor-dot.reference[data-id="${dotId}"]`);
+        const containerRect = editRightImg.getBoundingClientRect();
 
-      function moveHandler(moveEvent) {
+        function moveHandler(moveEvent) {
          if (moveEvent.type === 'touchmove') { moveEvent.preventDefault(); }
 
-         let clientX, clientY;
-         if (moveEvent.type === 'mousemove' || moveEvent.type === 'mousedown') {
+           let clientX, clientY;
+           if (moveEvent.type === 'mousemove' || moveEvent.type === 'mousedown') {
            clientX = moveEvent.clientX; clientY = moveEvent.clientY;
-         } else if (moveEvent.type === 'touchmove' || moveEvent.type === 'touchstart') {
+           } else if (moveEvent.type === 'touchmove' || moveEvent.type === 'touchstart') {
            clientX = moveEvent.touches[0].clientX; clientY = moveEvent.touches[0].clientY;
          } else { return; }
 
-         let x = ((clientX - containerRect.left) / containerRect.width) * 100;
-         let y = ((clientY - containerRect.top) / containerRect.height) * 100;
+           let x = ((clientX - containerRect.left) / containerRect.width) * 100;
+           let y = ((clientY - containerRect.top) / containerRect.height) * 100;
          x = Math.max(1, Math.min(99, x)); y = Math.max(1, Math.min(99, y));
-         const newPosition = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
+           const newPosition = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
 
          dot.style.left = newPosition.left; dot.style.top = newPosition.top;
          if (referenceDot) { referenceDot.style.left = newPosition.left; referenceDot.style.top = newPosition.top; }
 
-         const dotData = editorDots.find(d => d.id == dotId);
+           const dotData = editorDots.find(d => d.id == dotId);
          if (dotData) { dotData.rightPosition = newPosition; updateOutput(); }
-      }
+        }
 
-      function endDragHandler() {
-        document.removeEventListener('mousemove', moveHandler);
-        document.removeEventListener('mouseup', endDragHandler);
-        document.removeEventListener('touchmove', moveHandler);
-        document.removeEventListener('touchend', endDragHandler);
-        console.log(`Dot ${dotId} drag ended at`, dot.style.top, dot.style.left);
-      }
+        function endDragHandler() {
+          document.removeEventListener('mousemove', moveHandler);
+          document.removeEventListener('mouseup', endDragHandler);
+          document.removeEventListener('touchmove', moveHandler);
+          document.removeEventListener('touchend', endDragHandler);
+          console.log(`Dot ${dotId} drag ended at`, dot.style.top, dot.style.left);
+        }
 
-      document.addEventListener('mousemove', moveHandler);
-      document.addEventListener('mouseup', endDragHandler);
-      document.addEventListener('touchmove', moveHandler, { passive: false });
-      document.addEventListener('touchend', endDragHandler);
-    }
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', endDragHandler);
+        document.addEventListener('touchmove', moveHandler, { passive: false });
+        document.addEventListener('touchend', endDragHandler);
+      }
 
     function updateOutput() {
       if (!output) return; // Guard against missing element
@@ -1624,7 +1609,7 @@ async function getRandomLevels() {
             const posLeft = String(dot.rightPosition.left);
             const rightX = parseFloat(posLeft);
             const rightY = parseFloat(posTop);
-            let locationHint = '';
+          let locationHint = '';
             if (rightX < 33) locationHint += '左側'; else if (rightX < 66) locationHint += '中央'; else locationHint += '右側';
             if (rightY < 33) locationHint += '上方'; else if (rightY < 66) locationHint += '中部'; else locationHint += '下方';
             const description = `差異點位於${locationHint}區域`;
@@ -1684,22 +1669,22 @@ async function getRandomLevels() {
               const leftImage = leftInput.value.trim();
               const rightImage = rightInput.value.trim();
               if (!levelName || !leftImage || !rightImage) { alert('請填寫所有欄位'); return; }
-              try {
-                  const response = await fetch('/api/diffrent-game/levels', {
-                      method: 'POST',
+      try {
+        const response = await fetch('/api/diffrent-game/levels', {
+          method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ level_name: levelName, left_image_url: leftImage, right_image_url: rightImage, active: true })
-                  });
-                  if (response.ok) {
-                      alert('新圖片添加成功！');
+        });
+        if (response.ok) {
+          alert('新圖片添加成功！');
                       if(newLevelForm) newLevelForm.style.display = 'none';
                       await populateLevelSelector(); // Reload selector
                   } else { alert('添加失敗，請稍後再試'); }
-              } catch (error) {
-                  console.error('添加新圖片出錯:', error);
-                  alert('網絡錯誤，無法添加新圖片');
-              }
-           });
+      } catch (error) {
+        console.error('添加新圖片出錯:', error);
+        alert('網絡錯誤，無法添加新圖片');
+      }
+    });
       }
     } // End of editor listener setup block
 
@@ -1727,6 +1712,32 @@ async function getRandomLevels() {
       // Ensure editor output area is initially updated
       updateOutput(); // Call this after potential initial editor load
     };
+
+    function startTimer() {
+        if (!timerRunning) {
+            startTime = Date.now() - totalElapsedTime;
+            timerInterval = setInterval(updateTimer, 1000);
+            timerRunning = true;
+            console.log("Timer started.");
+        }
+    }
+    function pauseTimer() {
+        if (timerRunning) {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            totalElapsedTime = Date.now() - startTime;
+            console.log("Timer paused. Total elapsed time:", totalElapsedTime);
+        }
+    }
+    function updateTimer() {
+        if (!timerRunning) return;
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - startTime;
+        const seconds = Math.floor((elapsedTime / 1000) % 60);
+        const minutes = Math.floor((elapsedTime / (1000 * 60)) % 60);
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        totalElapsedTime = elapsedTime;
+    }
 
   </script>
 </body>
