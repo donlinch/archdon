@@ -617,11 +617,12 @@
       <button class="button reset" id="clear-editor">清除所有</button>
       <button class="button" id="save-editor" style="background-color: #28a745;">保存</button>
       <div class="level-select">
-        <select id="level-selector">
+        <select id="level-selector"><button class="button" id="delete-level" style="background-color: #dc3545;">刪除圖片</button>
           <!-- 選項將由JavaScript動態填充 -->
         </select>
       </div>
       <button class="button" id="add-new-level" style="background-color: #0275d8;">新增圖片</button>
+      
     </div>
     
     <!-- 添加輸出區域 -->
@@ -795,6 +796,7 @@ async function getRandomLevels() {
     const hintButton = document.getElementById('hint-button');
     const levelTransition = document.getElementById('level-transition');
     const nextLevelButton = document.getElementById('next-level-button');
+    const deleteLevelButton = document.getElementById('delete-level');
 
     // 計時器相關變數
     let timerInterval;
@@ -1830,6 +1832,35 @@ async function getRandomLevels() {
       } catch (e) {
         alert('送出成績失敗');
       }
+    }
+
+    if (deleteLevelButton) {
+      deleteLevelButton.addEventListener('click', async function() {
+        const selectedLevelId = parseInt(levelSelector.value);
+        if (isNaN(selectedLevelId)) {
+          alert('請先選擇要刪除的圖片！');
+          return;
+        }
+        if (!confirm(`確定要刪除 ID:${selectedLevelId} 這張圖片嗎？此動作無法復原。`)) {
+          return;
+        }
+        try {
+          const res = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            alert('圖片已刪除！');
+            await populateLevelSelector(); // 重新載入 selector
+            clearEditorDisplay(); // 清空畫面
+            if (editLeftImg) editLeftImg.src = "";
+            if (editRightImg) editRightImg.src = "";
+          } else {
+            alert('刪除失敗，請稍後再試');
+          }
+        } catch (e) {
+          alert('網路錯誤，無法刪除圖片');
+        }
+      });
     }
   </script>
 </body>
