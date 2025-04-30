@@ -1351,6 +1351,30 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
     }
   });
 
+// 刪除關卡
+app.delete('/api/diffrent-game/levels/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 先刪除該關卡的所有差異點（外鍵約束）
+    await pool.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [id]);
+    
+    // 再刪除關卡本身
+    const result = await pool.query('DELETE FROM diffrent_game_levels WHERE id = $1 RETURNING id', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '找不到該關卡' });
+    }
+    
+    res.json({ success: true, message: '關卡已成功刪除' });
+  } catch (error) {
+    console.error('刪除關卡錯誤:', error);
+    res.status(500).json({ error: '伺服器錯誤' });
+  }
+});
+
+// --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
+
 
 
 
