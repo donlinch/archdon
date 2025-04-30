@@ -1206,6 +1206,158 @@ app.get('/api/diffrent-game/levels', async (req, res) => {
 
 
 
+
+// --- 找不同遊戲API路由 ---
+
+// 獲取隨機關卡（遊戲開始時呼叫）
+app.get('/api/diffrent-game/levels/random', async (req, res) => {
+    try {
+      // 從資料庫隨機選擇3個關卡
+      const result = await pool.query(
+        'SELECT id, level_name, left_image_url, right_image_url FROM diffrent_game_levels WHERE active = TRUE ORDER BY RANDOM() LIMIT 3'
+      );
+      
+      // 適配前端期望的結構：leftImage/rightImage 屬性
+      const levels = result.rows.map(level => ({
+        id: level.id,
+        levelId: level.id, // 兼容前端代碼
+        level_name: level.level_name,
+        leftImage: level.left_image_url,
+        rightImage: level.right_image_url
+      }));
+      
+      res.json(levels);
+    } catch (error) {
+      console.error('獲取隨機關卡錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 獲取所有關卡（編輯器模式使用）
+  app.get('/api/diffrent-game/levels', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM diffrent_game_levels ORDER BY id');
+      res.json(result.rows);
+    } catch (error) {
+      console.error('獲取所有關卡錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 獲取特定關卡（編輯器模式使用）
+  app.get('/api/diffrent-game/levels/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query('SELECT * FROM diffrent_game_levels WHERE id = $1', [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '找不到關卡' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('獲取特定關卡錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 獲取特定關卡的差異點
+  app.get('/api/diffrent-game/differences/:levelId', async (req, res) => {
+    try {
+      const { levelId } = req.params;
+      const result = await pool.query(
+        'SELECT * FROM diffrent_game_differences WHERE level_id = $1',
+        [levelId]
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('獲取差異點錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 保存新的差異點（編輯器模式）
+  app.post('/api/diffrent-game/differences', async (req, res) => {
+    try {
+      const { levelId, differences } = req.body;
+      
+      // 驗證數據
+      if (!levelId || !differences || !Array.isArray(differences)) {
+        return res.status(400).json({ error: '無效的請求數據' });
+      }
+      
+      // 開始事務
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // 先刪除該關卡現有的差異點
+        await client.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [levelId]);
+        
+        // 插入新的差異點
+        for (const diff of differences) {
+          await client.query(
+            'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
+            [levelId, diff.position_top, diff.position_left, diff.description]
+          );
+        }
+        
+        await client.query('COMMIT');
+        res.json({ success: true, message: `已保存 ${differences.length} 個差異點` });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('保存差異點錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 獲取排行榜
+  app.get('/api/diffrent-game/leaderboard', async (req, res) => {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('獲取排行榜錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+  
+  // 提交排行榜成績
+  app.post('/api/diffrent-game/leaderboard', async (req, res) => {
+    try {
+      const { player_name, time_seconds } = req.body;
+      
+      // 驗證數據
+      if (!player_name || typeof time_seconds !== 'number') {
+        return res.status(400).json({ error: '無效的請求數據' });
+      }
+      
+      await pool.query(
+        'INSERT INTO diffrent_game_leaderboard (player_name, time_seconds) VALUES ($1, $2)',
+        [player_name, time_seconds]
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('保存排行榜錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+
+
+
+
+
+
+
+
 // --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
 
 // GET /api/card-game/templates - 獲取所有公開模板
