@@ -1746,11 +1746,90 @@ async function getRandomLevels() {
         nextLevelButton.textContent = `開始第 ${currentLevel + 2} 關`;
         nextLevelButton.disabled = false;
       } else {
+        // 全部完成，檢查是否進排行榜
         levelTransition.querySelector('p').textContent = `你已經完成所有關卡！`;
         nextLevelButton.textContent = `全部完成`;
         nextLevelButton.disabled = true;
+
+        setTimeout(checkLeaderboardAndShow, 1200); // 1.2秒後自動檢查排行榜
       }
       levelTransition.classList.add('show');
+    }
+
+    async function checkLeaderboardAndShow() {
+      // 1. 取得總秒數
+      const timeText = timerDisplay.textContent; // 格式 00:34
+      const [min, sec] = timeText.split(':').map(Number);
+      const totalSeconds = min * 60 + sec;
+
+      // 2. 取得排行榜
+      let leaderboard = [];
+      try {
+        const res = await fetch('/api/diffrent-game/leaderboard');
+        leaderboard = await res.json();
+      } catch (e) {
+        alert('無法取得排行榜，請稍後再試');
+        return;
+      }
+
+      // 3. 檢查是否進前 50 名
+      const isInTop50 = leaderboard.length < 50 || leaderboard.some(entry => totalSeconds < entry.time_seconds);
+
+      // 4. 顯示排行榜
+      showLeaderboard(leaderboard, isInTop50, totalSeconds);
+    }
+
+    function showLeaderboard(leaderboard, canSubmit, mySeconds) {
+      // 顯示排行榜區塊
+      const leaderboardContainer = document.getElementById('leaderboard-container');
+      leaderboardContainer.classList.add('show');
+
+      // 填入排行榜資料
+      const tbody = document.getElementById('leaderboard-rows');
+      tbody.innerHTML = '';
+      leaderboard.slice(0, 50).forEach((entry, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx + 1}</td><td>${entry.name}</td><td>${entry.time}</td><td>${entry.date}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // 顯示/隱藏名字輸入表單
+      const nameEntry = document.getElementById('name-entry-container');
+      if (canSubmit) {
+        nameEntry.style.display = 'block';
+        document.getElementById('final-time-display').textContent = timerDisplay.textContent;
+        // 綁定送出事件（只需綁一次）
+        document.getElementById('submit-score').onclick = async function() {
+          const name = document.getElementById('player-name').value.trim();
+          if (!name) { alert('請輸入名字'); return; }
+          await submitScore(name, mySeconds);
+          nameEntry.style.display = 'none';
+          await checkLeaderboardAndShow(); // 重新載入排行榜
+        };
+      } else {
+        nameEntry.style.display = 'none';
+      }
+
+      // 綁定重新開始
+      document.getElementById('restart-game').onclick = function() {
+        leaderboardContainer.classList.remove('show');
+        setupNewGame();
+      };
+      document.getElementById('close-leaderboard').onclick = function() {
+        leaderboardContainer.classList.remove('show');
+      };
+    }
+
+    async function submitScore(name, seconds) {
+      try {
+        await fetch('/api/diffrent-game/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, time_seconds: seconds })
+        });
+      } catch (e) {
+        alert('送出成績失敗');
+      }
     }
   </script>
 </body>
