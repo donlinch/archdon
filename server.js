@@ -1126,9 +1126,17 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
       
       // 插入新的差異點
       for (const diff of differences) {
+        // --- 開始修改 ---
+        // 將座標值轉換為浮點數並四捨五入到兩位小數
+        const topValue = parseFloat(diff.position_top).toFixed(2);
+        const leftValue = parseFloat(diff.position_left).toFixed(2);
+        // --- 結束修改 ---
+
         await pool.query(
           'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
-          [levelId, diff.position_top, diff.position_left, diff.description]
+          // --- 開始修改 ---
+          [levelId, topValue, leftValue, diff.description] // 使用處理過的值
+          // --- 結束修改 ---
         );
       }
       
@@ -1296,9 +1304,17 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
         
         // 插入新的差異點
         for (const diff of differences) {
+          // --- 開始修改 ---
+          // 將座標值轉換為浮點數並四捨五入到兩位小數
+          const topValue = parseFloat(diff.position_top).toFixed(2);
+          const leftValue = parseFloat(diff.position_left).toFixed(2);
+          // --- 結束修改 ---
+
           await client.query(
             'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
-            [levelId, diff.position_top, diff.position_left, diff.description]
+            // --- 開始修改 ---
+            [levelId, topValue, leftValue, diff.description] // 使用處理過的值
+            // --- 結束修改 ---
           );
         }
         
