@@ -1739,6 +1739,19 @@ async function getRandomLevels() {
         totalElapsedTime = elapsedTime;
     }
 
+    function showCompletionMessage() {
+      levelTransition.querySelector('h2').textContent = `恭喜完成第 ${currentLevel + 1} 關！`;
+      if (currentLevel + 1 < gameLevels.length) {
+        levelTransition.querySelector('p').textContent = `準備好挑戰第 ${currentLevel + 2} 關了嗎？`;
+        nextLevelButton.textContent = `開始第 ${currentLevel + 2} 關`;
+        nextLevelButton.disabled = false;
+      } else {
+        levelTransition.querySelector('p').textContent = `你已經完成所有關卡！`;
+        nextLevelButton.textContent = `全部完成`;
+        nextLevelButton.disabled = true;
+      }
+      levelTransition.classList.add('show');
+    }
   </script>
 </body>
 </html>
