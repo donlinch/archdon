@@ -1092,71 +1092,17 @@ app.get('/api/walk_map/templates', async (req, res) => {
 
 
 
- 
 
-
-
-
-
-
-
-
-
-
-
-
-
-// --- 找不同遊戲API路由 ---
-
-// 獲取隨機關卡（遊戲開始時呼叫）
+// 獲取隨機關卡
 app.get('/api/diffrent-game/levels/random', async (req, res) => {
     try {
-      // 從資料庫隨機選擇3個關卡
       const result = await pool.query(
-        'SELECT id, level_name, left_image_url, right_image_url FROM diffrent_game_levels WHERE active = TRUE ORDER BY RANDOM() LIMIT 3'
+        'SELECT * FROM diffrent_game_levels WHERE active = TRUE ORDER BY RANDOM() LIMIT 3'
       );
-      
-      // 適配前端期望的結構：leftImage/rightImage 屬性
-      const levels = result.rows.map(level => ({
-        id: level.id,
-        levelId: level.id, // 兼容前端代碼
-        level_name: level.level_name,
-        leftImage: level.left_image_url,
-        rightImage: level.right_image_url
-      }));
-      
-      res.json(levels);
-    } catch (error) {
-      console.error('獲取隨機關卡錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
-    }
-  });
-  
-  // 獲取所有關卡（編輯器模式使用）
-  app.get('/api/diffrent-game/levels', async (req, res) => {
-    try {
-      const result = await pool.query('SELECT * FROM diffrent_game_levels ORDER BY id');
       res.json(result.rows);
     } catch (error) {
-      console.error('獲取所有關卡錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
-    }
-  });
-  
-  // 獲取特定關卡（編輯器模式使用）
-  app.get('/api/diffrent-game/levels/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      const result = await pool.query('SELECT * FROM diffrent_game_levels WHERE id = $1', [id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: '找不到關卡' });
-      }
-      
-      res.json(result.rows[0]);
-    } catch (error) {
-      console.error('獲取特定關卡錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
+      console.error('Error fetching random levels:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
   
@@ -1170,56 +1116,39 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
       );
       res.json(result.rows);
     } catch (error) {
-      console.error('獲取差異點錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
+      console.error('Error fetching differences:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
   
-  // 保存新的差異點（編輯器模式）
+  // 保存新的差異點 (用於編輯器)
   app.post('/api/diffrent-game/differences', async (req, res) => {
     try {
       const { levelId, differences } = req.body;
       
-      // 驗證數據
-      if (!levelId || !differences || !Array.isArray(differences)) {
-        return res.status(400).json({ error: '無效的請求數據' });
+      // 先刪除該關卡現有的差異點
+      await pool.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [levelId]);
+      
+      // 插入新的差異點
+      for (const diff of differences) {
+        // --- 開始修改 ---
+        // 將座標值轉換為浮點數並四捨五入到兩位小數
+        const topValue = parseFloat(diff.position_top).toFixed(2);
+        const leftValue = parseFloat(diff.position_left).toFixed(2);
+        // --- 結束修改 ---
+
+        await pool.query(
+          'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
+          // --- 開始修改 ---
+          [levelId, topValue, leftValue, diff.description] // 使用處理過的值
+          // --- 結束修改 ---
+        );
       }
       
-      // 開始事務
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        
-        // 先刪除該關卡現有的差異點
-        await client.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [levelId]);
-        
-        // 插入新的差異點
-        for (const diff of differences) {
-          // --- 開始修改 ---
-          // 將座標值轉換為浮點數並四捨五入到兩位小數
-          const topValue = parseFloat(diff.position_top).toFixed(2);
-          const leftValue = parseFloat(diff.position_left).toFixed(2);
-          // --- 結束修改 ---
-
-          await client.query(
-            'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
-            // --- 開始修改 ---
-            [levelId, topValue, leftValue, diff.description] // 使用處理過的值
-            // --- 結束修改 ---
-          );
-        }
-        
-        await client.query('COMMIT');
-        res.json({ success: true, message: `已保存 ${differences.length} 個差異點` });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
+      res.json({ success: true });
     } catch (error) {
-      console.error('保存差異點錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
+      console.error('Error saving differences:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
   
@@ -1227,12 +1156,12 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
   app.get('/api/diffrent-game/leaderboard', async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT player_name, time_seconds,  FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
+        'SELECT player_name, time_seconds, created_at FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
       );
       res.json(result.rows);
     } catch (error) {
-      console.error('獲取排行榜錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
+      console.error('Error fetching leaderboard:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
   
@@ -1240,45 +1169,62 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
   app.post('/api/diffrent-game/leaderboard', async (req, res) => {
     try {
       const { player_name, time_seconds } = req.body;
-      
-      // 驗證數據
-      if (!player_name || typeof time_seconds !== 'number') {
-        return res.status(400).json({ error: '無效的請求數據' });
-      }
-      
       await pool.query(
         'INSERT INTO diffrent_game_leaderboard (player_name, time_seconds) VALUES ($1, $2)',
         [player_name, time_seconds]
       );
-      
       res.json({ success: true });
     } catch (error) {
-      console.error('保存排行榜錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
+      console.error('Error saving leaderboard entry:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-// 刪除關卡
-app.delete('/api/diffrent-game/levels/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // 先刪除該關卡的所有差異點（外鍵約束）
-    await pool.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [id]);
-    
-    // 再刪除關卡本身
-    const result = await pool.query('DELETE FROM diffrent_game_levels WHERE id = $1 RETURNING id', [id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '找不到該關卡' });
+
+
+
+
+
+// 獲取所有關卡
+app.get('/api/diffrent-game/levels', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM diffrent_game_levels ORDER BY id');
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching all levels:', error);
+      res.status(500).json({ error: 'Server error' });
     }
-    
-    res.json({ success: true, message: '關卡已成功刪除' });
-  } catch (error) {
-    console.error('刪除關卡錯誤:', error);
-    res.status(500).json({ error: '伺服器錯誤' });
-  }
-});
+  });
+  
+  // 獲取特定關卡
+  app.get('/api/diffrent-game/levels/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query('SELECT * FROM diffrent_game_levels WHERE id = $1', [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Level not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error fetching specific level:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
