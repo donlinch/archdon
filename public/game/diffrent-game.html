@@ -624,6 +624,11 @@
       <button class="button" id="add-new-level" style="background-color: #0275d8;">新增圖片</button>
     </div>
     
+    <!-- 添加輸出區域 -->
+    <div style="margin-top: 20px;">
+      <textarea id="output" style="width: 100%; height: 100px; font-family: monospace;" readonly></textarea>
+    </div>
+    
     <!-- 新增圖片表單 -->
     <div id="new-level-form" style="display: none; margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
       <h3>新增圖片</h3>
@@ -852,6 +857,13 @@ async function getRandomLevels() {
       }
       console.log(`Loading level index: ${levelIndex}`);
       const level = gameLevels[levelIndex];
+
+      // 確保level對象存在並且具有所需的屬性
+      if (!level || !level.leftImage || !level.rightImage) {
+        console.error("關卡對象缺少必要屬性:", level);
+        messageElement.textContent = "無法載入關卡，數據不完整";
+        return;
+      }
 
       // 更新圖片
       leftImageElement.src = level.leftImage;
@@ -1255,376 +1267,416 @@ async function getRandomLevels() {
 
 
     // ----- 編輯器模式代碼 -----
-    let editorDots = []; // { id: number, description: string, rightPosition: {top: string, left: string} }
-    let dotCounter = 1; // 用於生成新的點 ID
-    const output = document.getElementById('output');
+    // 獲取編輯器元素
     const editLeftContainer = document.getElementById('edit-left');
     const editRightContainer = document.getElementById('edit-right');
     const editLeftImg = document.getElementById('left-edit-img');
     const editRightImg = document.getElementById('right-edit-img');
-    const clearEditorButton = document.getElementById('clear-editor');
-    const saveEditorButton = document.getElementById('save-editor');
-    const loadEditorButton = document.getElementById('load-editor');
     const levelSelector = document.getElementById('level-selector');
+    const saveEditorButton = document.getElementById('save-editor');
+    const clearEditorButton = document.getElementById('clear-editor');
+    const loadEditorButton = document.createElement('button'); // 創建但不顯示
 
+    // 確保編輯器元素存在
+    if (!editLeftContainer || !editRightContainer || !editLeftImg || !editRightImg || 
+        !levelSelector || !saveEditorButton || !clearEditorButton) {
+      console.error("找不到編輯器模式所需的DOM元素");
+    } else {
+      // 編輯器變數
+      let editorDots = [];
+      let dotCounter = 1;
+      let allLevelsData = [];
 
-    // 更新HTML代碼輸出
-    function updateOutput() {
-      if (editorDots.length === 0) {
-        output.value = '// 點擊右側修改版圖片添加差異點，代碼將顯示在這裡';
-        return;
-      }
-      let code = `<!-- ${editorDots.length} 個差異點位置 (基於右圖) -->\n\n`;
-      editorDots.sort((a, b) => a.id - b.id).forEach(dot => {
-        const position = dot.rightPosition;
-        const dataId = dot.id;
-        const description = dot.description || `差異點 ${dataId}`;
-
-        code += `<!-- ${description} -->\n`;
-        // 左圖 (遊戲模式用)
-        code += `<div class="dot" id="diff${dataId}" data-id="${dataId}" style="top: ${position.top}; left: ${position.left};"></div>\n`;
-        code += `<div class="label" id="label${dataId}" style="top: ${position.top}; left: ${position.left};">${dataId}</div>\n`;
-        // 右圖 (遊戲模式用)
-        code += `<div class="dot" id="diff${dataId}-right" data-id="${dataId}" style="top: ${position.top}; left: ${position.left};"></div>\n`;
-        code += `<div class="label" id="label${dataId}-right" style="top: ${position.top}; left: ${position.left};">${dataId}</div>\n\n`;
-      });
-      output.value = code;
-    }
-
-    // 填充編輯器關卡選擇下拉框 (從API獲取所有關卡)
-    async function populateLevelSelector() {
-      try {
-        const response = await fetch('/api/diffrent-game/levels');
-        const levels = await response.json();
-        
-        levelSelector.innerHTML = ''; // 清空現有選項
-        levels.forEach(level => {
-          const option = document.createElement('option');
-          option.value = level.id;
-          option.textContent = `ID:${level.id} - ${level.level_name}`;
-          levelSelector.appendChild(option);
+      // 為編輯器模式的右圖容器添加點擊事件 (添加新點) - 確保元素存在
+      if (editRightContainer && editRightImg) {
+        editRightContainer.addEventListener('click', function(e) {
+          // 僅當點擊目標是圖片本身時才添加新點
+          if (e.target === editRightImg) {
+            addEditorDot(e);
+          }
         });
-        
-        // 如果有關卡，自動載入第一個
-        if (levels.length > 0) {
-          levelSelector.dispatchEvent(new Event('change'));
-        }
-      } catch (error) {
-        console.error('獲取關卡列表失敗:', error);
-        alert('無法載入關卡列表，請刷新頁面再試');
       }
-    }
 
-    // 編輯器關卡選擇變化事件
-    levelSelector.addEventListener('change', async function() {
-      const selectedLevelId = parseInt(this.value);
-      console.log(`選擇圖片: ${selectedLevelId}`);
-
-      try {
-        // 獲取特定關卡數據
-        const response = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`);
-        if (!response.ok) {
-          throw new Error('無法獲取關卡數據');
-        }
-        
-        const levelData = await response.json();
-        
-        // 清除編輯器現有點和狀態
-        clearEditorDisplay();
-
-        // 更新編輯器圖片
-        editLeftImg.src = levelData.left_image_url;
-        editRightImg.src = levelData.right_image_url;
-
-        // 加載該關卡的差異點到編輯器
-        loadEditorData(selectedLevelId);
-      } catch (error) {
-        console.error(`獲取關卡 ${selectedLevelId} 數據出錯:`, error);
-        alert(`無法載入第 ${selectedLevelId} 張圖片數據。`);
+      // 當選擇不同圖片時
+      if (levelSelector) {
+        levelSelector.addEventListener('change', async function() {
+          const selectedLevelId = parseInt(this.value);
+          try {
+            // 獲取關卡數據
+            const response = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`);
+            const levelData = await response.json();
+            
+            if (levelData && editLeftImg && editRightImg) {
+              // 設置圖片
+              editLeftImg.src = levelData.left_image_url;
+              editRightImg.src = levelData.right_image_url;
+              
+              // 更新本地存儲鍵
+              const storageKey = `differentGameLevel${selectedLevelId}EditorData`;
+              
+              // 清除當前編輯器顯示
+              clearEditorDisplay();
+              
+              // 嘗試加載編輯器數據
+              loadEditorData(storageKey, selectedLevelId);
+              
+              console.log(`已載入 ID:${selectedLevelId} 的圖片`);
+            }
+          } catch (error) {
+            console.error(`加載關卡 ${selectedLevelId} 數據失敗:`, error);
+            alert('無法加載選定的圖片數據');
+          }
+        });
       }
-    });
 
-    // 從 localStorage 加載數據到編輯器
-    function loadEditorData(storageKey, levelId) {
-        const savedData = localStorage.getItem(storageKey);
-        if (!savedData) {
-            console.log(`未找到 ${storageKey} 的編輯器數據，編輯器將為空。`);
-            updateOutput(); // 確保輸出區域更新
-            return; // 沒有數據可加載
+      // 更新HTML代碼輸出
+      function updateOutput() {
+        if (editorDots.length === 0) {
+          output.value = '// 點擊右側修改版圖片添加差異點，代碼將顯示在這裡';
+          return;
         }
+        let code = `<!-- ${editorDots.length} 個差異點位置 (基於右圖) -->\n\n`;
+        editorDots.sort((a, b) => a.id - b.id).forEach(dot => {
+          const position = dot.rightPosition;
+          const dataId = dot.id;
+          const description = dot.description || `差異點 ${dataId}`;
+
+          code += `<!-- ${description} -->\n`;
+          // 左圖 (遊戲模式用)
+          code += `<div class="dot" id="diff${dataId}" data-id="${dataId}" style="top: ${position.top}; left: ${position.left};"></div>\n`;
+          code += `<div class="label" id="label${dataId}" style="top: ${position.top}; left: ${position.left};">${dataId}</div>\n`;
+          // 右圖 (遊戲模式用)
+          code += `<div class="dot" id="diff${dataId}-right" data-id="${dataId}" style="top: ${position.top}; left: ${position.left};"></div>\n`;
+          code += `<div class="label" id="label${dataId}-right" style="top: ${position.top}; left: ${position.left};">${dataId}</div>\n\n`;
+        });
+        output.value = code;
+      }
+
+      // 填充編輯器關卡選擇下拉框 (從API獲取所有關卡)
+      async function populateLevelSelector() {
+        try {
+          const response = await fetch('/api/diffrent-game/levels');
+          const levels = await response.json();
+          
+          levelSelector.innerHTML = ''; // 清空現有選項
+          levels.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level.id;
+            option.textContent = `ID:${level.id} - ${level.level_name}`;
+            levelSelector.appendChild(option);
+          });
+          
+          // 如果有關卡，自動載入第一個
+          if (levels.length > 0) {
+            levelSelector.dispatchEvent(new Event('change'));
+          }
+        } catch (error) {
+          console.error('獲取關卡列表失敗:', error);
+          alert('無法載入關卡列表，請刷新頁面再試');
+        }
+      }
+
+      // 編輯器關卡選擇變化事件
+      levelSelector.addEventListener('change', async function() {
+        const selectedLevelId = parseInt(this.value);
+        console.log(`選擇圖片: ${selectedLevelId}`);
 
         try {
-            const data = JSON.parse(savedData);
-            // 確保 data.dots 存在且是一個陣列
-            const dotsArray = data.dots && Array.isArray(data.dots) ? data.dots : [];
-
-             if (dotsArray.length > 0) {
-                 // 恢復點計數器 (找到最大 ID + 1)
-                 const maxId = dotsArray.reduce((max, dot) => Math.max(max, parseInt(dot.id) || 0), 0);
-                 dotCounter = maxId + 1;
-
-                 // 重新創建編輯器中的點
-                 dotsArray.forEach(dotData => {
-                      if (dotData.id === undefined || !dotData.rightPosition) {
-                          console.warn("從存儲載入的編輯器點數據格式不完整:", dotData);
-                          return; // 跳過這個點
-                      }
-                      // 創建編輯器點 (參考點和可拖動點)
-                      createEditorDotElements(dotData.id, dotData.rightPosition);
-                 });
-
-                 // 更新編輯器內部數據 editorDots
-                 editorDots = dotsArray.map(d => ({
-                     id: d.id,
-                     description: data.differences?.find(df => String(df.id).endsWith(d.id))?.description || `差異點 ${d.id}`,
-                     rightPosition: d.rightPosition,
-                 }));
-
-                 updateOutput(); // 更新代碼輸出
-                 console.log(`成功從 ${storageKey} 載入 ${editorDots.length} 個點到編輯器`);
-            } else {
-                console.log(`${storageKey} 中找到數據，但 dots 陣列為空或無效。`);
-                updateOutput();
-            }
-        } catch (error) {
-            console.error(`從 ${storageKey} 載入編輯器數據錯誤:`, error);
-            alert(`加載第 ${levelId} 張圖片編輯器數據時發生錯誤！`);
-            clearEditorDisplay(); // 出錯時清空編輯器
-        }
-    }
-
-    // Load 按鈕事件 (現在只是觸發 levelSelector 的 change 事件)
-    loadEditorButton.addEventListener('click', function() {
-        const selectedLevelId = parseInt(levelSelector.value);
-        const storageKey = allLevelsData.find(l => l.levelId === selectedLevelId)?.storageKey;
-        if (storageKey) {
-            loadEditorData(storageKey, selectedLevelId);
-            alert(`已嘗試從存儲加載第 ${selectedLevelId} 張圖片數據。`);
-        } else {
-            alert("無法確定要加載哪張圖片的數據。");
-        }
-    });
-
-
-    // 清除編輯器顯示和狀態
-    function clearEditorDisplay() {
-        // 移除所有編輯器模式的點
-        document.querySelectorAll('#editor-tab .editor-dot').forEach(dot => {
-          dot.remove();
-        });
-        // 重置數據
-        editorDots = [];
-        dotCounter = 1; // 重置計數器
-        updateOutput();
-        console.log("Editor display cleared.");
-    }
-
-    // 清除編輯器按鈕事件
-    clearEditorButton.addEventListener('click', clearEditorDisplay);
-
-
-    // 為編輯器模式的右圖容器添加點擊事件 (添加新點)
-    editRightContainer.addEventListener('click', function(e) {
-      // 僅當點擊目標是圖片本身時才添加新點
-      if (e.target === editRightImg) {
-        addEditorDot(e);
-      }
-    });
-
-
-    // 添加編輯器模式中的差異點
-    function addEditorDot(e) {
-      if (editorDots.length >= 5) {
-        alert('最多只能添加5個差異點！');
-        return;
-      }
-
-      // 計算點擊相對於圖片的位置
-      const rect = editRightImg.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      const position = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
-      const newDotId = dotCounter;
-
-      console.log(`Adding editor dot ${newDotId} at`, position);
-
-      // 創建 DOM 元素 (參考點和可拖動點)
-      createEditorDotElements(newDotId, position);
-
-      // 更新內部數據
-      editorDots.push({
-        id: newDotId,
-        description: `差異點 ${newDotId}`,
-        rightPosition: position
-      });
-      dotCounter++; // 增加計數器
-
-      // 更新輸出代碼
-      updateOutput();
-    }
-
-    // 輔助函數: 創建編輯器點的 DOM 元素
-    function createEditorDotElements(id, position) {
-        // 在右圖創建可拖動點
-        const rightDot = document.createElement('div');
-        rightDot.className = 'editor-dot';
-        rightDot.setAttribute('data-id', id);
-        rightDot.style.top = position.top;
-        rightDot.style.left = position.left;
-        editRightContainer.appendChild(rightDot);
-        makeDotDraggable(rightDot); // 使其可拖動
-
-        // 在左圖創建對應的參考點
-        const leftDot = document.createElement('div');
-        leftDot.className = 'editor-dot reference'; // 參考點樣式
-        leftDot.setAttribute('data-id', id); // 關聯 ID
-        leftDot.style.top = position.top;
-        leftDot.style.left = position.left;
-        editLeftContainer.appendChild(leftDot);
-    }
-
-
-    // 讓編輯器點可拖曳
-    function makeDotDraggable(element) {
-      element.addEventListener('mousedown', startDragDot);
-      element.addEventListener('touchstart', startDragDot, { passive: false }); // passive: false for preventDefault
-    }
-
-    function startDragDot(e) {
-      // e.preventDefault(); // 阻止默認的拖動行為 (例如圖片拖動)
-      e.stopPropagation(); // 阻止事件冒泡
-
-      const dot = e.target;
-      if (!dot.classList.contains('editor-dot') || dot.classList.contains('reference')) {
-        return; // 確保是可拖動的點
-      }
-
-      const dotId = dot.getAttribute('data-id');
-      // 找到對應的參考點
-      const referenceDot = editLeftContainer.querySelector(`.editor-dot.reference[data-id="${dotId}"]`);
-      const containerRect = editRightImg.getBoundingClientRect();
-
-      function moveHandler(moveEvent) {
-         // For touch events, prevent scrolling while dragging
-         if (moveEvent.type === 'touchmove') {
-            moveEvent.preventDefault();
-         }
-
-         let clientX, clientY;
-         if (moveEvent.type === 'mousemove' || moveEvent.type === 'mousedown') {
-           clientX = moveEvent.clientX;
-           clientY = moveEvent.clientY;
-         } else if (moveEvent.type === 'touchmove' || moveEvent.type === 'touchstart') {
-           clientX = moveEvent.touches[0].clientX;
-           clientY = moveEvent.touches[0].clientY;
-         } else {
-             return; // Unknown event type
-         }
-
-         // 計算新位置 (百分比)
-         let x = ((clientX - containerRect.left) / containerRect.width) * 100;
-         let y = ((clientY - containerRect.top) / containerRect.height) * 100;
-
-         // 限制在圖片範圍內 (稍微留一點邊緣)
-         x = Math.max(1, Math.min(99, x));
-         y = Math.max(1, Math.min(99, y));
-         const newPosition = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
-
-         // 更新點的位置
-         dot.style.left = newPosition.left;
-         dot.style.top = newPosition.top;
-
-         // 同步更新參考點位置
-         if (referenceDot) {
-           referenceDot.style.left = newPosition.left;
-           referenceDot.style.top = newPosition.top;
-         }
-
-         // 更新內部數據
-         const dotData = editorDots.find(d => d.id == dotId);
-         if (dotData) {
-           dotData.rightPosition = newPosition;
-           // 更新代碼輸出 (可以考慮在拖動結束時才更新，以提高性能)
-           updateOutput();
-         }
-      }
-
-      function endDragHandler() {
-        document.removeEventListener('mousemove', moveHandler);
-        document.removeEventListener('mouseup', endDragHandler);
-        document.removeEventListener('touchmove', moveHandler);
-        document.removeEventListener('touchend', endDragHandler);
-        console.log(`Dot ${dotId} drag ended at`, dot.style.top, dot.style.left);
-        // 可以在這裡觸發一次最終的 updateOutput()
-      }
-
-      // 添加事件監聽器到 document，這樣即使鼠標移出元素也能繼續拖動
-      document.addEventListener('mousemove', moveHandler);
-      document.addEventListener('mouseup', endDragHandler);
-      document.addEventListener('touchmove', moveHandler, { passive: false });
-      document.addEventListener('touchend', endDragHandler);
-    }
-
-
-    // 保存編輯器內容到資料庫 (替換原本的localStorage保存方式)
-    saveEditorButton.addEventListener('click', async function() {
-      if (editorDots.length === 0) {
-        alert('沒有差異點可保存！');
-        return;
-      }
-
-      // 獲取當前編輯的關卡 ID
-      const selectedLevelId = parseInt(levelSelector.value);
-      
-      // 準備要發送到服務器的數據
-      const differencesData = editorDots.map(dot => {
-        // 更新描述 (基於位置)
-        const rightX = parseFloat(dot.rightPosition.left);
-        const rightY = parseFloat(dot.rightPosition.top);
-        let locationHint = '';
-        if (rightX < 33) locationHint += '左側';
-        else if (rightX < 66) locationHint += '中央';
-        else locationHint += '右側';
-        if (rightY < 33) locationHint += '上方';
-        else if (rightY < 66) locationHint += '中部';
-        else locationHint += '下方';
-        
-        return {
-          position_top: dot.rightPosition.top,
-          position_left: dot.rightPosition.left,
-          description: `差異點位於${locationHint}區域`
-        };
-      });
-
-      try {
-        const response = await fetch('/api/diffrent-game/differences', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            levelId: selectedLevelId,
-            differences: differencesData
-          })
-        });
-        
-        if (response.ok) {
-          alert(`已成功保存第 ${selectedLevelId} 張圖片數據！`);
-          
-          // 如果當前正在遊玩的關卡被編輯，重新載入關卡數據
-          const gameLevelIndex = gameLevels.findIndex(gl => gl.id === selectedLevelId);
-          if (gameLevelIndex !== -1 && gameLevelIndex === currentLevel) {
-            loadLevel(currentLevel);
+          // 獲取特定關卡數據
+          const response = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`);
+          if (!response.ok) {
+            throw new Error('無法獲取關卡數據');
           }
-        } else {
-          alert('保存失敗！請稍後再試。');
-        }
-      } catch (error) {
-        console.error('保存差異點出錯:', error);
-        alert('網絡錯誤，無法保存數據。');
-      }
-    });
+          
+          const levelData = await response.json();
+          
+          // 清除編輯器現有點和狀態
+          clearEditorDisplay();
 
+          // 更新編輯器圖片
+          editLeftImg.src = levelData.left_image_url;
+          editRightImg.src = levelData.right_image_url;
+
+          // 加載該關卡的差異點到編輯器
+          loadEditorData(selectedLevelId);
+        } catch (error) {
+          console.error(`獲取關卡 ${selectedLevelId} 數據出錯:`, error);
+          alert(`無法載入第 ${selectedLevelId} 張圖片數據。`);
+        }
+      });
+
+      // 從 localStorage 加載數據到編輯器
+      function loadEditorData(storageKey, levelId) {
+          const savedData = localStorage.getItem(storageKey);
+          if (!savedData) {
+              console.log(`未找到 ${storageKey} 的編輯器數據，編輯器將為空。`);
+              updateOutput(); // 確保輸出區域更新
+              return; // 沒有數據可加載
+          }
+
+          try {
+              const data = JSON.parse(savedData);
+              // 確保 data.dots 存在且是一個陣列
+              const dotsArray = data.dots && Array.isArray(data.dots) ? data.dots : [];
+
+               if (dotsArray.length > 0) {
+                   // 恢復點計數器 (找到最大 ID + 1)
+                   const maxId = dotsArray.reduce((max, dot) => Math.max(max, parseInt(dot.id) || 0), 0);
+                   dotCounter = maxId + 1;
+
+                   // 重新創建編輯器中的點
+                   dotsArray.forEach(dotData => {
+                        if (dotData.id === undefined || !dotData.rightPosition) {
+                            console.warn("從存儲載入的編輯器點數據格式不完整:", dotData);
+                            return; // 跳過這個點
+                        }
+                        // 創建編輯器點 (參考點和可拖動點)
+                        createEditorDotElements(dotData.id, dotData.rightPosition);
+                   });
+
+                   // 更新編輯器內部數據 editorDots
+                   editorDots = dotsArray.map(d => ({
+                       id: d.id,
+                       description: data.differences?.find(df => String(df.id).endsWith(d.id))?.description || `差異點 ${d.id}`,
+                       rightPosition: d.rightPosition,
+                   }));
+
+                   updateOutput(); // 更新代碼輸出
+                   console.log(`成功從 ${storageKey} 載入 ${editorDots.length} 個點到編輯器`);
+              } else {
+                  console.log(`${storageKey} 中找到數據，但 dots 陣列為空或無效。`);
+                  updateOutput();
+              }
+          } catch (error) {
+              console.error(`從 ${storageKey} 載入編輯器數據錯誤:`, error);
+              alert(`加載第 ${levelId} 張圖片編輯器數據時發生錯誤！`);
+              clearEditorDisplay(); // 出錯時清空編輯器
+          }
+      }
+
+      // Load 按鈕事件 (現在只是觸發 levelSelector 的 change 事件)
+      loadEditorButton.addEventListener('click', function() {
+          const selectedLevelId = parseInt(levelSelector.value);
+          const storageKey = allLevelsData.find(l => l.levelId === selectedLevelId)?.storageKey;
+          if (storageKey) {
+              loadEditorData(storageKey, selectedLevelId);
+              alert(`已嘗試從存儲加載第 ${selectedLevelId} 張圖片數據。`);
+          } else {
+              alert("無法確定要加載哪張圖片的數據。");
+          }
+      });
+
+
+      // 清除編輯器顯示和狀態
+      function clearEditorDisplay() {
+          // 移除所有編輯器模式的點
+          document.querySelectorAll('#editor-tab .editor-dot').forEach(dot => {
+            dot.remove();
+          });
+          // 重置數據
+          editorDots = [];
+          dotCounter = 1; // 重置計數器
+          updateOutput();
+          console.log("Editor display cleared.");
+      }
+
+      // 清除編輯器按鈕事件
+      clearEditorButton.addEventListener('click', clearEditorDisplay);
+
+
+      // 添加編輯器模式中的差異點
+      function addEditorDot(e) {
+        if (editorDots.length >= 5) {
+          alert('最多只能添加5個差異點！');
+          return;
+        }
+
+        // 計算點擊相對於圖片的位置
+        const rect = editRightImg.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        const position = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
+        const newDotId = dotCounter;
+
+        console.log(`Adding editor dot ${newDotId} at`, position);
+
+        // 創建 DOM 元素 (參考點和可拖動點)
+        createEditorDotElements(newDotId, position);
+
+        // 更新內部數據
+        editorDots.push({
+          id: newDotId,
+          description: `差異點 ${newDotId}`,
+          rightPosition: position
+        });
+        dotCounter++; // 增加計數器
+
+        // 更新輸出代碼
+        updateOutput();
+      }
+
+      // 輔助函數: 創建編輯器點的 DOM 元素
+      function createEditorDotElements(id, position) {
+          // 在右圖創建可拖動點
+          const rightDot = document.createElement('div');
+          rightDot.className = 'editor-dot';
+          rightDot.setAttribute('data-id', id);
+          rightDot.style.top = position.top;
+          rightDot.style.left = position.left;
+          editRightContainer.appendChild(rightDot);
+          makeDotDraggable(rightDot); // 使其可拖動
+
+          // 在左圖創建對應的參考點
+          const leftDot = document.createElement('div');
+          leftDot.className = 'editor-dot reference'; // 參考點樣式
+          leftDot.setAttribute('data-id', id); // 關聯 ID
+          leftDot.style.top = position.top;
+          leftDot.style.left = position.left;
+          editLeftContainer.appendChild(leftDot);
+      }
+
+
+      // 讓編輯器點可拖曳
+      function makeDotDraggable(element) {
+        element.addEventListener('mousedown', startDragDot);
+        element.addEventListener('touchstart', startDragDot, { passive: false }); // passive: false for preventDefault
+      }
+
+      function startDragDot(e) {
+        // e.preventDefault(); // 阻止默認的拖動行為 (例如圖片拖動)
+        e.stopPropagation(); // 阻止事件冒泡
+
+        const dot = e.target;
+        if (!dot.classList.contains('editor-dot') || dot.classList.contains('reference')) {
+          return; // 確保是可拖動的點
+        }
+
+        const dotId = dot.getAttribute('data-id');
+        // 找到對應的參考點
+        const referenceDot = editLeftContainer.querySelector(`.editor-dot.reference[data-id="${dotId}"]`);
+        const containerRect = editRightImg.getBoundingClientRect();
+
+        function moveHandler(moveEvent) {
+           // For touch events, prevent scrolling while dragging
+           if (moveEvent.type === 'touchmove') {
+              moveEvent.preventDefault();
+           }
+
+           let clientX, clientY;
+           if (moveEvent.type === 'mousemove' || moveEvent.type === 'mousedown') {
+             clientX = moveEvent.clientX;
+             clientY = moveEvent.clientY;
+           } else if (moveEvent.type === 'touchmove' || moveEvent.type === 'touchstart') {
+             clientX = moveEvent.touches[0].clientX;
+             clientY = moveEvent.touches[0].clientY;
+           } else {
+               return; // Unknown event type
+           }
+
+           // 計算新位置 (百分比)
+           let x = ((clientX - containerRect.left) / containerRect.width) * 100;
+           let y = ((clientY - containerRect.top) / containerRect.height) * 100;
+
+           // 限制在圖片範圍內 (稍微留一點邊緣)
+           x = Math.max(1, Math.min(99, x));
+           y = Math.max(1, Math.min(99, y));
+           const newPosition = { top: y.toFixed(2) + '%', left: x.toFixed(2) + '%' };
+
+           // 更新點的位置
+           dot.style.left = newPosition.left;
+           dot.style.top = newPosition.top;
+
+           // 同步更新參考點位置
+           if (referenceDot) {
+             referenceDot.style.left = newPosition.left;
+             referenceDot.style.top = newPosition.top;
+           }
+
+           // 更新內部數據
+           const dotData = editorDots.find(d => d.id == dotId);
+           if (dotData) {
+             dotData.rightPosition = newPosition;
+             // 更新代碼輸出 (可以考慮在拖動結束時才更新，以提高性能)
+             updateOutput();
+           }
+        }
+
+        function endDragHandler() {
+          document.removeEventListener('mousemove', moveHandler);
+          document.removeEventListener('mouseup', endDragHandler);
+          document.removeEventListener('touchmove', moveHandler);
+          document.removeEventListener('touchend', endDragHandler);
+          console.log(`Dot ${dotId} drag ended at`, dot.style.top, dot.style.left);
+          // 可以在這裡觸發一次最終的 updateOutput()
+        }
+
+        // 添加事件監聽器到 document，這樣即使鼠標移出元素也能繼續拖動
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', endDragHandler);
+        document.addEventListener('touchmove', moveHandler, { passive: false });
+        document.addEventListener('touchend', endDragHandler);
+      }
+
+
+      // 保存編輯器內容到資料庫 (替換原本的localStorage保存方式)
+      saveEditorButton.addEventListener('click', async function() {
+        if (editorDots.length === 0) {
+          alert('沒有差異點可保存！');
+          return;
+        }
+
+        // 獲取當前編輯的關卡 ID
+        const selectedLevelId = parseInt(levelSelector.value);
+        
+        // 準備要發送到服務器的數據
+        const differencesData = editorDots.map(dot => {
+          // 更新描述 (基於位置)
+          const rightX = parseFloat(dot.rightPosition.left);
+          const rightY = parseFloat(dot.rightPosition.top);
+          let locationHint = '';
+          if (rightX < 33) locationHint += '左側';
+          else if (rightX < 66) locationHint += '中央';
+          else locationHint += '右側';
+          if (rightY < 33) locationHint += '上方';
+          else if (rightY < 66) locationHint += '中部';
+          else locationHint += '下方';
+          
+          return {
+            position_top: dot.rightPosition.top,
+            position_left: dot.rightPosition.left,
+            description: `差異點位於${locationHint}區域`
+          };
+        });
+
+        try {
+          const response = await fetch('/api/diffrent-game/differences', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              levelId: selectedLevelId,
+              differences: differencesData
+            })
+          });
+          
+          if (response.ok) {
+            alert(`已成功保存第 ${selectedLevelId} 張圖片數據！`);
+            
+            // 如果當前正在遊玩的關卡被編輯，重新載入關卡數據
+            const gameLevelIndex = gameLevels.findIndex(gl => gl.id === selectedLevelId);
+            if (gameLevelIndex !== -1 && gameLevelIndex === currentLevel) {
+              loadLevel(currentLevel);
+            }
+          } else {
+            alert('保存失敗！請稍後再試。');
+          }
+        } catch (error) {
+          console.error('保存差異點出錯:', error);
+          alert('網絡錯誤，無法保存數據。');
+        }
+      });
+    }
 
     // ----- 遊戲完成與過渡 -----
 
