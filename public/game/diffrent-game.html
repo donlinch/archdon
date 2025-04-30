@@ -875,10 +875,10 @@ async function getRandomLevels() {
       // 清空舊的差異點顯示
       resetGameDisplay();
 
-      // 嘗試從 localStorage 載入當前關卡的差異點數據
-      // loadLevelDataFromStorage 會修改 level.differences 和 level.savedDots
-      const loadedFromStorage = loadLevelDataFromStorage(level);
-      console.log(`Level data loaded from storage for level ${level.levelId}?`, loadedFromStorage);
+      // 從API加載當前關卡的差異點數據
+      // loadDifferencesFromAPI會修改level.differences和level.savedDots
+      const loadedFromAPI = loadDifferencesFromAPI(level);
+      console.log(`Level data loaded from API for level ${level.id}?`, loadedFromAPI);
 
       // 根據更新後的 level.differences 和 level.savedDots 創建差異點
       createDifferencePoints();
@@ -916,8 +916,8 @@ async function getRandomLevels() {
       startTimer();
     }
 
-    // 替換loadLevelDataFromStorage函數
-    async function loadLevelDataFromStorage(level) {
+    // 從API載入關卡差異點數據
+    async function loadDifferencesFromAPI(level) {
       try {
         const response = await fetch(`/api/diffrent-game/differences/${level.id}`);
         const differences = await response.json();
@@ -1311,14 +1311,11 @@ async function getRandomLevels() {
               editLeftImg.src = levelData.left_image_url;
               editRightImg.src = levelData.right_image_url;
               
-              // 更新本地存儲鍵
-              const storageKey = `differentGameLevel${selectedLevelId}EditorData`;
-              
               // 清除當前編輯器顯示
               clearEditorDisplay();
               
-              // 嘗試加載編輯器數據
-              loadEditorData(storageKey, selectedLevelId);
+              // 從API加載差異點數據
+              loadDifferencesFromAPI({id: selectedLevelId});
               
               console.log(`已載入 ID:${selectedLevelId} 的圖片`);
             }
@@ -1397,15 +1394,63 @@ async function getRandomLevels() {
           editLeftImg.src = levelData.left_image_url;
           editRightImg.src = levelData.right_image_url;
 
-          // 加載該關卡的差異點到編輯器
-          loadEditorData(selectedLevelId);
+          // 從API加載該關卡的差異點到編輯器
+          loadDifferencesFromAPI(levelData);
         } catch (error) {
           console.error(`獲取關卡 ${selectedLevelId} 數據出錯:`, error);
           alert(`無法載入第 ${selectedLevelId} 張圖片數據。`);
         }
       });
 
-      // 從 localStorage 加載數據到編輯器
+      // 從 API 加載差異點數據到編輯器
+      async function loadDifferencesFromAPI(level) {
+        try {
+          const response = await fetch(`/api/diffrent-game/differences/${level.id}`);
+          const differences = await response.json();
+          
+          if (differences.length > 0) {
+            console.log(`從API獲取到 ${differences.length} 個差異點`);
+            
+            // 重置計數器
+            dotCounter = 1;
+            
+            // 處理差異點數據
+            differences.forEach(diff => {
+              const position = {
+                top: diff.position_top,
+                left: diff.position_left
+              };
+              
+              // 創建編輯器點元素
+              createEditorDotElements(diff.id, position);
+              
+              // 更新內部數據
+              editorDots.push({
+                id: diff.id,
+                description: diff.description || `差異點 ${diff.id}`,
+                rightPosition: position
+              });
+              
+              // 更新計數器
+              if (parseInt(diff.id) >= dotCounter) {
+                dotCounter = parseInt(diff.id) + 1;
+              }
+            });
+            
+            // 更新輸出顯示
+            updateOutput();
+            console.log(`成功從API載入 ${editorDots.length} 個差異點到編輯器`);
+          } else {
+            console.log(`未找到關卡 ${level.id} 的差異點數據，編輯器將為空。`);
+            updateOutput();
+          }
+        } catch (error) {
+          console.error(`從API載入關卡 ${level.id} 差異點數據錯誤:`, error);
+          alert(`載入第 ${level.id} 張圖片的差異點時發生錯誤！`);
+        }
+      }
+
+      // 從 localStorage 加載數據到編輯器 (保留但不再使用)
       function loadEditorData(storageKey, levelId) {
           const savedData = localStorage.getItem(storageKey);
           if (!savedData) {
@@ -1454,15 +1499,14 @@ async function getRandomLevels() {
           }
       }
 
-      // Load 按鈕事件 (現在只是觸發 levelSelector 的 change 事件)
+      // Load 按鈕事件 (現在使用API載入)
       loadEditorButton.addEventListener('click', function() {
           const selectedLevelId = parseInt(levelSelector.value);
-          const storageKey = allLevelsData.find(l => l.levelId === selectedLevelId)?.storageKey;
-          if (storageKey) {
-              loadEditorData(storageKey, selectedLevelId);
-              alert(`已嘗試從存儲加載第 ${selectedLevelId} 張圖片數據。`);
+          if (selectedLevelId) {
+              loadDifferencesFromAPI({id: selectedLevelId});
+              alert(`已嘗試從API加載第 ${selectedLevelId} 張圖片數據。`);
           } else {
-              alert("無法確定要加載哪張圖片的數據。");
+              alert("請先選擇一個關卡。");
           }
       });
 
