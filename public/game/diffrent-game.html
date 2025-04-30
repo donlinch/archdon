@@ -1528,11 +1528,18 @@ async function getRandomLevels() {
         const distance = Math.sqrt(Math.pow(x - diffX, 2) + Math.pow(y - diffY, 2));
         const clickRadius = 5; // 點擊半徑（百分比）
 
+        // **** ADD EXTRA LOGGING ****
+        console.log(`BEFORE IF: i=${i}, dataId=${dataId}, distance=${distance.toFixed(2)}, clickRadius=${clickRadius}, condition=${distance < clickRadius}`);
+
+        // ** Existing Log **
         console.log(`Checking distance to diff ${dataId}: ${distance.toFixed(2)}% (Target: < ${clickRadius}%)`);
 
-        if (distance < clickRadius) { // 調整點擊範圍
-          if (!foundDifferences.has(dataId)) {
-            console.log(`Found difference ${dataId}!`);
+        // ** The Core Conditional Logic **
+        if (distance < clickRadius) { // Check if click is within radius
+          if (!foundDifferences.has(dataId)) { // Check if not already found
+            // This block executes if BOTH conditions are true
+            // ** Modify log slightly for clarity **
+            console.log(`INSIDE IF: Found difference ${dataId}!`); // Log the found difference
             foundDifferences.add(dataId);
             foundCount++;
             foundCountElement.textContent = `${foundCount}`;
