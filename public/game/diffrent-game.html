@@ -592,6 +592,8 @@
     </div>
     
     <div class="controls">
+      <button class="button" id="leaderboard-button">排行榜</button>
+      <button class="button" id="show-answers-button">顯示所有答案</button>
       <button class="button reset" id="reset-button">重新開始</button>
     </div>
   </div>
@@ -872,10 +874,14 @@ async function getRandomLevels() {
         levelTransition.querySelector('p').textContent = `準備好挑戰第 ${currentLevel + 2} 關了嗎？`;
         nextLevelButton.textContent = `開始第 ${currentLevel + 2} 關`;
         nextLevelButton.disabled = false;
+        // 移除可能已存在的點擊事件
+        nextLevelButton.onclick = null;
       } else {
+        // 全部完成
         levelTransition.querySelector('p').textContent = `你已經完成所有關卡！`;
         nextLevelButton.textContent = `重新開始`;
         nextLevelButton.disabled = false;
+        // 設定重新開始的點擊事件
         nextLevelButton.onclick = function() {
           levelTransition.classList.remove('show');
           setupNewGame();
@@ -918,7 +924,7 @@ async function getRandomLevels() {
       tbody.innerHTML = '';
       leaderboard.slice(0, 50).forEach((entry, idx) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${idx + 1}</td><td>${entry.name}</td><td>${entry.time}</td><td>${entry.date}</td>`;
+        tr.innerHTML = `<td>${idx + 1}</td><td>${entry.player_name || 'N/A'}</td><td>${formatTime(entry.time_seconds)}</td><td>${formatDate(entry.created_at)}</td>`;
         tbody.appendChild(tr);
       });
 
@@ -955,6 +961,26 @@ async function getRandomLevels() {
       };
     }
 
+    // Helper function to format seconds into MM:SS
+    function formatTime(totalSeconds) {
+        if (totalSeconds === null || totalSeconds === undefined) return 'N/A';
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Helper function to format date
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            // Return YYYY-MM-DD format
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            return 'Invalid Date';
+        }
+    }
+
     async function submitScore(name, seconds) {
       if (!name || name.length > 20) {
         alert('名字不能空白且最多 20 字');
@@ -966,7 +992,7 @@ async function getRandomLevels() {
         const res = await fetch('/api/diffrent-game/leaderboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ player_name: name, time_seconds: seconds }) // 這裡修正
+          body: JSON.stringify({ player_name: name, time_seconds: seconds }) // 正確欄位名稱
         });
 
         let responseData;
@@ -1019,282 +1045,94 @@ async function getRandomLevels() {
       });
     }
 
-    // Helper function to format seconds into MM:SS
-    function formatTime(totalSeconds) {
-        if (totalSeconds === null || totalSeconds === undefined) return 'N/A';
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    // Helper function to format date
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            // Return YYYY-MM-DD format
-            return date.toISOString().split('T')[0];
-        } catch (e) {
-            return 'Invalid Date';
-        }
-    }
-
-    // ----- 初始調用 與 按鈕事件 ----- //
-    window.onload = async function() { // Make async
+    // ----- 初始調用 -----
+    window.onload = async function() { 
       // Initialize editor first (to populate selector)
-      await populateLevelSelector(); // Wait for selector to be populated
+      await populateLevelSelector(); 
 
-      // Then setup the game (which might depend on selector/initial load)
-      await setupNewGame(); // Wait for game setup
+      // Then setup the game
+      await setupNewGame(); 
 
-      // Set up event listeners that depend on elements being ready
+      // Set up event listeners
       nextLevelButton.addEventListener('click', loadNextLevel);
       resetButton.addEventListener('click', setupNewGame);
+      
+      // 設置"排行榜"按鈕事件
+      const leaderboardButton = document.getElementById('leaderboard-button');
+      if (leaderboardButton) {
+        leaderboardButton.addEventListener('click', displayLeaderboardDirectly);
+      }
+      
+      // 設置"顯示所有答案"按鈕事件
+      showAnswersButton.addEventListener('click', function() {
+        answersVisible = !answersVisible;
+        const level = gameLevels[currentLevel];
+        if (!level || !level.differences) return;
+
+        level.differences.forEach(diff => {
+            const match = String(diff.id).match(/\d+$/);
+            if (!match) return;
+            const dataId = match[0];
+
+            const dots = document.querySelectorAll(`.dot[data-id="${dataId}"]`);
+            const labels = document.querySelectorAll(`.label[data-id="${dataId}"]`);
+
+            if (answersVisible) {
+                dots.forEach(dot => {
+                    dot.style.display = 'block';
+                    if (!foundDifferences.has(dataId)) {
+                        dot.classList.add('hint'); // 對未找到的用提示樣式
+                        dot.classList.remove('found');
+                    }
+                });
+                labels.forEach(label => label.classList.add('show'));
+            } else {
+                // 隱藏答案
+                dots.forEach(dot => {
+                    if (!foundDifferences.has(dataId)) {
+                        dot.style.display = 'none'; // 隱藏未找到的
+                        dot.classList.remove('hint');
+                    } else {
+                        dot.classList.remove('hint'); // 確保已找到的沒有 hint 樣式
+                    }
+                });
+                labels.forEach(label => {
+                    if (!foundDifferences.has(dataId)) {
+                        label.classList.remove('show'); // 隱藏未找到的標籤
+                    }
+                });
+            }
+        });
+
+        showAnswersButton.textContent = answersVisible ? '隱藏答案' : '顯示所有答案';
+        messageElement.textContent = answersVisible ? '已顯示所有答案' : '';
+      });
+      
+      // 為遊戲模式中的每個圖片容器添加點擊事件
+      leftImageContainer.addEventListener('click', function(e) {
+        handleGameClick(e, this, false);
+      });
+
+      rightImageContainer.addEventListener('click', function(e) {
+        handleGameClick(e, this, true);
+      });
 
       // Ensure editor output area is initially updated
-      updateOutput(); // Call this after potential initial editor load
+      updateOutput(); 
     };
 
-    // Function to fetch and display leaderboard directly
+    // Function to fetch and display leaderboard directly (按下排行榜按鈕時呼叫)
     async function displayLeaderboardDirectly() {
       let leaderboard = [];
       try {
-        const res = await fetch('/api/diffrent-game/leaderboard'); // Fetch current data
+        const res = await fetch('/api/diffrent-game/leaderboard'); // 取得排行榜
         if (!res.ok) throw new Error('Failed to fetch leaderboard');
         leaderboard = await res.json();
-        // Call showLeaderboard, explicitly setting canSubmit to false and no score
+        // 顯示排行榜，不需要提交分數
         showLeaderboard(leaderboard, false, null);
       } catch (e) {
         alert('無法取得排行榜，請稍後再試');
         console.error("Error fetching leaderboard directly:", e);
-      }
-    }
-
-    function pauseTimer() {
-      if (timerRunning) {
-        clearInterval(timerInterval);
-        timerRunning = false;
-        totalElapsedTime = Date.now() - startTime;
-        console.log("Timer paused. Total elapsed time:", totalElapsedTime);
-      }
-    }
-
-    // 從API載入關卡差異點數據
-    async function loadDifferencesFromAPI(levelId) { // 只接收 levelId
-      let differences = [];
-      let savedDots = [];
-      let success = false;
-      
-      try {
-        const response = await fetch(`/api/diffrent-game/differences/${levelId}`);
-        
-        if (!response.ok) {
-          throw new Error(`API響應錯誤: ${response.status}`);
-        }
-        
-        const apiDifferences = await response.json();
-        
-        if (apiDifferences && Array.isArray(apiDifferences) && apiDifferences.length > 0) {
-          console.log(`從API獲取到 ${apiDifferences.length} 個差異點 for level ${levelId}`);
-          
-          // 處理差異點格式以符合前端需求
-          differences = apiDifferences.map(diff => ({
-            id: `diff${diff.id}`, // 遊戲模式用的 ID
-            description: diff.description || `差異點 ${diff.id}`
-          }));
-          
-          savedDots = apiDifferences.map(diff => ({
-            id: diff.id, // 編輯器和查找用的數字 ID
-            rightPosition: {
-              top: diff.position_top,
-              left: diff.position_left
-            }
-          }));
-          
-          success = true;
-        } else {
-          console.warn(`關卡 ${levelId} API未返回差異點數據`);
-          // 這裡不再嘗試使用默認值，調用者需要處理這種情況
-        }
-      } catch (error) {
-        console.error(`從API載入關卡 ${levelId} 數據錯誤:`, error);
-        // 調用者需要處理錯誤情況
-      }
-      
-      // 返回獲取到的數據和成功狀態
-      return { success, differences, savedDots };
-    }
-
-    // 修改 loadLevel 使其異步並正確處理數據
-    async function loadLevel(levelIndex) {
-      if (levelIndex < 0 || levelIndex >= gameLevels.length) {
-        console.error("無效的關卡索引:", levelIndex);
-        messageElement.textContent = "遊戲已完成或出現錯誤！";
-        pauseTimer();
-        return;
-      }
-      console.log(`Loading level index: ${levelIndex}`);
-      const level = gameLevels[levelIndex]; // level has { id, levelId, leftImage, rightImage }
-
-      if (!level || !level.id || !level.leftImage || !level.rightImage) {
-        console.error("關卡對象缺少必要屬性:", level);
-        messageElement.textContent = "無法載入關卡，數據不完整";
-        return;
-      }
-
-      // 更新圖片
-      leftImageElement.src = level.leftImage;
-      rightImageElement.src = level.rightImage;
-      levelIndicator.textContent = `關卡 ${levelIndex + 1}`;
-
-      // 清空舊的差異點顯示
-      resetGameDisplay();
-
-      // 從API加載當前關卡的差異點數據
-      const { success, differences: apiDifferences, savedDots: apiSavedDots } = await loadDifferencesFromAPI(level.id);
-      
-      let finalDifferences = [];
-      let finalPositions = {}; // Map: dataId -> position {top, left}
-      
-      if (success && apiDifferences.length > 0) {
-        console.log(`Level ${level.id} data loaded from API.`);
-        finalDifferences = apiDifferences;
-        apiSavedDots.forEach(dot => {
-          finalPositions[dot.id] = dot.rightPosition;
-        });
-      } else {
-        console.warn(`API failed or returned no data for level ${level.id}. Trying default data.`);
-        const defaultLevelData = allLevels.find(l => l.levelId === level.id || l.id === level.id); // Find default data
-        if (defaultLevelData && defaultLevelData.differences && defaultLevelData.differences.length > 0) {
-          console.log(`Using default difference data for level ${level.id}.`);
-          finalDifferences = defaultLevelData.differences; // Use default descriptions/ids
-          // Attempt to get positions from default data if they exist
-          finalDifferences.forEach((diff, index) => {
-            const dataIdMatch = String(diff.id).match(/\d+$/);
-            const dataId = dataIdMatch ? parseInt(dataIdMatch[0]) : index + 1;
-            if (diff.position) {
-              finalPositions[dataId] = diff.position;
-            } else {
-              // Fallback position if even default data lacks it
-              finalPositions[dataId] = { top: `${15 + index * 15}%`, left: `${20 + index * 10}%` };
-              console.warn(`Default data for diff ${dataId} also lacks position. Using fallback.`);
-            }
-          });
-        } else {
-          console.error(`No data found for level ${level.id} from API or defaults.`);
-          messageElement.textContent = `錯誤：無法載入關卡 ${level.id} 的差異點！`;
-          finalDifferences = [];
-          finalPositions = {};
-        }
-      }
-      
-      // **** 將加載的數據存儲到當前 level 對象中，供 handleGameClick 等使用 ****
-      level.differences = finalDifferences; // Store descriptions/diffIds
-      level.positions = finalPositions; // Store positions map { dataId: {top, left} }
-      
-      // 創建差異點 DOM 元素
-      createDifferencePoints(finalDifferences, finalPositions); // Pass data directly
-    }
-
-    // 修改 createDifferencePoints 以使用傳入的數據
-    function createDifferencePoints(differences, positionsMap) {
-      if (!differences || differences.length === 0) {
-        console.warn('No differences provided to createDifferencePoints');
-        totalCountElement.textContent = '0'; // Update total count display
-        return;
-      }
-      
-      // 清除現有點 (確保 resetGameDisplay 已被調用，但再次執行無害)
-      // document.querySelectorAll('.dot, .label').forEach(el => {
-      //   if (el !== levelIndicator) el.remove();
-      // });
-      
-      const leftContainer = document.getElementById('left-image');
-      const rightContainer = document.getElementById('right-image');
-      
-      if (!leftContainer || !rightContainer) {
-        console.error('Image containers not found');
-        return;
-      }
-      
-      console.log(`Creating ${differences.length} difference points in DOM.`);
-      totalCountElement.textContent = `${differences.length}`; // Update total count display
-      foundCountElement.textContent = '0'; // Reset found count display for the new level
-      
-      // 為每個差異創建點
-      differences.forEach((diff, index) => {
-        const diffIdMatch = String(diff.id).match(/\d+$/);
-        const dataId = diffIdMatch ? parseInt(diffIdMatch[0]) : index + 1; // Ensure dataId is a number
-        
-        // 從 map 中獲取位置
-        const position = positionsMap[dataId];
-        
-        if (!position || !position.top || !position.left) {
-          console.warn(`Position data missing or invalid for difference dataId ${dataId}. Skipping dot creation.`);
-          // Assign a default position if needed, or skip
-          // position = { top: `${15 + index * 15}%`, left: `${20 + index * 10}%` };
-          return; // Skip creating this dot if position is invalid
-        }
-        
-        // 確保使用百分比位置
-        const posTop = String(position.top).includes('%') ? position.top : `${position.top}%`;
-        const posLeft = String(position.left).includes('%') ? position.left : `${position.left}%`;
-        const finalPosition = { top: posTop, left: posLeft };
-        
-        const dotIdBase = `diff${dataId}`;
-        const labelIdBase = `label${dataId}`;
-        
-        // 創建左右圖的點和標籤
-        createDotElement(leftContainer, dotIdBase, dataId, finalPosition);
-        createLabelElement(leftContainer, labelIdBase, dataId, finalPosition);
-        
-        createDotElement(rightContainer, `${dotIdBase}-right`, dataId, finalPosition);
-        createLabelElement(rightContainer, `${labelIdBase}-right`, dataId, finalPosition);
-        
-        // (Optional) 檢查 foundDifferences - resetGameDisplay 應該已經處理了顯示
-        // if (foundDifferences.has(String(dataId))) { ... }
-      });
-    }
-
-    // 輔助函數：創建點元素 (檢查)
-    function createDotElement(container, id, dataId, position) {
-      const dot = document.createElement('div');
-      dot.className = 'dot';
-      dot.id = id;
-      dot.setAttribute('data-id', dataId); // 使用數字 ID 作為 data-id
-      
-      // 使用傳入的位置
-      dot.style.top = position.top;
-      dot.style.left = position.left;
-      
-      // 初始隱藏所有點
-      dot.style.display = 'none';
-      
-      // 將點添加到提供的容器中（左或右圖）
-      container.appendChild(dot);
-      
-      return dot;
-    }
-
-    // 輔助函數：創建標籤元素 (檢查)
-    function createLabelElement(container, id, dataId, position) {
-      const label = document.createElement('div');
-      label.className = 'label';
-      label.id = id;
-      label.style.top = position.top;
-      label.style.left = position.left;
-      label.textContent = dataId; // 顯示數字 ID
-      // 初始隱藏
-      // label.style.display = 'none'; // label class handles this with .show
-      container.appendChild(label);
-    }
-
-    function pauseTimer() {
-      if (timerRunning) {
-        clearInterval(timerInterval);
-        timerRunning = false;
-        totalElapsedTime = Date.now() - startTime;
-        console.log("Timer paused. Total elapsed time:", totalElapsedTime);
       }
     }
 
