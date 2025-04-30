@@ -1286,42 +1286,57 @@
       output.value = code;
     }
 
-    // 填充編輯器關卡選擇下拉框
-    function populateLevelSelector() {
+    // 填充編輯器關卡選擇下拉框 (從API獲取所有關卡)
+    async function populateLevelSelector() {
+      try {
+        const response = await fetch('/api/diffrent-game/levels');
+        const levels = await response.json();
+        
         levelSelector.innerHTML = ''; // 清空現有選項
-        allLevelsData.forEach(level => {
-            const option = document.createElement('option');
-            option.value = level.levelId; // 使用 levelId 作為 value
-            option.textContent = `第 ${level.levelId} 張圖片`;
-            levelSelector.appendChild(option);
+        levels.forEach(level => {
+          const option = document.createElement('option');
+          option.value = level.id;
+          option.textContent = `第 ${level.id} 張圖片`;
+          levelSelector.appendChild(option);
         });
+        
         // 觸發一次 change 事件以加載第一個關卡的圖片和數據
-        levelSelector.dispatchEvent(new Event('change'));
+        if (levels.length > 0) {
+          levelSelector.dispatchEvent(new Event('change'));
+        }
+      } catch (error) {
+        console.error('獲取關卡列表失敗:', error);
+        alert('無法載入關卡列表，請刷新頁面再試。');
+      }
     }
 
     // 編輯器關卡選擇變化事件
-    levelSelector.addEventListener('change', function() {
+    levelSelector.addEventListener('change', async function() {
       const selectedLevelId = parseInt(this.value);
       console.log(`選擇圖片: ${selectedLevelId}`);
 
-      // 找到對應的關卡數據
-      const selectedLevelData = allLevelsData.find(level => level.levelId === selectedLevelId);
+      try {
+        // 獲取特定關卡數據
+        const response = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`);
+        if (!response.ok) {
+          throw new Error('無法獲取關卡數據');
+        }
+        
+        const levelData = await response.json();
+        
+        // 清除編輯器現有點和狀態
+        clearEditorDisplay();
 
-      if (!selectedLevelData) {
-          alert(`錯誤：找不到 ID 為 ${selectedLevelId} 的圖片！`);
-          console.error(`Level data not found for ID: ${selectedLevelId}`);
-          return;
+        // 更新編輯器圖片
+        editLeftImg.src = levelData.left_image_url;
+        editRightImg.src = levelData.right_image_url;
+
+        // 加載該關卡的差異點到編輯器
+        loadEditorData(selectedLevelId);
+      } catch (error) {
+        console.error(`獲取關卡 ${selectedLevelId} 數據出錯:`, error);
+        alert(`無法載入第 ${selectedLevelId} 張圖片數據。`);
       }
-
-      // 清除編輯器現有點和狀態
-      clearEditorDisplay();
-
-      // 更新編輯器圖片
-      editLeftImg.src = selectedLevelData.leftImage;
-      editRightImg.src = selectedLevelData.rightImage;
-
-      // 嘗試從 localStorage 載入該關卡的數據到編輯器
-      loadEditorData(selectedLevelData.storageKey, selectedLevelId);
     });
 
     // 從 localStorage 加載數據到編輯器
@@ -1546,26 +1561,19 @@
     }
 
 
-    // 保存編輯器內容到本地存儲
-    saveEditorButton.addEventListener('click', function() {
+    // 保存編輯器內容到資料庫 (替換原本的localStorage保存方式)
+    saveEditorButton.addEventListener('click', async function() {
       if (editorDots.length === 0) {
         alert('沒有差異點可保存！');
         return;
       }
 
-      // 獲取當前編輯的關卡 ID 和 storageKey
+      // 獲取當前編輯的關卡 ID
       const selectedLevelId = parseInt(levelSelector.value);
-      const targetLevel = allLevelsData.find(level => level.levelId === selectedLevelId);
-
-      if (!targetLevel) {
-           alert('錯誤：無法確定要保存到哪張圖片！');
-           console.error("Cannot find target level data for saving:", selectedLevelId);
-           return;
-      }
-      const storageKey = targetLevel.storageKey;
-
-      // 更新描述 (基於最終位置)
-      editorDots.forEach((dot, index) => {
+      
+      // 準備要發送到服務器的數據
+      const differencesData = editorDots.map(dot => {
+        // 更新描述 (基於位置)
         const rightX = parseFloat(dot.rightPosition.left);
         const rightY = parseFloat(dot.rightPosition.top);
         let locationHint = '';
@@ -1575,44 +1583,40 @@
         if (rightY < 33) locationHint += '上方';
         else if (rightY < 66) locationHint += '中部';
         else locationHint += '下方';
-        dot.description = `差異點位於${locationHint}區域`;
-        // 確保 id 是數字
-        dot.id = parseInt(dot.id);
+        
+        return {
+          position_top: dot.rightPosition.top,
+          position_left: dot.rightPosition.left,
+          description: `差異點位於${locationHint}區域`
+        };
       });
 
-      // 準備保存的數據 (符合遊戲模式加載的格式)
-      const saveData = {
-        differences: editorDots.map(dot => ({
-          id: `diff${dot.id}`, // 遊戲模式需要 "diffX" 格式
-          description: dot.description
-          // 保存時不需要 position，因為會從 dots 讀取
-        })).sort((a, b) => parseInt(a.id.match(/\d+/)[0]) - parseInt(b.id.match(/\d+/)[0])), // 按ID排序
-        dots: editorDots.map(dot => ({ // 保存點的數字 id 和位置
-            id: dot.id,
-            rightPosition: dot.rightPosition
-        })).sort((a, b) => a.id - b.id) // 按ID排序
-      };
-
       try {
-           localStorage.setItem(storageKey, JSON.stringify(saveData));
-           alert(`已成功保存第 ${selectedLevelId} 張圖片數據到 ${storageKey}！`);
-           console.log(`Saved data to ${storageKey}:`, saveData);
-
-           // 可選：如果遊戲正在進行且剛好是這一關，可以嘗試更新遊戲狀態
-           const gameLevelIndex = gameLevels.findIndex(gl => gl.levelId === selectedLevelId);
-           if (gameLevelIndex !== -1 && gameLevelIndex === currentLevel) {
-               console.log("Currently playing level was edited, reloading game mode points...");
-               loadLevel(currentLevel); // 重新加載當前關卡數據和點
-           } else if (gameLevelIndex !== -1) {
-                // 如果編輯的不是當前關卡，只需更新 gameLevels 中的數據以備後用
-                // loadLevelDataFromStorage 會修改 gameLevels[gameLevelIndex]
-                loadLevelDataFromStorage(gameLevels[gameLevelIndex]);
-                console.log(`Updated gameLevels data for image ${selectedLevelId} for future use.`);
-           }
-
+        const response = await fetch('/api/diffrent-game/differences', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            levelId: selectedLevelId,
+            differences: differencesData
+          })
+        });
+        
+        if (response.ok) {
+          alert(`已成功保存第 ${selectedLevelId} 張圖片數據！`);
+          
+          // 如果當前正在遊玩的關卡被編輯，重新載入關卡數據
+          const gameLevelIndex = gameLevels.findIndex(gl => gl.id === selectedLevelId);
+          if (gameLevelIndex !== -1 && gameLevelIndex === currentLevel) {
+            loadLevel(currentLevel);
+          }
+        } else {
+          alert('保存失敗！請稍後再試。');
+        }
       } catch (error) {
-           console.error(`保存到 ${storageKey} 失敗:`, error);
-           alert(`保存第 ${selectedLevelId} 張圖片數據時出錯！請檢查瀏覽器控制台。`);
+        console.error('保存差異點出錯:', error);
+        alert('網絡錯誤，無法保存數據。');
       }
     });
 
@@ -1704,114 +1708,54 @@
     const MAX_LEADERBOARD_ENTRIES = 50;
     
     // 加載排行榜數據
-    function loadLeaderboardData() {
-      const savedData = localStorage.getItem(LEADERBOARD_KEY);
-      if (savedData) {
-        try {
-          return JSON.parse(savedData);
-        } catch (error) {
-          console.error('無法解析排行榜數據:', error);
-          return [];
-        }
-      }
-      return [];
-    }
-    
-    // 保存排行榜數據
-    function saveLeaderboardData(data) {
+    async function loadLeaderboardData() {
       try {
-        localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(data));
-        return true;
-      } catch (error) {
-        console.error('保存排行榜數據失敗:', error);
-        return false;
-      }
-    }
-    
-    // 添加新的排行榜條目
-    function addLeaderboardEntry(name, timeInSeconds, shouldSave = true) {
-      const leaderboard = loadLeaderboardData();
-      
-      // 創建新條目
-      const newEntry = {
-        name: name.trim() || '匿名玩家',
-        time: timeInSeconds,
-        date: new Date().toISOString()
-      };
-      
-      // 添加並排序
-      leaderboard.push(newEntry);
-      leaderboard.sort((a, b) => a.time - b.time);
-      
-      // 保留前 MAX_LEADERBOARD_ENTRIES 條
-      const trimmedLeaderboard = leaderboard.slice(0, MAX_LEADERBOARD_ENTRIES);
-      
-      // 保存回 localStorage
-      if (shouldSave) {
-        saveLeaderboardData(trimmedLeaderboard);
-      }
-      
-      return trimmedLeaderboard;
-    }
-    
-    // 顯示排行榜
-    function displayLeaderboard(playerTime = null) {
-      const leaderboard = loadLeaderboardData();
-      leaderboardRows.innerHTML = '';
-      
-      // 檢查玩家時間是否符合排名
-      let playerRank = -1;
-      if (playerTime !== null) {
-        playerRank = leaderboard.findIndex(entry => entry.time === playerTime);
-      }
-      
-      // 填充表格
-      leaderboard.forEach((entry, index) => {
-        const row = document.createElement('tr');
-        if (playerRank === index) {
-          row.style.backgroundColor = '#fffacd';
-          row.style.fontWeight = 'bold';
+        const response = await fetch('/api/diffrent-game/leaderboard');
+        if (!response.ok) {
+          throw new Error('無法獲取排行榜數據');
         }
-        
-        // 格式化時間
-        const minutes = Math.floor(entry.time / 60);
-        const seconds = entry.time % 60;
-        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        // 格式化日期
-        const date = new Date(entry.date);
-        const formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
-        
-        row.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${entry.name}</td>
-          <td>${formattedTime}</td>
-          <td>${formattedDate}</td>
-        `;
-        leaderboardRows.appendChild(row);
-      });
-      
-      // 如果排行榜為空，顯示提示訊息
-      if (leaderboard.length === 0) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="4" style="text-align: center;">目前還沒有紀錄，成為第一名吧！</td>';
-        leaderboardRows.appendChild(emptyRow);
+        return await response.json();
+      } catch (error) {
+        console.error('獲取排行榜數據失敗:', error);
+        return [];
       }
     }
     
     // 提交分數並顯示排行榜
-    function submitScore() {
+    async function submitScore() {
       const playerName = playerNameInput.value.trim() || '匿名玩家';
       const timeInSeconds = Math.floor(totalElapsedTime / 1000);
       
-      // 添加到排行榜
-      const updatedLeaderboard = addLeaderboardEntry(playerName, timeInSeconds);
-      
-      // 隱藏名字輸入框
-      nameEntryContainer.style.display = 'none';
-      
-      // 顯示更新後的排行榜 (高亮玩家成績)
-      displayLeaderboard(timeInSeconds);
+      try {
+        // 添加到排行榜
+        const response = await fetch('/api/diffrent-game/leaderboard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            player_name: playerName,
+            time_seconds: timeInSeconds
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('提交成績失敗');
+        }
+        
+        // 隱藏名字輸入框
+        nameEntryContainer.style.display = 'none';
+        
+        // 顯示更新後的排行榜 (高亮玩家成績)
+        displayLeaderboard(timeInSeconds);
+      } catch (error) {
+        console.error('提交排行榜成績失敗:', error);
+        alert('無法提交成績，請稍後再試。');
+        
+        // 即使API失敗，也允許用戶看到排行榜
+        nameEntryContainer.style.display = 'none';
+        displayLeaderboard();
+      }
     }
     
     // 初始化排行榜事件監聽器
