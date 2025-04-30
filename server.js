@@ -1354,7 +1354,31 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
 
 
 
-
+// 新增關卡
+app.post('/api/diffrent-game/levels', async (req, res) => {
+    try {
+      const { level_name, left_image_url, right_image_url, active } = req.body;
+      
+      // 驗證數據
+      if (!level_name || !left_image_url || !right_image_url) {
+        return res.status(400).json({ error: '必須提供所有必要欄位' });
+      }
+      
+      const result = await pool.query(
+        'INSERT INTO diffrent_game_levels (level_name, left_image_url, right_image_url, active) VALUES ($1, $2, $3, $4) RETURNING id',
+        [level_name, left_image_url, right_image_url, active || true]
+      );
+      
+      res.status(201).json({ 
+        success: true, 
+        id: result.rows[0].id,
+        message: '關卡已成功新增' 
+      });
+    } catch (error) {
+      console.error('新增關卡錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
 
 
 

@@ -601,25 +601,14 @@
   <div id="editor-tab" class="tab-content">
     <h2>編輯器模式 ✏️</h2>
     
-    <div class="edit-instructions">
-      <p><strong>使用說明：</strong></p>
-      <ul>
-        <li>從下拉選單選擇要編輯的圖片</li>
-        <li>只需在<strong>修改版圖片</strong>上添加差異點（最多5個）</li>
-        <li>添加後可以點擊並拖動紅點調整位置</li>
-        <li>點擊【保存】將差異點儲存</li>
-        <li>點擊【清除所有】重新開始</li>
-      </ul>
-    </div>
-    
     <div class="game-container">
       <div class="image-container" id="edit-left">
-        <img src="https://sunnyyummy.onrender.com/uploads/1745928020704-22308.png" alt="原圖" id="left-edit-img" />
+        <img src="" alt="原圖" id="left-edit-img" />
         <div class="image-label">原圖</div>
       </div>
       
       <div class="image-container" id="edit-right">
-        <img src="https://sunnyyummy.onrender.com/uploads/1745928028967-85686.png" alt="修改版" id="right-edit-img" />
+        <img src="" alt="修改版" id="right-edit-img" />
         <div class="image-label">修改版</div>
       </div>
     </div>
@@ -627,19 +616,28 @@
     <div class="controls">
       <button class="button reset" id="clear-editor">清除所有</button>
       <button class="button" id="save-editor" style="background-color: #28a745;">保存</button>
-      <button class="button" id="load-editor" style="background-color: #007bff;">加載</button>
       <div class="level-select">
         <select id="level-selector">
-          <option value="1">第一關圖片</option>
-          <option value="2">第二關圖片</option>
-          <option value="3">第三關圖片</option>
+          <!-- 選項將由JavaScript動態填充 -->
         </select>
       </div>
+      <button class="button" id="add-new-level" style="background-color: #0275d8;">新增圖片</button>
     </div>
     
-    <div class="editor-container">
-      <h3>生成的HTML代碼：</h3>
-      <textarea id="output" readonly></textarea>
+    <!-- 新增圖片表單 -->
+    <div id="new-level-form" style="display: none; margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+      <h3>新增圖片</h3>
+      <div style="margin-bottom: 10px;">
+        <label>圖片名稱: <input type="text" id="new-level-name" style="margin-left: 10px;"></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>原圖URL: <input type="text" id="new-left-image" style="margin-left: 10px; width: 300px;"></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>修改版URL: <input type="text" id="new-right-image" style="margin-left: 10px; width: 300px;"></label>
+      </div>
+      <button class="button" id="submit-new-level" style="background-color: #28a745;">提交</button>
+      <button class="button" id="cancel-new-level" style="background-color: #dc3545;">取消</button>
     </div>
   </div>
   
@@ -750,18 +748,25 @@
     // 創建 allLevels 的深拷貝以備修改
     const allLevelsData = JSON.parse(JSON.stringify(allLevels));
 
-    // 替換getRandomLevels函數
-    async function getRandomLevels() {
-      try {
-        const response = await fetch('/api/diffrent-game/levels/random');
-        const levels = await response.json();
-        console.log("隨機選擇的關卡:", levels.map(l => l.id));
-        return levels;
-      } catch (error) {
-        console.error('無法獲取隨機關卡:', error);
-        return []; // 返回空數組以防錯誤
-      }
-    }
+   // 修改 getRandomLevels 函數以確保返回正確的格式
+async function getRandomLevels() {
+  try {
+    const response = await fetch('/api/diffrent-game/levels/random');
+    const levels = await response.json();
+    // 格式化確保每個level有正確的屬性
+    const formattedLevels = levels.map(level => ({
+      id: level.id,
+      levelId: level.id,
+      leftImage: level.left_image_url,
+      rightImage: level.right_image_url
+    }));
+    console.log("隨機選擇的關卡:", formattedLevels.map(l => l.id));
+    return formattedLevels;
+  } catch (error) {
+    console.error('無法獲取隨機關卡:', error);
+    return []; // 返回空數組以防錯誤
+  }
+}
 
     // ----- 遊戲狀態變數 -----
     let gameLevels = []; // 儲存當前遊戲會用到的隨機關卡
@@ -1296,17 +1301,17 @@
         levels.forEach(level => {
           const option = document.createElement('option');
           option.value = level.id;
-          option.textContent = `第 ${level.id} 張圖片`;
+          option.textContent = `ID:${level.id} - ${level.level_name}`;
           levelSelector.appendChild(option);
         });
         
-        // 觸發一次 change 事件以加載第一個關卡的圖片和數據
+        // 如果有關卡，自動載入第一個
         if (levels.length > 0) {
           levelSelector.dispatchEvent(new Event('change'));
         }
       } catch (error) {
         console.error('獲取關卡列表失敗:', error);
-        alert('無法載入關卡列表，請刷新頁面再試。');
+        alert('無法載入關卡列表，請刷新頁面再試');
       }
     }
 
@@ -1785,6 +1790,82 @@
       
       // 顯示排行榜視窗
       leaderboardContainer.classList.add('show');
+    }
+
+    // 顯示/隱藏新增圖片表單
+    document.getElementById('add-new-level').addEventListener('click', function() {
+      document.getElementById('new-level-form').style.display = 'block';
+    });
+
+    document.getElementById('cancel-new-level').addEventListener('click', function() {
+      document.getElementById('new-level-form').style.display = 'none';
+      // 清空表單
+      document.getElementById('new-level-name').value = '';
+      document.getElementById('new-left-image').value = '';
+      document.getElementById('new-right-image').value = '';
+    });
+
+    // 提交新圖片
+    document.getElementById('submit-new-level').addEventListener('click', async function() {
+      const levelName = document.getElementById('new-level-name').value.trim();
+      const leftImage = document.getElementById('new-left-image').value.trim();
+      const rightImage = document.getElementById('new-right-image').value.trim();
+      
+      if (!levelName || !leftImage || !rightImage) {
+        alert('請填寫所有欄位');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/diffrent-game/levels', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            level_name: levelName,
+            left_image_url: leftImage,
+            right_image_url: rightImage,
+            active: true
+          })
+        });
+        
+        if (response.ok) {
+          alert('新圖片添加成功！');
+          document.getElementById('new-level-form').style.display = 'none';
+          // 重新加載關卡選擇器
+          await populateLevelSelector();
+        } else {
+          alert('添加失敗，請稍後再試');
+        }
+      } catch (error) {
+        console.error('添加新圖片出錯:', error);
+        alert('網絡錯誤，無法添加新圖片');
+      }
+    });
+
+    // 修改填充關卡選擇器函數
+    async function populateLevelSelector() {
+      try {
+        const response = await fetch('/api/diffrent-game/levels');
+        const levels = await response.json();
+        
+        levelSelector.innerHTML = ''; // 清空現有選項
+        levels.forEach(level => {
+          const option = document.createElement('option');
+          option.value = level.id;
+          option.textContent = `ID:${level.id} - ${level.level_name}`;
+          levelSelector.appendChild(option);
+        });
+        
+        // 如果有關卡，自動載入第一個
+        if (levels.length > 0) {
+          levelSelector.dispatchEvent(new Event('change'));
+        }
+      } catch (error) {
+        console.error('獲取關卡列表失敗:', error);
+        alert('無法載入關卡列表，請刷新頁面再試');
+      }
     }
 
   </script>
