@@ -1207,6 +1207,30 @@ async function getRandomLevels() {
         
         totalCountElement.textContent = level.differences.length;
         console.log(`Loaded ${level.differences.length} differences for level ${index + 1}`);
+        
+        // Update the position of existing dots and labels based on fetched data
+        level.differences.forEach(diff => {
+          const match = String(diff.id).match(/\d+$/);
+          if (!match) return;
+          const dataId = match[0];
+          
+          const dots = document.querySelectorAll(`.dot[data-id="${dataId}"]`);
+          const labels = document.querySelectorAll(`.label[data-id="${dataId}"]`);
+          
+          dots.forEach(dot => {
+            dot.style.top = diff.position.top;
+            dot.style.left = diff.position.left;
+            dot.style.display = 'none'; // Ensure they start hidden
+            dot.classList.remove('found', 'hint');
+          });
+          
+          labels.forEach(label => {
+            label.style.top = diff.position.top;
+            label.style.left = diff.position.left;
+            label.classList.remove('show'); // Ensure they start hidden
+          });
+        });
+        
       } catch (error) {
         console.error('載入差異點失敗:', error);
         messageElement.textContent = '無法獲取差異點資料';
