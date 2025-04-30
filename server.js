@@ -1088,125 +1088,16 @@ app.get('/api/walk_map/templates', async (req, res) => {
 
 
 
-// 獲取隨機關卡
-app.get('/api/diffrent-game/levels/random', async (req, res) => {
-    try {
-      const result = await pool.query(
-        'SELECT * FROM diffrent_game_levels WHERE active = TRUE ORDER BY RANDOM() LIMIT 3'
-      );
-      res.json(result.rows);
-    } catch (error) {
-      console.error('Error fetching random levels:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
-  // 獲取特定關卡的差異點
-  app.get('/api/diffrent-game/differences/:levelId', async (req, res) => {
-    try {
-      const { levelId } = req.params;
-      const result = await pool.query(
-        'SELECT * FROM diffrent_game_differences WHERE level_id = $1',
-        [levelId]
-      );
-      res.json(result.rows);
-    } catch (error) {
-      console.error('Error fetching differences:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
-  // 保存新的差異點 (用於編輯器)
-  app.post('/api/diffrent-game/differences', async (req, res) => {
-    try {
-      const { levelId, differences } = req.body;
-      
-      // 先刪除該關卡現有的差異點
-      await pool.query('DELETE FROM diffrent_game_differences WHERE level_id = $1', [levelId]);
-      
-      // 插入新的差異點
-      for (const diff of differences) {
-        // --- 開始修改 ---
-        // 將座標值轉換為浮點數並四捨五入到兩位小數
-        const topValue = parseFloat(diff.position_top).toFixed(2);
-        const leftValue = parseFloat(diff.position_left).toFixed(2);
-        // --- 結束修改 ---
 
-        await pool.query(
-          'INSERT INTO diffrent_game_differences (level_id, position_top, position_left, description) VALUES ($1, $2, $3, $4)',
-          // --- 開始修改 ---
-          [levelId, topValue, leftValue, diff.description] // 使用處理過的值
-          // --- 結束修改 ---
-        );
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error saving differences:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
-  // 獲取排行榜
-  app.get('/api/diffrent-game/leaderboard', async (req, res) => {
-    try {
-      const result = await pool.query(
-        'SELECT player_name, time_seconds, created_at FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
-      );
-      res.json(result.rows);
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
-  // 提交排行榜成績
-  app.post('/api/diffrent-game/leaderboard', async (req, res) => {
-    try {
-      const { player_name, time_seconds } = req.body;
-      await pool.query(
-        'INSERT INTO diffrent_game_leaderboard (player_name, time_seconds) VALUES ($1, $2)',
-        [player_name, time_seconds]
-      );
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error saving leaderboard entry:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
+
+
+
+ 
 
 
 
 
 
-
-// 獲取所有關卡
-app.get('/api/diffrent-game/levels', async (req, res) => {
-    try {
-      const result = await pool.query('SELECT * FROM diffrent_game_levels ORDER BY id');
-      res.json(result.rows);
-    } catch (error) {
-      console.error('Error fetching all levels:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
-  
-  // 獲取特定關卡
-  app.get('/api/diffrent-game/levels/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      const result = await pool.query('SELECT * FROM diffrent_game_levels WHERE id = $1', [id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Level not found' });
-      }
-      
-      res.json(result.rows[0]);
-    } catch (error) {
-      console.error('Error fetching specific level:', error);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
 
 
 
@@ -1336,7 +1227,7 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
   app.get('/api/diffrent-game/leaderboard', async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT player_name, time_seconds, created_at FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
+        'SELECT player_name, time_seconds,  FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
       );
       res.json(result.rows);
     } catch (error) {
@@ -1388,6 +1279,22 @@ app.delete('/api/diffrent-game/levels/:id', async (req, res) => {
     res.status(500).json({ error: '伺服器錯誤' });
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
 
