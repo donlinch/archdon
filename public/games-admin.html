@@ -1172,123 +1172,235 @@
             let currentEditorLevel = null;
 
             function initializeDiffEditor() {
-                if (diffEditorInitialized || !diffEditorContainer) return;
-                console.log("Initializing Difference Editor...");
-                editLeftImg = diffEditorContainer.querySelector('#left-edit-img');
-                editRightImg = diffEditorContainer.querySelector('#right-edit-img');
-                levelSelector = diffEditorContainer.querySelector('#level-selector');
-                saveEditorButton = diffEditorContainer.querySelector('#save-editor');
-                clearEditorButton = diffEditorContainer.querySelector('#clear-editor');
-                outputArea = diffEditorContainer.querySelector('#output');
-                addNewLevelButton = diffEditorContainer.querySelector('#add-new-level');
-                newLevelForm = diffEditorContainer.querySelector('#new-level-form');
-                submitNewLevelButton = diffEditorContainer.querySelector('#submit-new-level');
-                cancelNewLevelButton = diffEditorContainer.querySelector('#cancel-new-level');
-                deleteLevelButton = diffEditorContainer.querySelector('#delete-level');
-                editLeftContainer = diffEditorContainer.querySelector('#edit-left');
-
-                if (!editLeftImg || !editRightImg || !levelSelector || !saveEditorButton || !clearEditorButton || !outputArea || !addNewLevelButton || !newLevelForm || !submitNewLevelButton || !cancelNewLevelButton || !deleteLevelButton || !editLeftContainer) {
-                   console.error("One or more difference editor elements not found within #diff-editor container.");
-                   return;
+                console.log("开始初始化差异点编辑器...");
+                if (diffEditorInitialized || !diffEditorContainer) {
+                    console.log("编辑器已初始化或容器不存在:", {
+                        initialized: diffEditorInitialized,
+                        containerExists: !!diffEditorContainer
+                    });
+                    return;
                 }
-                levelSelector.addEventListener('change', function() {
-                    const selectedLevelId = this.value;
-                    if (selectedLevelId) {
-                        loadLevelToEditor(selectedLevelId);
-                    } else {
-                        clearEditorDisplay();
-                        currentEditorLevel = null;
-                        if(editLeftImg) editLeftImg.src = '';
-                        if(editRightImg) editRightImg.src = '';
-                    }
-                });
-                editLeftContainer.addEventListener('click', function(e) {
-                    if (!currentEditorLevel) {
-                        alert('請先選擇一個圖片組');
+                
+                try {
+                    // 首先获取DOM元素
+                    console.log("正在查找所需DOM元素...");
+                    editLeftImg = document.querySelector('#diff-editor #left-edit-img');
+                    editRightImg = document.querySelector('#diff-editor #right-edit-img');
+                    levelSelector = document.querySelector('#diff-editor #level-selector');
+                    saveEditorButton = document.querySelector('#diff-editor #save-editor');
+                    clearEditorButton = document.querySelector('#diff-editor #clear-editor');
+                    outputArea = document.querySelector('#diff-editor #output');
+                    addNewLevelButton = document.querySelector('#diff-editor #add-new-level');
+                    newLevelForm = document.querySelector('#diff-editor #new-level-form');
+                    submitNewLevelButton = document.querySelector('#diff-editor #submit-new-level');
+                    cancelNewLevelButton = document.querySelector('#diff-editor #cancel-new-level');
+                    deleteLevelButton = document.querySelector('#diff-editor #delete-level');
+                    editLeftContainer = document.querySelector('#diff-editor #edit-left');
+
+                    // 使用对象检查所有必需的元素
+                    const elements = {
+                        editLeftImg, editRightImg, levelSelector, saveEditorButton,
+                        clearEditorButton, outputArea, addNewLevelButton, newLevelForm,
+                        submitNewLevelButton, cancelNewLevelButton, deleteLevelButton, editLeftContainer
+                    };
+                    
+                    // 创建元素缺失报告
+                    const missingElements = Object.entries(elements)
+                        .filter(([_, el]) => !el)
+                        .map(([name]) => name);
+                    
+                    if (missingElements.length > 0) {
+                        console.error("差异点编辑器缺少以下DOM元素:", missingElements.join(', '));
+                        if (outputArea) {
+                            outputArea.value = `初始化失败: 找不到以下DOM元素:\n${missingElements.join('\n')}`;
+                        } else {
+                            console.error("无法在输出区域显示错误，因为outputArea元素也不存在");
+                            
+                            // 在页面上显示错误信息
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.color = 'red';
+                            errorDiv.style.padding = '10px';
+                            errorDiv.style.border = '1px solid red';
+                            errorDiv.style.margin = '10px 0';
+                            errorDiv.textContent = `初始化失败: 找不到以下DOM元素: ${missingElements.join(', ')}`;
+                            
+                            if (diffEditorContainer) {
+                                diffEditorContainer.prepend(errorDiv);
+                            }
+                        }
                         return;
                     }
-                    if (e.target.classList.contains('editor-dot')) return;
-                    if (e.target === this || e.target.tagName.toLowerCase() === 'img') {
-                        const img = this.querySelector('img');
-                        if (!img || !img.complete || img.naturalWidth === 0) {
-                             alert('圖片尚未載入完成，無法添加點位。');
-                             return;
+                    
+                    console.log("所有DOM元素已找到，继续初始化差异点编辑器");
+                    
+                    // 添加事件监听器
+                    levelSelector.addEventListener('change', function() {
+                        const selectedLevelId = this.value;
+                        if (selectedLevelId) {
+                            loadLevelToEditor(selectedLevelId);
+                        } else {
+                            clearEditorDisplay();
+                            currentEditorLevel = null;
+                            if(editLeftImg) editLeftImg.src = '';
+                            if(editRightImg) editRightImg.src = '';
                         }
-                        const rect = img.getBoundingClientRect();
-                        const x = ((e.clientX - rect.left) / rect.width) * 100;
-                        const y = ((e.clientY - rect.top) / rect.height) * 100;
-                        addEditorDot(y, x);
+                    });
+                    
+                    editLeftContainer.addEventListener('click', function(e) {
+                        if (!currentEditorLevel) {
+                            alert('请先选择一个图片组');
+                            return;
+                        }
+                        if (e.target.classList.contains('editor-dot')) return;
+                        if (e.target === this || e.target.tagName.toLowerCase() === 'img') {
+                            const img = this.querySelector('img');
+                            if (!img || !img.complete || img.naturalWidth === 0) {
+                                alert('图片尚未加载完成，无法添加点位。');
+                                return;
+                            }
+                            const rect = img.getBoundingClientRect();
+                            const x = ((e.clientX - rect.left) / rect.width) * 100;
+                            const y = ((e.clientY - rect.top) / rect.height) * 100;
+                            addEditorDot(y, x);
+                        }
+                    });
+                    
+                    saveEditorButton.addEventListener('click', saveEditorData);
+                    clearEditorButton.addEventListener('click', function() {
+                        if (confirm('确定要清除此图片组的所有差异点吗？')) {
+                            clearEditorDisplay();
+                        }
+                    });
+                    addNewLevelButton.addEventListener('click', function() {
+                        if(newLevelForm) newLevelForm.style.display = 'block';
+                        const nameInput = diffEditorContainer.querySelector('#new-level-name');
+                        const leftInput = diffEditorContainer.querySelector('#new-left-image');
+                        const rightInput = diffEditorContainer.querySelector('#new-right-image');
+                        if(nameInput) nameInput.value = '';
+                        if(leftInput) leftInput.value = '';
+                        if(rightInput) rightInput.value = '';
+                    });
+                    submitNewLevelButton.addEventListener('click', submitNewLevel);
+                    cancelNewLevelButton.addEventListener('click', function() {
+                        if(newLevelForm) newLevelForm.style.display = 'none';
+                    });
+                    deleteLevelButton.addEventListener('click', deleteSelectedLevel);
+                    
+                    populateLevelSelector();
+                    diffEditorInitialized = true;
+                    console.log("差异点编辑器初始化完成。");
+                } catch (err) {
+                    console.error("初始化差异点编辑器失败:", err);
+                    alert(`初始化差异点编辑器失败: ${err.message}`);
+                    if(outputArea) {
+                        outputArea.value = `初始化错误: ${err.message}`;
                     }
-                });
-                saveEditorButton.addEventListener('click', saveEditorData);
-                clearEditorButton.addEventListener('click', function() {
-                    if (confirm('確定要清除此圖片組的所有差異點嗎？')) {
-                        clearEditorDisplay();
+                    
+                    // 在页面上显示错误信息
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.color = 'red';
+                    errorDiv.style.padding = '10px';
+                    errorDiv.style.border = '1px solid red';
+                    errorDiv.style.margin = '10px 0';
+                    errorDiv.textContent = `差异点编辑器初始化错误: ${err.message}`;
+                    
+                    if (diffEditorContainer) {
+                        diffEditorContainer.prepend(errorDiv);
                     }
-                });
-                addNewLevelButton.addEventListener('click', function() {
-                    if(newLevelForm) newLevelForm.style.display = 'block';
-                    const nameInput = diffEditorContainer.querySelector('#new-level-name');
-                    const leftInput = diffEditorContainer.querySelector('#new-left-image');
-                    const rightInput = diffEditorContainer.querySelector('#new-right-image');
-                    if(nameInput) nameInput.value = '';
-                    if(leftInput) leftInput.value = '';
-                    if(rightInput) rightInput.value = '';
-                });
-                submitNewLevelButton.addEventListener('click', submitNewLevel);
-                cancelNewLevelButton.addEventListener('click', function() {
-                    if(newLevelForm) newLevelForm.style.display = 'none';
-                });
-                deleteLevelButton.addEventListener('click', deleteSelectedLevel);
-                populateLevelSelector();
-                diffEditorInitialized = true;
-                console.log("Difference Editor Initialized.");
+                }
             }
+            
             async function populateLevelSelector() {
-                if (!levelSelector) return;
+                if (!levelSelector) {
+                    console.error("关卡选择器元素不存在");
+                    return;
+                }
+                
                 try {
-                    levelSelector.innerHTML = '<option value="">-- 正在載入圖片組 --</option>';
-                    const response = await fetch('/api/diffrent-game/levels');
-                    if (!response.ok) {
-                        throw new Error(`無法獲取圖片組列表: ${response.statusText}`);
+                    console.log("开始填充关卡选择器...");
+                    levelSelector.innerHTML = '<option value="">-- 正在加载图片组 --</option>';
+                    
+                    // 确保输出区显示状态
+                    if (outputArea) {
+                        outputArea.value = "正在加载图片组列表...";
                     }
+                    
+                    console.log("从 /api/diffrent-game/levels 获取关卡列表...");
+                    const response = await fetch('/api/diffrent-game/levels');
+                    console.log("API响应状态:", response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("获取图片组API错误:", {
+                            status: response.status,
+                            text: errorText
+                        });
+                        throw new Error(`无法获取图片组列表: ${response.status} ${response.statusText}`);
+                    }
+                    
                     const levels = await response.json();
-                    levelSelector.innerHTML = '<option value="">-- 請選擇圖片組 --</option>';
-                    let firstLevelId = null; // Variable to store the first level ID
+                    console.log("成功获取关卡数据:", levels);
+                    
+                    if (!Array.isArray(levels)) {
+                        console.error("API返回数据不是数组:", levels);
+                        throw new Error("API返回的关卡数据格式不正确");
+                    }
+                    
+                    if (levels.length === 0) {
+                        console.log("没有找到任何图片组");
+                        levelSelector.innerHTML = '<option value="">-- 没有可用的图片组 --</option>';
+                        if (outputArea) {
+                            outputArea.value = "没有找到任何图片组，请点击'新增图片组'按钮创建";
+                        }
+                        return;
+                    }
+                    
+                    levelSelector.innerHTML = '<option value="">-- 请选择图片组 --</option>';
+                    let firstLevelId = null;
+                    
                     levels.forEach((level, index) => {
                         const option = document.createElement('option');
                         option.value = level.id;
-                        option.textContent = `${level.id}: ${level.level_name || '未命名圖片組'}`;
+                        option.textContent = `${level.id}: ${level.level_name || '未命名图片组'}`;
                         levelSelector.appendChild(option);
                         if (index === 0) {
-                            firstLevelId = level.id; // Store the ID of the first level
+                            firstLevelId = level.id;
                         }
                     });
-                    console.log('圖片組選擇器已更新');
                     
-                    // Automatically select and load the first level if it exists
+                    console.log('图片组选择器已更新，共', levels.length, '个选项');
+                    
+                    // 自动选择首个关卡
                     if (firstLevelId) {
-                        console.log(`自動選擇第一個圖片組: ID ${firstLevelId}`);
+                        console.log(`自动选择第一个图片组: ID ${firstLevelId}`);
                         levelSelector.value = firstLevelId;
-                        await loadLevelToEditor(firstLevelId); // Load the first level data
+                        await loadLevelToEditor(firstLevelId);
                     } else {
-                        console.log("沒有可自動選擇的圖片組。");
-                        clearEditorDisplay(); 
+                        console.log("没有自动选择图片组");
+                        clearEditorDisplay();
                         if(editLeftImg) editLeftImg.src = '';
                         if(editRightImg) editRightImg.src = '';
                         currentEditorLevel = null;
                     }
-
+                    
+                    if (outputArea) {
+                        outputArea.value = `成功加载${levels.length}个图片组，可以开始编辑差异点`;
+                    }
                 } catch (error) {
-                    console.error('載入圖片組選擇器失敗:', error);
-                    levelSelector.innerHTML = '<option value="">-- 載入失敗 --</option>';
-                    alert('無法載入圖片組列表: ' + error.message);
-                    clearEditorDisplay(); 
+                    console.error('加载图片组选择器失败:', error);
+                    levelSelector.innerHTML = '<option value="">-- 加载失败 --</option>';
+                    alert('无法加载图片组列表: ' + error.message);
+                    
+                    if (outputArea) {
+                        outputArea.value = `加载图片组错误: ${error.message}\n\n请确认服务器API是否正确运行。\n检查数据库中是否存在diffrent_game_levels表。`;
+                    }
+                    
+                    clearEditorDisplay();
                     if(editLeftImg) editLeftImg.src = '';
                     if(editRightImg) editRightImg.src = '';
                     currentEditorLevel = null;
                 }
-             }
+            }
             async function loadLevelToEditor(levelId) {
                  if (!editLeftImg || !editRightImg) return;
                  try {
