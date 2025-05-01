@@ -133,21 +133,21 @@
       display: block;
     }
     .game-status-container {
-      position: fixed; /* Make it fixed */
-      top: 10px;      /* Position from top */
-      left: 50%;      /* Center horizontally */
-      transform: translateX(-50%);
-      z-index: 999;   /* Ensure it's above most content */
-      width: auto;
-      max-width: 90%; /* Prevent it from being too wide on large screens */
-      margin: 0;      /* Remove original margin */
-      padding: 8px 15px;
-      background-color: rgba(255, 248, 225, 0.8); /* Original: #fff8e1 - Made semi-transparent */
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: block; /* Change from inline-block */
-      text-align: center; /* Center text inside */
-    }
+    position: fixed; /* Make it fixed */
+    top: 10px;      /* Position from top */
+    left: 50%;      /* Center horizontally */
+    transform: translateX(-50%);
+    z-index: 999;   /* Ensure it's above most content */
+    width: auto;
+    max-width: 90%; /* Prevent it from being too wide on large screens */
+    margin: 0;      /* Remove original margin */
+    padding: 8px 15px;
+    background-color: rgba(255, 248, 225, 0); /* Completely transparent background */
+    border: none;   /* No border */
+    box-shadow: none; /* No shadow */
+    display: block; /* Change from inline-block */
+    text-align: center; /* Center text inside */
+}
     #status {
       margin: 0;
       font-size: 18px;
@@ -768,7 +768,7 @@
       
       <div class="game-status-container">
         <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
-        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">時間：<span id="timer-display">00:00</span></div>
+        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">（<span id="timer-display">00:00</span>）</div>
         <div id="message"></div>
       </div>
       
@@ -800,8 +800,8 @@
     
     <div class="controls">
       <button class="button" id="leaderboard-button">排行榜</button>
-      <button class="button" id="show-answers-button">顯示所有答案</button>
       <button class="button reset" id="reset-button">重新開始</button>
+      <a href="/games.html" class="button">返回遊戲主頁</a>
     </div>
   </div>
   
@@ -1000,8 +1000,8 @@ async function getRandomLevels() {
     const foundCountElement = document.getElementById('found-count');
     const totalCountElement = document.getElementById('total-count');
     const resetButton = document.getElementById('reset-button');
-    const showAnswersButton = document.getElementById('show-answers-button');
-    const hintButton = document.getElementById('hint-button');
+    // const showAnswersButton = document.getElementById('show-answers-button'); // Removed
+    // const hintButton = document.getElementById('hint-button'); // Assuming hint button isn't used either
     const levelTransition = document.getElementById('level-transition');
     const nextLevelButton = document.getElementById('next-level-button');
     const deleteLevelButton = document.getElementById('delete-level');
@@ -1622,51 +1622,6 @@ async function getRandomLevels() {
         leaderboardButton.addEventListener('click', displayLeaderboardDirectly);
       }
       
-      // 設置"顯示所有答案"按鈕事件
-      showAnswersButton.addEventListener('click', function() {
-        answersVisible = !answersVisible;
-        const level = gameLevels[currentLevel];
-        if (!level || !level.differences) return;
-
-        level.differences.forEach(diff => {
-            const match = String(diff.id).match(/\d+$/);
-            if (!match) return;
-            const dataId = match[0];
-
-            const dots = document.querySelectorAll(`.dot[data-id="${dataId}"]`);
-            const labels = document.querySelectorAll(`.label[data-id="${dataId}"]`);
-
-            if (answersVisible) {
-                dots.forEach(dot => {
-                    dot.style.display = 'block';
-                    if (!foundDifferences.has(dataId)) {
-                        dot.classList.add('hint'); // 對未找到的用提示樣式
-                        dot.classList.remove('found');
-                    }
-                });
-                labels.forEach(label => label.classList.add('show'));
-            } else {
-                // 隱藏答案
-                dots.forEach(dot => {
-                    if (!foundDifferences.has(dataId)) {
-                        dot.style.display = 'none'; // 隱藏未找到的
-                        dot.classList.remove('hint');
-                    } else {
-                        dot.classList.remove('hint'); // 確保已找到的沒有 hint 樣式
-                    }
-                });
-                labels.forEach(label => {
-                    if (!foundDifferences.has(dataId)) {
-                        label.classList.remove('show'); // 隱藏未找到的標籤
-                    }
-                });
-            }
-        });
-
-        showAnswersButton.textContent = answersVisible ? '隱藏答案' : '顯示所有答案';
-        messageElement.textContent = answersVisible ? '已顯示所有答案' : '';
-      });
-      
       // 為遊戲模式中的每個圖片容器添加點擊事件
       leftImageContainer.addEventListener('click', function(e) {
         handleGameClick(e, this, false);
@@ -1943,17 +1898,7 @@ async function getRandomLevels() {
       }
     }
   </script>
-   <!-- 底部導航 -->
-   <nav class="bottom-nav">
-    <ul>
-        <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-        <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-        <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-        <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-        <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-        <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
-    </ul>
-</nav>
+  
 
 </body>
 </html>
