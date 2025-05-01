@@ -698,42 +698,333 @@
    <!-- 引入 JS Libraries -->
    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-   <!-- SortableJS for drag-and-drop functionality (optional, needed if level image reordering is required) -->
-   <!-- <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script> -->
     
    <script>
         // --- Start: Integrated JavaScript ---
         let currentTemplateId = null; // For tracking edited/viewed template in same-game section
         let currentEditingLevelId = null; // For tracking edited level
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- General Game Logic ---
-            fetchAndDisplayGames(); // Load general games list
+        // ==================================
+        // General Game Functions (Moved outside DOMContentLoaded)
+        // ==================================
+        function fetchAndDisplayGames() {
+            const tableBody = document.querySelector('#games-list-table tbody');
+            if (!tableBody) { console.error("General games table body not found."); return; }
+            tableBody.innerHTML = '<tr><td colspan="6">正在載入一般遊戲列表...</td></tr>';
 
+            fetch('/api/admin/games')
+            .then(handleFetchResponse) // Assumes handleFetchResponse is defined globally or moved here
+            .then(data => {
+                renderTable(tableBody, data, renderGeneralGameRow, 6, "目前沒有任何一般遊戲"); // Assumes renderTable is defined globally or moved here
+                updateStatistics(data);
+            })
+            .catch(error => { handleError(error, tableBody, '載入一般遊戲列表失敗', 6); }); // Assumes handleError is defined globally or moved here
+        }
+        
+        function handleAddGameSubmit(e) {
+            e.preventDefault();
+            const formData = {
+                name: document.getElementById('add-game-name').value.trim(),
+                description: document.getElementById('add-game-description').value.trim(),
+                play_url: document.getElementById('add-game-play-url').value.trim(),
+                image_url: document.getElementById('add-game-image-url').value.trim(),
+                sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
+                is_active: document.getElementById('add-game-is-active').value === '1'
+            };
+            const addErrorElement = document.getElementById('add-form-error');
+            if (!formData.name || !formData.play_url) {
+                addErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+            }
+            addErrorElement.textContent = '';
+
+            fetch('/api/admin/games', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
+            .then(handleFetchResponse)
+            .then(data => {
+                document.getElementById('add-game-form').reset();
+                window.previewImage('add-image-preview', ''); // Use window.previewImage
+                window.switchTab('general-games'); // Use window.switchTab if defined inside DOMContentLoaded
+                fetchAndDisplayGames();
+                showAlert('一般遊戲新增成功', 'success'); // Assumes showAlert is defined globally
+            })
+            .catch(error => { handleError(error, addErrorElement, '新增一般遊戲失敗'); });
+        }
+
+        function handleEditGameSubmit(e) {
+            e.preventDefault();
+            const gameId = document.getElementById('edit-game-id').value;
+            const formData = {
+                name: document.getElementById('edit-game-name').value.trim(),
+                description: document.getElementById('edit-game-description').value.trim(),
+                play_url: document.getElementById('edit-game-play-url').value.trim(),
+                image_url: document.getElementById('edit-game-image-url').value.trim(),
+                sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
+                is_active: document.getElementById('edit-game-is-active').value === '1'
+            };
+            const editErrorElement = document.getElementById('edit-form-error');
+            if (!formData.name || !formData.play_url) {
+                editErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+            }
+            editErrorElement.textContent = '';
+
+            fetch(`/api/admin/games/${gameId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
+            .then(handleFetchResponse)
+            .then(data => {
+                window.closeEditForm(); // Use window.closeEditForm
+                fetchAndDisplayGames();
+                showAlert('一般遊戲更新成功', 'success');
+            })
+            .catch(error => { handleError(error, editErrorElement, '更新一般遊戲失敗'); });
+        }
+        
+        window.editGame = function(id) { // Attach to window
+            const editErrorElement = document.getElementById('edit-form-error');
+            const editGameForm = document.getElementById('edit-game-form');
+            const editImagePreview = document.getElementById('edit-image-preview');
+            if(editErrorElement) editErrorElement.textContent = '';
+            if(editGameForm) editGameForm.reset();
+            if(editImagePreview) editImagePreview.style.display = 'none';
+
+            fetch(`/api/admin/games/${id}`)
+            .then(handleFetchResponse)
+            .then(game => {
+                document.getElementById('edit-game-id').value = game.id;
+                document.getElementById('edit-game-name').value = game.title;
+                document.getElementById('edit-game-description').value = game.description || '';
+                document.getElementById('edit-game-play-url').value = game.play_url;
+                document.getElementById('edit-game-image-url').value = game.image_url || '';
+                document.getElementById('edit-game-sort-order').value = game.sort_order || 0;
+                document.getElementById('edit-game-is-active').value = game.is_active ? '1' : '0';
+                document.getElementById('edit-game-play-count').textContent = game.play_count || 0;
+                
+                window.previewImage('edit-image-preview', game.image_url);
+                
+                const editFormContainer = document.getElementById('editGameForm');
+                if (editFormContainer) editFormContainer.style.display = 'block';
+                const adminContainer = document.querySelector('.admin-container');
+                if (adminContainer) adminContainer.style.display = 'none';
+            })
+            .catch(error => { alert(`載入一般遊戲資料時出錯: ${error.message}`); });
+        }
+
+        window.closeEditForm = function() { // Attach to window
+            const editFormContainer = document.getElementById('editGameForm');
+            if (editFormContainer) editFormContainer.style.display = 'none';
+            const adminContainer = document.querySelector('.admin-container');
+            if (adminContainer) adminContainer.style.display = 'block';
+        }
+
+        window.deleteGame = function(id) { // Attach to window
+            if (confirm(`確定要刪除ID為 ${id} 的一般遊戲嗎？此操作無法復原！`)) {
+                fetch(`/api/admin/games/${id}`, { method: 'DELETE' })
+                .then(handleFetchResponse)
+                .then(data => {
+                    showAlert('一般遊戲刪除成功', 'success');
+                    fetchAndDisplayGames(); // Refresh list
+                })
+                .catch(error => { handleError(error, null, '刪除一般遊戲失敗'); });
+            }
+        }
+        
+        function renderGeneralGameRow(game) {
+            const imageUrl = game.image_url || '/images/placeholder.png';
+            const title = escapeHtml(game.title || '無標題'); // Assumes escapeHtml is global
+            const description = escapeHtml(game.description || '');
+            const playCount = game.play_count || 0;
+            const gameId = game.id;
+
+            return `
+                <td>${gameId}</td>
+                <td>${title}</td>
+                <td>${description}</td>
+                <td>${playCount}</td>
+                <td><img src="${imageUrl}" alt="${title}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="window.editGame(${gameId})">編輯</button>
+                    <button class="action-btn delete-btn" onclick="window.deleteGame(${gameId})">刪除</button>
+                </td>
+            `;
+        }
+        
+        function updateStatistics(data) { // Assumes fetchGameStats is defined globally or moved
+            const totalGamesElement = document.getElementById('total-games-count');
+            const totalPlaysElement = document.getElementById('total-plays-count');
+            const mostPopularElement = document.getElementById('most-popular-game');
+            // const todayPlaysElement = document.getElementById('today-plays-count'); // Handled by fetchGameStats
+
+            if (data && Array.isArray(data)) {
+                const totalGames = data.length;
+                const totalPlays = data.reduce((sum, game) => sum + (game.play_count || 0), 0);
+                const mostPopular = data.length > 0 ? [...data].sort((a, b) => (b.play_count || 0) - (a.play_count || 0))[0] : null;
+                if(totalGamesElement) totalGamesElement.textContent = totalGames;
+                if(totalPlaysElement) totalPlaysElement.textContent = totalPlays;
+                if(mostPopularElement) mostPopularElement.textContent = mostPopular ? escapeHtml(mostPopular.title) : '-';
+            }
+            // Fetch today's stats separately
+            fetchGameStats(); 
+        }
+
+        function fetchGameStats() {
+             const todayPlaysElement = document.getElementById('today-plays-count');
+             fetch('/api/admin/games/stats/today') // Assuming endpoint exists
+            .then(handleFetchResponse)
+            .then(stats => {
+                if(todayPlaysElement) todayPlaysElement.textContent = stats.today_count || 0;
+            }) 
+            .catch(error => {
+                if(todayPlaysElement) todayPlaysElement.textContent = '?';
+                console.error('獲取今日遊玩次數失敗:', error);
+            });
+        }
+
+        window.previewImage = function(previewId, imageUrl) { // Attach to window
+            const preview = document.getElementById(previewId);
+            if (!preview) { console.error(`Preview image element ID '${previewId}' not found.`); return; }
+            if (imageUrl) {
+                preview.src = imageUrl;
+                preview.style.display = 'block';
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+        }
+        
+        // ==================================
+        // Utility Functions (Keep accessible, maybe move outside DOMContentLoaded too)
+        // ==================================
+        function handleFetchResponse(response) {
+            if (!response.ok) {
+                return response.text().then(text => { 
+                   let errorMsg = `請求失敗: ${response.status} ${response.statusText}`;
+                   try {
+                       const jsonError = JSON.parse(text);
+                       if (jsonError && jsonError.error) {
+                           errorMsg += ` - ${jsonError.error}`;
+                       } else {
+                            errorMsg += ` - ${text}`;
+                       }
+                   } catch(e) {
+                       errorMsg += ` - ${text}`; // Not JSON
+                   }
+                   throw new Error(errorMsg); 
+                });
+            }
+             const contentType = response.headers.get("content-type");
+             if (contentType && contentType.indexOf("application/json") !== -1) {
+                 return response.json();
+             } else {
+                 return {};
+             }
+        }
+        
+        function handleError(error, element, contextMessage, colspan = 1) {
+             const message = `${contextMessage}: ${error.message}`;
+             console.error(message, error);
+             if (element) {
+                 if (element.tagName === 'TBODY') {
+                     element.innerHTML = `<tr><td colspan="${colspan}">${escapeHtml(message)}</td></tr>`;
+                 } else if (element.classList.contains('form-error')) {
+                     element.textContent = escapeHtml(error.message);
+                 } else {
+                     showAlert(message, 'danger');
+                 }
+             } else {
+                  showAlert(message, 'danger');
+             }
+        }
+
+        function renderTable(tableBodyElement, data, rowRenderer, colspan, emptyMessage) {
+             if (!tableBodyElement) return;
+             tableBodyElement.innerHTML = '';
+             if (!Array.isArray(data)) {
+                console.error("Received non-array data for table:", data);
+                tableBodyElement.innerHTML = `<tr><td colspan="${colspan}">載入資料格式錯誤</td></tr>`; 
+                return;
+             }
+             if (data.length === 0) {
+                 tableBodyElement.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4">${emptyMessage}</td></tr>`;
+                 return;
+             }
+             data.forEach((item, index) => {
+                 const rowHtml = rowRenderer(item, index);
+                 if (rowHtml) {
+                     const row = document.createElement('tr');
+                     row.innerHTML = rowHtml;
+                     tableBodyElement.appendChild(row);
+                 }
+             });
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertContainer = $('#alertContainer');
+             if (!alertContainer.length) return;
+            const alertId = 'alert-' + Date.now();
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert" style="margin-bottom: 10px;">
+                    ${escapeHtml(message)}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            alertContainer.append(alertHtml);
+            setTimeout(() => {
+                $(`#${alertId}`).alert('close');
+            }, 3000);
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            } catch (e) {
+                return 'Invalid Date';
+            }
+        }
+        
+        function escapeHtml(str) {
+            if (str === null || typeof str === 'undefined') return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Keep Tab switching and specific initializations inside DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial fetch calls for the default tab
+            fetchAndDisplayGames(); // Now defined globally
+            // fetchGameStats(); // Called within updateStatistics
+            
             const addGameFormElement = document.getElementById('add-game-form');
             if (addGameFormElement) {
-                addGameFormElement.addEventListener('submit', handleAddGameSubmit);
+                addGameFormElement.addEventListener('submit', handleAddGameSubmit); // handleAddGameSubmit is global
             } else { console.error("Add game form not found."); }
 
             const editGameFormElement = document.getElementById('edit-game-form');
             if (editGameFormElement) {
-                editGameFormElement.addEventListener('submit', handleEditGameSubmit);
+                editGameFormElement.addEventListener('submit', handleEditGameSubmit); // handleEditGameSubmit is global
             } else { console.error("Edit game form not found."); }
             
             const addGameImageUrl = document.getElementById('add-game-image-url');
             if (addGameImageUrl) {
                 addGameImageUrl.addEventListener('input', function() {
-                    previewImage('add-image-preview', this.value);
+                    window.previewImage('add-image-preview', this.value);
                 });
             }
             const editGameImageUrl = document.getElementById('edit-game-image-url');
             if (editGameImageUrl) {
                 editGameImageUrl.addEventListener('input', function() {
-                    previewImage('edit-image-preview', this.value);
+                    window.previewImage('edit-image-preview', this.value);
                 });
             }
 
-            // --- Same Game Logic ---
+            // --- Same Game Logic --- (Keep initialization inside)
             loadTemplates(); // Load same-game templates list
             loadLeaderboard(); // Load same-game leaderboard
             initializeSameGameEventListeners(); // Setup listeners for same-game section
@@ -745,21 +1036,16 @@
             const activeTab = document.querySelector('.tab-item.active');
             if (activeTab) {
                 const activeTabId = activeTab.getAttribute('data-tab');
+                // No need to call fetchGames/Stats here, called at start of DOMContentLoaded
                 if (activeTabId === 'diff-editor') {
-                    initializeDiffEditor(); // Call initialization here
-                } else {
-                    // Initialize other tabs if necessary
-                    if (activeTabId === 'general-games') {
-                        fetchGames();
-                        fetchGameStats();
-                    } else if (activeTabId === 'same-game') {
-                        // Init same-game logic if any
-                    }
+                    initializeDiffEditor(); // Initialize editor if it's the default tab
+                } else if (activeTabId === 'same-game') {
+                    // Init same-game logic if any needed beyond initial load
                 }
             }
 
-            // ----- Diff Game Editor Variables -----
-            let diffEditorInitialized = false; // Flag to prevent multiple initializations
+            // ----- Diff Game Editor Variables (Keep inside DOMContentLoaded) -----
+            let diffEditorInitialized = false;
             const diffEditorContainer = document.getElementById('diff-editor'); // Container for editor elements
             let editLeftImg = null;
             let editRightImg = null;
@@ -871,17 +1157,41 @@
                     }
                     const levels = await response.json();
                     levelSelector.innerHTML = '<option value="">-- 請選擇圖片組 --</option>';
-                    levels.forEach(level => {
+                    let firstLevelId = null; // Variable to store the first level ID
+                    levels.forEach((level, index) => {
                         const option = document.createElement('option');
                         option.value = level.id;
                         option.textContent = `${level.id}: ${level.level_name || '未命名圖片組'}`;
                         levelSelector.appendChild(option);
+                        if (index === 0) {
+                            firstLevelId = level.id; // Store the ID of the first level
+                        }
                     });
                     console.log('圖片組選擇器已更新');
+                    
+                    // Automatically select and load the first level if it exists
+                    if (firstLevelId) {
+                        console.log(`自動選擇第一個圖片組: ID ${firstLevelId}`);
+                        levelSelector.value = firstLevelId;
+                        await loadLevelToEditor(firstLevelId); // Load the first level data
+                    } else {
+                        console.log("沒有可自動選擇的圖片組。");
+                        // Optionally clear the editor display if no levels are available
+                        clearEditorDisplay(); 
+                        if(editLeftImg) editLeftImg.src = '';
+                        if(editRightImg) editRightImg.src = '';
+                        currentEditorLevel = null;
+                    }
+
                 } catch (error) {
                     console.error('載入圖片組選擇器失敗:', error);
                     levelSelector.innerHTML = '<option value="">-- 載入失敗 --</option>';
                     alert('無法載入圖片組列表: ' + error.message);
+                    // Clear editor on load failure
+                    clearEditorDisplay(); 
+                    if(editLeftImg) editLeftImg.src = '';
+                    if(editRightImg) editRightImg.src = '';
+                    currentEditorLevel = null;
                 }
             }
             async function loadLevelToEditor(levelId) {
@@ -1225,190 +1535,6 @@
                       alert('網路錯誤，無法刪除圖片組');
                   }
              }
-
-
-           // ==================================
-           // General Game Functions
-           // ==================================
-           function handleAddGameSubmit(e) {
-               e.preventDefault();
-               const formData = {
-                   name: document.getElementById('add-game-name').value.trim(),
-                   description: document.getElementById('add-game-description').value.trim(),
-                   play_url: document.getElementById('add-game-play-url').value.trim(),
-                   image_url: document.getElementById('add-game-image-url').value.trim(),
-                   sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
-                   is_active: document.getElementById('add-game-is-active').value === '1'
-               };
-               const addErrorElement = document.getElementById('add-form-error');
-               if (!formData.name || !formData.play_url) {
-                   addErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
-               }
-               addErrorElement.textContent = '';
-
-               fetch('/api/admin/games', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
-               .then(handleFetchResponse)
-               .then(data => {
-                   document.getElementById('add-game-form').reset();
-                   previewImage('add-image-preview', '');
-                   switchTab('general-games'); // Switch back to list
-                   fetchAndDisplayGames();
-                   showAlert('一般遊戲新增成功', 'success');
-               })
-               .catch(error => { handleError(error, addErrorElement, '新增一般遊戲失敗'); });
-           }
-
-           function handleEditGameSubmit(e) {
-               e.preventDefault();
-               const gameId = document.getElementById('edit-game-id').value;
-               const formData = {
-                   name: document.getElementById('edit-game-name').value.trim(),
-                   description: document.getElementById('edit-game-description').value.trim(),
-                   play_url: document.getElementById('edit-game-play-url').value.trim(),
-                   image_url: document.getElementById('edit-game-image-url').value.trim(),
-                   sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
-                   is_active: document.getElementById('edit-game-is-active').value === '1'
-               };
-               const editErrorElement = document.getElementById('edit-form-error');
-               if (!formData.name || !formData.play_url) {
-                   editErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
-               }
-               editErrorElement.textContent = '';
-
-               fetch(`/api/admin/games/${gameId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
-               .then(handleFetchResponse)
-               .then(data => {
-                   closeEditForm();
-                   fetchAndDisplayGames();
-                   showAlert('一般遊戲更新成功', 'success');
-               })
-               .catch(error => { handleError(error, editErrorElement, '更新一般遊戲失敗'); });
-           }
-           
-           // Needs to be global for onclick
-           window.editGame = function(id) {
-               const editErrorElement = document.getElementById('edit-form-error');
-               const editGameForm = document.getElementById('edit-game-form');
-               const editImagePreview = document.getElementById('edit-image-preview');
-               if(editErrorElement) editErrorElement.textContent = '';
-               if(editGameForm) editGameForm.reset();
-               if(editImagePreview) editImagePreview.style.display = 'none';
-
-               fetch(`/api/admin/games/${id}`)
-               .then(handleFetchResponse)
-               .then(game => {
-                   document.getElementById('edit-game-id').value = game.id;
-                   document.getElementById('edit-game-name').value = game.title;
-                   document.getElementById('edit-game-description').value = game.description || '';
-                   document.getElementById('edit-game-play-url').value = game.play_url;
-                   document.getElementById('edit-game-image-url').value = game.image_url || '';
-                   document.getElementById('edit-game-sort-order').value = game.sort_order || 0;
-                   document.getElementById('edit-game-is-active').value = game.is_active ? '1' : '0';
-                   document.getElementById('edit-game-play-count').textContent = game.play_count || 0;
-                   
-                   previewImage('edit-image-preview', game.image_url);
-                   
-                   const editGameForm = document.getElementById('editGameForm');
-                   if (editGameForm) editGameForm.style.display = 'block';
-                   const adminContainer = document.querySelector('.admin-container');
-                   if (adminContainer) adminContainer.style.display = 'none';
-               })
-               .catch(error => { alert(`載入一般遊戲資料時出錯: ${error.message}`); });
-           }
-
-           // Needs to be global for onclick
-           window.closeEditForm = function() {
-               const editGameForm = document.getElementById('editGameForm');
-               if (editGameForm) editGameForm.style.display = 'none';
-               const adminContainer = document.querySelector('.admin-container');
-               if (adminContainer) adminContainer.style.display = 'block';
-           }
-
-           // Needs to be global for onclick
-           window.deleteGame = function(id) {
-               if (confirm(`確定要刪除ID為 ${id} 的一般遊戲嗎？此操作無法復原！`)) {
-                   fetch(`/api/admin/games/${id}`, { method: 'DELETE' })
-                   .then(handleFetchResponse)
-                   .then(data => {
-                       showAlert('一般遊戲刪除成功', 'success');
-                       fetchAndDisplayGames(); // Refresh list
-                   })
-                   .catch(error => { handleError(error, null, '刪除一般遊戲失敗'); });
-               }
-           }
-
-           function fetchAndDisplayGames() {
-               const tableBody = document.querySelector('#games-list-table tbody');
-               if (!tableBody) { console.error("General games table body not found."); return; }
-               tableBody.innerHTML = '<tr><td colspan="6">正在載入一般遊戲列表...</td></tr>';
-
-               fetch('/api/admin/games')
-               .then(handleFetchResponse)
-               .then(data => {
-                   renderTable(tableBody, data, renderGeneralGameRow, 6, "目前沒有任何一般遊戲");
-                   updateStatistics(data);
-               })
-               .catch(error => { handleError(error, tableBody, '載入一般遊戲列表失敗', 6); });
-           }
-           
-           function renderGeneralGameRow(game) {
-               const imageUrl = game.image_url || '/images/placeholder.png';
-               const title = escapeHtml(game.title || '無標題');
-               const description = escapeHtml(game.description || '');
-               const playCount = game.play_count || 0;
-               const gameId = game.id;
-
-               return `
-                   <td>${gameId}</td>
-                   <td>${title}</td>
-                   <td>${description}</td>
-                   <td>${playCount}</td>
-                   <td><img src="${imageUrl}" alt="${title}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                   <td>
-                       <button class="action-btn edit-btn" onclick="editGame(${gameId})">編輯</button>
-                       <button class="action-btn delete-btn" onclick="deleteGame(${gameId})">刪除</button>
-                   </td>
-               `;
-           }
-
-           function updateStatistics(data) {
-               const totalGamesElement = document.getElementById('total-games-count');
-               const totalPlaysElement = document.getElementById('total-plays-count');
-               const mostPopularElement = document.getElementById('most-popular-game');
-               const todayPlaysElement = document.getElementById('today-plays-count');
-
-               if (data && Array.isArray(data)) {
-                   const totalGames = data.length;
-                   const totalPlays = data.reduce((sum, game) => sum + (game.play_count || 0), 0);
-                   const mostPopular = data.length > 0 ? [...data].sort((a, b) => (b.play_count || 0) - (a.play_count || 0))[0] : null;
-                   if(totalGamesElement) totalGamesElement.textContent = totalGames;
-                   if(totalPlaysElement) totalPlaysElement.textContent = totalPlays;
-                   if(mostPopularElement) mostPopularElement.textContent = mostPopular ? escapeHtml(mostPopular.title) : '-';
-               }
-                  
-               fetch('/api/admin/games/stats/today')
-               .then(handleFetchResponse)
-               .then(stats => {
-                   if(todayPlaysElement) todayPlaysElement.textContent = stats.today_count || 0;
-               }) 
-               .catch(error => {
-                   if(todayPlaysElement) todayPlaysElement.textContent = '?';
-                   console.error('獲取今日遊玩次數失敗:', error);
-               });
-           }
-
-           // Needs to be global for input events
-           window.previewImage = function(previewId, imageUrl) {
-               const preview = document.getElementById(previewId);
-               if (!preview) { console.error(`Preview image element ID '${previewId}' not found.`); return; }
-               if (imageUrl) {
-                   preview.src = imageUrl;
-                   preview.style.display = 'block';
-                           } else {
-                   preview.src = '';
-                   preview.style.display = 'none';
-               }
-           }
 
            // ==================================
            // Same Game (對對碰) Functions
