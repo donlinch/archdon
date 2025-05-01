@@ -58,18 +58,20 @@
     }
     .image-container {
       position: relative;
-      margin-bottom: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-      border-radius: 12px;
+      width: 500px;
+      height: 500px;
+      margin: 0 auto 15px; /* 居中 */
       overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
     .image-container img {
-      width: 90vw;
-      max-width: 400px;
-      height: auto;
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* 保持比例 */
+      display: block;
       border: none;
       border-radius: 10px;
-      display: block;
     }
     .image-label {
       font-size: 16px;
@@ -276,14 +278,19 @@
         margin-top: 5px;
       }
       .image-container {
-        margin-bottom: 5px;
-        width: 100%;
+        width: 90vw; /* 螢幕寬度的90% */
+        height: 90vw; /* 保持1:1比例 */
+        max-width: 500px;
+        max-height: 500px;
+        margin-bottom: 10px;
       }
       .image-container img {
         width: 100%;
-        max-width: none;
-        max-height: 40vh;
-        object-fit: contain;
+        height: 100%;
+        object-fit: contain; /* 保持比例 */
+        display: block;
+        border: none;
+        border-radius: 10px;
       }
       .controls {
         flex-direction: row;
@@ -1001,39 +1008,86 @@ async function getRandomLevels() {
       function drag(e) {
         if (!isDragging) return;
         
-        // 計算新位置
         const containerRect = container.getBoundingClientRect();
-        const imgRect = container.querySelector('img').getBoundingClientRect();
+        const img = container.querySelector('img');
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+            console.warn("圖片未完全載入，無法拖曳");
+            return; 
+        }
+        const imgRect = img.getBoundingClientRect();
+
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        if (clientX === undefined || clientY === undefined) return; 
+
+        // 計算原始點擊位置（相對於圖片左上角）
+        const rawX = clientX - imgRect.left;
+        const rawY = clientY - imgRect.top;
+
+        // 圖片的自然（原始）尺寸
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
         
-        // 計算點擊位置在容器中的百分比
-        const x = ((e.clientX - imgRect.left) / imgRect.width) * 100;
-        const y = ((e.clientY - imgRect.top) / imgRect.height) * 100;
+        // 圖片的渲染尺寸
+        const renderedWidth = imgRect.width;
+        const renderedHeight = imgRect.height;
+
+        // 計算縮放比例和偏移量
+        let scale, offsetX = 0, offsetY = 0;
+        let effectiveWidth, effectiveHeight;
+
+        // 確定縮放和偏移（處理 object-fit: contain 邏輯）
+        if (renderedWidth / renderedHeight > naturalWidth / naturalHeight) {
+            // 渲染框比需要的更寬（信箱效應）
+            scale = renderedHeight / naturalHeight;
+            effectiveWidth = naturalWidth * scale;
+            effectiveHeight = renderedHeight;
+            offsetX = (renderedWidth - effectiveWidth) / 2;
+        } else {
+            // 渲染框比需要的更高（柱形箱效應）
+            scale = renderedWidth / naturalWidth;
+            effectiveWidth = renderedWidth;
+            effectiveHeight = naturalHeight * scale;
+            offsetY = (renderedHeight - effectiveHeight) / 2;
+        }
+
+        // 調整點擊坐標相對於實際圖片內容
+        const xOnImage = rawX - offsetX;
+        const yOnImage = rawY - offsetY;
+
+        // 檢查拖曳是否在有效圖片區域外
+        if (xOnImage < 0 || xOnImage > effectiveWidth || yOnImage < 0 || yOnImage > effectiveHeight) {
+            return; // 避免拖出圖片邊界
+        }
+
+        // 將縮放圖片上的點擊轉換為百分比
+        let xPercent = (xOnImage / effectiveWidth) * 100;
+        let yPercent = (yOnImage / effectiveHeight) * 100;
+
+        // 確保百分比在有效範圍內（0-100%）
+        xPercent = Math.max(0, Math.min(100, xPercent));
+        yPercent = Math.max(0, Math.min(100, yPercent));
         
-        // 限制在圖片邊界內
-        const boundedX = Math.max(0, Math.min(100, x));
-        const boundedY = Math.max(0, Math.min(100, y));
-        
-        // 格式化確保數值精確度一致
-        const formattedX = parseFloat(boundedX).toFixed(2);
-        const formattedY = parseFloat(boundedY).toFixed(2);
-        
-        // 更新元素位置
-        element.style.left = `${formattedX}%`;
-        element.style.top = `${formattedY}%`;
-        
-        // 更新對應的參考點
-        const index = Array.from(document.querySelectorAll('.editor-dot')).indexOf(element);
+        // 格式化至兩位小數，確保數值精確度一致
+        const formattedXPercent = parseFloat(xPercent).toFixed(2);
+        const formattedYPercent = parseFloat(yPercent).toFixed(2);
+
+        // 更新點的位置
+        element.style.left = `${formattedXPercent}%`;
+        element.style.top = `${formattedYPercent}%`;
+
+        // 更新參考點和差異數據
+        const index = Array.from(document.querySelectorAll('#edit-left .editor-dot')).indexOf(element);
         if (index !== -1) {
-          const refDots = document.querySelectorAll('.editor-dot.reference');
+          const refDots = document.querySelectorAll('#edit-right .editor-dot.reference');
           if (refDots[index]) {
-            refDots[index].style.left = `${formattedX}%`;
-            refDots[index].style.top = `${formattedY}%`;
+            refDots[index].style.left = `${formattedXPercent}%`;
+            refDots[index].style.top = `${formattedYPercent}%`;
           }
           
-          // 更新差異點資料
           if (editorDifferences[index]) {
-            editorDifferences[index].position_left = formattedX;
-            editorDifferences[index].position_top = formattedY;
+            editorDifferences[index].position_left = formattedXPercent;
+            editorDifferences[index].position_top = formattedYPercent;
             updateOutput();
           }
         }
