@@ -1363,7 +1363,7 @@ async function getRandomLevels() {
       foundCount = 0;
       foundCountElement.textContent = '0';
       answersVisible = false;
-      showAnswersButton.textContent = '顯示所有答案';
+      // showAnswersButton.textContent = '顯示所有答案'; // This line causes the error
       
       // 更新關卡指示器
       levelIndicator.textContent = `關卡 ${index + 1}/${gameLevels.length}`;
@@ -1465,7 +1465,7 @@ async function getRandomLevels() {
       foundCountElement.textContent = '0';
       messageElement.textContent = '';
       answersVisible = false;
-      showAnswersButton.textContent = '顯示所有答案';
+      // showAnswersButton.textContent = '顯示所有答案'; // This line causes the error
 
       // 重置計時器
       clearInterval(timerInterval);
