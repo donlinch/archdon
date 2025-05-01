@@ -927,11 +927,15 @@ async function getRandomLevels() {
 
     // 添加編輯器差異點
     function addEditorDot(top, left, description) {
+      // 格式化確保數值精確度一致
+      const formattedTop = parseFloat(top).toFixed(2);
+      const formattedLeft = parseFloat(left).toFixed(2);
+      
       // 創建左側圖片上的點
       const dot = document.createElement('div');
       dot.className = 'editor-dot';
-      dot.style.top = `${top}%`;
-      dot.style.left = `${left}%`;
+      dot.style.top = `${formattedTop}%`;
+      dot.style.left = `${formattedLeft}%`;
       
       // 為點添加拖曳功能
       makeDraggable(dot);
@@ -942,14 +946,14 @@ async function getRandomLevels() {
       // 創建右側的參考點（不可拖曳）
       const referenceDot = document.createElement('div');
       referenceDot.className = 'editor-dot reference';
-      referenceDot.style.top = `${top}%`;
-      referenceDot.style.left = `${left}%`;
+      referenceDot.style.top = `${formattedTop}%`;
+      referenceDot.style.left = `${formattedLeft}%`;
       document.getElementById('edit-right').appendChild(referenceDot);
       
       // 添加到差異點陣列
       editorDifferences.push({
-        position_top: top,
-        position_left: left,
+        position_top: formattedTop,
+        position_left: formattedLeft,
         description: description || `差異點 #${editorDifferences.length + 1}`
       });
       
@@ -1009,23 +1013,27 @@ async function getRandomLevels() {
         const boundedX = Math.max(0, Math.min(100, x));
         const boundedY = Math.max(0, Math.min(100, y));
         
+        // 格式化確保數值精確度一致
+        const formattedX = parseFloat(boundedX).toFixed(2);
+        const formattedY = parseFloat(boundedY).toFixed(2);
+        
         // 更新元素位置
-        element.style.left = `${boundedX}%`;
-        element.style.top = `${boundedY}%`;
+        element.style.left = `${formattedX}%`;
+        element.style.top = `${formattedY}%`;
         
         // 更新對應的參考點
         const index = Array.from(document.querySelectorAll('.editor-dot')).indexOf(element);
         if (index !== -1) {
           const refDots = document.querySelectorAll('.editor-dot.reference');
           if (refDots[index]) {
-            refDots[index].style.left = `${boundedX}%`;
-            refDots[index].style.top = `${boundedY}%`;
+            refDots[index].style.left = `${formattedX}%`;
+            refDots[index].style.top = `${formattedY}%`;
           }
           
           // 更新差異點資料
           if (editorDifferences[index]) {
-            editorDifferences[index].position_left = boundedX;
-            editorDifferences[index].position_top = boundedY;
+            editorDifferences[index].position_left = formattedX;
+            editorDifferences[index].position_top = formattedY;
             updateOutput();
           }
         }
@@ -1071,6 +1079,13 @@ async function getRandomLevels() {
       }
       
       try {
+        // 統一位置格式，確保存儲的數據與遊戲模式一致
+        const processedDifferences = editorDifferences.map(diff => ({
+          description: diff.description,
+          position_top: parseFloat(diff.position_top).toFixed(2),
+          position_left: parseFloat(diff.position_left).toFixed(2)
+        }));
+        
         const response = await fetch('/api/diffrent-game/differences', {
           method: 'POST',
           headers: {
@@ -1078,7 +1093,7 @@ async function getRandomLevels() {
           },
           body: JSON.stringify({
             levelId: currentEditorLevel.id,
-            differences: editorDifferences
+            differences: processedDifferences
           })
         });
         
@@ -1526,20 +1541,15 @@ async function getRandomLevels() {
 
         // 計算距離
         const distance = Math.sqrt(Math.pow(x - diffX, 2) + Math.pow(y - diffY, 2));
-        const clickRadius = 5; // 點擊半徑（百分比）
+        const clickRadius = 10; // 增大點擊半徑（百分比），從5改為10，使點擊更容易
 
-        // **** ADD EXTRA LOGGING ****
-        console.log(`BEFORE IF: i=${i}, dataId=${dataId}, distance=${distance.toFixed(2)}, clickRadius=${clickRadius}, condition=${distance < clickRadius}`);
-
-        // ** Existing Log **
         console.log(`Checking distance to diff ${dataId}: ${distance.toFixed(2)}% (Target: < ${clickRadius}%)`);
 
         // ** The Core Conditional Logic **
         if (distance < clickRadius) { // Check if click is within radius
           if (!foundDifferences.has(dataId)) { // Check if not already found
             // This block executes if BOTH conditions are true
-            // ** Modify log slightly for clarity **
-            console.log(`INSIDE IF: Found difference ${dataId}!`); // Log the found difference
+            console.log(`Found difference ${dataId}!`); // Log the found difference
             foundDifferences.add(dataId);
             foundCount++;
             foundCountElement.textContent = `${foundCount}`;

@@ -1134,11 +1134,15 @@ async function getRandomLevels() {
 
     // 添加編輯器差異點
     function addEditorDot(top, left, description) {
+      // 格式化確保數值精確度一致
+      const formattedTop = parseFloat(top).toFixed(2);
+      const formattedLeft = parseFloat(left).toFixed(2);
+      
       // 創建左側圖片上的點
       const dot = document.createElement('div');
       dot.className = 'editor-dot';
-      dot.style.top = `${top}%`;
-      dot.style.left = `${left}%`;
+      dot.style.top = `${formattedTop}%`;
+      dot.style.left = `${formattedLeft}%`;
       
       // 為點添加拖曳功能
       makeDraggable(dot);
@@ -1149,14 +1153,14 @@ async function getRandomLevels() {
       // 創建右側的參考點（不可拖曳）
       const referenceDot = document.createElement('div');
       referenceDot.className = 'editor-dot reference';
-      referenceDot.style.top = `${top}%`;
-      referenceDot.style.left = `${left}%`;
+      referenceDot.style.top = `${formattedTop}%`;
+      referenceDot.style.left = `${formattedLeft}%`;
       document.getElementById('edit-right').appendChild(referenceDot);
       
       // 添加到差異點陣列
       editorDifferences.push({
-        position_top: top,
-        position_left: left,
+        position_top: formattedTop,
+        position_left: formattedLeft,
         description: description || `差異點 #${editorDifferences.length + 1}`
       });
       
@@ -1250,21 +1254,25 @@ async function getRandomLevels() {
 
         xPercent = Math.max(0, Math.min(100, xPercent));
         yPercent = Math.max(0, Math.min(100, yPercent));
+        
+        // 格式化確保數值精確度一致
+        const formattedXPercent = parseFloat(xPercent).toFixed(2);
+        const formattedYPercent = parseFloat(yPercent).toFixed(2);
 
-        element.style.left = `${xPercent}%`;
-        element.style.top = `${yPercent}%`;
+        element.style.left = `${formattedXPercent}%`;
+        element.style.top = `${formattedYPercent}%`;
 
         const index = Array.from(document.querySelectorAll('#edit-left .editor-dot')).indexOf(element);
         if (index !== -1) {
           const refDots = document.querySelectorAll('#edit-right .editor-dot.reference');
           if (refDots[index]) {
-            refDots[index].style.left = `${xPercent}%`;
-            refDots[index].style.top = `${yPercent}%`;
+            refDots[index].style.left = `${formattedXPercent}%`;
+            refDots[index].style.top = `${formattedYPercent}%`;
           }
           
           if (editorDifferences[index]) {
-            editorDifferences[index].position_left = xPercent;
-            editorDifferences[index].position_top = yPercent;
+            editorDifferences[index].position_left = formattedXPercent;
+            editorDifferences[index].position_top = formattedYPercent;
             updateOutput();
           }
         }
@@ -1310,6 +1318,13 @@ async function getRandomLevels() {
       }
       
       try {
+        // 統一位置格式，確保存儲的數據與遊戲模式一致
+        const processedDifferences = editorDifferences.map(diff => ({
+          description: diff.description,
+          position_top: parseFloat(diff.position_top).toFixed(2),
+          position_left: parseFloat(diff.position_left).toFixed(2)
+        }));
+        
         const response = await fetch('/api/diffrent-game/differences', {
           method: 'POST',
           headers: {
@@ -1317,7 +1332,7 @@ async function getRandomLevels() {
           },
           body: JSON.stringify({
             levelId: currentEditorLevel.id,
-            differences: editorDifferences
+            differences: processedDifferences
           })
         });
         
@@ -1808,7 +1823,7 @@ async function getRandomLevels() {
         const diffX = parseFloat(diffPosition.left);
         const diffY = parseFloat(diffPosition.top);
         const distance = Math.sqrt(Math.pow(x - diffX, 2) + Math.pow(y - diffY, 2));
-        const clickRadius = 5; // Adjust as needed
+        const clickRadius = 10; // Increased from 5 to make differences easier to click
 
         console.log(`Checking distance to diff ${dataId}: ${distance.toFixed(2)}% (Target: < ${clickRadius}%)`);
 
