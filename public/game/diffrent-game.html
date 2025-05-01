@@ -133,14 +133,20 @@
       display: block;
     }
     .game-status-container {
+      position: fixed; /* Make it fixed */
+      top: 10px;      /* Position from top */
+      left: 50%;      /* Center horizontally */
+      transform: translateX(-50%);
+      z-index: 999;   /* Ensure it's above most content */
       width: auto;
-      max-width: 450px;
-      margin: 0 auto 10px;
+      max-width: 90%; /* Prevent it from being too wide on large screens */
+      margin: 0;      /* Remove original margin */
       padding: 8px 15px;
       background-color: #fff8e1;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: inline-block;
+      display: block; /* Change from inline-block */
+      text-align: center; /* Center text inside */
     }
     #status {
       margin: 0;
@@ -304,8 +310,9 @@
         font-size: 14px;
       }
       .game-status-container {
-        margin: 5px auto;
-        padding: 5px;
+        margin: 0; /* Already handled by fixed positioning */
+        padding: 5px 10px; /* Adjust padding for mobile */
+        top: 5px; /* Slightly less space from top on mobile */
       }
       #status {
         font-size: 16px;
@@ -727,7 +734,7 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
-
+ 
   </style>
 </head>
 <body>
@@ -1936,35 +1943,7 @@ async function getRandomLevels() {
       }
     }
   </script>
-
-  <!-- 底部導航 -->
-  <nav class="bottom-nav">
-        <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
-        </ul>
-    </nav>
-
-      <!-- 頁腳 - 在大屏幕設備上顯示 -->
-    <footer class="desktop-footer">
-        <div class="footer-container">
-            <nav class="footer-nav">
-                <a href="/">週邊商品</a>
-                <a href="/music.html">音樂專輯</a>
-                <a href="/news.html">最新消息</a>
-                <a href="/scores.html">樂譜與舞蹈</a>
-                <a href="/games.html" class="active">互動遊戲</a>
-                <a href="/guestbook.html">留言板</a>
-            </nav>
-            <div class="footer-copyright">
-                <p>© 2024 SunnyYummy. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+ 
 
 </body>
 </html>
