@@ -708,8 +708,99 @@
             let currentTemplateId = null; 
             let currentEditingLevelId = null;
 
+            // 添加缺失的fetchAndDisplayGames函数
+            function fetchAndDisplayGames() {
+                console.log("正在获取游戏列表...");
+                const tableBody = document.querySelector('#games-list-table tbody');
+                if (!tableBody) {
+                    console.error("找不到游戏列表表格");
+                    return;
+                }
+                
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">载入中...</td></tr>';
+                
+                fetch('/api/games')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(games => {
+                        // 更新游戏统计
+                        updateGameStats(games);
+                        
+                        if (games.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">目前没有任何游戏</td></tr>';
+                            return;
+                        }
+                        
+                        // 渲染游戏列表
+                        let tableContent = '';
+                        games.forEach(game => {
+                            tableContent += `
+                                <tr>
+                                    <td>${game.id}</td>
+                                    <td>${escapeHtml(game.name)}</td>
+                                    <td>${escapeHtml(game.description || '')}</td>
+                                    <td style="text-align:center">${game.play_count || 0}</td>
+                                    <td style="text-align:center">
+                                        ${game.image_url ? `<img src="${escapeHtml(game.image_url)}" alt="游戏图片" style="max-height: 50px;">` : '无图片'}
+                                    </td>
+                                    <td style="text-align:center">
+                                        <button class="action-btn edit-btn" onclick="editGame(${game.id})">编辑</button>
+                                        <button class="action-btn delete-btn" onclick="deleteGame(${game.id})">删除</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        tableBody.innerHTML = tableContent;
+                    })
+                    .catch(error => {
+                        console.error('获取游戏列表失败:', error);
+                        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">加载失败: ${error.message}</td></tr>`;
+                    });
+            }
+            
+            // 添加辅助函数updateGameStats
+            function updateGameStats(games) {
+                // 更新统计数据
+                document.getElementById('total-games-count').textContent = games.length;
+                
+                let totalPlays = 0;
+                let mostPopularGame = '无';
+                let mostPlays = 0;
+                
+                games.forEach(game => {
+                    const playCount = game.play_count || 0;
+                    totalPlays += playCount;
+                    
+                    if (playCount > mostPlays) {
+                        mostPlays = playCount;
+                        mostPopularGame = game.name;
+                    }
+                });
+                
+                document.getElementById('total-plays-count').textContent = totalPlays;
+                document.getElementById('most-popular-game').textContent = mostPopularGame;
+                
+                // 今日游玩次数可能需要单独API，这里暂时置为0
+                document.getElementById('today-plays-count').textContent = '0';
+            }
+            
+            // 添加escapeHtml辅助函数
+            function escapeHtml(text) {
+                if (text === null || text === undefined) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
             // Define functions that *need* access to DOM or session variables
-            // (e.g., Diff Editor and Same Game functions that manipulate their specific DOM elements)
+            // ... existing code ...
 
             // ==================================
             // Same Game (對對碰) Functions (Define Inside DOMContentLoaded)
@@ -1840,14 +1931,114 @@
                 editGameFormElement.addEventListener('submit', handleEditGameSubmit);
             } else { console.error("Edit game form not found."); }
             
-            // Attach General Game image preview listeners
-            const addGameImageUrl = document.getElementById('add-game-image-url');
-            if (addGameImageUrl) {
-                addGameImageUrl.addEventListener('input', function() { previewImage('add-image-preview', this.value); });
+            // 添加游戏表单提交处理函数
+            function handleAddGameSubmit(event) {
+                event.preventDefault();
+                console.log("提交新增游戏表单");
+                
+                const formData = {
+                    name: document.getElementById('add-game-name').value.trim(),
+                    description: document.getElementById('add-game-description').value.trim(),
+                    play_url: document.getElementById('add-game-play-url').value.trim(),
+                    image_url: document.getElementById('add-game-image-url').value.trim(),
+                    sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
+                    is_active: document.getElementById('add-game-is-active').value === "1"
+                };
+                
+                const errorElement = document.getElementById('add-form-error');
+                
+                // 简单验证
+                if (!formData.name || !formData.play_url) {
+                    errorElement.textContent = '游戏名称和游戏链接为必填项';
+                    return;
+                }
+                
+                errorElement.textContent = '';
+                
+                fetch('/api/games', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        showAlert('游戏已成功添加', 'success');
+                        document.getElementById('add-game-form').reset();
+                        document.getElementById('add-image-preview').style.display = 'none';
+                        fetchAndDisplayGames(); // 刷新游戏列表
+                        
+                        // 切换回游戏列表标签
+                        switchTab('general-games');
+                    })
+                    .catch(error => {
+                        console.error('添加游戏失败:', error);
+                        errorElement.textContent = `添加失败: ${error.message}`;
+                    });
             }
-            const editGameImageUrl = document.getElementById('edit-game-image-url');
-            if (editGameImageUrl) {
-                editGameImageUrl.addEventListener('input', function() { previewImage('edit-image-preview', this.value); });
+            
+            // 编辑游戏表单提交处理函数
+            function handleEditGameSubmit(event) {
+                event.preventDefault();
+                console.log("提交编辑游戏表单");
+                
+                const gameId = document.getElementById('edit-game-id').value;
+                const formData = {
+                    name: document.getElementById('edit-game-name').value.trim(),
+                    description: document.getElementById('edit-game-description').value.trim(),
+                    play_url: document.getElementById('edit-game-play-url').value.trim(),
+                    image_url: document.getElementById('edit-game-image-url').value.trim(),
+                    sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
+                    is_active: document.getElementById('edit-game-is-active').value === "1"
+                };
+                
+                const errorElement = document.getElementById('edit-form-error');
+                
+                // 简单验证
+                if (!formData.name || !formData.play_url) {
+                    errorElement.textContent = '游戏名称和游戏链接为必填项';
+                    return;
+                }
+                
+                errorElement.textContent = '';
+                
+                fetch(`/api/games/${gameId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        showAlert('游戏已成功更新', 'success');
+                        closeEditForm();
+                        fetchAndDisplayGames(); // 刷新游戏列表
+                    })
+                    .catch(error => {
+                        console.error('更新游戏失败:', error);
+                        errorElement.textContent = `更新失败: ${error.message}`;
+                    });
+            }
+            
+            // 添加图片预览功能
+            function previewImage(previewId, imageUrl) {
+                const preview = document.getElementById(previewId);
+                if (!preview) return;
+                
+                if (imageUrl) {
+                    preview.src = imageUrl;
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
             }
 
             // Initialize Same Game section data and listeners
@@ -1864,6 +2055,121 @@
                 initializeDiffEditor(); 
             }
             
+            // 添加编辑游戏函数
+            function editGame(gameId) {
+                console.log(`编辑游戏ID: ${gameId}`);
+                // 显示编辑表单
+                const editForm = document.getElementById('editGameForm');
+                if (!editForm) {
+                    console.error("找不到编辑表单");
+                    return;
+                }
+                
+                editForm.style.display = 'block';
+                document.querySelector('.admin-container').style.display = 'none';
+                
+                // 获取游戏数据
+                fetch(`/api/games/${gameId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(game => {
+                        document.getElementById('edit-game-id').value = game.id;
+                        document.getElementById('edit-game-name').value = game.name || '';
+                        document.getElementById('edit-game-description').value = game.description || '';
+                        document.getElementById('edit-game-play-url').value = game.play_url || '';
+                        document.getElementById('edit-game-image-url').value = game.image_url || '';
+                        document.getElementById('edit-game-sort-order').value = game.sort_order || 0;
+                        document.getElementById('edit-game-is-active').value = game.is_active ? "1" : "0";
+                        document.getElementById('edit-game-play-count').textContent = game.play_count || 0;
+                        
+                        // 预览图片
+                        const imgPreview = document.getElementById('edit-image-preview');
+                        if (imgPreview) {
+                            if (game.image_url) {
+                                imgPreview.src = game.image_url;
+                                imgPreview.style.display = 'block';
+                            } else {
+                                imgPreview.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取游戏数据失败:', error);
+                        alert(`获取游戏数据失败: ${error.message}`);
+                    });
+            }
+            
+            // 添加删除游戏函数
+            function deleteGame(gameId) {
+                console.log(`删除游戏ID: ${gameId}`);
+                if (!confirm('确定要删除这个游戏吗？此操作无法撤销。')) {
+                    return;
+                }
+                
+                fetch(`/api/games/${gameId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        showAlert('游戏已成功删除', 'success');
+                        fetchAndDisplayGames(); // 刷新游戏列表
+                    })
+                    .catch(error => {
+                        console.error('删除游戏失败:', error);
+                        showAlert(`删除游戏失败: ${error.message}`, 'danger');
+                    });
+            }
+            
+            // 添加关闭编辑表单函数
+            function closeEditForm() {
+                document.getElementById('editGameForm').style.display = 'none';
+                document.querySelector('.admin-container').style.display = 'block';
+            }
+            
+            // 添加显示提示函数
+            function showAlert(message, type = 'info') {
+                const alertContainer = document.getElementById('alertContainer');
+                if (!alertContainer) {
+                    console.error("找不到提示容器");
+                    return;
+                }
+                
+                const alertId = 'alert-' + Date.now();
+                const alertHTML = `
+                    <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                alertContainer.innerHTML += alertHTML;
+                
+                // 自动关闭提示
+                setTimeout(() => {
+                    const alertElement = document.getElementById(alertId);
+                    if (alertElement) {
+                        alertElement.remove();
+                    }
+                }, 5000);
+            }
+            
+            // 将函数挂载到window对象上以便在HTML中直接调用
+            window.editGame = editGame;
+            window.deleteGame = deleteGame;
+            window.closeEditForm = closeEditForm;
+            window.showAlert = showAlert;
+
+            // Define functions that *need* access to DOM or session variables
+            // ... existing code ...
         }); // End of DOMContentLoaded
    </script>
 </body>
