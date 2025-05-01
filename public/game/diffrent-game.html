@@ -1478,13 +1478,24 @@ async function getRandomLevels() {
       let leaderboard = [];
       try {
         const res = await fetch('/api/diffrent-game/leaderboard'); // 取得排行榜
-        if (!res.ok) throw new Error('Failed to fetch leaderboard');
+        if (!res.ok) {
+           throw new Error(`Failed to fetch leaderboard: ${res.status} ${res.statusText}`);
+        }
         leaderboard = await res.json();
+        // Ensure leaderboard is an array before proceeding
+        if (!Array.isArray(leaderboard)) {
+            console.error("Leaderboard data is not an array:", leaderboard);
+            alert("排行榜資料格式錯誤，無法處理。");
+            // Optionally hide the leaderboard container if it was shown
+            const leaderboardContainer = document.getElementById('leaderboard-container');
+            if (leaderboardContainer) leaderboardContainer.classList.remove('show');
+            return;
+        }
         // 顯示排行榜，不需要提交分數
         showLeaderboard(leaderboard, false, null);
       } catch (e) {
+        console.error("Error fetching leaderboard directly:", e); // Log the actual error
         alert('無法取得排行榜，請稍後再試');
-        console.error("Error fetching leaderboard directly:", e);
       }
     }
 
@@ -1621,10 +1632,21 @@ async function getRandomLevels() {
       let leaderboard = [];
       try {
         const res = await fetch('/api/diffrent-game/leaderboard');
+        if (!res.ok) {
+            throw new Error(`Failed to fetch leaderboard: ${res.status} ${res.statusText}`);
+        }
         leaderboard = await res.json();
       } catch (e) {
+        console.error("Error fetching or parsing leaderboard:", e); // Log the actual error
         alert('無法取得排行榜，請稍後再試');
         return;
+      }
+
+      // Ensure leaderboard is an array before proceeding
+      if (!Array.isArray(leaderboard)) {
+          console.error("Leaderboard data is not an array:", leaderboard);
+          alert("排行榜資料格式錯誤，無法處理。");
+          return;
       }
 
       // 3. 檢查是否進前 50 名
