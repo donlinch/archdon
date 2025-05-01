@@ -149,6 +149,156 @@
         .image-list-item img { width: 60px; height: 60px; object-fit: cover; margin-right: 10px; border-radius: 4px; }
         .image-preview-container { width: 60px; height: 60px; margin-right: 10px; display: none; } /* Initially hidden */
         .image-preview-container img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* 差異點編輯器 CSS */
+        .editor-dot {
+          position: absolute;
+          width: 30px; /* Adjusted size for admin context? */
+          height: 30px;
+          border: 2px solid blue; /* Changed color to distinguish */
+          border-radius: 50%;
+          background-color: rgba(0, 0, 255, 0.3);
+          cursor: move;
+          transform: translate(-50%, -50%);
+          z-index: 10; /* Ensure dots are above image */
+        }
+        .editor-dot.reference {
+          background-color: rgba(0, 0, 255, 0.2);
+          border: 2px dashed blue;
+          cursor: default;
+        }
+         /* Need styles for the image containers and labels if reusing */
+         #diff-editor .image-container {
+             position: relative;
+             margin-bottom: 10px;
+             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+             border-radius: 12px;
+             overflow: hidden;
+             width: 90%; /* Adjust width as needed */
+             max-width: 450px; /* Adjust max-width as needed */
+         }
+         #diff-editor .image-container img {
+             width: 100%;
+             height: auto;
+             display: block;
+             border-radius: 10px;
+         }
+         #diff-editor .image-label {
+             font-size: 14px; /* Smaller label for admin */
+             font-weight: bold;
+             position: absolute;
+             top: 8px;
+             left: 8px;
+             background-color: rgba(255, 255, 255, 0.85);
+             padding: 2px 6px;
+             border-radius: 4px;
+             z-index: 5;
+             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+         }
+        #diff-editor #output {
+          width: 100%;
+          height: 150px; /* Increased height */
+          font-family: monospace;
+          white-space: pre-wrap;
+          text-align: left;
+          background: #f0f0f0; /* Slightly different background */
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          overflow-y: auto;
+          margin-top: 15px;
+          font-size: 0.9rem; /* Smaller font */
+        }
+         /* Add styles for the game container in editor */
+         #diff-editor .game-container {
+           display: flex;
+           justify-content: space-around; /* Space out images */
+           gap: 20px;
+           margin-top: 10px;
+           flex-wrap: wrap;
+         }
+         /* Add styles for controls section if reusing */
+         #diff-editor .controls {
+           margin: 20px 0;
+           display: flex;
+           justify-content: center;
+           gap: 10px;
+           flex-wrap: wrap;
+           align-items: center; /* Align items vertically */
+         }
+         /* Add styles for button if reusing */
+         #diff-editor .button {
+           padding: 8px 12px; /* Slightly smaller buttons */
+           background-color: #007bff; /* Bootstrap primary color */
+           color: white;
+           border: none;
+           border-radius: 5px;
+           cursor: pointer;
+           font-size: 14px;
+           font-weight: bold;
+           transition: background-color 0.3s;
+         }
+         #diff-editor .button:hover {
+           background-color: #0056b3;
+         }
+         #diff-editor .button.reset {
+           background-color: #6c757d; /* Bootstrap secondary color */
+         }
+         #diff-editor .button.reset:hover {
+           background-color: #5a6268;
+         }
+         /* Add styles for level-select */
+         #diff-editor .level-select {
+           display: flex;
+           align-items: center;
+           gap: 8px;
+         }
+         #diff-editor .level-select select {
+            padding: 8px 12px;
+            background-color: #6f42c1; /* Bootstrap purple */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+         }
+         /* Style for the new level form */
+        #diff-editor #new-level-form {
+            margin-top: 20px;
+            background: #e9ecef; /* Lighter background */
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        #diff-editor #new-level-form h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        #diff-editor #new-level-form div {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #diff-editor #new-level-form label {
+            flex-shrink: 0;
+            width: 100px; /* Adjust width as needed */
+            text-align: right;
+            font-weight: bold;
+        }
+        #diff-editor #new-level-form input[type="text"] {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #diff-editor #new-level-form .button {
+            margin-left: 110px; /* Align buttons with inputs */
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -183,6 +333,7 @@
                <li class="tab-item active" data-tab="general-games">一般遊戲管理</li>
                <li class="tab-item" data-tab="same-game">對對碰遊戲管理</li>
                <li class="tab-item" data-tab="add-game">新增一般遊戲</li>
+               <li class="tab-item" data-tab="diff-editor">差異點編輯器</li>
            </ul>
        </div>
        
@@ -441,6 +592,56 @@
                </form>
            </div>
        </div>
+
+       <!-- 新增一般遊戲標籤頁 -->
+       <div id="diff-editor" class="tab-content">
+           <div class="game-container">
+             <div class="image-container" id="edit-left">
+               <img src="" alt="原圖" id="left-edit-img" />
+               <div class="image-label">原圖</div>
+             </div>
+
+             <div class="image-container" id="edit-right">
+               <img src="" alt="修改版" id="right-edit-img" />
+               <div class="image-label">修改版</div>
+             </div>
+           </div>
+
+           <div class="controls">
+             <button class="button reset btn btn-secondary btn-sm" id="clear-editor">清除所有點位</button>
+             <button class="button btn btn-success btn-sm" id="save-editor">保存點位</button>
+             <div class="level-select">
+               <select id="level-selector" class="form-select form-select-sm">
+                 <option value="">-- 請選擇圖片組 --</option>
+               </select>
+               <button class="button btn btn-danger btn-sm" id="delete-level">刪除此圖片組</button>
+             </div>
+             <button class="button btn btn-info btn-sm" id="add-new-level">新增圖片組</button>
+           </div>
+
+           <div style="margin-top: 20px;">
+             <label for="output">差異點 JSON 數據 (僅供參考):</label>
+             <textarea id="output" class="form-control" style="height: 150px; font-family: monospace;" readonly></textarea>
+           </div>
+
+           <div id="new-level-form" style="display: none;">
+             <h3>新增圖片組</h3>
+             <div>
+               <label for="new-level-name">圖片名稱:</label>
+               <input type="text" id="new-level-name" class="form-control form-control-sm">
+             </div>
+             <div>
+               <label for="new-left-image">原圖URL:</label>
+               <input type="text" id="new-left-image" class="form-control form-control-sm" placeholder="https://...">
+             </div>
+             <div>
+               <label for="new-right-image">修改版URL:</label>
+               <input type="text" id="new-right-image" class="form-control form-control-sm" placeholder="https://...">
+             </div>
+             <button class="button btn btn-success btn-sm" id="submit-new-level">提交新增</button>
+             <button class="button btn btn-secondary btn-sm" id="cancel-new-level">取消</button>
+           </div>
+       </div>
    </div>
 
    <!-- 編輯一般遊戲表單 (保持原樣，顯示/隱藏) -->
@@ -539,869 +740,1356 @@
 
             // --- Tab Switching Logic ---
             initializeTabSwitching();
-        }); // End of DOMContentLoaded
 
-        // ==================================
-        // General Game Functions
-        // ==================================
-        function handleAddGameSubmit(e) {
-            e.preventDefault();
-            const formData = {
-                name: document.getElementById('add-game-name').value.trim(),
-                description: document.getElementById('add-game-description').value.trim(),
-                play_url: document.getElementById('add-game-play-url').value.trim(),
-                image_url: document.getElementById('add-game-image-url').value.trim(),
-                sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
-                is_active: document.getElementById('add-game-is-active').value === '1'
-            };
-            const addErrorElement = document.getElementById('add-form-error');
-            if (!formData.name || !formData.play_url) {
-                addErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+            // Initialize the default active tab's content (if needed)
+            const activeTab = document.querySelector('.tab-item.active');
+            if (activeTab) {
+                const activeTabId = activeTab.getAttribute('data-tab');
+                if (activeTabId === 'diff-editor') {
+                    initializeDiffEditor(); // Call initialization here
+                } else {
+                    // Initialize other tabs if necessary
+                    if (activeTabId === 'general-games') {
+                        fetchGames();
+                        fetchGameStats();
+                    } else if (activeTabId === 'same-game') {
+                        // Init same-game logic if any
+                    }
+                }
             }
-            addErrorElement.textContent = '';
 
-            fetch('/api/admin/games', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
-            .then(handleFetchResponse)
-            .then(data => {
-                document.getElementById('add-game-form').reset();
-                previewImage('add-image-preview', '');
-                switchTab('general-games'); // Switch back to list
-                fetchAndDisplayGames();
-                showAlert('一般遊戲新增成功', 'success');
-            })
-            .catch(error => { handleError(error, addErrorElement, '新增一般遊戲失敗'); });
-        }
+            // ----- Diff Game Editor Variables -----
+            let diffEditorInitialized = false; // Flag to prevent multiple initializations
+            const diffEditorContainer = document.getElementById('diff-editor'); // Container for editor elements
+            let editLeftImg = null;
+            let editRightImg = null;
+            let levelSelector = null;
+            let saveEditorButton = null;
+            let clearEditorButton = null;
+            let outputArea = null;
+            let addNewLevelButton = null;
+            let newLevelForm = null;
+            let submitNewLevelButton = null;
+            let cancelNewLevelButton = null;
+            let deleteLevelButton = null;
+            let editLeftContainer = null;
 
-        function handleEditGameSubmit(e) {
-            e.preventDefault();
-            const gameId = document.getElementById('edit-game-id').value;
-            const formData = {
-                name: document.getElementById('edit-game-name').value.trim(),
-                description: document.getElementById('edit-game-description').value.trim(),
-                play_url: document.getElementById('edit-game-play-url').value.trim(),
-                image_url: document.getElementById('edit-game-image-url').value.trim(),
-                sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
-                is_active: document.getElementById('edit-game-is-active').value === '1'
-            };
-            const editErrorElement = document.getElementById('edit-form-error');
-            if (!formData.name || !formData.play_url) {
-                editErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+            const editorDifferences = [];
+            let currentEditorLevel = null;
+
+            // ----- Diff Game Editor Functions -----
+            function initializeDiffEditor() {
+                if (diffEditorInitialized || !diffEditorContainer) return;
+                console.log("Initializing Difference Editor...");
+
+                // Find elements within the editor container
+                editLeftImg = diffEditorContainer.querySelector('#left-edit-img');
+                editRightImg = diffEditorContainer.querySelector('#right-edit-img');
+                levelSelector = diffEditorContainer.querySelector('#level-selector');
+                saveEditorButton = diffEditorContainer.querySelector('#save-editor');
+                clearEditorButton = diffEditorContainer.querySelector('#clear-editor');
+                outputArea = diffEditorContainer.querySelector('#output');
+                addNewLevelButton = diffEditorContainer.querySelector('#add-new-level');
+                newLevelForm = diffEditorContainer.querySelector('#new-level-form');
+                submitNewLevelButton = diffEditorContainer.querySelector('#submit-new-level');
+                cancelNewLevelButton = diffEditorContainer.querySelector('#cancel-new-level');
+                deleteLevelButton = diffEditorContainer.querySelector('#delete-level');
+                editLeftContainer = diffEditorContainer.querySelector('#edit-left');
+
+                if (!editLeftImg || !editRightImg || !levelSelector || !saveEditorButton || !clearEditorButton || !outputArea || !addNewLevelButton || !newLevelForm || !submitNewLevelButton || !cancelNewLevelButton || !deleteLevelButton || !editLeftContainer) {
+                   console.error("One or more difference editor elements not found within #diff-editor container.");
+                   return;
+                }
+
+                // Event Listeners (scoped to editor)
+                levelSelector.addEventListener('change', function() {
+                    const selectedLevelId = this.value;
+                    if (selectedLevelId) {
+                        loadLevelToEditor(selectedLevelId);
+                    } else {
+                        clearEditorDisplay();
+                        currentEditorLevel = null;
+                        if(editLeftImg) editLeftImg.src = '';
+                        if(editRightImg) editRightImg.src = '';
+                    }
+                });
+
+                editLeftContainer.addEventListener('click', function(e) {
+                    if (!currentEditorLevel) {
+                        alert('請先選擇一個圖片組');
+                        return;
+                    }
+                    if (e.target.classList.contains('editor-dot')) return;
+                    if (e.target === this || e.target.tagName.toLowerCase() === 'img') {
+                        const img = this.querySelector('img');
+                        if (!img || !img.complete || img.naturalWidth === 0) {
+                             alert('圖片尚未載入完成，無法添加點位。');
+                             return;
+                        }
+                        const rect = img.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        addEditorDot(y, x);
+                    }
+                });
+
+                saveEditorButton.addEventListener('click', saveEditorData);
+                clearEditorButton.addEventListener('click', function() {
+                    if (confirm('確定要清除此圖片組的所有差異點嗎？')) {
+                        clearEditorDisplay();
+                    }
+                });
+                addNewLevelButton.addEventListener('click', function() {
+                    if(newLevelForm) newLevelForm.style.display = 'block';
+                    const nameInput = diffEditorContainer.querySelector('#new-level-name');
+                    const leftInput = diffEditorContainer.querySelector('#new-left-image');
+                    const rightInput = diffEditorContainer.querySelector('#new-right-image');
+                    if(nameInput) nameInput.value = '';
+                    if(leftInput) leftInput.value = '';
+                    if(rightInput) rightInput.value = '';
+                });
+                submitNewLevelButton.addEventListener('click', submitNewLevel);
+                cancelNewLevelButton.addEventListener('click', function() {
+                    if(newLevelForm) newLevelForm.style.display = 'none';
+                });
+                deleteLevelButton.addEventListener('click', deleteSelectedLevel);
+
+                // Initial population
+                populateLevelSelector();
+                diffEditorInitialized = true;
+                console.log("Difference Editor Initialized.");
+            } // End of initializeDiffEditor
+
+            // Define other functions outside initializeDiffEditor but within the scope
+            async function populateLevelSelector() {
+                if (!levelSelector) return;
+                try {
+                    levelSelector.innerHTML = '<option value="">-- 正在載入圖片組 --</option>';
+                    const response = await fetch('/api/diffrent-game/levels');
+                    if (!response.ok) {
+                        throw new Error(`無法獲取圖片組列表: ${response.statusText}`);
+                    }
+                    const levels = await response.json();
+                    levelSelector.innerHTML = '<option value="">-- 請選擇圖片組 --</option>';
+                    levels.forEach(level => {
+                        const option = document.createElement('option');
+                        option.value = level.id;
+                        option.textContent = `${level.id}: ${level.level_name || '未命名圖片組'}`;
+                        levelSelector.appendChild(option);
+                    });
+                    console.log('圖片組選擇器已更新');
+                } catch (error) {
+                    console.error('載入圖片組選擇器失敗:', error);
+                    levelSelector.innerHTML = '<option value="">-- 載入失敗 --</option>';
+                    alert('無法載入圖片組列表: ' + error.message);
+                }
             }
-            editErrorElement.textContent = '';
+            async function loadLevelToEditor(levelId) {
+                 if (!editLeftImg || !editRightImg) return;
+                 try {
+                     clearEditorDisplay();
+                     editorDifferences.length = 0;
 
-            fetch(`/api/admin/games/${gameId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
-            .then(handleFetchResponse)
-            .then(data => {
-                closeEditForm();
-                fetchAndDisplayGames();
-                showAlert('一般遊戲更新成功', 'success');
-            })
-            .catch(error => { handleError(error, editErrorElement, '更新一般遊戲失敗'); });
-        }
-        
-        // Needs to be global for onclick
-        window.editGame = function(id) {
-            const editErrorElement = document.getElementById('edit-form-error');
-            const editGameForm = document.getElementById('edit-game-form');
-            const editImagePreview = document.getElementById('edit-image-preview');
-            if(editErrorElement) editErrorElement.textContent = '';
-            if(editGameForm) editGameForm.reset();
-            if(editImagePreview) editImagePreview.style.display = 'none';
+                     const levelResponse = await fetch(`/api/diffrent-game/levels/${levelId}`);
+                     if (!levelResponse.ok) {
+                         throw new Error(`無法獲取圖片組數據: ${levelResponse.statusText}`);
+                     }
+                     const levelData = await levelResponse.json();
+                     currentEditorLevel = levelData;
 
-            fetch(`/api/admin/games/${id}`)
-            .then(handleFetchResponse)
-            .then(game => {
-                document.getElementById('edit-game-id').value = game.id;
-                document.getElementById('edit-game-name').value = game.title;
-                document.getElementById('edit-game-description').value = game.description || '';
-                document.getElementById('edit-game-play-url').value = game.play_url;
-                document.getElementById('edit-game-image-url').value = game.image_url || '';
-                document.getElementById('edit-game-sort-order').value = game.sort_order || 0;
-                document.getElementById('edit-game-is-active').value = game.is_active ? '1' : '0';
-                document.getElementById('edit-game-play-count').textContent = game.play_count || 0;
+                     editLeftImg.src = levelData.left_image_url || '';
+                     editRightImg.src = levelData.right_image_url || '';
+                     editLeftImg.onerror = () => alert(`無法載入原圖: ${editLeftImg.src}`);
+                     editRightImg.onerror = () => alert(`無法載入修改圖: ${editRightImg.src}`);
+
+                     const diffResponse = await fetch(`/api/diffrent-game/differences/${levelId}`);
+                     if (diffResponse.ok) {
+                         const differences = await diffResponse.json();
+                         differences.forEach(diff => {
+                             const top = parseFloat(diff.position_top);
+                             const left = parseFloat(diff.position_left);
+                             if (!isNaN(top) && !isNaN(left)) {
+                                 addEditorDot(top, left, diff.description);
+                             } else {
+                                console.warn("Invalid position data for difference:", diff);
+                             }
+                         });
+                     } else if (diffResponse.status === 404) {
+                         console.log(`關卡 ${levelId} 尚無差異點資料。`);
+                     } else {
+                         console.warn(`無法獲取差異點: ${diffResponse.statusText}`);
+                     }
+                     updateOutput();
+                 } catch (error) {
+                     console.error('載入圖片組到編輯器失敗:', error);
+                     alert('載入圖片組失敗: ' + error.message);
+                     if(editLeftImg) editLeftImg.src = '';
+                     if(editRightImg) editRightImg.src = '';
+                     currentEditorLevel = null;
+                     clearEditorDisplay();
+                 }
+             }
+            function clearEditorDisplay() {
+                 if (!editLeftContainer) return;
+                 editLeftContainer.querySelectorAll('.editor-dot').forEach(dot => dot.remove());
+                 const editRightContainer = diffEditorContainer.querySelector('#edit-right');
+                 if(editRightContainer) {
+                    editRightContainer.querySelectorAll('.editor-dot.reference').forEach(dot => dot.remove());
+                 }
+                 editorDifferences.length = 0;
+                 updateOutput();
+             }
+            function addEditorDot(top, left, description = '') {
+                 if (!editLeftContainer) return;
+
+                 const dot = document.createElement('div');
+                 dot.className = 'editor-dot';
+                 const clampedTop = Math.max(0, Math.min(100, top));
+                 const clampedLeft = Math.max(0, Math.min(100, left));
+                 dot.style.top = `${clampedTop}%`;
+                 dot.style.left = `${clampedLeft}%`;
+                 dot.dataset.description = description;
+
+                 makeDraggable(dot);
+
+                 dot.addEventListener('contextmenu', (e) => {
+                     e.preventDefault();
+                     if (confirm(`要刪除這個差異點嗎？\n位置: (${clampedTop.toFixed(2)}%, ${clampedLeft.toFixed(2)}%)`)) {
+                         removeEditorDot(dot);
+                     }
+                 });
+
+                 editLeftContainer.appendChild(dot);
+
+                 const newDiff = {
+                     position_top: clampedTop,
+                     position_left: clampedLeft,
+                     description: description || `差異點 #${editorDifferences.length + 1}`
+                 };
+                 editorDifferences.push(newDiff);
+
+                 const editRightContainer = diffEditorContainer.querySelector('#edit-right');
+                 if (editRightContainer) {
+                     const referenceDot = document.createElement('div');
+                     referenceDot.className = 'editor-dot reference';
+                     referenceDot.style.top = `${clampedTop}%`;
+                     referenceDot.style.left = `${clampedLeft}%`;
+                     editRightContainer.appendChild(referenceDot);
+                     dot.dataset.refIndex = editRightContainer.querySelectorAll('.editor-dot.reference').length - 1;
+                 }
+                 updateOutput();
+                 return dot;
+             }
+            function removeEditorDot(dotElement) {
+                 const index = editorDifferences.findIndex(d =>
+                     Math.abs(d.position_top - parseFloat(dotElement.style.top)) < 0.01 &&
+                     Math.abs(d.position_left - parseFloat(dotElement.style.left)) < 0.01
+                 );
+
+                 if (index > -1) {
+                     editorDifferences.splice(index, 1);
+                     const refIndex = dotElement.dataset.refIndex;
+                     const editRightContainer = diffEditorContainer.querySelector('#edit-right');
+                     if (refIndex !== undefined && editRightContainer) {
+                         const refDots = editRightContainer.querySelectorAll('.editor-dot.reference');
+                         if (refDots[refIndex]) {
+                             refDots[refIndex].remove();
+                         }
+                     }
+                     dotElement.remove();
+                     updateOutput();
+                 } else {
+                     console.warn("Could not find corresponding difference in array to remove dot.");
+                     dotElement.remove();
+                     updateOutput();
+                 }
+             }
+            function makeDraggable(element) {
+                let isDragging = false;
+                let dragOffsetX, dragOffsetY;
+                const container = element.parentElement;
+
+                element.addEventListener('mousedown', startDrag);
+                element.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+                 function handleTouchStart(e) {
+                     if (e.touches.length !== 1) return;
+                     e.preventDefault();
+                     startDrag(e.touches[0]);
+                 }
+
+                 function startDrag(e) {
+                     isDragging = true;
+                     element.style.cursor = 'grabbing';
+                     element.style.zIndex = 20;
+
+                     const elementRect = element.getBoundingClientRect();
+                     dragOffsetX = e.clientX - elementRect.left;
+                     dragOffsetY = e.clientY - elementRect.top;
+
+                     document.addEventListener('mousemove', drag);
+                     document.addEventListener('mouseup', stopDrag);
+                     document.addEventListener('touchmove', handleTouchMove, { passive: false });
+                     document.addEventListener('touchend', handleTouchEnd);
+                     document.addEventListener('touchcancel', handleTouchEnd);
+                 }
+
+                function handleTouchMove(e) {
+                    if (!isDragging || e.touches.length !== 1) return;
+                    e.preventDefault();
+                    drag(e.touches[0]);
+                }
+
+                function drag(e) {
+                    if (!isDragging || !container) return;
+                    const img = container.querySelector('img');
+                    if (!img) return;
+                    const imgRect = img.getBoundingClientRect();
+
+                    const pointerX = e.clientX - imgRect.left;
+                    const pointerY = e.clientY - imgRect.top;
+
+                    let newLeftPercent = (pointerX / imgRect.width) * 100;
+                    let newTopPercent = (pointerY / imgRect.height) * 100;
+
+                    newLeftPercent = Math.max(0, Math.min(100, newLeftPercent));
+                    newTopPercent = Math.max(0, Math.min(100, newTopPercent));
+
+                    element.style.left = `${newLeftPercent}%`;
+                    element.style.top = `${newTopPercent}%`;
+
+                     let dotIndex = -1;
+                     const allDots = Array.from(container.querySelectorAll('.editor-dot:not(.reference)'));
+                     dotIndex = allDots.indexOf(element);
+
+                     if (dotIndex !== -1 && editorDifferences[dotIndex]) {
+                         editorDifferences[dotIndex].position_left = newLeftPercent;
+                         editorDifferences[dotIndex].position_top = newTopPercent;
+
+                         const editRightContainer = diffEditorContainer.querySelector('#edit-right');
+                          if (editRightContainer) {
+                             const refDots = editRightContainer.querySelectorAll('.editor-dot.reference');
+                             if (refDots[dotIndex]) {
+                                 refDots[dotIndex].style.left = `${newLeftPercent}%`;
+                                 refDots[dotIndex].style.top = `${newTopPercent}%`;
+                             }
+                          }
+                         updateOutput();
+                     } else {
+                         // console.warn("Could not reliably find index for dragged dot.");
+                     }
+                }
+
+                 function handleTouchEnd(e) {
+                     if (isDragging) {
+                        stopDrag();
+                     }
+                 }
+
+                function stopDrag() {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    element.style.cursor = 'move';
+                    element.style.zIndex = 10;
+
+                    document.removeEventListener('mousemove', drag);
+                    document.removeEventListener('mouseup', stopDrag);
+                    document.removeEventListener('touchmove', handleTouchMove);
+                    document.removeEventListener('touchend', handleTouchEnd);
+                    document.removeEventListener('touchcancel', handleTouchEnd);
+                    updateOutput();
+                }
+             }
+            function updateOutput() {
+                 if (!outputArea) return;
+                  try {
+                      const output = editorDifferences.map(d => ({
+                        position_top: parseFloat(d.position_top.toFixed(4)),
+                        position_left: parseFloat(d.position_left.toFixed(4)),
+                        description: d.description || ''
+                      }));
+                      outputArea.value = `// 共 ${editorDifferences.length} 個差異點 (請點擊 '保存點位' 按鈕儲存)\n${JSON.stringify(output, null, 2)}`;
+                  } catch (e) {
+                      console.error("Error updating output area:", e);
+                      outputArea.value = "更新 JSON 預覽時出錯";
+                  }
+             }
+            async function saveEditorData() {
+                 if (!currentEditorLevel || !currentEditorLevel.id) {
+                     alert('錯誤：未選擇有效的圖片組，無法保存。');
+                     return;
+                 }
+                 if (editorDifferences.length === 0) {
+                     if (!confirm('此圖片組沒有設定任何差異點，確定要保存嗎？ (這將清除伺服器上該圖片組的所有現有點位)')) {
+                         return;
+                     }
+                 } else if (editorDifferences.length < 3 || editorDifferences.length > 10) {
+                     if (!confirm(`此圖片組設定了 ${editorDifferences.length} 個差異點。\n建議數量為 3 到 10 個。\n確定要保存嗎？`)) {
+                         return;
+                     }
+                 }
+                 const dataToSend = {
+                     levelId: currentEditorLevel.id,
+                     differences: editorDifferences.map(d => ({
+                         position_top: parseFloat(d.position_top.toFixed(4)),
+                         position_left: parseFloat(d.position_left.toFixed(4)),
+                         description: d.description || ''
+                     }))
+                 };
+                 console.log("Saving differences:", JSON.stringify(dataToSend, null, 2));
+                 try {
+                     const response = await fetch('/api/diffrent-game/differences', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify(dataToSend)
+                     });
+                     if (!response.ok) {
+                         const errorData = await response.json().catch(() => ({ message: '保存失敗，請檢查伺服器日誌' }));
+                         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                     }
+                     const result = await response.json();
+                     alert(`保存成功！ ${result.message || '(伺服器未提供訊息)'}`);
+                 } catch (error) {
+                     console.error('保存差異點失敗:', error);
+                     alert('保存失敗: ' + error.message);
+                 }
+             }
+            async function submitNewLevel() {
+                  if (!newLevelForm) return;
+                 const levelNameInput = newLevelForm.querySelector('#new-level-name');
+                 const leftImageUrlInput = newLevelForm.querySelector('#new-left-image');
+                 const rightImageUrlInput = newLevelForm.querySelector('#new-right-image');
+                 const levelName = levelNameInput ? levelNameInput.value.trim() : '';
+                 const leftImageUrl = leftImageUrlInput ? leftImageUrlInput.value.trim() : '';
+                 const rightImageUrl = rightImageUrlInput ? rightImageUrlInput.value.trim() : '';
+
+                 if (!levelName || !leftImageUrl || !rightImageUrl) {
+                     alert('請填寫圖片名稱、原圖URL和修改版URL');
+                     return;
+                 }
+                  const urlPattern = /^https?:\/\/.+/i;
+                  if (!urlPattern.test(leftImageUrl) || !urlPattern.test(rightImageUrl)) {
+                      alert('請輸入有效的圖片 URL (以 http:// 或 https:// 開頭)');
+                      return;
+                  }
+                 try {
+                     const response = await fetch('/api/diffrent-game/levels', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({
+                             level_name: levelName,
+                             left_image_url: leftImageUrl,
+                             right_image_url: rightImageUrl,
+                             active: true
+                         })
+                     });
+                     if (!response.ok) {
+                          const errorData = await response.json().catch(() => ({ message: '新增圖片組失敗' }));
+                         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                     }
+                     const result = await response.json();
+                     alert(`新增圖片組成功！ID: ${result.id}`);
+                     if(newLevelForm) newLevelForm.style.display = 'none';
+                     await populateLevelSelector();
+                     if(levelSelector) levelSelector.value = result.id;
+                     await loadLevelToEditor(result.id);
+                 } catch (error) {
+                     console.error('新增圖片組失敗:', error);
+                     alert('新增圖片組失敗: ' + error.message);
+                 }
+             }
+            async function deleteSelectedLevel() {
+                  const selectedLevelId = levelSelector ? parseInt(levelSelector.value) : NaN;
+                  if (isNaN(selectedLevelId)) {
+                      alert('請先選擇要刪除的圖片組！');
+                      return;
+                  }
+                  if (!confirm(`確定要刪除 ID:${selectedLevelId} 這組圖片嗎？相關的差異點也會一併刪除。此動作無法復原。`)) {
+                      return;
+                  }
+                  try {
+                      const res = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`, { method: 'DELETE' });
+                      if (res.ok) {
+                          alert('圖片組已刪除！');
+                          await populateLevelSelector();
+                          clearEditorDisplay();
+                          if(editLeftImg) editLeftImg.src = "";
+                          if(editRightImg) editRightImg.src = "";
+                          currentEditorLevel = null;
+                      } else {
+                          const errorData = await res.json().catch(() => ({ message: '刪除失敗' }));
+                          alert(`刪除失敗: ${errorData.message || res.statusText}`);
+                      }
+                  } catch (e) {
+                      console.error("Error deleting level:", e);
+                      alert('網路錯誤，無法刪除圖片組');
+                  }
+             }
+
+
+           // ==================================
+           // General Game Functions
+           // ==================================
+           function handleAddGameSubmit(e) {
+               e.preventDefault();
+               const formData = {
+                   name: document.getElementById('add-game-name').value.trim(),
+                   description: document.getElementById('add-game-description').value.trim(),
+                   play_url: document.getElementById('add-game-play-url').value.trim(),
+                   image_url: document.getElementById('add-game-image-url').value.trim(),
+                   sort_order: parseInt(document.getElementById('add-game-sort-order').value) || 0,
+                   is_active: document.getElementById('add-game-is-active').value === '1'
+               };
+               const addErrorElement = document.getElementById('add-form-error');
+               if (!formData.name || !formData.play_url) {
+                   addErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+               }
+               addErrorElement.textContent = '';
+
+               fetch('/api/admin/games', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
+               .then(handleFetchResponse)
+               .then(data => {
+                   document.getElementById('add-game-form').reset();
+                   previewImage('add-image-preview', '');
+                   switchTab('general-games'); // Switch back to list
+                   fetchAndDisplayGames();
+                   showAlert('一般遊戲新增成功', 'success');
+               })
+               .catch(error => { handleError(error, addErrorElement, '新增一般遊戲失敗'); });
+           }
+
+           function handleEditGameSubmit(e) {
+               e.preventDefault();
+               const gameId = document.getElementById('edit-game-id').value;
+               const formData = {
+                   name: document.getElementById('edit-game-name').value.trim(),
+                   description: document.getElementById('edit-game-description').value.trim(),
+                   play_url: document.getElementById('edit-game-play-url').value.trim(),
+                   image_url: document.getElementById('edit-game-image-url').value.trim(),
+                   sort_order: parseInt(document.getElementById('edit-game-sort-order').value) || 0,
+                   is_active: document.getElementById('edit-game-is-active').value === '1'
+               };
+               const editErrorElement = document.getElementById('edit-form-error');
+               if (!formData.name || !formData.play_url) {
+                   editErrorElement.textContent = '遊戲名稱和連結不能為空'; return;
+               }
+               editErrorElement.textContent = '';
+
+               fetch(`/api/admin/games/${gameId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(formData) })
+               .then(handleFetchResponse)
+               .then(data => {
+                   closeEditForm();
+                   fetchAndDisplayGames();
+                   showAlert('一般遊戲更新成功', 'success');
+               })
+               .catch(error => { handleError(error, editErrorElement, '更新一般遊戲失敗'); });
+           }
+           
+           // Needs to be global for onclick
+           window.editGame = function(id) {
+               const editErrorElement = document.getElementById('edit-form-error');
+               const editGameForm = document.getElementById('edit-game-form');
+               const editImagePreview = document.getElementById('edit-image-preview');
+               if(editErrorElement) editErrorElement.textContent = '';
+               if(editGameForm) editGameForm.reset();
+               if(editImagePreview) editImagePreview.style.display = 'none';
+
+               fetch(`/api/admin/games/${id}`)
+               .then(handleFetchResponse)
+               .then(game => {
+                   document.getElementById('edit-game-id').value = game.id;
+                   document.getElementById('edit-game-name').value = game.title;
+                   document.getElementById('edit-game-description').value = game.description || '';
+                   document.getElementById('edit-game-play-url').value = game.play_url;
+                   document.getElementById('edit-game-image-url').value = game.image_url || '';
+                   document.getElementById('edit-game-sort-order').value = game.sort_order || 0;
+                   document.getElementById('edit-game-is-active').value = game.is_active ? '1' : '0';
+                   document.getElementById('edit-game-play-count').textContent = game.play_count || 0;
+                   
+                   previewImage('edit-image-preview', game.image_url);
+                   
+                   const editGameForm = document.getElementById('editGameForm');
+                   if (editGameForm) editGameForm.style.display = 'block';
+                   const adminContainer = document.querySelector('.admin-container');
+                   if (adminContainer) adminContainer.style.display = 'none';
+               })
+               .catch(error => { alert(`載入一般遊戲資料時出錯: ${error.message}`); });
+           }
+
+           // Needs to be global for onclick
+           window.closeEditForm = function() {
+               const editGameForm = document.getElementById('editGameForm');
+               if (editGameForm) editGameForm.style.display = 'none';
+               const adminContainer = document.querySelector('.admin-container');
+               if (adminContainer) adminContainer.style.display = 'block';
+           }
+
+           // Needs to be global for onclick
+           window.deleteGame = function(id) {
+               if (confirm(`確定要刪除ID為 ${id} 的一般遊戲嗎？此操作無法復原！`)) {
+                   fetch(`/api/admin/games/${id}`, { method: 'DELETE' })
+                   .then(handleFetchResponse)
+                   .then(data => {
+                       showAlert('一般遊戲刪除成功', 'success');
+                       fetchAndDisplayGames(); // Refresh list
+                   })
+                   .catch(error => { handleError(error, null, '刪除一般遊戲失敗'); });
+               }
+           }
+
+           function fetchAndDisplayGames() {
+               const tableBody = document.querySelector('#games-list-table tbody');
+               if (!tableBody) { console.error("General games table body not found."); return; }
+               tableBody.innerHTML = '<tr><td colspan="6">正在載入一般遊戲列表...</td></tr>';
+
+               fetch('/api/admin/games')
+               .then(handleFetchResponse)
+               .then(data => {
+                   renderTable(tableBody, data, renderGeneralGameRow, 6, "目前沒有任何一般遊戲");
+                   updateStatistics(data);
+               })
+               .catch(error => { handleError(error, tableBody, '載入一般遊戲列表失敗', 6); });
+           }
+           
+           function renderGeneralGameRow(game) {
+               const imageUrl = game.image_url || '/images/placeholder.png';
+               const title = escapeHtml(game.title || '無標題');
+               const description = escapeHtml(game.description || '');
+               const playCount = game.play_count || 0;
+               const gameId = game.id;
+
+               return `
+                   <td>${gameId}</td>
+                   <td>${title}</td>
+                   <td>${description}</td>
+                   <td>${playCount}</td>
+                   <td><img src="${imageUrl}" alt="${title}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                   <td>
+                       <button class="action-btn edit-btn" onclick="editGame(${gameId})">編輯</button>
+                       <button class="action-btn delete-btn" onclick="deleteGame(${gameId})">刪除</button>
+                   </td>
+               `;
+           }
+
+           function updateStatistics(data) {
+               const totalGamesElement = document.getElementById('total-games-count');
+               const totalPlaysElement = document.getElementById('total-plays-count');
+               const mostPopularElement = document.getElementById('most-popular-game');
+               const todayPlaysElement = document.getElementById('today-plays-count');
+
+               if (data && Array.isArray(data)) {
+                   const totalGames = data.length;
+                   const totalPlays = data.reduce((sum, game) => sum + (game.play_count || 0), 0);
+                   const mostPopular = data.length > 0 ? [...data].sort((a, b) => (b.play_count || 0) - (a.play_count || 0))[0] : null;
+                   if(totalGamesElement) totalGamesElement.textContent = totalGames;
+                   if(totalPlaysElement) totalPlaysElement.textContent = totalPlays;
+                   if(mostPopularElement) mostPopularElement.textContent = mostPopular ? escapeHtml(mostPopular.title) : '-';
+               }
+                  
+               fetch('/api/admin/games/stats/today')
+               .then(handleFetchResponse)
+               .then(stats => {
+                   if(todayPlaysElement) todayPlaysElement.textContent = stats.today_count || 0;
+               }) 
+               .catch(error => {
+                   if(todayPlaysElement) todayPlaysElement.textContent = '?';
+                   console.error('獲取今日遊玩次數失敗:', error);
+               });
+           }
+
+           // Needs to be global for input events
+           window.previewImage = function(previewId, imageUrl) {
+               const preview = document.getElementById(previewId);
+               if (!preview) { console.error(`Preview image element ID '${previewId}' not found.`); return; }
+               if (imageUrl) {
+                   preview.src = imageUrl;
+                   preview.style.display = 'block';
+                           } else {
+                   preview.src = '';
+                   preview.style.display = 'none';
+               }
+           }
+
+           // ==================================
+           // Same Game (對對碰) Functions
+           // ==================================
+           function initializeSameGameEventListeners() {
+               // Template form submission (for add/edit)
+               $('#templateForm').submit(handleTemplateFormSubmit);
+
+               // Cancel template edit button
+               $('#cancelTemplateEditBtn').click(cancelTemplateEdit);
+
+               // Back to list button from template detail view
+               $('#backToListBtn').click(hideTemplateDetail);
                 
-                previewImage('edit-image-preview', game.image_url);
+               // Add level button (shows level form)
+               $('#addLevelBtn').click(showAddLevelForm);
+
+               // Level form submission
+               $('#levelForm').submit(handleLevelFormSubmit);
+
+               // Cancel level edit button
+               $('#cancelLevelEditBtn').click(hideLevelForm);
+
+               // Add image field button in level form
+               $('#addImageBtn').click(() => addImageInput()); // Pass no URL for new field
+
+               // Leaderboard template filter change
+               $('#leaderboardTemplateFilter').change(function() {
+                   loadLeaderboard($(this).val());
+               });
+
+               // Event delegation for dynamically added buttons within lists
+                $('#templatesList').on('click', '.view-btn', function() {
+                   viewTemplateDetail($(this).data('id'));
+               });
+                $('#templatesList').on('click', '.edit-template-btn', function() {
+                   editTemplate($(this).data('id'));
+               });
+               $('#templatesList').on('click', '.delete-template-btn', function() {
+                   const templateId = $(this).data('id');
+                   const templateName = $(this).data('name');
+                   confirmDeleteTemplate(templateId, templateName);
+               });
+               $('#levelsList').on('click', '.edit-level-btn', function() {
+                   editLevel($(this).data('id'));
+               });
+               $('#levelsList').on('click', '.delete-level-btn', function() {
+                   const levelId = $(this).data('id');
+                   const levelNumber = $(this).data('level');
+                   confirmDeleteLevel(levelId, levelNumber);
+               });
+               $('#imageList').on('click', '.remove-image-btn', function() {
+                   $(this).closest('.image-list-item').remove();
+               });
+               $('#imageList').on('change', '.image-file-input', function(event) {
+                   handleImageFileUpload(event.target);
+               });
+           }
+
+           function loadTemplates() {
+               const tableBody = $('#templatesList');
+               if (!tableBody.length) { console.error("Templates table body not found."); return; }
+               tableBody.html('<tr><td colspan="8" class="text-center py-4">載入中...</td></tr>');
+               
+               fetch('/api/samegame/templates')
+               .then(handleFetchResponse)
+               .then(data => {
+                   renderTable(tableBody[0], data, renderTemplateRow, 8, "目前沒有任何模板");
+                   populateTemplateFilter(data); // Populate leaderboard filter
+               })
+               .catch(error => { handleError(error, tableBody[0], '載入模板列表失敗', 8); });
+           }
+           
+           function renderTemplateRow(template, index) {
+               const templateId = template.id;
+               const name = escapeHtml(template.name);
+               const difficulty = escapeHtml(template.difficulty || '未設置');
+               const levelCount = template.level_count || 0;
+               const playCount = template.play_count || 0;
+               const status = template.is_active ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>';
+               const updated = formatDate(template.updated_at);
+
+               return `
+                   <td>${index + 1}</td>
+                   <td>${name}</td>
+                   <td>${difficulty}</td>
+                   <td>${levelCount}</td>
+                   <td>${playCount}</td>
+                   <td>${status}</td>
+                   <td>${updated}</td>
+                   <td>
+                       <button class="btn btn-sm btn-outline-primary view-btn" data-id="${templateId}">
+                           <i class="fas fa-eye"></i> 查看
+                       </button>
+                        <button class="btn btn-sm btn-outline-warning edit-template-btn" data-id="${templateId}">
+                           <i class="fas fa-edit"></i> 編輯
+                       </button>
+                       <button class="btn btn-sm btn-outline-danger delete-template-btn" data-id="${templateId}" data-name="${name}">
+                           <i class="fas fa-trash"></i> 刪除
+                       </button>
+                   </td>
+               `;
+           }
+
+           function populateTemplateFilter(templates) {
+               const filterSelect = $('#leaderboardTemplateFilter');
+               if (!filterSelect.length) return;
+               let options = '<option value="">所有模板</option>';
+               if (Array.isArray(templates)) {
+                   templates.forEach(template => {
+                       options += `<option value="${template.id}">${escapeHtml(template.name)}</option>`;
+                   });
+               }
+               filterSelect.html(options);
+           }
+
+           function loadLeaderboard(templateId = '') {
+               const tableBody = $('#leaderboardList');
+               if (!tableBody.length) { console.error("Leaderboard table body not found."); return; }
+               tableBody.html('<tr><td colspan="6" class="text-center py-4">載入中...</td></tr>');
+               
+               let url = '/api/samegame/leaderboard';
+               if (templateId) {
+                   url += `?template_id=${templateId}`;
+               }
+               
+               fetch(url)
+               .then(handleFetchResponse)
+               .then(data => {
+                   renderTable(tableBody[0], data, renderLeaderboardRow, 6, "目前沒有任何排行紀錄");
+               })
+               .catch(error => { handleError(error, tableBody[0], '載入排行榜失敗', 6); });
+           }
+
+           function renderLeaderboardRow(record, index) {
+                const playerName = escapeHtml(record.player_name);
+                const templateName = escapeHtml(record.template_name);
+                const totalMoves = record.total_moves;
+                const completionTime = record.completion_time ? record.completion_time : '未記錄';
+                const createdAt = formatDate(record.created_at);
+
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${playerName}</td>
+                        <td>${templateName}</td>
+                        <td>${totalMoves}</td>
+                        <td>${completionTime}</td>
+                        <td>${createdAt}</td>
+                    </tr>
+                `;
+           }
+
+           function viewTemplateDetail(templateId) {
+               currentTemplateId = templateId; // Store globally for later use (e.g., adding levels)
+               $('#templateDetailContainer').hide(); // Hide first
+               $('#levelsList').empty(); // Clear previous levels
                 
-                const editGameForm = document.getElementById('editGameForm');
-                if (editGameForm) editGameForm.style.display = 'block';
-                const adminContainer = document.querySelector('.admin-container');
-                if (adminContainer) adminContainer.style.display = 'none';
-            })
-            .catch(error => { alert(`載入一般遊戲資料時出錯: ${error.message}`); });
-        }
+               fetch(`/api/samegame/templates/${templateId}`)
+               .then(handleFetchResponse)
+               .then(data => {
+                   $('#detailTemplateName').text(data.name);
+                   $('#detailTemplateDescription').text(data.description || '無描述');
+                   $('#detailTemplateDifficulty').text(data.difficulty || '未設置');
+                   $('#templateDetailTitle').text(`模板詳情: ${escapeHtml(data.name)}`);
+                   
+                   // Render levels list within the detail container
+                   renderTable(document.getElementById('levelsList'), data.levels || [], renderLevelRow, 5, "尚未設置任何關卡");
 
-        // Needs to be global for onclick
-        window.closeEditForm = function() {
-            const editGameForm = document.getElementById('editGameForm');
-            if (editGameForm) editGameForm.style.display = 'none';
-            const adminContainer = document.querySelector('.admin-container');
-            if (adminContainer) adminContainer.style.display = 'block';
-        }
+                   $('#templateDetailContainer').show(); // Show the container with details and levels
+                   // Hide the main list view (optional, depends on desired UI)
+                   // $('#templates-list').hide(); 
+               })
+               .catch(error => { showAlert(`載入模板詳情失敗: ${error.message}`, 'danger'); });
+           }
+           
+           function renderLevelRow(level) {
+               const levelId = level.id;
+               const levelNumber = level.level_number;
+               const grid = `${level.grid_rows} × ${level.grid_columns}`;
+               const imageCount = level.images ? level.images.length : 0;
+               const updated = formatDate(level.updated_at);
 
-        // Needs to be global for onclick
-        window.deleteGame = function(id) {
-            if (confirm(`確定要刪除ID為 ${id} 的一般遊戲嗎？此操作無法復原！`)) {
-                fetch(`/api/admin/games/${id}`, { method: 'DELETE' })
+               return `
+                   <tr>
+                       <td>${levelNumber}</td>
+                       <td>${grid}</td>
+                       <td>${imageCount} 張</td>
+                       <td>${updated}</td>
+                       <td>
+                           <button class="btn btn-sm btn-outline-primary edit-level-btn" data-id="${levelId}">
+                               <i class="fas fa-edit"></i> 編輯
+                           </button>
+                           <button class="btn btn-sm btn-outline-danger delete-level-btn" data-id="${levelId}" data-level="${levelNumber}">
+                               <i class="fas fa-trash"></i> 刪除
+                           </button>
+                       </td>
+                   </tr>
+               `;
+           }
+
+           function hideTemplateDetail() {
+               $('#templateDetailContainer').hide();
+                hideLevelForm(); // Also hide level form if open
+               currentTemplateId = null;
+               // Show the main list view again if it was hidden
+               // $('#templates-list').show(); 
+           }
+
+           function editTemplate(templateId) {
+                fetch(`/api/samegame/templates/${templateId}`)
+               .then(handleFetchResponse)
+               .then(data => {
+                   resetTemplateForm(); // Clear form first
+                   $('#templateId').val(data.id); // Set the ID for update
+                   $('#templateName').val(data.name);
+                   $('#templateDescription').val(data.description || '');
+                   $('#templateDifficulty').val(data.difficulty || '簡單');
+                   $('#templateActive').prop('checked', data.is_active);
+                   $('#templateFormTitle').text('編輯模板');
+                   
+                   // Switch to the add/edit template tab
+                   switchTab('add-template');
+               })
+               .catch(error => { showAlert(`載入模板數據失敗: ${error.message}`, 'danger'); });
+           }
+
+           function handleTemplateFormSubmit(e) {
+               e.preventDefault();
+               const templateId = $('#templateId').val();
+               const name = $('#templateName').val().trim();
+               const templateData = {
+                   name: name,
+                   description: $('#templateDescription').val().trim(),
+                   difficulty: $('#templateDifficulty').val(),
+                   is_active: $('#templateActive').is(':checked')
+               };
+               const errorElement = $('#templateFormError');
+
+               if (!name) { errorElement.text('請輸入模板名稱'); return; }
+               errorElement.text('');
+
+               const url = templateId ? `/api/samegame/templates/${templateId}` : '/api/samegame/templates';
+               const method = templateId ? 'PUT' : 'POST';
+
+               fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(templateData) })
+               .then(handleFetchResponse)
+               .then(data => {
+                   showAlert(templateId ? '模板更新成功' : '模板創建成功', 'success');
+                   resetTemplateForm();
+                   loadTemplates(); // Refresh list
+                   switchTab('templates-list'); // Go back to list tab
+               })
+               .catch(error => { handleError(error, errorElement[0], templateId ? '更新模板失敗' : '創建模板失敗'); });
+           }
+
+           function cancelTemplateEdit() {
+                resetTemplateForm();
+                switchTab('templates-list'); // Switch back to the list view
+           }
+           
+           function resetTemplateForm() {
+               $('#templateForm')[0].reset(); // Use native reset
+               $('#templateId').val(''); // Clear hidden ID
+               $('#templateFormTitle').text('新增模板');
+               $('#templateFormError').text('');
+                $('#templateActive').prop('checked', true); // Default to active
+           }
+           
+           function showAddLevelForm() {
+               resetLevelForm(); // Clear the form
+               currentEditingLevelId = null; // Ensure we are adding, not editing
+                $('#levelTemplateId').val(currentTemplateId); // Set the parent template ID
+               $('#levelFormTitle').text('新增關卡');
+               $('#levelFormContainer').show(); // Show the form within the detail view
+           }
+
+            function editLevel(levelId) {
+               resetLevelForm();
+               currentEditingLevelId = levelId; // Set the ID for update
+
+               fetch(`/api/samegame/levels/${levelId}`) // Assuming an endpoint to get level details
+               .then(handleFetchResponse)
+               .then(level => {
+                   $('#levelId').val(level.id);
+                   $('#levelTemplateId').val(level.template_id || currentTemplateId); // Use template_id from response or current context
+                   $('#levelNumber').val(level.level_number);
+                   $('#gridRows').val(level.grid_rows);
+                   $('#gridColumns').val(level.grid_columns);
+                   
+                   if (level.images && level.images.length > 0) {
+                       level.images.forEach(image => {
+                           addImageInput(image.image_url); // Populate existing images
+                       });
+                   }
+                   
+                   $('#levelFormTitle').text(`編輯關卡 ${level.level_number}`);
+                   $('#levelFormContainer').show(); // Show the form
+               })
+               .catch(error => { showAlert(`載入關卡數據失敗: ${error.message}`, 'danger'); });
+           }
+
+           function handleLevelFormSubmit(e) {
+                e.preventDefault();
+                const levelId = $('#levelId').val(); // Use hidden input value
+                const templateId = $('#levelTemplateId').val();
+                const levelNumber = $('#levelNumber').val();
+                const gridRows = $('#gridRows').val();
+                const gridColumns = $('#gridColumns').val();
+                const errorElement = $('#levelFormError');
+                errorElement.text(''); // Clear previous errors
+
+                if (!levelNumber || !gridRows || !gridColumns || !templateId) {
+                    errorElement.text('請填寫所有必填欄位'); return;
+                }
+                
+                const images = [];
+                $('#imageList .image-list-item').each(function() {
+                    const urlInput = $(this).find('.image-url-input').val();
+                    const url = urlInput ? urlInput.trim() : '';
+                    if (url) {
+                        images.push({ image_url: url });
+                    }
+                });
+
+                if (images.length < 2) { errorElement.text('請至少添加2張圖片'); return; }
+                if (images.length % 2 !== 0) { errorElement.text('圖片數量必須是偶數'); return; }
+                const maxPairs = (parseInt(gridRows) * parseInt(gridColumns)) / 2;
+                if (images.length > maxPairs * 2) { errorElement.text(`圖片數量 (${images.length}) 不能超過網格大小的兩倍 (${maxPairs * 2})`); return; }
+
+                const levelData = {
+                    level_number: parseInt(levelNumber),
+                    grid_rows: parseInt(gridRows),
+                    grid_columns: parseInt(gridColumns),
+                    images: images,
+                    template_id: parseInt(templateId) // Ensure template_id is sent
+                };
+
+                const url = levelId ? `/api/samegame/levels/${levelId}` : `/api/samegame/templates/${templateId}/levels`;
+                const method = levelId ? 'PUT' : 'POST';
+
+                fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(levelData) })
                 .then(handleFetchResponse)
                 .then(data => {
-                    showAlert('一般遊戲刪除成功', 'success');
-                    fetchAndDisplayGames(); // Refresh list
+                    showAlert(levelId ? '關卡更新成功' : '關卡創建成功', 'success');
+                    hideLevelForm();
+                    viewTemplateDetail(templateId); // Refresh the level list in the detail view
                 })
-                .catch(error => { handleError(error, null, '刪除一般遊戲失敗'); });
-            }
-        }
+                .catch(error => { handleError(error, errorElement[0], levelId ? '更新關卡失敗' : '創建關卡失敗'); });
+           }
 
-        function fetchAndDisplayGames() {
-            const tableBody = document.querySelector('#games-list-table tbody');
-            if (!tableBody) { console.error("General games table body not found."); return; }
-            tableBody.innerHTML = '<tr><td colspan="6">正在載入一般遊戲列表...</td></tr>';
+           function hideLevelForm() {
+               $('#levelFormContainer').hide();
+               resetLevelForm();
+           }
 
-            fetch('/api/admin/games')
-            .then(handleFetchResponse)
-            .then(data => {
-                renderTable(tableBody, data, renderGeneralGameRow, 6, "目前沒有任何一般遊戲");
-                updateStatistics(data);
-            })
-            .catch(error => { handleError(error, tableBody, '載入一般遊戲列表失敗', 6); });
-        }
-        
-        function renderGeneralGameRow(game) {
-            const imageUrl = game.image_url || '/images/placeholder.png';
-            const title = escapeHtml(game.title || '無標題');
-            const description = escapeHtml(game.description || '');
-            const playCount = game.play_count || 0;
-            const gameId = game.id;
+           function resetLevelForm() {
+               $('#levelForm')[0].reset();
+               $('#levelId').val('');
+               $('#imageList').empty(); // Clear dynamic image list
+               $('#levelFormError').text('');
+           }
 
-            return `
-                <td>${gameId}</td>
-                <td>${title}</td>
-                <td>${description}</td>
-                <td>${playCount}</td>
-                <td><img src="${imageUrl}" alt="${title}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                <td>
-                    <button class="action-btn edit-btn" onclick="editGame(${gameId})">編輯</button>
-                    <button class="action-btn delete-btn" onclick="deleteGame(${gameId})">刪除</button>
-                </td>
-            `;
-        }
-
-        function updateStatistics(data) {
-            const totalGamesElement = document.getElementById('total-games-count');
-            const totalPlaysElement = document.getElementById('total-plays-count');
-            const mostPopularElement = document.getElementById('most-popular-game');
-            const todayPlaysElement = document.getElementById('today-plays-count');
-
-            if (data && Array.isArray(data)) {
-                const totalGames = data.length;
-                const totalPlays = data.reduce((sum, game) => sum + (game.play_count || 0), 0);
-                const mostPopular = data.length > 0 ? [...data].sort((a, b) => (b.play_count || 0) - (a.play_count || 0))[0] : null;
-                if(totalGamesElement) totalGamesElement.textContent = totalGames;
-                if(totalPlaysElement) totalPlaysElement.textContent = totalPlays;
-                if(mostPopularElement) mostPopularElement.textContent = mostPopular ? escapeHtml(mostPopular.title) : '-';
-            }
-               
-            fetch('/api/admin/games/stats/today')
-            .then(handleFetchResponse)
-            .then(stats => {
-                if(todayPlaysElement) todayPlaysElement.textContent = stats.today_count || 0;
-            }) 
-            .catch(error => {
-                if(todayPlaysElement) todayPlaysElement.textContent = '?';
-                console.error('獲取今日遊玩次數失敗:', error);
-            });
-        }
-
-        // Needs to be global for input events
-        window.previewImage = function(previewId, imageUrl) {
-            const preview = document.getElementById(previewId);
-            if (!preview) { console.error(`Preview image element ID '${previewId}' not found.`); return; }
-            if (imageUrl) {
-                preview.src = imageUrl;
-                preview.style.display = 'block';
-            } else {
-                preview.src = '';
-                preview.style.display = 'none';
-            }
-        }
-
-        // ==================================
-        // Same Game (對對碰) Functions
-        // ==================================
-        function initializeSameGameEventListeners() {
-            // Template form submission (for add/edit)
-            $('#templateForm').submit(handleTemplateFormSubmit);
-
-            // Cancel template edit button
-            $('#cancelTemplateEditBtn').click(cancelTemplateEdit);
-
-            // Back to list button from template detail view
-            $('#backToListBtn').click(hideTemplateDetail);
-             
-            // Add level button (shows level form)
-            $('#addLevelBtn').click(showAddLevelForm);
-
-            // Level form submission
-            $('#levelForm').submit(handleLevelFormSubmit);
-
-            // Cancel level edit button
-            $('#cancelLevelEditBtn').click(hideLevelForm);
-
-            // Add image field button in level form
-            $('#addImageBtn').click(() => addImageInput()); // Pass no URL for new field
-
-            // Leaderboard template filter change
-            $('#leaderboardTemplateFilter').change(function() {
-                loadLeaderboard($(this).val());
-            });
-
-            // Event delegation for dynamically added buttons within lists
-             $('#templatesList').on('click', '.view-btn', function() {
-                viewTemplateDetail($(this).data('id'));
-            });
-             $('#templatesList').on('click', '.edit-template-btn', function() {
-                editTemplate($(this).data('id'));
-            });
-            $('#templatesList').on('click', '.delete-template-btn', function() {
-                const templateId = $(this).data('id');
-                const templateName = $(this).data('name');
-                confirmDeleteTemplate(templateId, templateName);
-            });
-            $('#levelsList').on('click', '.edit-level-btn', function() {
-                editLevel($(this).data('id'));
-            });
-            $('#levelsList').on('click', '.delete-level-btn', function() {
-                const levelId = $(this).data('id');
-                const levelNumber = $(this).data('level');
-                confirmDeleteLevel(levelId, levelNumber);
-            });
-            $('#imageList').on('click', '.remove-image-btn', function() {
-                $(this).closest('.image-list-item').remove();
-            });
-            $('#imageList').on('change', '.image-file-input', function(event) {
-                handleImageFileUpload(event.target);
-            });
-        }
-
-        function loadTemplates() {
-            const tableBody = $('#templatesList');
-            if (!tableBody.length) { console.error("Templates table body not found."); return; }
-            tableBody.html('<tr><td colspan="8" class="text-center py-4">載入中...</td></tr>');
-            
-            fetch('/api/samegame/templates')
-            .then(handleFetchResponse)
-            .then(data => {
-                renderTable(tableBody[0], data, renderTemplateRow, 8, "目前沒有任何模板");
-                populateTemplateFilter(data); // Populate leaderboard filter
-            })
-            .catch(error => { handleError(error, tableBody[0], '載入模板列表失敗', 8); });
-        }
-        
-        function renderTemplateRow(template, index) {
-            const templateId = template.id;
-            const name = escapeHtml(template.name);
-            const difficulty = escapeHtml(template.difficulty || '未設置');
-            const levelCount = template.level_count || 0;
-            const playCount = template.play_count || 0;
-            const status = template.is_active ? '<span class="badge bg-success">啟用</span>' : '<span class="badge bg-secondary">停用</span>';
-            const updated = formatDate(template.updated_at);
-
-            return `
-                <td>${index + 1}</td>
-                <td>${name}</td>
-                <td>${difficulty}</td>
-                <td>${levelCount}</td>
-                <td>${playCount}</td>
-                <td>${status}</td>
-                <td>${updated}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary view-btn" data-id="${templateId}">
-                        <i class="fas fa-eye"></i> 查看
-                    </button>
-                     <button class="btn btn-sm btn-outline-warning edit-template-btn" data-id="${templateId}">
-                        <i class="fas fa-edit"></i> 編輯
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger delete-template-btn" data-id="${templateId}" data-name="${name}">
-                        <i class="fas fa-trash"></i> 刪除
-                    </button>
-                </td>
-            `;
-        }
-
-        function populateTemplateFilter(templates) {
-            const filterSelect = $('#leaderboardTemplateFilter');
-            if (!filterSelect.length) return;
-            let options = '<option value="">所有模板</option>';
-            if (Array.isArray(templates)) {
-                templates.forEach(template => {
-                    options += `<option value="${template.id}">${escapeHtml(template.name)}</option>`;
-                });
-            }
-            filterSelect.html(options);
-        }
-
-        function loadLeaderboard(templateId = '') {
-            const tableBody = $('#leaderboardList');
-            if (!tableBody.length) { console.error("Leaderboard table body not found."); return; }
-            tableBody.html('<tr><td colspan="6" class="text-center py-4">載入中...</td></tr>');
-            
-            let url = '/api/samegame/leaderboard';
-            if (templateId) {
-                url += `?template_id=${templateId}`;
-            }
-            
-            fetch(url)
-            .then(handleFetchResponse)
-            .then(data => {
-                renderTable(tableBody[0], data, renderLeaderboardRow, 6, "目前沒有任何排行紀錄");
-            })
-            .catch(error => { handleError(error, tableBody[0], '載入排行榜失敗', 6); });
-        }
-
-        function renderLeaderboardRow(record, index) {
-             const playerName = escapeHtml(record.player_name);
-             const templateName = escapeHtml(record.template_name);
-             const totalMoves = record.total_moves;
-             const completionTime = record.completion_time ? record.completion_time : '未記錄';
-             const createdAt = formatDate(record.created_at);
-
-             return `
-                 <tr>
-                     <td>${index + 1}</td>
-                     <td>${playerName}</td>
-                     <td>${templateName}</td>
-                     <td>${totalMoves}</td>
-                     <td>${completionTime}</td>
-                     <td>${createdAt}</td>
-                 </tr>
-             `;
-        }
-
-        function viewTemplateDetail(templateId) {
-            currentTemplateId = templateId; // Store globally for later use (e.g., adding levels)
-            $('#templateDetailContainer').hide(); // Hide first
-            $('#levelsList').empty(); // Clear previous levels
-             
-            fetch(`/api/samegame/templates/${templateId}`)
-            .then(handleFetchResponse)
-            .then(data => {
-                $('#detailTemplateName').text(data.name);
-                $('#detailTemplateDescription').text(data.description || '無描述');
-                $('#detailTemplateDifficulty').text(data.difficulty || '未設置');
-                $('#templateDetailTitle').text(`模板詳情: ${escapeHtml(data.name)}`);
-                
-                // Render levels list within the detail container
-                renderTable(document.getElementById('levelsList'), data.levels || [], renderLevelRow, 5, "尚未設置任何關卡");
-
-                $('#templateDetailContainer').show(); // Show the container with details and levels
-                // Hide the main list view (optional, depends on desired UI)
-                // $('#templates-list').hide(); 
-            })
-            .catch(error => { showAlert(`載入模板詳情失敗: ${error.message}`, 'danger'); });
-        }
-        
-        function renderLevelRow(level) {
-            const levelId = level.id;
-            const levelNumber = level.level_number;
-            const grid = `${level.grid_rows} × ${level.grid_columns}`;
-            const imageCount = level.images ? level.images.length : 0;
-            const updated = formatDate(level.updated_at);
-
-            return `
-                <tr>
-                    <td>${levelNumber}</td>
-                    <td>${grid}</td>
-                    <td>${imageCount} 張</td>
-                    <td>${updated}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary edit-level-btn" data-id="${levelId}">
-                            <i class="fas fa-edit"></i> 編輯
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger delete-level-btn" data-id="${levelId}" data-level="${levelNumber}">
-                            <i class="fas fa-trash"></i> 刪除
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        function hideTemplateDetail() {
-            $('#templateDetailContainer').hide();
-             hideLevelForm(); // Also hide level form if open
-            currentTemplateId = null;
-            // Show the main list view again if it was hidden
-            // $('#templates-list').show(); 
-        }
-
-        function editTemplate(templateId) {
-             fetch(`/api/samegame/templates/${templateId}`)
-            .then(handleFetchResponse)
-            .then(data => {
-                resetTemplateForm(); // Clear form first
-                $('#templateId').val(data.id); // Set the ID for update
-                $('#templateName').val(data.name);
-                $('#templateDescription').val(data.description || '');
-                $('#templateDifficulty').val(data.difficulty || '簡單');
-                $('#templateActive').prop('checked', data.is_active);
-                $('#templateFormTitle').text('編輯模板');
-                
-                // Switch to the add/edit template tab
-                switchTab('add-template');
-            })
-            .catch(error => { showAlert(`載入模板數據失敗: ${error.message}`, 'danger'); });
-        }
-
-        function handleTemplateFormSubmit(e) {
-            e.preventDefault();
-            const templateId = $('#templateId').val();
-            const name = $('#templateName').val().trim();
-            const templateData = {
-                name: name,
-                description: $('#templateDescription').val().trim(),
-                difficulty: $('#templateDifficulty').val(),
-                is_active: $('#templateActive').is(':checked')
-            };
-            const errorElement = $('#templateFormError');
-
-            if (!name) { errorElement.text('請輸入模板名稱'); return; }
-            errorElement.text('');
-
-            const url = templateId ? `/api/samegame/templates/${templateId}` : '/api/samegame/templates';
-            const method = templateId ? 'PUT' : 'POST';
-
-            fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(templateData) })
-            .then(handleFetchResponse)
-            .then(data => {
-                showAlert(templateId ? '模板更新成功' : '模板創建成功', 'success');
-                resetTemplateForm();
-                loadTemplates(); // Refresh list
-                switchTab('templates-list'); // Go back to list tab
-            })
-            .catch(error => { handleError(error, errorElement[0], templateId ? '更新模板失敗' : '創建模板失敗'); });
-        }
-
-        function cancelTemplateEdit() {
-             resetTemplateForm();
-             switchTab('templates-list'); // Switch back to the list view
-        }
-        
-        function resetTemplateForm() {
-            $('#templateForm')[0].reset(); // Use native reset
-            $('#templateId').val(''); // Clear hidden ID
-            $('#templateFormTitle').text('新增模板');
-            $('#templateFormError').text('');
-             $('#templateActive').prop('checked', true); // Default to active
-        }
-        
-        function showAddLevelForm() {
-            resetLevelForm(); // Clear the form
-            currentEditingLevelId = null; // Ensure we are adding, not editing
-             $('#levelTemplateId').val(currentTemplateId); // Set the parent template ID
-            $('#levelFormTitle').text('新增關卡');
-            $('#levelFormContainer').show(); // Show the form within the detail view
-        }
-
-         function editLevel(levelId) {
-            resetLevelForm();
-            currentEditingLevelId = levelId; // Set the ID for update
-
-            fetch(`/api/samegame/levels/${levelId}`) // Assuming an endpoint to get level details
-            .then(handleFetchResponse)
-            .then(level => {
-                $('#levelId').val(level.id);
-                $('#levelTemplateId').val(level.template_id || currentTemplateId); // Use template_id from response or current context
-                $('#levelNumber').val(level.level_number);
-                $('#gridRows').val(level.grid_rows);
-                $('#gridColumns').val(level.grid_columns);
-                
-                if (level.images && level.images.length > 0) {
-                    level.images.forEach(image => {
-                        addImageInput(image.image_url); // Populate existing images
-                    });
-                }
-                
-                $('#levelFormTitle').text(`編輯關卡 ${level.level_number}`);
-                $('#levelFormContainer').show(); // Show the form
-            })
-            .catch(error => { showAlert(`載入關卡數據失敗: ${error.message}`, 'danger'); });
-        }
-
-        function handleLevelFormSubmit(e) {
-             e.preventDefault();
-             const levelId = $('#levelId').val(); // Use hidden input value
-             const templateId = $('#levelTemplateId').val();
-             const levelNumber = $('#levelNumber').val();
-             const gridRows = $('#gridRows').val();
-             const gridColumns = $('#gridColumns').val();
-             const errorElement = $('#levelFormError');
-             errorElement.text(''); // Clear previous errors
-
-             if (!levelNumber || !gridRows || !gridColumns || !templateId) {
-                 errorElement.text('請填寫所有必填欄位'); return;
-             }
-             
-             const images = [];
-             $('#imageList .image-list-item').each(function() {
-                 const urlInput = $(this).find('.image-url-input').val();
-                 const url = urlInput ? urlInput.trim() : '';
-                 if (url) {
-                     images.push({ image_url: url });
-                 }
-             });
-
-             if (images.length < 2) { errorElement.text('請至少添加2張圖片'); return; }
-             if (images.length % 2 !== 0) { errorElement.text('圖片數量必須是偶數'); return; }
-             const maxPairs = (parseInt(gridRows) * parseInt(gridColumns)) / 2;
-             if (images.length > maxPairs * 2) { errorElement.text(`圖片數量 (${images.length}) 不能超過網格大小的兩倍 (${maxPairs * 2})`); return; }
-
-             const levelData = {
-                 level_number: parseInt(levelNumber),
-                 grid_rows: parseInt(gridRows),
-                 grid_columns: parseInt(gridColumns),
-                 images: images,
-                 template_id: parseInt(templateId) // Ensure template_id is sent
-             };
-
-             const url = levelId ? `/api/samegame/levels/${levelId}` : `/api/samegame/templates/${templateId}/levels`;
-             const method = levelId ? 'PUT' : 'POST';
-
-             fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(levelData) })
-             .then(handleFetchResponse)
-             .then(data => {
-                 showAlert(levelId ? '關卡更新成功' : '關卡創建成功', 'success');
-                 hideLevelForm();
-                 viewTemplateDetail(templateId); // Refresh the level list in the detail view
-             })
-             .catch(error => { handleError(error, errorElement[0], levelId ? '更新關卡失敗' : '創建關卡失敗'); });
-        }
-
-        function hideLevelForm() {
-            $('#levelFormContainer').hide();
-            resetLevelForm();
-        }
-
-        function resetLevelForm() {
-            $('#levelForm')[0].reset();
-            $('#levelId').val('');
-            $('#imageList').empty(); // Clear dynamic image list
-            $('#levelFormError').text('');
-        }
-
-        function confirmDeleteTemplate(templateId, templateName) {
-            if (confirm(`您確定要刪除模板 "${escapeHtml(templateName)}" 嗎？
+           function confirmDeleteTemplate(templateId, templateName) {
+               if (confirm(`您確定要刪除模板 "${escapeHtml(templateName)}" 嗎？
 此操作將刪除所有關聯的關卡和圖片，且無法撤銷。`)) {
-                deleteTemplate(templateId);
-            }
-        }
-        
-        function deleteTemplate(templateId) {
-            fetch(`/api/samegame/templates/${templateId}`, { method: 'DELETE' })
-            .then(handleFetchResponse)
-            .then(() => {
-                showAlert('模板已成功刪除', 'success');
-                if (currentTemplateId && currentTemplateId === templateId) {
-                    hideTemplateDetail(); // Hide detail view if it was the deleted one
-                }
-                loadTemplates(); // Refresh list
-            })
-            .catch(error => { handleError(error, null, '刪除模板失敗'); });
-        }
-
-        function confirmDeleteLevel(levelId, levelNumber) {
-             if (confirm(`您確定要刪除第 ${levelNumber} 關嗎？此操作無法撤銷。`)) {
-                deleteLevel(levelId);
-            }
-        }
-
-        function deleteLevel(levelId) {
-             fetch(`/api/samegame/levels/${levelId}`, { method: 'DELETE' })
-            .then(handleFetchResponse)
-            .then(() => {
-                showAlert('關卡已成功刪除', 'success');
-                if (currentTemplateId) {
-                    viewTemplateDetail(currentTemplateId); // Refresh level list in detail view
-                }
-            })
-            .catch(error => { handleError(error, null, '刪除關卡失敗'); });
-        }
-        
-        function addImageInput(imageUrl = '') {
-            const itemId = 'image-item-' + Date.now();
-            const listItem = $(`
-                <li class="image-list-item" id="${itemId}">
-                    <div class="image-preview-container" style="${imageUrl ? '' : 'display: none;'}">
-                        <img src="${escapeHtml(imageUrl)}" class="img-thumbnail">
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="input-group">
-                            <input type="text" class="form-control image-url-input" value="${escapeHtml(imageUrl)}" placeholder="輸入圖片 URL">
-                            <input type="file" class="form-control image-file-input" style="display: none;" accept="image/*" data-target="${itemId}">
-                             <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('${itemId}').querySelector('.image-file-input').click()">
-                                <i class="fas fa-upload"></i> 上傳
-                            </button>
-                            <button type="button" class="btn btn-outline-danger remove-image-btn">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </li>
-            `);
-            
-            // Update preview on URL input change
-            listItem.find('.image-url-input').on('input', function() {
-                const url = $(this).val().trim();
-                const previewContainer = $(`#${itemId} .image-preview-container`);
-                const previewImg = previewContainer.find('img');
-                if (url) {
-                    previewImg.attr('src', url);
-                    previewContainer.show();
-                } else {
-                    previewContainer.hide();
-                }
-            });
-
-            $('#imageList').append(listItem);
-        }
-
-        function handleImageFileUpload(fileInput) {
-             const file = fileInput.files[0];
-             const targetId = $(fileInput).data('target'); // Get target li ID
-             const previewContainer = $(`#${targetId} .image-preview-container`);
-             const previewImg = previewContainer.find('img');
-             const urlInput = $(`#${targetId} .image-url-input`);
-
-             if (!file) return;
-
-             const formData = new FormData();
-             formData.append('file', file);
-
-             // Show temporary loading state? (Optional)
-             urlInput.prop('disabled', true).val('上傳中...');
-
-             fetch('/api/admin/files/upload', { method: 'POST', body: formData })
-             .then(handleFetchResponse)
-             .then(response => {
-                 if (response.success && response.file && response.file.file_path) {
-                     const imageUrl = response.file.file_path;
-                     urlInput.val(imageUrl);
-                     previewImg.attr('src', imageUrl);
-                     previewContainer.show();
-                     showAlert('圖片上傳成功', 'success');
-                 } else {
-                     throw new Error('伺服器返回無效的響應');
-                 }
-             })
-             .catch(error => {
-                 showAlert(`圖片上傳失敗: ${error.message}`, 'danger');
-             })
-             .finally(() => {
-                 urlInput.prop('disabled', false);
-                 if (!urlInput.val() || urlInput.val() === '上傳中...') {
-                      urlInput.val(''); // Clear if upload failed or was cancelled
-                 }
-                 // Reset file input so the same file can be selected again if needed
-                 $(fileInput).val(''); 
-             });
-        }
-
-        // ==================================
-        // Tab Switching Logic
-        // ==================================
-        function initializeTabSwitching() {
-            const mainTabs = document.querySelectorAll('.tabs-nav .tab-item:not(.same-game-tabs .tab-item)');
-            const mainTabContents = document.querySelectorAll('.admin-container > .tab-content');
-            
-            mainTabs.forEach(item => {
-                item.addEventListener('click', function() {
-                    switchTab(this.getAttribute('data-tab'), mainTabs, mainTabContents);
-                    // If switching away from same-game, ensure detail view is hidden
-                    if (this.getAttribute('data-tab') !== 'same-game') {
-                       hideTemplateDetail();
-                       hideLevelForm();
-                    }
-                    // If switching away from general-games, ensure edit form is hidden
-                     if (this.getAttribute('data-tab') !== 'general-games') {
-                        closeEditForm(); // Use existing function to hide general edit form
-                    }
-                     // When switching TO add-template, reset the form
-                     if (this.getAttribute('data-tab') === 'add-template') {
-                        resetTemplateForm(); 
-                    }
-                     // When switching TO templates-list, ensure detail is hidden
-                     if (this.getAttribute('data-tab') === 'templates-list') {
-                         hideTemplateDetail();
-                         hideLevelForm();
-                     }
-                });
-            });
-
-            const sameGameTabs = document.querySelectorAll('.same-game-tabs .tab-item');
-            const sameGameTabContents = document.querySelectorAll('.same-game-container .tab-content');
-
-            sameGameTabs.forEach(item => {
-                item.addEventListener('click', function() {
-                     switchTab(this.getAttribute('data-tab'), sameGameTabs, sameGameTabContents);
-                      // When switching TO add-template sub-tab, reset the form
-                     if (this.getAttribute('data-tab') === 'add-template') {
-                        resetTemplateForm(); 
-                    }
-                      // When switching TO templates-list sub-tab, ensure detail/forms are hidden
-                     if (this.getAttribute('data-tab') === 'templates-list') {
-                         hideTemplateDetail();
-                         hideLevelForm();
-                     }
-                });
-            });
-        }
-        
-        function switchTab(tabId, tabItemsNodeList = null, tabContentsNodeList = null) {
-             // Determine which set of tabs/content to use if not provided
-            if (!tabItemsNodeList || !tabContentsNodeList) {
-                // Check if it's a main tab or a sub-tab
-                const isSubTab = !!document.querySelector(`.same-game-tabs .tab-item[data-tab='${tabId}']`);
-                if (isSubTab) {
-                    tabItemsNodeList = document.querySelectorAll('.same-game-tabs .tab-item');
-                    tabContentsNodeList = document.querySelectorAll('.same-game-container .tab-content');
-                } else {
-                    tabItemsNodeList = document.querySelectorAll('.tabs-nav .tab-item:not(.same-game-tabs .tab-item)');
-                    tabContentsNodeList = document.querySelectorAll('.admin-container > .tab-content');
-                }
-            }
-
-            tabItemsNodeList.forEach(tab => tab.classList.remove('active'));
-            tabContentsNodeList.forEach(content => content.classList.remove('active'));
-
-            const currentTabItem = document.querySelector(`.tab-item[data-tab='${tabId}']`);
-            const currentTabContent = document.getElementById(tabId);
-
-            if (currentTabItem) { currentTabItem.classList.add('active'); } 
-            else { console.warn(`Tab item '${tabId}' not found.`); }
-            
-            if (currentTabContent) { currentTabContent.classList.add('active'); } 
-            else { console.warn(`Tab content ID '${tabId}' not found.`); }
-
-            // Special handling: Ensure the parent 'same-game' tab is active if a sub-tab is selected
-            if (Array.from(document.querySelectorAll('.same-game-tabs .tab-item')).includes(currentTabItem)) {
-                const sameGameTab = document.querySelector('.tab-item[data-tab="same-game"]');
-                if (sameGameTab) sameGameTab.classList.add('active');
-                
-                const sameGameContent = document.getElementById('same-game');
-                if (sameGameContent) sameGameContent.classList.add('active');
-            }
-        }
-
-        // ==================================
-        // Utility Functions
-        // ==================================
-        function handleFetchResponse(response) {
-            if (!response.ok) {
-                return response.text().then(text => { 
-                   let errorMsg = `請求失敗: ${response.status} ${response.statusText}`;
-                   try {
-                       const jsonError = JSON.parse(text);
-                       if (jsonError && jsonError.error) {
-                           errorMsg += ` - ${jsonError.error}`;
-                       } else {
-                            errorMsg += ` - ${text}`;
-                       }
-                   } catch(e) {
-                       errorMsg += ` - ${text}`; // Not JSON
+                   deleteTemplate(templateId);
+               }
+           }
+           
+           function deleteTemplate(templateId) {
+               fetch(`/api/samegame/templates/${templateId}`, { method: 'DELETE' })
+               .then(handleFetchResponse)
+               .then(() => {
+                   showAlert('模板已成功刪除', 'success');
+                   if (currentTemplateId && currentTemplateId === templateId) {
+                       hideTemplateDetail(); // Hide detail view if it was the deleted one
                    }
-                   throw new Error(errorMsg); 
+                   loadTemplates(); // Refresh list
+               })
+               .catch(error => { handleError(error, null, '刪除模板失敗'); });
+           }
+
+           function confirmDeleteLevel(levelId, levelNumber) {
+                if (confirm(`您確定要刪除第 ${levelNumber} 關嗎？此操作無法撤銷。`)) {
+                   deleteLevel(levelId);
+               }
+           }
+
+           function deleteLevel(levelId) {
+                fetch(`/api/samegame/levels/${levelId}`, { method: 'DELETE' })
+               .then(handleFetchResponse)
+               .then(() => {
+                   showAlert('關卡已成功刪除', 'success');
+                   if (currentTemplateId) {
+                       viewTemplateDetail(currentTemplateId); // Refresh level list in detail view
+                   }
+               })
+               .catch(error => { handleError(error, null, '刪除關卡失敗'); });
+           }
+           
+           function addImageInput(imageUrl = '') {
+               const itemId = 'image-item-' + Date.now();
+               const listItem = $(`
+                   <li class="image-list-item" id="${itemId}">
+                       <div class="image-preview-container" style="${imageUrl ? '' : 'display: none;'}">
+                           <img src="${escapeHtml(imageUrl)}" class="img-thumbnail">
+                       </div>
+                       <div class="flex-grow-1">
+                           <div class="input-group">
+                               <input type="text" class="form-control image-url-input" value="${escapeHtml(imageUrl)}" placeholder="輸入圖片 URL">
+                               <input type="file" class="form-control image-file-input" style="display: none;" accept="image/*" data-target="${itemId}">
+                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('${itemId}').querySelector('.image-file-input').click()">
+                                   <i class="fas fa-upload"></i> 上傳
+                               </button>
+                               <button type="button" class="btn btn-outline-danger remove-image-btn">
+                                   <i class="fas fa-times"></i>
+                               </button>
+                           </div>
+                       </div>
+                   </li>
+               `);
+               
+               // Update preview on URL input change
+               listItem.find('.image-url-input').on('input', function() {
+                   const url = $(this).val().trim();
+                   const previewContainer = $(`#${itemId} .image-preview-container`);
+                   const previewImg = previewContainer.find('img');
+                   if (url) {
+                       previewImg.attr('src', url);
+                       previewContainer.show();
+                   } else {
+                       previewContainer.hide();
+                   }
+               });
+
+               $('#imageList').append(listItem);
+           }
+
+           function handleImageFileUpload(fileInput) {
+                const file = fileInput.files[0];
+                const targetId = $(fileInput).data('target'); // Get target li ID
+                const previewContainer = $(`#${targetId} .image-preview-container`);
+                const previewImg = previewContainer.find('img');
+                const urlInput = $(`#${targetId} .image-url-input`);
+
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Show temporary loading state? (Optional)
+                urlInput.prop('disabled', true).val('上傳中...');
+
+                fetch('/api/admin/files/upload', { method: 'POST', body: formData })
+                .then(handleFetchResponse)
+                .then(response => {
+                    if (response.success && response.file && response.file.file_path) {
+                        const imageUrl = response.file.file_path;
+                        urlInput.val(imageUrl);
+                        previewImg.attr('src', imageUrl);
+                        previewContainer.show();
+                        showAlert('圖片上傳成功', 'success');
+                    } else {
+                        throw new Error('伺服器返回無效的響應');
+                    }
+                })
+                .catch(error => {
+                    showAlert(`圖片上傳失敗: ${error.message}`, 'danger');
+                })
+                .finally(() => {
+                    urlInput.prop('disabled', false);
+                    if (!urlInput.val() || urlInput.val() === '上傳中...') {
+                         urlInput.val(''); // Clear if upload failed or was cancelled
+                    }
+                    // Reset file input so the same file can be selected again if needed
+                    $(fileInput).val(''); 
                 });
-            }
-            // Handle empty response body for methods like DELETE
-             const contentType = response.headers.get("content-type");
-             if (contentType && contentType.indexOf("application/json") !== -1) {
-                 return response.json();
-             } else {
-                 return {}; // Return empty object for non-JSON or empty responses
-             }
-        }
-        
-        function handleError(error, element, contextMessage, colspan = 1) {
-             const message = `${contextMessage}: ${error.message}`;
-             console.error(message, error);
-             if (element) {
-                 if (element.tagName === 'TBODY') {
-                     element.innerHTML = `<tr><td colspan="${colspan}">${escapeHtml(message)}</td></tr>`;
-                 } else if (element.classList.contains('form-error')) {
-                     element.textContent = escapeHtml(error.message);
-                 } else {
-                     // Default to alert for other errors if element is not specific
-                     showAlert(message, 'danger');
-                 }
-             } else {
-                  showAlert(message, 'danger'); // Fallback alert
-             }
-        }
+           }
 
-        function renderTable(tableBodyElement, data, rowRenderer, colspan, emptyMessage) {
-             if (!tableBodyElement) return;
-             tableBodyElement.innerHTML = ''; // Clear previous content
-             if (!Array.isArray(data)) {
-                console.error("Received non-array data for table:", data);
-                tableBodyElement.innerHTML = `<tr><td colspan="${colspan}">載入資料格式錯誤</td></tr>`; 
-                return;
-             }
-             if (data.length === 0) {
-                 tableBodyElement.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4">${emptyMessage}</td></tr>`;
-                 return;
-             }
-             data.forEach((item, index) => {
-                 const rowHtml = rowRenderer(item, index);
-                 if (rowHtml) { // Ensure renderer returned something
-                     const row = document.createElement('tr');
-                     row.innerHTML = rowHtml;
-                     tableBodyElement.appendChild(row);
-                 }
-             });
-        }
-        
-        function showAlert(message, type = 'info') {
-            const alertContainer = $('#alertContainer'); // Use jQuery selector
-             if (!alertContainer.length) return; // Check if container exists
+           // ==================================
+           // Tab Switching Logic
+           // ==================================
+           function initializeTabSwitching() {
+               const mainTabs = document.querySelectorAll('.tabs-nav .tab-item:not(.same-game-tabs .tab-item)');
+               const mainTabContents = document.querySelectorAll('.admin-container > .tab-content');
+               
+               mainTabs.forEach(item => {
+                   item.addEventListener('click', function() {
+                       switchTab(this.getAttribute('data-tab'), mainTabs, mainTabContents);
+                       // If switching away from same-game, ensure detail view is hidden
+                       if (this.getAttribute('data-tab') !== 'same-game') {
+                          hideTemplateDetail();
+                          hideLevelForm();
+                       }
+                       // If switching away from general-games, ensure edit form is hidden
+                        if (this.getAttribute('data-tab') !== 'general-games') {
+                           closeEditForm(); // Use existing function to hide general edit form
+                       }
+                        // When switching TO add-template, reset the form
+                        if (this.getAttribute('data-tab') === 'add-template') {
+                           resetTemplateForm(); 
+                       }
+                        // When switching TO templates-list, ensure detail is hidden
+                        if (this.getAttribute('data-tab') === 'templates-list') {
+                            hideTemplateDetail();
+                            hideLevelForm();
+                        }
+                   });
+               });
 
-            const alertId = 'alert-' + Date.now();
-            const alertHtml = `
-                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert" style="margin-bottom: 10px;">
-                    ${escapeHtml(message)}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            
-            alertContainer.append(alertHtml);
-            
-            // Auto-dismiss after 3 seconds
-            setTimeout(() => {
-                $(`#${alertId}`).alert('close');
-            }, 3000);
-        }
-        
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            try {
-                const date = new Date(dateString);
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                return `${year}-${month}-${day} ${hours}:${minutes}`;
-            } catch (e) {
-                return 'Invalid Date';
-            }
-        }
-        
-        function escapeHtml(str) {
-            if (str === null || typeof str === 'undefined') return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-        // --- End: Integrated JavaScript ---
-   </script>
-</body>
+               const sameGameTabs = document.querySelectorAll('.same-game-tabs .tab-item');
+               const sameGameTabContents = document.querySelectorAll('.same-game-container .tab-content');
+
+               sameGameTabs.forEach(item => {
+                   item.addEventListener('click', function() {
+                        switchTab(this.getAttribute('data-tab'), sameGameTabs, sameGameTabContents);
+                         // When switching TO add-template sub-tab, reset the form
+                        if (this.getAttribute('data-tab') === 'add-template') {
+                           resetTemplateForm(); 
+                       }
+                         // When switching TO templates-list sub-tab, ensure detail/forms are hidden
+                        if (this.getAttribute('data-tab') === 'templates-list') {
+                            hideTemplateDetail();
+                            hideLevelForm();
+                        }
+                   });
+               });
+           }
+           
+           function switchTab(tabId, tabItemsNodeList = null, tabContentsNodeList = null) {
+                // Determine which set of tabs/content to use if not provided
+               if (!tabItemsNodeList || !tabContentsNodeList) {
+                   // Check if it's a main tab or a sub-tab
+                   const isSubTab = !!document.querySelector(`.same-game-tabs .tab-item[data-tab='${tabId}']`);
+                   if (isSubTab) {
+                       tabItemsNodeList = document.querySelectorAll('.same-game-tabs .tab-item');
+                       tabContentsNodeList = document.querySelectorAll('.same-game-container .tab-content');
+                   } else {
+                       tabItemsNodeList = document.querySelectorAll('.tabs-nav .tab-item:not(.same-game-tabs .tab-item)');
+                       tabContentsNodeList = document.querySelectorAll('.admin-container > .tab-content');
+                   }
+               }
+
+               tabItemsNodeList.forEach(tab => tab.classList.remove('active'));
+               tabContentsNodeList.forEach(content => content.classList.remove('active'));
+
+               const currentTabItem = document.querySelector(`.tab-item[data-tab='${tabId}']`);
+               const currentTabContent = document.getElementById(tabId);
+
+               if (currentTabItem) { currentTabItem.classList.add('active'); } 
+               else { console.warn(`Tab item '${tabId}' not found.`); }
+               
+               if (currentTabContent) { currentTabContent.classList.add('active'); } 
+               else { console.warn(`Tab content ID '${tabId}' not found.`); }
+
+               // Special handling: Ensure the parent 'same-game' tab is active if a sub-tab is selected
+               if (Array.from(document.querySelectorAll('.same-game-tabs .tab-item')).includes(currentTabItem)) {
+                   const sameGameTab = document.querySelector('.tab-item[data-tab="same-game"]');
+                   if (sameGameTab) sameGameTab.classList.add('active');
+                   
+                   const sameGameContent = document.getElementById('same-game');
+                   if (sameGameContent) sameGameContent.classList.add('active');
+               }
+           }
+
+           // ==================================
+           // Utility Functions
+           // ==================================
+           function handleFetchResponse(response) {
+               if (!response.ok) {
+                   return response.text().then(text => { 
+                      let errorMsg = `請求失敗: ${response.status} ${response.statusText}`;
+                      try {
+                          const jsonError = JSON.parse(text);
+                          if (jsonError && jsonError.error) {
+                              errorMsg += ` - ${jsonError.error}`;
+                          } else {
+                               errorMsg += ` - ${text}`;
+                          }
+                      } catch(e) {
+                          errorMsg += ` - ${text}`; // Not JSON
+                      }
+                      throw new Error(errorMsg); 
+                   });
+               }
+               // Handle empty response body for methods like DELETE
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json();
+                        } else {
+                    return {}; // Return empty object for non-JSON or empty responses
+                }
+           }
+           
+           function handleError(error, element, contextMessage, colspan = 1) {
+                const message = `${contextMessage}: ${error.message}`;
+                console.error(message, error);
+                if (element) {
+                    if (element.tagName === 'TBODY') {
+                        element.innerHTML = `<tr><td colspan="${colspan}">${escapeHtml(message)}</td></tr>`;
+                    } else if (element.classList.contains('form-error')) {
+                        element.textContent = escapeHtml(error.message);
+                    } else {
+                        // Default to alert for other errors if element is not specific
+                        showAlert(message, 'danger');
+                    }
+                } else {
+                     showAlert(message, 'danger'); // Fallback alert
+                }
+           }
+
+           function renderTable(tableBodyElement, data, rowRenderer, colspan, emptyMessage) {
+                if (!tableBodyElement) return;
+                tableBodyElement.innerHTML = ''; // Clear previous content
+                if (!Array.isArray(data)) {
+                   console.error("Received non-array data for table:", data);
+                   tableBodyElement.innerHTML = `<tr><td colspan="${colspan}">載入資料格式錯誤</td></tr>`; 
+                   return;
+                }
+                if (data.length === 0) {
+                    tableBodyElement.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4">${emptyMessage}</td></tr>`;
+                    return;
+                }
+                data.forEach((item, index) => {
+                    const rowHtml = rowRenderer(item, index);
+                    if (rowHtml) { // Ensure renderer returned something
+                        const row = document.createElement('tr');
+                        row.innerHTML = rowHtml;
+                        tableBodyElement.appendChild(row);
+                    }
+                });
+           }
+           
+           function showAlert(message, type = 'info') {
+               const alertContainer = $('#alertContainer'); // Use jQuery selector
+                if (!alertContainer.length) return; // Check if container exists
+
+               const alertId = 'alert-' + Date.now();
+               const alertHtml = `
+                   <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert" style="margin-bottom: 10px;">
+                       ${escapeHtml(message)}
+                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                   </div>
+               `;
+               
+               alertContainer.append(alertHtml);
+               
+               // Auto-dismiss after 3 seconds
+               setTimeout(() => {
+                   $(`#${alertId}`).alert('close');
+               }, 3000);
+           }
+           
+           function formatDate(dateString) {
+               if (!dateString) return 'N/A';
+               try {
+                   const date = new Date(dateString);
+                   const year = date.getFullYear();
+                   const month = String(date.getMonth() + 1).padStart(2, '0');
+                   const day = String(date.getDate()).padStart(2, '0');
+                   const hours = String(date.getHours()).padStart(2, '0');
+                   const minutes = String(date.getMinutes()).padStart(2, '0');
+                   return `${year}-${month}-${day} ${hours}:${minutes}`;
+                    } catch (e) {
+                   return 'Invalid Date';
+               }
+           }
+           
+           function escapeHtml(str) {
+               if (str === null || typeof str === 'undefined') return '';
+               return String(str)
+                   .replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;')
+                   .replace(/"/g, '&quot;')
+                   .replace(/'/g, '&#039;');
+           }
+           // --- End: Integrated JavaScript ---
+      }); // <<< ADD THE CLOSING BRACE HERE for DOMContentLoaded
+  
+     </script>
+ </body>
 </html> 
