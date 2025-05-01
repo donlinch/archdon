@@ -133,44 +133,48 @@
       display: block;
     }
     .game-status-container {
-    position: fixed; /* Make it fixed */
-    top: 10px;      /* Position from top */
-    left: 50%;      /* Center horizontally */
-    transform: translateX(-50%);
-    z-index: 999;   /* Ensure it's above most content */
-    width: auto;
-    max-width: 90%; /* Prevent it from being too wide on large screens */
-    margin: 0;      /* Remove original margin */
-    padding: 8px 15px;
-    background-color: rgba(255, 248, 225, 0); /* Completely transparent background */
-    border: none;   /* No border */
-    box-shadow: none; /* No shadow */
-    display: block; /* Change from inline-block */
-    text-align: center; /* Center text inside */
-}
+      position: absolute; /* 改为绝对定位 */
+      top: 42px; /* 放在level-indicator下方 */
+      right: 10px;
+      left: auto;
+      transform: none;
+      z-index: 10;
+      width: auto;
+      margin: 0;      
+      padding: 8px 12px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+      pointer-events: none;
+    }
     #status {
-      margin: 0;
-      font-size: 18px;
+      margin: 0 0 3px 0;
+      font-size: 14px;
       color: #008800;
       font-weight: bold;
-      display: inline-block;
+      display: block;
     }
     #timer {
-      margin-left: 15px;
-      display: inline-block;
+      margin: 0 0 3px 0;
+      display: block;
       color: #ff6600;
       font-weight: bold;
+      font-size: 14px;
     }
     #timer-display {
       font-weight: bold;
     }
     #message {
-      min-height: 24px;
-      font-size: 16px;
+      min-height: 18px;
+      font-size: 14px;
       color: #0066cc;
       font-weight: bold;
-      margin: 0 0 0 15px;
-      display: inline-block;
+      margin: 0;
+      display: block;
     }
     .controls {
       margin: 10px 0 20px;
@@ -387,6 +391,7 @@
       font-weight: bold;
       color: #ff8c00;
       z-index: 10;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     .level-select {
       display: inline-block;
@@ -764,12 +769,12 @@
         <div class="label" id="label5" style="top: 52%; left: 60%;">5</div>
         
         <div class="image-label">原圖</div>
-      </div>
-      
-      <div class="game-status-container">
-        <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
-        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">（<span id="timer-display">00:00</span>）</div>
-        <div id="message"></div>
+        <div class="level-indicator"></div>
+        <div class="game-status-container">
+          <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
+          <div id="timer">（<span id="timer-display">00:00</span>）</div>
+          <div id="message"></div>
+        </div>
       </div>
       
       <div class="image-container" id="right-image">
@@ -1020,9 +1025,7 @@ async function getRandomLevels() {
     const rightImageContainer = document.getElementById('right-image');
     const leftImageElement = leftImageContainer.querySelector('img');
     const rightImageElement = rightImageContainer.querySelector('img');
-    const levelIndicator = document.createElement('div'); // 關卡指示器只需要創建一次
-    levelIndicator.className = 'level-indicator';
-    leftImageContainer.appendChild(levelIndicator); // 添加到左圖容器
+    const levelIndicator = document.querySelector('.level-indicator'); // 更新为查询选择器
 
     // ----- 編輯器模式變數 -----
     const editLeftImg = document.getElementById('left-edit-img');
