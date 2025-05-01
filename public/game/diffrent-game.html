@@ -101,6 +101,21 @@
       background-color: rgba(255, 255, 0, 0.3);
       box-shadow: 0 0 10px gold;
     }
+    .editor-dot {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 2px solid red;
+      border-radius: 50%;
+      background-color: rgba(255, 0, 0, 0.3);
+      cursor: move;
+      transform: translate(-50%, -50%);
+    }
+    .editor-dot.reference {
+      background-color: rgba(255, 0, 0, 0.2);
+      border: 2px dashed red;
+      cursor: default;
+    }
     .label {
       position: absolute;
       font-weight: bold;
@@ -205,6 +220,109 @@
     @keyframes pulse {
       0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
       100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.9; }
+    }
+    .editor-container {
+      margin: 20px auto;
+      max-width: 90%;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #output {
+      width: 100%;
+      height: 150px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      text-align: left;
+      background: #f5f5f5;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow-y: auto;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .edit-instructions {
+      background-color: #fffbcc;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .edit-instructions p {
+      margin: 5px 0;
+    }
+    .edit-instructions ul {
+      margin: 5px 0;
+      padding-left: 25px;
+    }
+    .edit-instructions li {
+      margin-bottom: 5px;
+    }
+    /* 手機版特別設定（螢幕寬度小於 768px） */
+    @media (max-width: 768px) {
+      body {
+        padding: 5px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 10px 0;
+      }
+      .game-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+      }
+      .image-container {
+        margin-bottom: 5px;
+        width: 100%;
+      }
+      .image-container img {
+        width: 100%;
+        max-width: none;
+        max-height: 40vh;
+        object-fit: contain;
+      }
+      .controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin: 5px 0 15px;
+      }
+      .button {
+        width: auto;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .tabs {
+        bottom: 10px;
+        right: 10px;
+      }
+      .tab {
+        padding: 8px 15px;
+        font-size: 14px;
+      }
+      .game-status-container {
+        margin: 5px auto;
+        padding: 5px;
+      }
+      #status {
+        font-size: 16px;
+        margin: 5px 0;
+      }
+      #message {
+        min-height: 20px;
+        font-size: 14px;
+      }
+      .image-label {
+        font-size: 14px;
+        padding: 2px 6px;
+      }
+      .dot, .editor-dot {
+        width: 24px;
+        height: 24px;
+      }
     }
     .level-transition {
       position: fixed;
@@ -411,6 +529,7 @@
   
   <div class="tabs">
     <div class="tab active" data-tab="game">遊戲模式</div>
+    <div class="tab" data-tab="editor">編輯器模式</div>
   </div>
   
   <div id="game-tab" class="tab-content active">
@@ -476,6 +595,56 @@
       <button class="button" id="leaderboard-button">排行榜</button>
       <button class="button" id="show-answers-button">顯示所有答案</button>
       <button class="button reset" id="reset-button">重新開始</button>
+    </div>
+  </div>
+  
+  <div id="editor-tab" class="tab-content">
+    <h2>編輯器模式 ✏️</h2>
+    
+    <div class="game-container">
+      <div class="image-container" id="edit-left">
+        <img src="" alt="原圖" id="left-edit-img" />
+        <div class="image-label">原圖</div>
+      </div>
+      
+      <div class="image-container" id="edit-right">
+        <img src="" alt="修改版" id="right-edit-img" />
+        <div class="image-label">修改版</div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button class="button reset" id="clear-editor">清除所有</button>
+      <button class="button" id="save-editor" style="background-color: #28a745;">保存</button>
+      <div class="level-select" style="display: flex; align-items: center; gap: 8px;">
+        <select id="level-selector">
+          <!-- 選項將由JavaScript動態填充 -->
+        </select>
+        <button class="button" id="delete-level" style="background-color: #dc3545;">刪除圖片</button>
+      </div>
+      <button class="button" id="add-new-level" style="background-color: #0275d8;">新增圖片</button>
+      
+    </div>
+    
+    <!-- 添加輸出區域 -->
+    <div style="margin-top: 20px;">
+      <textarea id="output" style="width: 100%; height: 100px; font-family: monospace;" readonly></textarea>
+    </div>
+    
+    <!-- 新增圖片表單 -->
+    <div id="new-level-form" style="display: none; margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+      <h3>新增圖片</h3>
+      <div style="margin-bottom: 10px;">
+        <label>圖片名稱: <input type="text" id="new-level-name" style="margin-left: 10px;"></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>原圖URL: <input type="text" id="new-left-image" style="margin-left: 10px; width: 300px;"></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>修改版URL: <input type="text" id="new-right-image" style="margin-left: 10px; width: 300px;"></label>
+      </div>
+      <button class="button" id="submit-new-level" style="background-color: #28a745;">提交</button>
+      <button class="button" id="cancel-new-level" style="background-color: #dc3545;">取消</button>
     </div>
   </div>
   
@@ -648,29 +817,328 @@ async function getRandomLevels() {
     levelIndicator.className = 'level-indicator';
     leftImageContainer.appendChild(levelIndicator); // 添加到左圖容器
 
-    // ----- 編輯器模式變數 (Remove these) -----
-    // const editLeftImg = document.getElementById('left-edit-img');
-    // const editRightImg = document.getElementById('right-edit-img');
-    // const levelSelector = document.getElementById('level-selector');
-    // const saveEditorButton = document.getElementById('save-editor');
-    // const clearEditorButton = document.getElementById('clear-editor');
-    // const outputArea = document.getElementById('output');
-    // const addNewLevelButton = document.getElementById('add-new-level');
-    // const newLevelForm = document.getElementById('new-level-form');
-    // const submitNewLevelButton = document.getElementById('submit-new-level');
-    // const cancelNewLevelButton = document.getElementById('cancel-new-level');
-    // const editorDifferences = [];
-    // let currentEditorLevel = null;
+    // ----- 編輯器模式變數 -----
+    const editLeftImg = document.getElementById('left-edit-img');
+    const editRightImg = document.getElementById('right-edit-img');
+    const levelSelector = document.getElementById('level-selector');
+    const saveEditorButton = document.getElementById('save-editor');
+    const clearEditorButton = document.getElementById('clear-editor');
+    const outputArea = document.getElementById('output');
+    const addNewLevelButton = document.getElementById('add-new-level');
+    const newLevelForm = document.getElementById('new-level-form');
+    const submitNewLevelButton = document.getElementById('submit-new-level');
+    const cancelNewLevelButton = document.getElementById('cancel-new-level');
 
-    // ----- 編輯器模式函數 (Remove these functions) -----
-    // async function populateLevelSelector() { ... }
-    // async function loadLevelToEditor(levelId) { ... }
-    // function clearEditorDisplay() { ... }
-    // function addEditorDot(top, left, description) { ... }
-    // function makeDraggable(element) { ... }
-    // function updateOutput() { ... }
-    // async function saveEditorData() { ... }
-    // async function submitNewLevel() { ... }
+    // 編輯器模式差異點
+    const editorDifferences = [];
+    let currentEditorLevel = null;
+
+    // ----- 編輯器模式函數 -----
+    // 載入關卡選擇器
+    async function populateLevelSelector() {
+      try {
+        // 清空選擇器
+        levelSelector.innerHTML = '<option value="">-- 請選擇圖片 --</option>';
+        
+        // 從API獲取所有關卡
+        const response = await fetch('/api/diffrent-game/levels');
+        
+        if (!response.ok) {
+          throw new Error('無法獲取關卡列表');
+        }
+        
+        const levels = await response.json();
+        
+        // 填充選擇器
+        levels.forEach(level => {
+          const option = document.createElement('option');
+          option.value = level.id;
+          option.textContent = `${level.id}: ${level.level_name || '未命名圖片'}`;
+          levelSelector.appendChild(option);
+        });
+        
+        console.log('關卡選擇器已更新，載入了', levels.length, '個關卡');
+      } catch (error) {
+        console.error('載入關卡選擇器失敗:', error);
+        alert('無法載入圖片列表，請重新整理頁面');
+      }
+    }
+
+    // 載入特定關卡到編輯器
+    async function loadLevelToEditor(levelId) {
+      try {
+        // 清空現有的編輯器差異點
+        clearEditorDisplay();
+        editorDifferences.length = 0;
+        
+        // 獲取關卡數據
+        const response = await fetch(`/api/diffrent-game/levels/${levelId}`);
+        
+        if (!response.ok) {
+          throw new Error('無法獲取關卡數據');
+        }
+        
+        const levelData = await response.json();
+        currentEditorLevel = levelData;
+        
+        // 設置圖片
+        editLeftImg.src = levelData.left_image_url;
+        editRightImg.src = levelData.right_image_url;
+        
+        // 獲取差異點
+        const diffResponse = await fetch(`/api/diffrent-game/differences/${levelId}`);
+        
+        if (!diffResponse.ok) {
+          console.warn('無法獲取差異點或該關卡沒有差異點');
+          updateOutput();
+          return;
+        }
+        
+        const differences = await diffResponse.json();
+        
+        // 在編輯器中顯示差異點
+        differences.forEach(diff => {
+          addEditorDot(
+            parseFloat(diff.position_top), 
+            parseFloat(diff.position_left), 
+            diff.description || `差異點 #${editorDifferences.length + 1}`
+          );
+        });
+        
+        updateOutput();
+      } catch (error) {
+        console.error('載入關卡到編輯器失敗:', error);
+        alert('載入圖片失敗: ' + error.message);
+      }
+    }
+
+    // 清空編輯器顯示
+    function clearEditorDisplay() {
+      // 移除所有編輯器差異點
+      document.querySelectorAll('.editor-dot').forEach(dot => dot.remove());
+      document.querySelectorAll('.editor-dot.reference').forEach(dot => dot.remove());
+      
+      // 清空差異點陣列
+      editorDifferences.length = 0;
+      
+      // 更新輸出區域
+      updateOutput();
+    }
+
+    // 添加編輯器差異點
+    function addEditorDot(top, left, description) {
+      // 創建左側圖片上的點
+      const dot = document.createElement('div');
+      dot.className = 'editor-dot';
+      dot.style.top = `${top}%`;
+      dot.style.left = `${left}%`;
+      
+      // 為點添加拖曳功能
+      makeDraggable(dot);
+      
+      // 將點添加到左側圖片容器
+      document.getElementById('edit-left').appendChild(dot);
+      
+      // 創建右側的參考點（不可拖曳）
+      const referenceDot = document.createElement('div');
+      referenceDot.className = 'editor-dot reference';
+      referenceDot.style.top = `${top}%`;
+      referenceDot.style.left = `${left}%`;
+      document.getElementById('edit-right').appendChild(referenceDot);
+      
+      // 添加到差異點陣列
+      editorDifferences.push({
+        position_top: top,
+        position_left: left,
+        description: description || `差異點 #${editorDifferences.length + 1}`
+      });
+      
+      // 更新輸出
+      updateOutput();
+      
+      // 返回創建的點元素
+      return dot;
+    }
+
+    // 拖曳功能
+    function makeDraggable(element) {
+      let isDragging = false;
+      let startX, startY;
+      const container = document.getElementById('edit-left');
+      
+      // 鼠標按下事件
+      element.addEventListener('mousedown', startDrag);
+      element.addEventListener('touchstart', handleTouchStart);
+      
+      function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startDrag({ clientX: touch.clientX, clientY: touch.clientY });
+      }
+      
+      function startDrag(e) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        // 添加移動和結束事件監聽器
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', handleTouchMove);
+        document.addEventListener('touchend', handleTouchEnd);
+      }
+      
+      function handleTouchMove(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        drag({ clientX: touch.clientX, clientY: touch.clientY });
+      }
+      
+      function drag(e) {
+        if (!isDragging) return;
+        
+        // 計算新位置
+        const containerRect = container.getBoundingClientRect();
+        const imgRect = container.querySelector('img').getBoundingClientRect();
+        
+        // 計算點擊位置在容器中的百分比
+        const x = ((e.clientX - imgRect.left) / imgRect.width) * 100;
+        const y = ((e.clientY - imgRect.top) / imgRect.height) * 100;
+        
+        // 限制在圖片邊界內
+        const boundedX = Math.max(0, Math.min(100, x));
+        const boundedY = Math.max(0, Math.min(100, y));
+        
+        // 更新元素位置
+        element.style.left = `${boundedX}%`;
+        element.style.top = `${boundedY}%`;
+        
+        // 更新對應的參考點
+        const index = Array.from(document.querySelectorAll('.editor-dot')).indexOf(element);
+        if (index !== -1) {
+          const refDots = document.querySelectorAll('.editor-dot.reference');
+          if (refDots[index]) {
+            refDots[index].style.left = `${boundedX}%`;
+            refDots[index].style.top = `${boundedY}%`;
+          }
+          
+          // 更新差異點資料
+          if (editorDifferences[index]) {
+            editorDifferences[index].position_left = boundedX;
+            editorDifferences[index].position_top = boundedY;
+            updateOutput();
+          }
+        }
+      }
+      
+      function handleTouchEnd() {
+        stopDrag();
+      }
+      
+      function stopDrag() {
+        isDragging = false;
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      }
+    }
+
+    // 更新輸出區域
+    function updateOutput() {
+      if (!outputArea) return;
+      
+      // 顯示差異點數據
+      const output = JSON.stringify(editorDifferences, null, 2);
+      outputArea.value = `// 共 ${editorDifferences.length} 個差異點\n${output}`;
+    }
+
+    // 保存編輯器數據
+    async function saveEditorData() {
+      if (!currentEditorLevel) {
+        alert('請先選擇一個關卡');
+        return;
+      }
+      
+      if (editorDifferences.length === 0) {
+        if (!confirm('確定要保存空白差異點嗎？這將刪除該關卡的所有現有差異點。')) {
+          return;
+        }
+      } else if (editorDifferences.length < 5) {
+        if (!confirm(`本關只有 ${editorDifferences.length} 個差異點，建議至少有 5 個，確定要保存嗎？`)) {
+          return;
+        }
+      }
+      
+      try {
+        const response = await fetch('/api/diffrent-game/differences', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            levelId: currentEditorLevel.id,
+            differences: editorDifferences
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('保存失敗');
+        }
+        
+        const result = await response.json();
+        alert(`保存成功！${result.message}`);
+      } catch (error) {
+        console.error('保存差異點失敗:', error);
+        alert('保存失敗: ' + error.message);
+      }
+    }
+
+    // 添加新關卡
+    async function submitNewLevel() {
+      const levelName = document.getElementById('new-level-name').value.trim();
+      const leftImageUrl = document.getElementById('new-left-image').value.trim();
+      const rightImageUrl = document.getElementById('new-right-image').value.trim();
+      
+      if (!levelName || !leftImageUrl || !rightImageUrl) {
+        alert('請填寫所有必填欄位');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/diffrent-game/levels', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            level_name: levelName,
+            left_image_url: leftImageUrl,
+            right_image_url: rightImageUrl,
+            active: true
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('新增圖片失敗');
+        }
+        
+        const result = await response.json();
+        alert(`新增圖片成功！ID: ${result.id}`);
+        
+        // 隱藏表單並重新載入選擇器
+        newLevelForm.style.display = 'none';
+        await populateLevelSelector();
+        
+        // 自動選擇新建立的關卡
+        levelSelector.value = result.id;
+        await loadLevelToEditor(result.id);
+        
+      } catch (error) {
+        console.error('新增圖片失敗:', error);
+        alert('新增圖片失敗: ' + error.message);
+      }
+    }
 
     // 載入關卡（遊戲模式）
     async function loadLevel(index) {
@@ -827,20 +1295,115 @@ async function getRandomLevels() {
       timerInterval = setInterval(updateTimer, 1000);
     }
 
-    // ----- 事件監聽器 (Remove editor listeners) -----
-    // if (levelSelector) { levelSelector.addEventListener(...) }
-    // if (document.getElementById('edit-left')) { document.getElementById('edit-left').addEventListener(...) }
-    // if (saveEditorButton) { saveEditorButton.addEventListener(...) }
-    // if (clearEditorButton) { clearEditorButton.addEventListener(...) }
-    // if (addNewLevelButton) { addNewLevelButton.addEventListener(...) }
-    // if (submitNewLevelButton) { submitNewLevelButton.addEventListener(...) }
-    // if (cancelNewLevelButton) { cancelNewLevelButton.addEventListener(...) }
-    // if (deleteLevelButton) { deleteLevelButton.addEventListener(...) }
+    // ----- 事件監聽器 -----
+    // 編輯器模式：關卡選擇器變更事件
+    if (levelSelector) {
+      levelSelector.addEventListener('change', function() {
+        const selectedLevelId = this.value;
+        if (selectedLevelId) {
+          loadLevelToEditor(selectedLevelId);
+        } else {
+          clearEditorDisplay();
+          currentEditorLevel = null;
+          editLeftImg.src = '';
+          editRightImg.src = '';
+        }
+      });
+    }
+
+    // 編輯器模式：點擊左側圖片添加差異點
+    if (document.getElementById('edit-left')) {
+      document.getElementById('edit-left').addEventListener('click', function(e) {
+        // 確保編輯器已經選擇了關卡
+        if (!currentEditorLevel) {
+          alert('請先選擇一個關卡');
+          return;
+        }
+        
+        // 確保點擊的是圖片，而不是其他元素
+        if (e.target === this || e.target.tagName.toLowerCase() === 'img') {
+          const img = this.querySelector('img');
+          const rect = img.getBoundingClientRect();
+          
+          // 計算點擊位置在圖片中的百分比
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          
+          // 添加差異點
+          addEditorDot(y, x);
+        }
+      });
+    }
+
+    // 編輯器模式：保存按鈕
+    if (saveEditorButton) {
+      saveEditorButton.addEventListener('click', saveEditorData);
+    }
+
+    // 編輯器模式：清除按鈕
+    if (clearEditorButton) {
+      clearEditorButton.addEventListener('click', function() {
+        if (confirm('確定要清除所有差異點嗎？')) {
+          clearEditorDisplay();
+        }
+      });
+    }
+
+    // 編輯器模式：添加新關卡按鈕
+    if (addNewLevelButton) {
+      addNewLevelButton.addEventListener('click', function() {
+        newLevelForm.style.display = 'block';
+      });
+    }
+
+    // 編輯器模式：提交新關卡按鈕
+    if (submitNewLevelButton) {
+      submitNewLevelButton.addEventListener('click', submitNewLevel);
+    }
+
+    // 編輯器模式：取消添加新關卡按鈕
+    if (cancelNewLevelButton) {
+      cancelNewLevelButton.addEventListener('click', function() {
+        newLevelForm.style.display = 'none';
+      });
+    }
+
+    if (deleteLevelButton) {
+      deleteLevelButton.addEventListener('click', async function() {
+        const selectedLevelId = parseInt(levelSelector.value);
+        if (isNaN(selectedLevelId)) {
+          alert('請先選擇要刪除的圖片！');
+          return;
+        }
+        if (!confirm(`確定要刪除 ID:${selectedLevelId} 這張圖片嗎？此動作無法復原。`)) {
+          return;
+        }
+        try {
+          const res = await fetch(`/api/diffrent-game/levels/${selectedLevelId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            alert('圖片已刪除！');
+            await populateLevelSelector(); // 重新載入 selector
+            clearEditorDisplay(); // 清空畫面
+            if (editLeftImg) editLeftImg.src = "";
+            if (editRightImg) editRightImg.src = "";
+          } else {
+            alert('刪除失敗，請稍後再試');
+          }
+        } catch (e) {
+          alert('網路錯誤，無法刪除圖片');
+        }
+      });
+    }
 
     // ----- 初始調用 -----
-    window.onload = async function() {
-      // Remove editor initialization: await populateLevelSelector();
-      await setupNewGame();
+    window.onload = async function() { 
+      // Initialize editor first (to populate selector)
+      await populateLevelSelector(); 
+
+      // Then setup the game
+      await setupNewGame(); 
 
       // Set up event listeners
       nextLevelButton.addEventListener('click', loadNextLevel);
@@ -905,6 +1468,9 @@ async function getRandomLevels() {
       rightImageContainer.addEventListener('click', function(e) {
         handleGameClick(e, this, true);
       });
+
+      // Ensure editor output area is initially updated
+      updateOutput(); 
     };
 
     // Function to fetch and display leaderboard directly (按下排行榜按鈕時呼叫)
@@ -912,24 +1478,13 @@ async function getRandomLevels() {
       let leaderboard = [];
       try {
         const res = await fetch('/api/diffrent-game/leaderboard'); // 取得排行榜
-        if (!res.ok) {
-           throw new Error(`Failed to fetch leaderboard: ${res.status} ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error('Failed to fetch leaderboard');
         leaderboard = await res.json();
-        // Ensure leaderboard is an array before proceeding
-        if (!Array.isArray(leaderboard)) {
-            console.error("Leaderboard data is not an array:", leaderboard);
-            alert("排行榜資料格式錯誤，無法處理。");
-            // Optionally hide the leaderboard container if it was shown
-            const leaderboardContainer = document.getElementById('leaderboard-container');
-            if (leaderboardContainer) leaderboardContainer.classList.remove('show');
-            return;
-        }
         // 顯示排行榜，不需要提交分數
         showLeaderboard(leaderboard, false, null);
       } catch (e) {
-        console.error("Error fetching leaderboard directly:", e); // Log the actual error
         alert('無法取得排行榜，請稍後再試');
+        console.error("Error fetching leaderboard directly:", e);
       }
     }
 
@@ -1066,21 +1621,10 @@ async function getRandomLevels() {
       let leaderboard = [];
       try {
         const res = await fetch('/api/diffrent-game/leaderboard');
-        if (!res.ok) {
-            throw new Error(`Failed to fetch leaderboard: ${res.status} ${res.statusText}`);
-        }
         leaderboard = await res.json();
-      } catch (e) { // Add the closing brace here
-        console.error("Error fetching or parsing leaderboard:", e); // Log the actual error
+      } catch (e) {
         alert('無法取得排行榜，請稍後再試');
         return;
-      }
-
-      // Ensure leaderboard is an array before proceeding
-      if (!Array.isArray(leaderboard)) {
-          console.error("Leaderboard data is not an array:", leaderboard);
-          alert("排行榜資料格式錯誤，無法處理。");
-          return;
       }
 
       // 3. 檢查是否進前 50 名
