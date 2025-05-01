@@ -1156,7 +1156,7 @@ app.get('/api/diffrent-game/levels/random', async (req, res) => {
   app.get('/api/diffrent-game/leaderboard', async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT player_name, time_seconds, created_at FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
+        'SELECT player_name, time_seconds, completion_date as created_at FROM diffrent_game_leaderboard ORDER BY time_seconds ASC LIMIT 50'
       );
       res.json(result.rows);
     } catch (error) {
