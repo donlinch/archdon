@@ -182,6 +182,7 @@
            <ul class="tabs-nav">
                <li class="tab-item active" data-tab="general-games">一般遊戲管理</li>
                <li class="tab-item" data-tab="same-game">對對碰遊戲管理</li>
+               <li class="tab-item" data-tab="diffrent-game">找出不同遊戲管理</li>
                <li class="tab-item" data-tab="add-game">新增一般遊戲</li>
            </ul>
        </div>
@@ -439,6 +440,186 @@
                    </div>
                    <p class="form-error" id="add-form-error"></p>
                </form>
+           </div>
+       </div>
+
+       <!-- 找出不同遊戲管理標籤頁 -->
+       <div id="diffrent-game" class="tab-content">
+           <div class="diffrent-game-container">
+               <!-- 子標籤頁導航 -->
+               <div class="tabs-container">
+                   <ul class="tabs-nav diffrent-game-tabs">
+                       <li class="tab-item active" data-tab="diffrent-levels-list">關卡列表</li>
+                       <li class="tab-item" data-tab="diffrent-leaderboard">排行榜</li>
+                       <li class="tab-item" data-tab="diffrent-editor">差異點編輯器</li>
+                   </ul>
+               </div>
+               
+               <!-- 關卡列表內容 -->
+               <div id="diffrent-levels-list" class="tab-content active">
+                   <h2>找出不同遊戲關卡列表</h2>
+                   <div class="mb-3">
+                       <button class="btn btn-success" id="add-diffrent-level-btn">
+                           <i class="fas fa-plus me-1"></i> 新增關卡
+                       </button>
+                   </div>
+                   <div class="table-responsive">
+                       <table class="table table-hover">
+                           <thead>
+                               <tr>
+                                   <th scope="col">#</th>
+                                   <th scope="col">關卡名稱</th>
+                                   <th scope="col">圖片數</th>
+                                   <th scope="col">建立時間</th>
+                                   <th scope="col">遊玩次數</th>
+                                   <th scope="col">狀態</th>
+                                   <th scope="col">操作</th>
+                               </tr>
+                           </thead>
+                           <tbody id="diffrent-levels-tbody">
+                               <!-- 數據將通過 JavaScript 加載 -->
+                               <tr><td colspan="7" class="text-center py-4">載入中...</td></tr>
+                           </tbody>
+                       </table>
+                   </div>
+               </div>
+               
+               <!-- 排行榜內容 -->
+               <div id="diffrent-leaderboard" class="tab-content">
+                   <h2>找出不同遊戲排行榜</h2>
+                   <div class="table-responsive">
+                       <table class="table table-hover">
+                           <thead>
+                               <tr>
+                                   <th scope="col">排名</th>
+                                   <th scope="col">玩家名稱</th>
+                                   <th scope="col">耗時(秒)</th>
+                                   <th scope="col">完成日期</th>
+                               </tr>
+                           </thead>
+                           <tbody id="diffrent-leaderboard-tbody">
+                               <!-- 數據將通過 JavaScript 加載 -->
+                               <tr><td colspan="4" class="text-center py-4">載入中...</td></tr>
+                           </tbody>
+                       </table>
+                   </div>
+               </div>
+               
+               <!-- 差異點編輯器內容 -->
+               <div id="diffrent-editor" class="tab-content">
+                   <div class="row mb-3">
+                       <div class="col-md-6">
+                           <h2>差異點編輯器</h2>
+                       </div>
+                       <div class="col-md-6 text-end">
+                           <div class="form-group">
+                               <label for="diffrent-level-selector" class="me-2">選擇關卡:</label>
+                               <select id="diffrent-level-selector" class="form-select form-select-sm d-inline-block w-auto">
+                                   <option value="">請選擇關卡</option>
+                                   <!-- 關卡選項將通過 JavaScript 加載 -->
+                               </select>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="editor-container" style="display: none;">
+                       <div class="row">
+                           <div class="col-md-6">
+                               <div class="card mb-3">
+                                   <div class="card-header">原圖</div>
+                                   <div class="card-body text-center">
+                                       <div class="position-relative" style="overflow: hidden;">
+                                           <img id="diffrent-edit-left" src="" alt="原圖" class="img-fluid" style="max-width: 100%; cursor: crosshair;">
+                                       </div>
+                                   </div>
+                                   <div class="card-footer">
+                                       <div class="input-group">
+                                           <input type="text" id="diffrent-left-url" class="form-control" placeholder="輸入原圖 URL">
+                                           <input type="file" id="diffrent-left-upload" class="form-control" accept="image/*" style="display: none;">
+                                           <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('diffrent-left-upload').click()">上傳</button>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                           <div class="col-md-6">
+                               <div class="card mb-3">
+                                   <div class="card-header">修改版</div>
+                                   <div class="card-body text-center">
+                                       <div class="position-relative" style="overflow: hidden;">
+                                           <img id="diffrent-edit-right" src="" alt="修改版" class="img-fluid" style="max-width: 100%; cursor: crosshair;">
+                                       </div>
+                                   </div>
+                                   <div class="card-footer">
+                                       <div class="input-group">
+                                           <input type="text" id="diffrent-right-url" class="form-control" placeholder="輸入修改版 URL">
+                                           <input type="file" id="diffrent-right-upload" class="form-control" accept="image/*" style="display: none;">
+                                           <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('diffrent-right-upload').click()">上傳</button>
+                                       </div>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                       
+                       <div class="card mb-3">
+                           <div class="card-header">
+                               <div class="d-flex justify-content-between align-items-center">
+                                   <span>差異點設置</span>
+                                   <div>
+                                       <button id="diffrent-save-btn" class="btn btn-primary btn-sm">儲存</button>
+                                       <button id="diffrent-clear-btn" class="btn btn-secondary btn-sm ms-2">清除</button>
+                                   </div>
+                               </div>
+                           </div>
+                           <div class="card-body">
+                               <p class="text-muted small">點擊圖片添加差異點，然後輸入描述。您可以拖動差異點調整位置。</p>
+                               <div class="table-responsive">
+                                   <table class="table table-bordered table-sm">
+                                       <thead>
+                                           <tr>
+                                               <th>#</th>
+                                               <th>描述</th>
+                                               <th>位置 (Left, Top)</th>
+                                               <th>操作</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody id="diffrent-points-list">
+                                           <tr><td colspan="4" class="text-center">無差異點</td></tr>
+                                       </tbody>
+                                   </table>
+                               </div>
+                           </div>
+                       </div>
+                       
+                       <div class="row mb-3">
+                           <div class="col">
+                               <div class="form-group">
+                                   <label for="diffrent-level-name">關卡名稱:</label>
+                                   <input type="text" id="diffrent-level-name" class="form-control" placeholder="例如：第一關">
+                               </div>
+                           </div>
+                           <div class="col">
+                               <div class="form-group">
+                                   <label for="diffrent-level-active">狀態:</label>
+                                   <select id="diffrent-level-active" class="form-control">
+                                       <option value="1">啟用</option>
+                                       <option value="0">停用</option>
+                                   </select>
+                               </div>
+                           </div>
+                       </div>
+                       
+                       <div class="form-group">
+                           <pre id="diffrent-output" class="border p-3 bg-light" style="height: 200px; overflow: auto;"></pre>
+                       </div>
+                   </div>
+                   
+                   <div id="diffrent-editor-placeholder" class="text-center py-5 border rounded bg-light">
+                       <p class="mb-3">請選擇一個關卡進行編輯，或者</p>
+                       <button class="btn btn-primary" id="diffrent-new-level-btn">
+                           <i class="fas fa-plus me-1"></i> 建立新關卡
+                       </button>
+                   </div>
+               </div>
            </div>
        </div>
    </div>
