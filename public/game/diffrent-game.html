@@ -133,21 +133,15 @@
       display: block;
     }
     .game-status-container {
-    position: fixed; /* Make it fixed */
-    top: 10px;      /* Position from top */
-    left: 50%;      /* Center horizontally */
-    transform: translateX(-50%);
-    z-index: 999;   /* Ensure it's above most content */
-    width: auto;
-    max-width: 90%; /* Prevent it from being too wide on large screens */
-    margin: 0;      /* Remove original margin */
-    padding: 8px 15px;
-    background-color: rgba(255, 248, 225, 0); /* Completely transparent background */
-    border: none;   /* No border */
-    box-shadow: none; /* No shadow */
-    display: block; /* Change from inline-block */
-    text-align: center; /* Center text inside */
-}
+      width: auto;
+      max-width: 450px;
+      margin: 0 auto 10px;
+      padding: 8px 15px;
+      background-color: #fff8e1;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
     #status {
       margin: 0;
       font-size: 18px;
@@ -310,9 +304,8 @@
         font-size: 14px;
       }
       .game-status-container {
-        margin: 0; /* Already handled by fixed positioning */
-        padding: 5px 10px; /* Adjust padding for mobile */
-        top: 5px; /* Slightly less space from top on mobile */
+        margin: 5px auto;
+        padding: 5px;
       }
       #status {
         font-size: 16px;
@@ -530,214 +523,14 @@
     .leaderboard-buttons button.secondary {
       background-color: #6c757d;
     }
-
-    /* --- 底部導航 --- */
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: white;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        border-top-left-radius: 20px;
-        border-top-right-radius: 20px;
-        z-index: 1000;
-        padding: 5px 0;
-    }
-
-    .bottom-nav ul {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
-    .bottom-nav li {
-        text-align: center;
-    }
-
-    .bottom-nav a {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 5px;
-        text-decoration: none;
-        color: #777;
-        font-size: 0.7rem;
-        transition: all 0.3s;
-    }
-
-    .bottom-nav a.active {
-        color: #FFB74D;
-        background-color: rgba(255, 183, 77, 0.1);
-        border-radius: 20px;
-    }
-
-    .bottom-nav .icon {
-        font-size: 1.5rem;
-        margin-bottom: 3px;
-    }
-
-
-        /* --- 頁腳（桌面版） --- */
-        .desktop-footer {
-            background-color: #f8f8f8;
-            padding: 20px 0;
-            margin-top: 30px;
-            display: none; /* 默認隱藏 */
-        }
-
-        .footer-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        .footer-nav {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 15px;
-        }
-
-        .footer-nav a {
-            color: #555;
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        .footer-nav a:hover {
-            color: #FFB74D;
-        }
-
-        .footer-copyright {
-            text-align: center;
-            color: #888;
-            font-size: 0.9rem;
-        }
-
-        /* --- 響應式設計 --- */
-        @media (max-width: 767px) {
-            .game-controls {
-        padding: 10px 0;
-        background-color: rgba(255, 255, 255, 0.95);
-    }
-    
-    .game-controls button {
-        font-size: 13px;
-        padding: 8px 12px;
-    }
-        }
-
-        @media (min-width: 768px) {
-            .game-controls {
-        position: static;
-        background-color: transparent;
-        box-shadow: none;
-        padding: 20px 0;
-        margin-bottom: 20px;
-    }
-        }
-        
-        /* 孔洞懸停效果 */
-        .hole:not(.revealed):hover {
-            transform: translateY(-5px);
-            animation: floatAnimation 2s ease-in-out infinite;
-        }
-        
-        .hole:not(.revealed):hover .hole-front {
-            animation: pulseGlow 1.5s infinite;
-        }
-        
-        /* 增強卡片打開動畫 */
-        .hole.revealing {
-            animation: revealSpin 0.6s forwards;
-        }
-        
-        /* 漣漪效果 */
-        .ripple {
-            position: absolute;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.7);
-            transform: scale(0);
-            animation: ripple 0.6s linear;
-            pointer-events: none;
-        }
-        
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-        .bottom-nav .icon {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    margin-bottom: 3px;
-}
-
-        /* --- 底部導航 --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: white;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            z-index: 1000;
-            padding: 5px 0;
-        }
-
-        .bottom-nav ul {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .bottom-nav li {
-            text-align: center;
-        }
-
-        .bottom-nav a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 5px;
-            text-decoration: none;
-            color: #777;
-            font-size: 0.7rem;
-            transition: all 0.3s;
-        }
-
-        .bottom-nav a.active {
-            color: #FFB74D;
-            background-color: rgba(255, 183, 77, 0.1);
-            border-radius: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        .bottom-nav .icon {
-            font-size: 1.5rem;
-            margin-bottom: 3px;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
- 
   </style>
 </head>
 <body>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="game">遊戲模式</div>
+    <div class="tab" data-tab="editor">編輯器模式</div>
+  </div>
   
   <div id="game-tab" class="tab-content active">
     <div class="game-container">
@@ -768,7 +561,7 @@
       
       <div class="game-status-container">
         <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
-        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">（<span id="timer-display">00:00</span>）</div>
+        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">時間：<span id="timer-display">00:00</span></div>
         <div id="message"></div>
       </div>
       
@@ -800,8 +593,8 @@
     
     <div class="controls">
       <button class="button" id="leaderboard-button">排行榜</button>
+      <button class="button" id="show-answers-button">顯示所有答案</button>
       <button class="button reset" id="reset-button">重新開始</button>
-      <a href="/games.html" class="button">返回遊戲主頁</a>
     </div>
   </div>
   
@@ -1000,8 +793,8 @@ async function getRandomLevels() {
     const foundCountElement = document.getElementById('found-count');
     const totalCountElement = document.getElementById('total-count');
     const resetButton = document.getElementById('reset-button');
-    // const showAnswersButton = document.getElementById('show-answers-button'); // Removed
-    // const hintButton = document.getElementById('hint-button'); // Assuming hint button isn't used either
+    const showAnswersButton = document.getElementById('show-answers-button');
+    const hintButton = document.getElementById('hint-button');
     const levelTransition = document.getElementById('level-transition');
     const nextLevelButton = document.getElementById('next-level-button');
     const deleteLevelButton = document.getElementById('delete-level');
@@ -1363,7 +1156,7 @@ async function getRandomLevels() {
       foundCount = 0;
       foundCountElement.textContent = '0';
       answersVisible = false;
-      // showAnswersButton.textContent = '顯示所有答案'; // This line causes the error
+      showAnswersButton.textContent = '顯示所有答案';
       
       // 更新關卡指示器
       levelIndicator.textContent = `關卡 ${index + 1}/${gameLevels.length}`;
@@ -1465,7 +1258,7 @@ async function getRandomLevels() {
       foundCountElement.textContent = '0';
       messageElement.textContent = '';
       answersVisible = false;
-      // showAnswersButton.textContent = '顯示所有答案'; // This line causes the error
+      showAnswersButton.textContent = '顯示所有答案';
 
       // 重置計時器
       clearInterval(timerInterval);
@@ -1621,6 +1414,51 @@ async function getRandomLevels() {
       if (leaderboardButton) {
         leaderboardButton.addEventListener('click', displayLeaderboardDirectly);
       }
+      
+      // 設置"顯示所有答案"按鈕事件
+      showAnswersButton.addEventListener('click', function() {
+        answersVisible = !answersVisible;
+        const level = gameLevels[currentLevel];
+        if (!level || !level.differences) return;
+
+        level.differences.forEach(diff => {
+            const match = String(diff.id).match(/\d+$/);
+            if (!match) return;
+            const dataId = match[0];
+
+            const dots = document.querySelectorAll(`.dot[data-id="${dataId}"]`);
+            const labels = document.querySelectorAll(`.label[data-id="${dataId}"]`);
+
+            if (answersVisible) {
+                dots.forEach(dot => {
+                    dot.style.display = 'block';
+                    if (!foundDifferences.has(dataId)) {
+                        dot.classList.add('hint'); // 對未找到的用提示樣式
+                        dot.classList.remove('found');
+                    }
+                });
+                labels.forEach(label => label.classList.add('show'));
+            } else {
+                // 隱藏答案
+                dots.forEach(dot => {
+                    if (!foundDifferences.has(dataId)) {
+                        dot.style.display = 'none'; // 隱藏未找到的
+                        dot.classList.remove('hint');
+                    } else {
+                        dot.classList.remove('hint'); // 確保已找到的沒有 hint 樣式
+                    }
+                });
+                labels.forEach(label => {
+                    if (!foundDifferences.has(dataId)) {
+                        label.classList.remove('show'); // 隱藏未找到的標籤
+                    }
+                });
+            }
+        });
+
+        showAnswersButton.textContent = answersVisible ? '隱藏答案' : '顯示所有答案';
+        messageElement.textContent = answersVisible ? '已顯示所有答案' : '';
+      });
       
       // 為遊戲模式中的每個圖片容器添加點擊事件
       leftImageContainer.addEventListener('click', function(e) {
@@ -1898,7 +1736,5 @@ async function getRandomLevels() {
       }
     }
   </script>
-  
-
 </body>
 </html>
