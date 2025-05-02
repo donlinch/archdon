@@ -58,20 +58,18 @@
     }
     .image-container {
       position: relative;
-      width: 500px;
-      height: 500px;
-      margin: 0 auto 15px; /* 居中 */
-      overflow: hidden;
-      border-radius: 12px;
+      margin-bottom: 10px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
     }
     .image-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* 保持比例 */
-      display: block;
+      width: 90vw;
+      max-width: 400px;
+      height: auto;
       border: none;
       border-radius: 10px;
+      display: block;
     }
     .image-label {
       font-size: 16px;
@@ -135,48 +133,44 @@
       display: block;
     }
     .game-status-container {
-      position: absolute; /* 改为绝对定位 */
-      top: 42px; /* 放在level-indicator下方 */
-      right: 10px;
-      left: auto;
-      transform: none;
-      z-index: 10;
-      width: auto;
-      margin: 0;      
-      padding: 8px 12px;
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      text-align: right;
-      pointer-events: none;
-    }
+    position: fixed; /* Make it fixed */
+    top: 10px;      /* Position from top */
+    left: 50%;      /* Center horizontally */
+    transform: translateX(-50%);
+    z-index: 999;   /* Ensure it's above most content */
+    width: auto;
+    max-width: 90%; /* Prevent it from being too wide on large screens */
+    margin: 0;      /* Remove original margin */
+    padding: 8px 15px;
+    background-color: rgba(255, 248, 225, 0); /* Completely transparent background */
+    border: none;   /* No border */
+    box-shadow: none; /* No shadow */
+    display: block; /* Change from inline-block */
+    text-align: center; /* Center text inside */
+}
     #status {
-      margin: 0 0 3px 0;
-      font-size: 14px;
+      margin: 0;
+      font-size: 18px;
       color: #008800;
       font-weight: bold;
-      display: block;
+      display: inline-block;
     }
     #timer {
-      margin: 0 0 3px 0;
-      display: block;
+      margin-left: 15px;
+      display: inline-block;
       color: #ff6600;
       font-weight: bold;
-      font-size: 14px;
     }
     #timer-display {
       font-weight: bold;
     }
     #message {
-      min-height: 18px;
-      font-size: 14px;
+      min-height: 24px;
+      font-size: 16px;
       color: #0066cc;
       font-weight: bold;
-      margin: 0;
-      display: block;
+      margin: 0 0 0 15px;
+      display: inline-block;
     }
     .controls {
       margin: 10px 0 20px;
@@ -285,13 +279,17 @@
         flex-direction: column;
         align-items: center;
         gap: 5px;
+        margin-top: 5px;
       }
       .image-container {
-        width: 90vw; /* 螢幕寬度的90% */
-        height: 90vw; /* 保持1:1比例 */
-        max-width: 500px;
-        max-height: 500px;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
+        width: 100%;
+      }
+      .image-container img {
+        width: 100%;
+        max-width: none;
+        max-height: 40vh;
+        object-fit: contain;
       }
       .controls {
         flex-direction: row;
@@ -389,7 +387,6 @@
       font-weight: bold;
       color: #ff8c00;
       z-index: 10;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     .level-select {
       display: inline-block;
@@ -675,36 +672,6 @@
                 opacity: 0;
             }
         }
-
-
-
-        .image-container {
-  width: 500px;
-  height: 500px;
-  margin: 0 auto; /* 居中 */
-  position: relative;
-  overflow: hidden;
-}
-
-.image-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* 保持比例 */
-  display: block;
-}
-
-/* 手機版 */
-@media (max-width: 768px) {
-  .image-container {
-    width: 90vw; /* 螢幕寬度的90% */
-    height: 90vw; /* 保持1:1比例 */
-    max-width: 500px;
-    max-height: 500px;
-  }
-}
-
-
-
         .bottom-nav .icon {
     width: 40px;
     height: 40px;
@@ -797,12 +764,12 @@
         <div class="label" id="label5" style="top: 52%; left: 60%;">5</div>
         
         <div class="image-label">原圖</div>
-        <div class="level-indicator"></div>
-        <div class="game-status-container">
-          <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
-          <div id="timer">（<span id="timer-display">00:00</span>）</div>
-          <div id="message"></div>
-        </div>
+      </div>
+      
+      <div class="game-status-container">
+        <div id="status">已找到：<span id="found-count">0</span> / <span id="total-count">5</span></div>
+        <div id="timer" style="margin-left: 15px; display: inline-block; color: #ff6600; font-weight: bold;">（<span id="timer-display">00:00</span>）</div>
+        <div id="message"></div>
       </div>
       
       <div class="image-container" id="right-image">
@@ -1053,7 +1020,9 @@ async function getRandomLevels() {
     const rightImageContainer = document.getElementById('right-image');
     const leftImageElement = leftImageContainer.querySelector('img');
     const rightImageElement = rightImageContainer.querySelector('img');
-    const levelIndicator = document.querySelector('.level-indicator'); // 更新为查询选择器
+    const levelIndicator = document.createElement('div'); // 關卡指示器只需要創建一次
+    levelIndicator.className = 'level-indicator';
+    leftImageContainer.appendChild(levelIndicator); // 添加到左圖容器
 
     // ----- 編輯器模式變數 -----
     const editLeftImg = document.getElementById('left-edit-img');
@@ -1165,15 +1134,11 @@ async function getRandomLevels() {
 
     // 添加編輯器差異點
     function addEditorDot(top, left, description) {
-      // 格式化確保數值精確度一致
-      const formattedTop = parseFloat(top).toFixed(2);
-      const formattedLeft = parseFloat(left).toFixed(2);
-      
       // 創建左側圖片上的點
       const dot = document.createElement('div');
       dot.className = 'editor-dot';
-      dot.style.top = `${formattedTop}%`;
-      dot.style.left = `${formattedLeft}%`;
+      dot.style.top = `${top}%`;
+      dot.style.left = `${left}%`;
       
       // 為點添加拖曳功能
       makeDraggable(dot);
@@ -1184,14 +1149,14 @@ async function getRandomLevels() {
       // 創建右側的參考點（不可拖曳）
       const referenceDot = document.createElement('div');
       referenceDot.className = 'editor-dot reference';
-      referenceDot.style.top = `${formattedTop}%`;
-      referenceDot.style.left = `${formattedLeft}%`;
+      referenceDot.style.top = `${top}%`;
+      referenceDot.style.left = `${left}%`;
       document.getElementById('edit-right').appendChild(referenceDot);
       
       // 添加到差異點陣列
       editorDifferences.push({
-        position_top: formattedTop,
-        position_left: formattedLeft,
+        position_top: top,
+        position_left: left,
         description: description || `差異點 #${editorDifferences.length + 1}`
       });
       
@@ -1239,71 +1204,35 @@ async function getRandomLevels() {
       function drag(e) {
         if (!isDragging) return;
         
+        // 計算新位置
         const containerRect = container.getBoundingClientRect();
-        const img = container.querySelector('img');
-        if (!img || !img.naturalWidth || !img.naturalHeight) {
-            console.warn("Cannot drag, image dimensions not ready.");
-            return; 
-        }
-        const imgRect = img.getBoundingClientRect();
-
-        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-        if (clientX === undefined || clientY === undefined) return; 
-
-        const rawX = clientX - imgRect.left;
-        const rawY = clientY - imgRect.top;
-
-        const naturalWidth = img.naturalWidth;
-        const naturalHeight = img.naturalHeight;
-        const renderedWidth = imgRect.width;
-        const renderedHeight = imgRect.height;
-
-        const naturalRatio = naturalWidth / naturalHeight;
-        const renderedRatio = renderedWidth / renderedHeight;
-
-        let scale, offsetX = 0, offsetY = 0;
-        let effectiveWidth, effectiveHeight;
-
-        if (renderedRatio > naturalRatio) {
-            scale = renderedHeight / naturalHeight;
-            effectiveWidth = naturalWidth * scale;
-            effectiveHeight = renderedHeight;
-            offsetX = (renderedWidth - effectiveWidth) / 2;
-        } else {
-            scale = renderedWidth / naturalWidth;
-            effectiveWidth = renderedWidth;
-            effectiveHeight = naturalHeight * scale;
-            offsetY = (renderedHeight - effectiveHeight) / 2;
-        }
-
-        const xOnImage = rawX - offsetX;
-        const yOnImage = rawY - offsetY;
-
-        let xPercent = (xOnImage / effectiveWidth) * 100;
-        let yPercent = (yOnImage / effectiveHeight) * 100;
-
-        xPercent = Math.max(0, Math.min(100, xPercent));
-        yPercent = Math.max(0, Math.min(100, yPercent));
+        const imgRect = container.querySelector('img').getBoundingClientRect();
         
-        // 格式化確保數值精確度一致
-        const formattedXPercent = parseFloat(xPercent).toFixed(2);
-        const formattedYPercent = parseFloat(yPercent).toFixed(2);
-
-        element.style.left = `${formattedXPercent}%`;
-        element.style.top = `${formattedYPercent}%`;
-
-        const index = Array.from(document.querySelectorAll('#edit-left .editor-dot')).indexOf(element);
+        // 計算點擊位置在容器中的百分比
+        const x = ((e.clientX - imgRect.left) / imgRect.width) * 100;
+        const y = ((e.clientY - imgRect.top) / imgRect.height) * 100;
+        
+        // 限制在圖片邊界內
+        const boundedX = Math.max(0, Math.min(100, x));
+        const boundedY = Math.max(0, Math.min(100, y));
+        
+        // 更新元素位置
+        element.style.left = `${boundedX}%`;
+        element.style.top = `${boundedY}%`;
+        
+        // 更新對應的參考點
+        const index = Array.from(document.querySelectorAll('.editor-dot')).indexOf(element);
         if (index !== -1) {
-          const refDots = document.querySelectorAll('#edit-right .editor-dot.reference');
+          const refDots = document.querySelectorAll('.editor-dot.reference');
           if (refDots[index]) {
-            refDots[index].style.left = `${formattedXPercent}%`;
-            refDots[index].style.top = `${formattedYPercent}%`;
+            refDots[index].style.left = `${boundedX}%`;
+            refDots[index].style.top = `${boundedY}%`;
           }
           
+          // 更新差異點資料
           if (editorDifferences[index]) {
-            editorDifferences[index].position_left = formattedXPercent;
-            editorDifferences[index].position_top = formattedYPercent;
+            editorDifferences[index].position_left = boundedX;
+            editorDifferences[index].position_top = boundedY;
             updateOutput();
           }
         }
@@ -1349,13 +1278,6 @@ async function getRandomLevels() {
       }
       
       try {
-        // 統一位置格式，確保存儲的數據與遊戲模式一致
-        const processedDifferences = editorDifferences.map(diff => ({
-          description: diff.description,
-          position_top: parseFloat(diff.position_top).toFixed(2),
-          position_left: parseFloat(diff.position_left).toFixed(2)
-        }));
-        
         const response = await fetch('/api/diffrent-game/differences', {
           method: 'POST',
           headers: {
@@ -1363,7 +1285,7 @@ async function getRandomLevels() {
           },
           body: JSON.stringify({
             levelId: currentEditorLevel.id,
-            differences: processedDifferences
+            differences: editorDifferences
           })
         });
         
@@ -1599,62 +1521,24 @@ async function getRandomLevels() {
     // 編輯器模式：點擊左側圖片添加差異點
     if (document.getElementById('edit-left')) {
       document.getElementById('edit-left').addEventListener('click', function(e) {
+        // 確保編輯器已經選擇了關卡
         if (!currentEditorLevel) {
           alert('請先選擇一個關卡');
           return;
         }
-
-        // Don't add dot if clicking an existing one
-        if (e.target.closest('.editor-dot')) {
-            return;
+        
+        // 確保點擊的是圖片，而不是其他元素
+        if (e.target === this || e.target.tagName.toLowerCase() === 'img') {
+          const img = this.querySelector('img');
+          const rect = img.getBoundingClientRect();
+          
+          // 計算點擊位置在圖片中的百分比
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          
+          // 添加差異點
+          addEditorDot(y, x);
         }
-
-        const img = this.querySelector('img');
-        const container = this;
-
-        if (!img || !img.naturalWidth || !img.naturalHeight) {
-            alert('圖片尚未載入完成，無法添加標記。');
-            return;
-        }
-
-        const rect = img.getBoundingClientRect();
-
-        const clickXRelative = e.clientX - rect.left;
-        const clickYRelative = e.clientY - rect.top;
-        const naturalWidth = img.naturalWidth;
-        const naturalHeight = img.naturalHeight;
-        const renderedWidth = rect.width;
-        const renderedHeight = rect.height;
-        const naturalRatio = naturalWidth / naturalHeight;
-        const renderedRatio = renderedWidth / renderedHeight;
-
-        let scale, offsetX = 0, offsetY = 0;
-        let effectiveWidth, effectiveHeight;
-
-        if (renderedRatio > naturalRatio) {
-            scale = renderedHeight / naturalHeight;
-            effectiveWidth = naturalWidth * scale;
-            effectiveHeight = renderedHeight;
-            offsetX = (renderedWidth - effectiveWidth) / 2;
-        } else {
-            scale = renderedWidth / naturalWidth;
-            effectiveWidth = renderedWidth;
-            effectiveHeight = naturalHeight * scale;
-            offsetY = (renderedHeight - effectiveHeight) / 2;
-        }
-
-        const clickXOnImage = clickXRelative - offsetX;
-        const clickYOnImage = clickYRelative - offsetY;
-
-        if (clickXOnImage < 0 || clickXOnImage > effectiveWidth || clickYOnImage < 0 || clickYOnImage > effectiveHeight) {
-            console.log("Editor click was outside the effective image area.");
-            return;
-        }
-
-        const xPercent = (clickXOnImage / effectiveWidth) * 100;
-        const yPercent = (clickYOnImage / effectiveHeight) * 100;
-
-        addEditorDot(yPercent, xPercent);
       });
     }
 
@@ -1772,123 +1656,85 @@ async function getRandomLevels() {
       if (!e.target.matches('img') && e.target !== container) {
         return;
       }
-      
       const level = gameLevels[currentLevel];
       if (!level || !level.differences || level.differences.length === 0 || !level.positions) return; // 沒有點可以找或位置數據缺失
 
+      // 計算點擊相對於圖片的位置
       const img = container.querySelector('img');
-      if (!img.naturalWidth || !img.naturalHeight) {
-        console.warn("圖片還未完全載入，無法獲取自然尺寸");
-        return; // 等待圖片完全載入
-      }
-      
       const rect = img.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      console.log(`Click at (${x.toFixed(2)}%, ${y.toFixed(2)}%) on ${isRight ? 'right' : 'left'} image`);
 
-      // 計算原始點擊位置（相對於元素的左上角）
-      const clickXRelative = e.clientX - rect.left;
-      const clickYRelative = e.clientY - rect.top;
-
-      // 圖片自然（原始）尺寸
-      const naturalWidth = img.naturalWidth;
-      const naturalHeight = img.naturalHeight;
-
-      // 圖片元素渲染尺寸
-      const renderedWidth = rect.width;
-      const renderedHeight = rect.height;
-
-      // 計算縮放比例和偏移量
-      let scale, offsetX = 0, offsetY = 0;
-      let effectiveWidth, effectiveHeight; // 可見圖片內容的尺寸
-
-      // 確定縮放和偏移（處理 object-fit: contain 邏輯）
-      if (renderedWidth / renderedHeight > naturalWidth / naturalHeight) {
-        // 渲染框比需要的更寬（信箱）
-        scale = renderedHeight / naturalHeight;
-        effectiveWidth = naturalWidth * scale;
-        effectiveHeight = renderedHeight;
-        offsetX = (renderedWidth - effectiveWidth) / 2;
-      } else {
-        // 渲染框比需要的更高（柱形箱）
-        scale = renderedWidth / naturalWidth;
-        effectiveWidth = renderedWidth;
-        effectiveHeight = naturalHeight * scale;
-        offsetY = (renderedHeight - effectiveHeight) / 2;
-      }
-
-      // 調整點擊坐標相對於實際圖片內容
-      const clickXOnImage = clickXRelative - offsetX;
-      const clickYOnImage = clickYRelative - offsetY;
-
-      // 檢查點擊是否在有效圖片區域外
-      if (clickXOnImage < 0 || clickXOnImage > effectiveWidth || clickYOnImage < 0 || clickYOnImage > effectiveHeight) {
-        console.log("點擊在有效圖片區域外");
-        if (e.target.matches('img')) { // 只有在點擊靠近圖片時才顯示消息
-          messageElement.textContent = '請點擊圖片內部區域';
-          setTimeout(() => { messageElement.textContent = ''; }, 1000);
-        }
-        return;
-      }
-
-      // 將縮放圖片上的點擊轉換為相對於有效尺寸的百分比
-      const x = (clickXOnImage / effectiveWidth) * 100;
-      const y = (clickYOnImage / effectiveHeight) * 100;
-
-      console.log(`調整後的點擊位置：(${x.toFixed(2)}%, ${y.toFixed(2)}%)`);
-
-      // 檢查距離存儲的差異（使用校正的 x, y）
+      // 檢查是否點擊在差異點附近
       let found = false;
       for (let i = 0; i < level.differences.length; i++) {
         const diff = level.differences[i];
         const diffIdMatch = String(diff.id).match(/\d+$/);
         if (!diffIdMatch) continue;
-        const dataId = diffIdMatch[0];
-        const dataIdNum = parseInt(dataId);
+        const dataId = diffIdMatch[0]; // 獲取數字 ID (字符串形式)
+        const dataIdNum = parseInt(dataId); // 數字形式用於查找 position map
 
+        // **** 從 level.positions 獲取位置 ****
         const diffPosition = level.positions[dataIdNum];
+
         if (!diffPosition) {
-          console.warn(`找不到 dataId: ${dataIdNum} 的位置數據`);
+          console.warn(`Position data not found in level.positions for dataId: ${dataIdNum}`);
           continue;
         }
 
         const diffX = parseFloat(diffPosition.left);
         const diffY = parseFloat(diffPosition.top);
+
+        // 計算距離
         const distance = Math.sqrt(Math.pow(x - diffX, 2) + Math.pow(y - diffY, 2));
-        const clickRadius = 10; // 10% 的點擊半徑讓使用者更容易點中差異
+        const clickRadius = 5; // 點擊半徑（百分比）
 
-        console.log(`檢查到差異 ${dataId} 的距離: ${distance.toFixed(2)}% (目標: < ${clickRadius}%)`);
+        // **** ADD EXTRA LOGGING ****
+        console.log(`BEFORE IF: i=${i}, dataId=${dataId}, distance=${distance.toFixed(2)}, clickRadius=${clickRadius}, condition=${distance < clickRadius}`);
 
-        if (distance < clickRadius) {
-          if (!foundDifferences.has(dataId)) {
-            console.log(`找到差異 ${dataId}!`);
+        // ** Existing Log **
+        console.log(`Checking distance to diff ${dataId}: ${distance.toFixed(2)}% (Target: < ${clickRadius}%)`);
+
+        // ** The Core Conditional Logic **
+        if (distance < clickRadius) { // Check if click is within radius
+          if (!foundDifferences.has(dataId)) { // Check if not already found
+            // This block executes if BOTH conditions are true
+            // ** Modify log slightly for clarity **
+            console.log(`INSIDE IF: Found difference ${dataId}!`); // Log the found difference
             foundDifferences.add(dataId);
             foundCount++;
             foundCountElement.textContent = `${foundCount}`;
 
+            // 顯示左右兩邊的點和標籤
             document.querySelectorAll(`.dot[data-id="${dataId}"]`).forEach(dot => {
               dot.style.display = 'block';
               dot.classList.add('found');
             });
-            document.querySelectorAll(`.label[id="label${dataId}"], .label[id="label${dataId}-right"]`).forEach(label => {
+            document.querySelectorAll(`.label[data-id="${dataId}"]`).forEach(label => {
               label.classList.add('show');
             });
 
-            messageElement.textContent = `找到了！`;
+            messageElement.textContent = `找到了！`; // Use description from diff
+
+            // 檢查是否找到所有差異點
             if (foundCount === level.differences.length) {
-              console.log("找到所有差異！");
-              setTimeout(showCompletionMessage, 1000);
+              console.log("All differences found for this level!");
+              setTimeout(showCompletionMessage, 1000); // 延遲顯示過關信息
             }
           } else {
-            console.log(`差異 ${dataId} 已經找到`);
+            console.log(`Difference ${dataId} already found.`);
             messageElement.textContent = `這個點已經找到了！`;
             setTimeout(() => { messageElement.textContent = ''; }, 1500);
           }
           found = true;
-          break;
+          break; // 找到一個就停止檢查
         }
       }
 
-      if (!found) {
-        console.log("沒有找到差異");
+      // 如果點擊不在任何差異點附近
+      if (!found && e.target.matches('img')) {
+        console.log("Missed.");
         messageElement.textContent = '請再試一次';
         setTimeout(() => { messageElement.textContent = ''; }, 1000);
       }
