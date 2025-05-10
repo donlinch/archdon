@@ -47,6 +47,7 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin-bottom: 24px;
+            padding: 10px; /* 增加選項容器與邊界的間隔 */
         }
         .option {
             position: relative;
@@ -109,6 +110,22 @@
             text-align: center;
             font-size: 1.1em;
             box-sizing: border-box;
+        }
+        .option.option-with-image .option-content {
+            top: 5px;
+            left: 5px;
+            bottom: auto;
+            right: auto;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 4px 8px; /* 調整padding */
+            font-size: 0.8em; /* 更小的字體 */
+            border-radius: 4px;
+            text-align: left;
+            max-width: calc(100% - 50px); /* 避免與右上角的縮放圖標重疊，留出更多空間 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            z-index: 5; /* 確保在圖片之上，但在 zoom-icon 之下 */
         }
         .button, #back-to-campaigns-button.moved-button { /* Unified button styles */
             background-color: #FFB74D; /* Theme color */
@@ -746,6 +763,7 @@
                             optionContentDiv.textContent = opt.name;
 
                             if (opt.image_url && opt.image_url.trim() !== '') {
+                                optionDiv.classList.add('option-with-image'); // 添加class以便CSS控制
                                 const zoomIconSpan = document.createElement('span');
                                 zoomIconSpan.className = 'zoom-icon';
                                 zoomIconSpan.innerHTML = '&#128269;';
