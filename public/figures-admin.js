@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tableBody = document.getElementById('figure-table-body');
+    const figureListContainer = document.getElementById('figure-list-container'); // Table container
+    const figureGridContainer = document.getElementById('figure-grid-container'); // Grid container
     const addFigureBtn = document.getElementById('add-figure-btn');
+    const viewTableBtn = document.getElementById('view-table-btn');
+    const viewGridBtn = document.getElementById('view-grid-btn');
     const modal = document.getElementById('figure-modal');
     const modalTitle = document.getElementById('modal-title');
     const figureForm = document.getElementById('figure-form');
@@ -16,27 +20,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = modal.querySelector('.cancel-btn');
 
     let allFiguresData = []; // 用於編輯時查找數據
+    let currentViewMode = 'table'; // 'table' or 'grid'
 
     // --- CRUD 函數 ---
 
     /** 獲取並顯示所有公仔 */
     async function fetchAndDisplayFigures() {
-        tableBody.innerHTML = '<tr><td colspan="7">正在載入商品資料...</td></tr>';
+        // Clear previous content based on view mode
+        if (currentViewMode === 'table') {
+            tableBody.innerHTML = '<tr><td colspan="7">正在載入商品資料...</td></tr>';
+        } else {
+            figureGridContainer.innerHTML = '<p>正在載入商品資料...</p>';
+        }
+
         try {
             const response = await fetch('/api/admin/figures');
             if (!response.ok) {
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             }
             allFiguresData = await response.json(); // 儲存數據供編輯使用
-            displayFigures(allFiguresData);
+            renderFigures(); // Call a new render function
         } catch (error) {
             console.error("獲取商品列表失敗:", error);
-            tableBody.innerHTML = '<tr><td colspan="7">無法載入商品資料，請稍後再試。</td></tr>';
+            if (currentViewMode === 'table') {
+                tableBody.innerHTML = '<tr><td colspan="7">無法載入商品資料，請稍後再試。</td></tr>';
+            } else {
+                figureGridContainer.innerHTML = '<p>無法載入商品資料，請稍後再試。</p>';
+            }
+        }
+    }
+
+    /** Main function to render figures based on currentViewMode */
+    function renderFigures() {
+        if (currentViewMode === 'table') {
+            displayFiguresAsTable(allFiguresData);
+        } else {
+            displayFiguresAsGrid(allFiguresData);
         }
     }
 
     /** 將公仔列表渲染到表格 */
-    function displayFigures(figures) {
+    function displayFiguresAsTable(figures) {
         tableBody.innerHTML = ''; // 清空表格
 
         if (!figures || figures.length === 0) {
@@ -51,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 圖片
             const cellImage = row.insertCell();
             const img = document.createElement('img');
-            img.src = figure.image_url || '/images/placeholder.png'; // 使用預設圖片
+            img.src = figure.image_url || '/images/placeholder.png';
             img.alt = figure.name;
             img.style.maxWidth = '80px';
             img.style.height = 'auto';
@@ -68,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 figure.variations.forEach(v => {
                     const listItem = document.createElement('li');
                     listItem.textContent = `${v.name}: ${v.quantity}`;
-                    listItem.setAttribute('data-variation-id', v.id); // 添加規格ID
+                    listItem.setAttribute('data-variation-id', v.id);
                     variationsList.appendChild(listItem);
                 });
             } else {
@@ -77,11 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             cellVariations.appendChild(variationsList);
 
             // 買入價格
-             row.insertCell().textContent = formatCurrency(figure.purchase_price);
-
-             // 賣出價格
-             row.insertCell().textContent = formatCurrency(figure.selling_price);
-
+            row.insertCell().textContent = formatCurrency(figure.purchase_price);
+            // 賣出價格
+            row.insertCell().textContent = formatCurrency(figure.selling_price);
             // 叫貨方法
             row.insertCell().textContent = figure.ordering_method || '-';
 
@@ -99,6 +121,83 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.className = 'delete-btn';
             deleteBtn.onclick = () => deleteFigure(figure.id, figure.name);
             cellActions.appendChild(deleteBtn);
+        });
+    }
+
+    /** 將公仔列表渲染成格狀 */
+    function displayFiguresAsGrid(figures) {
+        figureGridContainer.innerHTML = ''; // 清空格狀容器
+
+        if (!figures || figures.length === 0) {
+            figureGridContainer.innerHTML = '<p>目前沒有商品資料。</p>';
+            return;
+        }
+
+        figures.forEach(figure => {
+            const card = document.createElement('div');
+            card.className = 'figure-card';
+            card.setAttribute('data-id', figure.id);
+
+            const img = document.createElement('img');
+            img.src = figure.image_url || '/images/placeholder.png';
+            img.alt = figure.name;
+            card.appendChild(img);
+
+            const nameH3 = document.createElement('h3');
+            nameH3.textContent = figure.name;
+            card.appendChild(nameH3);
+
+            const variationsDiv = document.createElement('div');
+            variationsDiv.className = 'variations-grid';
+            if (figure.variations && figure.variations.length > 0) {
+                figure.variations.forEach(v => {
+                    const chip = document.createElement('span');
+                    chip.className = 'variation-chip';
+                    chip.textContent = `${v.name}: ${v.quantity}`;
+                    chip.setAttribute('data-variation-id', v.id);
+                    variationsDiv.appendChild(chip);
+                });
+            } else {
+                const noVariationChip = document.createElement('span');
+                noVariationChip.className = 'variation-chip';
+                noVariationChip.textContent = '無規格';
+                variationsDiv.appendChild(noVariationChip);
+            }
+            card.appendChild(variationsDiv);
+            
+            // Display purchase price, selling price, and ordering method in the card as per user's image context
+            const priceInfo = document.createElement('p');
+            priceInfo.innerHTML = `買入: ${formatCurrency(figure.purchase_price)}<br>賣出: ${formatCurrency(figure.selling_price)}`;
+            priceInfo.style.fontSize = '0.9em';
+            priceInfo.style.color = '#555';
+            priceInfo.style.marginBottom = '8px';
+            card.appendChild(priceInfo);
+
+            const orderingMethodP = document.createElement('p');
+            orderingMethodP.textContent = `叫貨: ${figure.ordering_method || '-'}`;
+            orderingMethodP.style.fontSize = '0.9em';
+            orderingMethodP.style.color = '#555';
+            orderingMethodP.style.marginBottom = '10px';
+            card.appendChild(orderingMethodP);
+
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '編輯';
+            editBtn.className = 'edit-btn';
+            editBtn.onclick = () => openEditModal(figure.id);
+            actionsDiv.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '刪除';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = () => deleteFigure(figure.id, figure.name);
+            actionsDiv.appendChild(deleteBtn);
+
+            card.appendChild(actionsDiv);
+            figureGridContainer.appendChild(card);
         });
     }
 
@@ -309,8 +408,40 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     figureForm.addEventListener('submit', saveFigure);
-    addVariationBtn.addEventListener('click', () => addVariationInput()); // 點擊按鈕新增一組規格欄位
+    addVariationBtn.addEventListener('click', () => addVariationInput());
+
+    viewTableBtn.addEventListener('click', () => {
+        if (currentViewMode === 'table') return;
+        currentViewMode = 'table';
+        figureListContainer.style.display = 'block';
+        figureGridContainer.style.display = 'none';
+        viewTableBtn.classList.add('active');
+        viewGridBtn.classList.remove('active');
+        renderFigures();
+    });
+
+    viewGridBtn.addEventListener('click', () => {
+        if (currentViewMode === 'grid') return;
+        currentViewMode = 'grid';
+        figureListContainer.style.display = 'none';
+        figureGridContainer.style.display = 'grid'; // Use 'grid' for display
+        viewGridBtn.classList.add('active');
+        viewTableBtn.classList.remove('active');
+        renderFigures();
+    });
 
     // --- 初始載入 ---
+    // Set initial view based on currentViewMode (default is 'table')
+    if (currentViewMode === 'table') {
+        figureListContainer.style.display = 'block';
+        figureGridContainer.style.display = 'none';
+        viewTableBtn.classList.add('active');
+        viewGridBtn.classList.remove('active');
+    } else {
+        figureListContainer.style.display = 'none';
+        figureGridContainer.style.display = 'grid';
+        viewGridBtn.classList.add('active');
+        viewTableBtn.classList.remove('active');
+    }
     fetchAndDisplayFigures();
 });

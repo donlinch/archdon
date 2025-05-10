@@ -18,6 +18,63 @@
         .actions button { margin-right: 5px; padding: 5px 10px; cursor: pointer; }
         .add-btn-container { margin-bottom: 20px; text-align: right; }
         #add-figure-btn, #save-figure-btn, .cancel-btn { padding: 10px 15px; cursor: pointer; }
+        .view-switch-container { margin-bottom: 15px; text-align: left; }
+        .view-switch-container button { padding: 8px 12px; margin-right: 10px; cursor: pointer; background-color: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; }
+        .view-switch-container button.active { background-color: #962424; color: white; border-color: #962424; }
+
+        /* Grid View Styles */
+        #figure-grid-container {
+            display: none; /* Initially hidden */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .figure-card {
+            border: 1px solid #b13939;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fff5f5;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .figure-card img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain; /* Changed from cover to contain to see full image */
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .figure-card h3 {
+            font-size: 1.2em;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .figure-card .variations-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .figure-card .variation-chip {
+            background-color: #ffe0b2;
+            color: #8d6e63;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            border: 1px solid #ffcc80;
+        }
+        .figure-card .actions {
+            margin-top: auto; /* Pushes actions to the bottom */
+            display: flex;
+            gap: 10px;
+        }
+        .figure-card .actions button {
+            flex-grow: 1;
+            padding: 8px 10px;
+        }
 
         /* Modal 樣式 (簡易) */
         .modal {
@@ -63,6 +120,11 @@
     </nav>
     <h1>商品庫存管理</h1>
 
+    <div class="view-switch-container">
+        <button id="view-table-btn" class="active">表格視圖</button>
+        <button id="view-grid-btn">格狀視圖</button>
+    </div>
+
     <div class="add-btn-container">
         <button id="add-figure-btn">＋ 新增商品</button>
     </div>
@@ -85,6 +147,10 @@
                 <tr><td colspan="7">正在載入商品資料...</td></tr>
             </tbody>
         </table>
+    </div>
+
+    <div id="figure-grid-container">
+        <!-- 格狀商品將由 JavaScript 載入 -->
     </div>
 
     <!-- 新增/編輯 Modal -->
