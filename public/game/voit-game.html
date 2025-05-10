@@ -237,6 +237,38 @@
              margin-bottom: 20px;
         }
 
+        .share-link-container {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .share-link-container p {
+            margin: 0 0 10px 0;
+            font-weight: 500;
+            color: #555;
+        }
+        .share-link-container input[type="text"] {
+            width: calc(100% - 100px); /* Adjust width to fit button */
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-right: 10px;
+            box-sizing: border-box;
+        }
+        .share-link-container button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .share-link-container button:hover {
+            background-color: #4cae4c;
+        }
 
         .lightbox {
             display: none;
@@ -570,6 +602,12 @@
             
             <div class="results">
                 <h2>投票結果</h2>
+                <!-- Share link placeholder will be populated by JS -->
+            </div>
+            <div id="share-link-area" class="share-link-container" style="display: none;">
+                <p>分享此投票活動連結：</p>
+                <input type="text" id="shareable-link-input" readonly>
+                <button id="copy-share-link-button">複製</button>
             </div>
             <div class="thank-you">感謝您的投票！</div>
             <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
@@ -591,6 +629,9 @@
         let currentCampaignData = null; 
 
         document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const campaignIdFromUrl = urlParams.get('campaign_id');
+
             const campaignSelectionArea = document.getElementById('campaign-selection-area');
             const campaignListUl = document.getElementById('campaign-list');
             const voteArea = document.getElementById('vote-area');
@@ -816,11 +857,11 @@
                         optionsContainer.style.display = 'none';
                         voteButton.style.display = 'none';
                         resultsDiv.style.display = 'block';
-                        thankYouMessage.textContent = '感謝您的投票！'; 
+                        thankYouMessage.textContent = '感謝您的投票！';
                         thankYouMessage.style.display = 'block';
-                        restartButton.textContent = '再次投票'; 
+                        restartButton.textContent = '再次投票';
                         restartButton.style.display = 'block';
-                        showResultsForCampaign(); 
+                        showResultsForCampaign(); // This will now also show the share link
                     } catch (error) {
                         console.error("投票失敗:", error);
                         if (error.message && !error.message.includes('您已對此活動投過票')) { 
@@ -837,7 +878,12 @@
 
             async function showResultsForCampaign() {
                 if (!currentCampaignData) return;
-                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>'; 
+                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>';
+                const shareLinkArea = document.getElementById('share-link-area');
+                const shareLinkInput = document.getElementById('shareable-link-input');
+                const copyShareLinkButton = document.getElementById('copy-share-link-button');
+
+                if (shareLinkArea) shareLinkArea.style.display = 'none'; // Hide initially
 
                 try {
                     const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
@@ -867,6 +913,27 @@
                             }, 50 * (index + 1)); 
                         }
                     });
+
+                    // Display share link
+                    if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
+                        const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
+                        shareLinkInput.value = shareUrl;
+                        shareLinkArea.style.display = 'block';
+
+                        copyShareLinkButton.onclick = () => {
+                            shareLinkInput.select();
+                            shareLinkInput.setSelectionRange(0, 99999); // For mobile devices
+                            try {
+                                document.execCommand('copy');
+                                copyShareLinkButton.textContent = '已複製!';
+                                setTimeout(() => { copyShareLinkButton.textContent = '複製'; }, 2000);
+                            } catch (err) {
+                                console.error('無法複製連結: ', err);
+                                alert('無法自動複製連結，請手動複製。');
+                            }
+                        };
+                    }
+
                 } catch (error) {
                      console.error("無法獲取投票結果:", error);
                      resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
@@ -1243,9 +1310,13 @@
                         }
                     }
                 }
-            } 
+            }
             
-            renderCampaignList(); 
+            if (campaignIdFromUrl) {
+                loadCampaign(campaignIdFromUrl);
+            } else {
+                renderCampaignList();
+            }
         });
     </script>
     <footer class="footer">
