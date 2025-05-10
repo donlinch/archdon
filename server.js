@@ -4326,6 +4326,7 @@ app.post('/api/music', async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id;
         `;
+        console.log('[新增音樂日誌] 準備插入 music 表，資料:', { title, release_date, description, cover_art_url, platform_url, youtube_video_id });
         const musicResult = await client.query(musicInsertQuery, [
             title,
             release_date || null,
@@ -4335,19 +4336,35 @@ app.post('/api/music', async (req, res) => {
             youtube_video_id || null
         ]);
         const musicId = musicResult.rows[0].id;
+        console.log(`[新增音樂日誌] music 表插入成功，musicId: ${musicId}`);
 
         // 2. 處理歌手
+        console.log('[新增音樂日誌] 準備處理歌手，原始 artist_names:', artist_names);
         for (const artistName of artist_names) {
-            let artistResult = await client.query('SELECT id FROM artists WHERE name = $1', [artistName.trim()]);
+            const trimmedArtistName = artistName.trim();
+            console.log(`[新增音樂日誌] 正在處理歌手: "${artistName}", trim 後: "${trimmedArtistName}"`);
+
+            if (!trimmedArtistName) {
+                console.warn(`[新增音樂日誌] 警告: 發現 trim 後的空歌手名稱，將跳過此歌手。原始名稱: "${artistName}"`);
+                continue; // 如果 trim 後是空字串，則跳過
+            }
+
+            let artistResult = await client.query('SELECT id FROM artists WHERE name = $1', [trimmedArtistName]);
             let artistId;
             if (artistResult.rows.length > 0) {
                 artistId = artistResult.rows[0].id;
+                console.log(`[新增音樂日誌] 歌手 "${trimmedArtistName}" 已存在於 artists 表，ID: ${artistId}`);
             } else {
-                artistResult = await client.query('INSERT INTO artists (name) VALUES ($1) RETURNING id', [artistName.trim()]);
+                console.log(`[新增音樂日誌] 歌手 "${trimmedArtistName}" 不在 artists 表中，準備插入新歌手。`);
+                artistResult = await client.query('INSERT INTO artists (name) VALUES ($1) RETURNING id', [trimmedArtistName]);
                 artistId = artistResult.rows[0].id;
+                console.log(`[新增音樂日誌] 新歌手 "${trimmedArtistName}" 插入 artists 表成功，ID: ${artistId}`);
             }
+            console.log(`[新增音樂日誌] 準備將 musicId: ${musicId} 與 artistId: ${artistId} 關聯到 music_artists 表。`);
             await client.query('INSERT INTO music_artists (music_id, artist_id) VALUES ($1, $2)', [musicId, artistId]);
+            console.log(`[新增音樂日誌] music_artists 表關聯成功。`);
         }
+        console.log('[新增音樂日誌] 所有歌手處理完畢。');
 
         // 3. 處理樂譜 (如果提供)
         if (scores && scores.length > 0) {
@@ -4393,18 +4410,19 @@ app.post('/api/music', async (req, res) => {
 
         // SQLSTATE '23502' for not_null_violation
         if (err.code === '23502') {
-            const columnName = err.column || (err.message && err.message.match(/column "([^"]+)"/) ? err.message.match(/column "([^"]+)"/)[1] : '某個');
-            let userFriendlyMessage = `欄位 "${columnName}" 為必填項。`;
+            const columnName = err.column || (err.message && err.message.match(/column "([^"]+)"/) ? err.message.match(/column "([^"]+)"/)[1] : '未知欄位');
+            const tableName = err.table || '未知表';
+            let userFriendlyMessage = `欄位 "${columnName}" (來自表: ${tableName}) 為必填項。`;
 
-            if (columnName === 'release_date') {
+            // 針對已知情況提供更友好的訊息
+            if (columnName === 'release_date' && tableName === 'music') {
                 userFriendlyMessage = '發行日期為必填項，請提供有效的日期。';
-            } else if (columnName === 'name' && err.table === 'artists') {
+            } else if (columnName === 'name' && tableName === 'artists') {
                 userFriendlyMessage = '歌手名稱為必填項，請確保已正確輸入。';
-            } else if (columnName === 'title' && err.table === 'music') {
+            } else if (columnName === 'title' && tableName === 'music') {
                 userFriendlyMessage = '專輯標題為必填項。';
-            } else if (columnName === 'artist') { // 保留對 'artist' 的特殊處理以防萬一
-                 userFriendlyMessage = '歌手資訊（可能是名稱）為必填項，請檢查是否已填寫。';
             }
+            // 如果 columnName 仍然是 'artist'，這裡會顯示 "欄位 "artist" (來自表: X) 為必填項。"
             return res.status(400).json({ error: userFriendlyMessage });
         }
         // SQLSTATE '23505' for unique_violation
