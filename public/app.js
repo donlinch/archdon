@@ -473,13 +473,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         speechBubble.className = 'character-speech';
                         characterElement.appendChild(speechBubble);
                         
-                        let speeches = ['嗨！'];
+                        let speeches = ['嗨！']; // 預設值
                         try {
-                            if (character.speech_phrases) {
-                                speeches = JSON.parse(character.speech_phrases);
-                                if (!Array.isArray(speeches) || speeches.length === 0) speeches = ['嗨！'];
+                            if (character.speech_phrases && typeof character.speech_phrases === 'string') {
+                                // 嘗試判斷是否已經是 JSON 格式
+                                if (character.speech_phrases.startsWith('[') && character.speech_phrases.endsWith(']')) {
+                                    const parsedPhrases = JSON.parse(character.speech_phrases);
+                                    if (Array.isArray(parsedPhrases) && parsedPhrases.length > 0) {
+                                        speeches = parsedPhrases;
+                                    }
+                                } else if (character.speech_phrases.trim() !== '') {
+                                    // 如果不是 JSON 格式，但也不是空字串，嘗試按逗號分割 (作為臨時兼容)
+                                    const splitPhrases = character.speech_phrases.split(',').map(p => p.trim()).filter(Boolean);
+                                    if (splitPhrases.length > 0) {
+                                        speeches = splitPhrases;
+                                        console.warn(`角色 ID ${character.id} 的 speech_phrases ("${character.speech_phrases}") 不是有效的 JSON 陣列，已嘗試按逗號分割。請盡快修復資料庫中的資料。`);
+                                    }
+                                }
                             }
-                        } catch (e) { console.warn(`解析角色對話內容時出錯:`, e); }
+                        } catch (e) {
+                            console.warn(`解析角色 ID ${character.id} 的對話內容 ("${character.speech_phrases}") 時出錯:`, e, "將使用預設對話。");
+                            // speeches 已經有預設值 ['嗨！']
+                        }
                         
                         const handleInteraction = (e) => { // 使用箭頭函數以便移除
                             e.stopPropagation();
