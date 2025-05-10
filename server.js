@@ -3635,41 +3635,55 @@ app.get('/api/scores/artists', async (req, res) => {
     }
 });
 app.get('/api/scores/songs', async (req, res) => {
-    const { artist } = req.query;
+    const { artist: artistNameFilter } = req.query; // Rename for clarity
     try {
-        let queryText = `
-            SELECT
-                m.id,
-                m.title,
-                m.artist,
-                m.cover_art_url,
-                m.release_date,
-                m.youtube_video_id,
-                s_agg.scores
-            FROM (
-                SELECT DISTINCT m_inner.id
-                FROM music m_inner
-                INNER JOIN scores s_inner ON m_inner.id = s_inner.music_id
+        let subQueryMusicIds = `
+            SELECT DISTINCT m_inner.id
+            FROM music m_inner
+            INNER JOIN scores s_inner ON m_inner.id = s_inner.music_id
         `;
         const queryParams = [];
         let paramIndex = 1;
 
-        if (artist && artist !== 'All') {
-            queryText += ` WHERE m_inner.artist = $${paramIndex++}`;
-            queryParams.push(decodeURIComponent(artist));
+        if (artistNameFilter && artistNameFilter !== 'All') {
+            subQueryMusicIds += `
+            WHERE EXISTS (
+                SELECT 1
+                FROM music_artists ma_filter
+                JOIN artists a_filter ON ma_filter.artist_id = a_filter.id
+                WHERE ma_filter.music_id = m_inner.id AND a_filter.name = $${paramIndex++}
+            )
+            `;
+            queryParams.push(decodeURIComponent(artistNameFilter));
         }
 
-        queryText += `
-            ) AS distinct_music
-            JOIN music m ON m.id = distinct_music.id
+        let queryText = `
+            SELECT
+                m.id,
+                m.title,
+                m.cover_art_url,
+                m.release_date,
+                m.youtube_video_id,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
+                     FROM artists a
+                     JOIN music_artists ma ON ma.artist_id = a.id
+                     WHERE ma.music_id = m.id),
+                    '[]'::json
+                ) AS artists,
+                s_agg.scores
+            FROM (${subQueryMusicIds}) AS distinct_music_with_scores
+            JOIN music m ON m.id = distinct_music_with_scores.id
             LEFT JOIN LATERAL (
-                SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC) AS scores
-                FROM scores s
-                WHERE s.music_id = m.id
+                SELECT json_agg(s_lat.* ORDER BY s_lat.display_order ASC, s_lat.type ASC) AS scores
+                FROM scores s_lat
+                WHERE s_lat.music_id = m.id
             ) s_agg ON true
-            ORDER BY m.artist ASC, m.release_date DESC NULLS LAST, m.title ASC;
+            ORDER BY m.title ASC;
+            -- Consider a more stable sort, e.g., by first artist then title, or by release_date
+            -- ORDER BY (SELECT MIN(a_sort.name) FROM artists a_sort JOIN music_artists ma_sort ON a_sort.id = ma_sort.artist_id WHERE ma_sort.music_id = m.id) ASC, m.release_date DESC NULLS LAST, m.title ASC;
         `;
-
+        
         const result = await pool.query(queryText, queryParams);
         res.json(result.rows);
 

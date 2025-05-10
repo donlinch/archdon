@@ -984,7 +984,7 @@ async function fetchAndDisplayArtists() {
                         <li data-song-id="${song.id}">
                             <div class="song-list-info">
                                 <span class="song-title">${song.title || '未知標題'}</span>
-                                <span class="song-artist">${song.artist || '未知歌手'}</span>
+                                <span class="song-artist">${song.artists && song.artists.length > 0 ? song.artists.map(a => a.name).join(', ') : '未知歌手'}</span>
                                 <div class="song-list-scores">
                                     ${scoreButtonsHTML}
                                 </div>
