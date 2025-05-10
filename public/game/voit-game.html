@@ -229,41 +229,168 @@
             }
             /* .option img 的高度將由 aspect-ratio 控制，此處無需特別設定 height */
         }
+
+        /* 設定按鈕 (FAB) */
+        .settings-fab {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            line-height: 50px; /* 垂直居中圖示 */
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1005; /* 高於 lightbox */
+            transition: background-color 0.3s;
+        }
+        .settings-fab:hover {
+            background-color: #2980b9;
+        }
+
+        /* 抽屜樣式 */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -350px; /* 初始位置在螢幕外，寬度為350px */
+            width: 350px;
+            height: 100%;
+            background-color: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1010; /* 最高層級 */
+            transition: right 0.3s ease-in-out;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .drawer.open {
+            right: 0; /* 滑入螢幕 */
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .drawer-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+        .drawer-close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        .drawer-close-button:hover {
+            color: #2c3e50;
+        }
+        .drawer-content {
+            flex-grow: 1;
+            overflow-y: auto; /* 如果內容過多則滾動 */
+        }
+        .drawer-item-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .drawer-item-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-item-list li:last-child {
+            border-bottom: none;
+        }
+        .drawer-item-list .edit-item-button {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .drawer-item-list .edit-item-button:hover {
+            background-color: #bdc3c7;
+        }
+        .drawer-add-new-button { /* 與主頁面 .button 樣式類似，但可能需要微調 */
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        /* 抽屜覆蓋層 */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 1009; /* 低於抽屜，高於設定按鈕和 lightbox */
+        }
+        .drawer-overlay.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
+    <button id="settings-fab" class="settings-fab">⚙️</button>
+
+    <div id="settings-drawer" class="drawer">
+        <div class="drawer-header">
+            <h2>管理投票項目</h2>
+            <button id="close-drawer-button" class="drawer-close-button">&times;</button>
+        </div>
+        <div class="drawer-content">
+            <ul id="drawer-item-list" class="drawer-item-list">
+                <!-- 範例項目，之後會由 JS 動態生成 -->
+                <li><span>可愛狗狗</span> <button class="edit-item-button">編輯</button></li>
+                <li><span>美味蛋糕</span> <button class="edit-item-button">編輯</button></li>
+                <li><span>創意甜點</span> <button class="edit-item-button">編輯</button></li>
+                <li><span>精緻小點</span> <button class="edit-item-button">編輯</button></li>
+            </ul>
+            <button id="drawer-add-new-button" class="button drawer-add-new-button">新增項目</button>
+        </div>
+    </div>
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
     <div class="container">
-        <h1>請為您喜愛的圖片投票</h1>
-        <div class="options">
-            <div class="option" data-id="1" data-name="可愛狗狗">
-                <span class="zoom-icon">&#128269;</span>
-                <img src="https://sunnyyummy.onrender.com/uploads/1746881741747-83046.jpeg" alt="可愛狗狗">
-                <div class="option-content">可愛狗狗</div>
-            </div>
-            <div class="option" data-id="2" data-name="美味蛋糕">
-                <span class="zoom-icon">&#128269;</span>
-                <img src="https://sunnyyummy.onrender.com/uploads/1746881736596-62020.jpeg" alt="美味蛋糕">
-                <div class="option-content">美味蛋糕</div>
-            </div>
-            <div class="option" data-id="3" data-name="創意甜點">
-                <span class="zoom-icon">&#128269;</span>
-                <img src="https://sunnyyummy.onrender.com/uploads/1746881731587-82055.jpeg" alt="創意甜點">
-                <div class="option-content">創意甜點</div>
-            </div>
-            <div class="option" data-id="4" data-name="精緻小點">
-                <span class="zoom-icon">&#128269;</span>
-                <img src="https://sunnyyummy.onrender.com/uploads/1746881726144-71847.jpeg" alt="精緻小點">
-                <div class="option-content">精緻小點</div>
-            </div>
+        <div id="campaign-selection-area">
+            <h1>選擇一個投票活動</h1>
+            <ul id="campaign-list">
+                <!-- 投票活動標題將由 JS 動態載入 -->
+            </ul>
         </div>
-        <button id="vote-button" class="button" disabled>投票</button>
-        
-        <div class="results">
-            <h2>投票結果</h2>
-            <!-- 結果項目會由 JavaScript 動態生成或更新 -->
+
+        <div id="vote-area" style="display: none;">
+            <button id="back-to-campaigns-button" class="button" style="margin-bottom: 15px; background-color: #7f8c8d;">返回活動列表</button>
+            <h1 id="vote-title"></h1>
+            <div class="options">
+                <!-- 投票選項將由 JS 動態載入 -->
+            </div>
+            <button id="vote-button" class="button" disabled>投票</button>
+            
+            <div class="results">
+                <h2>投票結果</h2>
+                <!-- 結果項目會由 JavaScript 動態生成或更新 -->
+            </div>
+            <div class="thank-you">感謝您的投票！</div>
+            <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
         </div>
-        <div class="thank-you">感謝您的投票！</div>
-        <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
     </div>
 
     <!-- Lightbox HTML 結構 -->
@@ -275,192 +402,268 @@
     </div>
 
     <script>
+        // API 基礎路徑 (如果您的 API 不是在同一個域名下，需要填寫完整路徑)
+        const API_BASE_URL = '/api/voit'; // 假設的 API 路徑
+
+        let currentCampaignData = null; // 當前選擇的投票活動數據 (從 API 獲取)
+        // campaignVotes 將不再由前端維護，而是從 API 獲取結果
+
         document.addEventListener('DOMContentLoaded', function() {
-            const optionsContainer = document.querySelector('.options');
+            const campaignSelectionArea = document.getElementById('campaign-selection-area');
+            const campaignListUl = document.getElementById('campaign-list');
+            const voteArea = document.getElementById('vote-area');
+            const voteTitleH1 = document.getElementById('vote-title');
+            const optionsContainer = voteArea.querySelector('.options');
             const voteButton = document.getElementById('vote-button');
-            const resultsDiv = document.querySelector('.results');
-            const thankYouMessage = document.querySelector('.thank-you');
+            const resultsDiv = voteArea.querySelector('.results');
+            const thankYouMessage = voteArea.querySelector('.thank-you');
             const restartButton = document.getElementById('restart-button');
+            const backToCampaignsButton = document.getElementById('back-to-campaigns-button');
+            
             const lightbox = document.getElementById('myLightbox');
             const lightboxImg = document.getElementById('lightboxImg');
             const closeLightboxButton = document.querySelector('.lightbox-close');
+
+            const settingsFab = document.getElementById('settings-fab');
+            const settingsDrawer = document.getElementById('settings-drawer');
+            const closeDrawerButton = document.getElementById('close-drawer-button');
+            const drawerOverlay = document.getElementById('drawer-overlay');
             
             let selectedOptionId = null;
-            const optionElements = document.querySelectorAll('.option');
 
-            // 初始投票數據 (可以從0開始，或像你原本一樣有初始值)
-            const votes = {
-                '1': 0, // 可愛狗狗
-                '2': 0, // 美味蛋糕
-                '3': 0, // 創意甜點
-                '4': 0  // 精緻小點
-            };
-            // 如果你希望有初始票數，可以像這樣設定：
-            // const votes = { '1': 42, '2': 28, '3': 67, '4': 53 };
+            async function renderCampaignList() {
+                campaignListUl.innerHTML = '<li>載入中...</li>';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/campaigns`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const campaigns = await response.json();
+                    
+                    campaignListUl.innerHTML = ''; // 清空列表
+                    if (campaigns && campaigns.length > 0) {
+                        campaigns.forEach(campaign => {
+                            const listItem = document.createElement('li');
+                            // API 回應的 campaign 物件應有 campaign_id 和 title 欄位
+                            listItem.textContent = campaign.title;
+                            listItem.style.cursor = 'pointer';
+                            listItem.style.padding = '10px';
+                            listItem.style.borderBottom = '1px solid #eee';
+                            listItem.addEventListener('click', () => loadCampaign(campaign.campaign_id));
+                            campaignListUl.appendChild(listItem);
+                        });
+                    } else {
+                        campaignListUl.innerHTML = '<li>目前沒有可投票的活動。</li>';
+                    }
+                } catch (error) {
+                    console.error("無法獲取投票活動列表:", error);
+                    campaignListUl.innerHTML = '<li>無法載入投票活動，請稍後再試。</li>';
+                }
+                campaignSelectionArea.style.display = 'block';
+                voteArea.style.display = 'none';
+            }
 
+            async function loadCampaign(campaignId) {
+                optionsContainer.innerHTML = '<p>載入投票選項中...</p>';
+                voteTitleH1.textContent = '載入中...';
+                campaignSelectionArea.style.display = 'none';
+                voteArea.style.display = 'block'; // 先顯示 voteArea 讓使用者看到載入狀態
 
-            // 初始化結果區域的 HTML 結構
-            function initializeResultsStructure() {
-                resultsDiv.innerHTML = '<h2>投票結果</h2>'; // 清空並重新加入標題
-                optionElements.forEach(option => {
-                    const optionId = option.getAttribute('data-id');
-                    const optionName = option.getAttribute('data-name');
-                    const optionImageSrc = option.querySelector('img').src; // 新增：獲取圖片來源
+                try {
+                    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    currentCampaignData = await response.json(); // API 回應應包含 title 和 options 陣列
+                    
+                    if (!currentCampaignData || !currentCampaignData.options) {
+                        throw new Error('無效的活動數據格式');
+                    }
+
+                    selectedOptionId = null;
+                    voteButton.disabled = true;
+                    resultsDiv.style.display = 'none';
+                    thankYouMessage.style.display = 'none';
+                    restartButton.style.display = 'none';
+                    optionsContainer.style.display = 'grid';
+                    voteButton.style.display = 'block';
+
+                    voteTitleH1.textContent = currentCampaignData.title;
+                    optionsContainer.innerHTML = '';
+
+                    currentCampaignData.options.forEach(opt => { // API 回應的 option 物件應有 option_id, name, image_url
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'option';
+                        optionDiv.setAttribute('data-id', opt.option_id);
+                        optionDiv.setAttribute('data-name', opt.name);
+
+                        const zoomIconSpan = document.createElement('span');
+                        zoomIconSpan.className = 'zoom-icon';
+                        zoomIconSpan.innerHTML = '&#128269;';
+                        
+                        const imgElement = document.createElement('img');
+                        imgElement.src = opt.image_url;
+                        imgElement.alt = opt.name;
+
+                        const optionContentDiv = document.createElement('div');
+                        optionContentDiv.className = 'option-content';
+                        optionContentDiv.textContent = opt.name;
+                        
+                        optionContentDiv.style.display = 'none';
+                        imgElement.onload = () => { optionContentDiv.style.display = 'none'; };
+                        imgElement.onerror = () => { optionContentDiv.style.display = 'block'; };
+                        if (imgElement.complete && imgElement.naturalHeight !== 0) optionContentDiv.style.display = 'none';
+                        else if (imgElement.complete && imgElement.naturalHeight === 0) optionContentDiv.style.display = 'block';
+
+                        optionDiv.appendChild(zoomIconSpan);
+                        optionDiv.appendChild(imgElement);
+                        optionDiv.appendChild(optionContentDiv);
+                        optionsContainer.appendChild(optionDiv);
+
+                        optionDiv.addEventListener('click', function() {
+                            if (voteButton.style.display === 'none') return;
+                            document.querySelectorAll('#vote-area .option').forEach(o => o.classList.remove('selected'));
+                            this.classList.add('selected');
+                            selectedOptionId = this.getAttribute('data-id');
+                            voteButton.disabled = false;
+                        });
+
+                        zoomIconSpan.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            lightboxImg.src = imgElement.src;
+                            lightbox.style.display = 'flex';
+                        });
+                    });
+                    
+                    initializeResultsStructureForCampaign();
+
+                } catch (error) {
+                    console.error(`無法載入投票活動 ${campaignId}:`, error);
+                    voteTitleH1.textContent = '錯誤';
+                    optionsContainer.innerHTML = `<p>無法載入投票選項，請<a href="#" onclick="loadCampaign(${campaignId}); return false;">重試</a>或返回活動列表。</p>`;
+                }
+            }
+            
+            backToCampaignsButton.addEventListener('click', renderCampaignList);
+
+            function initializeResultsStructureForCampaign() {
+                resultsDiv.innerHTML = '<h2>投票結果</h2>';
+                if (!currentCampaignData || !currentCampaignData.options) return;
+
+                currentCampaignData.options.forEach(opt => {
                     const resultItemHTML = `
-                        <div class="result-item" data-result-id="${optionId}">
+                        <div class="result-item" data-result-id="${opt.option_id}">
                             <div class="result-label">
-                                <div> <!-- 新增：用於圖片和文字的容器 -->
-                                    <img src="${optionImageSrc}" alt="${optionName}" class="result-item-image">
-                                    <span>${optionName}</span>
+                                <div>
+                                    <img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">
+                                    <span>${opt.name}</span>
                                 </div>
                                 <span class="percentage">0% (0票)</span>
                             </div>
                             <div class="progress-bar">
-                                <div class="progress" id="progress-${optionId}">0%</div>
+                                <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}">0%</div>
                             </div>
                         </div>
                     `;
                     resultsDiv.insertAdjacentHTML('beforeend', resultItemHTML);
                 });
             }
-            initializeResultsStructure(); // 頁面載入時初始化結果區塊
-
-            // 點擊選項
-            optionElements.forEach(option => {
-                option.addEventListener('click', function() {
-                    if (voteButton.style.display === 'none') return; // 如果已投票，則不允許再選
-
-                    // 處理選項選擇的邏輯
-                    optionElements.forEach(o => o.classList.remove('selected'));
-                    this.classList.add('selected');
-                    selectedOptionId = this.getAttribute('data-id');
-                    voteButton.disabled = false;
-                });
-
-                // Lightbox: 點擊放大鏡圖示或圖片本身
-                const zoomIcon = option.querySelector('.zoom-icon');
-                const imgElement = option.querySelector('img');
-                const optionContent = option.querySelector('.option-content');
-
-                // 預設隱藏文字標題，圖片載入成功後再次確認隱藏，失敗則顯示
-                if (optionContent) {
-                    optionContent.style.display = 'none'; // 先隱藏
-                }
-
-                if (imgElement) {
-                    imgElement.onload = () => {
-                        if (optionContent) {
-                            optionContent.style.display = 'none'; // 圖片成功載入，隱藏文字
-                        }
-                    };
-                    imgElement.onerror = () => {
-                        if (optionContent) {
-                            optionContent.style.display = 'block'; // 圖片載入失敗，顯示文字
-                        }
-                    };
-                    // 如果圖片已經快取，onload 可能不會觸發，所以檢查 complete 屬性
-                    if (imgElement.complete && imgElement.naturalHeight !== 0) {
-                         if (optionContent) {
-                            optionContent.style.display = 'none';
-                        }
-                    } else if (imgElement.complete && imgElement.naturalHeight === 0) {
-                        // 圖片已完成載入但載入失敗 (例如 src 不正確)
-                        if (optionContent) {
-                            optionContent.style.display = 'block';
-                        }
-                    }
-                }
-
-
-                function openLightbox(event) {
-                    event.stopPropagation(); // 防止觸發父元素(.option)的點擊事件 (選擇選項)
-                    if (imgElement) {
-                        lightboxImg.src = imgElement.src;
-                        lightbox.style.display = 'flex'; // 改為 flex 以便居中
-                    }
-                }
-
-                if (zoomIcon) {
-                    zoomIcon.addEventListener('click', openLightbox);
-                }
-                if (imgElement) {
-                    // imgElement.addEventListener('click', openLightbox); // 將此行註解，恢復點擊圖片為選擇項目
-                }
-
-            });
             
-            // 關閉 Lightbox
-            if (closeLightboxButton) {
-                closeLightboxButton.addEventListener('click', () => {
-                    lightbox.style.display = 'none';
-                });
+            voteButton.addEventListener('click', async function() {
+                if (selectedOptionId && currentCampaignData) {
+                    voteButton.disabled = true;
+                    voteButton.textContent = '投票中...';
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/vote`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ option_id: selectedOptionId })
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({message: '投票失敗，請稍後再試'}));
+                            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                        }
+                        // 投票成功，顯示結果
+                        optionsContainer.style.display = 'none';
+                        voteButton.style.display = 'none';
+                        resultsDiv.style.display = 'block';
+                        thankYouMessage.style.display = 'block';
+                        restartButton.style.display = 'block';
+                        showResultsForCampaign(); // 從 API 獲取最新結果
+                    } catch (error) {
+                        console.error("投票失敗:", error);
+                        alert(`投票失敗：${error.message}`);
+                    } finally {
+                        voteButton.disabled = false;
+                        voteButton.textContent = '投票';
+                    }
+                }
+            });
+
+            async function showResultsForCampaign() {
+                if (!currentCampaignData) return;
+                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>'; // 先顯示載入中
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const resultsData = await response.json(); // 預期格式 { option_id_1: count1, option_id_2: count2, ... }
+
+                    initializeResultsStructureForCampaign(); // 重新繪製結果區基本結構
+
+                    let totalVotes = 0;
+                    currentCampaignData.options.forEach(opt => {
+                        totalVotes += (resultsData[opt.option_id] || 0);
+                    });
+                
+                    currentCampaignData.options.forEach((opt, index) => {
+                        const votesForOption = resultsData[opt.option_id] || 0;
+                        const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
+                        
+                        const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${opt.option_id}"]`);
+                        if (resultItem) {
+                            const progressBar = resultItem.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
+                            const percentageSpan = resultItem.querySelector('.percentage');
+                            
+                            setTimeout(() => {
+                                progressBar.style.width = `${percentage.toFixed(1)}%`;
+                                progressBar.textContent = `${percentage.toFixed(1)}%`;
+                                percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
+                            }, 50 * (index + 1)); // 稍微加快動畫
+                        }
+                    });
+                } catch (error) {
+                     console.error("無法獲取投票結果:", error);
+                     resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
+                }
             }
-            // 點擊 Lightbox 背景關閉
+            
+            restartButton.addEventListener('click', function() {
+                if (!currentCampaignData) return;
+                loadCampaign(currentCampaignData.campaign_id);
+            });
+
+            // Lightbox 關閉邏輯
+            if (closeLightboxButton) {
+                closeLightboxButton.addEventListener('click', () => { lightbox.style.display = 'none'; });
+            }
             if (lightbox) {
                 lightbox.addEventListener('click', (event) => {
-                    if (event.target === lightbox) { // 確保點擊的是背景本身，而不是圖片
-                        lightbox.style.display = 'none';
-                    }
+                    if (event.target === lightbox) { lightbox.style.display = 'none'; }
                 });
             }
 
-            // 點擊投票按鈕
-            voteButton.addEventListener('click', function() {
-                if (selectedOptionId) {
-                    votes[selectedOptionId]++;
-                    
-                    optionsContainer.style.display = 'none'; // 隱藏選項區
-                    voteButton.style.display = 'none';      // 隱藏投票按鈕
-                    resultsDiv.style.display = 'block';     // 顯示結果區
-                    thankYouMessage.style.display = 'block';// 顯示感謝訊息
-                    restartButton.style.display = 'block';  // 顯示重新投票按鈕
-                    
-                    showResults();
+            // 設定抽屜開關邏輯
+            if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
+                settingsFab.addEventListener('click', () => {
+                    settingsDrawer.classList.add('open');
+                    drawerOverlay.classList.add('active');
+                });
+                function closeDrawer() {
+                    settingsDrawer.classList.remove('open');
+                    drawerOverlay.classList.remove('active');
                 }
-            });
-            
-            // 顯示投票結果
-            function showResults() {
-                const totalVotes = Object.values(votes).reduce((a, b) => a + b, 0);
-                
-                optionElements.forEach((option, index) => {
-                    const optionId = option.getAttribute('data-id');
-                    const currentVotes = votes[optionId];
-                    const percentage = totalVotes > 0 ? ((currentVotes / totalVotes) * 100) : 0;
-                    
-                    const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${optionId}"]`);
-                    if (resultItem) {
-                        const progressBar = resultItem.querySelector(`#progress-${optionId}`);
-                        const percentageSpan = resultItem.querySelector('.percentage');
-                        
-                        // 設置進度條寬度和文字
-                        setTimeout(() => {
-                            progressBar.style.width = `${percentage.toFixed(1)}%`;
-                            progressBar.textContent = `${percentage.toFixed(1)}%`;
-                            percentageSpan.textContent = `${percentage.toFixed(1)}% (${currentVotes}票)`;
-                        }, 100 * (index + 1)); // 依次顯示進度條動畫
-                    }
-                });
+                closeDrawerButton.addEventListener('click', closeDrawer);
+                drawerOverlay.addEventListener('click', closeDrawer);
             }
             
-            // 重新投票
-            restartButton.addEventListener('click', function() {
-                selectedOptionId = null;
-                optionElements.forEach(o => o.classList.remove('selected'));
-                
-                optionsContainer.style.display = 'grid'; // 顯示選項區 (grid 是你原本的設定)
-                voteButton.style.display = 'block';      // 顯示投票按鈕
-                voteButton.disabled = true;              // 禁用投票按鈕直到選擇
-                resultsDiv.style.display = 'none';       // 隱藏結果區
-                thankYouMessage.style.display = 'none';  // 隱藏感謝訊息
-                restartButton.style.display = 'none';    // 隱藏重新投票按鈕
-
-                // (可選) 重置進度條視覺，但票數仍會累計，除非重置 votes 物件
-                // 如果要完全重置票數，則取消下一行的註解：
-                // Object.keys(votes).forEach(key => { votes[key] = 0; });
-                // initializeResultsStructure(); // 重新繪製結果區域以清空舊百分比
-                // showResults(); // 如果票數歸零，也應更新顯示
-            });
+            renderCampaignList(); // 初始渲染活動列表
         });
     </script>
 </body>

@@ -18,6 +18,91 @@ const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report
 const storeDb = require('./public/store/store-db');
 const storeRoutes = require('./public/store/store-routes');
 
+// --- Voit (投票系統) API Router ---
+const voitRouter = express.Router();
+
+// GET /api/voit/campaigns - 獲取所有活躍的投票活動列表
+voitRouter.get('/campaigns', async (req, res) => {
+    try {
+        const result = await pool.query(
+            "SELECT campaign_id, title, description, status FROM voit_Campaigns WHERE status = 'active' ORDER BY created_at DESC"
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Error fetching voit campaigns:', err.stack || err);
+        res.status(500).json({ error: 'Failed to fetch campaigns' });
+    }
+});
+
+// GET /api/voit/campaigns/:campaignId - 獲取特定投票活動的詳細信息及其選項
+voitRouter.get('/campaigns/:campaignId', async (req, res) => {
+    const { campaignId } = req.params;
+    try {
+        const campaignResult = await pool.query("SELECT campaign_id, title, description, status FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
+        if (campaignResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Campaign not found' });
+        }
+        const campaign = campaignResult.rows[0];
+        const optionsResult = await pool.query("SELECT option_id, name, image_url, display_order FROM voit_Options WHERE campaign_id = $1 ORDER BY display_order ASC, name ASC", [campaignId]);
+        campaign.options = optionsResult.rows;
+        res.status(200).json(campaign);
+    } catch (err) {
+        console.error(`Error fetching campaign ${campaignId}:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to fetch campaign details' });
+    }
+});
+
+// POST /api/voit/campaigns/:campaignId/vote - 提交投票
+voitRouter.post('/campaigns/:campaignId/vote', async (req, res) => {
+    const { campaignId } = req.params;
+    const { option_id } = req.body;
+    const ipAddress = req.ip || req.socket.remoteAddress || req.headers['x-forwarded-for']?.split(',').shift();
+
+    if (!option_id) return res.status(400).json({ error: 'Option ID is required' });
+
+    try {
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const existingVote = await pool.query(
+            "SELECT vote_id FROM voit_Votes WHERE campaign_id = $1 AND ip_address = $2 AND voted_at > $3",
+            [campaignId, ipAddress, twentyFourHoursAgo]
+        );
+        if (existingVote.rows.length > 0) {
+            return res.status(429).json({ error: 'You have already voted for this campaign recently from this IP address.' });
+        }
+        await pool.query(
+            "INSERT INTO voit_Votes (campaign_id, option_id, ip_address) VALUES ($1, $2, $3)",
+            [campaignId, option_id, ipAddress]
+        );
+        res.status(201).json({ message: 'Vote cast successfully' });
+    } catch (err) {
+        console.error(`Error casting vote for campaign ${campaignId}:`, err.stack || err);
+        // 更具體的錯誤判斷，例如外鍵約束失敗
+        if (err.code === '23503') { // PostgreSQL foreign key violation
+             return res.status(400).json({ error: 'Invalid campaign or option ID provided.' });
+        }
+        res.status(500).json({ error: 'Failed to cast vote' });
+    }
+});
+
+// GET /api/voit/campaigns/:campaignId/results - 獲取特定投票活動的結果
+voitRouter.get('/campaigns/:campaignId/results', async (req, res) => {
+    const { campaignId } = req.params;
+    try {
+        const result = await pool.query(
+            "SELECT option_id, COUNT(*) as vote_count FROM voit_Votes WHERE campaign_id = $1 GROUP BY option_id",
+            [campaignId]
+        );
+        const resultsData = {};
+        result.rows.forEach(row => {
+            resultsData[row.option_id] = parseInt(row.vote_count, 10);
+        });
+        res.status(200).json(resultsData);
+    } catch (err) {
+        console.error(`Error fetching results for campaign ${campaignId}:`, err.stack || err);
+        res.status(500).json({ error: 'Failed to fetch results' });
+    }
+});
+// --- END OF Voit Router Definitions ---
 
 
 
@@ -130,6 +215,7 @@ app.post('/api/game-rooms', async (req, res) => {
 
 // 在 Express 路由設定區域添加
 app.use('/api/storemarket', storeRoutes);
+app.use('/api/voit', voitRouter);
 // --- 獲取活躍房間列表 API ---
 app.get('/api/game-rooms', async (req, res) => {
     try {
@@ -771,7 +857,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 
 
 
-
+// [app.use for voitRouter moved to an earlier position in the file]
 
 
 
@@ -5006,6 +5092,8 @@ adminRouter.delete('/identities/:id', async (req, res) => {
 
 
 
+
+// [voitRouter code moved to an earlier position in the file]
 
 
 
