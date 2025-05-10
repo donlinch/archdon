@@ -218,54 +218,73 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
         // 明確銷毀舊圖表實例
         if (salesTrendChartInstance) {
             salesTrendChartInstance.destroy();
+            salesTrendChartInstance = null; // 確保完全清除
         }
         if (topProductsChartInstance) {
             topProductsChartInstance.destroy();
+            topProductsChartInstance = null; // 確保完全清除
         }
     
-        // 1. 銷售趨勢圖 (現在是長條圖)
+        // 1. 銷售趨勢圖 (改為折線圖)
         const trendLabels = summary.salesTrend.map(item => item.date);
         const trendData = summary.salesTrend.map(item => item.quantity);
     
         salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'bar', // 明確設置為長條圖
+            type: 'line', // *** 改為折線圖 ***
             data: {
                 labels: trendLabels,
                 datasets: [{
                     label: '每日銷售件數',
                     data: trendData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // 添加背景色
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)', // 淡一點的背景色
                     borderColor: 'rgb(75, 192, 192)',
-                    borderWidth: 1 // 添加邊框寬度
+                    borderWidth: 2, // 線條寬度
+                    tension: 0.1, // 輕微曲線
+                    fill: true // 填充線條下方區域
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { // 增強互動
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                // 格式化工具提示的標題 (日期)
+                                const date = new Date(tooltipItems[0].parsed.x);
+                                return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+                            }
+                        }
+                    }
+                },
                 scales: {
                     x: {
                         type: 'time',
                         time: {
                             unit: 'day',
-                            tooltipFormat: 'yyyy-MM-dd',
+                            tooltipFormat: 'yyyy-MM-dd', // Chart.js v3+ 使用 'P' for date-fns
                             displayFormats: {
                                 day: 'MM/dd'
                             }
                         },
-                        title: { display: true, text: '日期' }
+                        title: { display: true, text: '日期', font: { weight: 'bold' } }
                     },
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: '銷售件數' },
+                        title: { display: true, text: '銷售件數', font: { weight: 'bold' } },
                         ticks: {
-                            stepSize: 1,
-                            precision: 0
+                            stepSize: 1, // 確保整數刻度
+                            precision: 0 // 無小數
                         }
                     }
                 }
             }
         });
-        // 2. 熱銷商品圖 (長條圖)
+        // 2. 熱銷商品圖 (長條圖 - 保持不變，但可優化配置)
         const topProductLabels = summary.topProducts.map(item => escapeHtml(item.product_name));
         const topProductData = summary.topProducts.map(item => item.total_sold);
 
@@ -530,11 +549,81 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
      };
 
 
+    // --- Helper function for date ranges ---
+    const getDateRange = (rangeType) => {
+        const today = new Date();
+        let startDate = new Date();
+        let endDate = new Date();
+
+        switch (rangeType) {
+            case 'today':
+                startDate = today;
+                endDate = today;
+                break;
+            case 'yesterday':
+                startDate.setDate(today.getDate() - 1);
+                endDate.setDate(today.getDate() - 1);
+                break;
+            case 'this_week': // 週一到週日
+                const firstDayOfWeek = today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1); // 週一為第一天
+                startDate = new Date(today.setDate(firstDayOfWeek));
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                break;
+            case 'last_week':
+                const firstDayOfLastWeek = today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1) - 7;
+                startDate = new Date(new Date().setDate(firstDayOfLastWeek)); // 重新獲取當前日期再計算
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                break;
+            case 'this_month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'last_month':
+                startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                break;
+            case 'last_7_days':
+                startDate.setDate(today.getDate() - 6); // 包括今天共7天
+                endDate = today;
+                break;
+            case 'last_30_days':
+                startDate.setDate(today.getDate() - 29); // 包括今天共30天
+                endDate = today;
+                break;
+            default:
+                return null;
+        }
+        // Format to YYYY-MM-DD
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        return { startDate: formatDate(startDate), endDate: formatDate(endDate) };
+    };
+
     // --- Initial Load & Event Listeners Setup ---
     salesForm.addEventListener('submit', handleFormSubmit);
     cancelEditBtn.addEventListener('click', clearForm);
     applyFilterBtn.addEventListener('click', handleApplyFilter);
     clearFilterBtn.addEventListener('click', handleClearFilter);
+
+    // Add event listeners for quick date filters
+    const quickDateFilterButtons = document.querySelectorAll('.quick-date-filters button[data-range]');
+    quickDateFilterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const rangeType = button.dataset.range;
+            const dates = getDateRange(rangeType);
+            if (dates) {
+                filterStartDateInput.value = dates.startDate;
+                filterEndDateInput.value = dates.endDate;
+                handleApplyFilter(); // Automatically apply filter
+            }
+        });
+    });
 
     setDefaultSaleTimestamp(); // 頁面載入時設定預設時間
     refreshData(); // 初始載入數據 (預設無篩選)
