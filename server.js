@@ -121,6 +121,97 @@ voitRouter.get('/campaigns/:campaignId/results', async (req, res) => {
     }
 });
 
+// 新增 API 端點：驗證活動編輯密碼
+voitRouter.post('/campaigns/:campaignId/verify-password', async (req, res) => {
+    const { campaignId } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+        return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
+    }
+
+    try {
+        const result = await pool.query("SELECT edit_password FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ verified: false, error: '找不到指定的投票活動。' });
+        }
+        const storedPassword = result.rows[0].edit_password;
+        // 這裡假設密碼是明文存儲的，實際應用中應使用哈希比較
+        if (password === storedPassword) {
+            res.json({ verified: true });
+        } else {
+            res.status(401).json({ verified: false, error: '編輯密碼錯誤，請重試。' });
+        }
+    } catch (err) {
+        console.error(`Error verifying password for campaign ${campaignId}:`, err.stack || err);
+        res.status(500).json({ verified: false, error: '密碼驗證失敗，請稍後再試。' });
+    }
+});
+
+// PUT /api/voit/campaigns/:campaignId - 更新現有投票活動
+voitRouter.put('/campaigns/:campaignId', async (req, res) => {
+    const { campaignId } = req.params;
+    const { title, description, options } = req.body; // 編輯時不應更新 edit_password
+
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '活動標題為必填項。' });
+    }
+    if (!options || !Array.isArray(options) || options.length === 0) {
+        return res.status(400).json({ error: '至少需要一個投票選項。' });
+    }
+    for (const opt of options) {
+        if (!opt.name || opt.name.trim() === '') {
+            return res.status(400).json({ error: '所有選項都必須有名稱。' });
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 更新 voit_Campaigns 表
+        const updatedCampaignResult = await client.query(
+            "UPDATE voit_Campaigns SET title = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE campaign_id = $3 RETURNING campaign_id, title, description",
+            [title.trim(), description || null, campaignId]
+        );
+
+        if (updatedCampaignResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到要更新的投票活動。' });
+        }
+
+        // 2. 刪除與該 campaign_id 相關的所有現有選項
+        await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [campaignId]); // 同時刪除相關投票記錄
+        await client.query("DELETE FROM voit_Options WHERE campaign_id = $1", [campaignId]);
+
+
+        // 3. 重新插入提交上來的新的選項列表
+        const insertedOptions = [];
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const optionResult = await client.query(
+                "INSERT INTO voit_Options (campaign_id, name, image_url, display_order) VALUES ($1, $2, $3, $4) RETURNING option_id, name, image_url, display_order",
+                [campaignId, opt.name.trim(), opt.image_url || null, i + 1]
+            );
+            insertedOptions.push(optionResult.rows[0]);
+        }
+
+        await client.query('COMMIT');
+        
+        const responseCampaign = updatedCampaignResult.rows[0];
+        responseCampaign.options = insertedOptions;
+        res.status(200).json(responseCampaign);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Error updating campaign ${campaignId}:`, err.stack || err);
+        res.status(500).json({ error: '更新投票活動失敗。' });
+    } finally {
+        client.release();
+    }
+});
+
+
 // POST /api/voit/campaigns - 新增投票活動
 voitRouter.post('/campaigns', async (req, res) => {
     const { title, description, edit_password, options } = req.body;

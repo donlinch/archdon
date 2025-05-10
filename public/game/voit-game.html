@@ -422,7 +422,6 @@
             const closeDrawerButton = document.getElementById('close-drawer-button');
             const drawerOverlay = document.getElementById('drawer-overlay');
             const drawerContent = settingsDrawer.querySelector('.drawer-content'); 
-            const drawerAddNewButton = document.getElementById('drawer-add-new-button'); 
             
             let selectedOptionId = null;
 
@@ -699,11 +698,10 @@
                 });
             }
 
-            // Helper function to escape HTML to prevent XSS
             function escapeHtml(unsafe) {
                 if (typeof unsafe !== 'string') return '';
                 return unsafe
-                  .replace(/&/g, '&amp;')
+                      .replace(/&/g, '&amp;')
         
                 // < 轉成 & l t ;
                 .replace(/</g, '&lt;')
@@ -773,14 +771,167 @@
                     }
                 }
 
-                function handleEditCampaignClick(event) {
+                async function handleEditCampaignClick(event) { 
                     const campaignId = event.target.dataset.campaignId;
                     const campaignTitle = event.target.previousElementSibling.textContent;
-                    console.log('請求編輯活動 ID:', campaignId, '標題:', campaignTitle);
                     
                     const password = prompt(`請輸入活動 "${escapeHtml(campaignTitle)}" 的編輯密碼 (4-6位):`);
-                    if (password !== null) { 
-                        alert(`您輸入了密碼: "${password}" (編輯功能待實現，密碼驗證和編輯表單將在此處處理)`);
+                    
+                    if (password === null) { 
+                        return;
+                    }
+
+                    if (password.trim() === '') {
+                        alert('請輸入編輯密碼。');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: password })
+                        });
+                        
+                        const result = await response.json();
+
+                        if (response.ok && result.verified) {
+                            showEditCampaignForm(campaignId); 
+                        } else {
+                            alert(result.error || '密碼驗證失敗，請重試。');
+                        }
+                    } catch (error) {
+                        console.error('驗證編輯密碼時出錯:', error);
+                        alert('驗證密碼時發生錯誤，請稍後再試。');
+                    }
+                }
+                
+                async function showEditCampaignForm(campaignId) {
+                    if (!drawerContent) return;
+                    drawerContent.innerHTML = `<p style="text-align:center; padding:20px;">正在載入活動資料進行編輯...</p>`;
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
+                        if (!response.ok) {
+                            const errData = await response.json().catch(() => ({error: '無法載入活動資料'}));
+                            throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                        }
+                        const campaignToEdit = await response.json();
+
+                        if (!campaignToEdit) {
+                            throw new Error('找不到要編輯的活動資料。');
+                        }
+
+                        drawerContent.innerHTML = `
+                            <h3>編輯投票活動: ${escapeHtml(campaignToEdit.title)}</h3>
+                            <form id="edit-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
+                                <input type="hidden" name="campaign_id" value="${campaignId}">
+                                <div>
+                                    <label for="edit-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
+                                    <input type="text" id="edit-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;" value="${escapeHtml(campaignToEdit.title || '')}">
+                                </div>
+                                <div>
+                                    <label for="edit-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
+                                    <textarea id="edit-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;">${escapeHtml(campaignToEdit.description || '')}</textarea>
+                                </div>
+                                
+                                <h4>投票選項</h4>
+                                <div id="edit-campaign-options-container">
+                                </div>
+                                <button type="button" id="edit-add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
+                                
+                                <hr style="margin: 15px 0;">
+                                <p style="font-size:0.9em; color:#555;">注意：更新活動將會重置現有投票結果。</p>
+                                <button type="submit" class="button">更新活動</button>
+                                <button type="button" id="cancel-edit-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消編輯</button>
+                            </form>
+                        `;
+
+                        const optionsContainerEl = document.getElementById('edit-campaign-options-container');
+                        if (campaignToEdit.options && campaignToEdit.options.length > 0) {
+                            campaignToEdit.options.forEach((opt, index) => {
+                                addCampaignOptionInput(optionsContainerEl, opt, index + 1, true); 
+                            });
+                        } else {
+                            addCampaignOptionInput(optionsContainerEl, {}, 1, true);
+                        }
+                        
+                        document.getElementById('cancel-edit-campaign').addEventListener('click', showDefaultDrawerContent);
+                        document.getElementById('edit-add-another-option-button').addEventListener('click', () => addCampaignOptionInput(optionsContainerEl, {}, optionsContainerEl.querySelectorAll('.campaign-option-input-group').length + 1, true));
+                        document.getElementById('edit-campaign-form').addEventListener('submit', (event) => handleUpdateCampaignSubmit(event, campaignId));
+
+                    } catch (error) {
+                        console.error('載入編輯表單失敗:', error);
+                        drawerContent.innerHTML = `<p style="color:red; text-align:center; padding:20px;">載入編輯資料失敗：${escapeHtml(error.message)}</p><button id="back-to-list-btn" class="button">返回列表</button>`;
+                        const backBtn = document.getElementById('back-to-list-btn');
+                        if(backBtn) backBtn.addEventListener('click', showDefaultDrawerContent);
+                    }
+                }
+
+                async function handleUpdateCampaignSubmit(event, campaignId) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    if (!submitButton) {
+                        console.error("更新按鈕未找到");
+                        return;
+                    }
+                    submitButton.disabled = true;
+                    submitButton.textContent = '更新中...';
+
+                    const title = form.elements['title'].value.trim();
+                    const description = form.elements['description'].value.trim();
+                    
+                    const optionInputsContainer = document.getElementById('edit-campaign-options-container'); // 確保使用正確的容器ID
+                    const optionGroups = optionInputsContainer.querySelectorAll('.campaign-option-input-group');
+                    const options = [];
+
+                    optionGroups.forEach(group => {
+                        const nameInput = group.querySelector('input[name="option_name[]"]');
+                        const imageUrlInput = group.querySelector('input[name="option_image_url[]"]');
+                        if (nameInput && nameInput.value.trim() !== '') {
+                            options.push({
+                                name: nameInput.value.trim(),
+                                image_url: (imageUrlInput && imageUrlInput.value.trim() !== '') ? imageUrlInput.value.trim() : null
+                            });
+                        }
+                    });
+
+                    if (title === '') {
+                        alert('活動標題為必填項。');
+                        submitButton.disabled = false;
+                        submitButton.textContent = '更新活動';
+                        return;
+                    }
+                    if (options.length === 0) {
+                        alert('請至少保留一個有效的投票選項名稱。');
+                        submitButton.disabled = false;
+                        submitButton.textContent = '更新活動';
+                        return;
+                    }
+                    
+                    const campaignData = { title, description, options };
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(campaignData)
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: '更新失敗，請檢查輸入或伺服器日誌。' }));
+                            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                        }
+                        alert('投票活動更新成功！');
+                        closeDrawer(); 
+                        renderCampaignList(); 
+                        showDefaultDrawerContent(); 
+                    } catch (error) {
+                        console.error("更新投票活動失敗:", error);
+                        alert(`更新失敗：${error.message}`);
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = '更新活動';
                     }
                 }
 
@@ -803,12 +954,6 @@
                             </div>
                             <h4>投票選項 (至少1個)</h4>
                             <div id="new-campaign-options-container">
-                                <div class="campaign-option-input-group" style="margin-bottom:10px; padding-bottom:10px; border-bottom: 1px dashed #ccc;">
-                                    <label style="display:block; margin-bottom:3px;">選項 1 名稱:</label>
-                                    <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
-                                    <label style="display:block; margin-bottom:3px;">選項 1 圖片URL (可選):</label>
-                                    <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box;">
-                                </div>
                             </div>
                             <button type="button" id="add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
                             <hr style="margin: 15px 0;">
@@ -816,32 +961,39 @@
                             <button type="button" id="cancel-add-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消</button>
                         </form>
                     `;
+                    const newOptionsContainer = document.getElementById('new-campaign-options-container');
+                    addCampaignOptionInput(newOptionsContainer, {}, 1, false); 
 
                     document.getElementById('cancel-add-campaign').addEventListener('click', showDefaultDrawerContent);
-                    document.getElementById('add-another-option-button').addEventListener('click', addCampaignOptionInput);
+                    document.getElementById('add-another-option-button').addEventListener('click', () => addCampaignOptionInput(newOptionsContainer, {}, newOptionsContainer.querySelectorAll('.campaign-option-input-group').length + 1, false));
                     document.getElementById('add-campaign-form').addEventListener('submit', handleAddNewCampaignSubmit);
                 }
+                
+                function addCampaignOptionInput(containerElement, optionData = {}, optionNumber, isEditMode = false) {
+                    const optionName = optionData.name || '';
+                    const optionImageUrl = optionData.image_url || '';
+                    const optionId = optionData.option_id || null; 
 
-                function addCampaignOptionInput() {
-                    const container = document.getElementById('new-campaign-options-container');
-                    const optionCount = container.querySelectorAll('.campaign-option-input-group').length + 1;
                     const newInputGroup = document.createElement('div');
                     newInputGroup.className = 'campaign-option-input-group';
                     newInputGroup.style.marginBottom = '10px';
                     newInputGroup.style.paddingBottom = '10px';
                     newInputGroup.style.borderBottom = '1px dashed #ccc';
+                    if (isEditMode && optionId) { 
+                        newInputGroup.setAttribute('data-existing-option-id', optionId);
+                    }
                     
                     newInputGroup.innerHTML = `
-                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 名稱:</label>
-                        <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
-                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 圖片URL (可選):</label>
-                        <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                        <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 名稱:</label>
+                        <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionName)}">
+                        <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片URL (可選):</label>
+                        <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionImageUrl)}">
                         <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
                     `;
                     newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
                         this.parentElement.remove();
                     });
-                    container.appendChild(newInputGroup);
+                    containerElement.appendChild(newInputGroup);
                 }
 
                 async function handleAddNewCampaignSubmit(event) {
@@ -891,6 +1043,7 @@
                         alert('投票活動創建成功！');
                         closeDrawer();
                         renderCampaignList();
+                        showDefaultDrawerContent(); 
                     } catch (error) {
                         console.error("創建投票活動失敗:", error);
                         alert(`創建失敗：${error.message}`);
@@ -900,10 +1053,6 @@
                            form.querySelector('button[type="submit"]').textContent = '創建活動';
                         }
                     }
-                }
-
-                if(drawerAddNewButton) {
-                   drawerAddNewButton.addEventListener('click', showAddNewCampaignForm);
                 }
             } 
             
