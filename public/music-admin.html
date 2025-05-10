@@ -138,7 +138,7 @@
               <h2>新增音樂</h2>
               <form id="add-music-form"> <!-- *** 修改 ID *** -->
                   <div class="form-group"> <label for="add-music-title">專輯標題:</label> <input type="text" id="add-music-title" name="title" required> </div>
-                  <div class="form-group"> <label for="add-music-artist">歌手:</label> <input type="text" id="add-music-artist" name="artist" required> </div>
+                  <div class="form-group"> <label for="add-music-artist">歌手 (多位歌手請用逗號 "," 或換行分隔):</label> <textarea id="add-music-artist" name="artist" rows="2" required></textarea> </div>
                   <div class="form-group"> <label for="add-music-release-date">發行日期:</label> <input type="date" id="add-music-release-date" name="release_date"> </div> <!-- *** 新增 Date Input *** -->
                   <div class="form-group"> <label for="add-music-description">專輯描述:</label> <textarea id="add-music-description" name="description" rows="3"></textarea> </div>
                   <div class="form-group"> <label for="add-music-cover-url">封面圖片路徑:</label> <input type="text" id="add-music-cover-url" name="cover_art_url" placeholder="例如: /images/album.jpg"> <img id="add-cover-preview" src="" alt="封面預覽"> </div>
@@ -177,7 +177,7 @@
               <form id="edit-music-form"> <!-- *** 修改 ID *** -->
                   <input type="hidden" id="edit-music-id">
                   <div class="form-group"> <label for="edit-music-title">專輯標題:</label> <input type="text" id="edit-music-title" name="title" required> </div>
-                  <div class="form-group"> <label for="edit-music-artist">歌手:</label> <input type="text" id="edit-music-artist" name="artist" required> </div>
+                  <div class="form-group"> <label for="edit-music-artist">歌手 (多位歌手請用逗號 "," 或換行分隔):</label> <textarea id="edit-music-artist" name="artist" rows="2" required></textarea> </div>
                   <div class="form-group"> <label for="edit-music-release-date">發行日期:</label> <input type="date" id="edit-music-release-date" name="release_date"> </div> <!-- *** 新增 Date Input *** -->
                   <div class="form-group"> <label for="edit-music-description">專輯描述:</label> <textarea id="edit-music-description" name="description" rows="3"></textarea> </div>
                   <div class="form-group"> <label for="edit-music-cover-url">封面圖片路徑:</label> <input type="text" id="edit-music-cover-url" name="cover_art_url"> <img id="edit-cover-preview" src="" alt="封面預覽"> </div>

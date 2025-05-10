@@ -4190,23 +4190,54 @@ app.post('/api/products/:id/click', async (req, res) => {
 // --- 音樂 API ---
 app.get('/api/artists', async (req, res) => {
     try {
-        const result = await pool.query('SELECT DISTINCT artist FROM music WHERE artist IS NOT NULL AND artist <> \'\' ORDER BY artist ASC');
-        const artists = result.rows.map(row => row.artist);
-        res.json(artists);
+        // 從新的 artists 表獲取歌手列表
+        const result = await pool.query('SELECT id, name FROM artists ORDER BY name ASC');
+        res.json(result.rows); // 直接返回 {id, name} 對象的陣列
     } catch (err) {
         console.error('獲取歌手列表時出錯:', err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
 app.get('/api/music', async (req, res) => {
-    const artistFilter = req.query.artist || null;
-    let queryText = 'SELECT id, title, artist, cover_art_url, platform_url, release_date, description FROM music';
+    const artistNameFilter = req.query.artist || null; // 前端可能會傳遞歌手名稱作為篩選條件
+    let queryText = `
+        SELECT
+            m.id, m.title, m.cover_art_url, m.platform_url, m.release_date, m.description, m.youtube_video_id,
+            COALESCE(
+                (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
+                 FROM artists a
+                 JOIN music_artists ma ON ma.artist_id = a.id
+                 WHERE ma.music_id = m.id),
+                '[]'::json
+            ) AS artists,
+            COALESCE(
+                (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
+                 FROM scores s
+                 WHERE s.music_id = m.id),
+                '[]'::json
+            ) AS scores
+        FROM music m
+    `;
     const queryParams = [];
-    if (artistFilter && artistFilter !== 'All') {
-         queryText += ' WHERE artist = $1';
-         queryParams.push(decodeURIComponent(artistFilter));
+    let paramIndex = 1;
+
+    if (artistNameFilter && artistNameFilter !== 'All') {
+        // 如果有歌手名稱篩選，需要 JOIN artists 表並在 WHERE 子句中篩選
+        // 這會讓查詢稍微複雜，因為我們需要確保即使篩選了，其他歌曲的 artists 陣列也能正確聚合
+        // 一個簡化的方法是先獲取所有歌曲及其藝術家，然後在應用層篩選，或者使用子查詢/CTE
+        // 為了簡化，這裡先獲取所有，前端的篩選邏輯已經存在
+        // 如果需要後端篩選，可以這樣：
+        // queryText += ` JOIN music_artists ma_filter ON ma_filter.music_id = m.id
+        //                JOIN artists a_filter ON a_filter.id = ma_filter.artist_id AND a_filter.name = $${paramIndex++}`;
+        // queryParams.push(decodeURIComponent(artistNameFilter));
+        // 但這會只返回該歌手的歌曲，而不是所有歌曲列表。
+        // 保持原樣，讓前端處理基於完整列表的篩選，或者前端在請求時不傳 artist 參數，總是獲取全部。
+        // 根據前端 music-admin.js 的 fetchAndDisplayMusic，它會獲取全部然後在客戶端篩選。
     }
-    queryText += ' ORDER BY release_date DESC NULLS LAST, title ASC';
+
+    queryText += ' ORDER BY m.release_date DESC NULLS LAST, m.title ASC';
+    
     try {
         const result = await pool.query(queryText, queryParams);
         res.json(result.rows);
@@ -4215,6 +4246,7 @@ app.get('/api/music', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
 app.get('/api/music/:id', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id, 10))) {
@@ -4223,7 +4255,15 @@ app.get('/api/music/:id', async (req, res) => {
     try {
         const queryText = `
             SELECT
-                m.*,
+                m.id, m.title, m.cover_art_url, m.platform_url, m.release_date, m.description, m.youtube_video_id,
+                m.created_at, m.updated_at,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
+                     FROM artists a
+                     JOIN music_artists ma ON ma.artist_id = a.id
+                     WHERE ma.music_id = m.id),
+                    '[]'::json
+                ) AS artists,
                 COALESCE(
                     (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
                      FROM scores s
@@ -4238,10 +4278,228 @@ app.get('/api/music/:id', async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: '找不到音樂' });
         }
-        res.json(result.rows[0]);
+        // 從 music 表中移除舊的 artist 欄位後，這裡就不需要 m.artist 了
+        const musicData = result.rows[0];
+        delete musicData.artist; // 如果 music 表中還存在 artist 欄位，確保不在回應中返回
+
+        res.json(musicData);
     } catch (err) {
         console.error(`獲取 ID 為 ${id} 的音樂時出錯：`, err.stack || err);
         res.status(500).json({ error: '獲取音樂詳情時發生內部伺服器錯誤' });
+    }
+});
+
+// POST /api/music - 新增音樂
+app.post('/api/music', async (req, res) => {
+    const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
+
+    // 基本驗證
+    if (!title || !artist_names || !Array.isArray(artist_names) || artist_names.length === 0) {
+        return res.status(400).json({ error: '標題和至少一位歌手名稱為必填項。' });
+    }
+    if (scores && !Array.isArray(scores)) {
+        return res.status(400).json({ error: '樂譜資料格式不正確，應為陣列。' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 插入音樂基本資訊
+        const musicInsertQuery = `
+            INSERT INTO music (title, release_date, description, cover_art_url, platform_url, youtube_video_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id;
+        `;
+        const musicResult = await client.query(musicInsertQuery, [
+            title,
+            release_date || null,
+            description || null,
+            cover_art_url || null,
+            platform_url || null,
+            youtube_video_id || null
+        ]);
+        const musicId = musicResult.rows[0].id;
+
+        // 2. 處理歌手
+        for (const artistName of artist_names) {
+            let artistResult = await client.query('SELECT id FROM artists WHERE name = $1', [artistName.trim()]);
+            let artistId;
+            if (artistResult.rows.length > 0) {
+                artistId = artistResult.rows[0].id;
+            } else {
+                artistResult = await client.query('INSERT INTO artists (name) VALUES ($1) RETURNING id', [artistName.trim()]);
+                artistId = artistResult.rows[0].id;
+            }
+            await client.query('INSERT INTO music_artists (music_id, artist_id) VALUES ($1, $2)', [musicId, artistId]);
+        }
+
+        // 3. 處理樂譜 (如果提供)
+        if (scores && scores.length > 0) {
+            for (const score of scores) {
+                const { type, pdf_url, display_order } = score;
+                if (type && pdf_url) { // 確保基本樂譜資訊存在
+                    await client.query(
+                        'INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4)',
+                        [musicId, type, pdf_url, display_order || 0]
+                    );
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        
+        const newMusicQuery = `
+            SELECT
+                m.id, m.title, m.cover_art_url, m.platform_url, m.release_date, m.description, m.youtube_video_id,
+                m.created_at, m.updated_at,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
+                     FROM artists a
+                     JOIN music_artists ma ON ma.artist_id = a.id
+                     WHERE ma.music_id = m.id),
+                    '[]'::json
+                ) AS artists,
+                COALESCE(
+                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
+                     FROM scores s
+                     WHERE s.music_id = m.id),
+                    '[]'::json
+                ) AS scores
+            FROM music m
+            WHERE m.id = $1;
+        `;
+        const newMusicResult = await pool.query(newMusicQuery, [musicId]);
+        res.status(201).json(newMusicResult.rows[0]);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('新增音樂時出錯:', err.stack || err);
+        res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// PUT /api/music/:id - 更新音樂
+app.put('/api/music/:id', async (req, res) => {
+    const { id } = req.params;
+    const musicId = parseInt(id, 10);
+    if (isNaN(musicId)) {
+        return res.status(400).json({ error: '無效的音樂 ID' });
+    }
+
+    const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
+
+    if (!title || !artist_names || !Array.isArray(artist_names) || artist_names.length === 0) {
+        return res.status(400).json({ error: '標題和至少一位歌手名稱為必填項。' });
+    }
+    if (scores && !Array.isArray(scores)) {
+        return res.status(400).json({ error: '樂譜資料格式不正確，應為陣列。' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const musicUpdateQuery = `
+            UPDATE music
+            SET title = $1, release_date = $2, description = $3, cover_art_url = $4, platform_url = $5, youtube_video_id = $6, updated_at = NOW()
+            WHERE id = $7;
+        `;
+        await client.query(musicUpdateQuery, [
+            title,
+            release_date || null,
+            description || null,
+            cover_art_url || null,
+            platform_url || null,
+            youtube_video_id || null,
+            musicId
+        ]);
+
+        await client.query('DELETE FROM music_artists WHERE music_id = $1', [musicId]);
+        for (const artistName of artist_names) {
+            let artistResult = await client.query('SELECT id FROM artists WHERE name = $1', [artistName.trim()]);
+            let artistId;
+            if (artistResult.rows.length > 0) {
+                artistId = artistResult.rows[0].id;
+            } else {
+                artistResult = await client.query('INSERT INTO artists (name) VALUES ($1) RETURNING id', [artistName.trim()]);
+                artistId = artistResult.rows[0].id;
+            }
+            await client.query('INSERT INTO music_artists (music_id, artist_id) VALUES ($1, $2)', [musicId, artistId]);
+        }
+
+        await client.query('DELETE FROM scores WHERE music_id = $1', [musicId]);
+        if (scores && scores.length > 0) {
+            for (const score of scores) {
+                const { type, pdf_url, display_order } = score;
+                if (type && pdf_url) {
+                    await client.query(
+                        'INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4)',
+                        [musicId, type, pdf_url, display_order || 0]
+                    );
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        
+        const updatedMusicQuery = `
+            SELECT
+                m.id, m.title, m.cover_art_url, m.platform_url, m.release_date, m.description, m.youtube_video_id,
+                m.created_at, m.updated_at,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
+                     FROM artists a
+                     JOIN music_artists ma ON ma.artist_id = a.id
+                     WHERE ma.music_id = m.id),
+                    '[]'::json
+                ) AS artists,
+                COALESCE(
+                    (SELECT json_agg(s.* ORDER BY s.display_order ASC, s.type ASC)
+                     FROM scores s
+                     WHERE s.music_id = m.id),
+                    '[]'::json
+                ) AS scores
+            FROM music m
+            WHERE m.id = $1;
+        `;
+        const updatedMusicResult = await pool.query(updatedMusicQuery, [musicId]);
+        if (updatedMusicResult.rows.length === 0) {
+            return res.status(404).json({ error: '更新後找不到音樂' });
+        }
+        res.status(200).json(updatedMusicResult.rows[0]);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`更新音樂 ID ${musicId} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '更新音樂時發生內部伺服器錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/music/:id - 刪除音樂
+app.delete('/api/music/:id', async (req, res) => {
+    const { id } = req.params;
+    const musicId = parseInt(id, 10);
+
+    if (isNaN(musicId)) {
+        return res.status(400).json({ error: '無效的音樂 ID' });
+    }
+
+    try {
+        const result = await pool.query('DELETE FROM music WHERE id = $1 RETURNING id', [musicId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的音樂' });
+        }
+
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除音樂 ID ${musicId} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '刪除音樂時發生內部伺服器錯誤' });
     }
 });
 
