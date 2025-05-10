@@ -4390,7 +4390,25 @@ app.post('/api/music', async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('新增音樂時出錯:', err.stack || err);
-        res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
+
+        if (err.message && err.message.includes('violates not-null constraint')) {
+            // 嘗試從錯誤訊息中提取欄位名稱 (這部分可能需要根據實際錯誤訊息調整)
+            const columnMatch = err.message.match(/column "([^"]+)"/);
+            const columnName = columnMatch ? columnMatch[1] : '某個必填欄位';
+            if (columnName === 'release_date') {
+                return res.status(400).json({ error: '發行日期為必填項，請提供有效的日期。' });
+            }
+            return res.status(400).json({ error: `${columnName} 為必填項。` });
+        } else if (err.message && err.message.includes('violates unique constraint')) {
+            // 嘗試從錯誤訊息中提取涉及的鍵或欄位 (這部分可能需要根據實際錯誤訊息調整)
+            const detailMatch = err.detail && err.detail.match(/Key \(([^)]+)\)=\(([^)]+)\) already exists/);
+            if (detailMatch && detailMatch[1] === 'title') {
+                 return res.status(409).json({ error: `音樂標題 "${detailMatch[2]}" 已存在，請使用不同的標題。` });
+            }
+            return res.status(409).json({ error: '提交的資料與現有記錄衝突 (例如，標題可能已存在)。' });
+        }
+
+        res.status(500).json({ error: '新增音樂時發生未知的內部伺服器錯誤。' });
     } finally {
         client.release();
     }
