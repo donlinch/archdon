@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const albumListContainer = document.getElementById('album-list-container');
     const albumTable = document.getElementById('album-list-table');
     const loadingMessage = albumListContainer ? albumListContainer.querySelector('p') : null;
+    const artistFilterButtonsContainer = document.getElementById('artist-filter-buttons'); // 新增歌手按鈕容器
+
+    let allMusicData = []; // 用於存儲從 API獲取的所有音樂數據
 
     // --- 編輯 Modal 元素 ---
     const editModal = document.getElementById('edit-music-modal');
@@ -91,8 +94,98 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(div);
     }
 
+    // --- 渲染音樂列表到表格 ---
+    function renderMusicList(musicToRender) {
+        if (!albumListBody || !albumTable) {
+            console.error("音樂列表的 DOM 元素不完整 (renderMusicList)。");
+            return;
+        }
+        albumListBody.innerHTML = ''; // 清空現有列表
+
+        if (musicToRender.length === 0) {
+            albumTable.style.display = 'table';
+            albumListBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1rem;">沒有符合條件的音樂項目。</td></tr>';
+            return;
+        }
+
+        albumTable.style.display = 'table';
+        musicToRender.forEach(music => {
+            const row = document.createElement('tr');
+            row.dataset.musicId = music.id;
+            const releaseDateFormatted = music.release_date
+                ? new Date(music.release_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                : 'N/A';
+            row.innerHTML = `
+                <td>${music.id}</td>
+                <td title="${music.title || ''}">${music.title || ''}</td>
+                <td title="${music.artist || ''}">${music.artist || ''}</td>
+                <td>${releaseDateFormatted}</td>
+                <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''} 封面" style="max-width: 60px; max-height: 60px; height: auto; border: 1px solid #eee; object-fit: contain; display: block; margin: auto;"></td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="window.editMusic(${music.id})">編輯</button>
+                    <button class="action-btn delete-btn" onclick="window.deleteMusic(${music.id})">刪除</button>
+                </td>
+            `;
+            albumListBody.appendChild(row);
+        });
+    }
+
+    // --- 渲染歌手篩選按鈕 ---
+    function renderArtistButtons(musicList) {
+        if (!artistFilterButtonsContainer) {
+            console.error("歌手篩選按鈕容器未找到。");
+            return;
+        }
+        artistFilterButtonsContainer.innerHTML = ''; // 清空舊按鈕
+
+        const artists = [...new Set(musicList.map(music => music.artist).filter(artist => artist))].sort(); // 獲取唯一歌手並排序
+
+        // 新增「顯示全部」按鈕
+        const showAllButton = document.createElement('button');
+        showAllButton.textContent = '顯示全部';
+        showAllButton.classList.add('action-btn'); // 可以使用現有樣式或自訂
+        showAllButton.style.marginRight = '5px';
+        showAllButton.style.marginBottom = '5px';
+        showAllButton.onclick = () => {
+            renderMusicList(allMusicData); // 使用存儲的完整列表
+            setActiveButton(showAllButton);
+        };
+        artistFilterButtonsContainer.appendChild(showAllButton);
+
+        artists.forEach(artist => {
+            const button = document.createElement('button');
+            button.textContent = artist;
+            button.classList.add('action-btn');
+            button.style.marginRight = '5px';
+            button.style.marginBottom = '5px';
+            button.onclick = () => {
+                const filteredMusic = allMusicData.filter(music => music.artist === artist);
+                renderMusicList(filteredMusic);
+                setActiveButton(button);
+            };
+            artistFilterButtonsContainer.appendChild(button);
+        });
+        
+        // 預設選中「顯示全部」
+        if (artists.length > 0) {
+             setActiveButton(showAllButton);
+        }
+    }
+    
+    function setActiveButton(activeBtn) {
+        const buttons = artistFilterButtonsContainer.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.style.backgroundColor = ''; // 重置背景色
+            btn.style.fontWeight = 'normal';
+        });
+        activeBtn.style.backgroundColor = '#007bff'; // 例如：高亮顏色
+        activeBtn.style.color = 'white';
+        activeBtn.style.fontWeight = 'bold';
+    }
+
+
     // --- 獲取並顯示所有音樂 ---
-    async function fetchAndDisplayMusic() {
+    async function fetchAndDisplayMusic(filterArtist = null) {
         if (!albumListBody || !albumListContainer || !albumTable || !loadingMessage) {
             console.error("音樂列表的 DOM 元素不完整。");
             return;
@@ -103,42 +196,28 @@ document.addEventListener('DOMContentLoaded', () => {
             albumTable.style.display = 'none';
             albumListBody.innerHTML = '';
 
-            const response = await fetch('/api/music');
-            if (!response.ok) throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
-            const musicList = await response.json();
-
+            // 只有在 allMusicData 為空時才從 API 獲取
+            if (allMusicData.length === 0) {
+                const response = await fetch('/api/music');
+                if (!response.ok) throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
+                allMusicData = await response.json();
+                renderArtistButtons(allMusicData); // 首次獲取數據後渲染按鈕
+            }
+            
             loadingMessage.style.display = 'none';
 
-            if (musicList.length === 0) {
-                albumTable.style.display = 'table';
-                albumListBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1rem;">目前沒有音樂項目。</td></tr>';
-                return;
+            let musicToDisplay = allMusicData;
+            if (filterArtist) {
+                musicToDisplay = allMusicData.filter(music => music.artist === filterArtist);
             }
+            
+            renderMusicList(musicToDisplay);
 
-            albumTable.style.display = 'table';
-            musicList.forEach(music => {
-                const row = document.createElement('tr');
-                row.dataset.musicId = music.id;
-                const releaseDateFormatted = music.release_date
-                    ? new Date(music.release_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
-                    : 'N/A';
-                row.innerHTML = `
-                    <td>${music.id}</td>
-                    <td title="${music.title || ''}">${music.title || ''}</td>
-                    <td title="${music.artist || ''}">${music.artist || ''}</td>
-                    <td>${releaseDateFormatted}</td>
-                    <td><img src="${music.cover_art_url || '/images/placeholder.png'}" alt="${music.title || ''} 封面" style="max-width: 60px; max-height: 60px; height: auto; border: 1px solid #eee; object-fit: contain; display: block; margin: auto;"></td>
-                    <td>
-                        <button class="action-btn edit-btn" onclick="window.editMusic(${music.id})">編輯</button>
-                        <button class="action-btn delete-btn" onclick="window.deleteMusic(${music.id})">刪除</button>
-                    </td>
-                `;
-                albumListBody.appendChild(row);
-            });
         } catch (error) {
             console.error("獲取管理音樂列表失敗:", error);
             if(loadingMessage) loadingMessage.textContent = '無法載入音樂列表。';
             if(albumTable) albumTable.style.display = 'none';
+            allMusicData = []; // 出錯時清空，以便下次重試時重新獲取
         }
     }
 
