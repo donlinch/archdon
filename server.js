@@ -4389,26 +4389,44 @@ app.post('/api/music', async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('新增音樂時出錯:', err.stack || err);
+        console.error('新增音樂時出錯:', err.stack || err, 'Code:', err.code, 'Column:', err.column, 'Table:', err.table, 'Constraint:', err.constraint);
 
-        if (err.message && err.message.includes('violates not-null constraint')) {
-            // 嘗試從錯誤訊息中提取欄位名稱 (這部分可能需要根據實際錯誤訊息調整)
-            const columnMatch = err.message.match(/column "([^"]+)"/);
-            const columnName = columnMatch ? columnMatch[1] : '某個必填欄位';
+        // SQLSTATE '23502' for not_null_violation
+        if (err.code === '23502') {
+            const columnName = err.column || (err.message && err.message.match(/column "([^"]+)"/) ? err.message.match(/column "([^"]+)"/)[1] : '某個');
+            let userFriendlyMessage = `欄位 "${columnName}" 為必填項。`;
+
             if (columnName === 'release_date') {
-                return res.status(400).json({ error: '發行日期為必填項，請提供有效的日期。' });
+                userFriendlyMessage = '發行日期為必填項，請提供有效的日期。';
+            } else if (columnName === 'name' && err.table === 'artists') {
+                userFriendlyMessage = '歌手名稱為必填項，請確保已正確輸入。';
+            } else if (columnName === 'title' && err.table === 'music') {
+                userFriendlyMessage = '專輯標題為必填項。';
+            } else if (columnName === 'artist') { // 保留對 'artist' 的特殊處理以防萬一
+                 userFriendlyMessage = '歌手資訊（可能是名稱）為必填項，請檢查是否已填寫。';
             }
-            return res.status(400).json({ error: `${columnName} 為必填項。` });
-        } else if (err.message && err.message.includes('violates unique constraint')) {
-            // 嘗試從錯誤訊息中提取涉及的鍵或欄位 (這部分可能需要根據實際錯誤訊息調整)
-            const detailMatch = err.detail && err.detail.match(/Key \(([^)]+)\)=\(([^)]+)\) already exists/);
-            if (detailMatch && detailMatch[1] === 'title') {
-                 return res.status(409).json({ error: `音樂標題 "${detailMatch[2]}" 已存在，請使用不同的標題。` });
+            return res.status(400).json({ error: userFriendlyMessage });
+        }
+        // SQLSTATE '23505' for unique_violation
+        else if (err.code === '23505') {
+            let userFriendlyMessage = '提交的資料與現有記錄衝突。';
+            const constraintName = err.constraint || '';
+            const tableName = err.table || '';
+
+            if (constraintName.includes('title') && tableName === 'music') {
+                 userFriendlyMessage = `音樂標題已存在，請使用不同的標題。`;
+            } else if (constraintName.includes('name') && tableName === 'artists') {
+                 userFriendlyMessage = `歌手名稱已存在。`;
+            } else if (err.detail) { // 嘗試從 detail 獲取更多資訊
+                const detailMatch = err.detail.match(/Key \(([^)]+)\)=\(([^)]+)\) already exists/);
+                if (detailMatch) {
+                    userFriendlyMessage = `欄位 "${detailMatch[1]}" 的值 "${detailMatch[2]}" 已存在。`;
+                }
             }
-            return res.status(409).json({ error: '提交的資料與現有記錄衝突 (例如，標題可能已存在)。' });
+            return res.status(409).json({ error: userFriendlyMessage });
         }
 
-        res.status(500).json({ error: '新增音樂時發生未知的內部伺服器錯誤。' });
+        res.status(500).json({ error: '新增音樂時發生未知的內部伺服器錯誤，請稍後再試。' });
     } finally {
         client.release();
     }
