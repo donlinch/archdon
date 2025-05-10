@@ -34,6 +34,14 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
     const salesTrendChartCtx = document.getElementById('sales-trend-chart').getContext('2d');
     const topProductsChartCtx = document.getElementById('top-products-chart').getContext('2d');
 
+    // Drawer elements
+    const openDrawerBtn = document.getElementById('open-drawer-btn');
+    const closeDrawerBtn = document.getElementById('close-drawer-btn');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+    const slideOutDrawer = document.getElementById('slide-out-drawer');
+    const drawerTabButtons = document.querySelectorAll('.drawer-tab-button');
+    const drawerTabContents = document.querySelectorAll('.drawer-tab-content');
+
     let salesTrendChartInstance = null;
     let topProductsChartInstance = null;
 
@@ -548,6 +556,38 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
          await fetchSummaryData(filterParams); // 確保使用相同的篩選條件
      };
 
+    // --- Drawer Control Functions ---
+    const openDrawer = () => {
+        if (slideOutDrawer) slideOutDrawer.classList.add('open');
+        if (drawerOverlay) drawerOverlay.classList.add('open');
+        // Optional: Add class to body to prevent scrolling when drawer is open
+        // document.body.classList.add('drawer-open-no-scroll');
+    };
+
+    const closeDrawer = () => {
+        if (slideOutDrawer) slideOutDrawer.classList.remove('open');
+        if (drawerOverlay) drawerOverlay.classList.remove('open');
+        // Optional: Remove class from body
+        // document.body.classList.remove('drawer-open-no-scroll');
+    };
+
+    const switchTab = (targetTabId) => {
+        if (!targetTabId) return;
+
+        drawerTabContents.forEach(content => {
+            content.classList.remove('active');
+            if (content.id === targetTabId) {
+                content.classList.add('active');
+            }
+        });
+        drawerTabButtons.forEach(button => {
+            button.classList.remove('active');
+            // The button's data-tab attribute should match the content's ID
+            if (button.dataset.tab === targetTabId) {
+                button.classList.add('active');
+            }
+        });
+    };
 
     // --- Helper function for date ranges ---
     const getDateRange = (rangeType) => {
@@ -611,6 +651,18 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
     applyFilterBtn.addEventListener('click', handleApplyFilter);
     clearFilterBtn.addEventListener('click', handleClearFilter);
 
+    // Drawer event listeners
+    if (openDrawerBtn) openDrawerBtn.addEventListener('click', openDrawer);
+    if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeDrawer);
+    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+
+    drawerTabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Ensure the data-tab attribute on the button matches the ID of the content to show
+            switchTab(button.dataset.tab);
+        });
+    });
+
     // Add event listeners for quick date filters
     const quickDateFilterButtons = document.querySelectorAll('.quick-date-filters button[data-range]');
     quickDateFilterButtons.forEach(button => {
@@ -628,4 +680,17 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
     setDefaultSaleTimestamp(); // 頁面載入時設定預設時間
     refreshData(); // 初始載入數據 (預設無篩選)
 
+    // Ensure the first tab is active on load (if not already set by HTML)
+    // HTML structure already sets the first tab and content as active, so this is a fallback/explicit set.
+    if (drawerTabButtons.length > 0) {
+        const firstTabId = drawerTabButtons[0].dataset.tab;
+        // Check if any tab content is already active, if not, activate the first one.
+        const isActiveContentPresent = Array.from(drawerTabContents).some(tc => tc.classList.contains('active'));
+        if (!isActiveContentPresent && document.getElementById(firstTabId)) {
+             switchTab(firstTabId);
+        } else if (!document.querySelector('.drawer-tab-button.active') && drawerTabButtons.length > 0) {
+            // If no button is active, activate the first one.
+            drawerTabButtons[0].classList.add('active');
+        }
+    }
 });

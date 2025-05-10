@@ -232,6 +232,141 @@
             button, .btn { padding: 8px 12px; font-size: 0.9rem; }
             .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; }
         }
+
+        /* Drawer Styles */
+        .open-drawer-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1002; /* Higher than overlay and drawer when closed */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px; /* Adjust if using text, or for SVG size */
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .open-drawer-btn:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none; /* Initially hidden */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .drawer-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+
+        .slide-out-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 450px; /* Adjust width as needed */
+            max-width: 90%; /* Ensure it's not too wide on small screens */
+            height: 100%;
+            background-color: #ffffff;
+            box-shadow: -3px 0 15px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent content overflow before scroll is set */
+        }
+        .slide-out-drawer.open {
+            transform: translateX(0);
+        }
+
+        .close-drawer-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            font-size: 28px;
+            color: #888;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+        .close-drawer-btn:hover {
+            color: #333;
+        }
+
+        .drawer-tabs {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            border-bottom: 1px solid #e0e0e0;
+            flex-shrink: 0; /* Prevent tabs from shrinking */
+        }
+        .drawer-tabs li {
+            flex-grow: 1;
+        }
+        .drawer-tab-button {
+            width: 100%;
+            padding: 15px 10px;
+            border: none;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #495057;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            border-bottom: 3px solid transparent; /* For active indicator */
+        }
+        .drawer-tab-button:hover {
+            background-color: #e9ecef;
+        }
+        .drawer-tab-button.active {
+            background-color: #ffffff;
+            color: #007bff;
+            font-weight: 600;
+            border-bottom-color: #007bff;
+        }
+
+        .drawer-tab-content {
+            padding: 25px;
+            display: none;
+            flex-grow: 1; /* Allow content to take remaining space */
+            overflow-y: auto; /* Enable scrolling for content */
+        }
+        .drawer-tab-content.active {
+            display: block;
+        }
+        /* Ensure form sections within tabs don't have conflicting styles if any */
+        .slide-out-drawer .form-section,
+        .slide-out-drawer .filter-section {
+            border: none; /* Remove border if originally from .form-section */
+            box-shadow: none; /* Remove shadow if originally from .form-section */
+            padding: 0; /* Reset padding as .drawer-tab-content has it */
+            background-color: transparent; /* Inherit from drawer or tab content */
+        }
+        .slide-out-drawer .form-section h2,
+        .slide-out-drawer .filter-section h2 {
+            margin-top: 0; /* Adjust heading margin for tab content */
+            border-bottom: none; /* Remove border if not desired in tabs */
+            padding-bottom: 0;
+            font-size: 1.3rem; /* Slightly smaller for drawer context */
+        }
     </style>
 </head>
 <body>
@@ -250,76 +385,6 @@
 
     <main class="container">
         <h1>商品銷售報告</h1>
-
-        <div class="section-container">
-            <!-- 新增/編輯表單 -->
-            <section class="form-section">
-                <h2 id="form-title">新增銷售紀錄</h2>  
-                <form id="sales-form">
-                    <input type="hidden" id="sale-id"> <!-- 用於編輯時儲存 ID -->
-                    <div class="form-group">
-                        <label for="product-name">商品名稱 <span style="color: red;">*</span></label>
-                       <!-- 可選：增加 datalist -->
-
-                        <input type="text" id="product-name" required>
-                        <!-- 建議未來改為下拉選單，從商品/公仔列表選擇 -->
-                    </div>
-                    <div class="form-group">
-                        <label for="quantity-sold">銷售數量 <span style="color: red;">*</span></label>
-                        <input type="number" id="quantity-sold" required min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="sale-timestamp">銷售時間 <span style="color: red;">*</span></label>
-                        <!-- datetime-local 的值格式需要是 YYYY-MM-DDTHH:mm -->
-                        <input type="datetime-local" id="sale-timestamp" required>
-                    </div>
-                    <div id="form-error" class="error-message"></div>
-                    <div class="form-actions">
-                        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display: none;">取消編輯</button>
-                        <button type="submit" id="save-btn" class="btn-success">新增紀錄</button>
-                    </div>
-                </form>
-            </section>
-
-
-
-
-
-
-            <!-- 篩選條件 -->
-            <section class="filter-section">
-                <h2>篩選條件</h2>
-                <div class="form-group">
-                    <label for="filter-start-date">開始日期</label>
-                    <input type="date" id="filter-start-date">
-                </div>
-                <div class="form-group">
-                    <label for="filter-end-date">結束日期</label>
-                    <input type="date" id="filter-end-date">
-                </div>
-<div class="form-group">
-                        <label>快速選擇日期範圍</label>
-                        <div class="quick-date-filters" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="today">今天</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="yesterday">昨天</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="this_week">本週</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_week">上週</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="this_month">本月</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_month">上個月</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_7_days">過去7天</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_30_days">過去30天</button>
-                        </div>
-                    </div>
-                 <div class="form-group">
-                    <label for="filter-product-name">商品名稱 (模糊搜尋)</label>
-                    <input type="text" id="filter-product-name" placeholder="輸入部分名稱...">
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="clear-filter-btn" class="btn-secondary">清除條件</button>
-                    <button type="button" id="apply-filter-btn" class="btn-primary">套用篩選</button>
-                </div>
-            </section>
-        </div>
 
         <!-- 銷售彙總 -->
         <section class="summary-section">
@@ -389,6 +454,80 @@
             </div>
         </div>
     </footer>
+
+    <!-- Slide-out Drawer -->
+    <button id="open-drawer-btn" class="open-drawer-btn" aria-label="開啟設定面板" title="開啟設定面板">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+    <div id="slide-out-drawer" class="slide-out-drawer">
+        <button id="close-drawer-btn" class="close-drawer-btn" aria-label="關閉面板" title="關閉面板">&times;</button>
+        <ul class="drawer-tabs">
+            <li><button class="drawer-tab-button active" data-tab="add-sale-tab">新增紀錄</button></li>
+            <li><button class="drawer-tab-button" data-tab="filters-tab">篩選條件</button></li>
+        </ul>
+
+        <div id="add-sale-tab" class="drawer-tab-content active">
+            <section class="form-section"> <!-- Keep class for existing JS if needed, or rename -->
+                <h2 id="form-title">新增銷售紀錄</h2>
+                <form id="sales-form">
+                    <input type="hidden" id="sale-id">
+                    <div class="form-group">
+                        <label for="product-name">商品名稱 <span style="color: red;">*</span></label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity-sold">銷售數量 <span style="color: red;">*</span></label>
+                        <input type="number" id="quantity-sold" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="sale-timestamp">銷售時間 <span style="color: red;">*</span></label>
+                        <input type="datetime-local" id="sale-timestamp" required>
+                    </div>
+                    <div id="form-error" class="error-message"></div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-edit-btn" class="btn btn-secondary" style="display: none;">取消編輯</button>
+                        <button type="submit" id="save-btn" class="btn btn-success">新增紀錄</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <div id="filters-tab" class="drawer-tab-content">
+            <section class="filter-section"> <!-- Keep class for existing JS if needed, or rename -->
+                <h2>篩選條件</h2>
+                <div class="form-group">
+                    <label for="filter-start-date">開始日期</label>
+                    <input type="date" id="filter-start-date">
+                </div>
+                <div class="form-group">
+                    <label for="filter-end-date">結束日期</label>
+                    <input type="date" id="filter-end-date">
+                </div>
+                <div class="form-group">
+                    <label>快速選擇日期範圍</label>
+                    <div class="quick-date-filters" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="today">今天</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="yesterday">昨天</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="this_week">本週</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_week">上週</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="this_month">本月</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_month">上個月</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_7_days">過去7天</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-range="last_30_days">過去30天</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="filter-product-name">商品名稱 (模糊搜尋)</label>
+                    <input type="text" id="filter-product-name" placeholder="輸入部分名稱...">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="clear-filter-btn" class="btn btn-secondary">清除條件</button>
+                    <button type="button" id="apply-filter-btn" class="btn btn-primary">套用篩選</button>
+                </div>
+            </section>
+        </div>
+    </div>
 
     <!-- JavaScript 檔案 -->
     <script src="sales-report.js"></script>
