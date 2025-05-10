@@ -335,11 +335,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addModal.style.display = 'flex';
     }
 
-    // --- 點擊 Modal 外部關閉 ---
+    // --- 點擊 Modal 外部關閉 (已停用，僅能透過關閉按鈕關閉) ---
+    /*
     window.onclick = function(event) {
         if (event.target == editModal) closeEditMusicModal();
         else if (event.target == addModal) closeAddMusicModal();
     }
+    */
 
     // --- 表單提交處理函數 (共用邏輯) ---
     async function handleFormSubmit(event, isEditMode) {
