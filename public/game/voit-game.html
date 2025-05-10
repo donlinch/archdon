@@ -428,6 +428,9 @@
             const settingsDrawer = document.getElementById('settings-drawer');
             const closeDrawerButton = document.getElementById('close-drawer-button');
             const drawerOverlay = document.getElementById('drawer-overlay');
+            const drawerContent = settingsDrawer.querySelector('.drawer-content'); // 新增：獲取抽屜內容區域
+            const drawerItemList = document.getElementById('drawer-item-list'); // 新增：獲取抽屜項目列表
+            const drawerAddNewButton = document.getElementById('drawer-add-new-button'); // 新增：獲取新增按鈕
             
             let selectedOptionId = null;
 

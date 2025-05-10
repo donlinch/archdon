@@ -102,6 +102,67 @@ voitRouter.get('/campaigns/:campaignId/results', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch results' });
     }
 });
+
+// POST /api/voit/campaigns - 新增投票活動
+voitRouter.post('/campaigns', async (req, res) => {
+    const { title, description, edit_password, options } = req.body;
+
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: 'Campaign title is required.' });
+    }
+    if (!edit_password || edit_password.length < 4 || edit_password.length > 6) {
+        return res.status(400).json({ error: 'Edit password must be 4-6 characters long.' });
+    }
+    if (!options || !Array.isArray(options) || options.length === 0) {
+        return res.status(400).json({ error: 'At least one option is required.' });
+    }
+    for (const opt of options) {
+        if (!opt.name || opt.name.trim() === '' || !opt.image_url || opt.image_url.trim() === '') {
+            return res.status(400).json({ error: 'All options must have a name and an image_url.' });
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 插入投票活動
+        // 考慮到 edit_password 的安全性，這裡僅為示例，實際應用中應哈希存儲
+        const campaignResult = await client.query(
+            "INSERT INTO voit_Campaigns (title, description, status, edit_password) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
+            [title.trim(), description || null, 'active', edit_password] // 示例：直接存儲密碼
+        );
+        const newCampaign = campaignResult.rows[0];
+        const campaignId = newCampaign.campaign_id;
+
+        // 插入投票選項
+        const insertedOptions = [];
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const optionResult = await client.query(
+                "INSERT INTO voit_Options (campaign_id, name, image_url, display_order) VALUES ($1, $2, $3, $4) RETURNING option_id, name, image_url, display_order",
+                [campaignId, opt.name.trim(), opt.image_url.trim(), i]
+            );
+            insertedOptions.push(optionResult.rows[0]);
+        }
+        
+        await client.query('COMMIT');
+        
+        newCampaign.options = insertedOptions; // 將選項附加到返回的活動對象中
+        res.status(201).json(newCampaign);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error creating new voit campaign:', err.stack || err);
+        // 檢查是否為唯一約束衝突 (例如 title) - 根據您的資料庫設計
+        // if (err.code === '23505' && err.constraint === 'your_unique_title_constraint_name') {
+        //    return res.status(409).json({ error: 'A campaign with this title already exists.' });
+        // }
+        res.status(500).json({ error: 'Failed to create campaign' });
+    } finally {
+        client.release();
+    }
+});
 // --- END OF Voit Router Definitions ---
 
 
