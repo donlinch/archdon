@@ -250,6 +250,19 @@
             transform: scale(1.05);
         }
 
+        /* --- 發表按鈕與動畫容器 --- */
+        .post-button-container {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* 圖片和按鈕間距 */
+            align-self: flex-end; /* 使容器在 guestbook-header 中靠右 */
+        }
+
+        .girl-animation-header {
+            width: 50px; /* 調整適合的大小 */
+            height: 50px;
+        }
+ 
         /* --- 排序控制 --- */
         .sort-controls {
             display: none; /* 隱藏舊的排序控件 */
@@ -777,8 +790,10 @@
     <main class="guestbook-container">
         <div class="guestbook-header">
             <small>歡迎留言分享！無論是你的樂譜 Cover 演奏、精彩的舞蹈教學影片，或是任何想和大家交流的想法，都可以在這裡分享喔！(發表前請留意留言規範)</small>
-            <img src="/images/a01girlmove.gif" alt="小女孩動畫" class="girl-animation">
-            <button id="new-post-btn" class="btn btn-primary">發表留言</button>
+            <div class="post-button-container">
+                <button id="new-post-btn" class="btn btn-primary">發表留言</button>
+                <img src="/images/a01girlmove.gif" alt="小女孩動畫" class="girl-animation-header">
+            </div>
         </div>
         
         <section class="message-list-section">
