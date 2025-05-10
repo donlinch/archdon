@@ -413,9 +413,23 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
+            margin-left: 5px; /* Add some space between buttons */
         }
         .drawer-item-list .edit-item-button:hover {
             background-color: #dadada; /* Lighter hover */
+        }
+        .drawer-item-list .delete-item-button {
+            background-color: #f44336; /* Red for delete */
+            color: white;
+            border: 1px solid #d32f2f;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+        .drawer-item-list .delete-item-button:hover {
+            background-color: #d32f2f;
         }
         .drawer-add-new-button { /* Will inherit .button styles */
             margin-top: 20px;
@@ -1013,10 +1027,14 @@
                                 const listItem = document.createElement('li');
                                 listItem.innerHTML = `
                                     <span>${escapeHtml(campaign.title)}</span>
-                                    <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}">編輯</button>
+                                    <div>
+                                        <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}">編輯</button>
+                                        <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
+                                    </div>
                                 `;
                                 itemListUl.appendChild(listItem);
                                 listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
+                                listItem.querySelector('.delete-item-button').addEventListener('click', handleDeleteCampaignClick);
                             });
                         } else {
                             itemListUl.innerHTML = '<li>目前沒有可管理的投票活動。</li>';
@@ -1059,6 +1077,68 @@
                     } catch (error) {
                         console.error('驗證編輯密碼時出錯:', error);
                         alert('驗證密碼時發生錯誤，請稍後再試。');
+                    }
+                }
+
+                async function handleDeleteCampaignClick(event) {
+                    const campaignId = event.target.dataset.campaignId;
+                    const campaignTitle = event.target.dataset.campaignTitle; // Already escaped from render
+
+                    if (!confirm(`您確定要刪除投票活動 "${campaignTitle}" 嗎？此操作無法復原。`)) {
+                        return;
+                    }
+
+                    const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位) 以確認刪除:`);
+                    
+                    if (password === null) { // User cancelled prompt
+                        return;
+                    }
+                    if (password.trim() === '') {
+                        alert('請輸入編輯密碼以進行刪除。');
+                        return;
+                    }
+
+                    try {
+                        // Step 1: Verify password
+                        const verifyResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: password })
+                        });
+                        
+                        const verifyResult = await verifyResponse.json();
+
+                        if (!verifyResponse.ok || !verifyResult.verified) {
+                            alert(verifyResult.error || '密碼驗證失敗，無法刪除。');
+                            return;
+                        }
+
+                        // Step 2: Delete campaign if password is verified
+                        const deleteResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                            method: 'DELETE',
+                            // No body needed for DELETE if password was verified in a separate step
+                            // If backend handles password in DELETE, include it here:
+                            // headers: { 'Content-Type': 'application/json' },
+                            // body: JSON.stringify({ password: password })
+                        });
+
+                        if (!deleteResponse.ok) {
+                            const errorData = await deleteResponse.json().catch(() => ({ error: '刪除失敗，請檢查伺服器日誌。' }));
+                            throw new Error(errorData.error || `HTTP error! status: ${deleteResponse.status}`);
+                        }
+
+                        alert(`投票活動 "${campaignTitle}" 已成功刪除！`);
+                        showDefaultDrawerContent(); // Refresh drawer list
+                        renderCampaignList(); // Refresh main campaign list if the deleted one was active or for general update
+                        // If the currently loaded campaign is the one deleted, navigate back to selection
+                        if (currentCampaignData && currentCampaignData.campaign_id.toString() === campaignId.toString()) { // Ensure comparison is robust
+                            currentCampaignData = null; // Clear current campaign
+                            renderCampaignList(); // Show campaign selection screen
+                        }
+
+                    } catch (error) {
+                        console.error('刪除投票活動時出錯:', error);
+                        alert(`刪除失敗：${error.message}`);
                     }
                 }
                 
