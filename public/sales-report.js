@@ -238,17 +238,16 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
         const trendData = summary.salesTrend.map(item => item.quantity);
     
         salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'line', // *** 改為折線圖 ***
+            type: 'bar', // *** 改回長條圖 ***
             data: {
                 labels: trendLabels,
                 datasets: [{
                     label: '每日銷售件數',
                     data: trendData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)', // 淡一點的背景色
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // 長條圖的標準背景色
                     borderColor: 'rgb(75, 192, 192)',
-                    borderWidth: 2, // 線條寬度
-                    tension: 0.1, // 輕微曲線
-                    fill: true // 填充線條下方區域
+                    borderWidth: 1
+                    // tension and fill are not typically used for bar charts
                 }]
             },
             options: {
