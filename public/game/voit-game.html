@@ -703,11 +703,19 @@
             function escapeHtml(unsafe) {
                 if (typeof unsafe !== 'string') return '';
                 return unsafe
-                     .replace(/&/g, "&")
-                     .replace(/</g, "<")
-                     .replace(/>/g, ">")
-                     .replace(/"/g, """) 
-                     .replace(/'/g, "&#039;");
+                  .replace(/&/g, '&amp;')
+        
+                // < 轉成 & l t ;
+                .replace(/</g, '&lt;')
+        
+                // > 轉成 & g t ;
+                .replace(/>/g, '&gt;')
+        
+                // " 轉成 & q u o t ;
+                .replace(/"/g, '&quot;')
+        
+                // ' 轉成 & # 3 9 ;  (數字實體)
+                .replace(/'/g, '&#39;');
             }
 
             if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
