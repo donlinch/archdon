@@ -85,7 +85,7 @@ voitRouter.post('/campaigns/:campaignId/vote', async (req, res) => {
             [campaignId, ipAddress, twentyFourHoursAgo]
         );
         if (existingVote.rows.length > 0) {
-            return res.status(429).json({ error: 'You have already voted for this campaign recently from this IP address.' });
+            return res.status(429).json({ error: '您最近已使用此 IP 位址對此活動投過票。' });
         }
         await pool.query(
             "INSERT INTO voit_Votes (campaign_id, option_id, ip_address) VALUES ($1, $2, $3)",

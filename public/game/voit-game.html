@@ -84,7 +84,7 @@
             border: 4px solid #3498db;
             box-shadow: 0 0 0 4px #3498db, 0 5px 15px rgba(0, 0, 0, 0.2); 
         }
-        .option-content { /* 用於圖片疊加文字或無圖片時顯示文字 */
+        .option-content { 
             position: absolute;
             bottom: 0;
             left: 0;
@@ -148,7 +148,7 @@
             width: 40px; 
             height: 1px; 
             margin-right: 10px; 
-            vertical-align: middle; /* 確保與文字對齊 */
+            vertical-align: middle; 
         }
         .progress-bar {
             height: 24px;
@@ -699,30 +699,80 @@
                 });
             }
 
+            // Helper function to escape HTML to prevent XSS
+            function escapeHtml(unsafe) {
+                if (typeof unsafe !== 'string') return '';
+                return unsafe
+                     .replace(/&/g, "&")
+                     .replace(/</g, "<")
+                     .replace(/>/g, ">")
+                     .replace(/"/g, """) 
+                     .replace(/'/g, "&#039;");
+            }
+
             if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
                 settingsFab.addEventListener('click', () => {
                     settingsDrawer.classList.add('open');
                     drawerOverlay.classList.add('active');
+                    showDefaultDrawerContent(); 
                 });
                 function closeDrawer() {
                     settingsDrawer.classList.remove('open');
                     drawerOverlay.classList.remove('active');
-                    showDefaultDrawerContent(); 
                 }
                 closeDrawerButton.addEventListener('click', closeDrawer);
                 drawerOverlay.addEventListener('click', closeDrawer);
 
-                function showDefaultDrawerContent() {
+                async function showDefaultDrawerContent() { 
                     if (!drawerContent) return; 
+                    
                     drawerContent.innerHTML = `
                         <ul id="drawer-item-list" class="drawer-item-list">
-                            <li><span>(此處將顯示現有投票活動列表)</span></li>
+                            <li>載入活動列表中...</li>
                         </ul>
                         <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
                     `;
                     const newDrawerButton = document.getElementById('drawer-add-new-button');
                     if (newDrawerButton) {
                         newDrawerButton.addEventListener('click', showAddNewCampaignForm);
+                    }
+
+                    const itemListUl = document.getElementById('drawer-item-list');
+                    if (!itemListUl) return;
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns`);
+                        if (!response.ok) throw new Error('無法獲取活動列表');
+                        const campaigns = await response.json();
+
+                        itemListUl.innerHTML = ''; 
+                        if (campaigns && campaigns.length > 0) {
+                            campaigns.forEach(campaign => {
+                                const listItem = document.createElement('li');
+                                listItem.innerHTML = `
+                                    <span>${escapeHtml(campaign.title)}</span>
+                                    <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}">編輯</button>
+                                `;
+                                itemListUl.appendChild(listItem);
+                                listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
+                            });
+                        } else {
+                            itemListUl.innerHTML = '<li>目前沒有可管理的投票活動。</li>';
+                        }
+                    } catch (error) {
+                        console.error("在抽屜中載入活動列表失敗:", error);
+                        itemListUl.innerHTML = '<li>載入活動列表失敗。</li>';
+                    }
+                }
+
+                function handleEditCampaignClick(event) {
+                    const campaignId = event.target.dataset.campaignId;
+                    const campaignTitle = event.target.previousElementSibling.textContent;
+                    console.log('請求編輯活動 ID:', campaignId, '標題:', campaignTitle);
+                    
+                    const password = prompt(`請輸入活動 "${escapeHtml(campaignTitle)}" 的編輯密碼 (4-6位):`);
+                    if (password !== null) { 
+                        alert(`您輸入了密碼: "${password}" (編輯功能待實現，密碼驗證和編輯表單將在此處處理)`);
                     }
                 }
 
