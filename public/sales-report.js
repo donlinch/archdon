@@ -44,8 +44,7 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
 
     let salesTrendChartInstance = null;
     let topProductsChartInstance = null;
-
-
+    let allSalesRecords = []; // <--- 1. 儲存詳細銷售數據的變數
 
 
     const fetchExistingProductNames = async () => {
@@ -135,6 +134,7 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
                 throw new Error(`獲取銷售數據失敗: ${response.statusText}`);
             }
             const sales = await response.json();
+            allSalesRecords = sales; // <--- 1. 填充詳細銷售數據
             renderSalesTable(sales);
         } catch (error) {
             console.error('獲取銷售數據時出錯:', error);
@@ -220,37 +220,74 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
              topProductsChartInstance = null;
          }
      };
-
-
-     const renderCharts = (summary) => {
-        // 明確銷毀舊圖表實例
-        if (salesTrendChartInstance) {
-            salesTrendChartInstance.destroy();
-            salesTrendChartInstance = null; // 確保完全清除
-        }
-        if (topProductsChartInstance) {
-            topProductsChartInstance.destroy();
-            topProductsChartInstance = null; // 確保完全清除
-        }
-    
-        // 1. 銷售趨勢圖 (改為折線圖)
-        const trendLabels = summary.salesTrend.map(item => item.date);
-        const trendData = summary.salesTrend.map(item => item.quantity);
-    
-        salesTrendChartInstance = new Chart(salesTrendChartCtx, {
-            type: 'bar', // *** 改回長條圖 ***
-            data: {
-                labels: trendLabels,
-                datasets: [{
-                    label: '每日銷售件數',
-                    data: trendData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // 長條圖的標準背景色
-                    borderColor: 'rgb(75, 192, 192)',
-                    borderWidth: 1
-                    // tension and fill are not typically used for bar charts
-                }]
-            },
-            options: {
+ 
+     // --- 2. 輔助函數：聚合每日商品詳情 ---
+     const getDetailedItemsForDate = (targetDateString, salesRecords) => {
+         if (!salesRecords || salesRecords.length === 0) {
+             return [];
+         }
+         const dailyItemsMap = new Map();
+         salesRecords.forEach(record => {
+             // 確保 record.sale_timestamp 是有效的日期時間字符串
+             if (record.sale_timestamp) {
+                 const recordDate = new Date(record.sale_timestamp).toISOString().split('T')[0];
+                 if (recordDate === targetDateString) {
+                     const productName = record.product_name;
+                     const quantity = parseInt(record.quantity_sold, 10);
+                     if (dailyItemsMap.has(productName)) {
+                         dailyItemsMap.set(productName, dailyItemsMap.get(productName) + quantity);
+                     } else {
+                         dailyItemsMap.set(productName, quantity);
+                     }
+                 }
+             }
+         });
+         // 轉換 Map 為期望的數組格式
+         const detailedItems = [];
+         dailyItemsMap.forEach((quantity, name) => {
+             detailedItems.push({ name: name, quantity: quantity });
+         });
+         return detailedItems.sort((a,b) => b.quantity - a.quantity); // 按數量降序排列
+     };
+ 
+      const renderCharts = (summary) => {
+         // 明確銷毀舊圖表實例
+         if (salesTrendChartInstance) {
+             salesTrendChartInstance.destroy();
+             salesTrendChartInstance = null; // 確保完全清除
+         }
+         if (topProductsChartInstance) {
+             topProductsChartInstance.destroy();
+             topProductsChartInstance = null; // 確保完全清除
+         }
+     
+         // --- 3. 修改 renderCharts ---
+         // 3.1 數據準備: 為 summary.salesTrend 的每個條目添加 detailedItems
+         const salesTrendWithDetails = summary.salesTrend.map(trendItem => {
+             return {
+                 date: trendItem.date, // X 軸的值
+                 quantity: trendItem.quantity, // Y 軸的值 (總量)
+                 detailedItems: getDetailedItemsForDate(trendItem.date, allSalesRecords) // 當日詳細銷售
+             };
+         });
+     
+         salesTrendChartInstance = new Chart(salesTrendChartCtx, {
+             type: 'bar',
+             data: {
+                 // labels 不再直接使用 trendLabels，因為 x 軸會從數據對象中解析
+                 datasets: [{
+                     label: '每日銷售件數',
+                     data: salesTrendWithDetails, // <--- 使用包含詳細資訊的數據
+                     backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                     borderColor: 'rgb(75, 192, 192)',
+                     borderWidth: 1
+                 }]
+             },
+             options: { // <--- 3.2 添加 parsing 配置
+                 parsing: {
+                     xAxisKey: 'date',
+                     yAxisKey: 'quantity'
+                 },
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { // 增強互動
@@ -261,9 +298,35 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
                     tooltip: {
                         callbacks: {
                             title: function(tooltipItems) {
-                                // 格式化工具提示的標題 (日期)
-                                const date = new Date(tooltipItems[0].parsed.x);
-                                return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+                                const dataPoint = tooltipItems[0].chart.data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].dataIndex];
+                                if (dataPoint && dataPoint.date) {
+                                    const date = new Date(dataPoint.date + 'T00:00:00'); // 確保解析為本地日期
+                                    return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+                                }
+                                return '';
+                            },
+                            label: function(tooltipItem) {
+                                // datasetLabel 是 '每日銷售件數', raw.quantity 是總數
+                                return `${tooltipItem.dataset.label}: ${tooltipItem.raw.quantity}`;
+                            },
+                            afterBody: function(tooltipItems) { // <--- 3.3 修改 afterBody 回調
+                                const tooltipItem = tooltipItems[0];
+                                const dataPoint = tooltipItem.chart.data.datasets[tooltipItem.datasetIndex].data[tooltipItem.dataIndex];
+                                if (dataPoint && dataPoint.detailedItems && dataPoint.detailedItems.length > 0) {
+                                    let productLines = ['']; // 加一個空行分隔
+                                    productLines.push('當日銷售商品:');
+                                    dataPoint.detailedItems.forEach(product => {
+                                        productLines.push(`  - ${escapeHtml(product.name)}: ${product.quantity} 件`);
+                                    });
+                                    // 限制顯示的商品數量，避免工具提示過長
+                                    const maxItemsToShow = 5;
+                                    if (productLines.length > maxItemsToShow + 2) { // +2 for separator and title
+                                        productLines = productLines.slice(0, maxItemsToShow + 2);
+                                        productLines.push('  ...等更多');
+                                    }
+                                    return productLines;
+                                }
+                                return [];
                             }
                         }
                     }
