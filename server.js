@@ -3616,15 +3616,18 @@ app.post('/api/guestbook/replies/:id/like', async (req, res) => {
 // --- 樂譜 API ---
 app.get('/api/scores/artists', async (req, res) => {
     try {
+        // 從新的 artists 表查詢，並只選擇那些其歌曲有關聯樂譜的歌手
         const queryText = `
-            SELECT DISTINCT m.artist
-            FROM music m
+            SELECT DISTINCT a.name
+            FROM artists a
+            JOIN music_artists ma ON a.id = ma.artist_id
+            JOIN music m ON ma.music_id = m.id
             JOIN scores s ON m.id = s.music_id
-            WHERE m.artist IS NOT NULL AND m.artist <> ''
-            ORDER BY m.artist ASC
+            WHERE a.name IS NOT NULL AND a.name <> ''
+            ORDER BY a.name ASC;
         `;
         const result = await pool.query(queryText);
-        const artists = result.rows.map(row => row.artist);
+        const artists = result.rows.map(row => row.name); // 返回歌手名稱的陣列
         res.json(artists);
     } catch (err) {
         console.error('獲取帶有樂譜的歌手時出錯:', err.stack || err);

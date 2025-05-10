@@ -450,44 +450,43 @@ async function fetchAndDisplayArtists() {
     artistDrawerContent.innerHTML = '<button class="artist-drawer-btn active">全部歌手</button><button class="artist-drawer-btn">載入中...</button>';
     
     try {
-        // 修改 API 路徑為 /api/scores/artists 與 scores.js 一致
-        const response = await fetch('/api/scores/artists');
+        // 修改 API 路徑為 /api/artists，這個端點返回 {id, name} 陣列
+        const response = await fetch('/api/artists');
         if (!response.ok) {
             throw new Error(`獲取歌手列表失敗 (HTTP ${response.status})`);
         }
 
-        const artists = await response.json();
+        const artistsData = await response.json(); // artistsData is now [{id, name}, ...]
         
-        // 清除現有按鈕
         artistDrawerContent.innerHTML = '';
 
-        // 全部歌手按鈕
         const allButton = document.createElement('button');
         allButton.textContent = '全部歌手';
         allButton.classList.add('artist-drawer-btn', 'active');
         allButton.addEventListener('click', () => {
             setActiveArtistButton(allButton);
             currentArtistFilter = null;
-            fetchAndDisplayAlbums(currentArtistFilter);
+            fetchAndDisplayAlbums(null); // 傳遞 null 或 'All' 以顯示全部
             closeDrawer();
         });
         artistDrawerContent.appendChild(allButton);
 
-        // 各歌手按鈕
-        artists.forEach(artist => {
+        artistsData.forEach(artistObj => { // 遍歷物件陣列
             const button = document.createElement('button');
-            button.textContent = artist;
+            button.textContent = artistObj.name; // 使用 artistObj.name
             button.classList.add('artist-drawer-btn');
+            // 可以考慮將 artistObj.id 存儲在 data-attribute 中，如果將來需要
+            // button.dataset.artistId = artistObj.id;
             button.addEventListener('click', () => {
                 setActiveArtistButton(button);
-                currentArtistFilter = artist;
+                currentArtistFilter = artistObj.name; // 篩選時仍使用歌手名稱
                 fetchAndDisplayAlbums(currentArtistFilter);
                 closeDrawer();
             });
             artistDrawerContent.appendChild(button);
         });
 
-        console.log("歌手列表加載成功：", artists);
+        console.log("歌手列表加載成功：", artistsData.map(a => a.name));
 
     } catch (error) {
         console.error("[Music] Fetch artists error:", error);
