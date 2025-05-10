@@ -1028,7 +1028,7 @@
                                 listItem.innerHTML = `
                                     <span>${escapeHtml(campaign.title)}</span>
                                     <div>
-                                        <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}">編輯</button>
+                                        <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">編輯</button>
                                         <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
                                     </div>
                                 `;
@@ -1047,9 +1047,9 @@
 
                 async function handleEditCampaignClick(event) { 
                     const campaignId = event.target.dataset.campaignId;
-                    const campaignTitle = event.target.previousElementSibling.textContent;
+                    const campaignTitle = event.target.dataset.campaignTitle; // 從 data attribute 獲取標題
                     
-                    const password = prompt(`請輸入活動 "${escapeHtml(campaignTitle)}" 的編輯密碼 (4-6位):`);
+                    const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位):`);
                     
                     if (password === null) { 
                         return;
