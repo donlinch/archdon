@@ -4,30 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>圖片投票遊戲</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
-            background-color: #f5f7fa;
+            font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: #fff5f7;
+            color: #333;
             margin: 0;
-            padding: 20px;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch; /* Changed from center to stretch for full-width header/footer */
             min-height: 100vh;
+            position: relative;
+            padding-bottom: 70px; /* Space for bottom nav */
+            overflow-x: hidden;
         }
         .container {
             max-width: 800px;
             width: 100%;
             background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 24px;
-            margin-bottom: 20px;
+            border-radius: 16px; /* Slightly larger radius */
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Softer shadow */
+            padding: 30px; /* Increased padding */
+            margin-bottom: 25px; /* Increased margin */
         }
-        h1 {
-            color: #2c3e50;
+        h1, #vote-title, .results h2, .drawer-header h2 { /* Unified heading styles */
+            color: #424242; /* Match page-title color */
             text-align: center;
             margin-bottom: 24px;
+            font-weight: 600; /* Slightly less bold than page-title */
+        }
+        #vote-title {
+            font-size: 1.6em; /* Specific size for vote title */
+        }
+        .results h2 {
+            font-size: 1.4em;
         }
         .options {
             display: grid;
@@ -38,21 +51,22 @@
         .option {
             position: relative;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 12px; /* Increased radius */
             overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            aspect-ratio: 1 / 1; 
-            background-color: #f8f9fa; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            transition: transform 0.3s, box-shadow 0.3s; /* Smoother transition */
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07); /* Softer shadow */
+            aspect-ratio: 1 / 1;
+            background-color: #fdfdfd; /* Lighter background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e0e0e0; /* Subtle border */
         }
         .option:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(-6px) scale(1.02); /* Enhanced hover effect */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); /* Enhanced shadow */
         }
-        .option .zoom-icon { 
+        .option .zoom-icon {
             position: absolute;
             top: 10px;
             right: 10px;
@@ -81,10 +95,10 @@
             max-height: 100%; 
         }
         .option.selected {
-            border: 4px solid #3498db;
-            box-shadow: 0 0 0 4px #3498db, 0 5px 15px rgba(0, 0, 0, 0.2); 
+            border: 3px solid #FFB74D; /* Theme color for selection */
+            box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.5), 0 6px 18px rgba(0, 0, 0, 0.15); /* Themed shadow */
         }
-        .option-content { 
+        .option-content {
             position: absolute;
             bottom: 0;
             left: 0;
@@ -96,37 +110,53 @@
             font-size: 1.1em;
             box-sizing: border-box;
         }
-        .button {
-            background-color: #3498db;
+        .button, #back-to-campaigns-button.moved-button { /* Unified button styles */
+            background-color: #FFB74D; /* Theme color */
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 6px;
+            padding: 12px 28px; /* Slightly more padding */
+            font-size: 1rem; /* Relative font size */
+            font-weight: 500;
+            border-radius: 25px; /* Rounded buttons */
             cursor: pointer;
-            transition: background-color 0.3s;
-            margin: 0 auto;
+            transition: all 0.3s;
+            margin: 10px auto; /* Consistent margin */
             display: block;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+            text-transform: uppercase; /* Optional: for a more "button" feel */
+            letter-spacing: 0.5px; /* Optional */
         }
-        .button:hover {
-            background-color: #2980b9;
+        .button:hover, #back-to-campaigns-button.moved-button:hover {
+            background-color: #ffa726; /* Darker theme color on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
         }
-        .button:disabled {
-            background-color: #bdc3c7;
+        .button:disabled, #back-to-campaigns-button.moved-button:disabled {
+            background-color: #E0E0E0; /* Lighter grey for disabled */
+            color: #9E9E9E;
             cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
+        #back-to-campaigns-button.moved-button {
+             background-color: #757575; /* Specific color for back button */
+        }
+        #back-to-campaigns-button.moved-button:hover {
+             background-color: #616161;
+             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
         .results {
             display: none; 
             width: 100%;
             margin-top: 30px;
         }
-        .results h2 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        /* .results h2 styling is now part of the unified h1, #vote-title, .results h2 rule */
         .result-item {
-            margin-bottom: 15px;
+            margin-bottom: 18px; /* Increased margin */
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
         }
         .result-label {
             display: flex;
@@ -151,43 +181,67 @@
             vertical-align: middle; 
         }
         .progress-bar {
-            height: 24px;
-            border-radius: 12px;
-            background-color: #eaeaea;
+            height: 28px; /* Slightly taller */
+            border-radius: 14px; /* Matching radius */
+            background-color: #e0e0e0; /* Lighter grey */
             overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* Inner shadow */
         }
         .progress {
             height: 100%;
-            background-color: #3498db;
+            background-color: #FFB74D; /* Theme color */
             width: 0;
             transition: width 1s ease-in-out;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
+            font-weight: 500; /* Adjusted weight */
             font-size: 0.9em;
         }
         .thank-you {
             text-align: center;
-            margin-top: 20px;
-            font-size: 18px;
-            color: #27ae60;
-            font-weight: bold;
-            display: none; 
+            margin-top: 25px; /* Increased margin */
+            font-size: 1.2em; /* Relative size */
+            color: #4CAF50; /* Softer green */
+            font-weight: 600;
+            display: none;
         }
-        .restart-button {
-            background-color: #2ecc71;
+        .restart-button { /* Will inherit .button styles, specific overrides here */
+            background-color: #4CAF50; /* Green for restart/again */
             margin-top: 20px;
         }
         .restart-button:hover {
-            background-color: #27ae60;
+            background-color: #43A047; /* Darker green */
         }
+        
+        #campaign-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+        #campaign-list li {
+            padding: 15px;
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            background-color: #fff;
+        }
+        #campaign-list li:hover {
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        #campaign-selection-area h1 { /* Already covered by unified h1 style */
+             margin-bottom: 20px;
+        }
+
 
         .lightbox {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 1011; /* Increased z-index */
             left: 0;
             top: 0;
             width: 100%;
@@ -238,35 +292,36 @@
 
         .settings-fab {
             position: fixed;
-            top: 20px;
+            top: 85px; /* Adjusted to be below fixed header */
             right: 20px;
             width: 50px;
             height: 50px;
-            background-color: #3498db;
+            background-color: #FFB74D; /* Theme color */
             color: white;
             border: none;
             border-radius: 50%;
             font-size: 24px;
-            line-height: 50px; 
+            line-height: 50px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.15); /* Softer shadow */
             cursor: pointer;
-            z-index: 1005; 
-            transition: background-color 0.3s;
+            z-index: 1005;
+            transition: background-color 0.3s, transform 0.3s;
         }
         .settings-fab:hover {
-            background-color: #2980b9;
+            background-color: #ffa726; /* Darker theme color */
+            transform: scale(1.1);
         }
 
         .drawer {
             position: fixed;
             top: 0;
-            right: -350px; 
+            right: -350px;
             width: 350px;
             height: 100%;
-            background-color: white;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1010; 
+            background-color: #ffffff; /* Ensure it's white */
+            box-shadow: -3px 0 15px rgba(0,0,0,0.12); /* Softer shadow */
+            z-index: 1010;
             transition: right 0.3s ease-in-out;
             padding: 20px;
             box-sizing: border-box;
@@ -274,9 +329,9 @@
             flex-direction: column;
         }
         .drawer.open {
-            right: 0; 
+            right: 0;
         }
-        .drawer-header {
+        .drawer-header { /* h2 style already unified */
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -328,9 +383,9 @@
             font-size: 0.9em;
         }
         .drawer-item-list .edit-item-button:hover {
-            background-color: #bdc3c7;
+            background-color: #dadada; /* Lighter hover */
         }
-        .drawer-add-new-button { 
+        .drawer-add-new-button { /* Will inherit .button styles */
             margin-top: 20px;
             width: 100%;
         }
@@ -348,9 +403,142 @@
         .drawer-overlay.active {
             display: block;
         }
+
+        /* --- Page Header --- */
+        .page-header {
+            background-color: #FFB74D;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999;
+            box-sizing: border-box; /* Ensure padding doesn't add to width/height */
+        }
+
+        .page-title {
+            color: #424242;
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        /* --- Footer --- */
+        .footer {
+            text-align: center;
+            /* margin-top: 30px; Removed, wrapper handles spacing */
+            padding: 15px;
+            font-size: 0.9rem;
+            color: #757575;
+            width: 100%;
+            background-color: #fff5f7;
+            box-sizing: border-box;
+        }
+
+        .footer a {
+            color: #2196f3;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            z-index: 1000;
+            padding: 5px 0;
+            box-sizing: border-box;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav li {
+            text-align: center;
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            text-decoration: none;
+            color: #777;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .bottom-nav a.active {
+            color: #FFB74D;
+            background-color: rgba(255, 183, 77, 0.1);
+            border-radius: 20px;
+            animation: pulseNav 2s infinite;
+        }
+
+        .bottom-nav .icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            margin-bottom: 3px;
+        }
+
+        @keyframes pulseNav {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .main-content-wrapper {
+            padding-top: 70px; /* Height of fixed header, adjust if needed */
+            /* padding-bottom is handled by body's padding-bottom for nav */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center content like .container */
+            flex-grow: 1;
+            box-sizing: border-box;
+            overflow-y: auto; /* Allow content to scroll if it exceeds viewport height */
+        }
+
+        .main-content-wrapper > .container {
+             margin-top: 20px;
+             margin-bottom: 20px;
+        }
+
+        #back-to-campaigns-button.moved-button {
+            margin: 0 auto 20px auto; /* Centered, with bottom margin */
+            display: block;
+        }
+        /* Adjust existing H1 if needed, or rely on .page-title */
+        .container > h1 {
+            /* Example: font-size: 1.6rem; color: #333; */
+            /* This might be removed if .page-title is sufficient */
+        }
+
     </style>
 </head>
 <body>
+    <header class="page-header">
+        <h1 class="page-title">圖片投票遊戲</h1>
+    </header>
+    <div class="main-content-wrapper">
     <button id="settings-fab" class="settings-fab">⚙️</button>
 
     <div id="settings-drawer" class="drawer">
@@ -375,7 +563,6 @@
         </div>
 
         <div id="vote-area" style="display: none;">
-            <button id="back-to-campaigns-button" class="button" style="margin-bottom: 15px; background-color: #7f8c8d;">返回活動列表</button>
             <h1 id="vote-title"></h1>
             <div class="options">
             </div>
@@ -387,7 +574,9 @@
             <div class="thank-you">感謝您的投票！</div>
             <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
         </div>
-    </div>
+    </div> <!-- .container ends -->
+    <button id="back-to-campaigns-button" class="button moved-button" style="background-color: #7f8c8d;">返回活動列表</button>
+    </div> <!-- .main-content-wrapper ends -->
 
     <div id="myLightbox" class="lightbox">
         <span class="lightbox-close">&times;</span>
@@ -1059,5 +1248,18 @@
             renderCampaignList(); 
         });
     </script>
+    <footer class="footer">
+        <p>© 2025 SunnyYummy. All rights reserved.</p>
+    </footer>
+    <nav class="bottom-nav">
+        <ul>
+            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+        </ul>
+    </nav>
 </body>
 </html>
