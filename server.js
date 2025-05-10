@@ -4204,6 +4204,7 @@ app.get('/api/music', async (req, res) => {
     let queryText = `
         SELECT
             m.id, m.title, m.cover_art_url, m.platform_url, m.release_date, m.description, m.youtube_video_id,
+            m.created_at, m.updated_at,
             COALESCE(
                 (SELECT json_agg(json_build_object('id', a.id, 'name', a.name) ORDER BY a.name ASC)
                  FROM artists a
@@ -4220,20 +4221,17 @@ app.get('/api/music', async (req, res) => {
         FROM music m
     `;
     const queryParams = [];
-    let paramIndex = 1;
-
+    
     if (artistNameFilter && artistNameFilter !== 'All') {
-        // 如果有歌手名稱篩選，需要 JOIN artists 表並在 WHERE 子句中篩選
-        // 這會讓查詢稍微複雜，因為我們需要確保即使篩選了，其他歌曲的 artists 陣列也能正確聚合
-        // 一個簡化的方法是先獲取所有歌曲及其藝術家，然後在應用層篩選，或者使用子查詢/CTE
-        // 為了簡化，這裡先獲取所有，前端的篩選邏輯已經存在
-        // 如果需要後端篩選，可以這樣：
-        // queryText += ` JOIN music_artists ma_filter ON ma_filter.music_id = m.id
-        //                JOIN artists a_filter ON a_filter.id = ma_filter.artist_id AND a_filter.name = $${paramIndex++}`;
-        // queryParams.push(decodeURIComponent(artistNameFilter));
-        // 但這會只返回該歌手的歌曲，而不是所有歌曲列表。
-        // 保持原樣，讓前端處理基於完整列表的篩選，或者前端在請求時不傳 artist 參數，總是獲取全部。
-        // 根據前端 music-admin.js 的 fetchAndDisplayMusic，它會獲取全部然後在客戶端篩選。
+        queryText += `
+        WHERE EXISTS (
+            SELECT 1
+            FROM music_artists ma_filter
+            JOIN artists a_filter ON ma_filter.artist_id = a_filter.id
+            WHERE ma_filter.music_id = m.id AND a_filter.name = $1
+        )
+        `;
+        queryParams.push(decodeURIComponent(artistNameFilter));
     }
 
     queryText += ' ORDER BY m.release_date DESC NULLS LAST, m.title ASC';

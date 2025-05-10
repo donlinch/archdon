@@ -569,7 +569,11 @@ async function fetchAndDisplayArtists() {
                 // 歌手名稱 - 放在 cover-image 裡
                 const artistElem = document.createElement('p');
                 artistElem.className = 'artist';
-                artistElem.textContent = music.artist || '未知歌手';
+                // 修改以處理 music.artists 陣列
+                const artistsDisplay = music.artists && music.artists.length > 0
+                    ? music.artists.map(a => a.name).join(', ')
+                    : '未知歌手';
+                artistElem.textContent = artistsDisplay;
                 coverDiv.appendChild(artistElem);
                 
                 // 專輯資訊
