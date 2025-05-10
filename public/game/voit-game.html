@@ -661,10 +661,153 @@
                 function closeDrawer() {
                     settingsDrawer.classList.remove('open');
                     drawerOverlay.classList.remove('active');
+                    showDefaultDrawerContent(); // 調用以恢復預設視圖並重綁事件
                 }
                 closeDrawerButton.addEventListener('click', closeDrawer);
                 drawerOverlay.addEventListener('click', closeDrawer);
-            }
+
+                // 顯示抽屜預設內容 (項目列表和新增按鈕)
+                function showDefaultDrawerContent() {
+                    if (!drawerContent) return;
+                    drawerContent.innerHTML = `
+                        <ul id="drawer-item-list" class="drawer-item-list">
+                            <li><span>(此處將顯示現有投票活動列表)</span></li>
+                            <!-- 實際項目將由JS從API獲取並渲染 -->
+                        </ul>
+                        <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
+                    `;
+                    const newDrawerButton = document.getElementById('drawer-add-new-button');
+                    if (newDrawerButton) {
+                        newDrawerButton.addEventListener('click', showAddNewCampaignForm);
+                    }
+                    // TODO: 將來這裡可以加入渲染現有活動列表的邏輯 (從API獲取)
+                    // 例如: renderExistingCampaignsInDrawer();
+                }
+
+                // 點擊 "新增投票活動" 按鈕的處理
+                function showAddNewCampaignForm() {
+                    if (!drawerContent) return;
+                    drawerContent.innerHTML = `
+                        <h3>新增投票活動</h3>
+                        <form id="add-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div>
+                                <label for="new-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
+                                <input type="text" id="new-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label for="new-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
+                                <textarea id="new-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;"></textarea>
+                            </div>
+                            <div>
+                                <label for="new-campaign-password" style="display: block; margin-bottom: 5px;">編輯密碼 (4-6位):</label>
+                                <input type="password" id="new-campaign-password" name="edit_password" required minlength="4" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                            </div>
+                            <h4>投票選項 (至少1個)</h4>
+                            <div id="new-campaign-options-container">
+                                <div class="campaign-option-input-group" style="margin-bottom:10px; padding-bottom:10px; border-bottom: 1px dashed #ccc;">
+                                    <label style="display:block; margin-bottom:3px;">選項 1 名稱:</label>
+                                    <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                                    <label style="display:block; margin-bottom:3px;">選項 1 圖片URL:</label>
+                                    <input type="url" name="option_image_url[]" placeholder="圖片URL" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                </div>
+                            </div>
+                            <button type="button" id="add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
+                            <hr style="margin: 15px 0;">
+                            <button type="submit" class="button">創建活動</button>
+                            <button type="button" id="cancel-add-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消</button>
+                        </form>
+                    `;
+
+                    document.getElementById('cancel-add-campaign').addEventListener('click', showDefaultDrawerContent);
+                    document.getElementById('add-another-option-button').addEventListener('click', addCampaignOptionInput);
+                    document.getElementById('add-campaign-form').addEventListener('submit', handleAddNewCampaignSubmit);
+                }
+
+                function addCampaignOptionInput() {
+                    const container = document.getElementById('new-campaign-options-container');
+                    const optionCount = container.querySelectorAll('.campaign-option-input-group').length + 1;
+                    const newInputGroup = document.createElement('div');
+                    newInputGroup.className = 'campaign-option-input-group';
+                    newInputGroup.style.marginBottom = '10px';
+                    newInputGroup.style.paddingBottom = '10px';
+                    newInputGroup.style.borderBottom = '1px dashed #ccc';
+                    
+                    newInputGroup.innerHTML = `
+                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 名稱:</label>
+                        <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 圖片URL:</label>
+                        <input type="url" name="option_image_url[]" placeholder="圖片URL" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                        <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
+                    `;
+                    newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
+                        this.parentElement.remove();
+                    });
+                    container.appendChild(newInputGroup);
+                }
+
+                async function handleAddNewCampaignSubmit(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = '創建中...';
+
+                    const title = form.title.value;
+                    const description = form.description.value;
+                    const edit_password = form.edit_password.value;
+                    
+                    const optionNames = Array.from(form.querySelectorAll('input[name="option_name[]"]')).map(input => input.value.trim());
+                    const optionImageUrls = Array.from(form.querySelectorAll('input[name="option_image_url[]"]')).map(input => input.value.trim());
+
+                    const options = optionNames.map((name, index) => ({
+                        name: name,
+                        image_url: optionImageUrls[index]
+                    })).filter(opt => opt.name && opt.image_url);
+
+                    if (options.length === 0) {
+                        alert('請至少填寫一個完整的投票選項（名稱和圖片URL）。');
+                        submitButton.disabled = false;
+                        submitButton.textContent = '創建活動';
+                        return;
+                    }
+                     if (edit_password.length < 4 || edit_password.length > 6) {
+                        alert('編輯密碼必須是4到6位。');
+                        submitButton.disabled = false;
+                        submitButton.textContent = '創建活動';
+                        return;
+                    }
+
+                    const campaignData = { title, description, edit_password, options };
+                    
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(campaignData)
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: '創建失敗，請檢查輸入或伺服器日誌。' }));
+                            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                        }
+                        alert('投票活動創建成功！');
+                        closeDrawer();
+                        renderCampaignList();
+                    } catch (error) {
+                        console.error("創建投票活動失敗:", error);
+                        alert(`創建失敗：${error.message}`);
+                    } finally {
+                        if (form.querySelector('button[type="submit"]')) {
+                           form.querySelector('button[type="submit"]').disabled = false;
+                           form.querySelector('button[type="submit"]').textContent = '創建活動';
+                        }
+                    }
+                }
+
+                // 初始綁定新增按鈕事件
+                if(drawerAddNewButton) {
+                   drawerAddNewButton.addEventListener('click', showAddNewCampaignForm);
+                }
+            } // <-- This is the closing brace for: if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay)
             
             renderCampaignList(); // 初始渲染活動列表
         });
