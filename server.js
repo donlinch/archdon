@@ -272,6 +272,61 @@ voitRouter.post('/campaigns', async (req, res) => {
         client.release();
     }
 });
+
+// DELETE /api/voit/campaigns/:campaignId - 刪除投票活動及其相關數據
+voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
+    const { campaignId } = req.params;
+
+    // 基本的 ID 驗證 (例如，檢查是否為數字或有效的 UUID 格式，取決於您的 campaign_id 類型)
+    // 假設 campaign_id 是數字類型
+    const id = parseInt(campaignId, 10);
+    if (isNaN(id)) {
+        return res.status(400).json({ error: '無效的活動 ID 格式。' });
+    }
+
+    console.log(`[API DELETE /voit/campaigns] 請求刪除活動 ID: ${id}`);
+    // 注意：此處未直接處理密碼驗證，依賴前端在調用此端點前已通過 /verify-password 驗證。
+    // 更安全的做法是在此 DELETE 請求中也包含密碼或一個有時效性的 token。
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 刪除相關的投票記錄 (voit_Votes)
+        // 由於 voit_Votes 中的 option_id 外鍵關聯到 voit_Options, 且 voit_Options 中的 campaign_id 外鍵關聯到 voit_Campaigns,
+        // 並且這些外鍵可能設置了 ON DELETE CASCADE，理論上直接刪除 voit_Campaigns 中的記錄會級聯刪除相關的 voit_Options 和 voit_Votes。
+        // 但為了明確和安全，以及如果沒有設定級聯刪除，我們按順序刪除。
+        // 首先刪除依賴性最強的 voit_Votes。
+        const deleteVotesResult = await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [id]);
+        console.log(`[DB] 從 voit_Votes 刪除了 ${deleteVotesResult.rowCount} 條與活動 ID ${id} 相關的投票記錄。`);
+
+        // 2. 刪除相關的投票選項 (voit_Options)
+        const deleteOptionsResult = await client.query("DELETE FROM voit_Options WHERE campaign_id = $1", [id]);
+        console.log(`[DB] 從 voit_Options 刪除了 ${deleteOptionsResult.rowCount} 條與活動 ID ${id} 相關的選項記錄。`);
+
+        // 3. 刪除投票活動本身 (voit_Campaigns)
+        const deleteCampaignResult = await client.query("DELETE FROM voit_Campaigns WHERE campaign_id = $1", [id]);
+        
+        if (deleteCampaignResult.rowCount === 0) {
+            // 如果活動本身就找不到，可能已經被刪除，或者ID錯誤
+            await client.query('ROLLBACK');
+            console.warn(`[API DELETE /voit/campaigns] 找不到要刪除的活動 ID: ${id}。事務已回滾。`);
+            return res.status(404).json({ error: '找不到要刪除的投票活動。' });
+        }
+        console.log(`[DB] 從 voit_Campaigns 成功刪除了活動 ID: ${id}。`);
+
+        await client.query('COMMIT');
+        console.log(`[API DELETE /voit/campaigns] 活動 ID: ${id} 及其相關數據已成功刪除。事務已提交。`);
+        res.status(204).send(); // No Content, 表示成功刪除
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[API DELETE /voit/campaigns] 刪除活動 ID ${id} 時發生錯誤:`, err.stack || err);
+        res.status(500).json({ error: '刪除投票活動失敗。', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
 // --- END OF Voit Router Definitions ---
 
 
