@@ -308,11 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
     addFigureBtn.addEventListener('click', openAddModal);
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
-    window.addEventListener('click', (event) => { // 點擊 modal 外部關閉
-        if (event.target == modal) {
-            closeModal();
-        }
-    });
     figureForm.addEventListener('submit', saveFigure);
     addVariationBtn.addEventListener('click', () => addVariationInput()); // 點擊按鈕新增一組規格欄位
 

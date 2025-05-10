@@ -247,14 +247,6 @@ window.deleteProduct = async function(id) {
         addModal.style.display = 'flex';
     }
 
-    // --- Close Modals if User Clicks Outside of Modal Content ---
-    window.onclick = function(event) { 
-        if (event.target == editModal) { 
-            closeModal(); 
-        } else if (event.target == addModal) { 
-            closeAddModal(); 
-        } 
-    }
 
     // --- Edit Form Submission Listener ---
     if (editForm) {
