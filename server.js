@@ -4412,17 +4412,17 @@ app.post('/api/music', async (req, res) => {
         if (err.code === '23502') {
             const columnName = err.column || (err.message && err.message.match(/column "([^"]+)"/) ? err.message.match(/column "([^"]+)"/)[1] : '未知欄位');
             const tableName = err.table || '未知表';
-            let userFriendlyMessage = `欄位 "${columnName}" (來自表: ${tableName}) 為必填項。`;
+            let userFriendlyMessage = `欄位 "${columnName}" (在表 "${tableName}" 中) 為必填項。`;
 
-            // 針對已知情況提供更友好的訊息
-            if (columnName === 'release_date' && tableName === 'music') {
+            if (columnName === 'artist' && tableName === 'music') {
+                userFriendlyMessage = `資料庫 music 表中的 "artist" 欄位設定為必填，但目前新增邏輯已改用 "music_artists" 關聯表處理歌手。請檢查 music 表的結構定義，考慮將 "artist" 欄位設為允許 NULL，或如果不再需要則將其移除。`;
+            } else if (columnName === 'release_date' && tableName === 'music') {
                 userFriendlyMessage = '發行日期為必填項，請提供有效的日期。';
             } else if (columnName === 'name' && tableName === 'artists') {
                 userFriendlyMessage = '歌手名稱為必填項，請確保已正確輸入。';
             } else if (columnName === 'title' && tableName === 'music') {
                 userFriendlyMessage = '專輯標題為必填項。';
             }
-            // 如果 columnName 仍然是 'artist'，這裡會顯示 "欄位 "artist" (來自表: X) 為必填項。"
             return res.status(400).json({ error: userFriendlyMessage });
         }
         // SQLSTATE '23505' for unique_violation
