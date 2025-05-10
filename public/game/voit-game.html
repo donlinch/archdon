@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片投票遊戲</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .option {
+            position: relative;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            aspect-ratio: 1 / 1; /* 維持正方形比例 */
+            background-color: #f8f9fa; /* 圖片非正方形時的背景 */
+            display: flex; /* 使內部 img 可以更好地居中 */
+            align-items: center; /* 垂直居中 img */
+            justify-content: center; /* 水平居中 img */
+        }
+        .option:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .option .zoom-icon { /* 放大鏡圖示樣式 */
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 10; /* 確保在圖片之上 */
+        }
+        .option:hover .zoom-icon {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .option img {
+            width: 100%;
+            height: 100%; /* 讓圖片填滿父容器的高度 */
+            object-fit: contain; /* 完整顯示圖片，不裁切 */
+            display: block;
+            max-width: 100%; /* 確保圖片不會超出容器寬度 */
+            max-height: 100%; /* 確保圖片不會超出容器高度 */
+        }
+        .option.selected {
+            border: 4px solid #3498db;
+            box-shadow: 0 0 0 4px #3498db, 0 5px 15px rgba(0, 0, 0, 0.2); /* 讓邊框更明顯 */
+        }
+        .option-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 0 auto;
+            display: block;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .results {
+            display: none; /* 初始隱藏 */
+            width: 100%;
+            margin-top: 30px;
+        }
+        .results h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .result-item {
+            margin-bottom: 15px;
+        }
+        .result-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* 新增：垂直居中對齊 */
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+        .result-item-image { /* 新增：結果項目圖片樣式 */
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .progress-bar {
+            height: 24px;
+            border-radius: 12px;
+            background-color: #eaeaea;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #3498db;
+            width: 0;
+            transition: width 1s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .thank-you {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #27ae60;
+            font-weight: bold;
+            display: none; /* 初始隱藏 */
+        }
+        .restart-button {
+            background-color: #2ecc71;
+            margin-top: 20px;
+        }
+        .restart-button:hover {
+            background-color: #27ae60;
+        }
+
+        /* Lightbox 樣式 */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox-content {
+            position: relative;
+            margin: auto;
+            padding: 0;
+            max-width: 95vw; /* 增加視窗寬度的最大佔比 */
+            max-height: 95vh; /* 增加視窗高度的最大佔比 */
+        }
+        .lightbox-content img {
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            margin: auto;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .lightbox-close:hover,
+        .lightbox-close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 響應式設計：單欄 */
+        @media (max-width: 600px) {
+            .options {
+                grid-template-columns: repeat(2, 1fr); /* 手機上也維持一排兩個 */
+                gap: 10px; /* 縮小手機上的間距 */
+            }
+            /* .option img 的高度將由 aspect-ratio 控制，此處無需特別設定 height */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>請為您喜愛的圖片投票</h1>
+        <div class="options">
+            <div class="option" data-id="1" data-name="可愛狗狗">
+                <span class="zoom-icon">&#128269;</span>
+                <img src="https://sunnyyummy.onrender.com/uploads/1746881741747-83046.jpeg" alt="可愛狗狗">
+                <div class="option-content">可愛狗狗</div>
+            </div>
+            <div class="option" data-id="2" data-name="美味蛋糕">
+                <span class="zoom-icon">&#128269;</span>
+                <img src="https://sunnyyummy.onrender.com/uploads/1746881736596-62020.jpeg" alt="美味蛋糕">
+                <div class="option-content">美味蛋糕</div>
+            </div>
+            <div class="option" data-id="3" data-name="創意甜點">
+                <span class="zoom-icon">&#128269;</span>
+                <img src="https://sunnyyummy.onrender.com/uploads/1746881731587-82055.jpeg" alt="創意甜點">
+                <div class="option-content">創意甜點</div>
+            </div>
+            <div class="option" data-id="4" data-name="精緻小點">
+                <span class="zoom-icon">&#128269;</span>
+                <img src="https://sunnyyummy.onrender.com/uploads/1746881726144-71847.jpeg" alt="精緻小點">
+                <div class="option-content">精緻小點</div>
+            </div>
+        </div>
+        <button id="vote-button" class="button" disabled>投票</button>
+        
+        <div class="results">
+            <h2>投票結果</h2>
+            <!-- 結果項目會由 JavaScript 動態生成或更新 -->
+        </div>
+        <div class="thank-you">感謝您的投票！</div>
+        <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
+    </div>
+
+    <!-- Lightbox HTML 結構 -->
+    <div id="myLightbox" class="lightbox">
+        <span class="lightbox-close">&times;</span>
+        <div class="lightbox-content">
+            <img id="lightboxImg" src="#" alt="Lightbox Image">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const optionsContainer = document.querySelector('.options');
+            const voteButton = document.getElementById('vote-button');
+            const resultsDiv = document.querySelector('.results');
+            const thankYouMessage = document.querySelector('.thank-you');
+            const restartButton = document.getElementById('restart-button');
+            const lightbox = document.getElementById('myLightbox');
+            const lightboxImg = document.getElementById('lightboxImg');
+            const closeLightboxButton = document.querySelector('.lightbox-close');
+            
+            let selectedOptionId = null;
+            const optionElements = document.querySelectorAll('.option');
+
+            // 初始投票數據 (可以從0開始，或像你原本一樣有初始值)
+            const votes = {
+                '1': 0, // 可愛狗狗
+                '2': 0, // 美味蛋糕
+                '3': 0, // 創意甜點
+                '4': 0  // 精緻小點
+            };
+            // 如果你希望有初始票數，可以像這樣設定：
+            // const votes = { '1': 42, '2': 28, '3': 67, '4': 53 };
+
+
+            // 初始化結果區域的 HTML 結構
+            function initializeResultsStructure() {
+                resultsDiv.innerHTML = '<h2>投票結果</h2>'; // 清空並重新加入標題
+                optionElements.forEach(option => {
+                    const optionId = option.getAttribute('data-id');
+                    const optionName = option.getAttribute('data-name');
+                    const optionImageSrc = option.querySelector('img').src; // 新增：獲取圖片來源
+                    const resultItemHTML = `
+                        <div class="result-item" data-result-id="${optionId}">
+                            <div class="result-label">
+                                <div> <!-- 新增：用於圖片和文字的容器 -->
+                                    <img src="${optionImageSrc}" alt="${optionName}" class="result-item-image">
+                                    <span>${optionName}</span>
+                                </div>
+                                <span class="percentage">0% (0票)</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" id="progress-${optionId}">0%</div>
+                            </div>
+                        </div>
+                    `;
+                    resultsDiv.insertAdjacentHTML('beforeend', resultItemHTML);
+                });
+            }
+            initializeResultsStructure(); // 頁面載入時初始化結果區塊
+
+            // 點擊選項
+            optionElements.forEach(option => {
+                option.addEventListener('click', function() {
+                    if (voteButton.style.display === 'none') return; // 如果已投票，則不允許再選
+
+                    // 處理選項選擇的邏輯
+                    optionElements.forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedOptionId = this.getAttribute('data-id');
+                    voteButton.disabled = false;
+                });
+
+                // Lightbox: 點擊放大鏡圖示或圖片本身
+                const zoomIcon = option.querySelector('.zoom-icon');
+                const imgElement = option.querySelector('img');
+                const optionContent = option.querySelector('.option-content');
+
+                // 預設隱藏文字標題，圖片載入成功後再次確認隱藏，失敗則顯示
+                if (optionContent) {
+                    optionContent.style.display = 'none'; // 先隱藏
+                }
+
+                if (imgElement) {
+                    imgElement.onload = () => {
+                        if (optionContent) {
+                            optionContent.style.display = 'none'; // 圖片成功載入，隱藏文字
+                        }
+                    };
+                    imgElement.onerror = () => {
+                        if (optionContent) {
+                            optionContent.style.display = 'block'; // 圖片載入失敗，顯示文字
+                        }
+                    };
+                    // 如果圖片已經快取，onload 可能不會觸發，所以檢查 complete 屬性
+                    if (imgElement.complete && imgElement.naturalHeight !== 0) {
+                         if (optionContent) {
+                            optionContent.style.display = 'none';
+                        }
+                    } else if (imgElement.complete && imgElement.naturalHeight === 0) {
+                        // 圖片已完成載入但載入失敗 (例如 src 不正確)
+                        if (optionContent) {
+                            optionContent.style.display = 'block';
+                        }
+                    }
+                }
+
+
+                function openLightbox(event) {
+                    event.stopPropagation(); // 防止觸發父元素(.option)的點擊事件 (選擇選項)
+                    if (imgElement) {
+                        lightboxImg.src = imgElement.src;
+                        lightbox.style.display = 'flex'; // 改為 flex 以便居中
+                    }
+                }
+
+                if (zoomIcon) {
+                    zoomIcon.addEventListener('click', openLightbox);
+                }
+                if (imgElement) {
+                    // imgElement.addEventListener('click', openLightbox); // 將此行註解，恢復點擊圖片為選擇項目
+                }
+
+            });
+            
+            // 關閉 Lightbox
+            if (closeLightboxButton) {
+                closeLightboxButton.addEventListener('click', () => {
+                    lightbox.style.display = 'none';
+                });
+            }
+            // 點擊 Lightbox 背景關閉
+            if (lightbox) {
+                lightbox.addEventListener('click', (event) => {
+                    if (event.target === lightbox) { // 確保點擊的是背景本身，而不是圖片
+                        lightbox.style.display = 'none';
+                    }
+                });
+            }
+
+            // 點擊投票按鈕
+            voteButton.addEventListener('click', function() {
+                if (selectedOptionId) {
+                    votes[selectedOptionId]++;
+                    
+                    optionsContainer.style.display = 'none'; // 隱藏選項區
+                    voteButton.style.display = 'none';      // 隱藏投票按鈕
+                    resultsDiv.style.display = 'block';     // 顯示結果區
+                    thankYouMessage.style.display = 'block';// 顯示感謝訊息
+                    restartButton.style.display = 'block';  // 顯示重新投票按鈕
+                    
+                    showResults();
+                }
+            });
+            
+            // 顯示投票結果
+            function showResults() {
+                const totalVotes = Object.values(votes).reduce((a, b) => a + b, 0);
+                
+                optionElements.forEach((option, index) => {
+                    const optionId = option.getAttribute('data-id');
+                    const currentVotes = votes[optionId];
+                    const percentage = totalVotes > 0 ? ((currentVotes / totalVotes) * 100) : 0;
+                    
+                    const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${optionId}"]`);
+                    if (resultItem) {
+                        const progressBar = resultItem.querySelector(`#progress-${optionId}`);
+                        const percentageSpan = resultItem.querySelector('.percentage');
+                        
+                        // 設置進度條寬度和文字
+                        setTimeout(() => {
+                            progressBar.style.width = `${percentage.toFixed(1)}%`;
+                            progressBar.textContent = `${percentage.toFixed(1)}%`;
+                            percentageSpan.textContent = `${percentage.toFixed(1)}% (${currentVotes}票)`;
+                        }, 100 * (index + 1)); // 依次顯示進度條動畫
+                    }
+                });
+            }
+            
+            // 重新投票
+            restartButton.addEventListener('click', function() {
+                selectedOptionId = null;
+                optionElements.forEach(o => o.classList.remove('selected'));
+                
+                optionsContainer.style.display = 'grid'; // 顯示選項區 (grid 是你原本的設定)
+                voteButton.style.display = 'block';      // 顯示投票按鈕
+                voteButton.disabled = true;              // 禁用投票按鈕直到選擇
+                resultsDiv.style.display = 'none';       // 隱藏結果區
+                thankYouMessage.style.display = 'none';  // 隱藏感謝訊息
+                restartButton.style.display = 'none';    // 隱藏重新投票按鈕
+
+                // (可選) 重置進度條視覺，但票數仍會累計，除非重置 votes 物件
+                // 如果要完全重置票數，則取消下一行的註解：
+                // Object.keys(votes).forEach(key => { votes[key] = 0; });
+                // initializeResultsStructure(); // 重新繪製結果區域以清空舊百分比
+                // showResults(); // 如果票數歸零，也應更新顯示
+            });
+        });
+    </script>
+</body>
+</html>
