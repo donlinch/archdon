@@ -37,14 +37,32 @@ voitRouter.get('/campaigns', async (req, res) => {
 // GET /api/voit/campaigns/:campaignId - 獲取特定投票活動的詳細信息及其選項
 voitRouter.get('/campaigns/:campaignId', async (req, res) => {
     const { campaignId } = req.params;
+    const ipAddress = req.ip || req.socket.remoteAddress || req.headers['x-forwarded-for']?.split(',').shift();
+
     try {
         const campaignResult = await pool.query("SELECT campaign_id, title, description, status FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
         if (campaignResult.rows.length === 0) {
             return res.status(404).json({ error: 'Campaign not found' });
         }
         const campaign = campaignResult.rows[0];
+        
         const optionsResult = await pool.query("SELECT option_id, name, image_url, display_order FROM voit_Options WHERE campaign_id = $1 ORDER BY display_order ASC, name ASC", [campaignId]);
         campaign.options = optionsResult.rows;
+
+        // 檢查當前 IP 是否已投票
+        let currentUserHasVoted = false;
+        if (ipAddress) {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const existingVote = await pool.query(
+                "SELECT vote_id FROM voit_Votes WHERE campaign_id = $1 AND ip_address = $2 AND voted_at > $3",
+                [campaignId, ipAddress, twentyFourHoursAgo]
+            );
+            if (existingVote.rows.length > 0) {
+                currentUserHasVoted = true;
+            }
+        }
+        campaign.currentUserHasVoted = currentUserHasVoted;
+
         res.status(200).json(campaign);
     } catch (err) {
         console.error(`Error fetching campaign ${campaignId}:`, err.stack || err);
@@ -117,8 +135,8 @@ voitRouter.post('/campaigns', async (req, res) => {
         return res.status(400).json({ error: 'At least one option is required.' });
     }
     for (const opt of options) {
-        if (!opt.name || opt.name.trim() === '' || !opt.image_url || opt.image_url.trim() === '') {
-            return res.status(400).json({ error: 'All options must have a name and an image_url.' });
+        if (!opt.name || opt.name.trim() === '') { // 移除了對 image_url 的強制要求
+            return res.status(400).json({ error: 'All options must have a name.' });
         }
     }
 
@@ -141,7 +159,7 @@ voitRouter.post('/campaigns', async (req, res) => {
             const opt = options[i];
             const optionResult = await client.query(
                 "INSERT INTO voit_Options (campaign_id, name, image_url, display_order) VALUES ($1, $2, $3, $4) RETURNING option_id, name, image_url, display_order",
-                [campaignId, opt.name.trim(), opt.image_url.trim(), i]
+                [campaignId, opt.name.trim(), opt.image_url ? opt.image_url.trim() : null, i] // 如果 image_url 為空則存儲 NULL
             );
             insertedOptions.push(optionResult.rows[0]);
         }

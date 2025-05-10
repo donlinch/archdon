@@ -44,15 +44,15 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             aspect-ratio: 1 / 1; /* 維持正方形比例 */
             background-color: #f8f9fa; /* 圖片非正方形時的背景 */
-            display: flex; /* 使內部 img 可以更好地居中 */
-            align-items: center; /* 垂直居中 img */
-            justify-content: center; /* 水平居中 img */
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
         }
         .option:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
-        .option .zoom-icon { /* 放大鏡圖示樣式 */
+        .option .zoom-icon { 
             position: absolute;
             top: 10px;
             right: 10px;
@@ -67,22 +67,22 @@
             font-size: 16px;
             cursor: pointer;
             transition: background-color 0.2s;
-            z-index: 10; /* 確保在圖片之上 */
+            z-index: 10; 
         }
         .option:hover .zoom-icon {
             background-color: rgba(0, 0, 0, 0.8);
         }
         .option img {
             width: 100%;
-            height: 100%; /* 讓圖片填滿父容器的高度 */
-            object-fit: contain; /* 完整顯示圖片，不裁切 */
+            height: 100%; 
+            object-fit: contain; 
             display: block;
-            max-width: 100%; /* 確保圖片不會超出容器寬度 */
-            max-height: 100%; /* 確保圖片不會超出容器高度 */
+            max-width: 100%; 
+            max-height: 100%; 
         }
         .option.selected {
             border: 4px solid #3498db;
-            box-shadow: 0 0 0 4px #3498db, 0 5px 15px rgba(0, 0, 0, 0.2); /* 讓邊框更明顯 */
+            box-shadow: 0 0 0 4px #3498db, 0 5px 15px rgba(0, 0, 0, 0.2); 
         }
         .option-content {
             position: absolute;
@@ -115,7 +115,7 @@
             cursor: not-allowed;
         }
         .results {
-            display: none; /* 初始隱藏 */
+            display: none; 
             width: 100%;
             margin-top: 30px;
         }
@@ -130,16 +130,23 @@
         .result-label {
             display: flex;
             justify-content: space-between;
-            align-items: center; /* 新增：垂直居中對齊 */
+            align-items: center; 
             margin-bottom: 5px;
             font-size: 1.1em;
         }
-        .result-item-image { /* 新增：結果項目圖片樣式 */
+        .result-item-image {
             width: 40px;
             height: 40px;
             object-fit: cover;
             border-radius: 4px;
             margin-right: 10px;
+            vertical-align: middle;
+        }
+        .result-item-no-image { 
+            display: inline-block;
+            width: 40px; 
+            height: 1px; 
+            margin-right: 10px; 
         }
         .progress-bar {
             height: 24px;
@@ -165,7 +172,7 @@
             font-size: 18px;
             color: #27ae60;
             font-weight: bold;
-            display: none; /* 初始隱藏 */
+            display: none; 
         }
         .restart-button {
             background-color: #2ecc71;
@@ -193,8 +200,8 @@
             position: relative;
             margin: auto;
             padding: 0;
-            max-width: 95vw; /* 增加視窗寬度的最大佔比 */
-            max-height: 95vh; /* 增加視窗高度的最大佔比 */
+            max-width: 95vw; 
+            max-height: 95vh; 
         }
         .lightbox-content img {
             display: block;
@@ -221,16 +228,13 @@
             cursor: pointer;
         }
 
-        /* 響應式設計：單欄 */
         @media (max-width: 600px) {
             .options {
-                grid-template-columns: repeat(2, 1fr); /* 手機上也維持一排兩個 */
-                gap: 10px; /* 縮小手機上的間距 */
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 10px; 
             }
-            /* .option img 的高度將由 aspect-ratio 控制，此處無需特別設定 height */
         }
 
-        /* 設定按鈕 (FAB) */
         .settings-fab {
             position: fixed;
             top: 20px;
@@ -242,27 +246,26 @@
             border: none;
             border-radius: 50%;
             font-size: 24px;
-            line-height: 50px; /* 垂直居中圖示 */
+            line-height: 50px; 
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             cursor: pointer;
-            z-index: 1005; /* 高於 lightbox */
+            z-index: 1005; 
             transition: background-color 0.3s;
         }
         .settings-fab:hover {
             background-color: #2980b9;
         }
 
-        /* 抽屜樣式 */
         .drawer {
             position: fixed;
             top: 0;
-            right: -350px; /* 初始位置在螢幕外，寬度為350px */
+            right: -350px; 
             width: 350px;
             height: 100%;
             background-color: white;
             box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1010; /* 最高層級 */
+            z-index: 1010; 
             transition: right 0.3s ease-in-out;
             padding: 20px;
             box-sizing: border-box;
@@ -270,7 +273,7 @@
             flex-direction: column;
         }
         .drawer.open {
-            right: 0; /* 滑入螢幕 */
+            right: 0; 
         }
         .drawer-header {
             display: flex;
@@ -297,7 +300,7 @@
         }
         .drawer-content {
             flex-grow: 1;
-            overflow-y: auto; /* 如果內容過多則滾動 */
+            overflow-y: auto; 
         }
         .drawer-item-list {
             list-style: none;
@@ -326,12 +329,11 @@
         .drawer-item-list .edit-item-button:hover {
             background-color: #bdc3c7;
         }
-        .drawer-add-new-button { /* 與主頁面 .button 樣式類似，但可能需要微調 */
+        .drawer-add-new-button { 
             margin-top: 20px;
             width: 100%;
         }
 
-        /* 抽屜覆蓋層 */
         .drawer-overlay {
             display: none;
             position: fixed;
@@ -340,7 +342,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.4);
-            z-index: 1009; /* 低於抽屜，高於設定按鈕和 lightbox */
+            z-index: 1009; 
         }
         .drawer-overlay.active {
             display: block;
@@ -357,7 +359,6 @@
         </div>
         <div class="drawer-content">
             <ul id="drawer-item-list" class="drawer-item-list">
-                <!-- 範例項目，之後會由 JS 動態生成 -->
                 <li><span>可愛狗狗</span> <button class="edit-item-button">編輯</button></li>
                 <li><span>美味蛋糕</span> <button class="edit-item-button">編輯</button></li>
                 <li><span>創意甜點</span> <button class="edit-item-button">編輯</button></li>
@@ -372,7 +373,6 @@
         <div id="campaign-selection-area">
             <h1>選擇一個投票活動</h1>
             <ul id="campaign-list">
-                <!-- 投票活動標題將由 JS 動態載入 -->
             </ul>
         </div>
 
@@ -380,20 +380,17 @@
             <button id="back-to-campaigns-button" class="button" style="margin-bottom: 15px; background-color: #7f8c8d;">返回活動列表</button>
             <h1 id="vote-title"></h1>
             <div class="options">
-                <!-- 投票選項將由 JS 動態載入 -->
             </div>
             <button id="vote-button" class="button" disabled>投票</button>
             
             <div class="results">
                 <h2>投票結果</h2>
-                <!-- 結果項目會由 JavaScript 動態生成或更新 -->
             </div>
             <div class="thank-you">感謝您的投票！</div>
             <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
         </div>
     </div>
 
-    <!-- Lightbox HTML 結構 -->
     <div id="myLightbox" class="lightbox">
         <span class="lightbox-close">&times;</span>
         <div class="lightbox-content">
@@ -402,11 +399,9 @@
     </div>
 
     <script>
-        // API 基礎路徑 (如果您的 API 不是在同一個域名下，需要填寫完整路徑)
-        const API_BASE_URL = '/api/voit'; // 假設的 API 路徑
+        const API_BASE_URL = '/api/voit'; 
 
-        let currentCampaignData = null; // 當前選擇的投票活動數據 (從 API 獲取)
-        // campaignVotes 將不再由前端維護，而是從 API 獲取結果
+        let currentCampaignData = null; 
 
         document.addEventListener('DOMContentLoaded', function() {
             const campaignSelectionArea = document.getElementById('campaign-selection-area');
@@ -428,9 +423,9 @@
             const settingsDrawer = document.getElementById('settings-drawer');
             const closeDrawerButton = document.getElementById('close-drawer-button');
             const drawerOverlay = document.getElementById('drawer-overlay');
-            const drawerContent = settingsDrawer.querySelector('.drawer-content'); // 新增：獲取抽屜內容區域
-            const drawerItemList = document.getElementById('drawer-item-list'); // 新增：獲取抽屜項目列表
-            const drawerAddNewButton = document.getElementById('drawer-add-new-button'); // 新增：獲取新增按鈕
+            const drawerContent = settingsDrawer.querySelector('.drawer-content'); 
+            const drawerItemList = document.getElementById('drawer-item-list'); 
+            const drawerAddNewButton = document.getElementById('drawer-add-new-button'); 
             
             let selectedOptionId = null;
 
@@ -441,11 +436,10 @@
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const campaigns = await response.json();
                     
-                    campaignListUl.innerHTML = ''; // 清空列表
+                    campaignListUl.innerHTML = ''; 
                     if (campaigns && campaigns.length > 0) {
                         campaigns.forEach(campaign => {
                             const listItem = document.createElement('li');
-                            // API 回應的 campaign 物件應有 campaign_id 和 title 欄位
                             listItem.textContent = campaign.title;
                             listItem.style.cursor = 'pointer';
                             listItem.style.padding = '10px';
@@ -468,55 +462,187 @@
                 optionsContainer.innerHTML = '<p>載入投票選項中...</p>';
                 voteTitleH1.textContent = '載入中...';
                 campaignSelectionArea.style.display = 'none';
-                voteArea.style.display = 'block'; // 先顯示 voteArea 讓使用者看到載入狀態
+                voteArea.style.display = 'block'; 
 
                 try {
                     const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    currentCampaignData = await response.json(); // API 回應應包含 title 和 options 陣列
+                    currentCampaignData = await response.json(); 
                     
                     if (!currentCampaignData || !currentCampaignData.options) {
                         throw new Error('無效的活動數據格式');
                     }
 
+                    voteTitleH1.textContent = currentCampaignData.title;
+                    optionsContainer.innerHTML = ''; // 清空舊選項
                     selectedOptionId = null;
                     voteButton.disabled = true;
-                    resultsDiv.style.display = 'none';
-                    thankYouMessage.style.display = 'none';
-                    restartButton.style.display = 'none';
-                    optionsContainer.style.display = 'grid';
-                    voteButton.style.display = 'block';
 
-                    voteTitleH1.textContent = currentCampaignData.title;
+                    if (currentCampaignData.currentUserHasVoted) {
+                        // 用戶已投票，直接顯示結果
+                        optionsContainer.style.display = 'none';
+                        voteButton.style.display = 'none';
+                        resultsDiv.style.display = 'block';
+                        thankYouMessage.textContent = '您已對此活動投過票。';
+                        thankYouMessage.style.display = 'block';
+                        restartButton.textContent = '查看/刷新結果'; // 可以考慮更改按鈕文字
+                        restartButton.style.display = 'block';
+                        showResultsForCampaign();
+                    } else {
+                        // 用戶未投票，顯示投票選項
+                        resultsDiv.style.display = 'none';
+                        thankYouMessage.style.display = 'none';
+                        restartButton.style.display = 'none';
+                        optionsContainer.style.display = 'grid';
+                        voteButton.style.display = 'block';
+                        voteButton.textContent = '投票'; // 確保按鈕文字正確
+                        
+                        currentCampaignData.options.forEach(opt => {
+                            const optionDiv = document.createElement('div');
+                            optionDiv.className = 'option';
+                            optionDiv.setAttribute('data-id', opt.option_id);
+                            optionDiv.setAttribute('data-name', opt.name);
+
+                            const optionContentDiv = document.createElement('div');
+                            optionContentDiv.className = 'option-content';
+                            optionContentDiv.textContent = opt.name;
+
+                            if (opt.image_url && opt.image_url.trim() !== '') {
+                                const zoomIconSpan = document.createElement('span');
+                                zoomIconSpan.className = 'zoom-icon';
+                                zoomIconSpan.innerHTML = '&#128269;';
+                                
+                                const imgElement = document.createElement('img');
+                                imgElement.src = opt.image_url;
+                                imgElement.alt = opt.name;
+                                
+                                imgElement.onerror = () => {
+                                    if(zoomIconSpan.parentNode) zoomIconSpan.remove();
+                                    optionContentDiv.style.position = 'static';
+                                    optionContentDiv.style.background = 'transparent';
+                                    optionContentDiv.style.color = '#555';
+                                    optionContentDiv.style.height = '100%';
+                                    optionContentDiv.style.display = 'flex';
+                                    optionContentDiv.style.alignItems = 'center';
+                                    optionContentDiv.style.justifyContent = 'center';
+                                    optionDiv.style.backgroundColor = '#f0f0f0';
+                                    imgElement.remove();
+                                };
+                                if (imgElement.complete && imgElement.naturalHeight === 0 && imgElement.src) {
+                                    imgElement.onerror();
+                                }
+
+                                optionDiv.appendChild(zoomIconSpan);
+                                optionDiv.appendChild(imgElement);
+                                optionDiv.appendChild(optionContentDiv);
+
+                                zoomIconSpan.addEventListener('click', (event) => {
+                                    event.stopPropagation();
+                                    if(imgElement.src && imgElement.naturalHeight !== 0) {
+                                        lightboxImg.src = imgElement.src;
+                                        lightbox.style.display = 'flex';
+                                    }
+                                });
+                            } else {
+                                optionContentDiv.style.position = 'static';
+                                optionContentDiv.style.background = 'transparent';
+                                optionContentDiv.style.color = '#333';
+                                optionContentDiv.style.height = '100%';
+                                optionContentDiv.style.display = 'flex';
+                                optionContentDiv.style.alignItems = 'center';
+                                optionContentDiv.style.justifyContent = 'center';
+                                optionContentDiv.style.padding = '10px';
+                                optionDiv.style.backgroundColor = '#e9ecef';
+                                optionDiv.appendChild(optionContentDiv);
+                            }
+                            
+                            optionsContainer.appendChild(optionDiv);
+
+                            optionDiv.addEventListener('click', function() {
+                                if (voteButton.style.display === 'none') return;
+                                document.querySelectorAll('#vote-area .option').forEach(o => o.classList.remove('selected'));
+                                this.classList.add('selected');
+                                selectedOptionId = this.getAttribute('data-id');
+                                voteButton.disabled = false;
+                            });
+                        });
+                    }
+                    
+                    initializeResultsStructureForCampaign(); // 總是在加載活動後初始化結果區結構，即使是已投票狀態
+
+                } catch (error) {
+                    console.error(`無法載入投票活動 ${campaignId}:`, error);
+                    voteTitleH1.textContent = '錯誤';
+                    optionsContainer.innerHTML = `<p>無法載入投票選項，請<a href="#" onclick="loadCampaign(${campaignId}); return false;">重試</a>或返回活動列表。</p>`;
+                }
+            }
+            
+            backToCampaignsButton.addEventListener('click', renderCampaignList);
+
+            function initializeResultsStructureForCampaign() {
+                resultsDiv.innerHTML = '<h2>投票結果</h2>'; // 確保先清空並設置標題
+                if (!currentCampaignData || !currentCampaignData.options) return;
                     optionsContainer.innerHTML = '';
 
-                    currentCampaignData.options.forEach(opt => { // API 回應的 option 物件應有 option_id, name, image_url
+                    currentCampaignData.options.forEach(opt => { 
                         const optionDiv = document.createElement('div');
                         optionDiv.className = 'option';
                         optionDiv.setAttribute('data-id', opt.option_id);
                         optionDiv.setAttribute('data-name', opt.name);
 
-                        const zoomIconSpan = document.createElement('span');
-                        zoomIconSpan.className = 'zoom-icon';
-                        zoomIconSpan.innerHTML = '&#128269;';
-                        
-                        const imgElement = document.createElement('img');
-                        imgElement.src = opt.image_url;
-                        imgElement.alt = opt.name;
-
                         const optionContentDiv = document.createElement('div');
                         optionContentDiv.className = 'option-content';
                         optionContentDiv.textContent = opt.name;
-                        
-                        optionContentDiv.style.display = 'none';
-                        imgElement.onload = () => { optionContentDiv.style.display = 'none'; };
-                        imgElement.onerror = () => { optionContentDiv.style.display = 'block'; };
-                        if (imgElement.complete && imgElement.naturalHeight !== 0) optionContentDiv.style.display = 'none';
-                        else if (imgElement.complete && imgElement.naturalHeight === 0) optionContentDiv.style.display = 'block';
 
-                        optionDiv.appendChild(zoomIconSpan);
-                        optionDiv.appendChild(imgElement);
-                        optionDiv.appendChild(optionContentDiv);
+                        if (opt.image_url && opt.image_url.trim() !== '') {
+                            const zoomIconSpan = document.createElement('span');
+                            zoomIconSpan.className = 'zoom-icon';
+                            zoomIconSpan.innerHTML = '&#128269;';
+                            
+                            const imgElement = document.createElement('img');
+                            imgElement.src = opt.image_url;
+                            imgElement.alt = opt.name;
+                            
+                            imgElement.onerror = () => { 
+                                if(zoomIconSpan.parentNode) zoomIconSpan.remove(); 
+                                optionContentDiv.style.position = 'static';
+                                optionContentDiv.style.background = 'transparent';
+                                optionContentDiv.style.color = '#555'; 
+                                optionContentDiv.style.height = '100%';
+                                optionContentDiv.style.display = 'flex';
+                                optionContentDiv.style.alignItems = 'center';
+                                optionContentDiv.style.justifyContent = 'center';
+                                optionDiv.style.backgroundColor = '#f0f0f0'; 
+                                imgElement.remove(); 
+                            };
+                            if (imgElement.complete && imgElement.naturalHeight === 0 && imgElement.src) {
+                                imgElement.onerror(); 
+                            }
+
+                            optionDiv.appendChild(zoomIconSpan);
+                            optionDiv.appendChild(imgElement);
+                            optionDiv.appendChild(optionContentDiv); 
+
+                            zoomIconSpan.addEventListener('click', (event) => {
+                                event.stopPropagation();
+                                if(imgElement.src && imgElement.naturalHeight !== 0) { 
+                                    lightboxImg.src = imgElement.src;
+                                    lightbox.style.display = 'flex';
+                                }
+                            });
+                        } else {
+                            optionContentDiv.style.position = 'static';
+                            optionContentDiv.style.background = 'transparent';
+                            optionContentDiv.style.color = '#333';
+                            optionContentDiv.style.height = '100%';
+                            optionContentDiv.style.display = 'flex';
+                            optionContentDiv.style.alignItems = 'center';
+                            optionContentDiv.style.justifyContent = 'center';
+                            optionContentDiv.style.padding = '10px';
+                            optionDiv.style.backgroundColor = '#e9ecef'; 
+                            optionDiv.appendChild(optionContentDiv);
+                        }
+                        
                         optionsContainer.appendChild(optionDiv);
 
                         optionDiv.addEventListener('click', function() {
@@ -525,12 +651,6 @@
                             this.classList.add('selected');
                             selectedOptionId = this.getAttribute('data-id');
                             voteButton.disabled = false;
-                        });
-
-                        zoomIconSpan.addEventListener('click', (event) => {
-                            event.stopPropagation();
-                            lightboxImg.src = imgElement.src;
-                            lightbox.style.display = 'flex';
                         });
                     });
                     
@@ -554,7 +674,7 @@
                         <div class="result-item" data-result-id="${opt.option_id}">
                             <div class="result-label">
                                 <div>
-                                    <img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">
+                                    ${opt.image_url ? `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">` : '<span class="result-item-no-image"></span>'}
                                     <span>${opt.name}</span>
                                 </div>
                                 <span class="percentage">0% (0票)</span>
@@ -582,13 +702,12 @@
                             const errorData = await response.json().catch(() => ({message: '投票失敗，請稍後再試'}));
                             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
                         }
-                        // 投票成功，顯示結果
                         optionsContainer.style.display = 'none';
                         voteButton.style.display = 'none';
                         resultsDiv.style.display = 'block';
                         thankYouMessage.style.display = 'block';
                         restartButton.style.display = 'block';
-                        showResultsForCampaign(); // 從 API 獲取最新結果
+                        showResultsForCampaign(); 
                     } catch (error) {
                         console.error("投票失敗:", error);
                         alert(`投票失敗：${error.message}`);
@@ -601,14 +720,14 @@
 
             async function showResultsForCampaign() {
                 if (!currentCampaignData) return;
-                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>'; // 先顯示載入中
+                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>'; 
 
                 try {
                     const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const resultsData = await response.json(); // 預期格式 { option_id_1: count1, option_id_2: count2, ... }
+                    const resultsData = await response.json(); 
 
-                    initializeResultsStructureForCampaign(); // 重新繪製結果區基本結構
+                    initializeResultsStructureForCampaign(); 
 
                     let totalVotes = 0;
                     currentCampaignData.options.forEach(opt => {
@@ -628,7 +747,7 @@
                                 progressBar.style.width = `${percentage.toFixed(1)}%`;
                                 progressBar.textContent = `${percentage.toFixed(1)}%`;
                                 percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
-                            }, 50 * (index + 1)); // 稍微加快動畫
+                            }, 50 * (index + 1)); 
                         }
                     });
                 } catch (error) {
@@ -642,7 +761,6 @@
                 loadCampaign(currentCampaignData.campaign_id);
             });
 
-            // Lightbox 關閉邏輯
             if (closeLightboxButton) {
                 closeLightboxButton.addEventListener('click', () => { lightbox.style.display = 'none'; });
             }
@@ -652,7 +770,6 @@
                 });
             }
 
-            // 設定抽屜開關邏輯
             if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
                 settingsFab.addEventListener('click', () => {
                     settingsDrawer.classList.add('open');
@@ -661,18 +778,16 @@
                 function closeDrawer() {
                     settingsDrawer.classList.remove('open');
                     drawerOverlay.classList.remove('active');
-                    showDefaultDrawerContent(); // 調用以恢復預設視圖並重綁事件
+                    showDefaultDrawerContent(); 
                 }
                 closeDrawerButton.addEventListener('click', closeDrawer);
                 drawerOverlay.addEventListener('click', closeDrawer);
 
-                // 顯示抽屜預設內容 (項目列表和新增按鈕)
                 function showDefaultDrawerContent() {
-                    if (!drawerContent) return;
+                    if (!drawerContent) return; 
                     drawerContent.innerHTML = `
                         <ul id="drawer-item-list" class="drawer-item-list">
                             <li><span>(此處將顯示現有投票活動列表)</span></li>
-                            <!-- 實際項目將由JS從API獲取並渲染 -->
                         </ul>
                         <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
                     `;
@@ -680,11 +795,8 @@
                     if (newDrawerButton) {
                         newDrawerButton.addEventListener('click', showAddNewCampaignForm);
                     }
-                    // TODO: 將來這裡可以加入渲染現有活動列表的邏輯 (從API獲取)
-                    // 例如: renderExistingCampaignsInDrawer();
                 }
 
-                // 點擊 "新增投票活動" 按鈕的處理
                 function showAddNewCampaignForm() {
                     if (!drawerContent) return;
                     drawerContent.innerHTML = `
@@ -707,8 +819,8 @@
                                 <div class="campaign-option-input-group" style="margin-bottom:10px; padding-bottom:10px; border-bottom: 1px dashed #ccc;">
                                     <label style="display:block; margin-bottom:3px;">選項 1 名稱:</label>
                                     <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
-                                    <label style="display:block; margin-bottom:3px;">選項 1 圖片URL:</label>
-                                    <input type="url" name="option_image_url[]" placeholder="圖片URL" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                    <label style="display:block; margin-bottom:3px;">選項 1 圖片URL (可選):</label>
+                                    <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box;">
                                 </div>
                             </div>
                             <button type="button" id="add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
@@ -735,8 +847,8 @@
                     newInputGroup.innerHTML = `
                         <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 名稱:</label>
                         <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
-                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 圖片URL:</label>
-                        <input type="url" name="option_image_url[]" placeholder="圖片URL" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                        <label style="display:block; margin-bottom:3px;">選項 ${optionCount} 圖片URL (可選):</label>
+                        <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
                         <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
                     `;
                     newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
@@ -761,8 +873,8 @@
 
                     const options = optionNames.map((name, index) => ({
                         name: name,
-                        image_url: optionImageUrls[index]
-                    })).filter(opt => opt.name && opt.image_url);
+                        image_url: optionImageUrls[index] 
+                    })).filter(opt => opt.name); 
 
                     if (options.length === 0) {
                         alert('請至少填寫一個完整的投票選項（名稱和圖片URL）。');
@@ -803,13 +915,12 @@
                     }
                 }
 
-                // 初始綁定新增按鈕事件
                 if(drawerAddNewButton) {
                    drawerAddNewButton.addEventListener('click', showAddNewCampaignForm);
                 }
-            } // <-- This is the closing brace for: if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay)
+            } 
             
-            renderCampaignList(); // 初始渲染活動列表
+            renderCampaignList(); 
         });
     </script>
 </body>
