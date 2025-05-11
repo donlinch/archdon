@@ -31,6 +31,14 @@
         #admin-post-form .form-actions { margin-top: 1.5rem; text-align: right; }
         #admin-post-form .form-actions button { margin-left: 10px; }
         #admin-post-status { color: grey; font-size: 0.9em; margin-right: auto; /* 推到左邊 */ text-align: left;}
+
+        /* Tab 樣式 */
+        .admin-tabs { margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid #dee2e6;}
+        .admin-tabs .tab-link { padding: 10px 15px; border: 1px solid transparent; border-bottom: none; background-color: transparent; cursor: pointer; font-size: 1rem; margin-right: 5px; border-top-left-radius: .25rem; border-top-right-radius: .25rem; color: #495057; }
+        .admin-tabs .tab-link:hover { background-color: #e9ecef; border-color: #e9ecef #e9ecef #dee2e6; }
+        .admin-tabs .tab-link.active { border-color: #dee2e6 #dee2e6 #fff; border-bottom: 2px solid #007bff; font-weight: bold; color: #007bff; background-color: #fff; }
+        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+        #reported-count-badge { background-color: #dc3545; color: white; padding: 3px 7px; border-radius: 10px; font-size: 0.8em; margin-left: 5px; display: none; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -78,6 +86,14 @@
                 <!-- ★ 新增「管理員發表新留言」按鈕 ★ -->
                 <button id="admin-post-new-message-btn" class="btn btn-success">⊕ 管理員發表新留言</button>
             </div>
+        </div>
+
+        <!-- 新增 Tab 結構 -->
+        <div class="admin-tabs">
+            <button class="tab-link active" data-tab="all-messages">所有留言</button>
+            <button class="tab-link" data-tab="reported-content">
+                待處理檢舉 <span id="reported-count-badge" class="badge">0</span>
+            </button>
         </div>
 
         <div class="table-container">

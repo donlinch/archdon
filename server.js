@@ -5874,7 +5874,8 @@ adminRouter.get('/guestbook/message/:id', async (req, res) => {
         if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到留言' });
 
         const repliesResult = await client.query(
-            `SELECT r.*, r.like_count, r.parent_reply_id, ai.name AS admin_identity_name
+            `SELECT r.*, r.like_count, r.parent_reply_id, ai.name AS admin_identity_name,
+                    r.is_reported, r.can_be_reported -- 新增 is_reported 和 can_be_reported for replies
              FROM guestbook_replies r
              LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
              WHERE r.message_id = $1 ORDER BY r.created_at ASC`,
@@ -5924,6 +5925,58 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
     const { id } = req.params; const replyId = parseInt(id, 10); if (isNaN(replyId)) return res.status(400).json({ error: '無效的 ID' });
     const client = await pool.connect(); try { await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
     } catch (err) { await client.query('ROLLBACK'); console.error(`[API DELETE /admin/guestbook/replies/${id}] Error:`, err); res.status(500).json({ error: '無法刪除回覆' }); } finally { client.release(); }
+});
+
+// 新增：GET /api/admin/guestbook/reported-content - 獲取所有已檢舉的內容
+adminRouter.get('/guestbook/reported-content', async (req, res) => {
+    try {
+        const query = `
+            SELECT
+                id,
+                author_name,
+                substring(content for 100) as content_preview,
+                created_at,
+                updated_at,
+                is_visible,
+                is_reported,
+                can_be_reported,
+                'message' AS type,
+                NULL AS message_id,
+                NULL AS parent_reply_id,
+                NULL AS admin_identity_name
+            FROM guestbook_messages
+            WHERE is_reported = TRUE
+
+            UNION ALL
+
+            SELECT
+                r.id,
+                r.author_name,
+                substring(r.content for 100) as content_preview,
+                r.created_at,
+                r.updated_at,
+                r.is_visible,
+                r.is_reported,
+                r.can_be_reported,
+                'reply' AS type,
+                r.message_id,
+                r.parent_reply_id,
+                ai.name AS admin_identity_name
+            FROM guestbook_replies r
+            LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
+            WHERE r.is_reported = TRUE
+            
+            ORDER BY created_at DESC;
+        `;
+        const result = await pool.query(query);
+        res.json({
+            reportedItems: result.rows,
+            totalReported: result.rowCount
+        });
+    } catch (err) {
+        console.error('[API GET /admin/guestbook/reported-content] Error:', err);
+        res.status(500).json({ error: '無法獲取已檢舉內容列表' });
+    }
 });
 
 // PUT /api/admin/guestbook/messages/:id/status - 更新主留言的狀態 (is_visible, is_reported, can_be_reported)

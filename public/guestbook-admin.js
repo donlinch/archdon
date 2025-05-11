@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchTermInput = document.getElementById('search-term');
     const searchButton = document.getElementById('search-button');
 
+    // --- 新增: Tab 相關 DOM 元素 ---
+    const adminTabsContainer = document.querySelector('.admin-tabs');
+    const reportedCountBadge = document.getElementById('reported-count-badge');
+    const tableHeadRow = document.querySelector('#guestbook-admin-table thead tr'); // 用於動態修改表頭
+
     // --- ★ 新增: Modal 相關 DOM 元素 ★ ---
     const adminPostNewMessageBtn = document.getElementById('admin-post-new-message-btn');
     const adminPostModal = document.getElementById('admin-post-modal');
@@ -38,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     let currentSearch = '';
     let currentSort = 'latest';
+    let activeTab = 'all-messages'; // 新增狀態：追蹤當前活動的 Tab
 
     // --- 輔助函數 ---
     function closeModal(modalElement) {
@@ -105,6 +111,43 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(adminPostModal);
     }
 
+    // --- 新增：更新表頭函數 ---
+    function updateTableHeaders(tabName) {
+        if (!tableHeadRow) return;
+        tableHeadRow.innerHTML = ''; // 清空現有表頭
+
+        let headers = [];
+        if (tabName === 'all-messages') {
+            headers = ['ID', '類型', '作者/身份', '內容預覽', '回覆數', '最後活動', '狀態', '檢舉狀態', '操作'];
+        } else if (tabName === 'reported-content') {
+            headers = ['ID', '類型', '作者', '內容預覽', '檢舉時間', '操作'];
+        }
+
+        headers.forEach(headerText => {
+            const th = document.createElement('th');
+            th.textContent = headerText;
+            tableHeadRow.appendChild(th);
+        });
+    }
+
+    // --- 新增：更新檢舉數量徽章 ---
+    async function updateReportedCountBadge() {
+        if (!reportedCountBadge) return;
+        try {
+            const response = await fetch('/api/admin/guestbook/reported-content');
+            if (!response.ok) {
+                console.error('無法獲取檢舉數量');
+                return;
+            }
+            const data = await response.json();
+            const count = data.totalReported || 0;
+            reportedCountBadge.textContent = count;
+            reportedCountBadge.style.display = count > 0 ? 'inline-block' : 'none';
+        } catch (error) {
+            console.error('更新檢舉數量失敗:', error);
+            reportedCountBadge.style.display = 'none';
+        }
+    }
 
     // --- 函數：獲取並顯示管理列表 (原有，但可能需要更新渲染邏輯) ---
     async function fetchAdminGuestbookList(page = 1, filter = 'all', search = '', sort = 'latest') {
@@ -113,7 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('錯誤：找不到列表或分頁容器。');
             return;
         }
-        guestbookAdminList.innerHTML = '<tr><td colspan="8">正在載入資料...</td></tr>';
+        updateTableHeaders('all-messages'); // 確保是正確的表頭
+        guestbookAdminList.innerHTML = `<tr><td colspan="${tableHeadRow.cells.length}">正在載入資料...</td></tr>`;
         paginationContainer.innerHTML = '';
 
         currentPage = page;
@@ -557,7 +601,255 @@ if (adminPostForm && submitAdminPostBtn && adminPostStatus && adminPostIdentityS
     console.error("錯誤：管理員發表 Modal 的相關表單元素未完全找到。");
 }
 
+    // --- 新增：Tab 切換事件監聽 ---
+    if (adminTabsContainer) {
+        adminTabsContainer.addEventListener('click', (event) => {
+            const clickedTab = event.target.closest('.tab-link');
+            if (!clickedTab) return;
+
+            document.querySelectorAll('.admin-tabs .tab-link').forEach(tab => tab.classList.remove('active'));
+            clickedTab.classList.add('active');
+            activeTab = clickedTab.dataset.tab;
+
+            // 清空篩選和搜尋條件，除非特定邏輯需要保留
+            if (filterStatus) filterStatus.value = 'all';
+            if (searchTermInput) searchTermInput.value = '';
+            currentFilter = 'all';
+            currentSearch = '';
+            currentPage = 1; // 重置到第一頁
+
+            if (activeTab === 'all-messages') {
+                if (filterStatus) filterStatus.disabled = false;
+                if (searchTermInput) searchTermInput.disabled = false;
+                if (searchButton) searchButton.disabled = false;
+                fetchAdminGuestbookList(1, 'all', '', 'latest');
+            } else if (activeTab === 'reported-content') {
+                // 禁用不適用於檢舉列表的篩選器
+                if (filterStatus) filterStatus.disabled = true;
+                if (searchTermInput) searchTermInput.disabled = true;
+                if (searchButton) searchButton.disabled = true;
+                fetchAndRenderReportedContent();
+            }
+        });
+    }
+
+    // --- 新增：獲取並渲染已檢舉內容列表 ---
+    async function fetchAndRenderReportedContent() {
+        if (!guestbookAdminList || !tableHeadRow) return;
+        updateTableHeaders('reported-content');
+        guestbookAdminList.innerHTML = `<tr><td colspan="${tableHeadRow.cells.length}">正在載入已檢舉內容...</td></tr>`;
+        if (paginationContainer) paginationContainer.innerHTML = ''; // 清空分頁
+
+        try {
+            const response = await fetch('/api/admin/guestbook/reported-content');
+            if (!response.ok) {
+                let errorMsg = `HTTP 錯誤 ${response.status}`;
+                try { const errData = await response.json(); errorMsg = errData.error || errorMsg; } catch {}
+                throw new Error(`無法獲取已檢舉內容 (${errorMsg})`);
+            }
+            const data = await response.json();
+            renderReportedList(data.reportedItems || []);
+            updateReportedCountBadge(); // 更新徽章計數
+        } catch (error) {
+            console.error('獲取已檢舉內容失敗:', error);
+            guestbookAdminList.innerHTML = `<tr><td colspan="${tableHeadRow.cells.length}" style="color: red;">無法載入已檢舉內容：${error.message}</td></tr>`;
+        }
+    }
+
+    // --- 新增：渲染已檢舉內容列表 ---
+    function renderReportedList(items) {
+        if (!guestbookAdminList) return;
+        guestbookAdminList.innerHTML = '';
+
+        if (!items || items.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = tableHeadRow.cells.length;
+            td.textContent = '目前沒有待處理的檢舉。';
+            tr.appendChild(td);
+            guestbookAdminList.appendChild(tr);
+            return;
+        }
+
+        items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.id = `${item.type}-row-${item.id}`;
+
+            const tdId = document.createElement('td'); tdId.textContent = item.id;
+            const tdType = document.createElement('td'); tdType.textContent = item.type === 'message' ? '留言' : '回覆';
+            const tdAuthor = document.createElement('td'); tdAuthor.textContent = item.author_name || '匿名';
+            const tdPreview = document.createElement('td');
+                const previewText = item.content_preview || '';
+                tdPreview.textContent = previewText;
+                tdPreview.title = previewText; // 完整內容提示
+                tdPreview.style.whiteSpace = 'pre-wrap';
+                tdPreview.style.wordWrap = 'break-word';
+                tdPreview.style.maxWidth = '300px'; // 限制寬度
+                tdPreview.style.overflow = 'hidden';
+                tdPreview.style.textOverflow = 'ellipsis';
+
+
+            const tdReportTime = document.createElement('td');
+            // 後端返回的 updated_at 是檢舉時更新的時間戳
+            tdReportTime.textContent = new Date(item.updated_at || item.created_at).toLocaleString('zh-TW');
+
+            const tdActions = document.createElement('td');
+            tdActions.className = 'actions';
+
+            const unreportBtn = document.createElement('button');
+            unreportBtn.className = 'btn btn-success btn-sm unreport-item-btn'; // 新的 class
+            unreportBtn.textContent = '解除檢舉';
+            unreportBtn.dataset.itemId = item.id;
+            unreportBtn.dataset.itemType = item.type;
+
+            const detailLink = document.createElement('a');
+            detailLink.className = 'btn btn-info btn-sm';
+            detailLink.textContent = '查看詳情';
+            detailLink.style.marginLeft = '5px';
+            if (item.type === 'message') {
+                detailLink.href = `/admin-message-detail.html?id=${item.id}`;
+            } else if (item.type === 'reply') {
+                detailLink.href = `/admin-message-detail.html?id=${item.message_id}#reply-row-${item.id}`;
+            }
+            detailLink.target = '_blank'; // 新視窗開啟
+
+            tdActions.appendChild(unreportBtn);
+            tdActions.appendChild(detailLink);
+
+            tr.appendChild(tdId);
+            tr.appendChild(tdType);
+            tr.appendChild(tdAuthor);
+            tr.appendChild(tdPreview);
+            tr.appendChild(tdReportTime);
+            tr.appendChild(tdActions);
+
+            guestbookAdminList.appendChild(tr);
+        });
+    }
+
+    // 修改全局點擊事件監聽器以包含新的解除檢舉按鈕
+    if (guestbookAdminList) {
+        guestbookAdminList.addEventListener('click', async (event) => {
+            const target = event.target;
+
+            // ... (原有的 process-report-btn, toggle-visibility-btn, delete-item-btn 邏輯保持不變) ...
+            // --- 處理 "處理檢舉" 按鈕 (來自列表頁) ---
+            if (target.matches('.process-report-btn')) {
+                // ... (這部分邏輯不變，因為它是從主列表觸發的)
+                 const id = target.dataset.id;
+                 const type = target.dataset.type;
+                 const row = target.closest('tr');
+                 if (row && reportItemIdSpan && reportItemTypeSpan && reportItemAuthorSpan && reportItemContentPreviewDiv && processReportStatusP) {
+                     reportItemIdSpan.textContent = id;
+                     reportItemTypeSpan.textContent = type === 'message' ? '留言' : '回覆';
+                     const authorCell = row.cells[2];
+                     const contentPreviewCell = row.cells[3]?.querySelector('a');
+                     reportItemAuthorSpan.textContent = authorCell ? authorCell.textContent.split(' (管理員)')[0].trim() : 'N/A';
+                     reportItemContentPreviewDiv.textContent = contentPreviewCell ? contentPreviewCell.textContent : '無法載入預覽';
+                     processReportStatusP.textContent = '';
+                     if(processReportModal) processReportModal.dataset.itemId = id;
+                     if(processReportModal) processReportModal.dataset.itemType = type;
+                     openModal(processReportModal);
+                 } else {
+                     console.error('無法找到 Modal 元素或表格行來填充檢舉信息。');
+                     alert('打開處理視窗時發生錯誤。');
+                 }
+            }
+            // --- 處理顯隱按鈕 (來自列表頁) ---
+            else if (target.matches('.toggle-visibility-btn')) {
+                // ... (這部分邏輯不變)
+                const id = target.dataset.id;
+                const type = target.dataset.type;
+                const targetVisibility = target.dataset.targetVisibility === 'true';
+                const endpoint = type === 'message'
+                    ? `/api/admin/guestbook/messages/${id}/visibility`
+                    : `/api/admin/guestbook/replies/${id}/visibility`;
+                target.disabled = true;
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ is_visible: targetVisibility })
+                    });
+                     if (!response.ok) { let errorMsg = `HTTP ${response.status}`; try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch {} throw new Error(errorMsg); }
+                    if (activeTab === 'all-messages') {
+                        fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
+                    } else if (activeTab === 'reported-content') {
+                        fetchAndRenderReportedContent(); // 如果在檢舉列表操作，刷新檢舉列表
+                    }
+                } catch (error) {
+                    console.error(`切換 ${type} ${id} 可見度失敗:`, error);
+                    alert(`操作失敗：${error.message}`);
+                    target.disabled = false;
+                }
+            }
+            // --- 處理刪除按鈕 (來自列表頁) ---
+            else if (target.matches('.delete-item-btn')) {
+                // ... (這部分邏輯不變)
+                const id = target.dataset.id;
+                const type = target.dataset.type;
+                const name = target.dataset.name || `項目 #${id}`;
+                 const itemTypeText = type === 'message' ? '留言' : '回覆';
+                if (confirm(`確定要刪除這個 ${itemTypeText} (${name}) 嗎？\n(如果是留言，其下的所有回覆也會被刪除)`)) {
+                     const endpoint = type === 'message'
+                        ? `/api/admin/guestbook/messages/${id}`
+                        : `/api/admin/guestbook/replies/${id}`;
+                    target.disabled = true;
+                    try {
+                        const response = await fetch(endpoint, { method: 'DELETE' });
+                         if (!response.ok && response.status !== 204) { let errorMsg = `HTTP ${response.status}`; try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch {} throw new Error(errorMsg); }
+                        if (activeTab === 'all-messages') {
+                            fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
+                        } else if (activeTab === 'reported-content') {
+                            fetchAndRenderReportedContent(); // 如果在檢舉列表操作，刷新檢舉列表
+                        }
+                    } catch (error) {
+                         console.error(`刪除 ${type} ${id} 失敗:`, error);
+                         alert(`刪除失敗：${error.message}`);
+                         target.disabled = false;
+                    }
+                }
+            }
+            // --- 新增：處理來自「待處理檢舉」列表的解除檢舉按鈕 ---
+            else if (target.matches('.unreport-item-btn')) {
+                const itemId = target.dataset.itemId;
+                const itemType = target.dataset.itemType;
+
+                if (!itemId || !itemType) {
+                    alert('錯誤：缺少項目ID或類型以解除檢舉。');
+                    return;
+                }
+
+                if (confirm(`確定要解除此 ${itemType === 'message' ? '留言' : '回覆'} (ID: ${itemId}) 的檢舉嗎？`)) {
+                    target.disabled = true;
+                    const endpoint = `/api/admin/guestbook/${itemType}s/${itemId}/status`;
+                    const body = { is_reported: false, is_visible: true };
+
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+                        if (!response.ok && response.status !== 204) {
+                            const errData = await response.json().catch(() => ({}));
+                            throw new Error(errData.error || `操作失敗 (HTTP ${response.status})`);
+                        }
+                        // 成功後刷新檢舉列表
+                        fetchAndRenderReportedContent();
+                    } catch (error) {
+                        console.error(`解除檢舉 ${itemType} ${itemId} 失敗:`, error);
+                        alert(`解除檢舉失敗: ${error.message}`);
+                        target.disabled = false;
+                    }
+                }
+            }
+        });
+    }
+
+
     // --- 初始載入 ---
     fetchAdminGuestbookList(1, 'all', '', 'latest'); // 載入第一頁，所有狀態，無搜尋，最新活動排序
+    updateReportedCountBadge(); // 初始加載時更新檢舉數量
 
-});  
+});

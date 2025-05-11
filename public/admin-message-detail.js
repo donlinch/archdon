@@ -278,6 +278,16 @@ document.addEventListener('DOMContentLoaded', () => {
             actionsDiv.appendChild(toggleBtn);
             actionsDiv.appendChild(deleteBtn);
 
+            // 新增：如果回覆被檢舉，則添加解除檢舉按鈕
+            if (reply.is_reported) {
+                const unreportBtn = document.createElement('button');
+                unreportBtn.className = 'btn btn-success btn-sm unreport-reply-btn'; // 新的 class
+                unreportBtn.textContent = '解除檢舉';
+                unreportBtn.dataset.replyId = reply.id;
+                unreportBtn.style.marginLeft = '5px'; // 與其他按鈕間隔
+                actionsDiv.appendChild(unreportBtn);
+            }
+
             replyDiv.appendChild(metaP);
             replyDiv.appendChild(contentDiv);
 
@@ -547,6 +557,41 @@ if (replyListContainer) {
                      console.error(`刪除 ${type} ${id} 失敗:`, error);
                      alert(`刪除失敗：${error.message}`);
                      target.disabled = false;
+                }
+            }
+        }
+        // --- 新增：處理回覆的解除檢舉按鈕 ---
+        else if (target.matches('.unreport-reply-btn')) {
+            const replyId = target.dataset.replyId;
+            if (!replyId) {
+                console.error('解除檢舉按鈕缺少 replyId');
+                alert('操作失敗：缺少回覆 ID。');
+                return;
+            }
+
+            if (confirm(`確定要解除對此回覆 (ID: ${replyId}) 的檢舉嗎？\n這會將其標記為未檢舉且設為可見。`)) {
+                target.disabled = true;
+                const endpoint = `/api/admin/guestbook/replies/${replyId}/status`;
+                const body = { is_reported: false, is_visible: true };
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    if (!response.ok) {
+                        let errorMsg = `HTTP ${response.status}`;
+                        try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch {}
+                        throw new Error(errorMsg);
+                    }
+                    // 成功後重新載入整個詳情頁數據
+                    fetchAdminMessageDetail(currentMessageId);
+                    // 可以考慮只更新該回覆的狀態，而不是刷新全部，但刷新全部更簡單可靠
+                } catch (error) {
+                    console.error(`解除回覆 ${replyId} 檢舉失敗:`, error);
+                    alert(`操作失敗：${error.message}`);
+                    target.disabled = false; // 恢復按鈕
                 }
             }
         }
