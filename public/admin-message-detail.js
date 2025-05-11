@@ -280,6 +280,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             replyDiv.appendChild(metaP);
             replyDiv.appendChild(contentDiv);
+
+            // 新增：顯示回覆圖片 (如果存在)
+            if (reply.image_url) {
+                const imageContainer = document.createElement('div');
+                imageContainer.style.marginTop = '8px';
+                imageContainer.style.marginBottom = '8px';
+                
+                const img = document.createElement('img');
+                img.src = reply.image_url;
+                img.alt = '回覆圖片';
+                img.style.maxWidth = '200px'; // 限制最大寬度
+                img.style.maxHeight = '150px'; // 限制最大高度
+                img.style.borderRadius = '4px';
+                img.style.display = 'block'; // 使其獨占一行或根據需要調整
+                img.style.cursor = 'pointer'; // 暗示可點擊
+                img.addEventListener('click', () => {
+                    // 簡易圖片放大功能：新視窗打開原圖
+                    window.open(reply.image_url, '_blank');
+                });
+                imageContainer.appendChild(img);
+                replyDiv.appendChild(imageContainer);
+            }
+
             replyDiv.appendChild(actionsDiv);
 
             replyListContainer.appendChild(replyDiv);

@@ -65,6 +65,7 @@
                         <option value="all">全部</option>
                         <option value="visible">顯示中</option>
                         <option value="hidden">已隱藏</option>
+                        <option value="reported">已檢舉</option>
                     </select>
                 </div>
                 <div class="search-group" style="display: flex; align-items: center;">
@@ -90,6 +91,7 @@
                         <th>回覆數</th>
                         <th>最後活動</th>
                         <th>狀態</th>
+                        <th>檢舉狀態</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -128,7 +130,30 @@
             </form>
         </div>
     </div> 
-    <!-- Modal 結束 --> 
+    <!-- Modal 結束 -->
+
+    <!-- 新增：處理檢舉 Modal -->
+    <div id="process-report-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-process-report-modal-btn">×</span>
+            <h3>處理檢舉</h3>
+            <div id="reported-item-info">
+                <p><strong>ID:</strong> <span id="report-item-id"></span></p>
+                <p><strong>類型:</strong> <span id="report-item-type"></span></p>
+                <p><strong>作者:</strong> <span id="report-item-author"></span></p>
+                <p><strong>內容預覽:</strong></p>
+                <div id="report-item-content-preview" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; max-height: 100px; overflow-y: auto; margin-bottom: 15px; white-space: pre-wrap; word-wrap: break-word;"></div>
+            </div>
+            <div class="form-actions" style="text-align: center; margin-top: 20px;">
+                <button id="report-action-ignore" class="btn btn-secondary">忽略此檢舉</button>
+                <button id="report-action-hide" class="btn btn-warning">隱藏內容 (保留檢舉)</button>
+                <button id="report-action-delete" class="btn btn-danger">刪除內容</button>
+                <button id="report-action-clear-report" class="btn btn-info">清除檢舉標記</button>
+            </div>
+            <p id="process-report-status" class="status-message" style="margin-top: 15px; text-align: center;"></p>
+        </div>
+    </div>
+    <!-- 處理檢舉 Modal 結束 -->
 
     <footer></footer>
 

@@ -321,9 +321,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportButton.className = 'btn btn-link btn-sm report-btn';
                 reportButton.dataset.id = msg.id;
                 reportButton.dataset.type = 'message';
-                reportButton.textContent = '檢舉';
-                reportButton.style.color = '#6c757d'; // 改為灰色
+                // reportButton.textContent = '檢舉'; // 改為圖示
+                reportButton.style.color = '#6c757d';
                 reportButton.style.marginLeft = '8px';
+                reportButton.style.padding = '0'; // 移除內邊距，讓圖示更緊湊
+                reportButton.style.border = 'none'; // 移除邊框
+                reportButton.style.background = 'none'; // 移除背景
+                reportButton.title = '檢舉'; // 添加 title 提示
+
+                const reportIcon = document.createElement('img');
+                reportIcon.src = '/images/wormming.png';
+                reportIcon.alt = '檢舉';
+                reportIcon.style.width = '20px';
+                reportIcon.style.height = '20px';
+                reportIcon.style.verticalAlign = 'middle'; // 確保圖示垂直居中
+                reportButton.appendChild(reportIcon);
                 metaContainer.appendChild(reportButton);
             } else if (msg.is_reported) {
                 const reportedSpan = document.createElement('span');
@@ -458,9 +470,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportButton.className = 'btn btn-link btn-sm report-btn';
                 reportButton.dataset.id = msg.id;
                 reportButton.dataset.type = 'message';
-                reportButton.textContent = '檢舉';
-                reportButton.style.color = '#6c757d'; // 改為灰色
-                // reportButton.style.marginLeft = 'auto'; // 如果想推到最右
+                // reportButton.textContent = '檢舉'; // 改為圖示
+                reportButton.style.color = '#6c757d';
+                // reportButton.style.marginLeft = 'auto';
+                reportButton.style.padding = '0';
+                reportButton.style.border = 'none';
+                reportButton.style.background = 'none';
+                reportButton.title = '檢舉';
+
+                const reportIconList = document.createElement('img');
+                reportIconList.src = '/images/wormming.png';
+                reportIconList.alt = '檢舉';
+                reportIconList.style.width = '20px';
+                reportIconList.style.height = '20px';
+                reportIconList.style.verticalAlign = 'middle';
+                reportButton.appendChild(reportIconList);
                 metaInfoDiv.appendChild(reportButton);
             } else if (msg.is_reported) {
                 const reportedSpan = document.createElement('span');
@@ -972,9 +996,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     reportReplyButton.className = 'btn btn-link btn-sm report-btn';
                     reportReplyButton.dataset.id = reply.id;
                     reportReplyButton.dataset.type = 'reply';
-                    reportReplyButton.textContent = '檢舉';
-                    reportReplyButton.style.color = '#6c757d'; // 改為灰色
+                    // reportReplyButton.textContent = '檢舉'; // 改為圖示
+                    reportReplyButton.style.color = '#6c757d';
                     reportReplyButton.style.marginLeft = '10px';
+                    reportReplyButton.style.padding = '0';
+                    reportReplyButton.style.border = 'none';
+                    reportReplyButton.style.background = 'none';
+                    reportReplyButton.title = '檢舉';
+    
+                    const reportIconReply = document.createElement('img');
+                    reportIconReply.src = '/images/wormming.png';
+                    reportIconReply.alt = '檢舉';
+                    reportIconReply.style.width = '20px';
+                    reportIconReply.style.height = '20px';
+                    reportIconReply.style.verticalAlign = 'middle';
+                    reportReplyButton.appendChild(reportIconReply);
                     actionsDiv.appendChild(reportReplyButton);
                 } else if (reply.is_reported) {
                     const reportedSpan = document.createElement('span');

@@ -16,7 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPostContent = document.getElementById('admin-post-content');
     const adminPostStatus = document.getElementById('admin-post-status');
     const submitAdminPostBtn = document.getElementById('submit-admin-post-btn');
-    const adminPostCancelBtns = adminPostModal ? adminPostModal.querySelectorAll('.close-modal-btn') : []; // 獲取所有關閉按鈕
+    const adminPostCancelBtns = adminPostModal ? adminPostModal.querySelectorAll('.close-modal-btn') : [];
+
+    // --- 新增: 處理檢舉 Modal DOM 元素 ---
+    const processReportModal = document.getElementById('process-report-modal');
+    const closeProcessReportModalBtn = document.getElementById('close-process-report-modal-btn');
+    const reportItemIdSpan = document.getElementById('report-item-id');
+    const reportItemTypeSpan = document.getElementById('report-item-type');
+    const reportItemAuthorSpan = document.getElementById('report-item-author');
+    const reportItemContentPreviewDiv = document.getElementById('report-item-content-preview');
+    const reportActionIgnoreBtn = document.getElementById('report-action-ignore');
+    const reportActionHideBtn = document.getElementById('report-action-hide');
+    const reportActionDeleteBtn = document.getElementById('report-action-delete');
+    const reportActionClearReportBtn = document.getElementById('report-action-clear-report');
+    const processReportStatusP = document.getElementById('process-report-status');
+
 
     // --- 狀態變數 (原有) ---
     let currentPage = 1;
@@ -142,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!messages || messages.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 8; // 注意表格列數
+            td.colSpan = 9; // 更新列數 (ID, 類型, 作者, 預覽, 回覆數, 最後活動, 狀態, 檢舉狀態, 操作)
             td.textContent = '找不到符合條件的留言。';
             tr.appendChild(td);
             guestbookAdminList.appendChild(tr);
@@ -185,6 +199,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusSpan.textContent = msg.is_visible ? '顯示中' : '已隱藏';
             tdStatus.appendChild(statusSpan);
 
+            const tdReportedStatus = document.createElement('td');
+            tdReportedStatus.textContent = msg.is_reported ? '是' : '否';
+            if (msg.is_reported) {
+                tdReportedStatus.style.color = 'red';
+                tdReportedStatus.style.fontWeight = 'bold';
+            }
+
             const tdActions = document.createElement('td');
             tdActions.className = 'actions';
                 const toggleBtn = document.createElement('button'); /* ... 顯隱按鈕代碼不變 ... */
@@ -205,10 +226,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailLink.className = 'btn btn-info btn-sm';
                 detailLink.href = `/admin-message-detail.html?id=${msg.id}`;
                 detailLink.textContent = '詳情/回覆';
-
+            
             tdActions.appendChild(toggleBtn);
             tdActions.appendChild(deleteBtn);
             tdActions.appendChild(detailLink);
+
+            if (msg.is_reported) {
+                const processReportBtn = document.createElement('button');
+                processReportBtn.className = 'btn btn-info btn-sm process-report-btn';
+                processReportBtn.textContent = '處理檢舉';
+                processReportBtn.dataset.id = msg.id;
+                processReportBtn.dataset.type = 'message'; // 假設目前列表只顯示 message，回覆在詳情頁處理
+                processReportBtn.style.marginLeft = '5px';
+                tdActions.appendChild(processReportBtn);
+            }
 
             tr.appendChild(tdId);
             tr.appendChild(tdType);
@@ -217,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.appendChild(tdReplyCount);
             tr.appendChild(tdLastActivity);
             tr.appendChild(tdStatus);
+            tr.appendChild(tdReportedStatus); // 添加檢舉狀態列
             tr.appendChild(tdActions);
 
             guestbookAdminList.appendChild(tr);
@@ -278,8 +310,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
      // --- 【★ 新增 ★】事件委派監聽器，處理顯隱和刪除按鈕 ---
      if (guestbookAdminList) {
-        guestbookAdminList.addEventListener('click', async (event) => {
-            const target = event.target;
+         guestbookAdminList.addEventListener('click', async (event) => {
+             const target = event.target;
+ 
+             // --- 處理 "處理檢舉" 按鈕 ---
+             if (target.matches('.process-report-btn')) {
+                 const id = target.dataset.id;
+                 const type = target.dataset.type; // 目前假設為 'message'
+                 
+                 // 從表格行獲取信息來填充 Modal
+                 const row = target.closest('tr');
+                 if (row && reportItemIdSpan && reportItemTypeSpan && reportItemAuthorSpan && reportItemContentPreviewDiv && processReportStatusP) {
+                     reportItemIdSpan.textContent = id;
+                     reportItemTypeSpan.textContent = type === 'message' ? '留言' : '回覆'; // 根據實際情況調整
+                     
+                     // 假設作者在第3列 (index 2), 內容預覽在第4列 (index 3)
+                     const authorCell = row.cells[2];
+                     const contentPreviewCell = row.cells[3]?.querySelector('a'); // 內容在連結內
+                     
+                     reportItemAuthorSpan.textContent = authorCell ? authorCell.textContent.split(' (管理員)')[0].trim() : 'N/A';
+                     reportItemContentPreviewDiv.textContent = contentPreviewCell ? contentPreviewCell.textContent : '無法載入預覽';
+                     
+                     processReportStatusP.textContent = ''; // 清空狀態
+ 
+                     // 將 ID 和 Type 存儲到 Modal 或按鈕上，方便後續操作
+                     if(processReportModal) processReportModal.dataset.itemId = id;
+                     if(processReportModal) processReportModal.dataset.itemType = type;
+ 
+                     openModal(processReportModal);
+                 } else {
+                     console.error('無法找到 Modal 元素或表格行來填充檢舉信息。');
+                     alert('打開處理視窗時發生錯誤。');
+                 }
+             }
 
             // --- 處理顯隱按鈕 ---
             if (target.matches('.toggle-visibility-btn')) {
@@ -360,6 +423,91 @@ if (adminPostModal) {
         }
     });
 }
+
+// --- ★ 新增: 處理檢舉 Modal 的關閉事件 ★ ---
+if (closeProcessReportModalBtn && processReportModal) {
+    closeProcessReportModalBtn.addEventListener('click', () => closeModal(processReportModal));
+}
+if (processReportModal) {
+    processReportModal.addEventListener('click', (event) => {
+        if (event.target === processReportModal) {
+            closeModal(processReportModal);
+        }
+    });
+}
+
+// --- ★ 新增: 處理檢舉 Modal 內部操作按鈕的事件監聽器 (佔位) ★ ---
+const setupReportActionButtons = () => {
+    const reportModal = processReportModal; // 引用外部的 modal
+    if (!reportModal) return;
+
+    const itemId = () => reportModal.dataset.itemId;
+    const itemType = () => reportModal.dataset.itemType;
+
+    const handleAction = async (actionName, apiEndpointTemplate, method = 'PUT', body = null) => {
+        if (!itemId() || !itemType()) {
+            processReportStatusP.textContent = '錯誤：缺少項目ID或類型。';
+            processReportStatusP.style.color = 'red';
+            return;
+        }
+        
+        [reportActionIgnoreBtn, reportActionHideBtn, reportActionDeleteBtn, reportActionClearReportBtn].forEach(btn => btn.disabled = true);
+        processReportStatusP.textContent = `正在 ${actionName}...`;
+        processReportStatusP.style.color = 'blue';
+
+        // 模擬 API 調用
+        console.log(`執行操作: ${actionName}, ID: ${itemId()}, Type: ${itemType()}`);
+        // 實際 API 調用:
+        // const endpoint = apiEndpointTemplate.replace('{type}', itemType()).replace('{id}', itemId());
+        // try {
+        //     const response = await fetch(endpoint, { method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : null });
+        //     if (!response.ok && response.status !== 204) {
+        //         const errData = await response.json().catch(() => ({}));
+        //         throw new Error(errData.error || `操作失敗 (HTTP ${response.status})`);
+        //     }
+        //     processReportStatusP.textContent = `${actionName} 成功！`;
+        //     processReportStatusP.style.color = 'green';
+        //     setTimeout(() => {
+        //         closeModal(reportModal);
+        //         fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
+        //     }, 1500);
+        // } catch (error) {
+        //     console.error(`${actionName} 失敗:`, error);
+        //     processReportStatusP.textContent = `${actionName} 失敗: ${error.message}`;
+        //     processReportStatusP.style.color = 'red';
+        //     [reportActionIgnoreBtn, reportActionHideBtn, reportActionDeleteBtn, reportActionClearReportBtn].forEach(btn => btn.disabled = false);
+        // }
+
+        // 暫時的模擬成功流程
+        setTimeout(() => {
+            processReportStatusP.textContent = `${actionName} 操作已記錄 (模擬)。`;
+            processReportStatusP.style.color = 'green';
+            setTimeout(() => {
+                closeModal(reportModal);
+                fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
+            }, 1500);
+        }, 1000);
+    };
+
+    if (reportActionIgnoreBtn) {
+        reportActionIgnoreBtn.addEventListener('click', () => handleAction('忽略檢舉', `/api/admin/guestbook/{type}s/{id}/report/ignore`));
+    }
+    if (reportActionHideBtn) {
+        reportActionHideBtn.addEventListener('click', () => handleAction('隱藏內容', `/api/admin/guestbook/{type}s/{id}/visibility`, 'PUT', { is_visible: false }));
+    }
+    if (reportActionDeleteBtn) {
+        reportActionDeleteBtn.addEventListener('click', () => {
+            if (confirm(`確定要刪除此 ${itemType() === 'message' ? '留言' : '回覆'} (ID: ${itemId()}) 嗎？`)) {
+                handleAction('刪除內容', `/api/admin/guestbook/{type}s/{id}`, 'DELETE');
+            }
+        });
+    }
+    if (reportActionClearReportBtn) {
+        reportActionClearReportBtn.addEventListener('click', () => handleAction('清除檢舉標記', `/api/admin/guestbook/{type}s/{id}/report/clear`));
+    }
+};
+setupReportActionButtons();
+
 
 // --- ★ 新增: 事件監聽 - 提交管理員發表表單 ★ ---
 if (adminPostForm && submitAdminPostBtn && adminPostStatus && adminPostIdentitySelect && adminPostContent) {
