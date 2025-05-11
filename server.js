@@ -5899,25 +5899,27 @@ adminRouter.get('/games/stats/today', async (req, res) => {
 
 
 
-// GET /api/admin/disk-files - 列出 /data/uploads 目錄下的實體檔案
-adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => { // 添加 basicAuthMiddleware
+// GET /api/admin/disk-files - 列出 /data/uploads 目錄下的實體檔案 (支持排序和分頁)
+adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => {
     try {
-        const directoryPath = uploadDir; // uploadDir 應已在 server.js 前面定義為 /data/uploads
-        
-        // 檢查 uploadDir 是否有效
+        const directoryPath = uploadDir;
         if (!fs.existsSync(directoryPath)) {
             console.error(`[API GET /admin/disk-files] 上傳目錄 ${directoryPath} 不存在。`);
             return res.status(500).json({ error: '伺服器配置錯誤：上傳目錄找不到。' });
         }
 
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 15; // 與資料庫檔案列表的預設值一致
+        const sortBy = req.query.sortBy || 'date_desc'; // 預設按修改日期倒序
+
         const files = fs.readdirSync(directoryPath);
-        const fileDetails = [];
+        let fileDetails = [];
 
         for (const file of files) {
             const filePath = path.join(directoryPath, file);
             try {
                 const stats = fs.statSync(filePath);
-                if (stats.isFile()) { // 確保只處理檔案，忽略子目錄
+                if (stats.isFile()) {
                     const ext = path.extname(file).toLowerCase();
                     let type = 'other';
                     if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) {
@@ -5925,30 +5927,61 @@ adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => { // 添
                     } else if (ext === '.pdf') {
                         type = 'pdf';
                     }
-
                     fileDetails.push({
                         filename: file,
                         size: stats.size,
                         type: type,
-                        urlPath: `/uploads/${file}`, // 公開訪問的 URL 路徑
-                        modifiedTime: stats.mtimeMs, // 使用 mtimeMs 獲取毫秒數以便排序
+                        urlPath: `/uploads/${file}`,
+                        modifiedTimeMs: stats.mtimeMs, // 用於排序
+                        modifiedTimeString: stats.mtime.toLocaleString() // 用於顯示
                     });
                 }
             } catch (statErr) {
                 console.warn(`[API GET /admin/disk-files] 無法獲取檔案 ${file} 的狀態:`, statErr.message);
-                // 可以選擇跳過此檔案或記錄一個帶有錯誤標記的條目
-                // 例如: fileDetails.push({ filename: file, error: '無法讀取狀態' });
             }
         }
 
-        // 按修改時間倒序排序，最新的在前面
-        fileDetails.sort((a, b) => b.modifiedTime - a.modifiedTime);
-        
-        // 移除 modifiedTime 屬性，因為前端可能不需要毫秒級的時間戳
-        const filesForResponse = fileDetails.map(({ modifiedTime, ...rest }) => rest);
+        // 排序邏輯
+        switch (sortBy) {
+            case 'size_asc':
+                fileDetails.sort((a, b) => a.size - b.size);
+                break;
+            case 'size_desc':
+                fileDetails.sort((a, b) => b.size - a.size);
+                break;
+            case 'name_asc':
+                fileDetails.sort((a, b) => a.filename.localeCompare(b.filename, undefined, { sensitivity: 'base' }));
+                break;
+            case 'name_desc':
+                fileDetails.sort((a, b) => b.filename.localeCompare(a.filename, undefined, { sensitivity: 'base' }));
+                break;
+            case 'date_asc':
+                fileDetails.sort((a, b) => a.modifiedTimeMs - b.modifiedTimeMs);
+                break;
+            case 'date_desc':
+            default: // 預設按修改時間倒序
+                fileDetails.sort((a, b) => b.modifiedTimeMs - a.modifiedTimeMs);
+                break;
+        }
 
+        // 分頁邏輯
+        const totalItems = fileDetails.length;
+        const totalPages = Math.ceil(totalItems / limit);
+        const offset = (page - 1) * limit;
+        const paginatedFiles = fileDetails.slice(offset, offset + limit);
 
-        res.json(filesForResponse);
+        // 移除用於排序的 modifiedTimeMs，只保留 modifiedTimeString 給前端顯示
+        const filesForResponse = paginatedFiles.map(({ modifiedTimeMs, ...rest }) => rest);
+
+        res.json({
+            files: filesForResponse,
+            currentPage: page,
+            totalPages: totalPages,
+            totalItems: totalItems,
+            limit: limit,
+            sortBy: sortBy
+        });
+
     } catch (err) {
         console.error('[API GET /admin/disk-files] 讀取磁碟檔案列表時出錯:', err);
         res.status(500).json({ error: '無法讀取伺服器上的檔案列表', detail: err.message });
