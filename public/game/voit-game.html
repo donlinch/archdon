@@ -1242,6 +1242,7 @@
 
                     optionGroups.forEach(group => {
                         const nameInput = group.querySelector('input[name="option_name[]"]');
+                        // Get image URL from the hidden input field
                         const imageUrlInput = group.querySelector('input[name="option_image_url[]"]');
                         if (nameInput && nameInput.value.trim() !== '') {
                             options.push({
@@ -1325,25 +1326,93 @@
                 
                 function addCampaignOptionInput(containerElement, optionData = {}, optionNumber, isEditMode = false) {
                     const optionName = optionData.name || '';
-                    const optionImageUrl = optionData.image_url || '';
-                    const optionId = optionData.option_id || null; 
+                    let optionImageUrl = optionData.image_url || ''; // Make it let to update
+                    const optionId = optionData.option_id || null;
 
                     const newInputGroup = document.createElement('div');
                     newInputGroup.className = 'campaign-option-input-group';
                     newInputGroup.style.marginBottom = '10px';
                     newInputGroup.style.paddingBottom = '10px';
                     newInputGroup.style.borderBottom = '1px dashed #ccc';
-                    if (isEditMode && optionId) { 
+                    if (isEditMode && optionId) {
                         newInputGroup.setAttribute('data-existing-option-id', optionId);
                     }
-                    
+
+                    const imagePreviewId = `option-image-preview-${optionNumber}-${Date.now()}`;
+                    const hiddenImageUrlId = `hidden-option-image-url-${optionNumber}-${Date.now()}`;
+                    const fileInputId = `file-option-image-${optionNumber}-${Date.now()}`;
+                    const uploadStatusId = `upload-status-${optionNumber}-${Date.now()}`;
+
                     newInputGroup.innerHTML = `
                         <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 名稱:</label>
                         <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionName)}">
-                        <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片URL (可選):</label>
-                        <input type="url" name="option_image_url[]" placeholder="圖片URL (可選)" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionImageUrl)}">
+                        
+                        <label for="${fileInputId}" style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片 (可選, JPG/PNG):</label>
+                        <input type="file" id="${fileInputId}" name="option_image_file[]" accept=".jpg,.jpeg,.png" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                        <input type="hidden" id="${hiddenImageUrlId}" name="option_image_url[]" value="${escapeHtml(optionImageUrl)}">
+                        <img id="${imagePreviewId}" src="${escapeHtml(optionImageUrl)}" alt="圖片預覽" style="max-width: 100px; max-height: 100px; display: ${optionImageUrl ? 'block' : 'none'}; margin-top: 5px;">
+                        <div id="${uploadStatusId}" style="font-size: 0.8em; margin-top: 3px;"></div>
                         <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
                     `;
+
+                    const fileInput = newInputGroup.querySelector(`#${fileInputId}`);
+                    const imagePreview = newInputGroup.querySelector(`#${imagePreviewId}`);
+                    const hiddenImageUrlInput = newInputGroup.querySelector(`#${hiddenImageUrlId}`);
+                    const uploadStatusDiv = newInputGroup.querySelector(`#${uploadStatusId}`);
+
+                    fileInput.addEventListener('change', async function(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                                uploadStatusDiv.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
+                                uploadStatusDiv.style.color = 'red';
+                                imagePreview.style.display = 'none';
+                                hiddenImageUrlInput.value = ''; // Clear previous URL if any
+                                return;
+                            }
+                            if (file.size > 2 * 1024 * 1024) { // 2MB limit from server.js
+                                uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 2MB。';
+                                uploadStatusDiv.style.color = 'red';
+                                imagePreview.style.display = 'none';
+                                hiddenImageUrlInput.value = '';
+                                return;
+                            }
+
+                            uploadStatusDiv.textContent = '上傳中...';
+                            uploadStatusDiv.style.color = 'blue';
+                            const formData = new FormData();
+                            formData.append('image', file); // 'image' matches server.js upload.single('image')
+
+                            try {
+                                const response = await fetch('/api/upload', { // Ensure this matches your server's upload endpoint
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const result = await response.json();
+                                if (response.ok && result.success && result.url) {
+                                    hiddenImageUrlInput.value = result.url;
+                                    imagePreview.src = result.url;
+                                    imagePreview.style.display = 'block';
+                                    uploadStatusDiv.textContent = '上傳成功！';
+                                    uploadStatusDiv.style.color = 'green';
+                                } else {
+                                    throw new Error(result.error || '上傳失敗');
+                                }
+                            } catch (error) {
+                                console.error('圖片上傳失敗:', error);
+                                uploadStatusDiv.textContent = `上傳失敗: ${error.message}`;
+                                uploadStatusDiv.style.color = 'red';
+                                imagePreview.style.display = 'none';
+                                hiddenImageUrlInput.value = ''; // Clear on failure
+                            }
+                        } else {
+                            // No file selected, clear preview and hidden URL if needed
+                            // imagePreview.style.display = 'none';
+                            // hiddenImageUrlInput.value = ''; // Keep existing URL if user clears file input but had one before
+                            uploadStatusDiv.textContent = '';
+                        }
+                    });
+
                     newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
                         this.parentElement.remove();
                     });
@@ -1362,12 +1431,13 @@
                     const edit_password = form.edit_password.value;
                     
                     const optionNames = Array.from(form.querySelectorAll('input[name="option_name[]"]')).map(input => input.value.trim());
+                    // Get image URLs from the hidden input fields
                     const optionImageUrls = Array.from(form.querySelectorAll('input[name="option_image_url[]"]')).map(input => input.value.trim());
 
                     const options = optionNames.map((name, index) => ({
                         name: name,
-                        image_url: optionImageUrls[index] || null 
-                    })).filter(opt => opt.name && opt.name.trim() !== ''); 
+                        image_url: optionImageUrls[index] || null
+                    })).filter(opt => opt.name && opt.name.trim() !== '');
 
                     if (options.length === 0) {
                         alert('請至少填寫一個有效的投票選項名稱。');
