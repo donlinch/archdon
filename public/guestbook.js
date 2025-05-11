@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const postModalSubmitBtn = document.getElementById('submit-message-btn');
     const postModalCancelBtns = postModal?.querySelectorAll('.close-modal-btn');
     const postModalContentInput = document.getElementById('modal-message-content');
+    const modalMessageImageInput = document.getElementById('modal-message-image'); // 新增
+    const modalMessageImagePreview = document.getElementById('modal-message-image-preview'); // 新增
 
     // 详情 Modal 元素
     const detailModal = document.getElementById('message-detail-modal');
@@ -30,6 +32,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalReplyStatus = document.getElementById('modal-reply-status');
     const modalSubmitReplyBtn = document.getElementById('modal-submit-reply-btn');
     const detailModalCancelBtns = detailModal?.querySelectorAll('.close-modal-btn');
+    const modalReplyImageInput = document.getElementById('modal-reply-image'); // 新增
+    const modalReplyImagePreview = document.getElementById('modal-reply-image-preview'); // 新增
+
+    // 編輯 Modal 元素 (新增)
+    const editModal = document.getElementById('edit-modal');
+    const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
+    const editItemForm = document.getElementById('edit-item-form');
+    const editItemIdInput = document.getElementById('edit-item-id');
+    const editItemTypeInput = document.getElementById('edit-item-type');
+    const editPasswordGroup = document.getElementById('edit-password-group');
+    const editPasswordInput = document.getElementById('edit-password-input');
+    const editContentGroup = document.getElementById('edit-content-group');
+    const editContentTextarea = document.getElementById('edit-content-textarea');
+    const editStatus = document.getElementById('edit-status');
+    const verifyPasswordBtn = document.getElementById('verify-password-btn');
+    const submitEditBtn = document.getElementById('submit-edit-btn');
+    const editModalCancelBtns = editModal?.querySelectorAll('.close-modal-btn');
 
     // --- 状态变量 ---
     let currentPage = 1;
@@ -219,6 +238,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentDiv = document.createElement('div');
             contentDiv.className = 'content-preview';
             contentDiv.textContent = msg.content_preview || '(無內容預覽)';
+
+            // 新增：顯示圖片 (如果存在)
+            if (msg.image_url) {
+                const imagePreview = document.createElement('img');
+                imagePreview.src = msg.image_url;
+                imagePreview.alt = '留言圖片';
+                imagePreview.style.maxWidth = '100%';
+                imagePreview.style.maxHeight = '200px'; // 限制預覽高度
+                imagePreview.style.borderRadius = '8px';
+                imagePreview.style.marginTop = '10px';
+                imagePreview.style.objectFit = 'cover';
+                contentDiv.appendChild(imagePreview); // 將圖片放在內容預覽下方
+            }
             
             const metaContainer = document.createElement('div');
             metaContainer.className = 'message-meta-container';
@@ -249,6 +281,17 @@ document.addEventListener('DOMContentLoaded', () => {
             metaContainer.appendChild(replySpan);
             metaContainer.appendChild(viewSpan);
             metaContainer.appendChild(likeContainer);
+
+            // 添加編輯按鈕 (如果 msg.has_edit_password 為 true)
+            if (msg.has_edit_password) {
+                const editButton = document.createElement('button');
+                editButton.className = 'btn btn-link btn-sm edit-message-btn';
+                editButton.dataset.id = msg.id;
+                editButton.dataset.type = 'message';
+                editButton.textContent = '編輯';
+                editButton.style.marginLeft = '8px';
+                metaContainer.appendChild(editButton);
+            }
             
             messageCard.appendChild(authorSpan);
             messageCard.appendChild(document.createTextNode(' '));
@@ -343,6 +386,17 @@ document.addEventListener('DOMContentLoaded', () => {
             metaInfoDiv.appendChild(replySpan);
             metaInfoDiv.appendChild(viewSpan);
             metaInfoDiv.appendChild(likeContainer);
+
+            // 添加編輯按鈕 (如果 msg.has_edit_password 為 true)
+            if (msg.has_edit_password) {
+                const editButton = document.createElement('button');
+                editButton.className = 'btn btn-link btn-sm edit-message-btn';
+                editButton.dataset.id = msg.id;
+                editButton.dataset.type = 'message';
+                editButton.textContent = '編輯';
+                // editButton.style.marginLeft = 'auto'; // 嘗試將編輯按鈕推到最右邊
+                metaInfoDiv.appendChild(editButton);
+            }
             
             headerDiv.appendChild(authorInfoDiv);
             headerDiv.appendChild(metaInfoDiv);
@@ -350,6 +404,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentDiv = document.createElement('div');
             contentDiv.className = 'content-preview';
             contentDiv.textContent = msg.content_preview || '(無內容預覽)';
+
+            // 新增：顯示圖片 (如果存在)
+            if (msg.image_url) {
+                const imagePreview = document.createElement('img');
+                imagePreview.src = msg.image_url;
+                imagePreview.alt = '留言圖片';
+                imagePreview.style.maxWidth = '100%';
+                imagePreview.style.maxHeight = '150px'; // 列表視圖中圖片可以小一點
+                imagePreview.style.borderRadius = '8px';
+                imagePreview.style.marginTop = '8px';
+                imagePreview.style.objectFit = 'cover';
+                contentDiv.appendChild(imagePreview);
+            }
             
             const viewDetailsBtn = document.createElement('button');
             viewDetailsBtn.className = 'btn btn-primary';
@@ -583,6 +650,17 @@ document.addEventListener('DOMContentLoaded', () => {
         metaInfoDiv.appendChild(viewCountSpan);
         metaInfoDiv.appendChild(replyCountSpan);
         metaInfoDiv.appendChild(likeContainer);
+
+        // 添加主留言編輯按鈕 (如果 message.has_edit_password 為 true)
+        if (message.has_edit_password) {
+            const editMessageButton = document.createElement('button');
+            editMessageButton.className = 'btn btn-link btn-sm edit-message-btn';
+            editMessageButton.dataset.id = message.id;
+            editMessageButton.dataset.type = 'message';
+            editMessageButton.textContent = '編輯此留言';
+            editMessageButton.style.marginLeft = '10px';
+            metaInfoDiv.appendChild(editMessageButton);
+        }
         
         authorP.appendChild(authorInfoDiv);
         authorP.appendChild(metaInfoDiv);
@@ -601,6 +679,18 @@ document.addEventListener('DOMContentLoaded', () => {
         contentDiv.style.border = '1px solid #eee';
         contentDiv.style.margin = '10px 0 15px';
         contentDiv.style.lineHeight = '1.6';
+
+        // 新增：在 Modal 中顯示主留言的圖片 (如果存在)
+        if (message.image_url) {
+            const messageImage = document.createElement('img');
+            messageImage.src = message.image_url;
+            messageImage.alt = '留言圖片';
+            messageImage.style.maxWidth = '100%';
+            messageImage.style.borderRadius = '8px';
+            messageImage.style.marginTop = '10px';
+            messageImage.style.marginBottom = '15px';
+            detailModalMain.appendChild(messageImage);
+        }
         
         detailModalMain.appendChild(authorP);
         detailModalMain.appendChild(hr);
@@ -730,6 +820,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentDiv.style.wordWrap = 'break-word';
                 contentDiv.style.marginBottom = '8px';
                 contentDiv.style.lineHeight = '1.5';
+
+                // 新增：在 Modal 中顯示回覆的圖片 (如果存在)
+                if (reply.image_url) {
+                    const replyImage = document.createElement('img');
+                    replyImage.src = reply.image_url;
+                    replyImage.alt = '回覆圖片';
+                    replyImage.style.maxWidth = '80%'; // 回覆圖片可以小一點
+                    replyImage.style.maxHeight = '150px';
+                    replyImage.style.borderRadius = '6px';
+                    replyImage.style.marginTop = '8px';
+                    replyImage.style.marginBottom = '8px';
+                    replyImage.style.objectFit = 'cover';
+                    contentDiv.appendChild(replyImage); // 將圖片放在回覆內容下方
+                }
                 
                 // 回复操作按钮
                 const actionsDiv = document.createElement('div');
@@ -770,6 +874,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 actionsDiv.appendChild(replyButton);
                 actionsDiv.appendChild(quoteButton);
                 actionsDiv.appendChild(likeContainer);
+
+                // 添加回覆編輯按鈕 (如果 reply.has_edit_password 為 true)
+                if (reply.has_edit_password) {
+                    const editReplyButton = document.createElement('button');
+                    editReplyButton.className = 'btn btn-link btn-sm edit-reply-btn';
+                    editReplyButton.dataset.id = reply.id;
+                    editReplyButton.dataset.type = 'reply';
+                    editReplyButton.textContent = '編輯';
+                    editReplyButton.style.marginLeft = '10px';
+                    actionsDiv.appendChild(editReplyButton);
+                }
                 
                 // 组装回复项
                 replyDiv.appendChild(metaP);
@@ -804,6 +919,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             isPostingCooldown = false;
+            // 重置圖片預覽
+            if (modalMessageImageInput) modalMessageImageInput.value = '';
+            if (modalMessageImagePreview) {
+                modalMessageImagePreview.src = '#';
+                modalMessageImagePreview.style.display = 'none';
+            }
             openModal(postModal);
         });
     } else {
@@ -811,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- 事件监听：关闭 Modal ---
-    [postModal, detailModal].forEach(modal => {
+    [postModal, detailModal, editModal].forEach(modal => { // 新增 editModal
         if (modal) {
             const closeBtns = modal.querySelectorAll('.close-modal-btn');
             closeBtns.forEach(btn => btn.addEventListener('click', () => closeModal(modal)));
@@ -846,6 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(postModalForm);
             const authorName = formData.get('author_name')?.trim() || '匿名';
             const content = formData.get('content')?.trim();
+            const editPassword = formData.get('edit_password')?.trim(); // 獲取編輯密碼
             
             if (!content) {
                 postModalStatus.textContent = '錯誤：留言內容不能為空！';
@@ -856,10 +978,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             try {
+                let imageUrl = null;
+                const imageFile = modalMessageImageInput?.files[0];
+
+                if (imageFile) {
+                    postModalStatus.textContent = '正在上傳圖片...';
+                    const imageFormData = new FormData();
+                    imageFormData.append('image', imageFile); // 後端 multer 設定的 field name
+
+                    const uploadResponse = await fetch('/api/upload', { // 確認這是你的圖片上傳API
+                        method: 'POST',
+                        body: imageFormData,
+                    });
+
+                    if (!uploadResponse.ok) {
+                        const errorData = await uploadResponse.json().catch(() => ({ error: `圖片上傳失敗 (HTTP ${uploadResponse.status})` }));
+                        throw new Error(errorData.error || `圖片上傳失敗 (HTTP ${uploadResponse.status})`);
+                    }
+                    const uploadResult = await uploadResponse.json();
+                    if (!uploadResult.success || !uploadResult.url) {
+                        throw new Error(uploadResult.error || '圖片上傳成功但未返回有效URL');
+                    }
+                    imageUrl = uploadResult.url;
+                    postModalStatus.textContent = '圖片上傳成功，正在送出留言...';
+                }
+
+
                 const response = await fetch('/api/guestbook', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ author_name: authorName, content: content }),
+                    body: JSON.stringify({
+                        author_name: authorName,
+                        content: content,
+                        edit_password: editPassword,
+                        image_url: imageUrl // 新增 image_url
+                    }),
                 });
                 
                 if (!response.ok) {
@@ -928,6 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const authorName = modalReplyFormAuthor?.value.trim() || '匿名';
             const content = modalReplyFormContent?.value.trim();
+            const editPassword = document.getElementById('modal-reply-edit-password')?.value.trim(); // 獲取回覆的編輯密碼
             const parentId = currentParentReplyId;
             
             if (!content) {
@@ -939,6 +1093,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             try {
+                let imageUrl = null;
+                const imageFile = modalReplyImageInput?.files[0];
+
+                if (imageFile) {
+                    modalReplyStatus.textContent = '正在上傳圖片...';
+                    const imageFormData = new FormData();
+                    imageFormData.append('image', imageFile); // 後端 multer 設定的 field name
+
+                    const uploadResponse = await fetch('/api/upload', { // 確認這是你的圖片上傳API
+                        method: 'POST',
+                        body: imageFormData,
+                    });
+
+                    if (!uploadResponse.ok) {
+                        const errorData = await uploadResponse.json().catch(() => ({ error: `圖片上傳失敗 (HTTP ${uploadResponse.status})` }));
+                        throw new Error(errorData.error || `圖片上傳失敗 (HTTP ${uploadResponse.status})`);
+                    }
+                    const uploadResult = await uploadResponse.json();
+                    if (!uploadResult.success || !uploadResult.url) {
+                        throw new Error(uploadResult.error || '圖片上傳成功但未返回有效URL');
+                    }
+                    imageUrl = uploadResult.url;
+                    modalReplyStatus.textContent = '圖片上傳成功，正在送出回覆...';
+                }
+
                 const response = await fetch('/api/guestbook/replies', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -946,7 +1125,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         message_id: currentDetailMessageId,
                         parent_reply_id: parentId,
                         author_name: authorName,
-                        content: content
+                        content: content,
+                        edit_password: editPassword, // 新增 edit_password
+                        image_url: imageUrl // 新增 image_url
                     }),
                 });
                 
@@ -961,6 +1142,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentParentReplyId = null;
                 
                 if (modalReplyFormLabel) modalReplyFormLabel.textContent = '回覆內容 (必填):';
+                // 重置回覆圖片預覽
+                if (modalReplyImageInput) modalReplyImageInput.value = '';
+                if (modalReplyImagePreview) {
+                    modalReplyImagePreview.src = '#';
+                    modalReplyImagePreview.style.display = 'none';
+                }
                 
                 // 只刷新 Modal 內的內容
                 await fetchAndRenderDetailModal(currentDetailMessageId);
@@ -1122,6 +1309,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalReplyForm?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
+
+        // --- 处理编辑按钮点击 (新增) ---
+        if (target.matches('.edit-message-btn, .edit-reply-btn')) {
+            event.preventDefault();
+            const itemId = target.dataset.id;
+            const itemType = target.dataset.type; // 'message' or 'reply'
+
+            if (editModal && editItemIdInput && editItemTypeInput && editPasswordInput && editContentTextarea && editStatus && verifyPasswordBtn && submitEditBtn && editPasswordGroup && editContentGroup) {
+                editItemIdInput.value = itemId;
+                editItemTypeInput.value = itemType;
+                
+                // 重置 Modal 狀態
+                editItemForm.reset(); // 清空表單
+                editStatus.textContent = '';
+                editStatus.style.color = '';
+                
+                editPasswordGroup.style.display = 'block'; // 顯示密碼輸入
+                editContentGroup.style.display = 'none';  // 隱藏內容編輯
+                
+                verifyPasswordBtn.style.display = 'inline-block'; // 顯示驗證按鈕
+                verifyPasswordBtn.disabled = false;
+                submitEditBtn.style.display = 'none'; // 隱藏儲存按鈕
+                
+                document.getElementById('edit-modal-title').textContent = itemType === 'message' ? '編輯留言' : '編輯回覆';
+
+                openModal(editModal);
+            } else {
+                console.error("編輯 Modal 或其內部元素未找到!");
+            }
+        }
     });
     
     // --- 初始化 ---
@@ -1141,4 +1358,183 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 窗口尺寸改变时重新检测
     window.addEventListener('resize', detectDevice);
+
+    // --- 圖片預覽功能 (新增) ---
+    function setupImagePreview(inputElement, previewElement) {
+        if (inputElement && previewElement) {
+            inputElement.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewElement.src = e.target.result;
+                        previewElement.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    previewElement.src = '#';
+                    previewElement.style.display = 'none';
+                }
+            });
+        }
+    }
+    setupImagePreview(modalMessageImageInput, modalMessageImagePreview);
+    setupImagePreview(modalReplyImageInput, modalReplyImagePreview);
+
+
+    // --- 編輯 Modal 內部邏輯 (新增) ---
+    if (editModal && verifyPasswordBtn && submitEditBtn && editItemForm && editStatus && editPasswordGroup && editContentGroup && editContentTextarea && editItemIdInput && editItemTypeInput && editPasswordInput) {
+        
+        // 驗證密碼按鈕點擊
+        verifyPasswordBtn.addEventListener('click', async () => {
+            const itemId = editItemIdInput.value;
+            const itemType = editItemTypeInput.value;
+            const password = editPasswordInput.value;
+
+            if (!password) {
+                editStatus.textContent = '請輸入編輯密碼。';
+                editStatus.style.color = 'red';
+                return;
+            }
+
+            verifyPasswordBtn.disabled = true;
+            editStatus.textContent = '正在驗證密碼...';
+            editStatus.style.color = 'blue';
+
+            try {
+                const verifyUrl = itemType === 'message' ? `/api/guestbook/message/${itemId}/verify-password` : `/api/guestbook/reply/${itemId}/verify-password`;
+                const response = await fetch(verifyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ edit_password: password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.verified) {
+                    editStatus.textContent = '密碼驗證成功！請編輯內容。';
+                    editStatus.style.color = 'green';
+                    editPasswordGroup.style.display = 'none';
+                    editContentGroup.style.display = 'block';
+                    verifyPasswordBtn.style.display = 'none';
+                    submitEditBtn.style.display = 'inline-block';
+                    submitEditBtn.disabled = false;
+
+                    // 預填充內容 - 這裡需要獲取原始內容
+                    // 暫時留空，或提示用戶輸入
+                    // 為了簡化，我們先假設用戶會重新輸入，或者後續從詳情API獲取
+                    // 如果是編輯留言，我們可能需要重新fetch一次留言詳情來獲取完整內容
+                    // 如果是編輯回覆，則需要從當前回覆列表中找到該回覆的內容
+                    // 這裡先簡單處理，讓用戶自行輸入
+                    if (itemType === 'message') {
+                         // 嘗試從詳情 Modal 的主留言內容獲取 (如果已加載)
+                        const mainMessageContentElement = detailModalMain?.querySelector('.message-content');
+                        if (mainMessageContentElement && currentDetailMessageId === itemId) {
+                            // 移除HTML標籤，只取文本
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = mainMessageContentElement.innerHTML;
+                            editContentTextarea.value = tempDiv.textContent || tempDiv.innerText || "";
+                        } else {
+                             // 如果無法從詳情 Modal 獲取，則提示用戶或留空
+                            editContentTextarea.value = ''; // 或者提示用戶
+                            editContentTextarea.placeholder = '請輸入新的留言內容';
+                        }
+                    } else if (itemType === 'reply') {
+                        const replyElement = detailModalReplyList?.querySelector(`.reply-item[data-reply-id="${itemId}"] .reply-content`);
+                        if (replyElement) {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = replyElement.innerHTML;
+                            editContentTextarea.value = tempDiv.textContent || tempDiv.innerText || "";
+                        } else {
+                            editContentTextarea.value = '';
+                            editContentTextarea.placeholder = '請輸入新的回覆內容';
+                        }
+                    }
+
+
+                } else {
+                    editStatus.textContent = data.error || '密碼驗證失敗。';
+                    editStatus.style.color = 'red';
+                    verifyPasswordBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('驗證密碼時出錯:', error);
+                editStatus.textContent = '驗證過程中發生錯誤。';
+                editStatus.style.color = 'red';
+                verifyPasswordBtn.disabled = false;
+            }
+        });
+
+        // 儲存變更表單提交
+        editItemForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // 因為我們是手動觸發 submitEditBtn 的點擊
+
+            if (submitEditBtn.style.display === 'none' || submitEditBtn.disabled) {
+                return; // 如果儲存按鈕不可見或禁用，則不執行
+            }
+
+            const itemId = editItemIdInput.value;
+            const itemType = editItemTypeInput.value;
+            const newContent = editContentTextarea.value.trim();
+            const password = editPasswordInput.value; // 密碼在驗證後仍然保留在輸入框中
+
+            if (!newContent) {
+                editStatus.textContent = '內容不能為空。';
+                editStatus.style.color = 'red';
+                return;
+            }
+
+            submitEditBtn.disabled = true;
+            editStatus.textContent = '正在儲存變更...';
+            editStatus.style.color = 'blue';
+
+            try {
+                const updateUrl = itemType === 'message' ? `/api/guestbook/message/${itemId}/content` : `/api/guestbook/reply/${itemId}/content`;
+                const response = await fetch(updateUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: newContent, edit_password: password })
+                });
+
+                if (response.ok) {
+                    editStatus.textContent = '儲存成功！';
+                    editStatus.style.color = 'green';
+                    
+                    setTimeout(() => {
+                        closeModal(editModal);
+                        // 刷新列表或詳情
+                        if (itemType === 'message') {
+                            fetchGuestbookList(currentPage, currentSort); // 刷新主列表
+                            // 如果詳情 Modal 正好是這個 message，也刷新它
+                            if (detailModal.style.display === 'flex' && currentDetailMessageId === itemId) {
+                                fetchAndRenderDetailModal(itemId);
+                            }
+                        } else if (itemType === 'reply') {
+                            // 如果詳情 Modal 開著，刷新回覆列表
+                            if (detailModal.style.display === 'flex' && currentDetailMessageId) {
+                                fetchAndRenderDetailModal(currentDetailMessageId);
+                            } else {
+                                // 理論上編輯回覆時，詳情 Modal 應該是開著的
+                                // 但以防萬一，如果沒開，也刷新主列表（因為回覆數可能變了）
+                                fetchGuestbookList(currentPage, currentSort);
+                            }
+                        }
+                    }, 1000);
+
+                } else {
+                    const data = await response.json().catch(() => ({error: `HTTP 錯誤 ${response.status}`}));
+                    editStatus.textContent = data.error || '儲存失敗。';
+                    editStatus.style.color = 'red';
+                    submitEditBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('儲存變更時出錯:', error);
+                editStatus.textContent = '儲存過程中發生錯誤。';
+                editStatus.style.color = 'red';
+                submitEditBtn.disabled = false;
+            }
+        });
+    } else {
+        console.error("編輯 Modal 或其核心表單元素未完全獲取，編輯功能可能無法正常運作。");
+    }
 });

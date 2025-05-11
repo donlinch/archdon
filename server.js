@@ -1058,25 +1058,92 @@ const upload = multer({
 });
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
-      const file = req.file;
-      if (!file) { // 增加一個檢查，以防沒有檔案上傳
-          return res.status(400).json({ success: false, error: '沒有上傳檔案' });
-      }
-      const imageUrl = '/uploads/' + file.filename;
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
+        }
+
+        let fileToProcess = { ...file }; // 複製檔案資訊
+        const originalFilePath = fileToProcess.path;
+        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
+        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
+        let finalImageUrl = '/uploads/' + fileToProcess.filename;
+
+        // 只對 JPG/PNG 進行縮放
+        if (['.jpg', '.jpeg', '.png'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
+            try {
+                const metadata = await sharp(originalFilePath).metadata();
+                const originalWidth = metadata.width;
+                let targetWidth = originalWidth;
+                let needsResize = false;
+
+                if (originalWidth > 1500) {
+                    targetWidth = Math.round(originalWidth * 0.25); // 縮小到25%
+                    needsResize = true;
+                } else if (originalWidth > 800) {
+                    targetWidth = Math.round(originalWidth * 0.50); // 縮小到50%
+                    needsResize = true;
+                }
+                // 可以根據需求增加更多縮放級別或固定寬度
+                // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
+
+
+                if (needsResize) {
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
+                    const tempResizedPath = originalFilePath + '_guestbook_resized_temp' + lowerExt;
+                    
+                    await sharp(originalFilePath)
+                        .resize({ width: targetWidth })
+                        .toFile(tempResizedPath);
+                    
+                    console.log(`[API /api/upload] 圖片已縮放至臨時路徑: ${tempResizedPath}`);
+
+                    // 刪除 multer 最初上傳的原始檔案
+                    if (fs.existsSync(originalFilePath)) {
+                        fs.unlinkSync(originalFilePath);
+                        console.log(`[API /api/upload] 已刪除原始 multer 檔案: ${originalFilePath}`);
+                    }
+
+                    // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
+                    fs.renameSync(tempResizedPath, originalFilePath);
+                    // fileToProcess.path 更新不是必要的，因為檔名沒變，URL路徑也沒變
+                    
+                    const newStats = fs.statSync(originalFilePath);
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功縮放並覆蓋原檔案，新大小: ${newStats.size} bytes`);
+                } else {
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+                }
+            } catch (sharpError) {
+                console.error(`[API /api/upload] Sharp 處理圖片 ${fileToProcess.originalname} 失敗:`, sharpError);
+                // 如果縮放失敗，嘗試刪除已上傳的原始檔案並回報錯誤
+                try {
+                    if (fs.existsSync(originalFilePath)) {
+                        fs.unlinkSync(originalFilePath);
+                        console.warn(`[API /api/upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
+                    }
+                } catch (unlinkErr) {
+                    console.error(`[API /api/upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+                }
+                return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
+            }
+        } else {
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行縮放。`);
+        }
   
-      /* // <--- 開始註解
-      // 可選：儲存圖片記錄進資料庫 (暫時移除，因為 table 不存在)
-      if (pool) {
-        await pool.query(
-          'INSERT INTO uploaded_images (url, original_filename) VALUES ($1, $2)',
-          [imageUrl, file.originalname]
-        );
-      }
-      */ // <--- 結束註解
-  
-      res.json({ success: true, url: imageUrl });
+        res.json({ success: true, url: finalImageUrl });
+
     } catch (err) {
-      console.error('上傳圖片錯誤:', err); // 這裡的錯誤現在應該不會是 "relation does not exist" 了
+      console.error('[API /api/upload] 上傳圖片錯誤:', err);
+      // 確保如果檔案已部分處理或存在，嘗試清理
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+          try {
+              fs.unlinkSync(req.file.path);
+              console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
+          } catch (cleanupErr) {
+              console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
+          }
+      }
       res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
     }
   });
@@ -3826,7 +3893,9 @@ app.get('/api/guestbook', async (req, res) => {
                 m.view_count,
                 m.like_count,
                 m.last_activity_at,
-                m.is_admin_post  -- ★★★ 新增此行 ★★★
+                m.is_admin_post,
+                (m.edit_password IS NOT NULL) AS has_edit_password,
+                m.image_url
              FROM guestbook_messages m
              WHERE m.is_visible = TRUE
              ${orderByClause}
@@ -3856,9 +3925,9 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
 
     const client = await pool.connect();
     try {
-        // 1. 獲取主留言 (加入 view_count, like_count)
+        // 1. 獲取主留言 (加入 view_count, like_count, has_edit_password, image_url)
         const messageResult = await client.query(
-            'SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            'SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at, is_admin_post, (edit_password IS NOT NULL) AS has_edit_password, image_url FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
             [messageId]
         );
         if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到或無法查看此留言' });
@@ -3869,7 +3938,7 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
             `SELECT
                 r.id, r.message_id, r.parent_reply_id, -- 需要 parent_reply_id 用於前端嵌套
                 r.author_name, r.content, r.created_at,
-                r.is_admin_reply, r.like_count, -- 加入 like_count
+                r.is_admin_reply, r.like_count, (r.edit_password IS NOT NULL) AS has_edit_password, r.image_url,
                 ai.name AS admin_identity_name
              FROM guestbook_replies r
              LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
@@ -3887,18 +3956,21 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
 
 // POST /api/guestbook - 新增主留言
 app.post('/api/guestbook', async (req, res) => {
-    const { author_name, content } = req.body;
+    const { author_name, content, edit_password, image_url } = req.body; // 新增 image_url
 
     let authorNameToSave = '匿名';
     if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
     if (!content || content.trim() === '') return res.status(400).json({ error: '留言內容不能為空' });
     const trimmedContent = content.trim();
+    const editPasswordToSave = edit_password && edit_password.trim() !== '' ? edit_password.trim() : null; // 處理 edit_password
+    const imageUrlToSave = image_url && image_url.trim() !== '' ? image_url.trim() : null; // 處理 image_url
+
     try {
         const result = await pool.query(
-            `INSERT INTO guestbook_messages (author_name, content, last_activity_at, is_visible, like_count, view_count)
-             VALUES ($1, $2, NOW(), TRUE, 0, 0)
-             RETURNING id, author_name, substring(content for 80) || (CASE WHEN length(content) > 80 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at, like_count, view_count`, // 返回新欄位
-            [authorNameToSave, trimmedContent]
+            `INSERT INTO guestbook_messages (author_name, content, edit_password, image_url, last_activity_at, is_visible, like_count, view_count)
+             VALUES ($1, $2, $3, $4, NOW(), TRUE, 0, 0)
+             RETURNING id, author_name, substring(content for 80) || (CASE WHEN length(content) > 80 THEN '...' ELSE '' END) AS content_preview, reply_count, last_activity_at, like_count, view_count, (edit_password IS NOT NULL) AS has_edit_password, image_url`,
+            [authorNameToSave, trimmedContent, editPasswordToSave, imageUrlToSave] // 新增 imageUrlToSave
         );
         res.status(201).json(result.rows[0]);
     } catch (err) { console.error('[API POST /guestbook] Error:', err); res.status(500).json({ error: '無法新增留言' }); }
@@ -3906,7 +3978,7 @@ app.post('/api/guestbook', async (req, res) => {
 
 // POST /api/guestbook/replies - 新增公開回覆
 app.post('/api/guestbook/replies', async (req, res) => {
-    const { message_id, parent_reply_id, author_name, content } = req.body;
+    const { message_id, parent_reply_id, author_name, content, edit_password, image_url } = req.body; // 新增 image_url
     const messageIdInt = parseInt(message_id, 10);
     const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
 
@@ -3916,15 +3988,17 @@ app.post('/api/guestbook/replies', async (req, res) => {
     if (author_name && author_name.trim() !== '') { authorNameToSave = author_name.trim().substring(0, 100); }
     if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
     const trimmedContent = content.trim();
+    const editPasswordToSave = edit_password && edit_password.trim() !== '' ? edit_password.trim() : null; // 處理 edit_password
+    const imageUrlToSave = image_url && image_url.trim() !== '' ? image_url.trim() : null; // 處理 image_url
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
         const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
-             VALUES ($1, $2, $3, $4, FALSE, NULL, TRUE, 0)
-             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count`, // 返回新欄位
-            [messageIdInt, parentIdInt, authorNameToSave, trimmedContent]
+            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, edit_password, image_url, is_admin_reply, admin_identity_id, is_visible, like_count)
+             VALUES ($1, $2, $3, $4, $5, $6, FALSE, NULL, TRUE, 0)
+             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count, (edit_password IS NOT NULL) AS has_edit_password, image_url`,
+            [messageIdInt, parentIdInt, authorNameToSave, trimmedContent, editPasswordToSave, imageUrlToSave] // 新增 imageUrlToSave
         );
         await client.query('COMMIT');
         res.status(201).json(replyResult.rows[0]);
@@ -3996,6 +4070,164 @@ app.post('/api/guestbook/replies/:id/like', async (req, res) => {
     } catch (err) {
         console.error(`[API POST /guestbook/replies/${id}/like] Error:`, err);
         res.status(500).json({ error: '按讚失敗' });
+    }
+});
+
+// POST /api/guestbook/message/:id/verify-password - 驗證主留言編輯密碼
+app.post('/api/guestbook/message/:id/verify-password', async (req, res) => {
+    const { id } = req.params;
+    const { edit_password } = req.body;
+    const messageId = parseInt(id, 10);
+
+    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
+    if (!edit_password) return res.status(400).json({ error: '請提供編輯密碼' });
+
+    try {
+        const result = await pool.query(
+            'SELECT edit_password FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            [messageId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言或留言不可編輯' });
+
+        const storedPassword = result.rows[0].edit_password;
+        if (storedPassword === null) return res.status(403).json({ verified: false, error: '此留言未設定編輯密碼，無法編輯。' });
+        if (storedPassword === edit_password) {
+            res.json({ verified: true });
+        } else {
+            res.status(401).json({ verified: false, error: '編輯密碼錯誤。' });
+        }
+    } catch (err) {
+        console.error(`[API POST /guestbook/message/${id}/verify-password] Error:`, err);
+        res.status(500).json({ error: '密碼驗證失敗' });
+    }
+});
+
+// PUT /api/guestbook/message/:id/content - 更新主留言內容
+app.put('/api/guestbook/message/:id/content', async (req, res) => {
+    const { id } = req.params;
+    const { content, edit_password } = req.body;
+    const messageId = parseInt(id, 10);
+
+    if (isNaN(messageId)) return res.status(400).json({ error: '無效的留言 ID' });
+    if (!content || content.trim() === '') return res.status(400).json({ error: '留言內容不能為空' });
+    if (!edit_password) return res.status(400).json({ error: '請提供編輯密碼以進行更新' });
+
+    const trimmedContent = content.trim();
+
+    try {
+        // 再次驗證密碼
+        const passResult = await pool.query(
+            'SELECT edit_password FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            [messageId]
+        );
+        if (passResult.rowCount === 0) return res.status(404).json({ error: '找不到留言或留言不可編輯' });
+        const storedPassword = passResult.rows[0].edit_password;
+        if (storedPassword === null) return res.status(403).json({ error: '此留言未設定編輯密碼，無法編輯。' });
+        if (storedPassword !== edit_password) return res.status(401).json({ error: '編輯密碼錯誤，無法更新。' });
+
+        // 更新內容
+        const updateResult = await pool.query(
+            `UPDATE guestbook_messages
+             SET content = $1, last_activity_at = NOW()
+             WHERE id = $2
+             RETURNING id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at, is_admin_post, (edit_password IS NOT NULL) AS has_edit_password`,
+            [trimmedContent, messageId]
+        );
+        res.json(updateResult.rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /guestbook/message/${id}/content] Error:`, err);
+        res.status(500).json({ error: '更新留言失敗' });
+    }
+});
+
+// POST /api/guestbook/reply/:id/verify-password - 驗證回覆編輯密碼
+app.post('/api/guestbook/reply/:id/verify-password', async (req, res) => {
+    const { id } = req.params;
+    const { edit_password } = req.body;
+    const replyId = parseInt(id, 10);
+
+    if (isNaN(replyId)) return res.status(400).json({ error: '無效的回覆 ID' });
+    if (!edit_password) return res.status(400).json({ error: '請提供編輯密碼' });
+
+    try {
+        const result = await pool.query(
+            'SELECT edit_password FROM guestbook_replies WHERE id = $1 AND is_visible = TRUE',
+            [replyId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: '找不到回覆或回覆不可編輯' });
+
+        const storedPassword = result.rows[0].edit_password;
+        if (storedPassword === null) return res.status(403).json({ verified: false, error: '此回覆未設定編輯密碼，無法編輯。' });
+        if (storedPassword === edit_password) {
+            res.json({ verified: true });
+        } else {
+            res.status(401).json({ verified: false, error: '編輯密碼錯誤。' });
+        }
+    } catch (err) {
+        console.error(`[API POST /guestbook/reply/${id}/verify-password] Error:`, err);
+        res.status(500).json({ error: '密碼驗證失敗' });
+    }
+});
+
+// PUT /api/guestbook/reply/:id/content - 更新回覆內容
+app.put('/api/guestbook/reply/:id/content', async (req, res) => {
+    const { id } = req.params;
+    const { content, edit_password } = req.body;
+    const replyId = parseInt(id, 10);
+
+    if (isNaN(replyId)) return res.status(400).json({ error: '無效的回覆 ID' });
+    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
+    if (!edit_password) return res.status(400).json({ error: '請提供編輯密碼以進行更新' });
+
+    const trimmedContent = content.trim();
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // 再次驗證密碼
+        const passResult = await client.query(
+            'SELECT edit_password, message_id FROM guestbook_replies WHERE id = $1 AND is_visible = TRUE',
+            [replyId]
+        );
+        if (passResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到回覆或回覆不可編輯' });
+        }
+        const storedPassword = passResult.rows[0].edit_password;
+        const messageId = passResult.rows[0].message_id;
+
+        if (storedPassword === null) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: '此回覆未設定編輯密碼，無法編輯。' });
+        }
+        if (storedPassword !== edit_password) {
+            await client.query('ROLLBACK');
+            return res.status(401).json({ error: '編輯密碼錯誤，無法更新。' });
+        }
+
+        // 更新內容
+        const updateResult = await client.query(
+            `UPDATE guestbook_replies
+             SET content = $1
+             WHERE id = $2
+             RETURNING id, message_id, parent_reply_id, author_name, content, created_at, is_admin_reply, like_count, (edit_password IS NOT NULL) AS has_edit_password`,
+            [trimmedContent, replyId]
+        );
+
+        // 更新主留言的 last_activity_at
+        await client.query(
+            'UPDATE guestbook_messages SET last_activity_at = NOW() WHERE id = $1',
+            [messageId]
+        );
+
+        await client.query('COMMIT');
+        res.json(updateResult.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[API PUT /guestbook/reply/${id}/content] Error:`, err);
+        res.status(500).json({ error: '更新回覆失敗' });
+    } finally {
+        client.release();
     }
 });
 
