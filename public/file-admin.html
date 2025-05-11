@@ -147,7 +147,10 @@
                 <option value="size_desc">大小 (大→小)</option>
             </select>
             <button id="refresh-list-btn">🔄 刷新</button>
-            <div style="margin-left: auto;"> <!-- 推到最右邊 -->
+            <div style="margin-left: auto; display: flex; gap: 5px;"> <!-- 推到最右邊並使用 flex 佈局 -->
+                 <button id="view-mode-db" class="view-toggle active" data-mode="database">資料庫檔案</button>
+                 <button id="view-mode-disk" class="view-toggle" data-mode="disk">磁碟檔案</button>
+                 <span style="border-left: 1px solid #ccc; margin: 0 5px;"></span> <!-- 分隔線 -->
                  <button id="view-toggle-list" class="view-toggle active" data-view="list">列表</button>
                  <button id="view-toggle-grid" class="view-toggle" data-view="grid">格狀</button>
             </div>
@@ -158,8 +161,8 @@
             <div id="file-loading" style="display: none;">正在載入檔案列表...</div>
             <div id="file-error" style="display: none; color: red;"></div>
 
-            <!-- 列表視圖 (預設) -->
-            <div id="file-list-view" class="file-view active">
+            <!-- 資料庫 - 列表視圖 (預設) -->
+            <div id="file-list-view" class="file-view database-view active-view" data-viewtype="list">
                 <table id="file-list-table">
                     <thead>
                         <tr>
@@ -177,13 +180,38 @@
                 </table>
             </div>
 
-            <!-- 格狀視圖 -->
-            <div id="file-grid-view" class="file-view" style="display: none;">
+            <!-- 資料庫 - 格狀視圖 -->
+            <div id="file-grid-view" class="file-view database-view" style="display: none;" data-viewtype="grid">
                 <!-- 卡片由 JS 填充 -->
+            </div>
+
+            <!-- 磁碟檔案 - 列表視圖 -->
+            <div id="disk-file-list-view" class="file-view disk-view" style="display: none;" data-viewtype="list">
+                 <table id="disk-file-list-table">
+                    <thead>
+                        <tr>
+                            <th>預覽</th>
+                            <th>檔名</th>
+                            <th>URL 路徑</th>
+                            <th>類型</th>
+                            <th>大小</th>
+                            <th>修改時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 磁碟檔案列表內容由 JS 填充 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 磁碟檔案 - 格狀視圖 -->
+            <div id="disk-file-grid-view" class="file-view disk-view" style="display: none;" data-viewtype="grid">
+                <!-- 磁碟檔案卡片由 JS 填充 -->
             </div>
         </div>
 
-        <!-- 分頁控制 -->
+        <!-- 分頁控制 (資料庫視圖使用) -->
         <div id="pagination-controls" class="pagination-controls" style="margin-top: 1.5rem;"></div>
 
     </main>

@@ -5899,6 +5899,105 @@ adminRouter.get('/games/stats/today', async (req, res) => {
 
 
 
+// GET /api/admin/disk-files - 列出 /data/uploads 目錄下的實體檔案
+adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => { // 添加 basicAuthMiddleware
+    try {
+        const directoryPath = uploadDir; // uploadDir 應已在 server.js 前面定義為 /data/uploads
+        
+        // 檢查 uploadDir 是否有效
+        if (!fs.existsSync(directoryPath)) {
+            console.error(`[API GET /admin/disk-files] 上傳目錄 ${directoryPath} 不存在。`);
+            return res.status(500).json({ error: '伺服器配置錯誤：上傳目錄找不到。' });
+        }
+
+        const files = fs.readdirSync(directoryPath);
+        const fileDetails = [];
+
+        for (const file of files) {
+            const filePath = path.join(directoryPath, file);
+            try {
+                const stats = fs.statSync(filePath);
+                if (stats.isFile()) { // 確保只處理檔案，忽略子目錄
+                    const ext = path.extname(file).toLowerCase();
+                    let type = 'other';
+                    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) {
+                        type = 'image';
+                    } else if (ext === '.pdf') {
+                        type = 'pdf';
+                    }
+
+                    fileDetails.push({
+                        filename: file,
+                        size: stats.size,
+                        type: type,
+                        urlPath: `/uploads/${file}`, // 公開訪問的 URL 路徑
+                        modifiedTime: stats.mtimeMs, // 使用 mtimeMs 獲取毫秒數以便排序
+                    });
+                }
+            } catch (statErr) {
+                console.warn(`[API GET /admin/disk-files] 無法獲取檔案 ${file} 的狀態:`, statErr.message);
+                // 可以選擇跳過此檔案或記錄一個帶有錯誤標記的條目
+                // 例如: fileDetails.push({ filename: file, error: '無法讀取狀態' });
+            }
+        }
+
+        // 按修改時間倒序排序，最新的在前面
+        fileDetails.sort((a, b) => b.modifiedTime - a.modifiedTime);
+        
+        // 移除 modifiedTime 屬性，因為前端可能不需要毫秒級的時間戳
+        const filesForResponse = fileDetails.map(({ modifiedTime, ...rest }) => rest);
+
+
+        res.json(filesForResponse);
+    } catch (err) {
+        console.error('[API GET /admin/disk-files] 讀取磁碟檔案列表時出錯:', err);
+        res.status(500).json({ error: '無法讀取伺服器上的檔案列表', detail: err.message });
+    }
+});
+
+// DELETE /api/admin/disk-files/:filename - 刪除 /data/uploads 目錄下的指定實體檔案
+adminRouter.delete('/disk-files/:filename', basicAuthMiddleware, async (req, res) => {
+    const unsafeFilename = req.params.filename;
+
+    // 安全性：清理檔名，只取基本名稱部分，防止路徑遍歷
+    const filename = path.basename(unsafeFilename);
+
+    // 再次驗證檔名，確保沒有惡意字元或路徑操作符
+    if (filename !== unsafeFilename || filename.includes('..') || filename.includes('/')) {
+        console.warn(`[API DELETE /admin/disk-files] 偵測到潛在不安全的檔名: ${unsafeFilename}`);
+        return res.status(400).json({ error: '無效的檔案名稱。' });
+    }
+
+    const filePath = path.join(uploadDir, filename);
+
+    // 安全性：再次確認解析後的路徑是否仍在 uploadDir 之下
+    if (!filePath.startsWith(path.resolve(uploadDir) + path.sep)) {
+         console.error(`[API DELETE /admin/disk-files] 嘗試刪除 uploadDir 之外的檔案: ${filePath}`);
+         return res.status(400).json({ error: '試圖存取無效的檔案路徑。' });
+    }
+
+    try {
+        if (fs.existsSync(filePath)) {
+            await fs.promises.unlink(filePath); // 使用異步 unlink
+            console.log(`[API DELETE /admin/disk-files] 實體檔案已刪除: ${filePath}`);
+            
+            // 可選：如果此檔案也存在於 uploaded_files 資料庫中，也一併刪除記錄
+            // 這需要根據檔名（或相對路徑 /uploads/filename）去查詢資料庫
+            // 例如: const dbFilePath = '/uploads/' + filename;
+            // await pool.query('DELETE FROM uploaded_files WHERE file_path = $1', [dbFilePath]);
+            // console.log(`[API DELETE /admin/disk-files] 已嘗試從資料庫刪除對應記錄 (如果存在): ${dbFilePath}`);
+
+            res.status(204).send(); // No Content, 表示成功刪除
+        } else {
+            console.warn(`[API DELETE /admin/disk-files] 嘗試刪除的檔案不存在: ${filePath}`);
+            res.status(404).json({ error: '找不到要刪除的檔案。' });
+        }
+    } catch (err) {
+        console.error(`[API DELETE /admin/disk-files] 刪除檔案 ${filePath} 時出錯:`, err);
+        res.status(500).json({ error: '刪除檔案時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
 app.use('/api/admin', adminRouter); // 將 adminRouter 掛載到 /api/admin 路徑下
 
 
