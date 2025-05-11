@@ -5823,6 +5823,7 @@ adminRouter.get('/guestbook', async (req, res) => {
 
     if (filter === 'visible') whereClauses.push('m.is_visible = TRUE');
     else if (filter === 'hidden') whereClauses.push('m.is_visible = FALSE');
+    else if (filter === 'reported') whereClauses.push('m.is_reported = TRUE'); // 新增對 reported 的篩選
 
     if (search) {
         whereClauses.push(`(m.author_name ILIKE $${paramIndex} OR m.content ILIKE $${paramIndex})`);
@@ -5848,7 +5849,8 @@ adminRouter.get('/guestbook', async (req, res) => {
         const mainSql = `
             SELECT m.id, m.author_name,
                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
-                   m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible
+                   m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible,
+                   m.is_reported, m.can_be_reported -- 新增 is_reported 和 can_be_reported
             FROM guestbook_messages m
             ${whereSql} ${orderByClause}
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
