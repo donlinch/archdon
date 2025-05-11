@@ -215,6 +215,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageCard = document.createElement('div');
             messageCard.className = 'message-card';
             messageCard.dataset.messageId = msg.id;
+
+            if (msg.is_reported) {
+                messageCard.classList.add('reported-content-hidden');
+                const reportedNotice = document.createElement('p');
+                reportedNotice.textContent = '此留言已被檢舉，等待管理員審核。';
+                reportedNotice.style.color = '#dc3545';
+                reportedNotice.style.fontStyle = 'italic';
+                reportedNotice.style.padding = '10px';
+                messageCard.appendChild(reportedNotice);
+                messageListContainer.appendChild(messageCard);
+                return; // 跳過此留言的其餘渲染
+            }
             
             const authorSpan = document.createElement('span');
             authorSpan.className = 'author';
@@ -292,6 +304,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 editButton.style.marginLeft = '8px';
                 metaContainer.appendChild(editButton);
             }
+
+            // 新增：檢舉按鈕 (格狀視圖)
+            if (msg.can_be_reported && !msg.is_reported) {
+                const reportButton = document.createElement('button');
+                reportButton.className = 'btn btn-link btn-sm report-btn';
+                reportButton.dataset.id = msg.id;
+                reportButton.dataset.type = 'message';
+                reportButton.textContent = '檢舉';
+                reportButton.style.color = '#dc3545'; // 紅色以示警告
+                reportButton.style.marginLeft = '8px';
+                metaContainer.appendChild(reportButton);
+            } else if (msg.is_reported) {
+                const reportedSpan = document.createElement('span');
+                reportedSpan.className = 'reported-text';
+                reportedSpan.textContent = '(已檢舉)';
+                reportedSpan.style.color = '#6c757d';
+                reportedSpan.style.fontSize = '0.8em';
+                reportedSpan.style.marginLeft = '8px';
+                metaContainer.appendChild(reportedSpan);
+            }
             
             messageCard.appendChild(authorSpan);
             messageCard.appendChild(document.createTextNode(' '));
@@ -326,6 +358,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageItem = document.createElement('div');
             messageItem.className = 'message-list-item';
             messageItem.dataset.messageId = msg.id;
+
+            if (msg.is_reported) {
+                messageItem.classList.add('reported-content-hidden');
+                const reportedNotice = document.createElement('p');
+                reportedNotice.textContent = '此留言已被檢舉，等待管理員審核。';
+                reportedNotice.style.color = '#dc3545';
+                reportedNotice.style.fontStyle = 'italic';
+                reportedNotice.style.padding = '10px 0';
+                messageItem.appendChild(reportedNotice);
+                messageListContainer.appendChild(messageItem);
+                return; // 跳過此留言的其餘渲染
+            }
             
             const headerDiv = document.createElement('div');
             headerDiv.style.display = 'flex';
@@ -396,6 +440,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 editButton.textContent = '編輯';
                 // editButton.style.marginLeft = 'auto'; // 嘗試將編輯按鈕推到最右邊
                 metaInfoDiv.appendChild(editButton);
+            }
+
+            // 新增：檢舉按鈕 (列表視圖)
+            if (msg.can_be_reported && !msg.is_reported) {
+                const reportButton = document.createElement('button');
+                reportButton.className = 'btn btn-link btn-sm report-btn';
+                reportButton.dataset.id = msg.id;
+                reportButton.dataset.type = 'message';
+                reportButton.textContent = '檢舉';
+                reportButton.style.color = '#dc3545';
+                // reportButton.style.marginLeft = 'auto'; // 如果想推到最右
+                metaInfoDiv.appendChild(reportButton);
+            } else if (msg.is_reported) {
+                const reportedSpan = document.createElement('span');
+                reportedSpan.className = 'reported-text';
+                reportedSpan.textContent = '(已檢舉)';
+                reportedSpan.style.color = '#6c757d';
+                reportedSpan.style.fontSize = '0.8em';
+                metaInfoDiv.appendChild(reportedSpan);
             }
             
             headerDiv.appendChild(authorInfoDiv);
@@ -748,6 +811,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (children.length === 0) return;
             
             children.forEach((reply) => {
+                // 创建回复元素
+                const replyDiv = document.createElement('div');
+                replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item';
+                replyDiv.dataset.replyId = reply.id;
+
+                if (reply.is_reported) {
+                    replyDiv.classList.add('reported-content-hidden');
+                    const reportedNotice = document.createElement('p');
+                    reportedNotice.textContent = '此回覆已被檢舉，等待管理員審核。';
+                    reportedNotice.style.color = '#dc3545';
+                    reportedNotice.style.fontStyle = 'italic';
+                    reportedNotice.style.padding = '5px 0';
+                    replyDiv.appendChild(reportedNotice);
+                    detailModalReplyList.appendChild(replyDiv);
+                    
+                    // 即使被檢舉，也可能需要渲染其子回覆，所以這裡不直接 return
+                    // 但為了簡化，我們先假設被檢舉的回覆其子回覆也不顯示
+                    // 如果需要顯示子回覆，則需要調整這裡的邏輯
+                    // 並且，如果被檢舉，就不再添加分隔線 hr
+                    // renderRepliesRecursive(reply.id, level + 1); // 如果要顯示子回覆，則取消註釋這行
+                    return; // 目前：不顯示被檢舉回覆的子回覆
+                }
+
+
                 // 计算当前回复的楼层号
                 let floorNumber = '';
                 
@@ -769,9 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (!floorNumber) floorNumber = "?";
                 
-                // 创建回复元素
-                const replyDiv = document.createElement('div');
-                replyDiv.className = reply.is_admin_reply ? 'reply-item admin-reply' : 'reply-item';
+                // replyDiv 的創建已移到 is_reported 判斷之前
                 
                 // 为嵌套回复添加样式
                 if (level > 0) {
@@ -869,6 +954,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     editReplyButton.textContent = '編輯';
                     editReplyButton.style.marginLeft = '10px';
                     actionsDiv.appendChild(editReplyButton);
+                }
+    
+                // 新增：檢舉按鈕 (回覆列表)
+                if (reply.can_be_reported && !reply.is_reported) {
+                    const reportReplyButton = document.createElement('button');
+                    reportReplyButton.className = 'btn btn-link btn-sm report-btn';
+                    reportReplyButton.dataset.id = reply.id;
+                    reportReplyButton.dataset.type = 'reply';
+                    reportReplyButton.textContent = '檢舉';
+                    reportReplyButton.style.color = '#dc3545';
+                    reportReplyButton.style.marginLeft = '10px';
+                    actionsDiv.appendChild(reportReplyButton);
+                } else if (reply.is_reported) {
+                    const reportedSpan = document.createElement('span');
+                    reportedSpan.className = 'reported-text';
+                    reportedSpan.textContent = '(已檢舉)';
+                    reportedSpan.style.color = '#6c757d';
+                    reportedSpan.style.fontSize = '0.8em';
+                    reportedSpan.style.marginLeft = '10px';
+                    actionsDiv.appendChild(reportedSpan);
                 }
                 
                 // 组装回复项
@@ -1232,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', async (event) => {
         const target = event.target;
         
-        // --- 处理按赞 ---
+        // --- 处理按赞 和 編輯按鈕 ---
         let likeId = null;
         let likeApiUrl = null;
         let countSpanSelector = null;
@@ -1360,8 +1465,405 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("編輯 Modal 或其內部元素未找到!");
             }
         }
+
+        // --- 处理检举按钮点击 (新增) ---
+        if (target.matches('.report-btn')) {
+            event.preventDefault();
+            const itemId = target.dataset.id;
+            const itemType = target.dataset.type; // 'message' or 'reply'
+            
+            // 阻止重複點擊（如果按鈕已被禁用）
+            if (target.disabled || target.classList.contains('reported')) {
+                return;
+            }
+
+            showReportVerificationModal(itemId, itemType, target);
+            return; // 處理完檢舉按鈕點擊，等待 Modal 交互
+        }
+
     });
     
+    // --- 數學驗證 Modal 相關 (用於檢舉) ---
+    let reportVerificationModal = null;
+    let currentReportChallenge = {
+        itemId: null,
+        itemType: null,
+        question: '',
+        answer: null,
+        reportButtonElement: null
+    };
+
+    function createReportVerificationModal() {
+        if (document.getElementById('report-verification-modal')) return;
+
+        reportVerificationModal = document.createElement('div');
+        reportVerificationModal.id = 'report-verification-modal';
+        reportVerificationModal.className = 'modal'; // 使用現有的 modal class
+        // 樣式與其他 modal 類似，但 z-index 可以更高一些如果需要
+        reportVerificationModal.style.zIndex = '2000';
+
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '350px';
+
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'close-btn close-modal-btn'; // 確保可以被通用邏輯關閉
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = () => closeModal(reportVerificationModal);
+
+        const title = document.createElement('h2');
+        title.textContent = '檢舉驗證';
+        title.style.marginBottom = '15px';
+
+        const questionP = document.createElement('p');
+        questionP.id = 'report-verification-question';
+        questionP.style.fontSize = '1.1em';
+        questionP.style.marginBottom = '10px';
+        questionP.style.textAlign = 'center';
+
+
+        const answerInput = document.createElement('input');
+        answerInput.type = 'number'; // 限制數字輸入
+        answerInput.id = 'report-verification-answer';
+        answerInput.className = 'form-control';
+        answerInput.placeholder = '請輸入答案';
+        answerInput.style.marginBottom = '15px';
+        answerInput.style.textAlign = 'center';
+
+        const statusP = document.createElement('p');
+        statusP.id = 'report-verification-status';
+        statusP.style.minHeight = '1.2em';
+        statusP.style.marginTop = '5px';
+
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'form-actions';
+
+        const submitBtn = document.createElement('button');
+        submitBtn.id = 'submit-report-verification-btn';
+        submitBtn.className = 'btn btn-primary';
+        submitBtn.textContent = '提交驗證';
+// --- 數學驗證 Modal 相關 (用於檢舉) ---
+    let reportVerificationModal = null;
+    let currentReportChallenge = {
+        itemId: null,
+        itemType: null,
+        question: '',
+        answer: null,
+        reportButtonElement: null
+    };
+
+    function createReportVerificationModal() {
+        if (document.getElementById('report-verification-modal')) return;
+
+        reportVerificationModal = document.createElement('div');
+        reportVerificationModal.id = 'report-verification-modal';
+        reportVerificationModal.className = 'modal'; // 使用現有的 modal class
+        reportVerificationModal.style.zIndex = '2000';
+
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '350px';
+
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'close-btn close-modal-btn'; 
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = () => closeModal(reportVerificationModal);
+
+        const title = document.createElement('h2');
+        title.textContent = '檢舉驗證';
+        title.style.marginBottom = '15px';
+
+        const questionP = document.createElement('p');
+        questionP.id = 'report-verification-question';
+        questionP.style.fontSize = '1.1em';
+        questionP.style.marginBottom = '10px';
+        questionP.style.textAlign = 'center';
+
+
+        const answerInput = document.createElement('input');
+        answerInput.type = 'number'; 
+        answerInput.id = 'report-verification-answer';
+        answerInput.className = 'form-control';
+        answerInput.placeholder = '請輸入答案';
+        answerInput.style.marginBottom = '15px';
+        answerInput.style.textAlign = 'center';
+
+        const statusP = document.createElement('p');
+        statusP.id = 'report-verification-status';
+        statusP.style.minHeight = '1.2em';
+        statusP.style.marginTop = '5px';
+
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'form-actions';
+
+        const submitBtn = document.createElement('button');
+        submitBtn.id = 'submit-report-verification-btn';
+        submitBtn.className = 'btn btn-primary';
+        submitBtn.textContent = '提交驗證';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button'; 
+        cancelBtn.className = 'btn btn-secondary close-modal-btn'; 
+        cancelBtn.textContent = '取消';
+        cancelBtn.onclick = () => closeModal(reportVerificationModal);
+
+
+        actionsDiv.appendChild(cancelBtn);
+        actionsDiv.appendChild(submitBtn);
+
+        modalContent.appendChild(closeBtn);
+        modalContent.appendChild(title);
+        modalContent.appendChild(questionP);
+        modalContent.appendChild(answerInput);
+        modalContent.appendChild(statusP);
+        modalContent.appendChild(actionsDiv);
+        reportVerificationModal.appendChild(modalContent);
+        document.body.appendChild(reportVerificationModal);
+
+        // 提交驗證
+        submitBtn.addEventListener('click', async () => {
+            const userAnswer = parseInt(answerInput.value, 10);
+            const statusElement = document.getElementById('report-verification-status');
+            
+            if (isNaN(userAnswer)) {
+                statusElement.textContent = '請輸入數字答案。';
+                statusElement.style.color = 'red';
+                return;
+            }
+
+            if (userAnswer === currentReportChallenge.answer) {
+                statusElement.textContent = '驗證成功，正在提交檢舉...';
+                statusElement.style.color = 'green';
+                submitBtn.disabled = true;
+                cancelBtn.disabled = true;
+
+                const { itemId, itemType, reportButtonElement } = currentReportChallenge;
+                
+                try {
+                    const reportUrl = itemType === 'message' ? `/api/guestbook/message/${itemId}/report` : `/api/guestbook/reply/${itemId}/report`;
+                    const response = await fetch(reportUrl, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        if (reportButtonElement) {
+                            reportButtonElement.textContent = '已檢舉';
+                            reportButtonElement.classList.add('reported');
+                            reportButtonElement.style.color = '#6c757d';
+                            reportButtonElement.style.pointerEvents = 'none';
+                            reportButtonElement.disabled = true; 
+                        }
+                        
+                        const itemElement = itemType === 'message' 
+                            ? document.querySelector(`.message-card[data-message-id="${itemId}"], .message-list-item[data-message-id="${itemId}"]`)
+                            : detailModalReplyList?.querySelector(`.reply-item[data-reply-id="${itemId}"]`);
+                        
+                        if (itemElement) {
+                            const existingReportedText = itemElement.querySelector('.reported-status-text');
+                            if (!existingReportedText) {
+                                const reportedStatusText = document.createElement('span');
+                                reportedStatusText.textContent = ' (已提報待審)';
+                                reportedStatusText.style.color = 'orange';
+                                reportedStatusText.style.fontSize = '0.9em';
+                                reportedStatusText.classList.add('reported-status-text');
+                                
+                                if (itemType === 'message' && (itemElement.classList.contains('message-card') || itemElement.classList.contains('message-list-item'))) {
+                                    const metaContainer = itemElement.querySelector('.message-meta-container, div[style*="gap: 10px"]');
+                                    metaContainer?.appendChild(reportedStatusText);
+                                } else if (itemType === 'reply' && itemElement.classList.contains('reply-item')) {
+                                    const actionsDiv = itemElement.querySelector('.reply-item-actions');
+                                    actionsDiv?.appendChild(reportedStatusText);
+                                }
+                            }
+                        }
+                        statusElement.textContent = data.message || '檢舉成功！';
+                        setTimeout(() => closeModal(reportVerificationModal), 1500);
+
+                    } else {
+                        statusElement.textContent = data.error || '檢舉失敗，請稍後再試。';
+                        statusElement.style.color = 'red';
+                        submitBtn.disabled = false;
+                        cancelBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('檢舉時發生錯誤:', error);
+                    statusElement.textContent = '檢舉過程中發生網路或伺服器錯誤。';
+                    statusElement.style.color = 'red';
+                    submitBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }
+
+            } else {
+                statusElement.textContent = '答案錯誤，請重試。';
+                statusElement.style.color = 'red';
+                answerInput.value = '';
+                answerInput.focus();
+            }
+        });
+    }
+
+    function showReportVerificationModal(itemId, itemType, reportButtonElement) {
+        if (!reportVerificationModal || !document.getElementById('report-verification-modal')) {
+            createReportVerificationModal();
+        }
+
+        const num1 = Math.floor(Math.random() * 9) + 1; 
+        const num2 = Math.floor(Math.random() * 9) + 1; 
+        currentReportChallenge = {
+            itemId,
+            itemType,
+            question: `${num1} + ${num2} = ?`,
+            answer: num1 + num2,
+            reportButtonElement
+        };
+
+        document.getElementById('report-verification-question').textContent = currentReportChallenge.question;
+        const answerInput = document.getElementById('report-verification-answer');
+        answerInput.value = '';
+        const statusP = document.getElementById('report-verification-status');
+        statusP.textContent = '';
+        document.getElementById('submit-report-verification-btn').disabled = false;
+        const verificationCancelBtn = reportVerificationModal?.querySelector('.btn-secondary.close-modal-btn');
+        if(verificationCancelBtn) verificationCancelBtn.disabled = false;
+
+        openModal(reportVerificationModal);
+        answerInput.focus();
+    }
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button'; // 防止表單提交
+        cancelBtn.className = 'btn btn-secondary close-modal-btn'; // 確保可以被通用邏輯關閉
+        cancelBtn.textContent = '取消';
+        cancelBtn.onclick = () => closeModal(reportVerificationModal);
+
+
+        actionsDiv.appendChild(cancelBtn);
+        actionsDiv.appendChild(submitBtn);
+
+        modalContent.appendChild(closeBtn);
+        modalContent.appendChild(title);
+        modalContent.appendChild(questionP);
+        modalContent.appendChild(answerInput);
+        modalContent.appendChild(statusP);
+        modalContent.appendChild(actionsDiv);
+        reportVerificationModal.appendChild(modalContent);
+        document.body.appendChild(reportVerificationModal);
+
+        // 提交驗證
+        submitBtn.addEventListener('click', async () => {
+            const userAnswer = parseInt(answerInput.value, 10);
+            const statusElement = document.getElementById('report-verification-status');
+            
+            if (isNaN(userAnswer)) {
+                statusElement.textContent = '請輸入數字答案。';
+                statusElement.style.color = 'red';
+                return;
+            }
+
+            if (userAnswer === currentReportChallenge.answer) {
+                statusElement.textContent = '驗證成功，正在提交檢舉...';
+                statusElement.style.color = 'green';
+                submitBtn.disabled = true;
+                cancelBtn.disabled = true;
+
+                const { itemId, itemType, reportButtonElement } = currentReportChallenge;
+                
+                try {
+                    const reportUrl = itemType === 'message' ? `/api/guestbook/message/${itemId}/report` : `/api/guestbook/reply/${itemId}/report`;
+                    const response = await fetch(reportUrl, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        if (reportButtonElement) {
+                            reportButtonElement.textContent = '已檢舉';
+                            reportButtonElement.classList.add('reported');
+                            reportButtonElement.style.color = '#6c757d';
+                            reportButtonElement.style.pointerEvents = 'none';
+                            reportButtonElement.disabled = true; // 確保禁用
+                        }
+                        
+                        const itemElement = itemType === 'message'
+                            ? document.querySelector(`.message-card[data-message-id="${itemId}"], .message-list-item[data-message-id="${itemId}"]`)
+                            : detailModalReplyList?.querySelector(`.reply-item[data-reply-id="${itemId}"]`);
+                        
+                        if (itemElement) {
+                            const existingReportedText = itemElement.querySelector('.reported-status-text');
+                            if (!existingReportedText) {
+                                const reportedStatusText = document.createElement('span');
+                                reportedStatusText.textContent = ' (已提報待審)';
+                                reportedStatusText.style.color = 'orange';
+                                reportedStatusText.style.fontSize = '0.9em';
+                                reportedStatusText.classList.add('reported-status-text');
+                                
+                                if (itemType === 'message' && (itemElement.classList.contains('message-card') || itemElement.classList.contains('message-list-item'))) {
+                                    const metaContainer = itemElement.querySelector('.message-meta-container, div[style*="gap: 10px"]');
+                                    metaContainer?.appendChild(reportedStatusText);
+                                } else if (itemType === 'reply' && itemElement.classList.contains('reply-item')) {
+                                    const actionsDiv = itemElement.querySelector('.reply-item-actions');
+                                    actionsDiv?.appendChild(reportedStatusText);
+                                }
+                            }
+                        }
+                        // alert(data.message || '檢舉成功！內容將等待管理員審核。');
+                        statusElement.textContent = data.message || '檢舉成功！';
+                        setTimeout(() => closeModal(reportVerificationModal), 1500);
+
+                    } else {
+                        statusElement.textContent = data.error || '檢舉失敗，請稍後再試。';
+                        statusElement.style.color = 'red';
+                        submitBtn.disabled = false;
+                        cancelBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('檢舉時發生錯誤:', error);
+                    statusElement.textContent = '檢舉過程中發生網路或伺服器錯誤。';
+                    statusElement.style.color = 'red';
+                    submitBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }
+
+            } else {
+                statusElement.textContent = '答案錯誤，請重試。';
+                statusElement.style.color = 'red';
+                answerInput.value = '';
+                answerInput.focus();
+            }
+        });
+    }
+
+    function showReportVerificationModal(itemId, itemType, reportButtonElement) {
+        if (!reportVerificationModal || !document.getElementById('report-verification-modal')) {
+            createReportVerificationModal();
+        }
+
+        const num1 = Math.floor(Math.random() * 9) + 1; // 1-9
+        const num2 = Math.floor(Math.random() * 9) + 1; // 1-9
+        currentReportChallenge = {
+            itemId,
+            itemType,
+            question: `${num1} + ${num2} = ?`,
+            answer: num1 + num2,
+            reportButtonElement
+        };
+
+        document.getElementById('report-verification-question').textContent = currentReportChallenge.question;
+        const answerInput = document.getElementById('report-verification-answer');
+        answerInput.value = '';
+        const statusP = document.getElementById('report-verification-status');
+        statusP.textContent = '';
+        document.getElementById('submit-report-verification-btn').disabled = false;
+        // Ensure cancel button inside verification modal is also enabled
+        const verificationCancelBtn = reportVerificationModal?.querySelector('.btn-secondary.close-modal-btn');
+        if(verificationCancelBtn) verificationCancelBtn.disabled = false;
+
+
+        openModal(reportVerificationModal);
+        answerInput.focus();
+    }
+
     // --- 圖片放大 Modal 相關 ---
     let imageZoomModal = null;
 

@@ -3895,9 +3895,12 @@ app.get('/api/guestbook', async (req, res) => {
                 m.last_activity_at,
                 m.is_admin_post,
                 (m.edit_password IS NOT NULL) AS has_edit_password,
-                m.image_url
+                m.image_url,
+                m.is_reported,      -- 新增
+                m.can_be_reported   -- 新增
              FROM guestbook_messages m
-             WHERE m.is_visible = TRUE
+             WHERE m.is_visible = TRUE  -- 公開API暫時只獲取 is_visible = TRUE 的
+                                        -- 前端可以根據 is_reported 決定是否渲染或如何提示
              ${orderByClause}
              LIMIT $1 OFFSET $2`,
             [limit, offset]
@@ -3925,9 +3928,13 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
 
     const client = await pool.connect();
     try {
-        // 1. 獲取主留言 (加入 view_count, like_count, has_edit_password, image_url)
+        // 1. 獲取主留言 (加入 view_count, like_count, has_edit_password, image_url, is_reported, can_be_reported)
         const messageResult = await client.query(
-            'SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at, is_admin_post, (edit_password IS NOT NULL) AS has_edit_password, image_url FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            `SELECT id, author_name, content, reply_count, view_count, like_count, created_at, last_activity_at,
+                    is_admin_post, (edit_password IS NOT NULL) AS has_edit_password, image_url,
+                    is_reported, can_be_reported
+             FROM guestbook_messages
+             WHERE id = $1 AND is_visible = TRUE`,
             [messageId]
         );
         if (messageResult.rowCount === 0) return res.status(404).json({ error: '找不到或無法查看此留言' });
@@ -3939,10 +3946,12 @@ app.get('/api/guestbook/message/:id', async (req, res) => {
                 r.id, r.message_id, r.parent_reply_id, -- 需要 parent_reply_id 用於前端嵌套
                 r.author_name, r.content, r.created_at,
                 r.is_admin_reply, r.like_count, (r.edit_password IS NOT NULL) AS has_edit_password, r.image_url,
+                r.is_reported,      -- 新增
+                r.can_be_reported,  -- 新增
                 ai.name AS admin_identity_name
              FROM guestbook_replies r
              LEFT JOIN admin_identities ai ON r.admin_identity_id = ai.id
-             WHERE r.message_id = $1 AND r.is_visible = TRUE
+             WHERE r.message_id = $1 AND r.is_visible = TRUE -- 公開API暫時只獲取 is_visible = TRUE 的
              ORDER BY r.created_at ASC`,
             [messageId]
         );
@@ -4226,6 +4235,91 @@ app.put('/api/guestbook/reply/:id/content', async (req, res) => {
         await client.query('ROLLBACK');
         console.error(`[API PUT /guestbook/reply/${id}/content] Error:`, err);
         res.status(500).json({ error: '更新回覆失敗' });
+    } finally {
+        client.release();
+    }
+});
+
+// POST /api/guestbook/message/:id/report - 檢舉主留言
+app.post('/api/guestbook/message/:id/report', async (req, res) => {
+    const { id } = req.params;
+    const messageId = parseInt(id, 10);
+
+    if (isNaN(messageId)) {
+        return res.status(400).json({ error: '無效的留言 ID' });
+    }
+
+    try {
+        const checkResult = await pool.query(
+            'SELECT can_be_reported FROM guestbook_messages WHERE id = $1 AND is_visible = TRUE',
+            [messageId]
+        );
+
+        if (checkResult.rowCount === 0) {
+            return res.status(404).json({ error: '找不到留言或留言已被隱藏' });
+        }
+
+        if (!checkResult.rows[0].can_be_reported) {
+            return res.status(403).json({ error: '此留言目前不允許被檢舉' });
+        }
+
+        await pool.query(
+            'UPDATE guestbook_messages SET is_reported = TRUE, updated_at = NOW(), last_activity_at = NOW() WHERE id = $1',
+            [messageId]
+        );
+        res.status(200).json({ success: true, message: '留言已成功檢舉' });
+    } catch (err) {
+        console.error(`[API POST /guestbook/message/${id}/report] Error:`, err);
+        res.status(500).json({ error: '檢舉留言失敗' });
+    }
+});
+
+// POST /api/guestbook/reply/:id/report - 檢舉回覆
+app.post('/api/guestbook/reply/:id/report', async (req, res) => {
+    const { id } = req.params;
+    const replyId = parseInt(id, 10);
+
+    if (isNaN(replyId)) {
+        return res.status(400).json({ error: '無效的回覆 ID' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const checkResult = await client.query(
+            'SELECT can_be_reported, message_id FROM guestbook_replies WHERE id = $1 AND is_visible = TRUE',
+            [replyId]
+        );
+
+        if (checkResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到回覆或回覆已被隱藏' });
+        }
+
+        if (!checkResult.rows[0].can_be_reported) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: '此回覆目前不允許被檢舉' });
+        }
+        
+        const messageId = checkResult.rows[0].message_id;
+
+        await client.query(
+            'UPDATE guestbook_replies SET is_reported = TRUE, updated_at = NOW() WHERE id = $1',
+            [replyId]
+        );
+        
+        // 當回覆被檢舉時，也更新主留言的 last_activity_at
+        await client.query(
+            'UPDATE guestbook_messages SET last_activity_at = NOW() WHERE id = $1',
+            [messageId]
+        );
+
+        await client.query('COMMIT');
+        res.status(200).json({ success: true, message: '回覆已成功檢舉' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[API POST /guestbook/reply/${id}/report] Error:`, err);
+        res.status(500).json({ error: '檢舉回覆失敗' });
     } finally {
         client.release();
     }
@@ -5829,6 +5923,119 @@ adminRouter.delete('/guestbook/replies/:id', async (req, res) => {
     const client = await pool.connect(); try { await client.query('BEGIN'); const deleteResult = await client.query('DELETE FROM guestbook_replies WHERE id = $1', [replyId]); if (deleteResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要刪除的回覆' }); } await client.query('COMMIT'); res.status(204).send();
     } catch (err) { await client.query('ROLLBACK'); console.error(`[API DELETE /admin/guestbook/replies/${id}] Error:`, err); res.status(500).json({ error: '無法刪除回覆' }); } finally { client.release(); }
 });
+
+// PUT /api/admin/guestbook/messages/:id/status - 更新主留言的狀態 (is_visible, is_reported, can_be_reported)
+adminRouter.put('/guestbook/messages/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const messageId = parseInt(id, 10);
+    const { is_visible, is_reported, can_be_reported } = req.body;
+
+    if (isNaN(messageId)) {
+        return res.status(400).json({ error: '無效的留言 ID' });
+    }
+
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (typeof is_visible === 'boolean') {
+        updateFields.push(`is_visible = $${paramIndex++}`);
+        queryParams.push(is_visible);
+    }
+    if (typeof is_reported === 'boolean') {
+        updateFields.push(`is_reported = $${paramIndex++}`);
+        queryParams.push(is_reported);
+    }
+    if (typeof can_be_reported === 'boolean') {
+        updateFields.push(`can_be_reported = $${paramIndex++}`);
+        queryParams.push(can_be_reported);
+    }
+
+    if (updateFields.length === 0) {
+        return res.status(400).json({ error: '沒有提供要更新的狀態欄位' });
+    }
+
+    updateFields.push(`updated_at = NOW()`); // 總是更新 updated_at
+    updateFields.push(`last_activity_at = NOW()`); // 操作也視為活動
+
+    queryParams.push(messageId); // 最後一個參數是 ID
+
+    try {
+        const query = `UPDATE guestbook_messages SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+        const result = await pool.query(query, queryParams);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的留言' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /admin/guestbook/messages/${id}/status] Error:`, err);
+        res.status(500).json({ error: '更新留言狀態失敗' });
+    }
+});
+
+// PUT /api/admin/guestbook/replies/:id/status - 更新回覆的狀態 (is_visible, is_reported, can_be_reported)
+adminRouter.put('/guestbook/replies/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const replyId = parseInt(id, 10);
+    const { is_visible, is_reported, can_be_reported } = req.body;
+
+    if (isNaN(replyId)) {
+        return res.status(400).json({ error: '無效的回覆 ID' });
+    }
+
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (typeof is_visible === 'boolean') {
+        updateFields.push(`is_visible = $${paramIndex++}`);
+        queryParams.push(is_visible);
+    }
+    if (typeof is_reported === 'boolean') {
+        updateFields.push(`is_reported = $${paramIndex++}`);
+        queryParams.push(is_reported);
+    }
+    if (typeof can_be_reported === 'boolean') {
+        updateFields.push(`can_be_reported = $${paramIndex++}`);
+        queryParams.push(can_be_reported);
+    }
+
+    if (updateFields.length === 0) {
+        return res.status(400).json({ error: '沒有提供要更新的狀態欄位' });
+    }
+    
+    updateFields.push(`updated_at = NOW()`); // 總是更新 updated_at
+    queryParams.push(replyId); // 最後一個參數是 ID
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const query = `UPDATE guestbook_replies SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+        const result = await client.query(query, queryParams);
+
+        if (result.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到要更新的回覆' });
+        }
+        
+        // 如果回覆狀態改變，也更新主留言的 last_activity_at
+        const messageIdResult = await client.query('SELECT message_id FROM guestbook_replies WHERE id = $1', [replyId]);
+        if (messageIdResult.rowCount > 0) {
+            await client.query('UPDATE guestbook_messages SET last_activity_at = NOW() WHERE id = $1', [messageIdResult.rows[0].message_id]);
+        }
+
+        await client.query('COMMIT');
+        res.json(result.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[API PUT /admin/guestbook/replies/${id}/status] Error:`, err);
+        res.status(500).json({ error: '更新回覆狀態失敗' });
+    } finally {
+        client.release();
+    }
+});
+
 
 // --- 新聞管理 API (Admin News API) ---
 adminRouter.get('/news', async (req, res) => {
