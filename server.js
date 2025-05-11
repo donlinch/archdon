@@ -1084,6 +1084,9 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                 } else if (originalWidth > 800) {
                     targetWidth = Math.round(originalWidth * 0.50); // 縮小到50%
                     needsResize = true;
+                } else if (originalWidth > 500) {
+                    targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
+                    needsResize = true;
                 }
                 // 可以根據需求增加更多縮放級別或固定寬度
                 // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
@@ -2227,6 +2230,9 @@ app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), 
                 needsResize = true;
             } else if (originalWidth > 800) {
                 targetWidth = Math.round(originalWidth * 0.50);
+                needsResize = true;
+            } else if (originalWidth > 500) {
+                targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
                 needsResize = true;
             }
 
