@@ -738,7 +738,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 初始化 ---
     console.log("Initializing File Admin Page...");
-    updateSortByOptions(); // 確保在 switchDataMode 前調用，以設定正確的排序選項
-    switchDataMode(currentDataMode); // 使用更新後的預設模式 'disk'
+    updateSortByOptions(); // 更新排序選項以匹配預設模式 (disk)
+    
+    // 手動設置初始按鈕狀態和視圖顯示，以匹配預設值
+    if(viewModeDbBtn) viewModeDbBtn.classList.remove('active');
+    if(viewModeDiskBtn) viewModeDiskBtn.classList.add('active');
+    if(viewListBtn) viewListBtn.classList.remove('active');
+    if(viewGridBtn) viewGridBtn.classList.add('active');
+
+    document.querySelectorAll('.file-view').forEach(el => el.style.display = 'none');
+    if (diskFileGridView) diskFileGridView.style.display = 'grid'; // 預設是磁碟格狀
+
+    // 直接獲取初始數據
+    if (currentDataMode === 'disk') {
+        fetchDiskFiles(currentDiskPage);
+    } else { // 備用，如果預設不是 disk
+        fetchFiles(currentPage);
+    }
 
 }); // End of DOMContentLoaded
