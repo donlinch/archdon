@@ -1381,22 +1381,23 @@
                             uploadStatusDiv.textContent = '上傳中...';
                             uploadStatusDiv.style.color = 'blue';
                             const formData = new FormData();
-                            formData.append('image', file); // 'image' matches server.js upload.single('image')
+                            formData.append('file', file); // Changed 'image' to 'file' to match /api/admin/files/upload
 
                             try {
-                                const response = await fetch('/api/upload', { // Ensure this matches your server's upload endpoint
+                                const response = await fetch('/api/admin/files/upload', { // Changed to use the admin upload endpoint with sharp processing
                                     method: 'POST',
                                     body: formData
                                 });
                                 const result = await response.json();
-                                if (response.ok && result.success && result.url) {
-                                    hiddenImageUrlInput.value = result.url;
-                                    imagePreview.src = result.url;
+                                // The /api/admin/files/upload endpoint returns { success: true, file: { file_path: '...' } }
+                                if (response.ok && result.success && result.file && result.file.file_path) {
+                                    hiddenImageUrlInput.value = result.file.file_path; // Use file_path from the response
+                                    imagePreview.src = result.file.file_path;    // Use file_path for preview
                                     imagePreview.style.display = 'block';
                                     uploadStatusDiv.textContent = '上傳成功！';
                                     uploadStatusDiv.style.color = 'green';
                                 } else {
-                                    throw new Error(result.error || '上傳失敗');
+                                    throw new Error(result.error || '上傳失敗或回傳資料格式不符');
                                 }
                             } catch (error) {
                                 console.error('圖片上傳失敗:', error);
