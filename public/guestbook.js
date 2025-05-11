@@ -59,8 +59,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDetailMessageId = null;
     let currentParentReplyId = null;
 
+    // --- 數學驗證 Modal 相關變量 (移至此處以確保作用域) ---
+    let reportVerificationModal = null;
+    let currentReportChallenge = {
+        itemId: null,
+        itemType: null,
+        question: '',
+        answer: null,
+        reportButtonElement: null
+    };
+ 
     // --- 辅助函数 ---
-    function openModal(modalElement) { 
+    function openModal(modalElement) {
         if (modalElement) {
             modalElement.style.display = 'flex';
             document.body.style.overflow = 'hidden'; // 防止背景滚动
@@ -312,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportButton.dataset.id = msg.id;
                 reportButton.dataset.type = 'message';
                 reportButton.textContent = '檢舉';
-                reportButton.style.color = '#dc3545'; // 紅色以示警告
+                reportButton.style.color = '#6c757d'; // 改為灰色
                 reportButton.style.marginLeft = '8px';
                 metaContainer.appendChild(reportButton);
             } else if (msg.is_reported) {
@@ -449,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportButton.dataset.id = msg.id;
                 reportButton.dataset.type = 'message';
                 reportButton.textContent = '檢舉';
-                reportButton.style.color = '#dc3545';
+                reportButton.style.color = '#6c757d'; // 改為灰色
                 // reportButton.style.marginLeft = 'auto'; // 如果想推到最右
                 metaInfoDiv.appendChild(reportButton);
             } else if (msg.is_reported) {
@@ -963,7 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reportReplyButton.dataset.id = reply.id;
                     reportReplyButton.dataset.type = 'reply';
                     reportReplyButton.textContent = '檢舉';
-                    reportReplyButton.style.color = '#dc3545';
+                    reportReplyButton.style.color = '#6c757d'; // 改為灰色
                     reportReplyButton.style.marginLeft = '10px';
                     actionsDiv.appendChild(reportReplyButton);
                 } else if (reply.is_reported) {
@@ -1484,15 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // --- 數學驗證 Modal 相關 (用於檢舉) ---
-    let reportVerificationModal = null;
-    let currentReportChallenge = {
-        itemId: null,
-        itemType: null,
-        question: '',
-        answer: null,
-        reportButtonElement: null
-    };
-
+    // 變量已移至頂部
     function createReportVerificationModal() {
         if (document.getElementById('report-verification-modal')) return;
 
@@ -1544,93 +1546,38 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.id = 'submit-report-verification-btn';
         submitBtn.className = 'btn btn-primary';
         submitBtn.textContent = '提交驗證';
-// --- 數學驗證 Modal 相關 (用於檢舉) ---
-    let reportVerificationModal = null;
-    let currentReportChallenge = {
-        itemId: null,
-        itemType: null,
-        question: '',
-        answer: null,
-        reportButtonElement: null
-    };
-
-    function createReportVerificationModal() {
-        if (document.getElementById('report-verification-modal')) return;
-
-        reportVerificationModal = document.createElement('div');
-        reportVerificationModal.id = 'report-verification-modal';
-        reportVerificationModal.className = 'modal'; // 使用現有的 modal class
-        reportVerificationModal.style.zIndex = '2000';
-
-
-        const modalContent = document.createElement('div');
-        modalContent.className = 'modal-content';
-        modalContent.style.maxWidth = '350px';
-
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'close-btn close-modal-btn'; 
-        closeBtn.innerHTML = '&times;';
-        closeBtn.onclick = () => closeModal(reportVerificationModal);
-
-        const title = document.createElement('h2');
-        title.textContent = '檢舉驗證';
-        title.style.marginBottom = '15px';
-
-        const questionP = document.createElement('p');
-        questionP.id = 'report-verification-question';
-        questionP.style.fontSize = '1.1em';
-        questionP.style.marginBottom = '10px';
-        questionP.style.textAlign = 'center';
-
-
-        const answerInput = document.createElement('input');
-        answerInput.type = 'number'; 
-        answerInput.id = 'report-verification-answer';
-        answerInput.className = 'form-control';
-        answerInput.placeholder = '請輸入答案';
-        answerInput.style.marginBottom = '15px';
-        answerInput.style.textAlign = 'center';
-
-        const statusP = document.createElement('p');
-        statusP.id = 'report-verification-status';
-        statusP.style.minHeight = '1.2em';
-        statusP.style.marginTop = '5px';
-
-
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'form-actions';
-
-        const submitBtn = document.createElement('button');
-        submitBtn.id = 'submit-report-verification-btn';
-        submitBtn.className = 'btn btn-primary';
-        submitBtn.textContent = '提交驗證';
-
+        
+        // 將 cancelBtn 和 submitBtn 添加到 actionsDiv
         const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button'; 
-        cancelBtn.className = 'btn btn-secondary close-modal-btn'; 
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn btn-secondary close-modal-btn';
         cancelBtn.textContent = '取消';
         cancelBtn.onclick = () => closeModal(reportVerificationModal);
 
-
-        actionsDiv.appendChild(cancelBtn);
+        actionsDiv.appendChild(cancelBtn); // 確保 cancelBtn 被添加
         actionsDiv.appendChild(submitBtn);
 
+        // 將所有元素添加到 modalContent
         modalContent.appendChild(closeBtn);
         modalContent.appendChild(title);
         modalContent.appendChild(questionP);
         modalContent.appendChild(answerInput);
         modalContent.appendChild(statusP);
         modalContent.appendChild(actionsDiv);
+
+        // 將 modalContent 添加到 reportVerificationModal
         reportVerificationModal.appendChild(modalContent);
+        // 將 Modal 添加到 body
         document.body.appendChild(reportVerificationModal);
 
-        // 提交驗證
+        // 提交驗證的事件監聽器
         submitBtn.addEventListener('click', async () => {
-            const userAnswer = parseInt(answerInput.value, 10);
-            const statusElement = document.getElementById('report-verification-status');
+            const userAnswerText = answerInput.value; // 從 input 獲取文本值
+            const userAnswer = parseInt(userAnswerText, 10);
+            const statusElement = document.getElementById('report-verification-status'); // 重新獲取，以防萬一
             
-            if (isNaN(userAnswer)) {
-                statusElement.textContent = '請輸入數字答案。';
+            if (userAnswerText.trim() === '' || isNaN(userAnswer)) {
+                statusElement.textContent = '請輸入有效的數字答案。';
                 statusElement.style.color = 'red';
                 return;
             }
@@ -1639,7 +1586,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusElement.textContent = '驗證成功，正在提交檢舉...';
                 statusElement.style.color = 'green';
                 submitBtn.disabled = true;
-                cancelBtn.disabled = true;
+                if (cancelBtn) cancelBtn.disabled = true;
 
                 const { itemId, itemType, reportButtonElement } = currentReportChallenge;
                 
@@ -1654,135 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             reportButtonElement.classList.add('reported');
                             reportButtonElement.style.color = '#6c757d';
                             reportButtonElement.style.pointerEvents = 'none';
-                            reportButtonElement.disabled = true; 
-                        }
-                        
-                        const itemElement = itemType === 'message' 
-                            ? document.querySelector(`.message-card[data-message-id="${itemId}"], .message-list-item[data-message-id="${itemId}"]`)
-                            : detailModalReplyList?.querySelector(`.reply-item[data-reply-id="${itemId}"]`);
-                        
-                        if (itemElement) {
-                            const existingReportedText = itemElement.querySelector('.reported-status-text');
-                            if (!existingReportedText) {
-                                const reportedStatusText = document.createElement('span');
-                                reportedStatusText.textContent = ' (已提報待審)';
-                                reportedStatusText.style.color = 'orange';
-                                reportedStatusText.style.fontSize = '0.9em';
-                                reportedStatusText.classList.add('reported-status-text');
-                                
-                                if (itemType === 'message' && (itemElement.classList.contains('message-card') || itemElement.classList.contains('message-list-item'))) {
-                                    const metaContainer = itemElement.querySelector('.message-meta-container, div[style*="gap: 10px"]');
-                                    metaContainer?.appendChild(reportedStatusText);
-                                } else if (itemType === 'reply' && itemElement.classList.contains('reply-item')) {
-                                    const actionsDiv = itemElement.querySelector('.reply-item-actions');
-                                    actionsDiv?.appendChild(reportedStatusText);
-                                }
-                            }
-                        }
-                        statusElement.textContent = data.message || '檢舉成功！';
-                        setTimeout(() => closeModal(reportVerificationModal), 1500);
-
-                    } else {
-                        statusElement.textContent = data.error || '檢舉失敗，請稍後再試。';
-                        statusElement.style.color = 'red';
-                        submitBtn.disabled = false;
-                        cancelBtn.disabled = false;
-                    }
-                } catch (error) {
-                    console.error('檢舉時發生錯誤:', error);
-                    statusElement.textContent = '檢舉過程中發生網路或伺服器錯誤。';
-                    statusElement.style.color = 'red';
-                    submitBtn.disabled = false;
-                    cancelBtn.disabled = false;
-                }
-
-            } else {
-                statusElement.textContent = '答案錯誤，請重試。';
-                statusElement.style.color = 'red';
-                answerInput.value = '';
-                answerInput.focus();
-            }
-        });
-    }
-
-    function showReportVerificationModal(itemId, itemType, reportButtonElement) {
-        if (!reportVerificationModal || !document.getElementById('report-verification-modal')) {
-            createReportVerificationModal();
-        }
-
-        const num1 = Math.floor(Math.random() * 9) + 1; 
-        const num2 = Math.floor(Math.random() * 9) + 1; 
-        currentReportChallenge = {
-            itemId,
-            itemType,
-            question: `${num1} + ${num2} = ?`,
-            answer: num1 + num2,
-            reportButtonElement
-        };
-
-        document.getElementById('report-verification-question').textContent = currentReportChallenge.question;
-        const answerInput = document.getElementById('report-verification-answer');
-        answerInput.value = '';
-        const statusP = document.getElementById('report-verification-status');
-        statusP.textContent = '';
-        document.getElementById('submit-report-verification-btn').disabled = false;
-        const verificationCancelBtn = reportVerificationModal?.querySelector('.btn-secondary.close-modal-btn');
-        if(verificationCancelBtn) verificationCancelBtn.disabled = false;
-
-        openModal(reportVerificationModal);
-        answerInput.focus();
-    }
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button'; // 防止表單提交
-        cancelBtn.className = 'btn btn-secondary close-modal-btn'; // 確保可以被通用邏輯關閉
-        cancelBtn.textContent = '取消';
-        cancelBtn.onclick = () => closeModal(reportVerificationModal);
-
-
-        actionsDiv.appendChild(cancelBtn);
-        actionsDiv.appendChild(submitBtn);
-
-        modalContent.appendChild(closeBtn);
-        modalContent.appendChild(title);
-        modalContent.appendChild(questionP);
-        modalContent.appendChild(answerInput);
-        modalContent.appendChild(statusP);
-        modalContent.appendChild(actionsDiv);
-        reportVerificationModal.appendChild(modalContent);
-        document.body.appendChild(reportVerificationModal);
-
-        // 提交驗證
-        submitBtn.addEventListener('click', async () => {
-            const userAnswer = parseInt(answerInput.value, 10);
-            const statusElement = document.getElementById('report-verification-status');
-            
-            if (isNaN(userAnswer)) {
-                statusElement.textContent = '請輸入數字答案。';
-                statusElement.style.color = 'red';
-                return;
-            }
-
-            if (userAnswer === currentReportChallenge.answer) {
-                statusElement.textContent = '驗證成功，正在提交檢舉...';
-                statusElement.style.color = 'green';
-                submitBtn.disabled = true;
-                cancelBtn.disabled = true;
-
-                const { itemId, itemType, reportButtonElement } = currentReportChallenge;
-                
-                try {
-                    const reportUrl = itemType === 'message' ? `/api/guestbook/message/${itemId}/report` : `/api/guestbook/reply/${itemId}/report`;
-                    const response = await fetch(reportUrl, { method: 'POST' });
-                    const data = await response.json();
-
-                    if (response.ok && data.success) {
-                        if (reportButtonElement) {
-                            reportButtonElement.textContent = '已檢舉';
-                            reportButtonElement.classList.add('reported');
-                            reportButtonElement.style.color = '#6c757d';
-                            reportButtonElement.style.pointerEvents = 'none';
-                            reportButtonElement.disabled = true; // 確保禁用
+                            reportButtonElement.disabled = true;
                         }
                         
                         const itemElement = itemType === 'message'
@@ -1790,24 +1609,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             : detailModalReplyList?.querySelector(`.reply-item[data-reply-id="${itemId}"]`);
                         
                         if (itemElement) {
-                            const existingReportedText = itemElement.querySelector('.reported-status-text');
-                            if (!existingReportedText) {
-                                const reportedStatusText = document.createElement('span');
-                                reportedStatusText.textContent = ' (已提報待審)';
-                                reportedStatusText.style.color = 'orange';
-                                reportedStatusText.style.fontSize = '0.9em';
-                                reportedStatusText.classList.add('reported-status-text');
-                                
+                            // 更新UI以反映檢舉狀態，例如隱藏內容或顯示提示
+                            if (itemElement.classList.contains('message-card') || itemElement.classList.contains('message-list-item') || itemElement.classList.contains('reply-item')) {
                                 if (itemType === 'message' && (itemElement.classList.contains('message-card') || itemElement.classList.contains('message-list-item'))) {
-                                    const metaContainer = itemElement.querySelector('.message-meta-container, div[style*="gap: 10px"]');
-                                    metaContainer?.appendChild(reportedStatusText);
+                                    const existingContent = itemElement.querySelector('.content-preview');
+                                    if (existingContent) existingContent.innerHTML = '<p style="color: #dc3545; font-style: italic;">此留言已被檢舉，等待管理員審核。</p>';
                                 } else if (itemType === 'reply' && itemElement.classList.contains('reply-item')) {
-                                    const actionsDiv = itemElement.querySelector('.reply-item-actions');
-                                    actionsDiv?.appendChild(reportedStatusText);
+                                     const existingContent = itemElement.querySelector('.reply-content');
+                                     if (existingContent) existingContent.innerHTML = '<p style="color: #dc3545; font-style: italic;">此回覆已被檢舉，等待管理員審核。</p>';
+                                }
+                                // 移除檢舉按鈕本身，或使其永久禁用並更改文本
+                                const reportBtnOnItem = itemElement.querySelector(`.report-btn[data-id="${itemId}"]`);
+                                if(reportBtnOnItem) {
+                                    reportBtnOnItem.textContent = '已提報';
+                                    reportBtnOnItem.disabled = true;
+                                    reportBtnOnItem.style.pointerEvents = 'none';
                                 }
                             }
                         }
-                        // alert(data.message || '檢舉成功！內容將等待管理員審核。');
                         statusElement.textContent = data.message || '檢舉成功！';
                         setTimeout(() => closeModal(reportVerificationModal), 1500);
 
@@ -1815,14 +1634,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         statusElement.textContent = data.error || '檢舉失敗，請稍後再試。';
                         statusElement.style.color = 'red';
                         submitBtn.disabled = false;
-                        cancelBtn.disabled = false;
+                        if (cancelBtn) cancelBtn.disabled = false;
                     }
                 } catch (error) {
                     console.error('檢舉時發生錯誤:', error);
                     statusElement.textContent = '檢舉過程中發生網路或伺服器錯誤。';
                     statusElement.style.color = 'red';
                     submitBtn.disabled = false;
-                    cancelBtn.disabled = false;
+                    if (cancelBtn) cancelBtn.disabled = false;
                 }
 
             } else {
@@ -1832,7 +1651,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 answerInput.focus();
             }
         });
-    }
+
+    } // createReportVerificationModal 函數的結束括號
 
     function showReportVerificationModal(itemId, itemType, reportButtonElement) {
         if (!reportVerificationModal || !document.getElementById('report-verification-modal')) {
