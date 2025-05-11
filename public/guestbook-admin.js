@@ -25,10 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportItemTypeSpan = document.getElementById('report-item-type');
     const reportItemAuthorSpan = document.getElementById('report-item-author');
     const reportItemContentPreviewDiv = document.getElementById('report-item-content-preview');
-    const reportActionIgnoreBtn = document.getElementById('report-action-ignore');
-    const reportActionHideBtn = document.getElementById('report-action-hide');
-    const reportActionDeleteBtn = document.getElementById('report-action-delete');
-    const reportActionClearReportBtn = document.getElementById('report-action-clear-report');
+    // 移除已刪除的按鈕變量
+    // const reportActionIgnoreBtn = document.getElementById('report-action-ignore');
+    // const reportActionHideBtn = document.getElementById('report-action-hide');
+    // const reportActionDeleteBtn = document.getElementById('report-action-delete');
+    const reportActionUnreportBtn = document.getElementById('report-action-unreport'); // 更新ID和變量名
     const processReportStatusP = document.getElementById('process-report-status');
 
 
@@ -444,66 +445,49 @@ const setupReportActionButtons = () => {
     const itemId = () => reportModal.dataset.itemId;
     const itemType = () => reportModal.dataset.itemType;
 
-    const handleAction = async (actionName, apiEndpointTemplate, method = 'PUT', body = null) => {
-        if (!itemId() || !itemType()) {
+    const handleUnreportAction = async () => {
+        const currentItemId = itemId();
+        const currentItemType = itemType();
+
+        if (!currentItemId || !currentItemType) {
             processReportStatusP.textContent = '錯誤：缺少項目ID或類型。';
             processReportStatusP.style.color = 'red';
             return;
         }
         
-        [reportActionIgnoreBtn, reportActionHideBtn, reportActionDeleteBtn, reportActionClearReportBtn].forEach(btn => btn.disabled = true);
-        processReportStatusP.textContent = `正在 ${actionName}...`;
+        if(reportActionUnreportBtn) reportActionUnreportBtn.disabled = true;
+        processReportStatusP.textContent = `正在解除檢舉...`;
         processReportStatusP.style.color = 'blue';
 
-        // 模擬 API 調用
-        console.log(`執行操作: ${actionName}, ID: ${itemId()}, Type: ${itemType()}`);
-        // 實際 API 調用:
-        // const endpoint = apiEndpointTemplate.replace('{type}', itemType()).replace('{id}', itemId());
-        // try {
-        //     const response = await fetch(endpoint, { method, headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : null });
-        //     if (!response.ok && response.status !== 204) {
-        //         const errData = await response.json().catch(() => ({}));
-        //         throw new Error(errData.error || `操作失敗 (HTTP ${response.status})`);
-        //     }
-        //     processReportStatusP.textContent = `${actionName} 成功！`;
-        //     processReportStatusP.style.color = 'green';
-        //     setTimeout(() => {
-        //         closeModal(reportModal);
-        //         fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
-        //     }, 1500);
-        // } catch (error) {
-        //     console.error(`${actionName} 失敗:`, error);
-        //     processReportStatusP.textContent = `${actionName} 失敗: ${error.message}`;
-        //     processReportStatusP.style.color = 'red';
-        //     [reportActionIgnoreBtn, reportActionHideBtn, reportActionDeleteBtn, reportActionClearReportBtn].forEach(btn => btn.disabled = false);
-        // }
+        const endpoint = `/api/admin/guestbook/${currentItemType}s/${currentItemId}/status`;
+        const body = { is_reported: false, is_visible: true }; // 解除檢舉並設為可見
 
-        // 暫時的模擬成功流程
-        setTimeout(() => {
-            processReportStatusP.textContent = `${actionName} 操作已記錄 (模擬)。`;
+        try {
+            const response = await fetch(endpoint, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if (!response.ok && response.status !== 204) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `操作失敗 (HTTP ${response.status})`);
+            }
+            processReportStatusP.textContent = `解除檢舉成功！`;
             processReportStatusP.style.color = 'green';
             setTimeout(() => {
                 closeModal(reportModal);
                 fetchAdminGuestbookList(currentPage, currentFilter, currentSearch, currentSort);
             }, 1500);
-        }, 1000);
+        } catch (error) {
+            console.error(`解除檢舉失敗:`, error);
+            processReportStatusP.textContent = `解除檢舉失敗: ${error.message}`;
+            processReportStatusP.style.color = 'red';
+            if(reportActionUnreportBtn) reportActionUnreportBtn.disabled = false;
+        }
     };
 
-    if (reportActionIgnoreBtn) {
-        reportActionIgnoreBtn.addEventListener('click', () => handleAction('忽略檢舉', `/api/admin/guestbook/{type}s/{id}/report/ignore`));
-    }
-    if (reportActionHideBtn) {
-        reportActionHideBtn.addEventListener('click', () => handleAction('隱藏內容', `/api/admin/guestbook/{type}s/{id}/visibility`, 'PUT', { is_visible: false }));
-    }
-    if (reportActionDeleteBtn) {
-        reportActionDeleteBtn.addEventListener('click', () => {
-            if (confirm(`確定要刪除此 ${itemType() === 'message' ? '留言' : '回覆'} (ID: ${itemId()}) 嗎？`)) {
-                handleAction('刪除內容', `/api/admin/guestbook/{type}s/{id}`, 'DELETE');
-            }
-        });
-    }
-    if (reportActionClearReportBtn) {
-        reportActionClearReportBtn.addEventListener('click', () => handleAction('清除檢舉標記', `/api/admin/guestbook/{type}s/{id}/report/clear`));
+    if (reportActionUnreportBtn) {
+        reportActionUnreportBtn.addEventListener('click', handleUnreportAction);
     }
 };
 setupReportActionButtons();
