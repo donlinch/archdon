@@ -516,6 +516,10 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
         cancelEditBtn.style.display = 'inline-block'; // 顯示取消按鈕
         clearFormError();
 
+        // 新增：打開 drawer 並切換到表單 tab
+        openDrawer();
+        switchTab('add-sale-tab');
+
         // 將頁面滾動到表單位置，方便編輯
         salesForm.scrollIntoView({ behavior: 'smooth' });
     };
