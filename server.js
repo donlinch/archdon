@@ -335,6 +335,7 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
 
 const multer = require('multer');
 const fs = require('fs');
+const sharp = require('sharp');
 
 
 
@@ -2136,14 +2137,85 @@ app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), 
         return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
     }
     const file = req.file;
-    const fileUrlPath = '/uploads/' + file.filename; // ★ 使用 fileUrlPath 作為 URL 路徑 ★
+    let fileToSave = { ...file }; // 複製一份檔案資訊，以便修改
+    const originalFilePath = fileToSave.path; // multer 儲存的原始檔案路徑
+
+    const fileUrlPath = '/uploads/' + fileToSave.filename;
 
     let fileType = 'other';
-    const lowerExt = path.extname(file.originalname).toLowerCase();
-    if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(lowerExt)) { fileType = 'image'; }
-    else if (lowerExt === '.pdf') { fileType = 'pdf'; }
-    else if (file.mimetype?.startsWith('image/')) { fileType = 'image'; }
-    else if (file.mimetype === 'application/pdf') { fileType = 'pdf'; }
+    const lowerMimetype = fileToSave.mimetype.toLowerCase();
+    const lowerExt = path.extname(fileToSave.originalname).toLowerCase();
+
+    if (['.png', '.jpg', '.jpeg'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
+        fileType = 'image'; // 明確標記為可處理的圖片
+        console.log(`檔案 ${fileToSave.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
+        try {
+            const metadata = await sharp(originalFilePath).metadata();
+            const originalWidth = metadata.width;
+            let targetWidth = originalWidth;
+            let needsResize = false;
+
+            if (originalWidth > 1500) {
+                targetWidth = Math.round(originalWidth * 0.25);
+                needsResize = true;
+            } else if (originalWidth > 800) {
+                targetWidth = Math.round(originalWidth * 0.50);
+                needsResize = true;
+            }
+
+            if (needsResize) {
+                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
+                const tempResizedPath = originalFilePath + '_resized_temp' + lowerExt;
+                
+                await sharp(originalFilePath)
+                    .resize({ width: targetWidth })
+                    .toFile(tempResizedPath);
+                
+                console.log(`圖片已縮放至臨時路徑: ${tempResizedPath}`);
+
+                // 刪除 multer 最初上傳的原始檔案
+                if (fs.existsSync(originalFilePath)) {
+                    fs.unlinkSync(originalFilePath);
+                    console.log(`已刪除原始 multer 檔案: ${originalFilePath}`);
+                }
+
+                // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
+                fs.renameSync(tempResizedPath, originalFilePath);
+                fileToSave.path = originalFilePath; // 更新 fileToSave 中的路徑
+                
+                // 更新檔案大小
+                const newStats = fs.statSync(fileToSave.path);
+                fileToSave.size = newStats.size;
+                console.log(`圖片 ${fileToSave.originalname} 已成功縮放並覆蓋原檔案，新路徑: ${fileToSave.path}, 新大小: ${fileToSave.size} bytes`);
+            } else {
+                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+            }
+        } catch (sharpError) {
+            console.error(`Sharp 處理圖片 ${fileToSave.originalname} 失敗:`, sharpError);
+            // 如果縮放失敗，刪除已上傳的原始檔案並回報錯誤
+            try {
+                if (fs.existsSync(originalFilePath)) {
+                    fs.unlinkSync(originalFilePath);
+                    console.warn(`已刪除處理失敗的原始檔案: ${originalFilePath}`);
+                }
+            } catch (unlinkErr) {
+                console.error(`刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+            }
+            return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
+        }
+    } else if (lowerExt === '.gif' || lowerMimetype === 'image/gif') {
+        fileType = 'image'; // 仍然是圖片類型
+        console.log(`檔案 ${fileToSave.originalname} 是 GIF，不進行縮放。`);
+    } else if (lowerExt === '.pdf' || lowerMimetype === 'application/pdf') {
+        fileType = 'pdf';
+        console.log(`檔案 ${fileToSave.originalname} 是 PDF，不進行縮放。`);
+    } else if (['.webp', '.svg'].includes(lowerExt) || ['image/webp', 'image/svg+xml'].includes(lowerMimetype)) {
+        fileType = 'image'; // 其他可被視為圖片的類型
+        console.log(`檔案 ${fileToSave.originalname} 是 ${lowerExt}，不進行縮放。`);
+    } else {
+        fileType = 'other';
+        console.log(`檔案 ${fileToSave.originalname} 是其他類型 (${fileToSave.mimetype})，不進行縮放。`);
+    }
 
     const client = await pool.connect();
     try {
@@ -2152,27 +2224,28 @@ app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), 
             `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING id, file_path, original_filename, mimetype, size_bytes, file_type, uploaded_at`,
-            // ★ 存入資料庫的是 URL 路徑 ★
-            [fileUrlPath, file.originalname, file.mimetype, file.size, fileType]
+            [fileUrlPath, fileToSave.originalname, fileToSave.mimetype, fileToSave.size, fileType]
         );
         await client.query('COMMIT');
-        console.log(`檔案 ${file.originalname} 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
+        console.log(`檔案 ${fileToSave.originalname} (處理後) 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
         res.status(201).json({ success: true, file: insertResult.rows[0] });
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('[API POST /admin/files/upload] Error inserting file record:', err);
-        // 嘗試刪除已上傳但記錄失敗的檔案
-        const fullDiskPath = path.join(uploadDir, file.filename); // ★ 實際磁碟路徑 ★
-        try {
-            if (fs.existsSync(fullDiskPath)) {
-                 await fs.promises.unlink(fullDiskPath);
-                 console.warn(`已刪除記錄失敗的持久化檔案: ${fullDiskPath}`);
+        console.error('[API POST /admin/files/upload] Error inserting file record (after potential resize):', err);
+        // 如果資料庫儲存失敗，此時檔案可能已經被縮放並覆蓋了原始檔案
+        // 由於我們策略是縮放失敗時就已刪除檔案並返回，這裡主要是處理資料庫錯誤
+        // 如果需要，可以考慮是否要刪除已處理的檔案，但通常資料庫錯誤更應關注
+        const fullDiskPathToClean = path.join(uploadDir, fileToSave.filename);
+         try {
+            if (fs.existsSync(fullDiskPathToClean)) {
+                 fs.unlinkSync(fullDiskPathToClean); // 使用同步删除，因为在错误处理流程中
+                 console.warn(`因資料庫儲存失敗，已刪除磁碟上的檔案: ${fullDiskPathToClean}`);
             }
         } catch (unlinkErr) {
-            console.error(`刪除記錄失敗的檔案時出錯 (${fullDiskPath}):`, unlinkErr);
+            console.error(`因資料庫儲存失敗後，嘗試刪除磁碟檔案 ${fullDiskPathToClean} 時再次出錯:`, unlinkErr);
         }
-        res.status(500).json({ success: false, error: '儲存檔案記錄失敗', detail: err.message });
+        res.status(500).json({ success: false, error: '儲存檔案記錄到資料庫失敗', detail: err.message });
     } finally {
         client.release();
     }
