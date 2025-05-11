@@ -738,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 初始化 ---
     console.log("Initializing File Admin Page...");
-    updateSortByOptions(); 
-    switchDataMode('database'); 
+    updateSortByOptions(); // 確保在 switchDataMode 前調用，以設定正確的排序選項
+    switchDataMode(currentDataMode); // 使用更新後的預設模式 'disk'
 
 }); // End of DOMContentLoaded
