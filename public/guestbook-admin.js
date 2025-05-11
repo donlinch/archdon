@@ -136,9 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`無法獲取管理列表 (${errorMsg})`);
             }
             const data = await response.json();
-
-console.log('Admin messages data:', messages); // 診斷用：查看從後端收到的原始數據
-            renderAdminList(data.messages); // <--- 調用修改後的 renderAdminList
+            console.log('Admin API response data:', data); // 診斷用：查看從後端收到的完整 data 對象
+            renderAdminList(data.messages);
             renderAdminPagination(data.totalPages, data.currentPage);
 
         } catch (error) {
