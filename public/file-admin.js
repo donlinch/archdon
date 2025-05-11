@@ -287,13 +287,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const img = document.createElement('img');
                 img.src = file.urlPath;
                 img.alt = `預覽: ${escapeHtml(file.filename)}`;
-                img.className = 'preview-icon';
+                img.className = 'preview-icon'; // 確保有這個 class
+                img.style.maxWidth = '60px';    // 與 DB 視圖一致
+                img.style.maxHeight = '40px';   // 與 DB 視圖一致
+                img.style.objectFit = 'contain';// 確保圖片等比縮放
                 img.onerror = () => cellPreview.innerHTML = '<span class="preview-icon" title="圖片載入失敗">⚠️</span>';
                 cellPreview.appendChild(img);
             } else if (file.type === 'pdf') {
-                cellPreview.innerHTML = '<img src="/images/pdf_icon.png" alt="PDF" class="preview-icon" style="width:30px; height:auto;">';
+                // 使用 CSS class 控制大小，而不是內聯 style 的 width/height
+                cellPreview.innerHTML = '<img src="/images/pdf_icon.png" alt="PDF" class="preview-icon">';
             } else {
-                cellPreview.innerHTML = '<img src="/images/file_icon.png" alt="File" class="preview-icon" style="width:30px; height:auto;">';
+                cellPreview.innerHTML = '<img src="/images/file_icon.png" alt="File" class="preview-icon">';
             }
             row.insertCell().textContent = file.filename;
             const cellUrl = row.insertCell();

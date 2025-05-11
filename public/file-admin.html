@@ -33,8 +33,12 @@
         #file-list-view .copy-url-btn:hover { background-color: #e0e0e0; }
         #file-list-view .delete-file-btn { padding: 3px 6px; font-size: 0.8em; background-color: #dc3545; color: white; border: none; cursor: pointer; border-radius: 3px; }
 
-        /* 格狀視圖 */
-        #file-grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+        /* 格狀視圖 (共用樣式) */
+        #file-grid-view, #disk-file-grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
         .file-card { background-color: #fff; border: 1px solid #eee; border-radius: 5px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; text-align: center; }
         .file-card .preview {
     height: 100px; /* 或你想要的高度 */
@@ -100,7 +104,13 @@
             /* margin-left: 5px; */
         }
 
-
+        /* 針對磁碟列表視圖的預覽圖示 (如果需要特定調整，否則 .preview-icon 已有通用設定) */
+        #disk-file-list-view .preview-icon {
+            /* 與 #file-list-view .preview-icon 保持一致或按需修改 */
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
 
 
 
