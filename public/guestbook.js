@@ -79,6 +79,18 @@ document.addEventListener('DOMContentLoaded', () => {
         textarea.focus();
     }
 
+    function linkify(text) {
+        if (!text) return '';
+        const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        return text.replace(urlRegex, function(url) {
+            let fullUrl = url;
+            if (!url.match(/^[a-zA-Z]+:\/\//)) {
+                fullUrl = 'http://' + url;
+            }
+            return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        });
+    }
+
     // --- 设置回到顶部按钮 ---
     function setupBackToTop() {
         if (!backToTopButton) return;
@@ -580,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = message.content || '';
+        contentDiv.innerHTML = linkify(message.content || ''); // 修改此處
         contentDiv.style.whiteSpace = 'pre-wrap';
         contentDiv.style.wordWrap = 'break-word';
         contentDiv.style.padding = '15px';
@@ -713,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 回复内容
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'reply-content';
-                contentDiv.textContent = reply.content || '';
+                contentDiv.innerHTML = linkify(reply.content || ''); // 修改此處
                 contentDiv.style.whiteSpace = 'pre-wrap';
                 contentDiv.style.wordWrap = 'break-word';
                 contentDiv.style.marginBottom = '8px';
