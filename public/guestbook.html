@@ -467,13 +467,23 @@
             right: 20px;
             font-size: 24px;
             font-weight: bold;
-            color: #999;
+            color: #aaa; /* 稍微調淡顏色 */
             cursor: pointer;
-            transition: color 0.3s;
+            transition: all 0.2s ease-in-out; /* 過渡效果更平滑 */
+            line-height: 1; /* 確保叉叉垂直居中 */
+            padding: 5px; /* 增加點擊區域 */
+            width: 30px; /* 固定寬高 */
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%; /* 圓形背景 */
         }
 
         .close-btn:hover {
-            color: #333;
+            color: #FF7043; /* 懸停時變為橘紅色 */
+            background-color: #f0f0f0; /* 淺灰色背景 */
+            transform: rotate(90deg); /* 懸停時旋轉 */
         }
 
         .modal h2 {
@@ -840,7 +850,7 @@
         <!-- 查看詳情 Modal -->
         <div id="message-detail-modal" class="modal" style="display: none;">
             <div class="modal-content">
-                <span class="close-btn" id="close-detail-modal-btn">×</span>
+                <span class="close-btn close-modal-btn" id="close-detail-modal-btn">×</span>
                 <h2>留言詳情</h2>
                 <div id="modal-message-detail-main">
                     <!-- 主留言詳情將載入這裡 -->

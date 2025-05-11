@@ -818,22 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentDiv.innerHTML = linkify(reply.content || ''); // 修改此處
                 contentDiv.style.whiteSpace = 'pre-wrap';
                 contentDiv.style.wordWrap = 'break-word';
-                contentDiv.style.marginBottom = '8px';
-                contentDiv.style.lineHeight = '1.5';
-
-                // 新增：在 Modal 中顯示回覆的圖片 (如果存在)
-                if (reply.image_url) {
-                    const replyImage = document.createElement('img');
-                    replyImage.src = reply.image_url;
-                    replyImage.alt = '回覆圖片';
-                    replyImage.style.maxWidth = '80%'; // 回覆圖片可以小一點
-                    replyImage.style.maxHeight = '150px';
-                    replyImage.style.borderRadius = '6px';
-                    replyImage.style.marginTop = '8px';
-                    replyImage.style.marginBottom = '8px';
-                    replyImage.style.objectFit = 'cover';
-                    contentDiv.appendChild(replyImage); // 將圖片放在回覆內容下方
-                }
+                // marginBottom 和 lineHeight 會在下方根據是否有圖片動態調整
                 
                 // 回复操作按钮
                 const actionsDiv = document.createElement('div');
@@ -889,6 +874,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 组装回复项
                 replyDiv.appendChild(metaP);
                 replyDiv.appendChild(contentDiv);
+
+                // 新增：在 Modal 中顯示回覆的圖片 (如果存在)，放在 contentDiv 之後，actionsDiv 之前
+                if (reply.image_url) {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'reply-image-container';
+                    imageContainer.style.marginTop = '10px'; // 與文字內容的間隔
+                    imageContainer.style.marginBottom = '10px'; // 與下方操作按鈕的間隔
+                    // 為了實現類似「一排顯示兩個的大小」，這裡假設Modal寬度足夠，
+                    // 並且圖片本身有最大寬度限制。如果有多張圖片，則需要更複雜的flex或grid佈局。
+                    // 這裡主要處理單張圖片的顯示優化。
+
+                    const replyImage = document.createElement('img');
+                    replyImage.src = reply.image_url;
+                    replyImage.alt = '回覆圖片';
+                    // 調整樣式以符合期望
+                    replyImage.style.maxWidth = 'calc(50% - 4px)'; // 嘗試讓圖片佔容器一半寬度，留點間隙
+                                                                // 如果希望圖片更大，可以調整為例如 '70%' 或 '100%'
+                    replyImage.style.maxHeight = '250px'; // 增加最大高度限制
+                    replyImage.style.borderRadius = '8px';
+                    replyImage.style.objectFit = 'contain'; // 改為 contain 以完整顯示圖片，避免重要部分被裁切
+                    replyImage.style.cursor = 'pointer'; // 暗示可點擊放大
+                    replyImage.style.display = 'block'; // 讓圖片獨佔一行，如果需要並排則用inline-block
+                    replyImage.style.marginLeft = 'auto'; // 如果是 block，可以嘗試居中
+                    replyImage.style.marginRight = 'auto';// 如果是 block，可以嘗試居中
+                    replyImage.classList.add('reply-image-preview'); // 添加class用於點擊放大事件
+                    replyImage.dataset.fullImageUrl = reply.image_url; // 儲存完整圖片URL供放大使用
+
+                    imageContainer.appendChild(replyImage);
+                    replyDiv.appendChild(imageContainer);
+                    contentDiv.style.marginBottom = '0px'; // 如果有圖片，減少文字下方的margin
+                } else {
+                    contentDiv.style.marginBottom = '8px'; // 如果沒有圖片，保持原來的margin
+                }
+                contentDiv.style.lineHeight = '1.5'; // 無論是否有圖片都設置行高
+
+
                 replyDiv.appendChild(actionsDiv);
                 
                 // 添加到容器
@@ -1341,6 +1362,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // --- 圖片放大 Modal 相關 ---
+    let imageZoomModal = null;
+
+    function createImageZoomModal() {
+        if (document.getElementById('image-zoom-modal')) return;
+
+        imageZoomModal = document.createElement('div');
+        imageZoomModal.id = 'image-zoom-modal';
+        imageZoomModal.style.display = 'none';
+        imageZoomModal.style.position = 'fixed';
+        imageZoomModal.style.zIndex = '2000'; // 比其他 Modal 更高
+        imageZoomModal.style.left = '0';
+        imageZoomModal.style.top = '0';
+        imageZoomModal.style.width = '100%';
+        imageZoomModal.style.height = '100%';
+        imageZoomModal.style.overflow = 'auto';
+        imageZoomModal.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        imageZoomModal.style.justifyContent = 'center';
+        imageZoomModal.style.alignItems = 'center';
+        imageZoomModal.style.cursor = 'zoom-out';
+
+
+        const modalContent = document.createElement('img');
+        modalContent.id = 'zoomed-image-content';
+        modalContent.style.maxWidth = '90%';
+        modalContent.style.maxHeight = '90%';
+        modalContent.style.objectFit = 'contain';
+        modalContent.style.borderRadius = '8px';
+        modalContent.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+
+        imageZoomModal.appendChild(modalContent);
+        document.body.appendChild(imageZoomModal);
+
+        imageZoomModal.addEventListener('click', () => {
+            imageZoomModal.style.display = 'none';
+            document.body.style.overflow = ''; // 恢復背景滾動
+        });
+    }
+
+    // 使用事件委派處理回覆圖片點擊
+    if (detailModalReplyList) {
+        detailModalReplyList.addEventListener('click', (event) => {
+            if (event.target.classList.contains('reply-image-preview')) {
+                const fullImageUrl = event.target.dataset.fullImageUrl;
+                if (fullImageUrl) {
+                    if (!imageZoomModal || !document.getElementById('image-zoom-modal')) {
+                        createImageZoomModal(); // 如果 Modal 不存在則創建
+                    }
+                    const zoomedImageContent = document.getElementById('zoomed-image-content');
+                    if (imageZoomModal && zoomedImageContent) {
+                        zoomedImageContent.src = fullImageUrl;
+                        imageZoomModal.style.display = 'flex'; // 使用 flex 來居中
+                        document.body.style.overflow = 'hidden'; // 防止背景滾動
+                    }
+                }
+            }
+        });
+    }
+
+
     // --- 初始化 ---
     setupBackToTop();
     setupViewModeToggle();
