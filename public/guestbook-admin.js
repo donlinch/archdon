@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
+console.log('Admin messages data:', messages); // 診斷用：查看從後端收到的原始數據
             renderAdminList(data.messages); // <--- 調用修改後的 renderAdminList
             renderAdminPagination(data.totalPages, data.currentPage);
 
