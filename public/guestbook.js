@@ -1513,17 +1513,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 处理检举按钮点击 (新增) ---
-        if (target.matches('.report-btn')) {
+        const reportButtonTarget = target.closest('.report-btn'); // 修改這裡，以處理點擊圖示的情況
+        if (reportButtonTarget) {
             event.preventDefault();
-            const itemId = target.dataset.id;
-            const itemType = target.dataset.type; // 'message' or 'reply'
+            const itemId = reportButtonTarget.dataset.id;
+            const itemType = reportButtonTarget.dataset.type; // 'message' or 'reply'
             
             // 阻止重複點擊（如果按鈕已被禁用）
-            if (target.disabled || target.classList.contains('reported')) {
+            if (reportButtonTarget.disabled || reportButtonTarget.classList.contains('reported')) {
                 return;
             }
 
-            showReportVerificationModal(itemId, itemType, target);
+            showReportVerificationModal(itemId, itemType, reportButtonTarget); // 傳遞按鈕元素
             return; // 處理完檢舉按鈕點擊，等待 Modal 交互
         }
 
