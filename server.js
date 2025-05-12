@@ -374,6 +374,8 @@ app.get('/api/news-categories', async (req, res) => {
 // --- 基本 Express 設定 ---
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 
