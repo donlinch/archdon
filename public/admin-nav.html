@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理導覽</title>
     <style>
-        /* --- 基本樣式 --- */
         body {
             margin: 0;
             font-family: sans-serif;
@@ -73,10 +72,9 @@
             border-bottom-color: #4cc9f0;
         }
 
-        /* --- 下拉選單樣式 --- */
+        /* --- 關鍵修正：確保子選單正確顯示 --- */
         .navbar ul ul { /* 子選單 */
-            /* 初始隱藏，注意：這裡用 display: none 確保完全隱藏 */
-            display: none;
+            display: none !important; /* 使用 !important 確保優先級 */
             position: absolute;
             top: 100%;
             left: 0;
@@ -87,18 +85,19 @@
             padding: 5px 0;
             border-radius: 0 0 4px 4px;
             height: auto;
-            flex-direction: column;
+            flex-direction: column; /* 子選單內部使用 flex */
             white-space: normal;
         }
 
         /* 顯示下拉選單的 class */
         .navbar ul ul.show-dropdown {
-            display: block; /* 改為 block 而不是 flex，確保顯示 */
+            display: flex !important; /* 使用 !important 確保顯示 */
         }
 
         .navbar ul ul li {
             width: 100%;
             height: auto;
+            display: block; /* 子選單中的 li 使用 block */
         }
 
         .navbar ul ul a, .navbar ul ul span {
@@ -136,9 +135,9 @@
             text-align: center;
         }
 
-        /* 額外的樣式確保子選單正確顯示 */
+        /* 確保父層包含子層 */
         .navbar .has-children {
-            position: relative; /* 確保父層有 relative 定位 */
+            position: relative;
         }
     </style>
 </head>
@@ -186,7 +185,7 @@
                         html += `<${tagName} ${isEffectivelyLink ? `href="${item.url}" target="contentFrame"` : ''} ${item.url && item.url !== '#' && hasChildren ? `data-url="${item.url}"` : ''}>${item.name}</${tagName}>`;
 
                         if (hasChildren) {
-                            html += '<ul>'; // 子選單容器
+                            html += '<ul>';
                             html += generateNavHtml(item.children);
                             html += '</ul>';
                         }
@@ -208,10 +207,6 @@
                         const parentLi = this.closest('li');
                         const subMenu = this.nextElementSibling;
 
-                        console.log('點擊項目:', this.textContent);
-                        console.log('父層 li:', parentLi);
-                        console.log('子選單:', subMenu);
-
                         if (subMenu && subMenu.tagName === 'UL') {
                             // 先關閉所有同層級的其他已開啟選單
                             const parentUl = parentLi.parentElement;
@@ -225,8 +220,6 @@
                             // 切換當前選單狀態
                             const isOpening = !subMenu.classList.contains('show-dropdown');
                             subMenu.classList.toggle('show-dropdown');
-                            
-                            console.log('子選單狀態:', isOpening ? '開啟' : '關閉');
 
                             // 如果是打開選單，關閉其內部的所有下層選單
                             if (isOpening) {
@@ -269,24 +262,6 @@
                 }
             }
         });
-
-        // 額外的除錯函數，點擊按鈕可以檢查當前狀態
-        function checkMenuState() {
-            const allMenus = document.querySelectorAll('.navbar ul ul');
-            console.log('所有子選單狀態:');
-            allMenus.forEach((menu, index) => {
-                console.log(`子選單 ${index}:`, {
-                    element: menu,
-                    hasShowDropdown: menu.classList.contains('show-dropdown'),
-                    display: window.getComputedStyle(menu).display,
-                    position: window.getComputedStyle(menu).position,
-                    visibility: window.getComputedStyle(menu).visibility
-                });
-            });
-        }
-        
-        // 將檢查函數掛載到 window，方便在開發者工具中呼叫
-        window.checkMenuState = checkMenuState;
     </script>
 </body>
 </html>
