@@ -571,6 +571,61 @@ app.delete('/api/admin/nav-links/:id', async (req, res) => {
     }
 });
 
+// PUT /api/admin/nav-links/reorder - 更新兩個連結的排序
+app.put('/api/admin/nav-links/reorder', async (req, res) => {
+    const updates = req.body; // Expecting an array of [{id: number, display_order: number}, {id: number, display_order: number}]
+
+    if (!Array.isArray(updates) || updates.length !== 2) {
+        return res.status(400).json({ error: '無效的請求格式，需要包含兩個連結的更新資訊' });
+    }
+
+    const link1 = updates[0];
+    const link2 = updates[1];
+
+    // Basic validation
+    if (!link1 || typeof link1.id !== 'number' || typeof link1.display_order !== 'number' ||
+        !link2 || typeof link2.id !== 'number' || typeof link2.display_order !== 'number') {
+        return res.status(400).json({ error: '提供的連結資訊格式不正確' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Update link 1
+        const result1 = await client.query(
+            'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
+            [link1.display_order, link1.id]
+        );
+        // Update link 2
+        const result2 = await client.query(
+            'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
+            [link2.display_order, link2.id]
+        );
+
+        // Check if both updates affected a row (optional but good practice)
+        if (result1.rowCount === 0 || result2.rowCount === 0) {
+             await client.query('ROLLBACK');
+             // Determine which ID was not found
+             let notFoundId = result1.rowCount === 0 ? link1.id : link2.id;
+             if (result1.rowCount === 0 && result2.rowCount === 0) notFoundId = `${link1.id} 和 ${link2.id}`;
+             console.warn(`[API PUT /reorder] 找不到要更新的連結 ID: ${notFoundId}`);
+             return res.status(404).json({ error: `找不到要更新的連結 ID: ${notFoundId}` });
+        }
+
+
+        await client.query('COMMIT');
+        res.status(200).json({ message: '排序已成功更新' });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[API PUT /api/admin/nav-links/reorder] 更新排序失敗:', err.stack || err);
+        res.status(500).json({ error: '更新排序時發生錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
 
 // --- 黑名單管理 API Router ---
 const blacklistRouter = express.Router();
