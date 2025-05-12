@@ -444,6 +444,85 @@ app.post('/api/game-rooms', async (req, res) => {
 // 在 Express 路由設定區域添加
 app.use('/api/storemarket', storeRoutes);
 app.use('/api/voit', voitRouter);
+
+// --- 黑名單管理 API Router ---
+const blacklistRouter = express.Router();
+
+// 獲取所有黑名單項目
+blacklistRouter.get('/', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM black_list_items ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        console.error('[API GET /api/blacklist] 獲取黑名單失敗:', err.stack || err);
+        res.status(500).json({ error: '獲取黑名單時發生錯誤' });
+    }
+});
+
+// 新增黑名單項目
+blacklistRouter.post('/', async (req, res) => {
+    const { name, phone, email, location } = req.body;
+    
+    if (!name && !phone && !email && !location) {
+        return res.status(400).json({ error: '請至少提供姓名、電話、Email或地點其中一項' });
+    }
+
+    try {
+        const { rows } = await pool.query(
+            'INSERT INTO black_list_items (name, phone, email, location) VALUES ($1, $2, $3, $4) RETURNING *',
+            [name, phone, email, location]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('[API POST /api/blacklist] 新增黑名單失敗:', err.stack || err);
+        res.status(500).json({ error: '新增黑名單時發生錯誤' });
+    }
+});
+
+// 更新黑名單項目
+blacklistRouter.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, phone, email, location } = req.body;
+
+    try {
+        const { rows } = await pool.query(
+            'UPDATE black_list_items SET name = $1, phone = $2, email = $3, location = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
+            [name, phone, email, location, id]
+        );
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的黑名單項目' });
+        }
+        
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /api/blacklist/${id}] 更新黑名單失敗:`, err.stack || err);
+        res.status(500).json({ error: '更新黑名單時發生錯誤' });
+    }
+});
+
+// 刪除黑名單項目
+blacklistRouter.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { rowCount } = await pool.query(
+            'DELETE FROM black_list_items WHERE id = $1',
+            [id]
+        );
+        
+        if (rowCount === 0) {
+            return res.status(404).json({ error: '找不到指定的黑名單項目' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[API DELETE /api/blacklist/${id}] 刪除黑名單失敗:`, err.stack || err);
+        res.status(500).json({ error: '刪除黑名單時發生錯誤' });
+    }
+});
+
+app.use('/api/blacklist', blacklistRouter);
 // --- 獲取活躍房間列表 API ---
 app.get('/api/game-rooms', async (req, res) => {
     try {
