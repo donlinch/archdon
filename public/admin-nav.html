@@ -5,145 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理導覽</title>
     <style>
+        /* --- 基本樣式 (保留大部分) --- */
         body {
             margin: 0;
             font-family: sans-serif;
-            background-color: #f8f9fa; /* Light background for the nav bar */
-            overflow: hidden; /* Prevent body scroll */
+            background-color: #f8f9fa;
+            overflow: hidden;
         }
 
-      .navbar {
-    display: flex;
-    background: linear-gradient(to right, #4361ee, #3f37c9); /* Gradient background */
-    padding: 0 10px;
-    overflow-x: auto; /* Enable horizontal scrolling */
-    /* overflow-y: hidden; */ /* <-- REMOVE OR COMMENT OUT THIS LINE */
-    white-space: nowrap; /* Prevent wrapping */
-    height: 60px; /* Fixed height for the nav bar */
-    align-items: center; /* Vertically center items */
-    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
-    /* Keep the scrollbar hiding rules if you like */
-     -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.navbar::-webkit-scrollbar {
-    display: none;
-}
-
-        /* Hide scrollbar for IE, Edge and Firefox */
         .navbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            display: flex;
+            background: linear-gradient(to right, #4361ee, #3f37c9);
+            padding: 0 10px;
+            overflow-x: auto;
+            /* overflow-y: hidden; */ /* <-- 確認這行已移除或註解 */
+            white-space: nowrap;
+            height: 60px;
+            align-items: center;
+            -webkit-overflow-scrolling: touch;
+             -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-
+        .navbar::-webkit-scrollbar { display: none; }
 
         .navbar ul {
             list-style: none;
             padding: 0;
             margin: 0;
-            display: flex; /* Use flex for horizontal layout */
+            display: flex;
             height: 100%;
         }
 
         .navbar li {
-            position: relative; /* Needed for absolute positioning of dropdowns */
+            position: relative;
             height: 100%;
             display: flex;
             align-items: center;
         }
 
-        .navbar a, .navbar span { /* Apply styles to both links and non-link parents */
-            display: flex; /* Use flex to align icon and text */
+        .navbar a, .navbar span {
+            display: flex;
             align-items: center;
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            padding: 0 15px; /* Horizontal padding */
-            height: 100%; /* Make link fill the height */
+            padding: 0 15px;
+            height: 100%;
             font-size: 1rem;
             font-weight: 500;
             transition: background-color 0.3s ease, color 0.3s ease;
-            cursor: pointer; /* Indicate clickable items */
-            border-bottom: 3px solid transparent; /* Space for active indicator */
-            box-sizing: border-box; /* Include padding and border in height */
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            box-sizing: border-box;
         }
-         /* Add indicator for items with children */
-        .navbar li.has-children > a::after,
-        .navbar li.has-children > span::after {
-            content: ' ▼';
-            font-size: 0.7em;
-            margin-left: 5px;
-        }
+
+         .navbar li.has-children > a::after,
+         .navbar li.has-children > span::after {
+             content: ' ▼';
+             font-size: 0.7em;
+             margin-left: 5px;
+         }
 
 
         .navbar a:hover, .navbar span:hover, .navbar li:hover > a, .navbar li:hover > span {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
         }
-         /* Style for the currently active page (optional, needs JS to set) */
-        .navbar a.active {
-             color: white;
-             font-weight: 600;
-             border-bottom-color: #4cc9f0; /* Success color */
-        }
+         .navbar a.active {
+              color: white;
+              font-weight: 600;
+              border-bottom-color: #4cc9f0;
+         }
 
-
-        /* Dropdown Menu Styles */
-        .navbar ul ul { /* Submenu */
-            display: none; /* Hidden by default */
+        /* --- 下拉選單樣式 (Dropdown Menu Styles) --- */
+        .navbar ul ul { /* 子選單 */
+            /* display: none; */ /* <-- ***移除: 預設隱藏由 JS 控制*** */
+            /* ***改用 visibility 和 opacity 以便 CSS 過渡 (可選)*** */
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s linear 0.1s, opacity 0.1s linear; /* 稍微延遲隱藏 */
             position: absolute;
-            top: 100%; /* Position below the parent */
+            top: 100%;
             left: 0;
-            background-color: #fff; /* White background for dropdown */
+            background-color: #fff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            min-width: 200px; /* Minimum width */
+            min-width: 200px;
             z-index: 1000;
-            padding: 5px 0; /* Padding top/bottom */
+            padding: 5px 0;
             border-radius: 0 0 4px 4px;
-            height: auto; /* Override parent height */
-            flex-direction: column; /* Stack items vertically */
-            white-space: normal; /* Allow wrapping in dropdown */
+            height: auto;
+            flex-direction: column;
+            white-space: normal;
         }
+
+        /* ***新增: 控制顯示的 Class*** */
+        .navbar ul ul.show-dropdown {
+            display: flex; /* 或者 block, 根據你的 flex-direction */
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 0s; /* 顯示時立即反應 */
+        }
+
 
         .navbar ul ul li {
             width: 100%;
-            height: auto; /* Override parent height */
+            height: auto;
         }
 
         .navbar ul ul a, .navbar ul ul span {
-            color: #333; /* Dark text for dropdown items */
-            padding: 10px 15px; /* Padding for dropdown items */
+            color: #333;
+            padding: 10px 15px;
             width: 100%;
-            height: auto; /* Override parent height */
-            display: block; /* Make link fill width */
+            height: auto;
+            display: block;
             box-sizing: border-box;
-            border-bottom: none; /* Remove bottom border */
+            border-bottom: none;
         }
-         /* Nested dropdown indicator */
-         .navbar ul ul li.has-children > a::after,
-         .navbar ul ul li.has-children > span::after {
-             content: ' ▶'; /* Different indicator for nested */
-             float: right; /* Position indicator to the right */
-             margin-left: 0;
-         }
+          .navbar ul ul li.has-children > a::after,
+          .navbar ul ul li.has-children > span::after {
+              content: ' ▶';
+              float: right;
+              margin-left: 0;
+          }
 
 
         .navbar ul ul a:hover, .navbar ul ul span:hover {
-            background-color: #f0f0f0; /* Light gray hover for dropdown */
+            background-color: #f0f0f0;
             color: #000;
         }
 
-        /* Show dropdown on hover */
-        .navbar li:hover > ul {
+        /* --- 移除 :hover 觸發 --- */
+        /* .navbar li:hover > ul {
             display: block;
-        }
+        } */
 
-         /* Nested Dropdown positioning */
-         .navbar ul ul ul { /* Level 3+ dropdowns */
+         /* 巢狀下拉選單定位 */
+         .navbar ul ul ul {
              top: 0;
-             left: 100%; /* Position to the right of the parent */
-             margin-top: -5px; /* Align top edge slightly */
+             left: 100%;
+             margin-top: -5px;
              border-radius: 0 4px 4px 4px;
          }
 
@@ -175,14 +174,10 @@
                 }
                 const links = await response.json();
 
-                // Build a tree structure from the flat list
+                // --- (建立樹狀結構的程式碼保持不變) ---
                 const linkMap = {};
                 const tree = [];
-
-                links.forEach(link => {
-                    linkMap[link.id] = { ...link, children: [] };
-                });
-
+                links.forEach(link => { linkMap[link.id] = { ...link, children: [] }; });
                 links.forEach(link => {
                     if (link.parent_id && linkMap[link.parent_id]) {
                         linkMap[link.parent_id].children.push(linkMap[link.id]);
@@ -191,20 +186,24 @@
                     }
                 });
 
-                // Recursive function to generate HTML list items
+                // --- (遞迴生成 HTML 的函數保持不變) ---
                 const generateNavHtml = (items) => {
                     let html = '';
+                    items.sort((a, b) => a.display_order - b.display_order); // 確保子項目也排序
                     items.forEach(item => {
                         const hasChildren = item.children.length > 0;
-                        const isLink = item.url && item.url !== '#';
-                        const tagName = isLink ? 'a' : 'span'; // Use <a> for links, <span> for non-links
+                        // ***修改: 如果有子項目，即使有 URL 也不直接設 href，由 JS 控制***
+                        // const isLink = item.url && item.url !== '#';
+                        const isEffectivelyLink = item.url && item.url !== '#' && !hasChildren; // 只有沒有子項目的才算真正連結
+                        const tagName = isEffectivelyLink ? 'a' : 'span'; // 有子項目的父層用 span 或 a(但href可能不跳轉)
 
                         html += `<li class="${hasChildren ? 'has-children' : ''}">`;
-                        html += `<${tagName} ${isLink ? `href="${item.url}" target="contentFrame"` : ''}>${item.name}</${tagName}>`;
+                        // ***修改: 為有子項目的父層添加 data-url 屬性儲存連結 (如果有的話)***
+                        html += `<${tagName} ${isEffectivelyLink ? `href="${item.url}" target="contentFrame"` : ''} ${item.url && item.url !== '#' && hasChildren ? `data-url="${item.url}"` : ''}>${item.name}</${tagName}>`;
 
                         if (hasChildren) {
-                            html += '<ul>';
-                            html += generateNavHtml(item.children); // Recursively generate children
+                            html += '<ul>'; // 這個 ul 會被 JS 控制顯示/隱藏
+                            html += generateNavHtml(item.children);
                             html += '</ul>';
                         }
                         html += '</li>';
@@ -212,14 +211,77 @@
                     return html;
                 };
 
-                // Generate and insert the HTML
                 navList.innerHTML = generateNavHtml(tree);
                 if (loadingIndicator) {
-                    loadingIndicator.remove(); // Remove loading indicator
+                    loadingIndicator.remove();
                 }
 
-                // Optional: Add 'active' class based on current contentFrame URL (more complex)
-                // This would require listening to iframe load events or using postMessage
+                // --- ***新增: 點擊事件處理*** ---
+                const parentItems = navList.querySelectorAll('.has-children > a, .has-children > span');
+
+                parentItems.forEach(item => {
+                    item.addEventListener('click', function(event) {
+                        const parentLi = this.closest('li'); // 找到父層 li
+                        const subMenu = this.nextElementSibling; // 找到緊鄰的 <ul>
+
+                        if (subMenu && subMenu.tagName === 'UL') {
+                            // 切換當前點擊的子選單
+                            const isOpening = !subMenu.classList.contains('show-dropdown');
+                            
+                            // 先關閉所有同層級的其他已開啟選單
+                            const parentUl = parentLi.parentElement; // 找到父 ul
+                            const siblings = parentUl.querySelectorAll(':scope > li.has-children > ul.show-dropdown');
+                            siblings.forEach(siblingMenu => {
+                                if (siblingMenu !== subMenu) {
+                                    siblingMenu.classList.remove('show-dropdown');
+                                }
+                            });
+
+                            // 再切換當前選單狀態
+                            subMenu.classList.toggle('show-dropdown');
+
+                            // 如果是打開選單，關閉其內部的所有下層選單 (避免殘留)
+                            if (isOpening) {
+                               const nestedOpenMenus = subMenu.querySelectorAll('ul.show-dropdown');
+                               nestedOpenMenus.forEach(n => n.classList.remove('show-dropdown'));
+                            }
+
+
+                            // 如果點擊的父層本身有 data-url (我們剛才加的)，則進行頁面跳轉
+                            const targetUrl = this.dataset.url;
+                            if (targetUrl) {
+                                // 檢查 parent window 是否存在 contentFrame
+                                if (window.parent && window.parent.frames['contentFrame']) {
+                                     window.parent.frames['contentFrame'].location.href = targetUrl;
+                                } else {
+                                    console.warn('無法找到名為 contentFrame 的 iframe');
+                                    // 作為備用，可以在新分頁開啟
+                                    // window.open(targetUrl, '_blank');
+                                }
+                            } else if (this.tagName === 'A' && this.getAttribute('href') && this.getAttribute('href') !== '#') {
+                                // 如果是個沒有子選單的普通連結<a>，則讓其正常跳轉 (不需要 JS 處理，瀏覽器會處理 target="contentFrame")
+                                // 但如果父層 *有* 子選單，我們通常不希望它在展開時同時跳轉，除非特別設計
+                                // event.preventDefault(); // 可選：如果希望有子選單的<a>父層點擊時 *只* 展開而不跳轉，取消此行註解
+                            } else {
+                                // 如果是 span 或沒有有效 href 的 a，阻止預設行為 (雖然 span 沒預設行為)
+                                event.preventDefault();
+                            }
+
+                        }
+                        event.stopPropagation(); // 阻止事件冒泡到 document
+                    });
+                });
+
+                // 點擊頁面其他地方關閉所有下拉選單
+                document.addEventListener('click', function(event) {
+                    // 檢查點擊是否發生在 navbar 內部
+                    if (!navList.contains(event.target)) {
+                        const openMenus = navList.querySelectorAll('ul.show-dropdown');
+                        openMenus.forEach(menu => {
+                            menu.classList.remove('show-dropdown');
+                        });
+                    }
+                });
 
             } catch (error) {
                 console.error('無法載入導覽連結:', error);
