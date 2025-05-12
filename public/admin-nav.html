@@ -12,22 +12,25 @@
             overflow: hidden; /* Prevent body scroll */
         }
 
-        .navbar {
-            display: flex;
-            background: linear-gradient(to right, #4361ee, #3f37c9); /* Gradient background */
-            padding: 0 10px;
-            overflow-x: auto; /* Enable horizontal scrolling */
-            overflow-y: hidden; /* Hide vertical scrollbar */
-            white-space: nowrap; /* Prevent wrapping */
-            height: 60px; /* Fixed height for the nav bar */
-            align-items: center; /* Vertically center items */
-            -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
-        }
+      .navbar {
+    display: flex;
+    background: linear-gradient(to right, #4361ee, #3f37c9); /* Gradient background */
+    padding: 0 10px;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    /* overflow-y: hidden; */ /* <-- REMOVE OR COMMENT OUT THIS LINE */
+    white-space: nowrap; /* Prevent wrapping */
+    height: 60px; /* Fixed height for the nav bar */
+    align-items: center; /* Vertically center items */
+    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+    /* Keep the scrollbar hiding rules if you like */
+     -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
 
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .navbar::-webkit-scrollbar {
-            display: none;
-        }
+/* Hide scrollbar for Chrome, Safari and Opera */
+.navbar::-webkit-scrollbar {
+    display: none;
+}
 
         /* Hide scrollbar for IE, Edge and Firefox */
         .navbar {
@@ -154,9 +157,6 @@
 </head>
 <body>
     <nav class="navbar">
-        <!-- Static Test Link -->
-        <a href="music-admin.html" target="contentFrame" style="color: yellow; padding: 0 15px; height: 100%; display: flex; align-items: center; border: 1px solid red; text-decoration: none;">靜態測試連結</a>
-        <!-- End Static Test Link -->
         <ul id="nav-list">
             <!-- Links will be generated here by JavaScript -->
              <div id="loading-nav">載入導覽列中...</div>
