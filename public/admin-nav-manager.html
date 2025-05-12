@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>導覽連結管理</title>
+    <link rel="stylesheet" href="style.css"> <!-- Assuming a general style.css exists -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        #nav-links-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        #nav-links-list li {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+         /* Indentation for hierarchy */
+        #nav-links-list ul ul {
+            margin-left: 30px;
+            margin-top: 10px;
+            border-left: 2px solid #ddd;
+            padding-left: 15px;
+        }
+         #nav-links-list li .link-info {
+            flex-grow: 1;
+            margin-right: 15px; /* Space before actions */
+         }
+         #nav-links-list li .link-name {
+            font-weight: bold;
+         }
+         #nav-links-list li .link-url {
+            color: #555;
+            font-size: 0.9em;
+            margin-left: 10px;
+            word-break: break-all;
+         }
+         #nav-links-list li .link-details {
+             font-size: 0.8em;
+             color: #777;
+             margin-left: 10px;
+         }
+        #nav-links-list li .link-actions button {
+            margin-left: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .edit-btn { background-color: #ffc107; border: none; color: #333; border-radius: 3px; }
+        .delete-btn { background-color: #dc3545; border: none; color: white; border-radius: 3px; }
+        .up-btn, .down-btn { background-color: #6c757d; border: none; color: white; border-radius: 3px; }
+
+
+        #add-link-form, #edit-link-form { /* Combine styles */
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+            margin-top: 30px;
+        }
+        #add-link-form .form-group, #edit-link-form .form-group {
+            margin-bottom: 15px;
+        }
+        #add-link-form label, #edit-link-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #add-link-form input[type="text"],
+        #add-link-form input[type="url"],
+        #add-link-form input[type="number"],
+        #add-link-form select,
+        #edit-link-form input[type="text"],
+        #edit-link-form input[type="url"],
+        #edit-link-form input[type="number"],
+        #edit-link-form select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #add-link-form button, #edit-link-form button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+        }
+        #add-link-form .submit-btn, #edit-link-form .submit-btn {
+             background-color: #28a745; color: white;
+        }
+         #edit-link-form .cancel-btn {
+             background-color: #6c757d; color: white; margin-left: 10px;
+         }
+
+        #edit-link-form {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+            border-top: 2px solid #007bff;
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>管理導覽連結</h1>
+
+        <div id="nav-links-list">
+            <h2>現有連結</h2>
+            <div class="loading">載入連結中...</div>
+            <!-- Links will be rendered here -->
+            <ul></ul>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <!-- Add Link Form -->
+        <div id="add-link-form">
+            <h2>新增連結</h2>
+            <form>
+                <div class="form-group">
+                    <label for="add-name">名稱:</label>
+                    <input type="text" id="add-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-url">URL (留空表示為父層級):</label>
+                    <input type="url" id="add-url" name="url" placeholder="例如: /admin.html 或 #">
+                </div>
+                <div class="form-group">
+                    <label for="add-parent">父層級:</label>
+                    <select id="add-parent" name="parent_id">
+                        <option value="">-- 無 (頂層連結) --</option>
+                        <!-- Parent options will be populated here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="add-order">顯示順序 (數字越小越靠前):</label>
+                    <input type="number" id="add-order" name="display_order" value="0">
+                </div>
+                <button type="submit" class="submit-btn"><i class="fas fa-plus"></i> 新增連結</button>
+                <div class="form-error" style="color: red; margin-top: 10px;"></div>
+            </form>
+        </div>
+
+         <!-- Edit Link Form (Initially Hidden) -->
+        <div id="edit-link-form">
+            <h2>編輯連結</h2>
+            <form>
+                 <input type="hidden" id="edit-id" name="id">
+                <div class="form-group">
+                    <label for="edit-name">名稱:</label>
+                    <input type="text" id="edit-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-url">URL (留空表示為父層級):</label>
+                    <input type="url" id="edit-url" name="url" placeholder="例如: /admin.html 或 #">
+                </div>
+                <div class="form-group">
+                    <label for="edit-parent">父層級:</label>
+                    <select id="edit-parent" name="parent_id">
+                        <option value="">-- 無 (頂層連結) --</option>
+                        <!-- Parent options will be populated here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-order">顯示順序:</label>
+                    <input type="number" id="edit-order" name="display_order" value="0">
+                </div>
+                <button type="submit" class="submit-btn"><i class="fas fa-save"></i> 更新連結</button>
+                <button type="button" class="cancel-btn"><i class="fas fa-times"></i> 取消</button>
+                 <div class="form-error" style="color: red; margin-top: 10px;"></div>
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        const listContainer = document.querySelector('#nav-links-list ul');
+        const loadingDiv = document.querySelector('#nav-links-list .loading');
+        const addForm = document.querySelector('#add-link-form form');
+        const editFormDiv = document.getElementById('edit-link-form');
+        const editForm = document.querySelector('#edit-link-form form');
+        const addParentSelect = document.getElementById('add-parent');
+        const editParentSelect = document.getElementById('edit-parent');
+        const addFormError = document.querySelector('#add-link-form .form-error');
+        const editFormError = document.querySelector('#edit-link-form .form-error');
+
+        let allLinks = []; // Store all links for populating parent dropdowns
+
+        // --- Helper Functions ---
+        function displayError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        function clearError(element) {
+            element.textContent = '';
+            element.style.display = 'none';
+        }
+
+        // Build tree structure for display
+        function buildTree(links) {
+            const linkMap = {};
+            const tree = [];
+            links.forEach(link => {
+                linkMap[link.id] = { ...link, children: [] };
+            });
+            links.forEach(link => {
+                if (link.parent_id && linkMap[link.parent_id]) {
+                    // Ensure children are sorted by display_order as well
+                    linkMap[link.parent_id].children.push(linkMap[link.id]);
+                    linkMap[link.parent_id].children.sort((a, b) => a.display_order - b.display_order);
+                } else {
+                    tree.push(linkMap[link.id]);
+                }
+            });
+             // Sort top-level items
+             tree.sort((a, b) => a.display_order - b.display_order);
+            return tree;
+        }
+
+        // Recursive function to render the list
+        function renderList(items, container) {
+            container.innerHTML = ''; // Clear previous list
+            if (items.length === 0 && container === listContainer) {
+                 container.innerHTML = '<p>目前沒有導覽連結。</p>';
+                 return;
+            }
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.dataset.id = item.id;
+
+                const infoDiv = document.createElement('div');
+                infoDiv.classList.add('link-info');
+
+                const nameSpan = document.createElement('span');
+                nameSpan.classList.add('link-name');
+                nameSpan.textContent = item.name;
+                infoDiv.appendChild(nameSpan);
+
+                if (item.url && item.url !== '#') {
+                    const urlSpan = document.createElement('span');
+                    urlSpan.classList.add('link-url');
+                    urlSpan.textContent = `(${item.url})`;
+                    infoDiv.appendChild(urlSpan);
+                }
+
+                 const detailsSpan = document.createElement('span');
+                 detailsSpan.classList.add('link-details');
+                 detailsSpan.textContent = `(ID: ${item.id}, Order: ${item.display_order}, Parent: ${item.parent_id || 'None'})`;
+                 infoDiv.appendChild(detailsSpan);
+
+
+                li.appendChild(infoDiv);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('link-actions');
+
+                // --- Sort Buttons (Placeholder - requires PUT logic) ---
+                const upBtn = document.createElement('button');
+                upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                upBtn.classList.add('up-btn');
+                upBtn.title = '上移';
+                upBtn.disabled = true; // Disable for now
+                actionsDiv.appendChild(upBtn);
+
+                const downBtn = document.createElement('button');
+                downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                downBtn.classList.add('down-btn');
+                downBtn.title = '下移';
+                downBtn.disabled = true; // Disable for now
+                actionsDiv.appendChild(downBtn);
+                // --- End Sort Buttons ---
+
+
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
+                editBtn.classList.add('edit-btn');
+                editBtn.onclick = () => showEditForm(item);
+                actionsDiv.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.onclick = () => deleteLink(item.id, item.name);
+                actionsDiv.appendChild(deleteBtn);
+
+                li.appendChild(actionsDiv);
+
+                container.appendChild(li);
+
+                // Render children recursively
+                if (item.children && item.children.length > 0) {
+                    const subUl = document.createElement('ul');
+                    li.appendChild(subUl); // Append sublist inside the li
+                    renderList(item.children, subUl);
+                }
+            });
+        }
+
+        // Populate parent select dropdowns
+        function populateParentSelects(links, currentLinkId = null) {
+            addParentSelect.innerHTML = '<option value="">-- 無 (頂層連結) --</option>';
+            editParentSelect.innerHTML = '<option value="">-- 無 (頂層連結) --</option>';
+
+            // Recursive function to add options with indentation
+            const addOptions = (items, select, indent = 0) => {
+                 items.forEach(link => {
+                    // Prevent selecting itself or its descendants as parent during edit
+                    if (currentLinkId === link.id) return;
+                    // A more robust check would trace ancestry, but this prevents direct self-parenting
+
+                    const option = document.createElement('option');
+                    option.value = link.id;
+                    option.textContent = `${'--'.repeat(indent)} ${link.name} (ID: ${link.id})`;
+                    select.appendChild(option);
+                    if (link.children && link.children.length > 0) {
+                        addOptions(link.children, select, indent + 1);
+                    }
+                });
+            };
+
+            const tree = buildTree(links); // Need the tree structure for indentation
+            addOptions(tree, addParentSelect);
+            addOptions(tree, editParentSelect);
+        }
+
+
+        // --- Event Handlers ---
+
+        // Fetch and render links on load
+        async function loadLinks() {
+            loadingDiv.style.display = 'block';
+            listContainer.innerHTML = '';
+            clearError(addFormError);
+            clearError(editFormError);
+            editFormDiv.style.display = 'none'; // Hide edit form initially
+
+            try {
+                const response = await fetch('/api/admin/nav-links');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                allLinks = await response.json();
+
+                const tree = buildTree(allLinks);
+                renderList(tree, listContainer);
+                populateParentSelects(allLinks); // Populate dropdowns after fetching
+
+                loadingDiv.style.display = 'none';
+            } catch (error) {
+                console.error('無法載入連結:', error);
+                loadingDiv.textContent = '載入連結失敗';
+                loadingDiv.classList.add('error');
+            }
+        }
+
+        // Handle Add Form Submission
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError(addFormError);
+            const formData = new FormData(addForm);
+            const data = Object.fromEntries(formData.entries());
+             // Ensure empty parent_id is sent as null or omitted if backend expects that
+             if (data.parent_id === '') {
+                 delete data.parent_id; // Or set to null depending on backend
+             }
+
+
+            try {
+                const response = await fetch('/api/admin/nav-links', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                }
+                addForm.reset(); // Clear form
+                loadLinks(); // Reload the list
+            } catch (error) {
+                console.error('新增連結失敗:', error);
+                displayError(addFormError, `新增失敗: ${error.message}`);
+            }
+        });
+
+        // Show Edit Form
+        function showEditForm(link) {
+            clearError(editFormError);
+            editForm.reset(); // Clear previous data
+
+            // Populate form fields
+            document.getElementById('edit-id').value = link.id;
+            document.getElementById('edit-name').value = link.name;
+            document.getElementById('edit-url').value = link.url || ''; // Handle null URL
+            document.getElementById('edit-order').value = link.display_order;
+
+            // Populate and set parent select, disable selecting self
+            populateParentSelects(allLinks, link.id); // Repopulate excluding self
+            editParentSelect.value = link.parent_id || ''; // Set current parent
+
+            editFormDiv.style.display = 'block'; // Show the form
+            editForm.scrollIntoView({ behavior: 'smooth' }); // Scroll to the form
+        }
+
+        // Handle Edit Form Submission
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearError(editFormError);
+            const formData = new FormData(editForm);
+            const data = Object.fromEntries(formData.entries());
+            const linkId = data.id;
+             if (data.parent_id === '') {
+                 delete data.parent_id;
+             }
+
+
+            try {
+                const response = await fetch(`/api/admin/nav-links/${linkId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data) // Send all fields
+                });
+                 const result = await response.json();
+                if (!response.ok) {
+                     throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                }
+                editFormDiv.style.display = 'none'; // Hide form
+                loadLinks(); // Reload list
+            } catch (error) {
+                console.error('更新連結失敗:', error);
+                 displayError(editFormError, `更新失敗: ${error.message}`);
+            }
+        });
+
+         // Handle Edit Form Cancel
+         editForm.querySelector('.cancel-btn').addEventListener('click', () => {
+             editFormDiv.style.display = 'none';
+             clearError(editFormError);
+         });
+
+
+        // Handle Delete Link
+        async function deleteLink(id, name) {
+            if (!confirm(`確定要刪除連結 "${name}" 嗎？其所有子連結也會一併刪除。`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/nav-links/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                     // Try to get error message if server sends one
+                     let errorMsg = `HTTP error! status: ${response.status}`;
+                     try {
+                         const result = await response.json();
+                         errorMsg = result.error || errorMsg;
+                     } catch (e) { /* Ignore if no JSON body */ }
+                    throw new Error(errorMsg);
+                }
+                loadLinks(); // Reload list
+            } catch (error) {
+                console.error('刪除連結失敗:', error);
+                alert(`刪除失敗: ${error.message}`); // Show alert for delete errors
+            }
+        }
+
+        // --- Initial Load ---
+        loadLinks();
+
+    </script>
+</body>
+</html>
