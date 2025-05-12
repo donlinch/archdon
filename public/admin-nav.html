@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理導覽</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background-color: #f8f9fa; /* Light background for the nav bar */
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        .navbar {
+            display: flex;
+            background: linear-gradient(to right, #4361ee, #3f37c9); /* Gradient background */
+            padding: 0 10px;
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: hidden; /* Hide vertical scrollbar */
+            white-space: nowrap; /* Prevent wrapping */
+            height: 60px; /* Fixed height for the nav bar */
+            align-items: center; /* Vertically center items */
+            -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+        }
+
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .navbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .navbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+
+        .navbar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex; /* Use flex for horizontal layout */
+            height: 100%;
+        }
+
+        .navbar li {
+            position: relative; /* Needed for absolute positioning of dropdowns */
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar a, .navbar span { /* Apply styles to both links and non-link parents */
+            display: flex; /* Use flex to align icon and text */
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 0 15px; /* Horizontal padding */
+            height: 100%; /* Make link fill the height */
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer; /* Indicate clickable items */
+            border-bottom: 3px solid transparent; /* Space for active indicator */
+            box-sizing: border-box; /* Include padding and border in height */
+        }
+         /* Add indicator for items with children */
+        .navbar li.has-children > a::after,
+        .navbar li.has-children > span::after {
+            content: ' ▼';
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+
+
+        .navbar a:hover, .navbar span:hover, .navbar li:hover > a, .navbar li:hover > span {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+         /* Style for the currently active page (optional, needs JS to set) */
+        .navbar a.active {
+             color: white;
+             font-weight: 600;
+             border-bottom-color: #4cc9f0; /* Success color */
+        }
+
+
+        /* Dropdown Menu Styles */
+        .navbar ul ul { /* Submenu */
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 100%; /* Position below the parent */
+            left: 0;
+            background-color: #fff; /* White background for dropdown */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 200px; /* Minimum width */
+            z-index: 1000;
+            padding: 5px 0; /* Padding top/bottom */
+            border-radius: 0 0 4px 4px;
+            height: auto; /* Override parent height */
+            flex-direction: column; /* Stack items vertically */
+            white-space: normal; /* Allow wrapping in dropdown */
+        }
+
+        .navbar ul ul li {
+            width: 100%;
+            height: auto; /* Override parent height */
+        }
+
+        .navbar ul ul a, .navbar ul ul span {
+            color: #333; /* Dark text for dropdown items */
+            padding: 10px 15px; /* Padding for dropdown items */
+            width: 100%;
+            height: auto; /* Override parent height */
+            display: block; /* Make link fill width */
+            box-sizing: border-box;
+            border-bottom: none; /* Remove bottom border */
+        }
+         /* Nested dropdown indicator */
+         .navbar ul ul li.has-children > a::after,
+         .navbar ul ul li.has-children > span::after {
+             content: ' ▶'; /* Different indicator for nested */
+             float: right; /* Position indicator to the right */
+             margin-left: 0;
+         }
+
+
+        .navbar ul ul a:hover, .navbar ul ul span:hover {
+            background-color: #f0f0f0; /* Light gray hover for dropdown */
+            color: #000;
+        }
+
+        /* Show dropdown on hover */
+        .navbar li:hover > ul {
+            display: block;
+        }
+
+         /* Nested Dropdown positioning */
+         .navbar ul ul ul { /* Level 3+ dropdowns */
+             top: 0;
+             left: 100%; /* Position to the right of the parent */
+             margin-top: -5px; /* Align top edge slightly */
+             border-radius: 0 4px 4px 4px;
+         }
+
+        #loading-nav {
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <ul id="nav-list">
+            <!-- Links will be generated here by JavaScript -->
+             <div id="loading-nav">載入導覽列中...</div>
+        </ul>
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const navList = document.getElementById('nav-list');
+            const loadingIndicator = document.getElementById('loading-nav');
+
+            try {
+                const response = await fetch('/api/admin/nav-links');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const links = await response.json();
+
+                // Build a tree structure from the flat list
+                const linkMap = {};
+                const tree = [];
+
+                links.forEach(link => {
+                    linkMap[link.id] = { ...link, children: [] };
+                });
+
+                links.forEach(link => {
+                    if (link.parent_id && linkMap[link.parent_id]) {
+                        linkMap[link.parent_id].children.push(linkMap[link.id]);
+                    } else {
+                        tree.push(linkMap[link.id]);
+                    }
+                });
+
+                // Recursive function to generate HTML list items
+                const generateNavHtml = (items) => {
+                    let html = '';
+                    items.forEach(item => {
+                        const hasChildren = item.children.length > 0;
+                        const isLink = item.url && item.url !== '#';
+                        const tagName = isLink ? 'a' : 'span'; // Use <a> for links, <span> for non-links
+
+                        html += `<li class="${hasChildren ? 'has-children' : ''}">`;
+                        html += `<${tagName} ${isLink ? `href="${item.url}" target="contentFrame"` : ''}>${item.name}</${tagName}>`;
+
+                        if (hasChildren) {
+                            html += '<ul>';
+                            html += generateNavHtml(item.children); // Recursively generate children
+                            html += '</ul>';
+                        }
+                        html += '</li>';
+                    });
+                    return html;
+                };
+
+                // Generate and insert the HTML
+                navList.innerHTML = generateNavHtml(tree);
+                if (loadingIndicator) {
+                    loadingIndicator.remove(); // Remove loading indicator
+                }
+
+                // Optional: Add 'active' class based on current contentFrame URL (more complex)
+                // This would require listening to iframe load events or using postMessage
+
+            } catch (error) {
+                console.error('無法載入導覽連結:', error);
+                 if (loadingIndicator) {
+                    loadingIndicator.textContent = '載入導覽列失敗';
+                 } else {
+                    navList.innerHTML = '<li>載入導覽列失敗</li>';
+                 }
+            }
+        });
+    </script>
+</body>
+</html>

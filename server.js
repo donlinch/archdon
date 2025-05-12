@@ -445,6 +445,21 @@ app.post('/api/game-rooms', async (req, res) => {
 app.use('/api/storemarket', storeRoutes);
 app.use('/api/voit', voitRouter);
 
+// --- 管理後台導覽連結 API ---
+app.get('/api/admin/nav-links', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, name, url, parent_id, display_order
+             FROM admin_nav_links
+             ORDER BY display_order ASC, name ASC`
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('[API GET /api/admin/nav-links] 獲取導覽連結失敗:', err.stack || err);
+        res.status(500).json({ error: '無法獲取導覽連結' });
+    }
+});
+
 // --- 黑名單管理 API Router ---
 const blacklistRouter = express.Router();
 
