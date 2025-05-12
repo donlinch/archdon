@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理導覽</title>
+    <title>管理導覽 - 除錯版本</title>
     <style>
-        /* --- 基本樣式 (保留大部分) --- */
+        /* 保持原有的樣式 */
         body {
             margin: 0;
             font-family: sans-serif;
             background-color: #f8f9fa;
-            
         }
 
         .navbar {
@@ -18,12 +17,11 @@
             background: linear-gradient(to right, #4361ee, #3f37c9);
             padding: 0 10px;
             overflow-x: auto;
-            /* overflow-y: hidden; */ /* <-- 確認這行已移除或註解 */
             white-space: nowrap;
             height: 60px;
             align-items: center;
             -webkit-overflow-scrolling: touch;
-             -ms-overflow-style: none;
+            -ms-overflow-style: none;
             scrollbar-width: none;
         }
         .navbar::-webkit-scrollbar { display: none; }
@@ -58,31 +56,26 @@
             box-sizing: border-box;
         }
 
-         .navbar li.has-children > a::after,
-         .navbar li.has-children > span::after {
-             content: ' ▼';
-             font-size: 0.7em;
-             margin-left: 5px;
-         }
-
+        .navbar li.has-children > a::after,
+        .navbar li.has-children > span::after {
+            content: ' ▼';
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
 
         .navbar a:hover, .navbar span:hover, .navbar li:hover > a, .navbar li:hover > span {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
         }
-         .navbar a.active {
-              color: white;
-              font-weight: 600;
-              border-bottom-color: #4cc9f0;
-         }
+        .navbar a.active {
+            color: white;
+            font-weight: 600;
+            border-bottom-color: #4cc9f0;
+        }
 
-        /* --- 下拉選單樣式 (Dropdown Menu Styles) --- */
-        .navbar ul ul { /* 子選單 */
-            /* display: none; */ /* <-- ***移除: 預設隱藏由 JS 控制*** */
-            /* ***改用 visibility 和 opacity 以便 CSS 過渡 (可選)*** */
-            visibility: hidden;
-            opacity: 0;
-            transition: visibility 0s linear 0.1s, opacity 0.1s linear; /* 稍微延遲隱藏 */
+        /* 下拉選單樣式 */
+        .navbar ul ul {
+            display: none;
             position: absolute;
             top: 100%;
             left: 0;
@@ -97,14 +90,9 @@
             white-space: normal;
         }
 
-        /* ***新增: 控制顯示的 Class*** */
         .navbar ul ul.show-dropdown {
-            display: flex; /* 或者 block, 根據你的 flex-direction */
-            visibility: visible;
-            opacity: 1;
-            transition-delay: 0s; /* 顯示時立即反應 */
+            display: flex;
         }
-
 
         .navbar ul ul li {
             width: 100%;
@@ -120,31 +108,24 @@
             box-sizing: border-box;
             border-bottom: none;
         }
-          .navbar ul ul li.has-children > a::after,
-          .navbar ul ul li.has-children > span::after {
-              content: ' ▶';
-              float: right;
-              margin-left: 0;
-          }
-
+        .navbar ul ul li.has-children > a::after,
+        .navbar ul ul li.has-children > span::after {
+            content: ' ▶';
+            float: right;
+            margin-left: 0;
+        }
 
         .navbar ul ul a:hover, .navbar ul ul span:hover {
             background-color: #f0f0f0;
             color: #000;
         }
 
-        /* --- 移除 :hover 觸發 --- */
-        /* .navbar li:hover > ul {
-            display: block;
-        } */
-
-         /* 巢狀下拉選單定位 */
-         .navbar ul ul ul {
-             top: 0;
-             left: 100%;
-             margin-top: -5px;
-             border-radius: 0 4px 4px 4px;
-         }
+        .navbar ul ul ul {
+            top: 0;
+            left: 100%;
+            margin-top: -5px;
+            border-radius: 0 4px 4px 4px;
+        }
 
         #loading-nav {
             color: white;
@@ -152,29 +133,85 @@
             text-align: center;
         }
 
+        /* 除錯資訊樣式 */
+        .debug-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .debug-info h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .debug-info pre {
+            background-color: #ffffff;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <ul id="nav-list">
-            <!-- Links will be generated here by JavaScript -->
-             <div id="loading-nav">載入導覽列中...</div>
+            <div id="loading-nav">載入導覽列中...</div>
         </ul>
     </nav>
 
+    <div class="debug-info">
+        <h3>除錯資訊</h3>
+        <div id="debug-content">
+            <p>正在載入和分析導覽資料...</p>
+        </div>
+    </div>
+
     <script>
+        const debugElement = document.getElementById('debug-content');
+        
+        function log(message, data = null) {
+            console.log(message, data);
+            
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `
+                <p><strong>${new Date().toLocaleTimeString()}</strong>: ${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            debugElement.appendChild(logEntry);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const navList = document.getElementById('nav-list');
             const loadingIndicator = document.getElementById('loading-nav');
 
             try {
+                log('開始獲取導覽連結...');
+                
+                // 檢查目前頁面的 URL
+                log(`目前頁面 URL: ${window.location.href}`);
+                
                 const response = await fetch('/api/admin/nav-links');
+                log(`API 回應狀態: ${response.status} ${response.statusText}`);
+                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
                 const links = await response.json();
+                log(`獲取到 ${links.length} 個導覽連結`, links);
 
-                // --- (建立樹狀結構的程式碼保持不變) ---
+                // 分析資料結構
+                const parentLinks = links.filter(link => !link.parent_id);
+                const childLinks = links.filter(link => link.parent_id);
+                log(`父層連結: ${parentLinks.length} 個`, parentLinks);
+                log(`子層連結: ${childLinks.length} 個`, childLinks);
+
+                // 建立樹狀結構
+                log('建立樹狀結構...');
                 const linkMap = {};
                 const tree = [];
                 links.forEach(link => { linkMap[link.id] = { ...link, children: [] }; });
@@ -185,24 +222,27 @@
                         tree.push(linkMap[link.id]);
                     }
                 });
+                
+                log('完成樹狀結構', tree);
 
-                // --- (遞迴生成 HTML 的函數保持不變) ---
+                // 檢查哪些項目有子選單
+                const itemsWithChildren = tree.filter(item => item.children.length > 0);
+                log(`有子選單的項目: ${itemsWithChildren.length} 個`, itemsWithChildren);
+
+                // 生成 HTML
                 const generateNavHtml = (items) => {
                     let html = '';
-                    items.sort((a, b) => a.display_order - b.display_order); // 確保子項目也排序
+                    items.sort((a, b) => a.display_order - b.display_order);
                     items.forEach(item => {
                         const hasChildren = item.children.length > 0;
-                        // ***修改: 如果有子項目，即使有 URL 也不直接設 href，由 JS 控制***
-                        // const isLink = item.url && item.url !== '#';
-                        const isEffectivelyLink = item.url && item.url !== '#' && !hasChildren; // 只有沒有子項目的才算真正連結
-                        const tagName = isEffectivelyLink ? 'a' : 'span'; // 有子項目的父層用 span 或 a(但href可能不跳轉)
+                        const isEffectivelyLink = item.url && item.url !== '#' && !hasChildren;
+                        const tagName = isEffectivelyLink ? 'a' : 'span';
 
                         html += `<li class="${hasChildren ? 'has-children' : ''}">`;
-                        // ***修改: 為有子項目的父層添加 data-url 屬性儲存連結 (如果有的話)***
                         html += `<${tagName} ${isEffectivelyLink ? `href="${item.url}" target="contentFrame"` : ''} ${item.url && item.url !== '#' && hasChildren ? `data-url="${item.url}"` : ''}>${item.name}</${tagName}>`;
 
                         if (hasChildren) {
-                            html += '<ul>'; // 這個 ul 會被 JS 控制顯示/隱藏
+                            html += '<ul>';
                             html += generateNavHtml(item.children);
                             html += '</ul>';
                         }
@@ -211,85 +251,92 @@
                     return html;
                 };
 
-                navList.innerHTML = generateNavHtml(tree);
+                const navHtml = generateNavHtml(tree);
+                log('生成的 HTML', navHtml);
+
+                navList.innerHTML = navHtml;
                 if (loadingIndicator) {
                     loadingIndicator.remove();
                 }
 
-                // --- ***新增: 點擊事件處理*** ---
+                // 添加點擊事件
                 const parentItems = navList.querySelectorAll('.has-children > a, .has-children > span');
+                log(`找到 ${parentItems.length} 個父層項目`);
 
-                parentItems.forEach(item => {
+                parentItems.forEach((item, index) => {
                     item.addEventListener('click', function(event) {
-                        const parentLi = this.closest('li'); // 找到父層 li
-                        const subMenu = this.nextElementSibling; // 找到緊鄰的 <ul>
+                        log(`點擊了第 ${index + 1} 個父層項目: ${this.textContent}`);
+                        
+                        const parentLi = this.closest('li');
+                        const subMenu = this.nextElementSibling;
+                        
+                        log('父層 li:', parentLi);
+                        log('子選單:', subMenu);
 
                         if (subMenu && subMenu.tagName === 'UL') {
-                            // 切換當前點擊的子選單
-                            const isOpening = !subMenu.classList.contains('show-dropdown');
+                            const isCurrentlyOpen = subMenu.classList.contains('show-dropdown');
+                            log(`子選單當前狀態: ${isCurrentlyOpen ? '開啟' : '關閉'}`);
                             
-                            // 先關閉所有同層級的其他已開啟選單
-                            const parentUl = parentLi.parentElement; // 找到父 ul
+                            // 關閉同層級的其他子選單
+                            const parentUl = parentLi.parentElement;
                             const siblings = parentUl.querySelectorAll(':scope > li.has-children > ul.show-dropdown');
                             siblings.forEach(siblingMenu => {
                                 if (siblingMenu !== subMenu) {
                                     siblingMenu.classList.remove('show-dropdown');
+                                    log('關閉了同層級的子選單');
                                 }
                             });
 
-                            // 再切換當前選單狀態
+                            // 切換當前子選單
                             subMenu.classList.toggle('show-dropdown');
+                            log(`子選單新狀態: ${subMenu.classList.contains('show-dropdown') ? '開啟' : '關閉'}`);
 
-                            // 如果是打開選單，關閉其內部的所有下層選單 (避免殘留)
-                            if (isOpening) {
-                               const nestedOpenMenus = subMenu.querySelectorAll('ul.show-dropdown');
-                               nestedOpenMenus.forEach(n => n.classList.remove('show-dropdown'));
-                            }
-
-
-                            // 如果點擊的父層本身有 data-url (我們剛才加的)，則進行頁面跳轉
+                            // 如果有 data-url，進行跳轉
                             const targetUrl = this.dataset.url;
                             if (targetUrl) {
-                                // 檢查 parent window 是否存在 contentFrame
-                                if (window.parent && window.parent.frames['contentFrame']) {
-                                     window.parent.frames['contentFrame'].location.href = targetUrl;
+                                log(`嘗試跳轉到: ${targetUrl}`);
+                                if (window.parent && window.parent.frames && window.parent.frames['contentFrame']) {
+                                    window.parent.frames['contentFrame'].location.href = targetUrl;
+                                    log('成功跳轉到 contentFrame');
                                 } else {
-                                    console.warn('無法找到名為 contentFrame 的 iframe');
-                                    // 作為備用，可以在新分頁開啟
-                                    // window.open(targetUrl, '_blank');
+                                    log('找不到 contentFrame，嘗試在目前視窗開啟');
+                                    window.open(targetUrl, '_blank');
                                 }
-                            } else if (this.tagName === 'A' && this.getAttribute('href') && this.getAttribute('href') !== '#') {
-                                // 如果是個沒有子選單的普通連結<a>，則讓其正常跳轉 (不需要 JS 處理，瀏覽器會處理 target="contentFrame")
-                                // 但如果父層 *有* 子選單，我們通常不希望它在展開時同時跳轉，除非特別設計
-                                // event.preventDefault(); // 可選：如果希望有子選單的<a>父層點擊時 *只* 展開而不跳轉，取消此行註解
-                            } else {
-                                // 如果是 span 或沒有有效 href 的 a，阻止預設行為 (雖然 span 沒預設行為)
-                                event.preventDefault();
                             }
-
+                            
+                            event.preventDefault();
                         }
-                        event.stopPropagation(); // 阻止事件冒泡到 document
+                        event.stopPropagation();
                     });
                 });
 
-                // 點擊頁面其他地方關閉所有下拉選單
+                // 點擊其他地方關閉所有下拉選單
                 document.addEventListener('click', function(event) {
-                    // 檢查點擊是否發生在 navbar 內部
                     if (!navList.contains(event.target)) {
                         const openMenus = navList.querySelectorAll('ul.show-dropdown');
-                        openMenus.forEach(menu => {
-                            menu.classList.remove('show-dropdown');
-                        });
+                        if (openMenus.length > 0) {
+                            log(`關閉了 ${openMenus.length} 個開啟的子選單`);
+                            openMenus.forEach(menu => {
+                                menu.classList.remove('show-dropdown');
+                            });
+                        }
                     }
                 });
 
+                log('導覽列初始化完成');
+
             } catch (error) {
-                console.error('無法載入導覽連結:', error);
-                 if (loadingIndicator) {
+                console.error('載入導覽連結失敗:', error);
+                log('載入導覽連結時發生錯誤', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                if (loadingIndicator) {
                     loadingIndicator.textContent = '載入導覽列失敗';
-                 } else {
+                } else {
                     navList.innerHTML = '<li>載入導覽列失敗</li>';
-                 }
+                }
             }
         });
     </script>
