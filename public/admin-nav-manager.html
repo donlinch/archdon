@@ -628,21 +628,7 @@
                 const actionsDiv = document.createElement('div');
                 actionsDiv.classList.add('link-actions');
 
-                // 上移按鈕
-                const upBtn = document.createElement('button');
-                upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                upBtn.classList.add('btn', 'btn-move-up');
-                upBtn.title = '上移';
-                upBtn.onclick = () => handleSort(item.id, 'up');
-                actionsDiv.appendChild(upBtn);
-
-                // 下移按鈕
-                const downBtn = document.createElement('button');
-                downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                downBtn.classList.add('btn', 'btn-move-down');
-                downBtn.title = '下移';
-                downBtn.onclick = () => handleSort(item.id, 'down');
-                actionsDiv.appendChild(downBtn);
+                
 
                 // 編輯按鈕
                 const editBtn = document.createElement('button');
