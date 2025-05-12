@@ -3,29 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理後台</title>
+    <title>管理導覽</title>
     <style>
-        body, html {
+        /* --- 基本樣式 (保留大部分) --- */
+        body {
             margin: 0;
+            font-family: sans-serif;
+            background-color: #f8f9fa;
+            
+        }
+
+        .navbar {
+            display: flex;
+            background: linear-gradient(to right, #4361ee, #3f37c9);
+            padding: 0 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            height: 60px;
+            align-items: center;
+            -webkit-overflow-scrolling: touch;
+             -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .navbar::-webkit-scrollbar { display: none; }
+
+        .navbar ul {
+            list-style: none;
             padding: 0;
+            margin: 0;
+            display: flex;
             height: 100%;
-            overflow: hidden; /* 防止主頁面滾動 */
         }
-        #nav-frame {
+
+        .navbar li {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar a, .navbar span {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 0 15px;
+            height: 100%;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            box-sizing: border-box;
+        }
+
+         .navbar li.has-children > a::after,
+         .navbar li.has-children > span::after {
+             content: ' ▼';
+             font-size: 0.7em;
+             margin-left: 5px;
+         }
+
+
+        .navbar a:hover, .navbar span:hover, .navbar li:hover > a, .navbar li:hover > span {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+         .navbar a.active {
+              color: white;
+              font-weight: 600;
+              border-bottom-color: #4cc9f0;
+         }
+
+        /* --- 下拉選單樣式 (Dropdown Menu Styles) --- */
+        .navbar ul ul { /* 子選單 */
+            /* 使用 display: none 作為預設隱藏 */
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            z-index: 1000;
+            padding: 5px 0;
+            border-radius: 0 0 4px 4px;
+            height: auto;
+            flex-direction: column;
+            white-space: normal;
+        }
+
+        /* 顯示下拉選單 */
+        .navbar ul ul.show-dropdown {
+            display: flex;
+        }
+
+        .navbar ul ul li {
             width: 100%;
-            height: auto; /* 導覽列高度，可以調整 */
-            border: none;
+            height: auto;
         }
-        #content-frame {
+
+        .navbar ul ul a, .navbar ul ul span {
+            color: #333;
+            padding: 10px 15px;
             width: 100%;
-            height: calc(100% - 80px); /* 內容區域高度 */
-            border: none;
+            height: auto;
+            display: block;
+            box-sizing: border-box;
+            border-bottom: none;
         }
+          .navbar ul ul li.has-children > a::after,
+          .navbar ul ul li.has-children > span::after {
+              content: ' ▶';
+              float: right;
+              margin-left: 0;
+          }
+
+
+        .navbar ul ul a:hover, .navbar ul ul span:hover {
+            background-color: #f0f0f0;
+            color: #000;
+        }
+
+         /* 巢狀下拉選單定位 */
+         .navbar ul ul ul {
+             top: 0;
+             left: 100%;
+             margin-top: -5px;
+             border-radius: 0 4px 4px 4px;
+         }
+
+        #loading-nav {
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
-    <iframe id="nav-frame" src="admin-nav.html" name="navFrame"></iframe>
-    <iframe id="content-frame" src="admin.html" name="contentFrame"></iframe> 
-    <!-- 預設載入商品管理頁面 -->
+    <nav class="navbar">
+        <ul id="nav-list">
+            <!-- Links will be generated here by JavaScript -->
+             <div id="loading-nav">載入導覽列中...</div>
+        </ul>
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const navList = document.getElementById('nav-list');
+            const loadingIndicator = document.getElementById('loading-nav');
+
+            try {
+                const response = await fetch('/api/admin/nav-links');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const links = await response.json();
+
+                // --- 建立樹狀結構 ---
+                const linkMap = {};
+                const tree = [];
+                links.forEach(link => { linkMap[link.id] = { ...link, children: [] }; });
+                links.forEach(link => {
+                    if (link.parent_id && linkMap[link.parent_id]) {
+                        linkMap[link.parent_id].children.push(linkMap[link.id]);
+                    } else {
+                        tree.push(linkMap[link.id]);
+                    }
+                });
+
+                // --- 遞迴生成 HTML 的函數 ---
+                const generateNavHtml = (items) => {
+                    let html = '';
+                    items.sort((a, b) => a.display_order - b.display_order);
+                    items.forEach(item => {
+                        const hasChildren = item.children.length > 0;
+                        const isEffectivelyLink = item.url && item.url !== '#' && !hasChildren;
+                        const tagName = isEffectivelyLink ? 'a' : 'span';
+
+                        html += `<li class="${hasChildren ? 'has-children' : ''}">`;
+                        html += `<${tagName} ${isEffectivelyLink ? `href="${item.url}" target="contentFrame"` : ''} ${item.url && item.url !== '#' && hasChildren ? `data-url="${item.url}"` : ''}>${item.name}</${tagName}>`;
+
+                        if (hasChildren) {
+                            html += '<ul>';
+                            html += generateNavHtml(item.children);
+                            html += '</ul>';
+                        }
+                        html += '</li>';
+                    });
+                    return html;
+                };
+
+                navList.innerHTML = generateNavHtml(tree);
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+
+                // --- 點擊事件處理 ---
+                const parentItems = navList.querySelectorAll('.has-children > a, .has-children > span');
+
+                parentItems.forEach(item => {
+                    item.addEventListener('click', function(event) {
+                        const parentLi = this.closest('li');
+                        const subMenu = this.nextElementSibling;
+
+                        if (subMenu && subMenu.tagName === 'UL') {
+                            const isOpening = !subMenu.classList.contains('show-dropdown');
+                            
+                            // 關閉所有同層級的其他已開啟選單
+                            const parentUl = parentLi.parentElement;
+                            const siblings = parentUl.querySelectorAll(':scope > li.has-children > ul.show-dropdown');
+                            siblings.forEach(siblingMenu => {
+                                if (siblingMenu !== subMenu) {
+                                    siblingMenu.classList.remove('show-dropdown');
+                                }
+                            });
+
+                            // 切換當前選單狀態
+                            subMenu.classList.toggle('show-dropdown');
+
+                            // 如果是打開選單，關閉其內部的所有下層選單
+                            if (isOpening) {
+                               const nestedOpenMenus = subMenu.querySelectorAll('ul.show-dropdown');
+                               nestedOpenMenus.forEach(n => n.classList.remove('show-dropdown'));
+                            }
+
+                            // 如果點擊的父層本身有 data-url，則進行頁面跳轉
+                            const targetUrl = this.dataset.url;
+                            if (targetUrl) {
+                                if (window.parent && window.parent.frames && window.parent.frames['contentFrame']) {
+                                     window.parent.frames['contentFrame'].location.href = targetUrl;
+                                } else {
+                                    console.warn('無法找到名為 contentFrame 的 iframe');
+                                }
+                            }
+                            
+                            // 阻止預設行為，避免重複跳轉
+                            event.preventDefault();
+                        }
+                        event.stopPropagation();
+                    });
+                });
+
+                // 點擊頁面其他地方關閉所有下拉選單
+                document.addEventListener('click', function(event) {
+                    if (!navList.contains(event.target)) {
+                        const openMenus = navList.querySelectorAll('ul.show-dropdown');
+                        openMenus.forEach(menu => {
+                            menu.classList.remove('show-dropdown');
+                        });
+                    }
+                });
+
+            } catch (error) {
+                console.error('無法載入導覽連結:', error);
+                 if (loadingIndicator) {
+                    loadingIndicator.textContent = '載入導覽列失敗';
+                 } else {
+                    navList.innerHTML = '<li>載入導覽列失敗</li>';
+                 }
+            }
+        });
+    </script>
 </body>
 </html>
