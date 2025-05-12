@@ -854,8 +854,16 @@
             }
         }
 // 用這個函數替換現有的 handleSort 函數
+// 修正後的排序函數
 async function handleSort(linkId, direction) {
     console.log(`[SORT] 開始排序：ID=${linkId}, 方向=${direction}`);
+    
+    // 確保 linkId 是數字類型
+    linkId = parseInt(linkId, 10);
+    if (isNaN(linkId)) {
+        console.error('[SORT] 無效的連結 ID');
+        return;
+    }
     
     // 尋找要移動的連結和其兄弟節點
     const linkToMove = allLinks.find(link => link.id === linkId);
@@ -894,15 +902,15 @@ async function handleSort(linkId, direction) {
 
     console.log('[SORT] 要交換的兄弟節點:', siblingToSwap);
 
-    // 準備交換的數據
+    // 準備交換的數據 - 確保所有數值都是數字類型
     const updateData = [
         { 
-            id: linkToMove.id, 
-            display_order: siblingToSwap.display_order 
+            id: parseInt(linkToMove.id, 10), 
+            display_order: parseInt(siblingToSwap.display_order, 10)
         },
         { 
-            id: siblingToSwap.id, 
-            display_order: linkToMove.display_order 
+            id: parseInt(siblingToSwap.id, 10), 
+            display_order: parseInt(linkToMove.display_order, 10)
         }
     ];
 
@@ -928,29 +936,13 @@ async function handleSort(linkId, direction) {
         console.log('- 狀態文字:', response.statusText);
         console.log('- Content-Type:', response.headers.get('content-type'));
         
-        // 先讀取響應文字，然後嘗試解析 JSON
-        const responseText = await response.text();
-        console.log('[SORT] 響應原始內容:', responseText);
-        
         if (!response.ok) {
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                result = { error: responseText };
-            }
-            console.error('[SORT] 伺服器錯誤響應:', result);
-            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            const errorData = await response.json();
+            console.error('[SORT] 伺服器錯誤響應:', errorData);
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
         
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            console.warn('[SORT] 無法解析 JSON 響應，但請求成功');
-            result = { message: '排序更新成功' };
-        }
-        
+        const result = await response.json();
         console.log('[SORT] 排序成功, 伺服器響應:', result);
         
         // 重新載入連結列表
