@@ -572,48 +572,138 @@ app.delete('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 
-
-// 新增排序API端點
+// 修復後的排序API端點
 app.put('/api/admin/nav-links/reorder', async (req, res) => {
-    const updates = req.body; // 期望是一個包含 {id, display_order} 的數組
-    
-    if (!Array.isArray(updates) || updates.length === 0) {
-        return res.status(400).json({ error: '無效的排序數據' });
-    }
-    
-    // 開始事務
-    const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        const updates = req.body;
         
-        // 驗證所有ID都存在並更新它們的順序
-        for (const update of updates) {
-            const { id, display_order } = update;
-            const linkId = parseInt(id, 10);
-            const newOrder = parseInt(display_order, 10);
-            
-            if (isNaN(linkId) || isNaN(newOrder)) {
-                throw new Error(`無效的ID (${id}) 或顯示順序 (${display_order})`);
-            }
-            
-            const result = await client.query(
-                'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
-                [newOrder, linkId]
-            );
-            
-            if (result.rowCount === 0) {
-                throw new Error(`找不到ID為 ${linkId} 的連結`);
-            }
+        console.log('[REORDER] 收到原始請求數據:', JSON.stringify(updates, null, 2));
+        console.log('[REORDER] 請求數據類型:', typeof updates);
+        console.log('[REORDER] 是否為陣列:', Array.isArray(updates));
+        
+        // 驗證輸入
+        if (!Array.isArray(updates)) {
+            console.error('[REORDER] 錯誤：數據不是陣列格式');
+            return res.status(400).json({ error: '請求數據必須是陣列格式' });
         }
         
-        await client.query('COMMIT');
-        res.status(200).json({ message: '排序更新成功' });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('[API PUT /api/admin/nav-links/reorder] 排序失敗:', err.stack || err);
-        res.status(500).json({ error: `排序失敗: ${err.message}` });
-    } finally {
-        client.release();
+        if (updates.length === 0) {
+            console.error('[REORDER] 錯誤：陣列為空');
+            return res.status(400).json({ error: '更新數據不能為空' });
+        }
+        
+        // 驗證並解析每個更新項目
+        const parsedUpdates = [];
+        for (let i = 0; i < updates.length; i++) {
+            const update = updates[i];
+            console.log(`[REORDER] 處理第 ${i + 1} 項:`, update);
+            
+            if (!update || typeof update !== 'object') {
+                const msg = `第 ${i + 1} 項數據不是有效的物件`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            // 檢查 id 字段
+            let id;
+            if (update.id === undefined || update.id === null) {
+                const msg = `第 ${i + 1} 項缺少 ID 字段`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            if (typeof update.id === 'string') {
+                id = parseInt(update.id, 10);
+            } else if (typeof update.id === 'number') {
+                id = update.id;
+            } else {
+                const msg = `第 ${i + 1} 項 ID 字段類型無效: ${typeof update.id}`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            if (isNaN(id)) {
+                const msg = `第 ${i + 1} 項 ID 無法轉換為數字: ${update.id}`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            // 檢查 display_order 字段
+            let order;
+            if (update.display_order === undefined || update.display_order === null) {
+                const msg = `第 ${i + 1} 項缺少 display_order 字段`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            if (typeof update.display_order === 'string') {
+                order = parseInt(update.display_order, 10);
+            } else if (typeof update.display_order === 'number') {
+                order = update.display_order;
+            } else {
+                const msg = `第 ${i + 1} 項 display_order 字段類型無效: ${typeof update.display_order}`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            if (isNaN(order)) {
+                const msg = `第 ${i + 1} 項 display_order 無法轉換為數字: ${update.display_order}`;
+                console.error('[REORDER] ' + msg);
+                return res.status(400).json({ error: msg });
+            }
+            
+            parsedUpdates.push({ id, display_order: order });
+            console.log(`[REORDER] 第 ${i + 1} 項解析完成: id=${id}, order=${order}`);
+        }
+        
+        console.log('[REORDER] 所有數據解析完成:', parsedUpdates);
+        
+        // 使用事務處理
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            console.log('[REORDER] 開始事務');
+            
+            // 逐一更新每個項目
+            for (const update of parsedUpdates) {
+                const { id, display_order } = update;
+                
+                console.log(`[REORDER] 正在更新 ID ${id} 為順序 ${display_order}`);
+                
+                const result = await client.query(
+                    'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
+                    [display_order, id]
+                );
+                
+                console.log(`[REORDER] 更新結果: 影響行數 ${result.rowCount}`);
+                
+                if (result.rowCount === 0) {
+                    throw new Error(`找不到 ID 為 ${id} 的連結`);
+                }
+            }
+            
+            await client.query('COMMIT');
+            console.log('[REORDER] 事務提交成功');
+            res.status(200).json({ 
+                message: '排序更新成功', 
+                updated: parsedUpdates.length,
+                updates: parsedUpdates
+            });
+            
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('[REORDER] 事務回滾:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+        
+    } catch (error) {
+        console.error('[API PUT /api/admin/nav-links/reorder] 排序失敗:', error.stack || error);
+        res.status(500).json({ 
+            error: `排序失敗: ${error.message}`,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
