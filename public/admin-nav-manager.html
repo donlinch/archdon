@@ -3,210 +3,518 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>導覽連結管理</title>
-    <link rel="stylesheet" href="style.css"> <!-- Assuming a general style.css exists -->
+    <title>導覽連結管理系統</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: sans-serif;
-            padding: 20px;
-            background-color: #f4f7f6;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
             color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
         }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #667eea;
+        }
+
+        /* 導覽連結列表樣式 */
         #nav-links-list ul {
             list-style: none;
             padding: 0;
         }
+
         #nav-links-list li {
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
-            margin-bottom: 10px;
-            padding: 15px;
-            border-radius: 4px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
-         /* Indentation for hierarchy */
+
+        #nav-links-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #nav-links-list li:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        /* 子層級縮排 */
         #nav-links-list ul ul {
-            margin-left: 30px;
-            margin-top: 10px;
-            border-left: 2px solid #ddd;
-            padding-left: 15px;
+            margin-left: 40px;
+            margin-top: 15px;
+            border-left: 2px dashed #ddd;
+            padding-left: 20px;
         }
-         #nav-links-list li .link-info {
+
+        #nav-links-list ul ul li {
+            background: #ffffff;
+            border-left: 3px solid #e7f3ff;
+        }
+
+        .link-info {
             flex-grow: 1;
-            margin-right: 15px; /* Space before actions */
-         }
-         #nav-links-list li .link-name {
-            font-weight: bold;
-         }
-         #nav-links-list li .link-url {
-            color: #555;
-            font-size: 0.9em;
-            margin-left: 10px;
-            word-break: break-all;
-         }
-         #nav-links-list li .link-details {
-             font-size: 0.8em;
-             color: #777;
-             margin-left: 10px;
-         }
-        #nav-links-list li .link-actions button {
-            margin-left: 5px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 0.9em;
+            margin-right: 20px;
         }
-        .edit-btn { background-color: #ffc107; border: none; color: #333; border-radius: 3px; }
-        .delete-btn { background-color: #dc3545; border: none; color: white; border-radius: 3px; }
-        .up-btn, .down-btn { background-color: #6c757d; border: none; color: white; border-radius: 3px; }
-        .up-btn:disabled, .down-btn:disabled { background-color: #adb5bd; cursor: not-allowed; } /* Style for disabled sort buttons */
 
-
-        #add-link-form, #edit-link-form { /* Combine styles */
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-            border: 1px solid #eee;
-            margin-top: 30px;
-        }
-        #add-link-form .form-group, #edit-link-form .form-group {
-            margin-bottom: 15px;
-        }
-        #add-link-form label, #edit-link-form label {
-            display: block;
+        .link-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
             margin-bottom: 5px;
-            font-weight: bold;
         }
-        #add-link-form input[type="text"],
-        #add-link-form input[type="url"],
-        #add-link-form input[type="number"],
-        #add-link-form select,
-        #edit-link-form input[type="text"],
-        #edit-link-form input[type="url"],
-        #edit-link-form input[type="number"],
-        #edit-link-form select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
+
+        .link-url {
+            color: #6c757d;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
             border-radius: 4px;
-            box-sizing: border-box;
+            display: inline-block;
+            margin-top: 5px;
         }
-        #add-link-form button, #edit-link-form button {
-            padding: 10px 15px;
-            cursor: pointer;
-            border-radius: 4px;
+
+        .link-details {
+            font-size: 0.8rem;
+            color: #90a4ae;
+            margin-top: 8px;
+        }
+
+        /* 按鈕樣式 */
+        .link-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
             border: none;
-        }
-        #add-link-form .submit-btn, #edit-link-form .submit-btn {
-             background-color: #28a745; color: white;
-        }
-         #edit-link-form .cancel-btn {
-             background-color: #6c757d; color: white; margin-left: 10px;
-         }
-
-        #edit-link-form {
-            display: none; /* Hidden by default */
-            margin-top: 20px;
-            border-top: 2px solid #007bff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-move-up, .btn-move-down {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-move-up:hover, .btn-move-down:hover {
+            background: #5a6268;
+        }
+
+        .btn-edit {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #218838;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        /* 表單樣式 */
+        .form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .form-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .form-btn-cancel {
+            background: #6c757d;
+            margin-left: 10px;
+        }
+
+        .form-btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        /* 錯誤訊息樣式 */
+        .form-error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        /* 載入和錯誤狀態 */
         .loading, .error {
             text-align: center;
-            padding: 20px;
-            color: #777;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 1.1rem;
         }
+
         .error {
-            color: red;
+            color: #dc3545;
+            background: #f8d7da;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            #nav-links-list li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .link-actions {
+                margin-top: 15px;
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            #nav-links-list ul ul {
+                margin-left: 20px;
+            }
+        }
+
+        /* 動畫效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        /* 空狀態樣式 */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #e9ecef;
+        }
+
+        /* 成功訊息 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>管理導覽連結</h1>
+        <div class="header">
+            <h1><i class="fas fa-sitemap"></i> 導覽連結管理系統</h1>
+            <p>輕鬆管理您的網站導覽結構</p>
+        </div>
 
-        <div id="nav-links-list">
-            <h2>現有連結</h2>
-            <div class="loading">載入連結中...</div>
-            <!-- Links will be rendered here -->
+        <div id="nav-links-list" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-list"></i>
+                現有連結
+            </h2>
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                正在載入連結...
+            </div>
             <ul></ul>
         </div>
 
-        <hr style="margin: 30px 0;">
-
-        <!-- Add Link Form -->
-        <div id="add-link-form">
-            <h2>新增連結</h2>
-            <form>
+        <div id="add-link-form" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-plus-circle"></i>
+                新增連結
+            </h2>
+            <form class="form">
                 <div class="form-group">
-                    <label for="add-name">名稱:</label>
-                    <input type="text" id="add-name" name="name" required>
+                    <label for="add-name">
+                        <i class="fas fa-tag"></i>
+                        連結名稱
+                    </label>
+                    <input type="text" id="add-name" name="name" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="add-url">URL (留空表示為父層級):</label>
-                    <input type="url" id="add-url" name="url" placeholder="例如: /admin.html 或 #">
+                    <label for="add-url">
+                        <i class="fas fa-link"></i>
+                        URL（留空表示為父層級）
+                    </label>
+                    <input type="url" id="add-url" name="url" class="form-control" placeholder="例如: /admin.html">
                 </div>
                 <div class="form-group">
-                    <label for="add-parent">父層級:</label>
-                    <select id="add-parent" name="parent_id">
-                        <option value="">-- 無 (頂層連結) --</option>
-                        <!-- Parent options will be populated here -->
+                    <label for="add-parent">
+                        <i class="fas fa-sitemap"></i>
+                        父層級
+                    </label>
+                    <select id="add-parent" name="parent_id" class="form-control">
+                        <option value="">-- 無（頂層連結）--</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="add-order">顯示順序 (數字越小越靠前):</label>
-                    <input type="number" id="add-order" name="display_order" value="0">
+                    <label for="add-order">
+                        <i class="fas fa-sort-numeric-down"></i>
+                        顯示順序
+                    </label>
+                    <input type="number" id="add-order" name="display_order" value="0" class="form-control">
                 </div>
-                <button type="submit" class="submit-btn"><i class="fas fa-plus"></i> 新增連結</button>
-                <div class="form-error" style="color: red; margin-top: 10px;"></div>
+                <button type="submit" class="form-btn">
+                    <i class="fas fa-plus"></i>
+                    新增連結
+                </button>
+                <div class="form-error"></div>
             </form>
         </div>
 
-         <!-- Edit Link Form (Initially Hidden) -->
-        <div id="edit-link-form">
-            <h2>編輯連結</h2>
-            <form>
-                 <input type="hidden" id="edit-id" name="id">
+        <div id="edit-link-form" class="section" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-edit"></i>
+                編輯連結
+            </h2>
+            <form class="form">
+                <input type="hidden" id="edit-id" name="id">
                 <div class="form-group">
-                    <label for="edit-name">名稱:</label>
-                    <input type="text" id="edit-name" name="name" required>
+                    <label for="edit-name">
+                        <i class="fas fa-tag"></i>
+                        連結名稱
+                    </label>
+                    <input type="text" id="edit-name" name="name" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="edit-url">URL (留空表示為父層級):</label>
-                    <input type="url" id="edit-url" name="url" placeholder="例如: /admin.html 或 #">
+                    <label for="edit-url">
+                        <i class="fas fa-link"></i>
+                        URL（留空表示為父層級）
+                    </label>
+                    <input type="url" id="edit-url" name="url" class="form-control" placeholder="例如: /admin.html">
                 </div>
                 <div class="form-group">
-                    <label for="edit-parent">父層級:</label>
-                    <select id="edit-parent" name="parent_id">
-                        <option value="">-- 無 (頂層連結) --</option>
-                        <!-- Parent options will be populated here -->
+                    <label for="edit-parent">
+                        <i class="fas fa-sitemap"></i>
+                        父層級
+                    </label>
+                    <select id="edit-parent" name="parent_id" class="form-control">
+                        <option value="">-- 無（頂層連結）--</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="edit-order">顯示順序:</label>
-                    <input type="number" id="edit-order" name="display_order" value="0">
+                    <label for="edit-order">
+                        <i class="fas fa-sort-numeric-down"></i>
+                        顯示順序
+                    </label>
+                    <input type="number" id="edit-order" name="display_order" value="0" class="form-control">
                 </div>
-                <button type="submit" class="submit-btn"><i class="fas fa-save"></i> 更新連結</button>
-                <button type="button" class="cancel-btn"><i class="fas fa-times"></i> 取消</button>
-                 <div class="form-error" style="color: red; margin-top: 10px;"></div>
+                <button type="submit" class="form-btn">
+                    <i class="fas fa-save"></i>
+                    更新連結
+                </button>
+                <button type="button" class="form-btn form-btn-cancel">
+                    <i class="fas fa-times"></i>
+                    取消
+                </button>
+                <div class="form-error"></div>
             </form>
         </div>
+    </div>
 
+    <div id="toast" class="toast">
+        <span></span>
     </div>
 
     <script>
@@ -220,45 +528,71 @@
         const addFormError = document.querySelector('#add-link-form .form-error');
         const editFormError = document.querySelector('#edit-link-form .form-error');
 
-        let allLinks = []; // Store all links for populating parent dropdowns
+        let allLinks = [];
 
-        // --- Helper Functions ---
+        // 工具函數
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const span = toast.querySelector('span');
+            span.textContent = message;
+            
+            toast.className = 'toast show';
+            if (type === 'error') {
+                toast.style.background = '#dc3545';
+            } else {
+                toast.style.background = '#28a745';
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
         function displayError(element, message) {
             element.textContent = message;
-            element.style.display = 'block';
-        }
-        function clearError(element) {
-            element.textContent = '';
-            element.style.display = 'none';
+            element.classList.add('show');
         }
 
-        // Build tree structure for display
+        function clearError(element) {
+            element.textContent = '';
+            element.classList.remove('show');
+        }
+
+        // 建構樹狀結構
         function buildTree(links) {
             const linkMap = {};
             const tree = [];
+            
             links.forEach(link => {
                 linkMap[link.id] = { ...link, children: [] };
             });
+            
             links.forEach(link => {
                 if (link.parent_id && linkMap[link.parent_id]) {
-                    // Ensure children are sorted by display_order as well
                     linkMap[link.parent_id].children.push(linkMap[link.id]);
                     linkMap[link.parent_id].children.sort((a, b) => a.display_order - b.display_order);
                 } else {
                     tree.push(linkMap[link.id]);
                 }
             });
-             // Sort top-level items
-             tree.sort((a, b) => a.display_order - b.display_order);
+            
+            tree.sort((a, b) => a.display_order - b.display_order);
             return tree;
         }
 
-        // Recursive function to render the list
+        // 渲染列表
         function renderList(items, container) {
-            container.innerHTML = ''; // Clear previous list
+            container.innerHTML = '';
+            
             if (items.length === 0 && container === listContainer) {
-                 container.innerHTML = '<p>目前沒有導覽連結。</p>';
-                 return;
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <h3>尚未建立任何導覽連結</h3>
+                        <p>點擊下方的「新增連結」按鈕開始建立導覽結構</p>
+                    </div>
+                `;
+                return;
             }
 
             items.forEach(item => {
@@ -268,120 +602,115 @@
                 const infoDiv = document.createElement('div');
                 infoDiv.classList.add('link-info');
 
-                const nameSpan = document.createElement('span');
-                nameSpan.classList.add('link-name');
-                nameSpan.textContent = item.name;
-                infoDiv.appendChild(nameSpan);
+                const nameDiv = document.createElement('div');
+                nameDiv.classList.add('link-name');
+                nameDiv.textContent = item.name;
+                infoDiv.appendChild(nameDiv);
 
                 if (item.url && item.url !== '#') {
-                    const urlSpan = document.createElement('span');
-                    urlSpan.classList.add('link-url');
-                    urlSpan.textContent = `(${item.url})`;
-                    infoDiv.appendChild(urlSpan);
+                    const urlDiv = document.createElement('div');
+                    urlDiv.classList.add('link-url');
+                    urlDiv.textContent = item.url;
+                    infoDiv.appendChild(urlDiv);
                 }
 
-                 const detailsSpan = document.createElement('span');
-                 detailsSpan.classList.add('link-details');
-                 detailsSpan.textContent = `(ID: ${item.id}, Order: ${item.display_order}, Parent: ${item.parent_id || 'None'})`;
-                 infoDiv.appendChild(detailsSpan);
-
+                const detailsDiv = document.createElement('div');
+                detailsDiv.classList.add('link-details');
+                detailsDiv.innerHTML = `
+                    <span><i class="fas fa-fingerprint"></i> ID: ${item.id}</span>
+                    <span><i class="fas fa-sort"></i> 順序: ${item.display_order}</span>
+                    <span><i class="fas fa-sitemap"></i> 父級: ${item.parent_id || '無'}</span>
+                `;
+                infoDiv.appendChild(detailsDiv);
 
                 li.appendChild(infoDiv);
 
                 const actionsDiv = document.createElement('div');
                 actionsDiv.classList.add('link-actions');
 
-                // --- Sort Buttons ---
+                // 上移按鈕
                 const upBtn = document.createElement('button');
                 upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                upBtn.classList.add('up-btn');
+                upBtn.classList.add('btn', 'btn-move-up');
                 upBtn.title = '上移';
-                upBtn.onclick = () => handleSort(item.id, 'up'); // Add onclick handler
-                // Enable/disable based on position later
+                upBtn.onclick = () => handleSort(item.id, 'up');
                 actionsDiv.appendChild(upBtn);
 
+                // 下移按鈕
                 const downBtn = document.createElement('button');
                 downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                downBtn.classList.add('down-btn');
+                downBtn.classList.add('btn', 'btn-move-down');
                 downBtn.title = '下移';
-                downBtn.onclick = () => handleSort(item.id, 'down'); // Add onclick handler
-                // Enable/disable based on position later
+                downBtn.onclick = () => handleSort(item.id, 'down');
                 actionsDiv.appendChild(downBtn);
-                // --- End Sort Buttons ---
 
-
+                // 編輯按鈕
                 const editBtn = document.createElement('button');
                 editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
-                editBtn.classList.add('edit-btn');
+                editBtn.classList.add('btn', 'btn-edit');
                 editBtn.onclick = () => showEditForm(item);
                 actionsDiv.appendChild(editBtn);
 
+                // 刪除按鈕
                 const deleteBtn = document.createElement('button');
                 deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
-                deleteBtn.classList.add('delete-btn');
+                deleteBtn.classList.add('btn', 'btn-delete');
                 deleteBtn.onclick = () => deleteLink(item.id, item.name);
                 actionsDiv.appendChild(deleteBtn);
 
                 li.appendChild(actionsDiv);
-
                 container.appendChild(li);
 
-                // Render children recursively
+                // 遞迴渲染子項目
                 if (item.children && item.children.length > 0) {
                     const subUl = document.createElement('ul');
-                    li.appendChild(subUl); // Append sublist inside the li
+                    li.appendChild(subUl);
                     renderList(item.children, subUl);
                 }
             });
 
-            // --- Enable/Disable Sort Buttons ---
-            const siblings = Array.from(container.children); // Get all li elements in the current ul
+            // 啟用/禁用排序按鈕
+            const siblings = Array.from(container.children);
             siblings.forEach((siblingLi, index) => {
-                const upButton = siblingLi.querySelector('.up-btn');
-                const downButton = siblingLi.querySelector('.down-btn');
-                if (upButton) upButton.disabled = (index === 0); // Disable up for the first item
-                if (downButton) downButton.disabled = (index === siblings.length - 1); // Disable down for the last item
+                const upButton = siblingLi.querySelector('.btn-move-up');
+                const downButton = siblingLi.querySelector('.btn-move-down');
+                if (upButton) upButton.disabled = (index === 0);
+                if (downButton) downButton.disabled = (index === siblings.length - 1);
             });
-             // --- End Enable/Disable ---
         }
 
-        // Populate parent select dropdowns
+        // 填充父級選項
         function populateParentSelects(links, currentLinkId = null) {
-            addParentSelect.innerHTML = '<option value="">-- 無 (頂層連結) --</option>';
-            editParentSelect.innerHTML = '<option value="">-- 無 (頂層連結) --</option>';
+            addParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
+            editParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
 
-            // Recursive function to add options with indentation
             const addOptions = (items, select, indent = 0) => {
-                 items.forEach(link => {
-                    // Prevent selecting itself or its descendants as parent during edit
+                items.forEach(link => {
                     if (currentLinkId === link.id) return;
-                    // A more robust check would trace ancestry, but this prevents direct self-parenting
 
                     const option = document.createElement('option');
                     option.value = link.id;
-                    option.textContent = `${'--'.repeat(indent)} ${link.name} (ID: ${link.id})`;
+                    option.textContent = `${'—'.repeat(indent)} ${link.name}`;
                     select.appendChild(option);
+                    
                     if (link.children && link.children.length > 0) {
                         addOptions(link.children, select, indent + 1);
                     }
                 });
             };
 
-            const tree = buildTree(links); // Need the tree structure for indentation
+            const tree = buildTree(links);
             addOptions(tree, addParentSelect);
             addOptions(tree, editParentSelect);
         }
 
-
-        // --- Event Handlers ---
-
-        // Fetch and render links on load
+        // 載入連結
         async function loadLinks() {
             loadingDiv.style.display = 'block';
             listContainer.innerHTML = '';
             clearError(addFormError);
             clearError(editFormError);
-            editFormDiv.style.display = 'none'; // Hide edit form initially
+            editFormDiv.style.display = 'none';
 
             try {
                 const response = await fetch('/api/admin/nav-links');
@@ -390,27 +719,33 @@
 
                 const tree = buildTree(allLinks);
                 renderList(tree, listContainer);
-                populateParentSelects(allLinks); // Populate dropdowns after fetching
+                populateParentSelects(allLinks);
 
                 loadingDiv.style.display = 'none';
             } catch (error) {
                 console.error('無法載入連結:', error);
-                loadingDiv.textContent = '載入連結失敗';
-                loadingDiv.classList.add('error');
+                loadingDiv.style.display = 'none';
+                listContainer.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>載入失敗</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
             }
         }
 
-        // Handle Add Form Submission
+        // 新增表單提交
         addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             clearError(addFormError);
+            
             const formData = new FormData(addForm);
             const data = Object.fromEntries(formData.entries());
-             // Ensure empty parent_id is sent as null or omitted if backend expects that
-             if (data.parent_id === '') {
-                 delete data.parent_id; // Or set to null depending on backend
-             }
-
+            
+            if (data.parent_id === '') {
+                delete data.parent_id;
+            }
 
             try {
                 const response = await fetch('/api/admin/nav-links', {
@@ -418,77 +753,82 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
+                
                 const result = await response.json();
                 if (!response.ok) {
                     throw new Error(result.error || `HTTP error! status: ${response.status}`);
                 }
-                addForm.reset(); // Clear form
-                loadLinks(); // Reload the list
+                
+                addForm.reset();
+                document.getElementById('add-order').value = '0';
+                loadLinks();
+                showToast('連結新增成功！');
             } catch (error) {
                 console.error('新增連結失敗:', error);
                 displayError(addFormError, `新增失敗: ${error.message}`);
             }
         });
 
-        // Show Edit Form
+        // 顯示編輯表單
         function showEditForm(link) {
             clearError(editFormError);
-            editForm.reset(); // Clear previous data
+            editForm.reset();
 
-            // Populate form fields
             document.getElementById('edit-id').value = link.id;
             document.getElementById('edit-name').value = link.name;
-            document.getElementById('edit-url').value = link.url || ''; // Handle null URL
+            document.getElementById('edit-url').value = link.url || '';
             document.getElementById('edit-order').value = link.display_order;
 
-            // Populate and set parent select, disable selecting self
-            populateParentSelects(allLinks, link.id); // Repopulate excluding self
-            editParentSelect.value = link.parent_id || ''; // Set current parent
+            populateParentSelects(allLinks, link.id);
+            editParentSelect.value = link.parent_id || '';
 
-            editFormDiv.style.display = 'block'; // Show the form
-            editForm.scrollIntoView({ behavior: 'smooth' }); // Scroll to the form
+            editFormDiv.style.display = 'block';
+            editFormDiv.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Handle Edit Form Submission
+        // 編輯表單提交
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             clearError(editFormError);
+            
             const formData = new FormData(editForm);
             const data = Object.fromEntries(formData.entries());
             const linkId = data.id;
-             if (data.parent_id === '') {
-                 delete data.parent_id;
-             }
-
+            
+            if (data.parent_id === '') {
+                delete data.parent_id;
+            }
 
             try {
                 const response = await fetch(`/api/admin/nav-links/${linkId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data) // Send all fields
+                    body: JSON.stringify(data)
                 });
-                 const result = await response.json();
+                
+                const result = await response.json();
                 if (!response.ok) {
-                     throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
                 }
-                editFormDiv.style.display = 'none'; // Hide form
-                loadLinks(); // Reload list
+                
+                editFormDiv.style.display = 'none';
+                loadLinks();
+                showToast('連結更新成功！');
             } catch (error) {
                 console.error('更新連結失敗:', error);
-                 displayError(editFormError, `更新失敗: ${error.message}`);
+                displayError(editFormError, `更新失敗: ${error.message}`);
             }
         });
 
-         // Handle Edit Form Cancel
-         editForm.querySelector('.cancel-btn').addEventListener('click', () => {
-             editFormDiv.style.display = 'none';
-             clearError(editFormError);
-         });
+        // 取消編輯
+        editForm.querySelector('.form-btn-cancel').addEventListener('click', () => {
+            editFormDiv.style.display = 'none';
+            clearError(editFormError);
+        });
 
-
-        // Handle Delete Link
+        // 刪除連結
         async function deleteLink(id, name) {
-            if (!confirm(`確定要刪除連結 "${name}" 嗎？其所有子連結也會一併刪除。`)) {
+            if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) {
                 return;
             }
 
@@ -496,29 +836,31 @@
                 const response = await fetch(`/api/admin/nav-links/${id}`, {
                     method: 'DELETE'
                 });
+                
                 if (!response.ok) {
-                     // Try to get error message if server sends one
-                     let errorMsg = `HTTP error! status: ${response.status}`;
-                     try {
-                         const result = await response.json();
-                         errorMsg = result.error || errorMsg;
-                     } catch (e) { /* Ignore if no JSON body */ }
+                    let errorMsg = `HTTP error! status: ${response.status}`;
+                    try {
+                        const result = await response.json();
+                        errorMsg = result.error || errorMsg;
+                    } catch (e) { /* Ignore if no JSON body */ }
                     throw new Error(errorMsg);
                 }
-                loadLinks(); // Reload list
+                
+                loadLinks();
+                showToast('連結刪除成功！');
             } catch (error) {
                 console.error('刪除連結失敗:', error);
-                alert(`刪除失敗: ${error.message}`); // Show alert for delete errors
+                showToast(`刪除失敗: ${error.message}`, 'error');
             }
         }
 
-        // --- Handle Sorting ---
+        // 處理排序
         async function handleSort(linkId, direction) {
-            // Find the link and its sibling to swap with
+            // 尋找要移動的連結和其兄弟節點
             const linkToMove = allLinks.find(link => link.id === linkId);
             if (!linkToMove) return;
 
-            // Find siblings at the same level (same parent_id)
+            // 找到同一層級的兄弟節點（相同的 parent_id）
             const siblings = allLinks
                 .filter(link => link.parent_id === linkToMove.parent_id)
                 .sort((a, b) => a.display_order - b.display_order);
@@ -533,45 +875,38 @@
             }
 
             if (!siblingToSwap) {
-                console.warn('Cannot move link further in this direction.');
-                return; // Already at the top or bottom
+                console.warn('無法移動：已經是最頂端或最底端');
+                return;
             }
 
-            // Prepare data for backend: swap display_order values
-            // We send the two items that need their orders swapped
+            // 準備交換的數據
             const updateData = [
                 { id: linkToMove.id, display_order: siblingToSwap.display_order },
                 { id: siblingToSwap.id, display_order: linkToMove.display_order }
             ];
 
-            console.log('Attempting to swap order:', updateData);
-
             try {
-                 // Call the backend API to update the order
-                 const response = await fetch('/api/admin/nav-links/reorder', { // New endpoint needed
-                     method: 'PUT',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify(updateData) // Send IDs and new orders
-                 });
-                 if (!response.ok) {
-                     const result = await response.json();
-                     throw new Error(result.error || `HTTP error! status: ${response.status}`);
-                 }
-                 console.log('Backend update successful.');
-
-                // Reload the list to reflect changes
+                const response = await fetch('/api/admin/nav-links/reorder', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!response.ok) {
+                    const result = await response.json();
+                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                }
+                
                 loadLinks();
-
+                showToast('排序更新成功！');
             } catch (error) {
                 console.error('排序失敗:', error);
-                alert(`排序失敗: ${error.message}`);
+                showToast(`排序失敗: ${error.message}`, 'error');
             }
         }
 
-
-        // --- Initial Load ---
+        // 初始化載入
         loadLinks();
-
     </script>
 </body>
 </html>

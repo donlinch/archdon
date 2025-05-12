@@ -572,6 +572,52 @@ app.delete('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 
+
+// 新增排序API端點
+app.put('/api/admin/nav-links/reorder', async (req, res) => {
+    const updates = req.body; // 期望是一個包含 {id, display_order} 的數組
+    
+    if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ error: '無效的排序數據' });
+    }
+    
+    // 開始事務
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // 驗證所有ID都存在並更新它們的順序
+        for (const update of updates) {
+            const { id, display_order } = update;
+            const linkId = parseInt(id, 10);
+            const newOrder = parseInt(display_order, 10);
+            
+            if (isNaN(linkId) || isNaN(newOrder)) {
+                throw new Error(`無效的ID (${id}) 或顯示順序 (${display_order})`);
+            }
+            
+            const result = await client.query(
+                'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
+                [newOrder, linkId]
+            );
+            
+            if (result.rowCount === 0) {
+                throw new Error(`找不到ID為 ${linkId} 的連結`);
+            }
+        }
+        
+        await client.query('COMMIT');
+        res.status(200).json({ message: '排序更新成功' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[API PUT /api/admin/nav-links/reorder] 排序失敗:', err.stack || err);
+        res.status(500).json({ error: `排序失敗: ${err.message}` });
+    } finally {
+        client.release();
+    }
+});
+
+
 // --- 黑名單管理 API Router ---
 const blacklistRouter = express.Router();
 
