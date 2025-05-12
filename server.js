@@ -3246,6 +3246,7 @@ app.use([
     '/admin-identities.html',
     '/admin-message-detail.html',
     '/inventory-admin.html',
+   '/blacklist.html',
     '/store/report/report-admin.html'
 ], basicAuthMiddleware);
 
