@@ -39,7 +39,7 @@
             align-items: center;
         }
 
-        .navbar a {
+        .navbar a, .navbar span {
             display: flex;
             align-items: center;
             color: rgba(255, 255, 255, 0.8);
@@ -54,7 +54,7 @@
             box-sizing: border-box;
         }
 
-        .navbar a:hover {
+        .navbar a:hover, .navbar span:hover {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
         }
@@ -65,17 +65,34 @@
             border-bottom-color: #4cc9f0;
         }
 
+        .navbar .has-children > span::after {
+            content: ' ▶';
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+
         #loading-nav {
             color: white;
             padding: 20px;
             text-align: center;
         }
 
-        /* 分隔線樣式（可選） */
-        .navbar .separator {
-            color: rgba(255, 255, 255, 0.3);
-            padding: 0 5px;
-            user-select: none;
+        /* 回主管理層按鈕樣式 */
+        .navbar .back-to-main {
+            background-color: #f72585;
+            color: white !important;
+            font-weight: bold;
+        }
+        .navbar .back-to-main:hover {
+            background-color: #d90464;
+        }
+
+        /* 隱藏不活躍的層級 */
+        .nav-level {
+            display: none;
+        }
+        .nav-level.active {
+            display: contents;
         }
     </style>
 </head>
@@ -90,6 +107,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const navList = document.getElementById('nav-list');
             const loadingIndicator = document.getElementById('loading-nav');
+            let currentLevel = 'main'; // 'main' or the parent ID
+            let linkMap = {};
+            let tree = [];
 
             try {
                 const response = await fetch('/api/admin/nav-links');
@@ -99,8 +119,8 @@
                 const links = await response.json();
 
                 // 建立樹狀結構
-                const linkMap = {};
-                const tree = [];
+                linkMap = {};
+                tree = [];
                 links.forEach(link => { linkMap[link.id] = { ...link, children: [] }; });
                 links.forEach(link => {
                     if (link.parent_id && linkMap[link.parent_id]) {
@@ -110,55 +130,11 @@
                     }
                 });
 
-                // 平面化所有連結，包括子連結
-                const flattenLinks = (items, parentName = '') => {
-                    let flattened = [];
-                    items.sort((a, b) => a.display_order - b.display_order);
-                    
-                    items.forEach(item => {
-                        // 為有父層的項目添加前綴
-                        const displayName = parentName ? `${parentName} > ${item.name}` : item.name;
-                        
-                        // 如果有有效的 URL，就加入到平面列表中
-                        if (item.url && item.url !== '#') {
-                            flattened.push({
-                                ...item,
-                                displayName: displayName
-                            });
-                        }
-                        
-                        // 如果有子項目，遞迴處理
-                        if (item.children.length > 0) {
-                            flattened.push(...flattenLinks(item.children, displayName));
-                        }
-                    });
-                    
-                    return flattened;
-                };
+                // 顯示主層級
+                showLevel('main');
 
-                const flatLinks = flattenLinks(tree);
-
-                // 生成導覽 HTML
-                let html = '';
-                flatLinks.forEach((link, index) => {
-                    if (index > 0) {
-                        html += '<li class="separator">|</li>'; // 添加分隔線
-                    }
-                    html += `<li><a href="${link.url}" target="contentFrame">${link.displayName}</a></li>`;
-                });
-
-                navList.innerHTML = html;
                 if (loadingIndicator) {
                     loadingIndicator.remove();
-                }
-
-                // 添加當前頁面標記（可選）
-                const currentUrl = new URLSearchParams(window.location.search).get('page');
-                if (currentUrl) {
-                    const activeLink = navList.querySelector(`a[href="${currentUrl}"]`);
-                    if (activeLink) {
-                        activeLink.classList.add('active');
-                    }
                 }
 
             } catch (error) {
@@ -167,6 +143,68 @@
                     loadingIndicator.textContent = '載入導覽列失敗';
                 } else {
                     navList.innerHTML = '<li>載入導覽列失敗</li>';
+                }
+            }
+
+            function showLevel(levelId) {
+                let html = '';
+                let items = [];
+
+                if (levelId === 'main') {
+                    items = tree;
+                } else {
+                    // 顯示子層級
+                    const parentItem = linkMap[levelId];
+                    if (parentItem && parentItem.children) {
+                        items = parentItem.children;
+                        // 添加回主管理層按鈕
+                        html += `<li><a href="#" class="back-to-main" data-action="back">← 回主管理層</a></li>`;
+                    }
+                }
+
+                // 生成當前層級的連結
+                items.sort((a, b) => a.display_order - b.display_order);
+                items.forEach(item => {
+                    const hasChildren = item.children.length > 0;
+                    const hasValidUrl = item.url && item.url !== '#';
+
+                    if (hasChildren) {
+                        // 有子選單的項目
+                        html += `<li class="has-children">
+                            <span data-action="drill-down" data-parent-id="${item.id}">${item.name}</span>
+                        </li>`;
+                    } else if (hasValidUrl) {
+                        // 一般連結
+                        html += `<li>
+                            <a href="${item.url}" target="contentFrame">${item.name}</a>
+                        </li>`;
+                    }
+                });
+
+                navList.innerHTML = html;
+                currentLevel = levelId;
+
+                // 重新綁定事件
+                bindEvents();
+            }
+
+            function bindEvents() {
+                // 處理點擊有子選單的項目
+                const drillDownItems = navList.querySelectorAll('[data-action="drill-down"]');
+                drillDownItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        const parentId = this.dataset.parentId;
+                        showLevel(parentId);
+                    });
+                });
+
+                // 處理回主管理層按鈕
+                const backButton = navList.querySelector('[data-action="back"]');
+                if (backButton) {
+                    backButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        showLevel('main');
+                    });
                 }
             }
         });
