@@ -34,13 +34,12 @@
         }
 
         .navbar li {
-            position: relative;
             height: 100%;
             display: flex;
             align-items: center;
         }
 
-        .navbar a, .navbar span {
+        .navbar a {
             display: flex;
             align-items: center;
             color: rgba(255, 255, 255, 0.8);
@@ -55,78 +54,15 @@
             box-sizing: border-box;
         }
 
-        .navbar li.has-children > a::after,
-        .navbar li.has-children > span::after {
-            content: ' ▼';
-            font-size: 0.7em;
-            margin-left: 5px;
-        }
-
-        .navbar a:hover, .navbar span:hover, .navbar li:hover > a, .navbar li:hover > span {
+        .navbar a:hover {
             background-color: rgba(255, 255, 255, 0.1);
             color: white;
         }
+        
         .navbar a.active {
             color: white;
             font-weight: 600;
             border-bottom-color: #4cc9f0;
-        }
-
-        /* --- 關鍵修正：確保子選單正確顯示 --- */
-        .navbar ul ul { /* 子選單 */
-            display: none !important; /* 使用 !important 確保優先級 */
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            min-width: 200px;
-            z-index: 1000;
-            padding: 5px 0;
-            border-radius: 0 0 4px 4px;
-            height: auto;
-            flex-direction: column; /* 子選單內部使用 flex */
-            white-space: normal;
-        }
-
-        /* 顯示下拉選單的 class */
-        .navbar ul ul.show-dropdown {
-            display: flex !important; /* 使用 !important 確保顯示 */
-        }
-
-        .navbar ul ul li {
-            width: 100%;
-            height: auto;
-            display: block; /* 子選單中的 li 使用 block */
-        }
-
-        .navbar ul ul a, .navbar ul ul span {
-            color: #333;
-            padding: 10px 15px;
-            width: 100%;
-            height: auto;
-            display: block;
-            box-sizing: border-box;
-            border-bottom: none;
-        }
-        .navbar ul ul li.has-children > a::after,
-        .navbar ul ul li.has-children > span::after {
-            content: ' ▶';
-            float: right;
-            margin-left: 0;
-        }
-
-        .navbar ul ul a:hover, .navbar ul ul span:hover {
-            background-color: #f0f0f0;
-            color: #000;
-        }
-
-        /* 巢狀下拉選單定位 */
-        .navbar ul ul ul {
-            top: 0;
-            left: 100%;
-            margin-top: -5px;
-            border-radius: 0 4px 4px 4px;
         }
 
         #loading-nav {
@@ -135,9 +71,11 @@
             text-align: center;
         }
 
-        /* 確保父層包含子層 */
-        .navbar .has-children {
-            position: relative;
+        /* 分隔線樣式（可選） */
+        .navbar .separator {
+            color: rgba(255, 255, 255, 0.3);
+            padding: 0 5px;
+            user-select: none;
         }
     </style>
 </head>
@@ -172,86 +110,56 @@
                     }
                 });
 
-                // 遞迴生成 HTML
-                const generateNavHtml = (items) => {
-                    let html = '';
+                // 平面化所有連結，包括子連結
+                const flattenLinks = (items, parentName = '') => {
+                    let flattened = [];
                     items.sort((a, b) => a.display_order - b.display_order);
+                    
                     items.forEach(item => {
-                        const hasChildren = item.children.length > 0;
-                        const isEffectivelyLink = item.url && item.url !== '#' && !hasChildren;
-                        const tagName = isEffectivelyLink ? 'a' : 'span';
-
-                        html += `<li class="${hasChildren ? 'has-children' : ''}">`;
-                        html += `<${tagName} ${isEffectivelyLink ? `href="${item.url}" target="contentFrame"` : ''} ${item.url && item.url !== '#' && hasChildren ? `data-url="${item.url}"` : ''}>${item.name}</${tagName}>`;
-
-                        if (hasChildren) {
-                            html += '<ul>';
-                            html += generateNavHtml(item.children);
-                            html += '</ul>';
+                        // 為有父層的項目添加前綴
+                        const displayName = parentName ? `${parentName} > ${item.name}` : item.name;
+                        
+                        // 如果有有效的 URL，就加入到平面列表中
+                        if (item.url && item.url !== '#') {
+                            flattened.push({
+                                ...item,
+                                displayName: displayName
+                            });
                         }
-                        html += '</li>';
+                        
+                        // 如果有子項目，遞迴處理
+                        if (item.children.length > 0) {
+                            flattened.push(...flattenLinks(item.children, displayName));
+                        }
                     });
-                    return html;
+                    
+                    return flattened;
                 };
 
-                navList.innerHTML = generateNavHtml(tree);
+                const flatLinks = flattenLinks(tree);
+
+                // 生成導覽 HTML
+                let html = '';
+                flatLinks.forEach((link, index) => {
+                    if (index > 0) {
+                        html += '<li class="separator">|</li>'; // 添加分隔線
+                    }
+                    html += `<li><a href="${link.url}" target="contentFrame">${link.displayName}</a></li>`;
+                });
+
+                navList.innerHTML = html;
                 if (loadingIndicator) {
                     loadingIndicator.remove();
                 }
 
-                // 添加點擊事件
-                const parentItems = navList.querySelectorAll('.has-children > a, .has-children > span');
-
-                parentItems.forEach((item, index) => {
-                    item.addEventListener('click', function(event) {
-                        const parentLi = this.closest('li');
-                        const subMenu = this.nextElementSibling;
-
-                        if (subMenu && subMenu.tagName === 'UL') {
-                            // 先關閉所有同層級的其他已開啟選單
-                            const parentUl = parentLi.parentElement;
-                            const siblings = parentUl.querySelectorAll(':scope > li.has-children > ul.show-dropdown');
-                            siblings.forEach(siblingMenu => {
-                                if (siblingMenu !== subMenu) {
-                                    siblingMenu.classList.remove('show-dropdown');
-                                }
-                            });
-
-                            // 切換當前選單狀態
-                            const isOpening = !subMenu.classList.contains('show-dropdown');
-                            subMenu.classList.toggle('show-dropdown');
-
-                            // 如果是打開選單，關閉其內部的所有下層選單
-                            if (isOpening) {
-                               const nestedOpenMenus = subMenu.querySelectorAll('ul.show-dropdown');
-                               nestedOpenMenus.forEach(n => n.classList.remove('show-dropdown'));
-                            }
-
-                            // 如果點擊的父層本身有 data-url，則進行頁面跳轉
-                            const targetUrl = this.dataset.url;
-                            if (targetUrl) {
-                                if (window.parent && window.parent.frames && window.parent.frames['contentFrame']) {
-                                     window.parent.frames['contentFrame'].location.href = targetUrl;
-                                } else {
-                                    console.warn('找不到名為 contentFrame 的 iframe');
-                                }
-                            }
-                            
-                            event.preventDefault();
-                        }
-                        event.stopPropagation();
-                    });
-                });
-
-                // 點擊頁面其他地方關閉所有下拉選單
-                document.addEventListener('click', function(event) {
-                    if (!navList.contains(event.target)) {
-                        const openMenus = navList.querySelectorAll('ul.show-dropdown');
-                        openMenus.forEach(menu => {
-                            menu.classList.remove('show-dropdown');
-                        });
+                // 添加當前頁面標記（可選）
+                const currentUrl = new URLSearchParams(window.location.search).get('page');
+                if (currentUrl) {
+                    const activeLink = navList.querySelector(`a[href="${currentUrl}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
                     }
-                });
+                }
 
             } catch (error) {
                 console.error('無法載入導覽連結:', error);
