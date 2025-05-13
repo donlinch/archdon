@@ -378,7 +378,7 @@ Email:
 
         function normalizeEmail(email) {
             if (!email) return "";
-            let normalized = String(email).toLowerCase();
+            let normalized = String(email).replace(/\s+/g, '').toLowerCase(); // Remove all spaces and convert to lowercase
             const parts = normalized.split('@');
             if (parts.length === 2) {
                 const username = parts[0];
@@ -457,19 +457,41 @@ Email:
             };
             const lines = text.split('\n');
 
+            let payerName = null;
+            let recipientName = null;
+            let address = null;
+            let store = null;
+
             lines.forEach(line => {
-                // Case-insensitive check for labels
                 const lowerLine = line.toLowerCase();
-                if (lowerLine.includes("姓名:")) {
-                    order.name = line.split(/姓名:/i)[1]?.trim() || null;
-                } else if (lowerLine.includes("電話:")) {
-                     order.phone = line.split(/電話:/i)[1]?.trim() || null;
+                if (lowerLine.includes("付款人") && lowerLine.includes(":")) {
+                    payerName = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("收件人") && lowerLine.includes(":")) {
+                    recipientName = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("姓名") && lowerLine.includes(":")) { // Fallback for "姓名:"
+                    if (!recipientName) recipientName = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("手機") && lowerLine.includes(":")) {
+                    order.phone = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("電話") && lowerLine.includes(":")) { // Fallback for "電話:"
+                     if (!order.phone) order.phone = line.split(/:/)[1]?.trim() || null;
                 } else if (lowerLine.includes("email:") || lowerLine.includes("信箱:")) {
                     order.email = line.split(/email:|信箱:/i)[1]?.trim() || null;
-                 } else if (lowerLine.includes("地點:") || lowerLine.includes("地址:")) {
-                    order.location = line.split(/地點:|地址:/i)[1]?.trim() || null;
+                } else if (lowerLine.includes("地址") && lowerLine.includes(":")) {
+                    address = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("超商取貨") && lowerLine.includes(":")) {
+                    store = line.split(/:/)[1]?.trim() || null;
+                } else if (lowerLine.includes("地點") && lowerLine.includes(":")) { // Fallback for "地點:"
+                    if (!address) address = line.split(/:/)[1]?.trim() || null;
                 }
             });
+
+            order.name = recipientName || payerName; // Prioritize recipient name
+
+            if (address && store) {
+                order.location = `${address} ${store}`;
+            } else {
+                order.location = address || store;
+            }
 
             // Fallback regex matches if label extraction fails
             // Use original text for regex to preserve potential format cues
