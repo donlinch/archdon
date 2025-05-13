@@ -23,7 +23,11 @@
     <div class="container">
         <h1>測試留言板 AI 回覆</h1>
 
-        <div class="comment-block">
+        <div class="comment-block" data-comment-id="1">
+            <label for="user-name-1">用戶名稱：</label>
+            <input type="text" id="user-name-1" class="user-name" value="訪客"><br>
+            <label for="first-comment-1">第一則留言：</label>
+            <textarea id="first-comment-1" class="first-comment">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</textarea><br>
             <h3>留言 1 (正面評價)</h3>
             <p class="comment-text" data-comment-id="1">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</p>
             <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
@@ -34,7 +38,11 @@
             <textarea class="manual-reply" id="manual-reply-1" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
         </div>
 
-        <div class="comment-block">
+        <div class="comment-block" data-comment-id="2">
+            <label for="user-name-2">用戶名稱：</label>
+            <input type="text" id="user-name-2" class="user-name" value="訪客"><br>
+            <label for="first-comment-2">第一則留言：</label>
+            <textarea id="first-comment-2" class="first-comment">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</textarea><br>
             <h3>留言 2 (產品詢問)</h3>
             <p class="comment-text" data-comment-id="2">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</p>
             <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
@@ -45,7 +53,11 @@
             <textarea class="manual-reply" id="manual-reply-2" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
         </div>
 
-        <div class="comment-block">
+        <div class="comment-block" data-comment-id="3">
+            <label for="user-name-3">用戶名稱：</label>
+            <input type="text" id="user-name-3" class="user-name" value="訪客"><br>
+            <label for="first-comment-3">第一則留言：</label>
+            <textarea id="first-comment-3" class="first-comment">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</textarea><br>
             <h3>留言 3 (體驗問題)</h3>
             <p class="comment-text" data-comment-id="3">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</p>
             <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
@@ -56,7 +68,11 @@
             <textarea class="manual-reply" id="manual-reply-3" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
         </div>
 
-        <div class="comment-block">
+        <div class="comment-block" data-comment-id="4">
+            <label for="user-name-4">用戶名稱：</label>
+            <input type="text" id="user-name-4" class="user-name" value="訪客"><br>
+            <label for="first-comment-4">第一則留言：</label>
+            <textarea id="first-comment-4" class="first-comment">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</textarea><br>
             <h3>留言 4 (負面意見)</h3>
             <p class="comment-text" data-comment-id="4">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</p>
             <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
@@ -71,9 +87,13 @@
     <script>
         async function getAiReply(buttonElement) {
             const commentBlock = buttonElement.closest('.comment-block');
+            const commentId = commentBlock.dataset.commentId;
             const commentTextElement = commentBlock.querySelector('.comment-text');
             const commentText = commentTextElement.textContent;
-            const commentId = commentTextElement.dataset.commentId;
+            // 抓取用戶名稱
+            const userName = commentBlock.querySelector('.user-name').value;
+            // 抓取第一則留言
+            const firstComment = commentBlock.querySelector('.first-comment').value;
             const suggestionDiv = commentBlock.querySelector(`#suggestion-${commentId}`);
             const manualReplyTextarea = commentBlock.querySelector(`#manual-reply-${commentId}`);
 
@@ -88,7 +108,11 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ commentText: commentText }),
+                    body: JSON.stringify({
+                        commentText: commentText,
+                        userName: userName,
+                        firstComment: firstComment
+                    }),
                 });
 
                 if (!response.ok) {
