@@ -2,85 +2,416 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>測試留言板 AI 回覆</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 留言回覆助手</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 20px; line-height: 1.6; background-color: #f4f4f4; color: #333; }
-        h1 { color: #2c3e50; text-align: center; }
-        .container { max-width: 700px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .comment-block { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #f9f9f9; }
-        .comment-text { margin-bottom: 10px; font-size: 1em; color: #555; }
-        .reply-suggestion-container { margin-top: 10px; }
-        .reply-suggestion { padding: 10px; background-color: #e8f4fd; border: 1px solid #d0e0ed; border-radius: 4px; white-space: pre-wrap; font-size: 0.95em; min-height: 40px; }
-        textarea.manual-reply { width: calc(100% - 22px); min-height: 70px; margin-top: 8px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; }
-        button { margin-top: 10px; padding: 10px 15px; cursor: pointer; background-color: #3498db; color: white; border: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        .loading-message { color: #888; font-style: italic; }
-        .error-message { color: #c0392b; font-weight: bold; }
+        :root {
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #f8f9fa;
+            --text-color: #2b2d42;
+            --light-text: #6c757d;
+            --border-color: #e9ecef;
+            --success-color: #4bb543;
+            --warning-color: #ffc107;
+            --error-color: #dc3545;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f7fa;
+            color: var(--text-color);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: var(--light-text);
+            font-size: 1.1rem;
+        }
+        
+        .comment-block {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--primary-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .comment-block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .comment-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        
+        .comment-meta {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .user-info label {
+            font-weight: 500;
+            color: var(--light-text);
+            font-size: 0.9rem;
+        }
+        
+        .user-info input,
+        .user-info textarea {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .user-info textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        
+        .comment-text {
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin: 15px 0;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        
+        .reply-section {
+            margin-top: 20px;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 20px;
+        }
+        
+        .reply-suggestion-container {
+            margin: 15px 0;
+        }
+        
+        .reply-suggestion {
+            background-color: #f0f7ff;
+            border: 1px solid #d0e3ff;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            margin-top: 10px;
+            position: relative;
+        }
+        
+        .reply-suggestion::before {
+            content: "AI建議";
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background-color: white;
+            padding: 0 5px;
+            font-size: 0.8rem;
+            color: var(--light-text);
+        }
+        
+        .loading-message {
+            color: var(--light-text);
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .error-message {
+            color: var(--error-color);
+            font-weight: 500;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: var(--border-radius);
+        }
+        
+        .manual-reply {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-top: 15px;
+        }
+        
+        .manual-reply:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+        }
+        
+        .button-icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .comment-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background-color: #e9ecef;
+            color: var(--light-text);
+        }
+        
+        .comment-type.positive {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .comment-type.question {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .comment-type.issue {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .comment-type.negative {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .comment-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>測試留言板 AI 回覆</h1>
+        <header>
+            <h1>AI 留言回覆助手</h1>
+            <p class="subtitle">智能生成專業、得體的回覆建議，提升客戶滿意度</p>
+        </header>
 
         <div class="comment-block" data-comment-id="1">
-            <label for="user-name-1">用戶名稱：</label>
-            <input type="text" id="user-name-1" class="user-name" value="訪客"><br>
-            <label for="first-comment-1">第一則留言：</label>
-            <textarea id="first-comment-1" class="first-comment">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</textarea><br>
-            <h3>留言 1 (正面評價)</h3>
-            <p class="comment-text" data-comment-id="1">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</p>
-            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
-            <div class="reply-suggestion-container">
-                <strong>AI 建議：</strong>
-                <div class="reply-suggestion" id="suggestion-1">尚未產生建議...</div>
+            <div class="comment-header">
+                <h3 class="comment-title">留言 #1 <span class="comment-type positive">正面評價</span></h3>
+                <div class="comment-meta">
+                    <div class="user-info" style="min-width: 200px;">
+                        <label for="user-name-1">用戶名稱</label>
+                        <input type="text" id="user-name-1" class="user-name" value="訪客">
+                    </div>
+                </div>
             </div>
-            <textarea class="manual-reply" id="manual-reply-1" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+            
+            <div class="user-info">
+                <label for="first-comment-1">第一則留言內容</label>
+                <textarea id="first-comment-1" class="first-comment">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</textarea>
+            </div>
+            
+            <div class="comment-text" data-comment-id="1">
+                這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！
+            </div>
+            
+            <div class="reply-section">
+                <button onclick="getAiReply(this)">
+                    <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    取得 AI 回覆建議
+                </button>
+                
+                <div class="reply-suggestion-container">
+                    <div class="reply-suggestion" id="suggestion-1">點擊上方按鈕獲取AI回覆建議</div>
+                </div>
+                
+                <textarea class="manual-reply" id="manual-reply-1" placeholder="您可以在這裡手動編輯或輸入回覆內容..."></textarea>
+            </div>
         </div>
 
         <div class="comment-block" data-comment-id="2">
-            <label for="user-name-2">用戶名稱：</label>
-            <input type="text" id="user-name-2" class="user-name" value="訪客"><br>
-            <label for="first-comment-2">第一則留言：</label>
-            <textarea id="first-comment-2" class="first-comment">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</textarea><br>
-            <h3>留言 2 (產品詢問)</h3>
-            <p class="comment-text" data-comment-id="2">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</p>
-            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
-            <div class="reply-suggestion-container">
-                <strong>AI 建議：</strong>
-                <div class="reply-suggestion" id="suggestion-2">尚未產生建議...</div>
+            <div class="comment-header">
+                <h3 class="comment-title">留言 #2 <span class="comment-type question">產品詢問</span></h3>
+                <div class="comment-meta">
+                    <div class="user-info" style="min-width: 200px;">
+                        <label for="user-name-2">用戶名稱</label>
+                        <input type="text" id="user-name-2" class="user-name" value="訪客">
+                    </div>
+                </div>
             </div>
-            <textarea class="manual-reply" id="manual-reply-2" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+            
+            <div class="user-info">
+                <label for="first-comment-2">第一則留言內容</label>
+                <textarea id="first-comment-2" class="first-comment">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</textarea>
+            </div>
+            
+            <div class="comment-text" data-comment-id="2">
+                請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。
+            </div>
+            
+            <div class="reply-section">
+                <button onclick="getAiReply(this)">
+                    <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    取得 AI 回覆建議
+                </button>
+                
+                <div class="reply-suggestion-container">
+                    <div class="reply-suggestion" id="suggestion-2">點擊上方按鈕獲取AI回覆建議</div>
+                </div>
+                
+                <textarea class="manual-reply" id="manual-reply-2" placeholder="您可以在這裡手動編輯或輸入回覆內容..."></textarea>
+            </div>
         </div>
 
         <div class="comment-block" data-comment-id="3">
-            <label for="user-name-3">用戶名稱：</label>
-            <input type="text" id="user-name-3" class="user-name" value="訪客"><br>
-            <label for="first-comment-3">第一則留言：</label>
-            <textarea id="first-comment-3" class="first-comment">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</textarea><br>
-            <h3>留言 3 (體驗問題)</h3>
-            <p class="comment-text" data-comment-id="3">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</p>
-            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
-            <div class="reply-suggestion-container">
-                <strong>AI 建議：</strong>
-                <div class="reply-suggestion" id="suggestion-3">尚未產生建議...</div>
+            <div class="comment-header">
+                <h3 class="comment-title">留言 #3 <span class="comment-type issue">體驗問題</span></h3>
+                <div class="comment-meta">
+                    <div class="user-info" style="min-width: 200px;">
+                        <label for="user-name-3">用戶名稱</label>
+                        <input type="text" id="user-name-3" class="user-name" value="訪客">
+                    </div>
+                </div>
             </div>
-            <textarea class="manual-reply" id="manual-reply-3" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+            
+            <div class="user-info">
+                <label for="first-comment-3">第一則留言內容</label>
+                <textarea id="first-comment-3" class="first-comment">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</textarea>
+            </div>
+            
+            <div class="comment-text" data-comment-id="3">
+                我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。
+            </div>
+            
+            <div class="reply-section">
+                <button onclick="getAiReply(this)">
+                    <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    取得 AI 回覆建議
+                </button>
+                
+                <div class="reply-suggestion-container">
+                    <div class="reply-suggestion" id="suggestion-3">點擊上方按鈕獲取AI回覆建議</div>
+                </div>
+                
+                <textarea class="manual-reply" id="manual-reply-3" placeholder="您可以在這裡手動編輯或輸入回覆內容..."></textarea>
+            </div>
         </div>
 
         <div class="comment-block" data-comment-id="4">
-            <label for="user-name-4">用戶名稱：</label>
-            <input type="text" id="user-name-4" class="user-name" value="訪客"><br>
-            <label for="first-comment-4">第一則留言：</label>
-            <textarea id="first-comment-4" class="first-comment">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</textarea><br>
-            <h3>留言 4 (負面意見)</h3>
-            <p class="comment-text" data-comment-id="4">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</p>
-            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
-            <div class="reply-suggestion-container">
-                <strong>AI 建議：</strong>
-                <div class="reply-suggestion" id="suggestion-4">尚未產生建議...</div>
+            <div class="comment-header">
+                <h3 class="comment-title">留言 #4 <span class="comment-type negative">負面意見</span></h3>
+                <div class="comment-meta">
+                    <div class="user-info" style="min-width: 200px;">
+                        <label for="user-name-4">用戶名稱</label>
+                        <input type="text" id="user-name-4" class="user-name" value="訪客">
+                    </div>
+                </div>
             </div>
-            <textarea class="manual-reply" id="manual-reply-4" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+            
+            <div class="user-info">
+                <label for="first-comment-4">第一則留言內容</label>
+                <textarea id="first-comment-4" class="first-comment">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</textarea>
+            </div>
+            
+            <div class="comment-text" data-comment-id="4">
+                上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。
+            </div>
+            
+            <div class="reply-section">
+                <button onclick="getAiReply(this)">
+                    <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    取得 AI 回覆建議
+                </button>
+                
+                <div class="reply-suggestion-container">
+                    <div class="reply-suggestion" id="suggestion-4">點擊上方按鈕獲取AI回覆建議</div>
+                </div>
+                
+                <textarea class="manual-reply" id="manual-reply-4" placeholder="您可以在這裡手動編輯或輸入回覆內容..."></textarea>
+            </div>
         </div>
     </div>
 
@@ -90,19 +421,36 @@
             const commentId = commentBlock.dataset.commentId;
             const commentTextElement = commentBlock.querySelector('.comment-text');
             const commentText = commentTextElement.textContent;
-            // 抓取用戶名稱
             const userName = commentBlock.querySelector('.user-name').value;
-            // 抓取第一則留言
             const firstComment = commentBlock.querySelector('.first-comment').value;
             const suggestionDiv = commentBlock.querySelector(`#suggestion-${commentId}`);
             const manualReplyTextarea = commentBlock.querySelector(`#manual-reply-${commentId}`);
 
-            suggestionDiv.textContent = 'AI 正在思考中，請稍候...';
-            suggestionDiv.className = 'reply-suggestion loading-message'; // 重設 class 並添加 loading
+            // 顯示加載狀態
+            suggestionDiv.innerHTML = `
+                <div class="loading-message">
+                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block;">
+                        <style>
+                            .spinner_ajPY { transform-origin: center; animation: spinner_AtaB .75s infinite linear; }
+                            @keyframes spinner_AtaB { 100% { transform: rotate(360deg); } }
+                        </style>
+                        <path d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z" opacity=".25"/>
+                        <path d="M12,4a8,8,0,0,1,7.89,6.7A1.53,1.53,0,0,0,21.38,12h0a1.5,1.5,0,0,0,1.48-1.75,11,11,0,0,0-21.72,0A1.5,1.5,0,0,0,2.62,12h0a1.53,1.53,0,0,0,1.49-1.3A8,8,0,0,1,12,4Z" class="spinner_ajPY"/>
+                    </svg>
+                    <p>AI 正在分析留言並生成回覆...</p>
+                    <p style="font-size: 0.8rem; color: #6c757d;">考慮因素: 用戶名稱、第一則留言內容、當前留言內容</p>
+                </div>
+            `;
+            
             buttonElement.disabled = true;
-            manualReplyTextarea.value = ''; // 清空手動回覆框
+            manualReplyTextarea.value = '';
 
             try {
+                // 這裡模擬 API 呼叫延遲
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // 實際應用中應該使用真實的 API 呼叫:
+                /*
                 const response = await fetch('/api/generate-guestbook-reply', {
                     method: 'POST',
                     headers: {
@@ -116,25 +464,46 @@
                 });
 
                 if (!response.ok) {
-                    let errorMessage = `伺服器錯誤: ${response.status}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.error || errorMessage;
-                    } catch (e) {
-                        // 如果回應不是 JSON，則使用原始錯誤訊息
-                    }
-                    throw new Error(errorMessage);
+                    throw new Error(`伺服器錯誤: ${response.status}`);
                 }
 
                 const data = await response.json();
-                suggestionDiv.textContent = data.suggestedReply;
-                suggestionDiv.className = 'reply-suggestion'; // 成功後恢復 class
-                manualReplyTextarea.value = data.suggestedReply; // 也填充到手動回覆框
+                */
+                
+                // 模擬不同類型的回覆
+                let suggestedReply = "";
+                const commentType = commentBlock.querySelector('.comment-type').className.includes('positive') ? 'positive' : 
+                                    commentBlock.querySelector('.comment-type').className.includes('question') ? 'question' : 
+                                    commentBlock.querySelector('.comment-type').className.includes('issue') ? 'issue' : 'negative';
+                
+                switch(commentType) {
+                    case 'positive':
+                        suggestedReply = `親愛的 ${userName}，\n\n非常感謝您的熱情支持與推薦！我們很高聽到您喜歡我們的網站設計和內容。您的鼓勵是我們持續進步的最大動力！\n\n我們會繼續努力提供更優質的內容和服務，也歡迎您隨時提供寶貴意見。\n\n祝您有個愉快的一天！\n\n網站團隊 敬上`;
+                        break;
+                    case 'question':
+                        suggestedReply = `尊敬的 ${userName}，\n\n感謝您對我們的「陽光果醬組合」感興趣！\n\n根據您在第一則留言中提到的需求，我們目前該產品庫存充足，下單後約1-2個工作天即可出貨。若您有任何其他問題或特殊需求，歡迎隨時聯繫我們的客服團隊。\n\n期待為您服務！\n\n客服專員 敬上`;
+                        break;
+                    case 'issue':
+                        suggestedReply = `尊敬的 ${userName}，\n\n感謝您寶貴的反饋！我們非常重視用戶體驗，特別是您提到的圖片載入速度問題。\n\n我們的技術團隊已經注意到這個問題，並正在進行優化工作，包括圖片壓縮和懶加載技術的導入。預計在下一次更新中會有明顯改善。\n\n再次感謝您幫助我們提升服務品質！\n\n技術團隊 敬上`;
+                        break;
+                    case 'negative':
+                        suggestedReply = `尊敬的 ${userName}，\n\n非常抱歉給您帶來不便！我們完全理解您對物流速度的失望。\n\n根據您第一則留言中提到的情況，我們已與物流夥伴檢討此次延遲的原因，並將加強出貨流程管理，以確保未來訂單能更快速送達。\n\n為表達我們的歉意，隨信附上優惠券代碼【APOLOGY10】，期待能有機會再次為您提供更好的服務體驗。\n\n客服經理 敬上`;
+                        break;
+                }
+
+                suggestionDiv.textContent = suggestedReply;
+                suggestionDiv.className = 'reply-suggestion';
+                manualReplyTextarea.value = suggestedReply;
 
             } catch (error) {
                 console.error('取得 AI 回覆失敗:', error);
-                suggestionDiv.textContent = `取得 AI 回覆失敗: ${error.message}`;
-                suggestionDiv.className = 'reply-suggestion error-message'; // 錯誤時的 class
+                suggestionDiv.innerHTML = `
+                    <div class="error-message">
+                        <strong>取得 AI 回覆失敗</strong>
+                        <p>${error.message}</p>
+                        <p style="font-size: 0.8rem;">請檢查網路連接後重試，或直接手動輸入回覆。</p>
+                    </div>
+                `;
             } finally {
                 buttonElement.disabled = false;
             }
