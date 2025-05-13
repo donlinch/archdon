@@ -781,7 +781,7 @@ Email:
         /**
          * Handle click on Add/Edit button.
          */
-        function handleAddEditClick() {
+        async function handleAddEditClick() {
             const name = nameInput.value.trim();
             const phone = phoneInput.value.trim();
             const email = emailInput.value.trim();
@@ -793,82 +793,90 @@ Email:
                 return;
             }
 
-            // Normalize inputs for potential duplicate check
-             const normalizedNewItem = {
-                  name: normalizeName(name),
-                  phone: normalizePhone(phone),
-                  email: normalizeEmail(email),
-                  location: normalizeLocation(location)
-             };
+            const itemData = { name, phone, email, location };
 
-            if (itemId) { // Edit mode
-                // Find the item by its unique ID
-                const itemIndex = blacklist.findIndex(item => String(item.id) === itemId);
-                if (itemIndex !== -1) {
-                     // Optional: Check if the updated item is a duplicate of another item (excluding itself)
-                     const exists = blacklist.some((item, index) =>
-                         index !== itemIndex && // Don't compare with itself
-                          normalizeName(item.name) === normalizedNewItem.name &&
-                          normalizePhone(item.phone) === normalizedNewItem.phone &&
-                          normalizeEmail(item.email) === normalizedNewItem.email &&
-                          normalizeLocation(item.location) === normalizedNewItem.location
-                     );
-                     if (exists) {
-                         alert("更新後的黑名單項目似乎已經與列表中其他項目重複。");
-                         return; // Prevent saving duplicate
-                     }
+            try {
+                let response;
+                let successMessage = "";
 
-
-                    blacklist[itemIndex] = {
-                        id: blacklist[itemIndex].id, // Keep the original unique ID
-                        name: name,
-                        phone: phone,
-                        email: email,
-                        location: location
+                if (itemId) { // Edit mode
+                    // Optional: Client-side duplicate check before sending to API
+                    const normalizedNewItem = {
+                        name: normalizeName(name),
+                        phone: normalizePhone(phone),
+                        email: normalizeEmail(email),
+                        location: normalizeLocation(location)
                     };
-                    alert("黑名單項目已更新。");
-                } else {
-                    alert("錯誤：找不到要編輯的黑名單項目。");
+                    const exists = blacklist.some(item =>
+                        String(item.id) !== itemId && // Don't compare with itself
+                        normalizeName(item.name) === normalizedNewItem.name &&
+                        normalizePhone(item.phone) === normalizedNewItem.phone &&
+                        normalizeEmail(item.email) === normalizedNewItem.email &&
+                        normalizeLocation(item.location) === normalizedNewItem.location
+                    );
+                    if (exists) {
+                        alert("更新後的黑名單項目似乎已經與列表中其他項目重複。");
+                        return;
+                    }
+
+                    response = await fetch(`/api/blacklist/${itemId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(itemData)
+                    });
+                    successMessage = "黑名單項目已更新。";
+                } else { // Add mode
+                    // Optional: Client-side duplicate check before sending to API
+                     const normalizedNewItem = {
+                        name: normalizeName(name),
+                        phone: normalizePhone(phone),
+                        email: normalizeEmail(email),
+                        location: normalizeLocation(location)
+                    };
+                    const exists = blacklist.some(item =>
+                        normalizeName(item.name) === normalizedNewItem.name &&
+                        normalizePhone(item.phone) === normalizedNewItem.phone &&
+                        normalizeEmail(item.email) === normalizedNewItem.email &&
+                        normalizeLocation(item.location) === normalizedNewItem.location
+                    );
+                    if (exists) {
+                        alert("這個黑名單項目似乎已經存在。");
+                        const existingItem = blacklist.find(item =>
+                            normalizeName(item.name) === normalizedNewItem.name &&
+                            normalizePhone(item.phone) === normalizedNewItem.phone &&
+                            normalizeEmail(item.email) === normalizedNewItem.email &&
+                            normalizeLocation(item.location) === normalizedNewItem.location
+                        );
+                        if (existingItem) {
+                            handleEditClick({ target: { dataset: { id: existingItem.id } } });
+                        }
+                        return;
+                    }
+
+                    response = await fetch('/api/blacklist', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(itemData)
+                    });
+                    successMessage = "新的黑名單項目已加入。";
                 }
-                 // Reset form to Add mode
-                 resetForm();
-            } else { // Add mode
-                 // Simple check for exact duplicates before adding (normalized)
-                 const exists = blacklist.some(item =>
-                      normalizeName(item.name) === normalizedNewItem.name &&
-                      normalizePhone(item.phone) === normalizedNewItem.phone &&
-                      normalizeEmail(item.email) === normalizedNewItem.email &&
-                      normalizeLocation(item.location) === normalizedNewItem.location
-                 );
-                 if (exists) {
-                     alert("這個黑名單項目似乎已經存在。");
-                     // Optionally populate the form with the existing item for easier editing
-                     const existingItem = blacklist.find(item =>
-                         normalizeName(item.name) === normalizedNewItem.name &&
-                         normalizePhone(item.phone) === normalizedNewItem.phone &&
-                         normalizeEmail(item.email) === normalizedNewItem.email &&
-                         normalizeLocation(item.location) === normalizedNewItem.location
-                     );
-                     if (existingItem) {
-                         handleEditClick({ target: { dataset: { id: existingItem.id } } }); // Simulate clicking edit button
-                     }
-                     return;
-                 }
 
-                const newItem = {
-                    id: Date.now() + Math.random(), // Generate a unique ID using timestamp + random for safety
-                    name: name,
-                    phone: phone,
-                    email: email,
-                    location: location
-                };
-                blacklist.push(newItem);
-                alert("新的黑名單項目已加入。");
-                 resetForm(); // Clear form fields
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || (itemId ? '更新失敗' : '新增失敗'));
+                }
+
+                // Assuming the API returns the created/updated item or at least a success status
+                // We should reload the blacklist from the server to ensure data consistency
+                await loadBlacklist(); // Reload data from server
+                renderBlacklistTable();
+                resetForm();
+                alert(successMessage);
+
+            } catch (err) {
+                console.error("Error saving blacklist item:", err);
+                alert(`儲存失敗: ${err.message}`);
             }
-
-            saveBlacklist();
-            renderBlacklistTable();
         }
 
         /**
