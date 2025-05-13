@@ -4826,62 +4826,86 @@ app.post('/api/guestbook/reply/:id/report', async (req, res) => {
 
 
 
-
-
-// --- 新增 API 端點：產生留言板回覆建議 ---
+// 在 server.js 中修改 /api/generate-guestbook-reply
 app.post('/api/generate-guestbook-reply', async (req, res) => {
-    if (!geminiModel) { // 檢查 AI 模型是否已成功初始化
-        console.warn("[API /api/generate-guestbook-reply] Attempted to use AI service but it's not available or not initialized.");
-        return res.status(503).json({ error: "AI 服務目前不可用，請檢查伺服器日誌以了解詳細資訊。" });
+    if (!geminiModel) {
+        console.warn("[API /api/generate-guestbook-reply] AI service not available.");
+        return res.status(503).json({ error: "AI 服務目前不可用。" });
     }
 
-    const { commentText } = req.body; // 從前端請求的 body 中獲取留言內容
+    const {
+        mainMessageAuthor,     // 主留言作者 (可選)
+        mainMessageContent,    // 主留言內容 (可選，但通常會有)
+        quotedReplyContent,    // 被引用的回覆內容 (可選)
+        currentReplyDraft,     // 回覆框中已有的草稿 (可選)
+        targetCommentForReply  // AI 主要針對這則留言進行回覆 (必填)
+    } = req.body;
 
-    if (!commentText || typeof commentText !== 'string' || commentText.trim() === '') {
-        return res.status(400).json({ error: "留言內容為必填項且必須是字串。" });
+    if (!targetCommentForReply || typeof targetCommentForReply !== 'string' || targetCommentForReply.trim() === '') {
+        return res.status(400).json({ error: "目標回覆留言內容為必填項。" });
     }
+
+    // 清理和準備上下文變數
+    const author = (mainMessageAuthor && typeof mainMessageAuthor === 'string') ? mainMessageAuthor.trim() : "某位用戶";
+    const mainMsg = (mainMessageContent && typeof mainMessageContent === 'string') ? mainMessageContent.trim() : null;
+    const quotedMsg = (quotedReplyContent && typeof quotedReplyContent === 'string') ? quotedReplyContent.trim() : null;
+    const draft = (currentReplyDraft && typeof currentReplyDraft === 'string') ? currentReplyDraft.trim() : null;
 
     try {
-        // 設計你的提示 (Prompt Engineering 很重要！)
-        // 這個提示告訴 AI 它的角色以及如何回應
+        let contextForPrompt = "";
+
+        if (mainMsg) {
+            contextForPrompt += `這是整個討論串的背景，由「${author}」發起的主留言：\n"""\n${mainMsg}\n"""\n\n`;
+        }
+
+        if (quotedMsg && quotedMsg !== mainMsg) { // 如果引用了且不是主留言本身
+            contextForPrompt += `你正在回覆的（或引用的）是這則留言：\n"""\n${quotedMsg}\n"""\n\n`;
+        } else if (!quotedMsg && mainMsg === targetCommentForReply) { // 如果沒有引用，且目標是主留言
+             contextForPrompt += `你正在直接回覆上述由「${author}」發起的主留言。\n\n`;
+        } else if (quotedMsg && quotedMsg === mainMsg && mainMsg === targetCommentForReply) { // 如果引用了主留言
+             contextForPrompt += `你正在回覆（或引用）上述由「${author}」發起的主留言。\n\n`;
+        }
+
+
+        let taskInstruction = `現在，請針對以下這則留言內容，草擬一個回覆：\n"""\n${targetCommentForReply}\n"""\n\n`;
+
+        if (draft) {
+            taskInstruction += `我已經寫了開頭：「${draft}」，請你接著這個開頭繼續撰寫，或者以此為基礎提供一個更完整的建議。\n\n`;
+        }
+
         const prompt = `
             你是一位專業且友善的網站 (名為 Sunnyyummy) 客服小編。
-            一位訪客在網站的留言板留下了以下訊息：
-            """
-            ${commentText}
-            """
-
-            請針對這則留言，草擬一個專業、有禮貌、簡潔且具體的建議回覆。
-            - 如果留言是問題，請嘗試提供有用的資訊或引導訪客找到答案。
+            以下是留言板上的一些對話上下文：
+            ${contextForPrompt}
+            你的任務：
+            ${taskInstruction}
+            請遵循以下指示來生成回覆建議：
+            - 回覆應針對「${targetCommentForReply.substring(0, 50)}...」這則留言。
+            - 如果有提供「我已經寫了開頭...」，請盡量自然地延續或優化該開頭。
+            - 保持專業、有禮貌、簡潔且具體的風格。
+            - 如果留言是問題，嘗試提供有用的資訊或引導。
             - 如果是意見或讚美，請表示感謝。
-            - 如果是不滿或抱怨，請先表達歉意，並說明會如何處理或進一步了解情況。
+            - 如果是不滿或抱怨，請先表達歉意，並說明會如何處理或了解情況。
             - 回覆應保持正面和建設性的語氣。
-            - 回覆內容盡量在 2-4 句話之間。
+            - 回覆內容盡量在 2-5 句話之間。
 
             建議回覆：
         `;
 
-        console.log(`[API /api/generate-guestbook-reply] Sending prompt to Gemini for comment: "${commentText.substring(0, 70)}..."`);
+        console.log(`[API /generate-guestbook-reply] Sending prompt to Gemini. Target: "${targetCommentForReply.substring(0, 50)}...", Draft: "${draft ? draft.substring(0,30)+'...' : 'N/A'}"`);
         
         const result = await geminiModel.generateContent(prompt);
         const response = await result.response;
-        const suggestedReply = response.text();
+        const suggestedReplyText = response.text();
 
-        console.log(`[API /api/generate-guestbook-reply] Received reply from Gemini: "${suggestedReply.substring(0, 70)}..."`);
-        res.json({ suggestedReply: suggestedReply.trim() });
+        console.log(`[API /generate-guestbook-reply] Received reply from Gemini: "${suggestedReplyText.substring(0, 70)}..."`);
+        res.json({ suggestedReply: suggestedReplyText.trim() }); // 返回的鍵名改為 suggestedReply
 
     } catch (error) {
-        console.error('[API /api/generate-guestbook-reply] Error generating AI reply:', error.response ? error.response.data : error.message);
-        // 打印更詳細的錯誤堆疊信息，方便調試
-        if (error.stack) {
-            console.error(error.stack);
-        }
-        res.status(500).json({ error: 'AI 回覆建議生成失敗，請稍後再試或聯繫管理員。' });
+        console.error('[API /generate-guestbook-reply] Error generating AI reply:', error.response ? error.response.data : error.message, error.stack);
+        res.status(500).json({ error: 'AI 回覆建議生成失敗。' });
     }
 });
-// --- END OF AI Reply Endpoint ---
-
-
 
 
 
