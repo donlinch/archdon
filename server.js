@@ -30,8 +30,7 @@ const voitRouter = express.Router();
 
 // --- START OF Gemini AI Integration ---
 // 從環境變數讀取 API Key (你在 Render 環境設定中設定的是 google_api_key)
-const GEMINI_API_KEY = process.env.google_api_key; // <--- 請確認這個名稱與你在 Render 環境變數中設定的完全一致。從你的截圖看是 google_api_key，如果是，請改成：
-                                                       // const GEMINI_API_KEY = process.env.google_api_key;
+const GEMINI_API_KEY = process.env.gooogle_api_key;  
 let genAI;
 let geminiModel;
 
