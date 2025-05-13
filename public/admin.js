@@ -204,29 +204,32 @@ document.addEventListener('DOMContentLoaded', () => {
         openEditModal(id); 
     };
 
-// --- 修改刪除商品功能 ---
-window.deleteProduct = async function(id) { 
-    if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) { 
-        try { 
-            const response = await fetch(`/api/products/${id}`, { method: 'DELETE' }); 
-            if (response.status === 204 || response.ok) { 
-                await fetchAndDisplayProducts(); 
-                await fetchCategories();
-            } else { 
-                let errorMsg = `刪除失敗 (HTTP ${response.status})`; 
-                try { 
-                    const errorData = await response.json(); 
-                    errorMsg = errorData.error || errorMsg; 
-                } catch (e) { 
-                    errorMsg = `${errorMsg}: ${response.statusText}`; 
-                } 
-                throw new Error(errorMsg); 
-            } 
-        } catch (error) { 
-            alert(`刪除時發生錯誤：${error.message}`); 
-        } 
-    }
-};
+
+    // --- 修改：刪除商品函數 ---
+    window.deleteProduct = async function(id) {
+        if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
+            try {
+                // --- 主要更改點 ---
+                const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+                // --- 更改結束 ---
+                if (response.status === 204 || response.ok) {
+                    await fetchAndDisplayProducts();
+                    await fetchCategories();
+                } else {
+                    let errorMsg = `刪除失敗 (HTTP ${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = `${errorMsg}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                alert(`刪除時發生錯誤：${error.message}`);
+            }
+        }
+    };
     // --- Attach Show Add Form Function to Global Scope ---
     window.showAddForm = function() {
         const requiredAddElements = [addModal, addForm, addProductName, addProductDescription, addProductPrice, addProductCategory, addProductImageUrl, addProductSevenElevenUrl, addFormError]; 
@@ -248,29 +251,37 @@ window.deleteProduct = async function(id) {
     }
 
 
-    // --- Edit Form Submission Listener ---
+
+
+
+
+
+
+
+
+
+    // --- 修改：編輯商品表單提交監聽器 ---
     if (editForm) {
         editForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); 
-            editFormError.textContent = ''; 
-            
-            const productId = editProductId.value; 
-            if (!productId) { 
-                editFormError.textContent = '錯誤：找不到商品 ID。'; 
-                return; 
-            } 
-            
-            let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value); 
-            const updatedData = { 
-                name: editProductName.value.trim(), 
-                description: editProductDescription.value.trim(), 
-                price: priceValue, 
+            event.preventDefault();
+            editFormError.textContent = '';
+
+            const productId = editProductId.value;
+            if (!productId) {
+                editFormError.textContent = '錯誤：找不到商品 ID。';
+                return;
+            }
+
+            let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
+            const updatedData = {
+                name: editProductName.value.trim(),
+                description: editProductDescription.value.trim(),
+                price: priceValue,
                 category: editProductCategory.value.trim() || null,
-                image_url: editProductImageUrl.value.trim() || null, 
-                seven_eleven_url: editProductSevenElevenUrl.value.trim() || null 
-            }; 
-            
-            // 收集已勾選的標籤
+                image_url: editProductImageUrl.value.trim() || null,
+                seven_eleven_url: editProductSevenElevenUrl.value.trim() || null
+            };
+
             if (editTagsContainer) {
                 const selectedTags = [];
                 const checkboxes = editTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
@@ -279,9 +290,9 @@ window.deleteProduct = async function(id) {
                 });
                 updatedData.tags = selectedTags;
             }
-            
-            if (!updatedData.name) { 
-                editFormError.textContent = '商品名稱不能為空。'; 
+
+            if (!updatedData.name) {
+                editFormError.textContent = '商品名稱不能為空。';
                 return; 
             } 
             
@@ -302,7 +313,7 @@ window.deleteProduct = async function(id) {
             } 
             
             try { 
-                const response = await fetch(`/api/products/${productId}`, {
+                const response = await fetch(`/api/admin/products/${productId}`, {
                     method: 'PUT', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(updatedData) 
@@ -328,36 +339,36 @@ window.deleteProduct = async function(id) {
         console.error("編輯表單元素未找到。"); 
     }
 
-    // --- 修改新增商品表單提交邏輯 ---
-if (addForm) {
-    addForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); 
-        addFormError.textContent = ''; 
-        
-        let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value); 
-        const newData = { 
-            name: addProductName.value.trim(), 
-            description: addProductDescription.value.trim(), 
-            price: priceValue, 
-            category: addProductCategory.value.trim() || null,
-            image_url: addProductImageUrl.value.trim() || null, 
-            seven_eleven_url: addProductSevenElevenUrl.value.trim() || null 
-        }; 
-        
-        // 收集已勾選的標籤
-        if (addTagsContainer) {
-            const selectedTags = [];
-            const checkboxes = addTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
-            checkboxes.forEach(checkbox => {
-                selectedTags.push(parseInt(checkbox.value, 10));
-            });
-            newData.tags = selectedTags;
-        }
-        
-        if (!newData.name) { 
-            addFormError.textContent = '商品名稱不能為空。'; 
-            return; 
-        } 
+ 
+    // --- 修改：新增商品表單提交監聽器 ---
+    if (addForm) {
+        addForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            addFormError.textContent = '';
+
+            let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value);
+            const newData = {
+                name: addProductName.value.trim(),
+                description: addProductDescription.value.trim(),
+                price: priceValue,
+                category: addProductCategory.value.trim() || null,
+                image_url: addProductImageUrl.value.trim() || null,
+                seven_eleven_url: addProductSevenElevenUrl.value.trim() || null
+            };
+
+            if (addTagsContainer) {
+                const selectedTags = [];
+                const checkboxes = addTagsContainer.querySelectorAll('input[type="checkbox"]:checked');
+                checkboxes.forEach(checkbox => {
+                    selectedTags.push(parseInt(checkbox.value, 10));
+                });
+                newData.tags = selectedTags;
+            }
+
+            if (!newData.name) {
+                addFormError.textContent = '商品名稱不能為空。';
+                return;
+            }
         
         if (newData.price !== null && isNaN(newData.price)) { 
             addFormError.textContent = '價格必須是有效的數字。'; 
@@ -376,7 +387,7 @@ if (addForm) {
         } 
         
         try { 
-            const response = await fetch('/api/products', { 
+                const response = await fetch('/api/admin/products', {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(newData) 
