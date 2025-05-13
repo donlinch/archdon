@@ -2,18 +2,220 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 開箱文產生器</title>
     <style>
-        /* (可以沿用 testguest.html 的 CSS 或自行設計) */
-        body { font-family: sans-serif; margin: 20px; background-color: #f8f9fa; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        textarea { width: 98%; min-height: 100px; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="file"] { margin-bottom: 10px; }
-        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:disabled { background-color: #ccc; }
-        #result { margin-top: 20px; padding: 15px; background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 4px; white-space: pre-wrap; }
-        .preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
-        .preview-container img { max-width: 150px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px; object-fit: cover; }
+        :root {
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #3f37c9;
+            --light-gray: #f8f9fa;
+            --medium-gray: #e9ecef;
+            --dark-gray: #6c757d;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: var(--light-gray);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--white);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 2rem;
+        }
+        
+        h2 {
+            color: var(--secondary-color);
+            margin: 20px 0 15px;
+            font-size: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-gray);
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 1px solid var(--medium-gray);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        input[type="file"] {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px dashed var(--medium-gray);
+            border-radius: var(--border-radius);
+            background-color: var(--light-gray);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background-color: var(--dark-gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--light-gray);
+            border: 1px solid var(--medium-gray);
+            border-radius: var(--border-radius);
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .preview-container img {
+            width: 100%;
+            max-width: 150px;
+            height: 150px;
+            border: 1px solid var(--medium-gray);
+            border-radius: var(--border-radius);
+            object-fit: cover;
+            box-shadow: var(--shadow);
+        }
+        
+        #loading {
+            display: none;
+            margin: 15px 0;
+            padding: 15px;
+            background-color: rgba(67, 97, 238, 0.1);
+            border-radius: var(--border-radius);
+            text-align: center;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* 手機版樣式 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 15px;
+            }
+            
+            h2 {
+                font-size: 1.3rem;
+            }
+            
+            button {
+                padding: 10px 15px;
+                min-width: 100%;
+            }
+            
+            .preview-container img {
+                max-width: 120px;
+                height: 120px;
+            }
+            
+            #result {
+                padding: 15px;
+                font-size: 0.95rem;
+            }
+            
+            textarea {
+                min-height: 100px;
+                font-size: 0.95rem;
+            }
+        }
+        
+        /* 載入動畫 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(67, 97, 238, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 
@@ -22,41 +224,52 @@
         <h1>AI 內容助手</h1>
         <form id="contentForm">
             <div>
-                <label for="images">上傳照片 (最多3張):</label><br>
+                <label for="images">上傳照片 (最多3張):</label>
                 <input type="file" id="images" name="images" multiple accept="image/*">
                 <div class="preview-container" id="imagePreviewContainer"></div>
             </div>
             <div>
-                <label for="description">額外描述 (可選):</label><br>
-                <textarea id="description" name="description" placeholder="例如：這是一款新的無線耳機..."></textarea>
+                <label for="description">額外描述 (可選):</label>
+                <textarea id="description" name="description" placeholder="例如：這是一款新的無線耳機，音質清晰，電池續航力強..."></textarea>
             </div>
-            <!-- 修改：兩個按鈕 -->
-            <button type="button" id="generateIntroButton">幫我想怎麼介紹 (開箱文)</button>
-            <button type="button" id="identifyButton">告訴我這是什麼 (圖片識別)</button>
+            <div class="button-group">
+                <button type="button" id="generateIntroButton">
+                    <span class="button-text">幫我想怎麼介紹</span>
+                </button>
+                <button type="button" id="identifyButton">
+                    <span class="button-text">告訴我這是什麼</span>
+                </button>
+            </div>
         </form>
-        <div id="loading" style="display:none; margin-top:10px;">AI 正在處理中，請稍候...</div>
+        <div id="loading">
+            <div class="loading-spinner"></div>
+            <span>AI 正在處理中，請稍候...</span>
+        </div>
         <h2>AI 回覆:</h2>
         <div id="result">這裡將顯示 AI 的回覆...</div>
     </div>
 
     <script>
-        const contentForm = document.getElementById('contentForm'); // 改名以更通用
+        const contentForm = document.getElementById('contentForm');
         const generateIntroButton = document.getElementById('generateIntroButton');
         const identifyButton = document.getElementById('identifyButton');
         const resultDiv = document.getElementById('result');
         const loadingDiv = document.getElementById('loading');
         const imageInput = document.getElementById('images');
         const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const buttonTexts = document.querySelectorAll('.button-text');
 
-        // 圖片預覽邏輯 (同前)
+        // 圖片預覽邏輯
         imageInput.addEventListener('change', function(event) {
             imagePreviewContainer.innerHTML = '';
             const files = event.target.files;
+            
             if (files.length > 3) {
                 alert('最多只能選擇 3 張圖片！');
                 imageInput.value = '';
                 return;
             }
+            
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 if (file) {
@@ -75,41 +288,41 @@
         generateIntroButton.addEventListener('click', () => handleGeneration('generate_introduction'));
         identifyButton.addEventListener('click', () => handleGeneration('identify_content'));
 
-        async function handleGeneration(intent) { // intent: 'generate_introduction' 或 'identify_content'
-            generateIntroButton.disabled = true;
-            identifyButton.disabled = true;
+        async function handleGeneration(intent) {
+            // 禁用按鈕並顯示載入狀態
+            disableButtons(true);
+            buttonTexts.forEach(text => text.textContent = '處理中...');
             loadingDiv.style.display = 'block';
             resultDiv.textContent = 'AI 正在處理中...';
 
             const formData = new FormData();
             const files = imageInput.files;
 
+            // 驗證
             if (files.length === 0) {
                 alert('請至少上傳一張圖片。');
-                disableButtons(false);
-                loadingDiv.style.display = 'none';
+                resetUI();
                 resultDiv.textContent = '請先上傳圖片。';
                 return;
             }
-             if (files.length > 3) {
+            
+            if (files.length > 3) {
                 alert('最多只能上傳 3 張圖片。');
-                disableButtons(false);
-                loadingDiv.style.display = 'none';
+                resetUI();
                 resultDiv.textContent = '圖片數量超過限制。';
                 return;
             }
 
-
+            // 準備表單數據
             for (let i = 0; i < files.length; i++) {
                 formData.append('images', files[i]);
             }
             formData.append('description', document.getElementById('description').value);
-            formData.append('intent', intent); // <--- 新增：傳遞意圖
+            formData.append('intent', intent);
 
             try {
-                // 注意：後端 API 端點名稱可能需要保持一致，或者根據意圖呼叫不同端點
-                // 這裡假設還是使用同一個端點，由後端根據 intent 參數判斷
-                const response = await fetch('/api/generate-unboxing-post', { // 或者一個更通用的名稱如 /api/analyze-and-generate
+                // 發送請求
+                const response = await fetch('/api/generate-unboxing-post', {
                     method: 'POST',
                     body: formData,
                 });
@@ -125,7 +338,7 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    resultDiv.textContent = data.generatedText; // 後端返回的鍵名改為更通用的 generatedText
+                    resultDiv.textContent = data.generatedText;
                 } else {
                     resultDiv.textContent = `產生失敗: ${data.error || '未知錯誤'}`;
                 }
@@ -134,14 +347,20 @@
                 console.error('內容產生失敗:', error);
                 resultDiv.textContent = `發生錯誤: ${error.message}`;
             } finally {
-                disableButtons(false);
-                loadingDiv.style.display = 'none';
+                resetUI();
             }
         }
 
         function disableButtons(disabled) {
             generateIntroButton.disabled = disabled;
             identifyButton.disabled = disabled;
+        }
+        
+        function resetUI() {
+            disableButtons(false);
+            buttonTexts[0].textContent = '幫我想怎麼介紹';
+            buttonTexts[1].textContent = '告訴我這是什麼';
+            loadingDiv.style.display = 'none';
         }
     </script>
 </body>
