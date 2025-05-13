@@ -57,6 +57,8 @@ if (GEMINI_API_KEY) {
 let visionClient;
 try {
     // GOOGLE_APPLICATION_CREDENTIALS 環境變數會被 Node.js 客戶端程式庫自動偵測
+    console.log("[Cloud Vision AI Debug] GOOGLE_APPLICATION_CREDENTIALS:", process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
     visionClient = new ImageAnnotatorClient();
     console.log("[Cloud Vision AI] Client initialized successfully.");
 } catch (error) {
