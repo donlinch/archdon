@@ -17,9 +17,46 @@ const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 const storeDb = require('./public/store/store-db');
 const storeRoutes = require('./public/store/store-routes');
+const { GoogleGenerativeAI } = require('@google/generative-ai');  
+
 
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
+
+
+
+
+
+
+// --- START OF Gemini AI Integration ---
+// 從環境變數讀取 API Key (你在 Render 環境設定中設定的是 google_api_key)
+const GEMINI_API_KEY = process.env.google_api_key; // <--- 請確認這個名稱與你在 Render 環境變數中設定的完全一致。從你的截圖看是 google_api_key，如果是，請改成：
+                                                       // const GEMINI_API_KEY = process.env.google_api_key;
+let genAI;
+let geminiModel;
+
+if (GEMINI_API_KEY) {
+    try {
+        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        // 選擇你的模型，例如 "gemini-pro" 或 "gemini-1.5-pro-latest"
+        // 你之前截圖顯示 "gemini-2.5-pro-exp-03-25"，如果你確定它可用，可以在此處指定
+        geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro-exp-03-25" }); // <--- 確認模型名稱
+        console.log("[Gemini AI] Service initialized successfully with model 'gemini-2.5-pro-exp-03-25'.");
+    } catch (error) {
+        console.error("[Gemini AI] Failed to initialize GoogleGenerativeAI. Error:", error.message);
+        console.error("[Gemini AI] AI reply generation will be disabled. Check your API key and model name in environment variables.");
+        geminiModel = null; // 確保模型未定義
+    }
+} else {
+    console.warn("[Gemini AI] GOOGLE_API_KEY (or your specific key name) not found in environment variables. AI reply generation will be disabled.");
+    geminiModel = null;
+}
+// --- END OF Gemini AI Initialization ---
+
+
+
+
+
 
 // GET /api/voit/campaigns - 獲取所有活躍的投票活動列表
 voitRouter.get('/campaigns', async (req, res) => {
@@ -4784,6 +4821,73 @@ app.post('/api/guestbook/reply/:id/report', async (req, res) => {
         client.release();
     }
 });
+
+
+
+
+
+
+
+
+// --- 新增 API 端點：產生留言板回覆建議 ---
+app.post('/api/generate-guestbook-reply', async (req, res) => {
+    if (!geminiModel) { // 檢查 AI 模型是否已成功初始化
+        console.warn("[API /api/generate-guestbook-reply] Attempted to use AI service but it's not available or not initialized.");
+        return res.status(503).json({ error: "AI 服務目前不可用，請檢查伺服器日誌以了解詳細資訊。" });
+    }
+
+    const { commentText } = req.body; // 從前端請求的 body 中獲取留言內容
+
+    if (!commentText || typeof commentText !== 'string' || commentText.trim() === '') {
+        return res.status(400).json({ error: "留言內容為必填項且必須是字串。" });
+    }
+
+    try {
+        // 設計你的提示 (Prompt Engineering 很重要！)
+        // 這個提示告訴 AI 它的角色以及如何回應
+        const prompt = `
+            你是一位專業且友善的網站 (名為 Sunnyyummy) 客服小編。
+            一位訪客在網站的留言板留下了以下訊息：
+            """
+            ${commentText}
+            """
+
+            請針對這則留言，草擬一個專業、有禮貌、簡潔且具體的建議回覆。
+            - 如果留言是問題，請嘗試提供有用的資訊或引導訪客找到答案。
+            - 如果是意見或讚美，請表示感謝。
+            - 如果是不滿或抱怨，請先表達歉意，並說明會如何處理或進一步了解情況。
+            - 回覆應保持正面和建設性的語氣。
+            - 回覆內容盡量在 2-4 句話之間。
+
+            建議回覆：
+        `;
+
+        console.log(`[API /api/generate-guestbook-reply] Sending prompt to Gemini for comment: "${commentText.substring(0, 70)}..."`);
+        
+        const result = await geminiModel.generateContent(prompt);
+        const response = await result.response;
+        const suggestedReply = response.text();
+
+        console.log(`[API /api/generate-guestbook-reply] Received reply from Gemini: "${suggestedReply.substring(0, 70)}..."`);
+        res.json({ suggestedReply: suggestedReply.trim() });
+
+    } catch (error) {
+        console.error('[API /api/generate-guestbook-reply] Error generating AI reply:', error.response ? error.response.data : error.message);
+        // 打印更詳細的錯誤堆疊信息，方便調試
+        if (error.stack) {
+            console.error(error.stack);
+        }
+        res.status(500).json({ error: 'AI 回覆建議生成失敗，請稍後再試或聯繫管理員。' });
+    }
+});
+// --- END OF AI Reply Endpoint ---
+
+
+
+
+
+
+
 
 // --- 樂譜 API ---
 app.get('/api/scores/artists', async (req, res) => {
