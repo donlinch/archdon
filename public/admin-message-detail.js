@@ -496,6 +496,48 @@ if (replyListContainer) {
         });
     }
 
+    // --- 取得 AI 回覆建議 ---
+    const getAiReplyBtn = document.getElementById('get-ai-reply-btn');
+    if (getAiReplyBtn && adminReplyContent) {
+        getAiReplyBtn.addEventListener('click', async () => {
+            if (!currentMessageId) {
+                alert('請先載入留言詳情！');
+                return;
+            }
+
+            // 獲取留言內容
+            const messageDetailContainer = document.getElementById('admin-message-detail-main');
+            const contentDiv = messageDetailContainer.querySelector('.message-content');
+            const messageContent = contentDiv ? contentDiv.textContent : '';
+
+            // 呼叫 API 獲取 AI 回覆
+            try {
+                const response = await fetch('/api/generate-guestbook-reply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        commentText: messageContent
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const suggestedReply = data.reply;
+
+                // 將 AI 回覆建議顯示在文字區域中
+                adminReplyContent.value = suggestedReply;
+            } catch (error) {
+                console.error('取得 AI 回覆失敗:', error);
+                alert(`取得 AI 回覆失敗：${error.message}`);
+            }
+        });
+    }
+
     // --- 【★ 新增 ★】事件委派：處理主留言和回覆列表中的按鈕點擊 ---
     document.body.addEventListener('click', async (event) => {
         const target = event.target;
