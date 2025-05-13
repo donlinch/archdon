@@ -19,6 +19,11 @@ const storeDb = require('./public/store/store-db');
 const storeRoutes = require('./public/store/store-routes');
 const { GoogleGenerativeAI } = require('@google/generative-ai');  
 
+const multer = require('multer');
+const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
+const fs = require('fs');
+const sharp = require('sharp')
+
 
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
@@ -410,10 +415,7 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
 
 
 
-const multer = require('multer');
-const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
-const fs = require('fs');
-const sharp = require('sharp')
+
 
 
 
