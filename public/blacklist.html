@@ -181,19 +181,41 @@
             font-size: 1.2em;
         }
         .blacklist-match-item {
-            margin-top: 20px; /* 增加項目間距 */
-            padding-top: 15px;
-            border-top: 1px dashed #bdc3c7; /* 虛線分隔不同匹配項 */
+            background-color: #f9f9f9; /* Light grey background for each item */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .blacklist-match-item p { /* Style paragraphs within the match item */
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .blacklist-match-item strong { /* Make strong tags more prominent */
+            color: #333;
         }
         .criteria-list {
-            margin-left: 25px; /* 增加縮進 */
+            margin-left: 0; /* Remove default indent if using custom styling */
+            padding-left: 20px; /* Indent list items */
+            list-style-type: none; /* Remove default bullets */
             font-size: 0.95rem;
-            color: #555;
-            list-style: disc inside; /* 圓點列表 */
-            padding-left: 0; /* 移除默認列表左邊距 */
+            color: #444; /* Slightly darker text for criteria */
         }
          .criteria-list li {
-             margin-bottom: 5px; /* 列表項間距 */
+             margin-bottom: 8px; /* Increased spacing for list items */
+             padding-left: 15px; /* Space for custom bullet */
+             position: relative; /* For custom bullet positioning */
+         }
+         .criteria-list li::before { /* Custom bullet style */
+            content: "•"; /* Bullet character */
+            color: #3498db; /* Blue bullet */
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1.2em; /* Adjust to align with text */
+            position: absolute;
+            left: 0;
          }
 
 
