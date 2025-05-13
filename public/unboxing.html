@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 開箱文產生器</title>
+    <style>
+        /* (可以沿用 testguest.html 的 CSS 或自行設計) */
+        body { font-family: sans-serif; margin: 20px; background-color: #f8f9fa; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        textarea { width: 98%; min-height: 100px; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="file"] { margin-bottom: 10px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        #result { margin-top: 20px; padding: 15px; background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 4px; white-space: pre-wrap; }
+        .preview-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .preview-container img { max-width: 150px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px; object-fit: cover; }
+    </style>
+</head>
+
+<body> 
+    <div class="container">
+        <h1>AI 內容助手</h1>
+        <form id="contentForm">
+            <div>
+                <label for="images">上傳照片 (最多3張):</label><br>
+                <input type="file" id="images" name="images" multiple accept="image/*">
+                <div class="preview-container" id="imagePreviewContainer"></div>
+            </div>
+            <div>
+                <label for="description">額外描述 (可選):</label><br>
+                <textarea id="description" name="description" placeholder="例如：這是一款新的無線耳機..."></textarea>
+            </div>
+            <!-- 修改：兩個按鈕 -->
+            <button type="button" id="generateIntroButton">幫我想怎麼介紹 (開箱文)</button>
+            <button type="button" id="identifyButton">告訴我這是什麼 (圖片識別)</button>
+        </form>
+        <div id="loading" style="display:none; margin-top:10px;">AI 正在處理中，請稍候...</div>
+        <h2>AI 回覆:</h2>
+        <div id="result">這裡將顯示 AI 的回覆...</div>
+    </div>
+
+    <script>
+        const contentForm = document.getElementById('contentForm'); // 改名以更通用
+        const generateIntroButton = document.getElementById('generateIntroButton');
+        const identifyButton = document.getElementById('identifyButton');
+        const resultDiv = document.getElementById('result');
+        const loadingDiv = document.getElementById('loading');
+        const imageInput = document.getElementById('images');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+
+        // 圖片預覽邏輯 (同前)
+        imageInput.addEventListener('change', function(event) {
+            imagePreviewContainer.innerHTML = '';
+            const files = event.target.files;
+            if (files.length > 3) {
+                alert('最多只能選擇 3 張圖片！');
+                imageInput.value = '';
+                return;
+            }
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        imagePreviewContainer.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // 綁定事件到兩個按鈕
+        generateIntroButton.addEventListener('click', () => handleGeneration('generate_introduction'));
+        identifyButton.addEventListener('click', () => handleGeneration('identify_content'));
+
+        async function handleGeneration(intent) { // intent: 'generate_introduction' 或 'identify_content'
+            generateIntroButton.disabled = true;
+            identifyButton.disabled = true;
+            loadingDiv.style.display = 'block';
+            resultDiv.textContent = 'AI 正在處理中...';
+
+            const formData = new FormData();
+            const files = imageInput.files;
+
+            if (files.length === 0) {
+                alert('請至少上傳一張圖片。');
+                disableButtons(false);
+                loadingDiv.style.display = 'none';
+                resultDiv.textContent = '請先上傳圖片。';
+                return;
+            }
+             if (files.length > 3) {
+                alert('最多只能上傳 3 張圖片。');
+                disableButtons(false);
+                loadingDiv.style.display = 'none';
+                resultDiv.textContent = '圖片數量超過限制。';
+                return;
+            }
+
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append('images', files[i]);
+            }
+            formData.append('description', document.getElementById('description').value);
+            formData.append('intent', intent); // <--- 新增：傳遞意圖
+
+            try {
+                // 注意：後端 API 端點名稱可能需要保持一致，或者根據意圖呼叫不同端點
+                // 這裡假設還是使用同一個端點，由後端根據 intent 參數判斷
+                const response = await fetch('/api/generate-unboxing-post', { // 或者一個更通用的名稱如 /api/analyze-and-generate
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `伺服器錯誤: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {}
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.textContent = data.generatedText; // 後端返回的鍵名改為更通用的 generatedText
+                } else {
+                    resultDiv.textContent = `產生失敗: ${data.error || '未知錯誤'}`;
+                }
+
+            } catch (error) {
+                console.error('內容產生失敗:', error);
+                resultDiv.textContent = `發生錯誤: ${error.message}`;
+            } finally {
+                disableButtons(false);
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function disableButtons(disabled) {
+            generateIntroButton.disabled = disabled;
+            identifyButton.disabled = disabled;
+        }
+    </script>
+</body>
+</html>
