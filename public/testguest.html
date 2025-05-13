@@ -1,18 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-    <title>留言板</title>
+    <meta charset="UTF-8">
+    <title>測試留言板 AI 回覆</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 20px; line-height: 1.6; background-color: #f4f4f4; color: #333; }
+        h1 { color: #2c3e50; text-align: center; }
+        .container { max-width: 700px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .comment-block { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #f9f9f9; }
+        .comment-text { margin-bottom: 10px; font-size: 1em; color: #555; }
+        .reply-suggestion-container { margin-top: 10px; }
+        .reply-suggestion { padding: 10px; background-color: #e8f4fd; border: 1px solid #d0e0ed; border-radius: 4px; white-space: pre-wrap; font-size: 0.95em; min-height: 40px; }
+        textarea.manual-reply { width: calc(100% - 22px); min-height: 70px; margin-top: 8px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; }
+        button { margin-top: 10px; padding: 10px 15px; cursor: pointer; background-color: #3498db; color: white; border: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .loading-message { color: #888; font-style: italic; }
+        .error-message { color: #c0392b; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <h1>留言板</h1>
-    <div id="messages">
-        <!-- 留言將顯示在這裡 -->
+    <div class="container">
+        <h1>測試留言板 AI 回覆</h1>
+
+        <div class="comment-block">
+            <h3>留言 1 (正面評價)</h3>
+            <p class="comment-text" data-comment-id="1">這是一個很棒的網站！資訊非常豐富，設計也很美觀。我已經把它加到我的書籤了，並且會推薦給我的朋友們！</p>
+            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
+            <div class="reply-suggestion-container">
+                <strong>AI 建議：</strong>
+                <div class="reply-suggestion" id="suggestion-1">尚未產生建議...</div>
+            </div>
+            <textarea class="manual-reply" id="manual-reply-1" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+        </div>
+
+        <div class="comment-block">
+            <h3>留言 2 (產品詢問)</h3>
+            <p class="comment-text" data-comment-id="2">請問你們網站上列出的「陽光果醬組合」還有現貨嗎？如果沒有，大概什麼時候會補貨呢？我想買來送人。</p>
+            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
+            <div class="reply-suggestion-container">
+                <strong>AI 建議：</strong>
+                <div class="reply-suggestion" id="suggestion-2">尚未產生建議...</div>
+            </div>
+            <textarea class="manual-reply" id="manual-reply-2" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+        </div>
+
+        <div class="comment-block">
+            <h3>留言 3 (體驗問題)</h3>
+            <p class="comment-text" data-comment-id="3">我覺得你們網站的圖片載入速度有點慢，尤其是在手機上瀏覽的時候。如果能優化一下圖片大小或載入方式會更好。</p>
+            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
+            <div class="reply-suggestion-container">
+                <strong>AI 建議：</strong>
+                <div class="reply-suggestion" id="suggestion-3">尚未產生建議...</div>
+            </div>
+            <textarea class="manual-reply" id="manual-reply-3" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+        </div>
+
+        <div class="comment-block">
+            <h3>留言 4 (負面意見)</h3>
+            <p class="comment-text" data-comment-id="4">上次訂單的物流等了快一個禮拜才到，有點失望。希望之後出貨速度能快一點。</p>
+            <button onclick="getAiReply(this)">取得 AI 回覆建議</button>
+            <div class="reply-suggestion-container">
+                <strong>AI 建議：</strong>
+                <div class="reply-suggestion" id="suggestion-4">尚未產生建議...</div>
+            </div>
+            <textarea class="manual-reply" id="manual-reply-4" placeholder="您也可以在此手動輸入或編輯回覆..."></textarea>
+        </div>
     </div>
-    <textarea id="messageInput" placeholder="請輸入留言"></textarea>
-    <button id="replyButton">取得回覆</button>
 
     <script>
-        // JavaScript 程式碼將在這裡
+        async function getAiReply(buttonElement) {
+            const commentBlock = buttonElement.closest('.comment-block');
+            const commentTextElement = commentBlock.querySelector('.comment-text');
+            const commentText = commentTextElement.textContent;
+            const commentId = commentTextElement.dataset.commentId;
+            const suggestionDiv = commentBlock.querySelector(`#suggestion-${commentId}`);
+            const manualReplyTextarea = commentBlock.querySelector(`#manual-reply-${commentId}`);
+
+            suggestionDiv.textContent = 'AI 正在思考中，請稍候...';
+            suggestionDiv.className = 'reply-suggestion loading-message'; // 重設 class 並添加 loading
+            buttonElement.disabled = true;
+            manualReplyTextarea.value = ''; // 清空手動回覆框
+
+            try {
+                const response = await fetch('/api/generate-guestbook-reply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ commentText: commentText }),
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `伺服器錯誤: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        // 如果回應不是 JSON，則使用原始錯誤訊息
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const data = await response.json();
+                suggestionDiv.textContent = data.suggestedReply;
+                suggestionDiv.className = 'reply-suggestion'; // 成功後恢復 class
+                manualReplyTextarea.value = data.suggestedReply; // 也填充到手動回覆框
+
+            } catch (error) {
+                console.error('取得 AI 回覆失敗:', error);
+                suggestionDiv.textContent = `取得 AI 回覆失敗: ${error.message}`;
+                suggestionDiv.className = 'reply-suggestion error-message'; // 錯誤時的 class
+            } finally {
+                buttonElement.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
