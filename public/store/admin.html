@@ -397,8 +397,25 @@
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || '刪除商品失敗');
+                    let errorDetail = `HTTP status ${response.status}`;
+                    let serverMessage = '刪除商品失敗'; // 預設訊息
+                    try {
+                        // 嘗試讀取 JSON 回應
+                        const errorData = await response.json();
+                        serverMessage = errorData.error || serverMessage; // 使用後端提供的錯誤訊息
+                    } catch (jsonError) {
+                        // 如果解析 JSON 失敗，嘗試讀取純文字回應
+                        console.warn('無法解析 JSON 錯誤回應:', jsonError);
+                        try {
+                            const textResponse = await response.text();
+                            if (textResponse) {
+                                errorDetail += ` - 伺服器回應: ${textResponse.substring(0, 200)}`; // 顯示部分文字回應
+                            }
+                        } catch (textError) {
+                            console.warn('無法讀取文字錯誤回應:', textError);
+                        }
+                    }
+                    throw new Error(`${serverMessage} (${errorDetail})`);
                 }
                 
                 // 刷新商品列表 和 分類列表 (可能有分類因此消失)
@@ -408,7 +425,7 @@
                 alert('商品已成功刪除！');
             } catch (error) {
                 console.error('刪除商品錯誤:', error);
-                alert('刪除商品失敗: ' + error.message);
+                alert(error.message); // 直接顯示 throw 出來的 Error 的 message
             }
         }
     </script>
