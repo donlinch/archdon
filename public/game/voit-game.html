@@ -1384,20 +1384,20 @@
                             formData.append('file', file); // Changed 'image' to 'file' to match /api/admin/files/upload
 
                             try {
-                                const response = await fetch('/api/admin/files/upload', { // Changed to use the admin upload endpoint with sharp processing
+                                const response = await fetch('/api/upload', { // Changed to use the public upload endpoint
                                     method: 'POST',
                                     body: formData
                                 });
                                 const result = await response.json();
-                                // The /api/admin/files/upload endpoint returns { success: true, file: { file_path: '...' } }
-                                if (response.ok && result.success && result.file && result.file.file_path) {
-                                    hiddenImageUrlInput.value = result.file.file_path; // Use file_path from the response
-                                    imagePreview.src = result.file.file_path;    // Use file_path for preview
+                                // Assuming /api/upload endpoint returns { success: true, filePath: '...' } or similar
+                                if (response.ok && result.success && result.filePath) {
+                                    hiddenImageUrlInput.value = result.filePath; // Use filePath from the response
+                                    imagePreview.src = result.filePath;    // Use filePath for preview
                                     imagePreview.style.display = 'block';
                                     uploadStatusDiv.textContent = '上傳成功！';
                                     uploadStatusDiv.style.color = 'green';
                                 } else {
-                                    throw new Error(result.error || '上傳失敗或回傳資料格式不符');
+                                    throw new Error(result.message || result.error || '上傳失敗或回傳資料格式不符');
                                 }
                             } catch (error) {
                                 console.error('圖片上傳失敗:', error);
