@@ -5226,6 +5226,8 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
             });
         }
 
+        console.log("[DEBUG] Constructed imageInsights:", imageInsights); // 新增日誌: 打印 imageInsights 內容
+
         // 3. 使用獲取的 prompt_template 構造 geminiPrompt
         //    注意：模板中實際使用的預留位置是 "${userDescription || "使用者未提供額外描述。"}" 和 " ${imageInsights}" (注意 imageInsights 前的空格)
         
@@ -5236,11 +5238,15 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         // 進行替換時，確保替換值也被正確格式化（例如，userDescription 需要被引號包圍）
         const actualUserDescription = userDescription || "使用者未提供額外描述。";
         
+        console.log("[DEBUG] Original promptTemplate from DB:", promptTemplate); // 新增日誌: 打印原始模板
+
         let geminiPrompt = promptTemplate
             .replace(userDescStringInTemplate, `"${actualUserDescription}"`) // 替換時確保引號
             // 替換 imageInsights 時，確保替換後的內容也符合上下文，例如前面可能需要一個空格
             .replace(imageInsightsStringInTemplate, ` ${imageInsights}`);
         
+        console.log("[DEBUG] geminiPrompt after replacements:", geminiPrompt); // 新增日誌: 打印替換後的提示詞
+
         // 確保替換後的 prompt 仍然有效
         if (!geminiPrompt || geminiPrompt.trim() === "") {
             console.error(`[Content Gen] Error: Prompt template for ${schemeIntentKey} resulted in an empty prompt after replacements.`);
