@@ -191,9 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         editImagePreview.src = ''; 
         
         try { 
-            const response = await fetch(`/api/admin/products/${id}`); // Corrected API path
-            if (!response.ok) { 
-                if (response.status === 404) throw new Error('找不到該商品。'); 
+            const response = await fetch(`/api/products/${id}`); // Reverted to /api/products/ based on backup
+            if (!response.ok) {
+                if (response.status === 404) throw new Error('找不到該商品。');
                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); 
             } 
             
