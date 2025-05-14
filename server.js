@@ -5136,15 +5136,28 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
     }
 
     const userDescription = req.body.description || "";
-    const intent = req.body.scheme_intent_key; // <--- 從 scheme_intent_key 讀取
+    const schemeIntentKey = req.body.scheme_intent_key; // <--- 從 scheme_intent_key 讀取
 
-    if (!intent || (intent !== 'generate_introduction' && intent !== 'identify_content')) {
-        return res.status(400).json({ error: '無效的請求意圖。' });
+    if (!schemeIntentKey) {
+        return res.status(400).json({ error: '未提供 AI 方案意圖 (scheme_intent_key)。' });
     }
 
     try {
+        // 1. 根據 schemeIntentKey 從資料庫獲取 prompt_template
+        const schemeResult = await pool.query(
+            "SELECT prompt_template FROM unboxingAI_prompt_schemes WHERE intent_key = $1 AND is_active = TRUE",
+            [schemeIntentKey]
+        );
+
+        if (schemeResult.rows.length === 0) {
+            console.warn(`[Content Gen] 無效或未啟用的 AI 方案意圖: ${schemeIntentKey}`);
+            return res.status(400).json({ error: '無效的請求意圖或指定的 AI 方案未啟用。' });
+        }
+        const promptTemplate = schemeResult.rows[0].prompt_template;
+
+        // 2. 圖片分析 (與之前相同)
         let visionResults = [];
-        console.log(`[Content Gen] Received ${req.files.length} images. Intent: ${intent}.`);
+        console.log(`[Content Gen] Received ${req.files.length} images. Intent Key: ${schemeIntentKey}.`);
 
         for (const file of req.files) {
             const imageBuffer = file.buffer;
@@ -5198,47 +5211,18 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
             });
         }
 
-        let geminiPrompt = "";
-        if (intent === 'generate_introduction') {
-            geminiPrompt = `
-                你是一位充滿熱情且擅長撰寫吸引人開箱文的部落客或內容創作者。
-                你的任務是根據使用者上傳的幾張產品照片的分析結果，以及使用者可能提供的簡短描述，來生成一篇生動有趣的開箱介紹文。
-                使用者提供的產品簡短描述：
-                "${userDescription || "使用者未提供額外描述。"}"
-                以下是從圖片中分析得到的資訊：
-                ${imageInsights}
-                請根據以上所有資訊，撰寫一篇大約 150 至 300 字的開箱介紹文。
-                你的文案風格應該是：活潑、有趣、帶有第一人稱的興奮感。
-                請確保包含以下要點，並自然地融入文案中：
-                1. 開頭：營造期待感，描述收到包裹或初見產品時的心情。
-                2. 外觀與包裝：根據圖片分析結果，描述產品的包裝設計、顏色、材質（如果可推測）、以及第一印象。
-                3. 內容物：如果圖片顯示了產品主體和配件，請描述一下有哪些東西。
-                4. 細節與特色：如果圖片分析結果中包含品牌名稱、型號、或特定的文字/物件，嘗試將它們巧妙地融入描述，並推測其可能的特色或用途。
-                5. 初步感受與期待：分享對產品質感的初步感受，並表達對使用它的期待。
-                6. 結尾：用一個引人入勝的結尾。
-                重要：請直接輸出開箱文內容，不要包含任何額外的前言或結語。
-                開箱介紹文：
-            `;
-        } else if (intent === 'identify_content') {
-            geminiPrompt = `
-                你是一位精通圖像識別和描述的AI助手。
-                使用者上傳了幾張圖片，並可能提供了一些額外描述。
-                使用者提供的額外描述（如果有的話，可以幫助你更精準判斷）：
-                "${userDescription || "使用者未提供額外描述。"}"
-                以下是從圖片中分析得到的初步資訊：
-                ${imageInsights}
-                請根據以上所有資訊，清晰、簡潔地總結這些圖片主要拍攝的是什麼東西。
-                - 盡可能準確地識別主要物件或主題。
-                - 如果有多張圖片，可以綜合描述，或者指出不同圖片可能拍攝的是同一物件的不同角度或相關物品。
-                - 如果圖片分析結果包含品牌、型號等文字，請提及。
-                - 你的回答應該像是在告訴使用者「根據你提供的圖片，我認為這是...」。
-                - 盡量控制在 50-100 字左右。
-                重要：請直接輸出識別和描述的內容，不要包含任何額外的前言或結語。
-                這是什麼：
-            `;
+        // 3. 使用獲取的 prompt_template 構造 geminiPrompt
+        let geminiPrompt = promptTemplate
+            .replace(/\{\{userDescription\}\}/g, userDescription || "使用者未提供額外描述。")
+            .replace(/\{\{imageInsights\}\}/g, imageInsights);
+        
+        // 確保替換後的 prompt 仍然有效
+        if (!geminiPrompt || geminiPrompt.trim() === "") {
+            console.error(`[Content Gen] Error: Prompt template for ${schemeIntentKey} resulted in an empty prompt after replacements.`);
+            return res.status(500).json({ error: 'AI 提示詞模板處理失敗。' });
         }
 
-        console.log(`[Content Gen] Sending prompt to Gemini for intent: ${intent}.`);
+        console.log(`[Content Gen] Sending dynamic prompt to Gemini for intent key: ${schemeIntentKey}.`);
         const result = await geminiModel.generateContent(geminiPrompt);
         const response = await result.response;
         const generatedText = response.text();
