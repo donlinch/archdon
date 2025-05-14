@@ -5212,17 +5212,19 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         }
 
         // 3. 使用獲取的 prompt_template 構造 geminiPrompt
-        //    注意：模板中實際使用的預留位置是 "${userDescription || "使用者未提供額外描述。"}" 和 "${imageInsights}"
+        //    注意：模板中實際使用的預留位置是 "${userDescription || "使用者未提供額外描述。"}" 和 " ${imageInsights}" (注意 imageInsights 前的空格)
         
         const userDescStringInTemplate = '"${userDescription || "使用者未提供額外描述。"}"';
-        const imageInsightsStringInTemplate = '${imageInsights}';
+        // 根據模板截圖，`${imageInsights}` 前面有一個空格
+        const imageInsightsStringInTemplate = ' ${imageInsights}';
 
         // 進行替換時，確保替換值也被正確格式化（例如，userDescription 需要被引號包圍）
         const actualUserDescription = userDescription || "使用者未提供額外描述。";
         
         let geminiPrompt = promptTemplate
             .replace(userDescStringInTemplate, `"${actualUserDescription}"`) // 替換時確保引號
-            .replace(imageInsightsStringInTemplate, imageInsights);
+            // 替換 imageInsights 時，確保替換後的內容也符合上下文，例如前面可能需要一個空格
+            .replace(imageInsightsStringInTemplate, ` ${imageInsights}`);
         
         // 確保替換後的 prompt 仍然有效
         if (!geminiPrompt || geminiPrompt.trim() === "") {
