@@ -1660,6 +1660,13 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             try {
                                 console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`); // 新增日誌
 
+  
+                // --- START OF MODIFICATION for Orientation ---
+                let sharpInstance = sharp(originalFilePath);
+  const rotatedImageBuffer = await sharpInstance.rotate().toBuffer(); // 旋轉並獲取 buffer
+                sharpInstance = sharp(rotatedImageBuffer); // 用旋轉後的 buffer 重新初始化 sharp
+ 
+
                 const metadata = await sharp(originalFilePath).metadata();
                                console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`); // 新增日誌
 
@@ -1681,17 +1688,24 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                 // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
 
 
+
+
+
+
+
+
                 if (needsResize) {
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
                     const tempResizedPath = originalFilePath + '_guestbook_resized_temp' + lowerExt;
                     
-                    await sharp(originalFilePath)
+                 // 使用已經是正確方向的 sharpInstance 進行縮放
+                    await sharpInstance 
                         .resize({ width: targetWidth })
-                        .toFile(tempResizedPath);
-                                        console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`); // 新增日誌
+                        .toFile(tempResizedPath); // 保存處理後的圖片 (已旋轉和縮放)
+                    
+                    console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`);
 
-                    console.log(`[API /api/upload] 圖片已縮放至臨時路徑: ${tempResizedPath}`);
-
+ 
                     // 刪除 multer 最初上傳的原始檔案
                     if (fs.existsSync(originalFilePath)) {
                         fs.unlinkSync(originalFilePath);
@@ -1705,7 +1719,13 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     const newStats = fs.statSync(originalFilePath);
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功縮放並覆蓋原檔案，新大小: ${newStats.size} bytes`);
                 } else {
+
+
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+
+
+
+
                 }
             } catch (sharpError) {
 
