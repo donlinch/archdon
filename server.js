@@ -7943,7 +7943,7 @@ adminRouter.get('/products/:id', async (req, res) => {
 adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
     try {
         // Logic from public/store/store-routes.js router.post('/products',...)
-        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
+        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url } = req.body; // Added seven_eleven_url
 
         if (!name || !price) {
             if (req.file) {
@@ -7962,9 +7962,9 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
             category,
             expiration_type: parseInt(expiration_type || 0),
             start_date: start_date || null,
-            end_date: end_date || null
+            end_date: end_date || null,
+            seven_eleven_url: seven_eleven_url || null // Added seven_eleven_url
             // stock field removed
-            // seven_eleven_url is not in this version of productData, add if needed
             // click_count will be default in DB or handled by other logic
         };
         
@@ -7979,8 +7979,8 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
         const insertQuery = `
             INSERT INTO products
                 (name, description, price, image_url, category,
-                 expiration_type, start_date, end_date, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+                 expiration_type, start_date, end_date, seven_eleven_url, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
             RETURNING *`; // Placeholders count adjusted
         const values = [
             productData.name,
@@ -7990,7 +7990,8 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
             productData.category,
             productData.expiration_type,
             productData.start_date,
-            productData.end_date
+            productData.end_date,
+            productData.seven_eleven_url // Added seven_eleven_url
         ]; // stock removed
         
         const result = await pool.query(insertQuery, values);
@@ -8016,17 +8017,17 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             }
             return res.status(400).json({ error: '無效的商品 ID' });
         }
-
-        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
-
+ 
+        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url } = req.body; // Added seven_eleven_url
+ 
         // Directly fetch existing product using pool.query
         const existingProductResult = await pool.query(
-            `SELECT id, name, description, price, image_url, category,
+            `SELECT id, name, description, price, image_url, category, seven_eleven_url,
                     click_count, expiration_type, start_date, end_date
-             FROM products WHERE id = $1`, // Removed 'stock', added 'click_count' for completeness if needed by existingProduct obj
+             FROM products WHERE id = $1`, // Removed 'stock', added 'click_count' and 'seven_eleven_url'
             [productId]
         );
-
+ 
         if (existingProductResult.rows.length === 0) {
             if (req.file) {
                 fs.unlinkSync(req.file.path); // Clean up uploaded file if product not found
@@ -8038,8 +8039,8 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
         // Use image_url from the database as the base
         let imagePath = existingProduct.image_url;
         if (req.file) {
-            if (existingProduct.image && existingProduct.image.startsWith('/uploads/storemarket/')) {
-                const oldImagePath = path.join(__dirname, 'public', existingProduct.image);
+            if (existingProduct.image_url && existingProduct.image_url.startsWith('/uploads/storemarket/')) { // Corrected to existingProduct.image_url
+                const oldImagePath = path.join(__dirname, 'public', existingProduct.image_url); // Corrected to existingProduct.image_url
                  if (fs.existsSync(oldImagePath)) {
                      try {
                          fs.unlinkSync(oldImagePath);
@@ -8057,6 +8058,7 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             price: price !== undefined ? parseFloat(price) : existingProduct.price,
             image_url: imagePath,
             category: category !== undefined ? category : existingProduct.category, // stock removed
+            seven_eleven_url: seven_eleven_url !== undefined ? seven_eleven_url : existingProduct.seven_eleven_url, // Added seven_eleven_url
             expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
             start_date: start_date !== undefined ? start_date : existingProduct.start_date,
             end_date: end_date !== undefined ? end_date : existingProduct.end_date
@@ -8070,8 +8072,8 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
         const updateQuery = `
             UPDATE products
             SET name = $1, description = $2, price = $3, image_url = $4, category = $5,
-                expiration_type = $6, start_date = $7, end_date = $8, updated_at = NOW()
-            WHERE id = $9
+                expiration_type = $6, start_date = $7, end_date = $8, seven_eleven_url = $9, updated_at = NOW()
+            WHERE id = $10
             RETURNING *`; // Placeholders adjusted
         const values = [
             productData.name,
@@ -8082,6 +8084,7 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             productData.expiration_type,
             productData.start_date,
             productData.end_date,
+            productData.seven_eleven_url, // Added seven_eleven_url
             productId
         ]; // Placeholders adjusted
 
