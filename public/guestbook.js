@@ -1153,7 +1153,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 let imageUrl = null;
                 const imageFile = modalMessageImageInput?.files[0];
 
-                if (imageFile) {
+               if (imageFile) {
+                    // --- START OF MODIFICATION for guestbook.js (New Post) ---
+                    if (imageFile.size > 4 * 1024 * 1024) { // 4MB limit
+                        postModalStatus.textContent = '錯誤：圖片檔案大小不能超過 4MB。';
+                        postModalStatus.style.color = 'red';
+                        postModalSubmitBtn.disabled = false;
+                        isPostingCooldown = false;
+                        // 可選：清除已選文件
+                        if (modalMessageImageInput) modalMessageImageInput.value = '';
+                        if (modalMessageImagePreview) {
+                            modalMessageImagePreview.src = '#';
+                            modalMessageImagePreview.style.display = 'none';
+                        }
+                        return;
+                    }
+                    if (!['image/jpeg', 'image/png'].includes(imageFile.type)) {
+                         postModalStatus.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
+                         postModalStatus.style.color = 'red';
+                         postModalSubmitBtn.disabled = false;
+                         isPostingCooldown = false;
+                         if (modalMessageImageInput) modalMessageImageInput.value = '';
+                         if (modalMessageImagePreview) {
+                             modalMessageImagePreview.src = '#';
+                             modalMessageImagePreview.style.display = 'none';
+                         }
+                         return;
+                    }
                     postModalStatus.textContent = '正在上傳圖片...';
                     const imageFormData = new FormData();
                     imageFormData.append('image', imageFile); // 後端 multer 設定的 field name
@@ -1269,6 +1295,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 const imageFile = modalReplyImageInput?.files[0];
 
                 if (imageFile) {
+                    // --- START OF MODIFICATION for guestbook.js (Reply) ---
+                    if (imageFile.size > 4 * 1024 * 1024) { // 4MB limit
+                        modalReplyStatus.textContent = '錯誤：圖片檔案大小不能超過 4MB。';
+                        modalReplyStatus.style.color = 'red';
+                        modalSubmitReplyBtn.disabled = false;
+                        isReplyingCooldown = false;
+                        // 可選：清除已選文件
+                        if (modalReplyImageInput) modalReplyImageInput.value = '';
+                        if (modalReplyImagePreview) {
+                            modalReplyImagePreview.src = '#';
+                            modalReplyImagePreview.style.display = 'none';
+                        }
+                        return;
+                    }
+                     if (!['image/jpeg', 'image/png'].includes(imageFile.type)) {
+                         modalReplyStatus.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
+                         modalReplyStatus.style.color = 'red';
+                         modalSubmitReplyBtn.disabled = false;
+                         isReplyingCooldown = false;
+                         if (modalReplyImageInput) modalReplyImageInput.value = '';
+                         if (modalReplyImagePreview) {
+                             modalReplyImagePreview.src = '#';
+                             modalReplyImagePreview.style.display = 'none';
+                         }
+                         return;
+                    }
+                    // --- END OF MODIFICATION for guestbook.js (Reply) ---
+
                     modalReplyStatus.textContent = '正在上傳圖片...';
                     const imageFormData = new FormData();
                     imageFormData.append('image', imageFile); // 後端 multer 設定的 field name

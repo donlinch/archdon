@@ -1371,8 +1371,8 @@
                                 hiddenImageUrlInput.value = ''; // Clear previous URL if any
                                 return;
                             }
-                            if (file.size > 2 * 1024 * 1024) { // 2MB limit from server.js
-                                uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 2MB。';
+                           if (file.size > 4 * 1024 * 1024) { // 4MB limit
+                                uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 4MB。'; // Updated message
                                 uploadStatusDiv.style.color = 'red';
                                 imagePreview.style.display = 'none';
                                 hiddenImageUrlInput.value = '';
