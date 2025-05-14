@@ -7997,9 +7997,9 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
 
         // Directly fetch existing product using pool.query
         const existingProductResult = await pool.query(
-            `SELECT id, name, description, price, image_url, stock, category,
-                    expiration_type, start_date, end_date
-             FROM products WHERE id = $1`,
+            `SELECT id, name, description, price, image_url, category,
+                    click_count, expiration_type, start_date, end_date
+             FROM products WHERE id = $1`, // Removed 'stock', added 'click_count' for completeness if needed by existingProduct obj
             [productId]
         );
 
@@ -8100,25 +8100,37 @@ adminRouter.delete('/products/:id', async (req, res) => {
             return res.status(400).json({ error: '無效的商品 ID' });
         }
         
-        // Optional: Fetch product to delete its image, similar to store-routes.js
-        const product = await storeDb.getProductById(productId);
-        if (product && product.image && product.image.startsWith('/uploads/storemarket/')) {
-            const imagePathToDelete = path.join(__dirname, 'public', product.image);
-            if (fs.existsSync(imagePathToDelete)) {
-                try {
-                    fs.unlinkSync(imagePathToDelete);
-                    console.log(`[Admin API] Deleted image file: ${imagePathToDelete}`);
-                } catch (unlinkErr) {
-                    console.error(`[Admin API] Error deleting image file ${imagePathToDelete}:`, unlinkErr);
+        // Fetch product to delete its image using pool.query
+        const productResult = await pool.query("SELECT image_url FROM products WHERE id = $1", [productId]);
+
+        if (productResult.rows.length > 0) {
+            const product = productResult.rows[0];
+            // Ensure product.image_url is used, as 'image' might not exist or be correct
+            if (product.image_url && product.image_url.startsWith('/uploads/storemarket/')) {
+                const imagePathToDelete = path.join(__dirname, 'public', product.image_url);
+                if (fs.existsSync(imagePathToDelete)) {
+                    try {
+                        fs.unlinkSync(imagePathToDelete);
+                        console.log(`[Admin API] Deleted image file: ${imagePathToDelete}`);
+                    } catch (unlinkErr) {
+                        console.error(`[Admin API] Error deleting image file ${imagePathToDelete}:`, unlinkErr);
+                    }
                 }
             }
         }
+        
+        // Delete product from database using pool.query
+        const deleteResult = await pool.query("DELETE FROM products WHERE id = $1", [productId]);
 
-        const deleted = await storeDb.deleteProduct(productId); // Using storeDb
-        if (deleted) {
+        if (deleteResult.rowCount > 0) {
             res.status(204).send();
         } else {
-            res.status(404).json({ error: '找不到商品，無法刪除。' });
+            // This case might occur if the product was already deleted by another request,
+            // or if the ID was valid but somehow not found during the delete operation itself.
+            // If productResult found it, but deleteResult didn't, it's an anomaly.
+            // However, if productResult didn't find it, we might not even reach here if we threw 404 earlier.
+            // For simplicity, if delete didn't affect rows, assume it wasn't found for deletion.
+            res.status(404).json({ error: '找不到商品，無法刪除 (或者已被刪除)。' });
         }
     } catch (err) {
         console.error(`[Admin API Error] 刪除商品 ID ${id} 時出錯:`, err);
