@@ -7940,6 +7940,59 @@ adminRouter.get('/products/:id', async (req, res) => {
     }
 });
 
+
+app.post('/api/admin/products', async (req, res) => {
+    const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO products (name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+        `, [name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date]);
+
+        const newProduct = result.rows[0];
+
+        // 如果有 tags，額外儲存關聯表（省略）
+        res.status(201).json(newProduct);
+    } catch (err) {
+        console.error('新增商品失敗:', err);
+        res.status(500).json({ error: '無法新增商品' });
+    }
+});
+
+
+
+app.put('/api/admin/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE products
+            SET name = $1, description = $2, price = $3, category = $4,
+                image_url = $5, seven_eleven_url = $6, expiration_type = $7,
+                start_date = $8, end_date = $9
+            WHERE id = $10
+            RETURNING *
+        `, [name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到商品' });
+        }
+
+        const updatedProduct = result.rows[0];
+        // 如果有 tags，額外處理關聯表（省略）
+        res.json(updatedProduct);
+    } catch (err) {
+        console.error('更新商品失敗:', err);
+        res.status(500).json({ error: '無法更新商品' });
+    }
+});
+
+
+
+
 adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
     try {
         // Logic from public/store/store-routes.js router.post('/products',...)

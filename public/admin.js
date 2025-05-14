@@ -354,31 +354,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isBasicUrlValid(updatedData.image_url) || !isBasicUrlValid(updatedData.seven_eleven_url)) {
                 editFormError.textContent = '圖片路徑或 7-11 連結格式不正確 (應以 http://, https:// 或 / 開頭)。';
                 return;
-            } 
+            }
             
-            try { 
+            console.log('Submitting updated product data:', updatedData); // 新增日誌記錄
+            try {
                 const response = await fetch(`/api/admin/products/${productId}`, {
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(updatedData) 
-                }); 
-                if (!response.ok) { 
-                    let errorMsg = `儲存失敗 (HTTP ${response.status})`; 
-                    try { 
-                        const errorData = await response.json(); 
-                        errorMsg = errorData.error || errorMsg; 
-                    } catch (e) {} 
-                    throw new Error(errorMsg); 
-                } 
-                closeModal(); 
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                });
+                if (!response.ok) {
+                    let errorMsg = `儲存失敗 (HTTP ${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+                closeModal();
                 await fetchAndDisplayProducts();
                 await fetchCategories();
-            } catch (error) { 
-                editFormError.textContent = `儲存錯誤：${error.message}`; 
+            } catch (error) {
+                editFormError.textContent = `儲存錯誤：${error.message}`;
             }
         });
-    } else { 
-        console.error("編輯表單元素未找到。"); 
+    } else {
+        console.error("編輯表單元素未找到。");
     }
  
     if (addForm) {
@@ -417,43 +418,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 addFormError.textContent = '商品名稱不能為空。';
                 return;
             }
-            if (newData.price !== null && isNaN(newData.price)) { 
-                addFormError.textContent = '價格必須是有效的數字。'; 
-                return; 
-            } 
-            if (newData.price !== null && newData.price < 0) { 
-                addFormError.textContent = '價格不能是負數。'; 
-                return; 
-            } 
-            const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'); 
+            if (newData.price !== null && isNaN(newData.price)) {
+                addFormError.textContent = '價格必須是有效的數字。';
+                return;
+            }
+            if (newData.price !== null && newData.price < 0) {
+                addFormError.textContent = '價格不能是負數。';
+                return;
+            }
+            const isBasicUrlValid = (url) => !url || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
             if (!isBasicUrlValid(newData.image_url) || !isBasicUrlValid(newData.seven_eleven_url)) {
                 addFormError.textContent = '圖片路徑或 7-11 連結格式不正確 (應以 http://, https:// 或 / 開頭)。';
                 return;
-            } 
+            }
             
-            try { 
+            console.log('Submitting new product data:', newData); // 新增日誌記錄
+            try {
                 const response = await fetch('/api/admin/products', {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(newData) 
-                }); 
-                if (!response.ok) { 
-                    let errorMsg = `新增失敗 (HTTP ${response.status})`; 
-                    try { 
-                        const errorData = await response.json(); 
-                        errorMsg = errorData.error || errorMsg; 
-                    } catch (e) {} 
-                    throw new Error(errorMsg); 
-                } 
-                closeAddModal(); 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newData)
+                });
+                if (!response.ok) {
+                    let errorMsg = `新增失敗 (HTTP ${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+                closeAddModal();
                 await fetchAndDisplayProducts();
                 await fetchCategories();
-            } catch (error) { 
-                addFormError.textContent = `新增錯誤：${error.message}`; 
+            } catch (error) {
+                addFormError.textContent = `新增錯誤：${error.message}`;
             }
         });
-    } else { 
-        console.error("新增表單元素未找到。"); 
+    } else {
+        console.error("新增表單元素未找到。");
     }
 
     function refreshAllCharts() {
