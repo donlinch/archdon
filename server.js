@@ -7915,10 +7915,17 @@ adminRouter.get('/products/:id', async (req, res) => {
 
     try {
         const result = await pool.query(
-            `SELECT id, name, description, price, image_url, category, click_count,
-                    expiration_type, start_date, end_date, created_at, updated_at
-             FROM products
-             WHERE id = $1`,
+            `SELECT
+                p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
+                p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
+                COALESCE(
+                    (SELECT json_agg(pt_inner.tag_id) -- 選擇 tag_id
+                     FROM product_tags pt_inner
+                     WHERE pt_inner.product_id = p.id),
+                    '[]'::json
+                ) AS tags
+             FROM products p
+             WHERE p.id = $1`,
             [productId]
         );
 
