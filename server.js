@@ -7887,6 +7887,35 @@ adminRouter.get('/products', async (req, res) => {
     }
 });
 
+// GET /api/admin/products/:id - 獲取單個商品詳情供編輯使用
+adminRouter.get('/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const productId = parseInt(id);
+
+    if (isNaN(productId)) {
+        return res.status(400).json({ error: '無效的商品 ID 格式。' });
+    }
+
+    try {
+        const result = await pool.query(
+            `SELECT id, name, description, price, image_url, category, click_count,
+                    expiration_type, start_date, end_date, created_at, updated_at
+             FROM products
+             WHERE id = $1`,
+            [productId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到該商品。' });
+        }
+        // 不需要計算 product_status，前端 openEditModal 會處理顯示邏輯
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[Admin API Error] 獲取商品 ID ${id} 詳情失敗:`, err);
+        res.status(500).json({ error: '獲取商品詳情失敗', details: err.message });
+    }
+});
+
 adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
     try {
         // Logic from public/store/store-routes.js router.post('/products',...)
@@ -7905,12 +7934,12 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
             name,
             description,
             price: parseFloat(price),
-            image: imagePath, // Use 'image' to match storeDb.createProduct expectation
-            stock: parseInt(stock || 0),
+            image_url: imagePath, // Corrected: products table uses image_url, and productData should reflect that for clarity
             category,
             expiration_type: parseInt(expiration_type || 0),
             start_date: start_date || null,
-            end_date: end_date || null,
+            end_date: end_date || null
+            // stock field removed
             // seven_eleven_url is not in this version of productData, add if needed
             // click_count will be default in DB or handled by other logic
         };
@@ -7925,21 +7954,20 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
         // The 'products' table uses 'image_url'.
         const insertQuery = `
             INSERT INTO products
-                (name, description, price, image_url, stock, category,
+                (name, description, price, image_url, category,
                  expiration_type, start_date, end_date, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-            RETURNING *`;
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+            RETURNING *`; // Placeholders count adjusted
         const values = [
             productData.name,
             productData.description,
             productData.price,
-            productData.image, // This was imagePath, which is correct for image_url
-            productData.stock,
+            productData.image_url, // Corrected to use productData.image_url
             productData.category,
             productData.expiration_type,
             productData.start_date,
             productData.end_date
-        ];
+        ]; // stock removed
         
         const result = await pool.query(insertQuery, values);
         res.status(201).json(result.rows[0]);
@@ -8003,9 +8031,8 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             name: name !== undefined ? name : existingProduct.name,
             description: description !== undefined ? description : existingProduct.description,
             price: price !== undefined ? parseFloat(price) : existingProduct.price,
-            image_url: imagePath, // Corrected to image_url to match productData structure for SQL
-            stock: stock !== undefined ? parseInt(stock) : existingProduct.stock,
-            category: category !== undefined ? category : existingProduct.category,
+            image_url: imagePath,
+            category: category !== undefined ? category : existingProduct.category, // stock removed
             expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
             start_date: start_date !== undefined ? start_date : existingProduct.start_date,
             end_date: end_date !== undefined ? end_date : existingProduct.end_date
@@ -8018,22 +8045,21 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
         
         const updateQuery = `
             UPDATE products
-            SET name = $1, description = $2, price = $3, image_url = $4, stock = $5, category = $6,
-                expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW()
-            WHERE id = $10
-            RETURNING *`;
+            SET name = $1, description = $2, price = $3, image_url = $4, category = $5,
+                expiration_type = $6, start_date = $7, end_date = $8, updated_at = NOW()
+            WHERE id = $9
+            RETURNING *`; // Placeholders adjusted
         const values = [
             productData.name,
             productData.description,
             productData.price,
-            productData.image_url, // This now correctly uses image_url from productData
-            productData.stock,
-            productData.category,
+            productData.image_url,
+            productData.category, // stock removed
             productData.expiration_type,
             productData.start_date,
             productData.end_date,
             productId
-        ];
+        ]; // Placeholders adjusted
 
         const result = await pool.query(updateQuery, values);
 
