@@ -7835,12 +7835,20 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 // GET /api/admin/products - 獲取所有商品列表供管理後台使用
 adminRouter.get('/products', async (req, res) => {
     try {
-        // const category = req.query.category; // 管理後台通常不需要按分類篩選，除非特別設計
-        const productsFromDb = await storeDb.getAllProducts(); // 獲取所有商品
+        // 直接使用 pool.query 獲取商品，包含所有需要的欄位
+        const result = await pool.query(
+            `SELECT id, name, description, price, image_url, category, click_count,
+                    expiration_type, start_date, end_date, created_at, updated_at
+             FROM products
+             ORDER BY id DESC` // 或者其他排序方式
+        );
+        const productsFromDb = result.rows;
 
         const products = productsFromDb.map(product => {
             let calculated_status;
-            const expType = product.expiration_type;
+            // pg driver 通常會將 INTEGER 轉為 number, DATE 轉為 Date object or string
+            // 確保 expiration_type 是數字進行比較
+            const expType = product.expiration_type !== null ? parseInt(product.expiration_type) : null;
 
             if (expType === 0) {
                 calculated_status = '有效';
@@ -7848,17 +7856,27 @@ adminRouter.get('/products', async (req, res) => {
                 calculated_status = '有效'; // 預設
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
+                
+                // product.start_date 和 product.end_date 可能直接是 Date 物件或 ISO 字串
                 const startDate = product.start_date ? new Date(product.start_date) : null;
                 const endDate = product.end_date ? new Date(product.end_date) : null;
 
                 if (startDate && endDate) {
                     if (today < startDate) calculated_status = '尚未開始';
                     else if (today > endDate) calculated_status = '已過期';
-                } else if (startDate && !endDate && today < startDate) calculated_status = '尚未開始';
-                else if (!startDate && endDate && today > endDate) calculated_status = '已過期';
-                // 其他情況（如只有一個日期且在範圍內）維持 '有效'
+                } else if (startDate && !endDate && today < startDate) { // 只有開始日期且未到
+                    calculated_status = '尚未開始';
+                } else if (!startDate && endDate && today > endDate) { // 只有結束日期且已過
+                    calculated_status = '已過期';
+                } else if (startDate && !endDate && today >= startDate) { // 只有開始日期且已到或進行中
+                    calculated_status = '有效';
+                } else if (!startDate && endDate && today <= endDate) { // 只有結束日期且未到或進行中
+                    calculated_status = '有效';
+                }
+                // 如果 expiration_type=1 但日期都為 null，則維持 '有效'
             } else {
-                calculated_status = '狀態未明';
+                // expiration_type 為 null 或其他非預期值 (例如資料庫中有些舊資料是 NULL)
+                calculated_status = '有效'; // 或者 '狀態未明'，根據需求，這裡暫設為有效
             }
             return { ...product, product_status: calculated_status };
         });
@@ -7903,11 +7921,28 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
             productData.end_date = null;
         }
         
-        // Note: storeDb.createProduct expects 'image', not 'image_url'
-        // The original adminRouter.post used 'image_url' directly in SQL.
-        // We are now using storeDb.createProduct which expects 'image'.
-        const newProduct = await storeDb.createProduct(productData);
-        res.status(201).json(newProduct);
+        // Directly use pool.query for INSERT, ensuring all fields including new ones are handled.
+        // The 'products' table uses 'image_url'.
+        const insertQuery = `
+            INSERT INTO products
+                (name, description, price, image_url, stock, category,
+                 expiration_type, start_date, end_date, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+            RETURNING *`;
+        const values = [
+            productData.name,
+            productData.description,
+            productData.price,
+            productData.image, // This was imagePath, which is correct for image_url
+            productData.stock,
+            productData.category,
+            productData.expiration_type,
+            productData.start_date,
+            productData.end_date
+        ];
+        
+        const result = await pool.query(insertQuery, values);
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('[Admin API Error] 創建商品失敗:', err);
         if (req.file) {
@@ -7932,15 +7967,24 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
 
         const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
 
-        const existingProduct = await storeDb.getProductById(productId);
-        if (!existingProduct) {
+        // Directly fetch existing product using pool.query
+        const existingProductResult = await pool.query(
+            `SELECT id, name, description, price, image_url, stock, category,
+                    expiration_type, start_date, end_date
+             FROM products WHERE id = $1`,
+            [productId]
+        );
+
+        if (existingProductResult.rows.length === 0) {
             if (req.file) {
-                fs.unlinkSync(req.file.path);
+                fs.unlinkSync(req.file.path); // Clean up uploaded file if product not found
             }
             return res.status(404).json({ error: '商品不存在' });
         }
-
-        let imagePath = existingProduct.image;
+        const existingProduct = existingProductResult.rows[0];
+        
+        // Use image_url from the database as the base
+        let imagePath = existingProduct.image_url;
         if (req.file) {
             if (existingProduct.image && existingProduct.image.startsWith('/uploads/storemarket/')) {
                 const oldImagePath = path.join(__dirname, 'public', existingProduct.image);
@@ -7959,7 +8003,7 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             name: name !== undefined ? name : existingProduct.name,
             description: description !== undefined ? description : existingProduct.description,
             price: price !== undefined ? parseFloat(price) : existingProduct.price,
-            image: imagePath,
+            image_url: imagePath, // Corrected to image_url to match productData structure for SQL
             stock: stock !== undefined ? parseInt(stock) : existingProduct.stock,
             category: category !== undefined ? category : existingProduct.category,
             expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
@@ -7972,14 +8016,34 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             productData.end_date = null;
         }
         
-        const updatedProduct = await storeDb.updateProduct(productId, productData);
-        if (!updatedProduct) {
-             if (req.file && imagePath === `/uploads/storemarket/${req.file.filename}`) {
+        const updateQuery = `
+            UPDATE products
+            SET name = $1, description = $2, price = $3, image_url = $4, stock = $5, category = $6,
+                expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW()
+            WHERE id = $10
+            RETURNING *`;
+        const values = [
+            productData.name,
+            productData.description,
+            productData.price,
+            productData.image_url, // This now correctly uses image_url from productData
+            productData.stock,
+            productData.category,
+            productData.expiration_type,
+            productData.start_date,
+            productData.end_date,
+            productId
+        ];
+
+        const result = await pool.query(updateQuery, values);
+
+        if (result.rows.length === 0) {
+             if (req.file && imagePath === `/uploads/storemarket/${req.file.filename}`) { // imagePath here is the new path if a file was uploaded
                  fs.unlinkSync(req.file.path);
              }
-             return res.status(500).json({ error: '更新商品失敗 (資料庫操作可能未成功)' });
+             return res.status(500).json({ error: '更新商品失敗 (資料庫操作未返回更新後的記錄)' });
         }
-        res.json(updatedProduct);
+        res.json(result.rows[0]);
     } catch (err) {
         console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 失敗:`, err);
         if (req.file) {
