@@ -1184,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const imageFormData = new FormData();
                     imageFormData.append('image', imageFile); // 後端 multer 設定的 field name
 
-                    const uploadResponse = await fetch('/api/upload', { // 確認這是你的圖片上傳API
+                    const uploadResponse = await fetch('/api/upload-safe-image', { // 確認這是你的圖片上傳API
                         method: 'POST',
                         body: imageFormData,
                     });
@@ -1327,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const imageFormData = new FormData();
                     imageFormData.append('image', imageFile); // 後端 multer 設定的 field name
 
-                    const uploadResponse = await fetch('/api/upload', { // 確認這是你的圖片上傳API
+                    const uploadResponse = await fetch('/api/upload-safe-image', { // 確認這是你的圖片上傳API
                         method: 'POST',
                         body: imageFormData,
                     });

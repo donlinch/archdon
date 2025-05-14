@@ -1364,7 +1364,7 @@
                     fileInput.addEventListener('change', async function(event) {
                         const file = event.target.files[0];
                         if (file) {
-                            if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { // 根據 publicSafeUpload 的 fileFilter 調整
                                 uploadStatusDiv.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
                                 uploadStatusDiv.style.color = 'red';
                                 imagePreview.style.display = 'none';
@@ -1385,7 +1385,7 @@
                             formData.append('image', file); // Match fieldName expected by /api/upload
 
                             try {
-                                const response = await fetch('/api/upload', { // Changed to use the public upload endpoint
+                                const response = await fetch('/api/upload-safe-image', { // <--- 修改這裡！
                                     method: 'POST',
                                     body: formData
                                 });
