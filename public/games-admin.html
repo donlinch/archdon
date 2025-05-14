@@ -956,7 +956,19 @@
             const url = templateId ? `/api/samegame/templates/${templateId}` : '/api/samegame/templates';
             const method = templateId ? 'PUT' : 'POST';
 
-            fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(templateData) })
+            const adminPassword = prompt(`請輸入管理員密碼以${templateId ? '更新' : '創建'}模板：`);
+            if (!adminPassword) {
+                errorElement.text('未提供管理員密碼，操作取消。');
+                return;
+            }
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPassword
+                },
+                body: JSON.stringify(templateData)
+            })
             .then(handleFetchResponse)
             .then(data => {
                 showAlert(templateId ? '模板更新成功' : '模板創建成功', 'success');
@@ -1052,7 +1064,19 @@
              const url = levelId ? `/api/samegame/levels/${levelId}` : `/api/samegame/templates/${templateId}/levels`;
              const method = levelId ? 'PUT' : 'POST';
 
-             fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(levelData) })
+             const adminPassword = prompt(`請輸入管理員密碼以${levelId ? '更新' : '創建'}關卡：`);
+             if (!adminPassword) {
+                 errorElement.text('未提供管理員密碼，操作取消。');
+                 return;
+             }
+             fetch(url, {
+                 method: method,
+                 headers: {
+                     'Content-Type': 'application/json',
+                     'X-Admin-Password': adminPassword
+                 },
+                 body: JSON.stringify(levelData)
+             })
              .then(handleFetchResponse)
              .then(data => {
                  showAlert(levelId ? '關卡更新成功' : '關卡創建成功', 'success');
@@ -1082,7 +1106,17 @@
         }
         
         function deleteTemplate(templateId) {
-            fetch(`/api/samegame/templates/${templateId}`, { method: 'DELETE' })
+            const adminPassword = prompt("請輸入管理員密碼以刪除模板：");
+            if (!adminPassword) {
+                showAlert('未提供管理員密碼，操作取消。', 'warning');
+                return;
+            }
+            fetch(`/api/samegame/templates/${templateId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': adminPassword
+                }
+            })
             .then(handleFetchResponse)
             .then(() => {
                 showAlert('模板已成功刪除', 'success');
@@ -1101,7 +1135,17 @@
         }
 
         function deleteLevel(levelId) {
-             fetch(`/api/samegame/levels/${levelId}`, { method: 'DELETE' })
+            const adminPassword = prompt("請輸入管理員密碼以刪除關卡：");
+            if (!adminPassword) {
+                showAlert('未提供管理員密碼，操作取消。', 'warning');
+                return;
+            }
+             fetch(`/api/samegame/levels/${levelId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': adminPassword
+                }
+            })
             .then(handleFetchResponse)
             .then(() => {
                 showAlert('關卡已成功刪除', 'success');

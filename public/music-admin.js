@@ -301,8 +301,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editMusic = openEditMusicModal;
     window.deleteMusic = async function(id) {
         if (confirm(`確定要刪除音樂 ID: ${id} 嗎？此操作也會刪除關聯的樂譜。`)) {
+            const adminPassword = prompt("請輸入管理員密碼以刪除音樂：");
+            if (!adminPassword) {
+                alert("未提供管理員密碼，操作取消。");
+                return;
+            }
             try {
-                const response = await fetch(`/api/music/${id}`, { method: 'DELETE' });
+                const response = await fetch(`/api/music/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Admin-Password': adminPassword
+                    }
+                });
                 if (response.status === 204 || response.ok) {
                     console.log(`音樂 ID ${id} 已刪除。`);
                     allMusicData = []; // 清空緩存以便重新獲取
@@ -442,10 +452,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorAction = isEditMode ? '儲存' : '新增';
 
         try {
+            const adminPassword = prompt(`請輸入管理員密碼以${successAction}音樂：`);
+            if (!adminPassword) {
+                alert("未提供管理員密碼，操作取消。");
+                formErrorElement.textContent = '操作已取消。';
+                return;
+            }
             console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2));
             const response = await fetch(apiUrl, {
                 method: method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPassword
+                },
                 body: JSON.stringify(formData)
             });
 

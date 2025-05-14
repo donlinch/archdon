@@ -734,9 +734,17 @@
             }
 
             try {
+                const adminPassword = prompt("請輸入管理員密碼以新增連結：");
+                if (!adminPassword) {
+                    displayError(addFormError, "未提供管理員密碼，操作取消。");
+                    return;
+                }
                 const response = await fetch('/api/admin/nav-links', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
                     body: JSON.stringify(data)
                 });
                 
@@ -786,9 +794,17 @@
             }
 
             try {
+                const adminPassword = prompt("請輸入管理員密碼以更新連結：");
+                if (!adminPassword) {
+                    displayError(editFormError, "未提供管理員密碼，操作取消。");
+                    return;
+                }
                 const response = await fetch(`/api/admin/nav-links/${linkId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
                     body: JSON.stringify(data)
                 });
                 
@@ -819,8 +835,16 @@
             }
 
             try {
+                const adminPassword = prompt("請輸入管理員密碼以刪除連結：");
+                if (!adminPassword) {
+                    showToast("未提供管理員密碼，操作取消。", "error");
+                    return;
+                }
                 const response = await fetch(`/api/admin/nav-links/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'X-Admin-Password': adminPassword
+                    }
                 });
                 
                 if (!response.ok) {
@@ -906,13 +930,19 @@ async function handleSort(linkId, direction) {
     console.log('- JSON 字串:', JSON.stringify(updateData, null, 2));
 
     try {
+        const adminPassword = prompt("請輸入管理員密碼以更新排序：");
+        if (!adminPassword) {
+            showToast("未提供管理員密碼，操作取消。", "error");
+            return;
+        }
         console.log('[SORT] 發送 PUT 請求到 /api/admin/nav-links/reorder');
         
         const response = await fetch('/api/admin/nav-links/reorder', {
             method: 'PUT',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Admin-Password': adminPassword
             },
             body: JSON.stringify(updateData)
         });

@@ -976,9 +976,19 @@ if (addTagForm) {
         }
         
         try {
+            const adminPassword = prompt("請輸入管理員密碼以新增標籤：");
+            if (!adminPassword) {
+                alert("未提供管理員密碼，操作取消。");
+                if (tagManagementError) tagManagementError.textContent = '操作已取消。';
+                return;
+            }
+
             const response = await fetch('/api/tags', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPassword
+                },
                 body: JSON.stringify({ tag_name: tagName })
             });
             

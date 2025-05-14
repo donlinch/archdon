@@ -567,7 +567,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', async (req, res) => {
+app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -605,7 +605,7 @@ app.post('/api/admin/nav-links', async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', async (req, res) => {
+app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -655,7 +655,7 @@ app.put('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', async (req, res) => {
+app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -678,7 +678,7 @@ app.delete('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 // 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', async (req, res) => {
+app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
     try {
         const updates = req.body;
         
@@ -3048,7 +3048,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', async (req, res) => {
+app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3073,7 +3073,7 @@ app.post('/api/samegame/templates', async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', async (req, res) => {
+app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3110,7 +3110,7 @@ app.put('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', async (req, res) => {
+app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3133,7 +3133,7 @@ app.delete('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3235,7 +3235,7 @@ app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', async (req, res) => {
+app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3326,7 +3326,7 @@ app.put('/api/samegame/levels/:id', async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', async (req, res) => {
+app.delete('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -5524,7 +5524,7 @@ app.get('/api/tags', async (req, res) => {
 
 
 // 新增：建立新標籤
-app.post('/api/tags', async (req, res) => {
+app.post('/api/tags', verifyAdminPassword, async (req, res) => {
     const { tag_name } = req.body; // 從請求 body 獲取 tag_name
 
     // 驗證輸入
@@ -5989,7 +5989,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', async (req, res) => {
+app.post('/api/music', verifyAdminPassword, async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6135,7 +6135,7 @@ app.post('/api/music', async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', async (req, res) => {
+app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6234,7 +6234,7 @@ app.put('/api/music/:id', async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', async (req, res) => {
+app.delete('/api/music/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
