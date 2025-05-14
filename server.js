@@ -1658,7 +1658,11 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         if (['.jpg', '.jpeg', '.png'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
             console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
             try {
+                                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`); // 新增日誌
+
                 const metadata = await sharp(originalFilePath).metadata();
+                               console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`); // 新增日誌
+
                 const originalWidth = metadata.width;
                 let targetWidth = originalWidth;
                 let needsResize = false;
@@ -1684,7 +1688,8 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     await sharp(originalFilePath)
                         .resize({ width: targetWidth })
                         .toFile(tempResizedPath);
-                    
+                                        console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`); // 新增日誌
+
                     console.log(`[API /api/upload] 圖片已縮放至臨時路徑: ${tempResizedPath}`);
 
                     // 刪除 multer 最初上傳的原始檔案
@@ -1703,8 +1708,12 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
                 }
             } catch (sharpError) {
-                console.error(`[API /api/upload] Sharp 處理圖片 ${fileToProcess.originalname} 失敗:`, sharpError);
-                // 如果縮放失敗，嘗試刪除已上傳的原始檔案並回報錯誤
+
+ // <<<--- 這裡非常重要 ---<<<
+                console.error(`[API /api/upload] Sharp processing FAILED for ${fileToProcess.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
+                console.error("[API /api/upload] Full Sharp Error Object:", sharpError); // 記錄完整的錯誤物件
+                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack); // 記錄堆疊追蹤
+                // --- >>> ---
                 try {
                     if (fs.existsSync(originalFilePath)) {
                         fs.unlinkSync(originalFilePath);
@@ -1718,10 +1727,13 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         } else {
             console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行縮放。`);
         }
-  
-        res.json({ success: true, url: finalImageUrl });
+          console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`); // 新增日誌
+
+        res.json({ success: true, url: finalImageUrl }); // 修改這裡，確保回傳 'url'
 
     } catch (err) {
+              console.error('[API /api/upload] Outer catch block error:', err); // 修改日誌
+
       console.error('[API /api/upload] 上傳圖片錯誤:', err);
       // 確保如果檔案已部分處理或存在，嘗試清理
       if (req.file && req.file.path && fs.existsSync(req.file.path)) {
@@ -8317,13 +8329,32 @@ app.use((req, res, next) => {
     res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
-// --- Global Error Handler ---
+/// --- Global Error Handler ---
 app.use((err, req, res, next) => {
-    console.error("全局錯誤處理:", err.stack || err);
-    if (res.headersSent) { return next(err); }
-    res.status(err.status || 500).send(process.env.NODE_ENV === 'production' ? '伺服器發生了一些問題！' : `伺服器錯誤: ${err.message}`);
+    console.error("全局錯誤處理:", {
+        message: err.message,
+        status: err.status,
+        // 在開發模式下顯示堆疊，生產環境隱藏或記錄到文件
+        stack: process.env.NODE_ENV !== 'production' ? err.stack : 'Stack trace hidden in production',
+        url: req.originalUrl,
+        method: req.method,
+        ip: req.ip
+    });
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    const errorStatus = err.status || 500;
+    const errorMessageForClient = (process.env.NODE_ENV === 'production' && errorStatus === 500)
+        ? '伺服器發生了一些問題！請稍後再試。' // 更友好的生產環境消息
+        : err.message || '未知伺服器錯誤';
+
+    res.status(errorStatus).json({ // <--- 確保這裡回傳 JSON
+        success: false,
+        error: errorMessageForClient
+    });
 });
- 
 // --- END OF FILE server.js ---
 
  
