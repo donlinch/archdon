@@ -270,7 +270,7 @@
                 return;
             }
             
-            const MAX_FILE_SIZE_MB = 10; // 與後端 unboxingUpload 的限制匹配 (或稍小一點以防萬一)
+            const MAX_FILE_SIZE_MB = 20; // 更新為與後端 unboxingUpload 的限制匹配 (20MB)
             const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
             for (let i = 0; i < files.length; i++) {
