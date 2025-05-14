@@ -739,10 +739,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const tags = await response.json();
             container.innerHTML = '';
             if (tags.length === 0) { container.innerHTML = '<p class="no-tags-message">尚無標籤，請先在標籤管理頁面新增標籤。</p>'; return; }
+            console.log('populateTagCheckboxes - selectedTags:', selectedTags); // 新增日誌
             tags.forEach(tag => {
+                console.log('populateTagCheckboxes - current tag_id:', tag.tag_id, 'type:', typeof tag.tag_id, 'selectedTags includes:', selectedTags.includes(tag.tag_id)); // 新增日誌
                 const checkboxId = `tag-${container.id}-${tag.tag_id}`;
                 const wrapper = document.createElement('div'); wrapper.className = 'tag-checkbox-wrapper';
-                const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = tag.tag_id; checkbox.checked = selectedTags.includes(tag.tag_id);
+                const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = tag.tag_id;
+                // 確保比較時類型一致，selectedTags 中的 id 可能是字串或數字
+                checkbox.checked = selectedTags.map(String).includes(String(tag.tag_id));
                 const label = document.createElement('label'); label.htmlFor = checkboxId; label.textContent = tag.tag_name;
                 wrapper.appendChild(checkbox); wrapper.appendChild(label); container.appendChild(wrapper);
             });
