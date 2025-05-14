@@ -125,22 +125,18 @@ body {
 }
 
 .filter-btn.active {
-    background-color: #FFB74D; /* 黃色 */
-    color: white;
-    box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+    background-color: #fff; /* 改為白色背景，讓紅框更突出 */
+    color: #D32F2F; /* 使用較深的紅色作為文字顏色，確保對比度 */
+    border: 3px solid #E57373; /* 大紅框 (柔和的紅色) */
+    box-shadow: 0 2px 8px rgba(229, 115, 115, 0.25); /* 紅色系的陰影，稍微調淡 */
+    /* 考慮到增加了3px的邊框，調整padding以保持按鈕視覺大小和文字位置 */
+    /* 原 .filter-btn padding: 8px 16px; */
+    /* 新 padding: 5px 13px; (上下各減3px, 左右各減3px 來補償border的寬度) */
+    padding: 5px 13px;
 }
 
 .filter-btn.active::after {
-    content: '\f0d8'; /* Font Awesome caret-up icon */
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900; /* Solid icon */
-    position: absolute;
-    top: 4px;       /* 調整垂直位置 */
-    right: 6px;     /* 調整水平位置 */
-    font-size: 12px;  /* 圖示大小 */
-    color: white;     /* 圖示顏色 */
-    line-height: 1;   /* 確保對齊 */
-    transition: all 0.3s; /* 平滑過渡 */
+    content: none; /* 移除箭頭圖示 */
 }
 
 .filter-btn:hover {
@@ -873,7 +869,7 @@ body {
 }
 
 .payment-icon {
-    height: 50px !important; /* 支付圖標高度 - 強制優先 */
+    height: 30px !important; /* 支付圖標高度 - 強制優先 */
     width: auto;
     border: 1px solid #eee; /* 細邊框 */
     border-radius: 4px; /* 輕微圓角 */
