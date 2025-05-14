@@ -512,468 +512,382 @@
             </form>
         </div>
     </div>
-
-    <div id="toast" class="toast">
+    <div id="toast" class="toast"> <!-- Ensure toast element exists -->
         <span></span>
     </div>
 
     <script>
-        const listContainer = document.querySelector('#nav-links-list ul');
-        const loadingDiv = document.querySelector('#nav-links-list .loading');
-        const addForm = document.querySelector('#add-link-form form');
-        const editFormDiv = document.getElementById('edit-link-form');
-        const editForm = document.querySelector('#edit-link-form form');
-        const addParentSelect = document.getElementById('add-parent');
-        const editParentSelect = document.getElementById('edit-parent');
-        const addFormError = document.querySelector('#add-link-form .form-error');
-        const editFormError = document.querySelector('#edit-link-form .form-error');
-
-        let allLinks = [];
-
-        // 工具函數
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const span = toast.querySelector('span');
-            span.textContent = message;
-            
-            toast.className = 'toast show';
-            if (type === 'error') {
-                toast.style.background = '#dc3545';
-            } else {
-                toast.style.background = '#28a745';
-            }
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        function displayError(element, message) {
-            element.textContent = message;
-            element.classList.add('show');
-        }
-
-        function clearError(element) {
-            element.textContent = '';
-            element.classList.remove('show');
-        }
-
-        // 建構樹狀結構
-        function buildTree(links) {
-            const linkMap = {};
-            const tree = [];
-            
-            links.forEach(link => {
-                linkMap[link.id] = { ...link, children: [] };
-            });
-            
-            links.forEach(link => {
-                if (link.parent_id && linkMap[link.parent_id]) {
-                    linkMap[link.parent_id].children.push(linkMap[link.id]);
-                    linkMap[link.parent_id].children.sort((a, b) => a.display_order - b.display_order);
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Admin Password Check and Prompt (Ensure this is declared only once at the top) ---
+            let adminPasswordGlobal = localStorage.getItem('adminPassword');
+            if (!adminPasswordGlobal) {
+                adminPasswordGlobal = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
+                if (adminPasswordGlobal && adminPasswordGlobal.trim() !== '') {
+                    localStorage.setItem('adminPassword', adminPasswordGlobal);
                 } else {
-                    tree.push(linkMap[link.id]);
+                    alert('未輸入管理員密碼，部分管理功能可能受限。');
+                    // Optionally disable UI elements that require password
                 }
-            });
-            
-            tree.sort((a, b) => a.display_order - b.display_order);
-            return tree;
-        }
+            }
+            // --- End of Admin Password Check ---
 
-        // 渲染列表
-        function renderList(items, container) {
-            container.innerHTML = '';
-            
-            if (items.length === 0 && container === listContainer) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-folder-open"></i>
-                        <h3>尚未建立任何導覽連結</h3>
-                        <p>點擊下方的「新增連結」按鈕開始建立導覽結構</p>
-                    </div>
-                `;
-                return;
+            const listContainer = document.querySelector('#nav-links-list ul');
+            const loadingDiv = document.querySelector('#nav-links-list .loading');
+            const addForm = document.querySelector('#add-link-form form');
+            const editFormDiv = document.getElementById('edit-link-form');
+            const editForm = document.querySelector('#edit-link-form form');
+            const addParentSelect = document.getElementById('add-parent');
+            const editParentSelect = document.getElementById('edit-parent');
+            const addFormError = document.querySelector('#add-link-form .form-error');
+            const editFormError = document.querySelector('#edit-link-form .form-error');
+            const toast = document.getElementById('toast'); 
+
+            let allLinks = [];
+
+            function showToast(message, type = 'success') {
+                if (toast) {
+                    const span = toast.querySelector('span') || toast; 
+                    span.textContent = message;
+                    toast.className = 'toast show';
+                    if (type === 'error') {
+                        toast.style.background = '#dc3545';
+                    } else {
+                        toast.style.background = '#28a745';
+                    }
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 3000);
+                } else {
+                    (type === 'error' ? console.error : console.log)(message);
+                    alert(message);
+                }
             }
 
-            items.forEach(item => {
-                const li = document.createElement('li');
-                li.dataset.id = item.id;
-
-                const infoDiv = document.createElement('div');
-                infoDiv.classList.add('link-info');
-
-                const nameDiv = document.createElement('div');
-                nameDiv.classList.add('link-name');
-                nameDiv.textContent = item.name;
-                infoDiv.appendChild(nameDiv);
-
-                if (item.url && item.url !== '#') {
-                    const urlDiv = document.createElement('div');
-                    urlDiv.classList.add('link-url');
-                    urlDiv.textContent = item.url;
-                    infoDiv.appendChild(urlDiv);
+            function displayError(element, message) {
+                if (element) {
+                    element.textContent = message;
+                    element.classList.add('show');
                 }
+            }
 
-                const detailsDiv = document.createElement('div');
-                detailsDiv.classList.add('link-details');
-                detailsDiv.innerHTML = `
-                    <span><i class="fas fa-fingerprint"></i> ID: ${item.id}</span>
-                    <span><i class="fas fa-sort"></i> 順序: ${item.display_order}</span>
-                    <span><i class="fas fa-sitemap"></i> 父級: ${item.parent_id || '無'}</span>
-                `;
-                infoDiv.appendChild(detailsDiv);
-
-                li.appendChild(infoDiv);
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.classList.add('link-actions');
-
-                
-
-                // 編輯按鈕
-                const editBtn = document.createElement('button');
-                editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
-                editBtn.classList.add('btn', 'btn-edit');
-                editBtn.onclick = () => showEditForm(item);
-                actionsDiv.appendChild(editBtn);
-
-                // 刪除按鈕
-                const deleteBtn = document.createElement('button');
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
-                deleteBtn.classList.add('btn', 'btn-delete');
-                deleteBtn.onclick = () => deleteLink(item.id, item.name);
-                actionsDiv.appendChild(deleteBtn);
-
-                li.appendChild(actionsDiv);
-                container.appendChild(li);
-
-                // 遞迴渲染子項目
-                if (item.children && item.children.length > 0) {
-                    const subUl = document.createElement('ul');
-                    li.appendChild(subUl);
-                    renderList(item.children, subUl);
+            function clearError(element) {
+                if (element) {
+                    element.textContent = '';
+                    element.classList.remove('show');
                 }
-            });
+            }
 
-            // 啟用/禁用排序按鈕
-            const siblings = Array.from(container.children);
-            siblings.forEach((siblingLi, index) => {
-                const upButton = siblingLi.querySelector('.btn-move-up');
-                const downButton = siblingLi.querySelector('.btn-move-down');
-                if (upButton) upButton.disabled = (index === 0);
-                if (downButton) downButton.disabled = (index === siblings.length - 1);
-            });
-        }
+            function buildTree(links) {
+                const linkMap = {};
+                const tree = [];
+                links.forEach(link => {
+                    linkMap[link.id] = { ...link, children: [] };
+                });
+                links.forEach(link => {
+                    if (link.parent_id && linkMap[link.parent_id]) {
+                        linkMap[link.parent_id].children.push(linkMap[link.id]);
+                        linkMap[link.parent_id].children.sort((a, b) => a.display_order - b.display_order);
+                    } else {
+                        tree.push(linkMap[link.id]);
+                    }
+                });
+                tree.sort((a, b) => a.display_order - b.display_order);
+                return tree;
+            }
 
-        // 填充父級選項
-        function populateParentSelects(links, currentLinkId = null) {
-            addParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
-            editParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
-
-            const addOptions = (items, select, indent = 0) => {
-                items.forEach(link => {
-                    if (currentLinkId === link.id) return;
-
-                    const option = document.createElement('option');
-                    option.value = link.id;
-                    option.textContent = `${'—'.repeat(indent)} ${link.name}`;
-                    select.appendChild(option);
+            function renderList(items, container) {
+                container.innerHTML = '';
+                if (items.length === 0 && container === listContainer) {
+                    container.innerHTML = `<div class="empty-state"><i class="fas fa-folder-open"></i><h3>尚未建立任何導覽連結</h3><p>點擊下方的「新增連結」按鈕開始建立導覽結構</p></div>`;
+                    return;
+                }
+                items.forEach((item, index, arr) => { 
+                    const li = document.createElement('li');
+                    li.dataset.id = item.id;
+                    const infoDiv = document.createElement('div');
+                    infoDiv.classList.add('link-info');
+                    const nameDiv = document.createElement('div');
+                    nameDiv.classList.add('link-name');
+                    nameDiv.textContent = item.name;
+                    infoDiv.appendChild(nameDiv);
+                    if (item.url && item.url !== '#') {
+                        const urlDiv = document.createElement('div');
+                        urlDiv.classList.add('link-url');
+                        urlDiv.textContent = item.url;
+                        infoDiv.appendChild(urlDiv);
+                    }
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.classList.add('link-details');
+                    detailsDiv.innerHTML = `<span><i class="fas fa-fingerprint"></i> ID: ${item.id}</span> <span><i class="fas fa-sort"></i> 順序: ${item.display_order}</span> <span><i class="fas fa-sitemap"></i> 父級: ${item.parent_id || '無'}</span>`;
+                    infoDiv.appendChild(detailsDiv);
+                    li.appendChild(infoDiv);
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('link-actions');
                     
-                    if (link.children && link.children.length > 0) {
-                        addOptions(link.children, select, indent + 1);
+                    const moveUpBtn = document.createElement('button');
+                    moveUpBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                    moveUpBtn.classList.add('btn', 'btn-move-up');
+                    moveUpBtn.title = "上移";
+                    moveUpBtn.disabled = index === 0;
+                    moveUpBtn.onclick = () => handleSort(item.id, 'up');
+                    actionsDiv.appendChild(moveUpBtn);
+
+                    const moveDownBtn = document.createElement('button');
+                    moveDownBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                    moveDownBtn.classList.add('btn', 'btn-move-down');
+                    moveDownBtn.title = "下移";
+                    moveDownBtn.disabled = index === arr.length - 1;
+                    moveDownBtn.onclick = () => handleSort(item.id, 'down');
+                    actionsDiv.appendChild(moveDownBtn);
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
+                    editBtn.classList.add('btn', 'btn-edit');
+                    editBtn.onclick = () => showEditForm(item);
+                    actionsDiv.appendChild(editBtn);
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
+                    deleteBtn.classList.add('btn', 'btn-delete');
+                    deleteBtn.onclick = () => deleteLink(item.id, item.name);
+                    actionsDiv.appendChild(deleteBtn);
+                    li.appendChild(actionsDiv);
+                    container.appendChild(li);
+                    if (item.children && item.children.length > 0) {
+                        const subUl = document.createElement('ul');
+                        li.appendChild(subUl);
+                        renderList(item.children, subUl);
                     }
                 });
-            };
-
-            const tree = buildTree(links);
-            addOptions(tree, addParentSelect);
-            addOptions(tree, editParentSelect);
-        }
-
-        // 載入連結
-        async function loadLinks() {
-            loadingDiv.style.display = 'block';
-            listContainer.innerHTML = '';
-            clearError(addFormError);
-            clearError(editFormError);
-            editFormDiv.style.display = 'none';
-
-            try {
-                const response = await fetch('/api/admin/nav-links');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                allLinks = await response.json();
-
-                const tree = buildTree(allLinks);
-                renderList(tree, listContainer);
-                populateParentSelects(allLinks);
-
-                loadingDiv.style.display = 'none';
-            } catch (error) {
-                console.error('無法載入連結:', error);
-                loadingDiv.style.display = 'none';
-                listContainer.innerHTML = `
-                    <div class="error">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <h3>載入失敗</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-            }
-        }
-
-        // 新增表單提交
-        addForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearError(addFormError);
-            
-            const formData = new FormData(addForm);
-            const data = Object.fromEntries(formData.entries());
-            
-            if (data.parent_id === '') {
-                delete data.parent_id;
             }
 
-            try {
-                const adminPassword = prompt("請輸入管理員密碼以新增連結：");
-                if (!adminPassword) {
-                    displayError(addFormError, "未提供管理員密碼，操作取消。");
-                    return;
-                }
-                const response = await fetch('/api/admin/nav-links', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Password': adminPassword
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
-                }
-                
-                addForm.reset();
-                document.getElementById('add-order').value = '0';
-                loadLinks();
-                showToast('連結新增成功！');
-            } catch (error) {
-                console.error('新增連結失敗:', error);
-                displayError(addFormError, `新增失敗: ${error.message}`);
+            function populateParentSelects(links, currentLinkId = null) {
+                addParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
+                editParentSelect.innerHTML = '<option value="">-- 無（頂層連結）--</option>';
+                const addOptions = (items, select, indent = 0) => {
+                    items.forEach(link => {
+                        if (currentLinkId === link.id || (currentLinkId && isDescendant(allLinks, currentLinkId, link.id))) return;
+                        const option = document.createElement('option');
+                        option.value = link.id;
+                        option.textContent = `${'—'.repeat(indent)} ${link.name}`;
+                        select.appendChild(option);
+                        if (link.children && link.children.length > 0) {
+                            addOptions(link.children, select, indent + 1);
+                        }
+                    });
+                };
+                const tree = buildTree(links);
+                addOptions(tree, addParentSelect);
+                addOptions(tree, editParentSelect);
             }
-        });
-
-        // 顯示編輯表單
-        function showEditForm(link) {
-            clearError(editFormError);
-            editForm.reset();
-
-            document.getElementById('edit-id').value = link.id;
-            document.getElementById('edit-name').value = link.name;
-            document.getElementById('edit-url').value = link.url || '';
-            document.getElementById('edit-order').value = link.display_order;
-
-            populateParentSelects(allLinks, link.id);
-            editParentSelect.value = link.parent_id || '';
-
-            editFormDiv.style.display = 'block';
-            editFormDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // 編輯表單提交
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearError(editFormError);
             
-            const formData = new FormData(editForm);
-            const data = Object.fromEntries(formData.entries());
-            const linkId = data.id;
-            
-            if (data.parent_id === '') {
-                delete data.parent_id;
+            function findLinkById(links, id) {
+                for (const link of links) {
+                    if (link.id === id) return link;
+                    if (link.children) {
+                        const found = findLinkById(link.children, id);
+                        if (found) return found;
+                    }
+                }
+                return null;
             }
 
-            try {
-                const adminPassword = prompt("請輸入管理員密碼以更新連結：");
-                if (!adminPassword) {
-                    displayError(editFormError, "未提供管理員密碼，操作取消。");
-                    return;
-                }
-                const response = await fetch(`/api/admin/nav-links/${linkId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Password': adminPassword
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
-                }
-                
+            function isDescendant(allLinks, parentId, childIdToTest) {
+                 const parentLink = findLinkById(allLinks, parentId);
+                 if (!parentLink || !parentLink.children) return false;
+                 
+                 function check(currentChildren) {
+                     for (const child of currentChildren) {
+                         if (child.id === childIdToTest) return true;
+                         if (child.children && check(child.children)) return true;
+                     }
+                     return false;
+                 }
+                 return check(parentLink.children);
+            }
+
+            async function loadLinks() {
+                loadingDiv.style.display = 'block';
+                listContainer.innerHTML = '';
+                clearError(addFormError);
+                clearError(editFormError);
                 editFormDiv.style.display = 'none';
-                loadLinks();
-                showToast('連結更新成功！');
-            } catch (error) {
-                console.error('更新連結失敗:', error);
-                displayError(editFormError, `更新失敗: ${error.message}`);
-            }
-        });
-
-        // 取消編輯
-        editForm.querySelector('.form-btn-cancel').addEventListener('click', () => {
-            editFormDiv.style.display = 'none';
-            clearError(editFormError);
-        });
-
-        // 刪除連結
-        async function deleteLink(id, name) {
-            if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) {
-                return;
+                try {
+                    const response = await fetch('/api/admin/nav-links');
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    allLinks = await response.json();
+                    const tree = buildTree(allLinks);
+                    renderList(tree, listContainer);
+                    populateParentSelects(allLinks);
+                    loadingDiv.style.display = 'none';
+                } catch (error) {
+                    console.error('無法載入連結:', error);
+                    loadingDiv.style.display = 'none';
+                    listContainer.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><h3>載入失敗</h3><p>${error.message}</p></div>`;
+                }
             }
 
-            try {
-                const adminPassword = prompt("請輸入管理員密碼以刪除連結：");
-                if (!adminPassword) {
-                    showToast("未提供管理員密碼，操作取消。", "error");
+            addForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearError(addFormError);
+                const formData = new FormData(addForm);
+                const data = Object.fromEntries(formData.entries());
+                if (data.parent_id === '') delete data.parent_id;
+                data.display_order = parseInt(data.display_order) || 0;
+
+                const storedPassword = localStorage.getItem('adminPassword');
+                if (!storedPassword) {
+                    displayError(addFormError, "管理員密碼未設定，請重新整理頁面並輸入。");
                     return;
                 }
-                const response = await fetch(`/api/admin/nav-links/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Admin-Password': adminPassword
-                    }
-                });
-                
-                if (!response.ok) {
-                    let errorMsg = `HTTP error! status: ${response.status}`;
-                    try {
-                        const result = await response.json();
-                        errorMsg = result.error || errorMsg;
-                    } catch (e) { /* Ignore if no JSON body */ }
-                    throw new Error(errorMsg);
+                try {
+                    const response = await fetch('/api/admin/nav-links', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                    addForm.reset();
+                    document.getElementById('add-order').value = '0';
+                    loadLinks();
+                    showToast('連結新增成功！');
+                } catch (error) {
+                    console.error('新增連結失敗:', error);
+                    displayError(addFormError, `新增失敗: ${error.message}`);
+                }
+            });
+
+            window.showEditForm = function(link) { 
+                clearError(editFormError);
+                editForm.reset();
+                document.getElementById('edit-id').value = link.id;
+                document.getElementById('edit-name').value = link.name;
+                document.getElementById('edit-url').value = link.url || '';
+                document.getElementById('edit-order').value = link.display_order;
+                populateParentSelects(allLinks, link.id);
+                editParentSelect.value = link.parent_id || '';
+                editFormDiv.style.display = 'block';
+                editFormDiv.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearError(editFormError);
+                const formData = new FormData(editForm);
+                const data = Object.fromEntries(formData.entries());
+                const linkId = data.id;
+                if (data.parent_id === '') delete data.parent_id;
+                else data.parent_id = parseInt(data.parent_id);
+                data.display_order = parseInt(data.display_order) || 0;
+
+                if (data.parent_id && (data.parent_id === parseInt(linkId) || isDescendant(allLinks, parseInt(linkId), data.parent_id))) {
+                    displayError(editFormError, "不能將連結的父層級設為其自身或其子項目。");
+                    return;
                 }
                 
-                loadLinks();
-                showToast('連結刪除成功！');
-            } catch (error) {
-                console.error('刪除連結失敗:', error);
-                showToast(`刪除失敗: ${error.message}`, 'error');
+                const storedPassword = localStorage.getItem('adminPassword');
+                if (!storedPassword) {
+                    displayError(editFormError, "管理員密碼未設定，請重新整理頁面並輸入。");
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/admin/nav-links/${linkId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                    editFormDiv.style.display = 'none';
+                    loadLinks();
+                    showToast('連結更新成功！');
+                } catch (error) {
+                    console.error('更新連結失敗:', error);
+                    displayError(editFormError, `更新失敗: ${error.message}`);
+                }
+            });
+
+            editForm.querySelector('.form-btn-cancel').addEventListener('click', () => {
+                editFormDiv.style.display = 'none';
+                clearError(editFormError);
+            });
+
+            window.deleteLink = async function(id, name) { 
+                if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) return;
+                const storedPassword = localStorage.getItem('adminPassword');
+                if (!storedPassword) {
+                    showToast("管理員密碼未設定，請重新整理頁面並輸入。", "error");
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/admin/nav-links/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'X-Admin-Password': storedPassword }
+                    });
+                    if (!response.ok && response.status !== 204) {
+                        let errorMsg = `HTTP error! status: ${response.status}`;
+                        try { const result = await response.json(); errorMsg = result.error || errorMsg; } catch (e) {}
+                        throw new Error(errorMsg);
+                    }
+                    loadLinks();
+                    showToast('連結刪除成功！');
+                } catch (error) {
+                    console.error('刪除連結失敗:', error);
+                    showToast(`刪除失敗: ${error.message}`, 'error');
+                }
             }
-        }
-// 用這個函數替換現有的 handleSort 函數
-// 修正後的排序函數
-async function handleSort(linkId, direction) {
-    console.log(`[SORT] 開始排序：ID=${linkId}, 方向=${direction}`);
-    
-    // 確保 linkId 是數字類型
-    linkId = parseInt(linkId, 10);
-    if (isNaN(linkId)) {
-        console.error('[SORT] 無效的連結 ID');
-        return;
-    }
-    
-    // 尋找要移動的連結和其兄弟節點
-    const linkToMove = allLinks.find(link => link.id === linkId);
-    if (!linkToMove) {
-        console.error('[SORT] 找不到要移動的連結');
-        return;
-    }
 
-    console.log('[SORT] 找到要移動的連結:', linkToMove);
+            window.handleSort = async function(linkId, direction) { 
+                const storedPassword = localStorage.getItem('adminPassword');
+                if (!storedPassword) {
+                    showToast("管理員密碼未設定，請重新整理頁面並輸入。", "error");
+                    return;
+                }
+                const linkToMove = allLinks.find(l => l.id === linkId);
+                if (!linkToMove) return;
+                const siblings = allLinks.filter(l => l.parent_id === linkToMove.parent_id).sort((a,b) => a.display_order - b.display_order);
+                const currentIndex = siblings.findIndex(l => l.id === linkId);
+                let siblingToSwap = null;
+                if (direction === 'up' && currentIndex > 0) {
+                    siblingToSwap = siblings[currentIndex - 1];
+                } else if (direction === 'down' && currentIndex < siblings.length - 1) {
+                    siblingToSwap = siblings[currentIndex + 1];
+                }
 
-    // 找到同一層級的兄弟節點（相同的 parent_id）
-    const siblings = allLinks
-        .filter(link => link.parent_id === linkToMove.parent_id)
-        .sort((a, b) => a.display_order - b.display_order);
+                if (!siblingToSwap) return;
 
-    console.log('[SORT] 同層級兄弟節點 (已排序):', siblings);
+                const tempOrder = linkToMove.display_order;
+                linkToMove.display_order = siblingToSwap.display_order;
+                siblingToSwap.display_order = tempOrder;
 
-    const currentIndex = siblings.findIndex(link => link.id === linkId);
-    console.log('[SORT] 當前連結在兄弟節點中的索引:', currentIndex);
-    
-    let siblingToSwap = null;
-
-    if (direction === 'up' && currentIndex > 0) {
-        siblingToSwap = siblings[currentIndex - 1];
-        console.log('[SORT] 上移: 與索引', currentIndex - 1, '的連結交換');
-    } else if (direction === 'down' && currentIndex < siblings.length - 1) {
-        siblingToSwap = siblings[currentIndex + 1];
-        console.log('[SORT] 下移: 與索引', currentIndex + 1, '的連結交換');
-    }
-
-    if (!siblingToSwap) {
-        console.warn('[SORT] 無法移動：已經是最頂端或最底端');
-        showToast('無法移動：已經是最頂端或最底端', 'error');
-        return;
-    }
-
-    console.log('[SORT] 要交換的兄弟節點:', siblingToSwap);
-
-    // 準備交換的數據 - 確保所有數值都是數字類型
-    const updateData = [
-        { 
-            id: parseInt(linkToMove.id, 10), 
-            display_order: parseInt(siblingToSwap.display_order, 10)
-        },
-        { 
-            id: parseInt(siblingToSwap.id, 10), 
-            display_order: parseInt(linkToMove.display_order, 10)
-        }
-    ];
-
-    console.log('[SORT] 準備發送的數據:');
-    console.log('- 第一項:', updateData[0]);
-    console.log('- 第二項:', updateData[1]);
-    console.log('- JSON 字串:', JSON.stringify(updateData, null, 2));
-
-    try {
-        const adminPassword = prompt("請輸入管理員密碼以更新排序：");
-        if (!adminPassword) {
-            showToast("未提供管理員密碼，操作取消。", "error");
-            return;
-        }
-        console.log('[SORT] 發送 PUT 請求到 /api/admin/nav-links/reorder');
-        
-        const response = await fetch('/api/admin/nav-links/reorder', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Admin-Password': adminPassword
-            },
-            body: JSON.stringify(updateData)
+                try {
+                    const updates = [
+                        { id: linkToMove.id, display_order: linkToMove.display_order },
+                        { id: siblingToSwap.id, display_order: siblingToSwap.display_order }
+                    ];
+                    for (const update of updates) {
+                         const response = await fetch(`/api/admin/nav-links/${update.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                            body: JSON.stringify({ display_order: update.display_order }) 
+                        });
+                        if (!response.ok) {
+                             const errorData = await response.json().catch(() => ({}));
+                             throw new Error(errorData.error || `HTTP error! status: ${response.status} for ID ${update.id}`);
+                        }
+                    }
+                    showToast('排序已更新！');
+                    await loadLinks();
+                } catch (error) {
+                    console.error('更新排序失敗:', error);
+                    showToast(`排序更新失敗: ${error.message}`, 'error');
+                    siblingToSwap.display_order = linkToMove.display_order; 
+                    linkToMove.display_order = tempOrder; 
+                    await loadLinks(); 
+                }
+            }
+            loadLinks();
         });
-        
-        console.log('[SORT] 收到響應:');
-        console.log('- 狀態:', response.status);
-        console.log('- 狀態文字:', response.statusText);
-        console.log('- Content-Type:', response.headers.get('content-type'));
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('[SORT] 伺服器錯誤響應:', errorData);
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('[SORT] 排序成功, 伺服器響應:', result);
-        
-        // 重新載入連結列表
-        await loadLinks();
-        showToast('排序更新成功！');
-        
-    } catch (error) {
-        console.error('[SORT] 排序失敗:', error);
-        console.error('[SORT] 錯誤堆疊:', error.stack);
-        showToast(`排序失敗: ${error.message}`, 'error');
-    }
-}
-
-        // 初始化載入
-        loadLinks();
     </script>
 </body>
 </html>
