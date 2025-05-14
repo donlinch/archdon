@@ -258,11 +258,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
             }
 
-            cardContainer.innerHTML = ` 
+            let daysRemainingHtml = '';
+            if (product.expiration_type === 1 && product.end_date) {
+                const endDate = new Date(product.end_date);
+                const today = new Date();
+                // 將時間設為午夜以避免時區問題影響天數計算
+                endDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+
+                const diffTime = endDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays >= 0) {
+                    daysRemainingHtml = `<span class="days-remaining-badge" style="position: absolute; top: 5px; right: 5px; background-color: rgba(255, 0, 0, 0.7); color: white; padding: 2px 5px; font-size: 0.75rem; border-radius: 3px;">剩下 ${diffDays} 天</span>`;
+                }
+            }
+
+            cardContainer.innerHTML = `
             <div class="position-relative">
                 <img src="${product.image_url || '/images/placeholder.png'}" class="card-img-top" alt="${product.name || '商品圖片'}">
                 ${tagsHtml}
                 ${product.price !== null ? `<span class="price-badge">NT$ ${Math.floor(product.price)}</span>` : ''}
+                ${daysRemainingHtml}
             </div>
             <div class="card-body">
                 <h5 class="card-title">${product.name || '未命名商品'}</h5>
