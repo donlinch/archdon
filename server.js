@@ -4961,7 +4961,7 @@ const unboxingUploadStorage = multer.memoryStorage();
 const unboxingUpload = multer({
     storage: unboxingUploadStorage,
     limits: {
-        fileSize: 10 * 1024 * 1024, // 每張圖片最大 10MB
+        fileSize: 20 * 1024 * 1024, // 每張圖片最大 20MB
         files: 3                    // 最多上傳 3 張圖片
     },
     fileFilter: (req, file, cb) => {
@@ -7905,4 +7905,3 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
     }
 });
-
