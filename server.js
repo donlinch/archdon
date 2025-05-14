@@ -7943,7 +7943,7 @@ adminRouter.get('/products/:id', async (req, res) => {
 adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
     try {
         // Logic from public/store/store-routes.js router.post('/products',...)
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url } = req.body; // Added seven_eleven_url
+        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url } = req.body; // Added seven_eleven_url and body_image_url
 
         if (!name || !price) {
             if (req.file) {
@@ -7952,13 +7952,13 @@ adminRouter.post('/products', productUpload.single('image'), async (req, res) =>
             return res.status(400).json({ error: '商品名稱和價格為必填項' });
         }
 
-        const imagePath = req.file ? `/uploads/storemarket/${req.file.filename}` : null;
+        let final_image_url = req.file ? `/uploads/storemarket/${req.file.filename}` : (body_image_url || null);
 
         const productData = {
             name,
             description,
             price: parseFloat(price),
-            image_url: imagePath, // Corrected: products table uses image_url, and productData should reflect that for clarity
+            image_url: final_image_url, // Use final_image_url which considers body_image_url
             category,
             expiration_type: parseInt(expiration_type || 0),
             start_date: start_date || null,
@@ -8018,7 +8018,7 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             return res.status(400).json({ error: '無效的商品 ID' });
         }
  
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url } = req.body; // Added seven_eleven_url
+        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url } = req.body; // Added seven_eleven_url and body_image_url
  
         // Directly fetch existing product using pool.query
         const existingProductResult = await pool.query(
@@ -8036,11 +8036,10 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
         }
         const existingProduct = existingProductResult.rows[0];
         
-        // Use image_url from the database as the base
-        let imagePath = existingProduct.image_url;
-        if (req.file) {
-            if (existingProduct.image_url && existingProduct.image_url.startsWith('/uploads/storemarket/')) { // Corrected to existingProduct.image_url
-                const oldImagePath = path.join(__dirname, 'public', existingProduct.image_url); // Corrected to existingProduct.image_url
+        let final_image_url = existingProduct.image_url; // Default to existing
+        if (req.file) { // If a new file is uploaded, it takes precedence
+            if (existingProduct.image_url && existingProduct.image_url.startsWith('/uploads/storemarket/')) {
+                const oldImagePath = path.join(__dirname, 'public', existingProduct.image_url);
                  if (fs.existsSync(oldImagePath)) {
                      try {
                          fs.unlinkSync(oldImagePath);
@@ -8049,14 +8048,17 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
                      }
                  }
             }
-            imagePath = `/uploads/storemarket/${req.file.filename}`;
+            final_image_url = `/uploads/storemarket/${req.file.filename}`;
+        } else if (body_image_url !== undefined) { // If no file, but body_image_url is provided (even if empty string to clear it)
+            final_image_url = body_image_url || null;
         }
+        // If no req.file and body_image_url is undefined, final_image_url remains existingProduct.image_url
 
         const productData = {
             name: name !== undefined ? name : existingProduct.name,
             description: description !== undefined ? description : existingProduct.description,
             price: price !== undefined ? parseFloat(price) : existingProduct.price,
-            image_url: imagePath,
+            image_url: final_image_url, // Use the determined final_image_url
             category: category !== undefined ? category : existingProduct.category, // stock removed
             seven_eleven_url: seven_eleven_url !== undefined ? seven_eleven_url : existingProduct.seven_eleven_url, // Added seven_eleven_url
             expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
