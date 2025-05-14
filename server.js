@@ -15,8 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
-const storeDb = require('./public/store/store-db');
-const storeRoutes = require('./public/store/store-routes');
+// const storeDb = require('./public/store/store-db'); // Removed as /public/store is deleted
+// const storeRoutes = require('./public/store/store-routes'); // Removed as /public/store is deleted
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // 管理員密碼 (從環境變數讀取)
@@ -576,7 +576,7 @@ app.post('/api/game-rooms', async (req, res) => {
 });
 
 // 在 Express 路由設定區域添加
-app.use('/api/storemarket', storeRoutes);
+// app.use('/api/storemarket', storeRoutes); // Removed as storeRoutes is deleted
 app.use('/api/voit', voitRouter);
 
 // --- 管理後台導覽連結 API ---
@@ -8207,14 +8207,14 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
     // 可能還有其他現有的啟動代碼
 
     // ---> 添加以下代碼來初始化商店數據庫 <---
-    try {
-        await storeDb.initStoreDatabase();
-        // 初始化成功日誌已在 storeDb.initStoreDatabase 內部處理
-    } catch (err) {
-        // 錯誤日誌已在 storeDb.initStoreDatabase 內部處理
-        // 您可以選擇在這裡添加額外的錯誤處理，例如退出應用
-        console.error('*** 商店數據庫初始化失敗，應用可能無法正常運行商店功能 ***');
-    }
+    // try {
+    //     await storeDb.initStoreDatabase(); // storeDb is removed
+    //     // 初始化成功日誌已在 storeDb.initStoreDatabase 內部處理
+    // } catch (err) {
+    //     // 錯誤日誌已在 storeDb.initStoreDatabase 內部處理
+    //     // 您可以選擇在這裡添加額外的錯誤處理，例如退出應用
+    //     console.error('*** 商店數據庫初始化失敗，應用可能無法正常運行商店功能 ***'); // This was related to storeDb
+    // }
     // ---> 添加結束 <---
 
 });
