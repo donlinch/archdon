@@ -213,9 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); 
             } 
             
-            const product = await response.json(); 
-            editProductId.value = product.id; 
-            editProductName.value = product.name || ''; 
+            const product = await response.json();
+            console.log('Product data for editing:', JSON.stringify(product, null, 2)); // 调试日志
+            editProductId.value = product.id;
+            editProductName.value = product.name || '';
             editProductDescription.value = product.description || ''; 
             editProductPrice.value = product.price !== null ? product.price : ''; 
             editProductImageUrl.value = product.image_url || ''; 
