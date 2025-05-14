@@ -1004,11 +1004,20 @@ if (addTagForm) {
 window.editTag = async function(id, currentName) {
     const newName = prompt('請輸入新的標籤名稱:', currentName);
     if (newName === null || newName.trim() === '') return;
+
+    const adminPassword = prompt("請輸入管理員密碼：");
+    if (!adminPassword) {
+        alert("未提供管理員密碼，操作取消。");
+        return;
+    }
     
     try {
         const response = await fetch(`/api/tags/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Password': adminPassword
+            },
             body: JSON.stringify({ tag_name: newName.trim() })
         });
         
@@ -1031,9 +1040,17 @@ window.editTag = async function(id, currentName) {
 // 刪除標籤（全局函數）
 window.deleteTag = async function(id) {
     if (confirm(`確定要刪除此標籤嗎？此操作無法復原，並會從所有使用此標籤的商品中移除。`)) {
+        const adminPassword = prompt("請輸入管理員密碼：");
+        if (!adminPassword) {
+            alert("未提供管理員密碼，操作取消。");
+            return;
+        }
         try {
             const response = await fetch(`/api/tags/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': adminPassword
+                }
             });
             
             if (!response.ok) {

@@ -17,7 +17,31 @@ const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 const storeDb = require('./public/store/store-db');
 const storeRoutes = require('./public/store/store-routes');
-const { GoogleGenerativeAI } = require('@google/generative-ai');  
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// 管理員密碼 (從環境變數讀取)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.warn("警告：ADMIN_PASSWORD 環境變數未設定。標籤管理 API 將無法受到密碼保護。");
+}
+
+// 密碼驗證中介軟體
+const verifyAdminPassword = (req, res, next) => {
+    if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
+        console.warn("警告：ADMIN_PASSWORD 未設定，跳過標籤管理 API 的密碼驗證。");
+        return next();
+    }
+
+    const password = req.headers['x-admin-password'] || req.body.adminPassword;
+
+    if (!password) {
+        return res.status(401).json({ error: '未提供管理員密碼。' });
+    }
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(403).json({ error: '管理員密碼錯誤。' });
+    }
+    next();
+};
 
 const multer = require('multer');
 const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
@@ -5529,7 +5553,7 @@ app.post('/api/tags', async (req, res) => {
 
 
 // 新增：更新標籤名稱
-app.put('/api/tags/:tag_id', async (req, res) => {
+app.put('/api/tags/:tag_id', verifyAdminPassword, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
     const { tag_name } = req.body; // 從請求 body 獲取新的 tag_name
 
@@ -5570,7 +5594,7 @@ app.put('/api/tags/:tag_id', async (req, res) => {
 // --- 標籤 API ---
 // ... (GET, POST, PUT /api/tags) ...
 // 新增：刪除標籤
-app.delete('/api/tags/:tag_id', async (req, res) => {
+app.delete('/api/tags/:tag_id', verifyAdminPassword, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
 
     // 驗證輸入
