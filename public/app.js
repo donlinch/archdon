@@ -221,6 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         productList.forEach(product => {
+            // 新增：檢查商品狀態，如果不是 '有效'，則跳過此商品
+            if (product.product_status !== '有效') {
+                return; // 跳到下一個商品
+            }
+
             const cardContainer = document.createElement('div');
             cardContainer.className = 'product-card animate__animated animate__fadeIn';
 
