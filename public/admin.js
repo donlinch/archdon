@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingMessage) loadingMessage.style.display = 'block';
             if (productTable) productTable.style.display = 'none';
             
-            const response = await fetch('/api/storemarket/products'); // <--- 修改 API 路徑
+            const response = await fetch('/api/admin/products'); // <--- 修改 API 路徑為 adminRouter 的路徑
             if (!response.ok) {
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             } 

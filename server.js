@@ -7832,6 +7832,43 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 });
 
 // --- 商品管理 API (受保護) ---
+// GET /api/admin/products - 獲取所有商品列表供管理後台使用
+adminRouter.get('/products', async (req, res) => {
+    try {
+        // const category = req.query.category; // 管理後台通常不需要按分類篩選，除非特別設計
+        const productsFromDb = await storeDb.getAllProducts(); // 獲取所有商品
+
+        const products = productsFromDb.map(product => {
+            let calculated_status;
+            const expType = product.expiration_type;
+
+            if (expType === 0) {
+                calculated_status = '有效';
+            } else if (expType === 1) {
+                calculated_status = '有效'; // 預設
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const startDate = product.start_date ? new Date(product.start_date) : null;
+                const endDate = product.end_date ? new Date(product.end_date) : null;
+
+                if (startDate && endDate) {
+                    if (today < startDate) calculated_status = '尚未開始';
+                    else if (today > endDate) calculated_status = '已過期';
+                } else if (startDate && !endDate && today < startDate) calculated_status = '尚未開始';
+                else if (!startDate && endDate && today > endDate) calculated_status = '已過期';
+                // 其他情況（如只有一個日期且在範圍內）維持 '有效'
+            } else {
+                calculated_status = '狀態未明';
+            }
+            return { ...product, product_status: calculated_status };
+        });
+        res.json(products);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取商品列表失敗:', err);
+        res.status(500).json({ error: '獲取商品列表失敗', details: err.message });
+    }
+});
+
 adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
     try {
         // Logic from public/store/store-routes.js router.post('/products',...)
