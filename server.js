@@ -5240,6 +5240,9 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         
         console.log("[DEBUG] Original promptTemplate from DB:", promptTemplate); // 新增日誌: 打印原始模板
 
+        console.log("[VERY DEBUG] imageInsights JUST BEFORE REPLACE:", imageInsights); // 更詳細的日誌
+        console.log("[VERY DEBUG] typeof imageInsights JUST BEFORE REPLACE:", typeof imageInsights); // 更詳細的日誌
+
         let geminiPrompt = promptTemplate
             .replace(userDescStringInTemplate, `"${actualUserDescription}"`) // 替換時確保引號
             // 替換 imageInsights 時，確保替換後的內容也符合上下文，例如前面可能需要一個空格
