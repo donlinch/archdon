@@ -5816,9 +5816,15 @@ app.get('/api/products', async (req, res) => {
     // 使用 LEFT JOIN 以確保即使商品沒有標籤也能被選出
     // 使用 COALESCE(json_agg(...) FILTER (...), '[]'::json) 來處理沒有標籤的情況，返回空JSON數組
     let queryText = `
-        SELECT 
-            p.id, p.name, p.description, p.price, p.image_url, 
+        SELECT
+            p.id, p.name, p.description, p.price, p.image_url,
             p.seven_eleven_url, p.click_count, p.category,
+            p.expiration_type, p.start_date, p.end_date, -- 新增欄位
+            CASE
+                WHEN p.expiration_type = 0 THEN '有效'
+                WHEN p.expiration_type = 1 AND (p.start_date IS NULL OR p.start_date <= CURRENT_DATE) AND (p.end_date IS NULL OR p.end_date >= CURRENT_DATE) THEN '有效'
+                ELSE '已過期'
+            END as product_status, -- 新增狀態計算
             COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
         FROM products p
         LEFT JOIN product_tags pt ON p.id = pt.product_id
@@ -5843,7 +5849,7 @@ app.get('/api/products', async (req, res) => {
 
     // *** GROUP BY 子句，確保每個商品只出現一次 ***
     // 必須 GROUP BY products 表中所有被 SELECT 的非聚合欄位
-    queryText += ` GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category`; 
+    queryText += ` GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category, p.expiration_type, p.start_date, p.end_date`;
 
     // 構建 ORDER BY 子句
     // *** 重要：排序欄位也需要指定表別名 ***
