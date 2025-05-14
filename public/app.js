@@ -2,18 +2,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 獲取DOM元素
     const grid = document.getElementById('product-grid');
-    const sortLinks = document.querySelectorAll('.sort-link');
+    const sortToggleButton = document.getElementById('sort-toggle-btn'); // 新的排序切換按鈕
     const backToTopButton = document.getElementById('back-to-top');
     const categoryFilterContainer = document.getElementById('category-filter-buttons');
     
     // 修改: 初始狀態
-    let currentSort = 'latest'; 
+    let currentSort = 'latest'; // 預設為最新排序
     let currentCategory = null; // 使用 null 代表未選擇/全部
     
     // 初始化各功能
     initSwiper();
     fetchCategoriesAndProducts();
-    setupSortLinks();
+    setupSortToggleButton(); // 修改為新的設定函式
     setupBackToTop();
     setupCharacterInteractions();
     
@@ -315,22 +315,25 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * 設置排序連結事件
      */
-    function setupSortLinks() {
-        if (sortLinks.length > 0) {
-            sortLinks.forEach(link => {
-                link.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const clickedSort = link.dataset.sort;
-                    if (clickedSort === currentSort) return; 
-                    
-                    sortLinks.forEach(otherLink => otherLink.classList.remove('active'));
-                    link.classList.add('active');
-                    
-                    currentSort = clickedSort; 
-                    
-                    fetchProducts(currentSort, currentCategory); 
-                });
+    function setupSortToggleButton() {
+        if (sortToggleButton) {
+            sortToggleButton.addEventListener('click', () => {
+                if (currentSort === 'latest') {
+                    currentSort = 'popular';
+                    sortToggleButton.textContent = '最新';
+                    sortToggleButton.classList.add('displaying-popular');
+                } else {
+                    currentSort = 'latest';
+                    sortToggleButton.textContent = '熱門';
+                    sortToggleButton.classList.remove('displaying-popular');
+                }
+                fetchProducts(currentSort, currentCategory);
             });
+
+            // 初始設定按鈕文字和 class (頁面載入時預設是最新排序)
+            // currentSort 初始為 'latest'
+            sortToggleButton.textContent = '熱門'; // 提示點擊後會變為熱門
+            sortToggleButton.classList.remove('displaying-popular'); // 確保初始沒有這個 class
         }
     }
     

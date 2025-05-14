@@ -829,12 +829,11 @@ body {
     
     <!-- 分類/排序標籤 -->
     <div class="category-tabs">
-        <!-- 排序按鈕 -->
-        <button class="filter-btn sort-link active" data-sort="latest">最新</button>
-        <button class="filter-btn sort-link" data-sort="popular">熱門</button>
+        <!-- 合併後的排序切換按鈕 -->
+        <button id="sort-toggle-btn" class="filter-btn sort-toggle-button">熱門</button>
         
         <!-- 分類按鈕容器 (JavaScript 將填入按鈕) -->
-        <div id="category-filter-buttons"></div> 
+        <div id="category-filter-buttons"></div>
     </div>
     
     <!-- 浮動角色 -->

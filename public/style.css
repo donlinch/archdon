@@ -43,6 +43,24 @@ nav#artist-filter.artist-filter-nav button.artist-filter-btn {
     /* 其他樣式保持不變 */
 }
 
+/* 新的合併排序切換按鈕樣式 */
+/* 確保這些樣式在 .filter-btn 之後，或者使用更高的特異性 */
+.category-tabs .sort-toggle-button { /* 增加特異性 */
+    /* 預設狀態 (最新排序，按鈕顯示 "熱門") */
+    background-color: #FFB74D; /* 主題黃色，與 'active' filter-btn 一致 */
+    color: white;
+    /* 您可以添加更多特定樣式 */
+}
+
+.category-tabs .sort-toggle-button.displaying-popular {
+    /* 當前為熱門排序時 (按鈕顯示 "最新") */
+    background-color: #64B5F6; /* 一個不同的顏色，例如淺藍色 */
+    color: white;
+}
+
+/* 如果您在 JS 中使用了 active-latest 和 active-popular class，可以像這樣定義它們 */
+/* 或者直接在 JS 中切換 displaying-popular class */
+
 /* --- Product Grid Layout (For index.html) --- */
 .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
 @media (min-width: 600px) { .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
