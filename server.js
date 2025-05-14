@@ -5119,7 +5119,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
-  console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.intent}, Files: ${req.files ? req.files.length : 0}`); // <--- 非常早期的日誌
+  console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.scheme_intent_key}, Files: ${req.files ? req.files.length : 0}`); // <--- 非常早期的日誌, 已修正
 
     
     if (!visionClient || !geminiModel) {
