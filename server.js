@@ -7941,224 +7941,209 @@ adminRouter.get('/products/:id', async (req, res) => {
 });
 
 
-app.post('/api/admin/products', async (req, res) => {
-    const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
 
+
+
+// POST /api/admin/products - **已修改**
+adminRouter.post('/products', async (req, res) => { // 移除了 productUpload 中介軟體
     try {
-        const result = await pool.query(`
-            INSERT INTO products (name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING *
-        `, [name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date]);
+        // 現在直接從 req.body 獲取所有欄位，包括 image_url 和 seven_eleven_url
+        const { name, description, price, category, expiration_type, start_date, end_date, image_url, seven_eleven_url, tags } = req.body;
 
-        const newProduct = result.rows[0];
-
-        // 如果有 tags，額外儲存關聯表（省略）
-        res.status(201).json(newProduct);
-    } catch (err) {
-        console.error('新增商品失敗:', err);
-        res.status(500).json({ error: '無法新增商品' });
-    }
-});
-
-
-
-app.put('/api/admin/products/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
-
-    try {
-        const result = await pool.query(`
-            UPDATE products
-            SET name = $1, description = $2, price = $3, category = $4,
-                image_url = $5, seven_eleven_url = $6, expiration_type = $7,
-                start_date = $8, end_date = $9
-            WHERE id = $10
-            RETURNING *
-        `, [name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到商品' });
-        }
-
-        const updatedProduct = result.rows[0];
-        // 如果有 tags，額外處理關聯表（省略）
-        res.json(updatedProduct);
-    } catch (err) {
-        console.error('更新商品失敗:', err);
-        res.status(500).json({ error: '無法更新商品' });
-    }
-});
-
-
-
-
-adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
-    try {
-        // Logic from public/store/store-routes.js router.post('/products',...)
-        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
-
-        if (!name || !price) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
+        if (!name || price === undefined || price === null) { // 價格可以是 0
             return res.status(400).json({ error: '商品名稱和價格為必填項' });
         }
 
-        const imagePath = req.file ? `/uploads/storemarket/${req.file.filename}` : null;
-
         const productData = {
-            name,
-            description,
+            name: name.trim(),
+            description: description ? description.trim() : null,
             price: parseFloat(price),
-            image_url: imagePath, // Corrected: products table uses image_url, and productData should reflect that for clarity
-            category,
+            image_url: image_url ? image_url.trim() : null, // 從 req.body 讀取
+            category: category ? category.trim() : null,
+            seven_eleven_url: seven_eleven_url ? seven_eleven_url.trim() : null, // 從 req.body 讀取
             expiration_type: parseInt(expiration_type || 0),
             start_date: start_date || null,
             end_date: end_date || null
-            // stock field removed
-            // seven_eleven_url is not in this version of productData, add if needed
-            // click_count will be default in DB or handled by other logic
         };
         
-        // If expiration_type is 0 (unlimited), force start_date and end_date to null
         if (productData.expiration_type === 0) {
             productData.start_date = null;
             productData.end_date = null;
         }
-        
-        // Directly use pool.query for INSERT, ensuring all fields including new ones are handled.
-        // The 'products' table uses 'image_url'.
-        const insertQuery = `
-            INSERT INTO products
-                (name, description, price, image_url, category,
-                 expiration_type, start_date, end_date, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-            RETURNING *`; // Placeholders count adjusted
-        const values = [
-            productData.name,
-            productData.description,
-            productData.price,
-            productData.image_url, // Corrected to use productData.image_url
-            productData.category,
-            productData.expiration_type,
-            productData.start_date,
-            productData.end_date
-        ]; // stock removed
-        
-        const result = await pool.query(insertQuery, values);
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[Admin API Error] 創建商品失敗:', err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (創建商品時):', unlinkErr);
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const insertQuery = `
+                INSERT INTO products
+                    (name, description, price, image_url, category, seven_eleven_url,
+                     expiration_type, start_date, end_date, click_count, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, NOW(), NOW()) 
+                RETURNING *`; // click_count 預設為 0
+            const values = [
+                productData.name, productData.description, productData.price, productData.image_url,
+                productData.category, productData.seven_eleven_url, productData.expiration_type,
+                productData.start_date, productData.end_date
+            ];
+            
+            const result = await client.query(insertQuery, values);
+            const newProduct = result.rows[0];
+            const newProductId = newProduct.id;
+
+            let insertedTagIds = [];
+            if (tags && Array.isArray(tags) && tags.length > 0) {
+                const validTagIds = tags.filter(tagId => typeof tagId === 'number' && Number.isInteger(tagId));
+                if (validTagIds.length > 0) {
+                    const tagInsertPromises = validTagIds.map(tagId => {
+                        return client.query(
+                            'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING tag_id',
+                            [newProductId, tagId]
+                        );
+                    });
+                    const tagInsertResults = await Promise.all(tagInsertPromises);
+                    insertedTagIds = tagInsertResults.map(r => r.rows[0] ? r.rows[0].tag_id : null).filter(id => id !== null);
+                }
             }
+            
+            await client.query('COMMIT');
+
+            let tagNames = [];
+            if (insertedTagIds.length > 0) { // 查詢剛才插入的標籤名稱
+                const tagNamesResult = await pool.query('SELECT tag_name FROM tags WHERE tag_id = ANY($1::int[])', [insertedTagIds]);
+                tagNames = tagNamesResult.rows.map(row => row.tag_name);
+            }
+            newProduct.tags = tagNames; // 將標籤名稱陣列加入回傳物件
+
+            res.status(201).json(newProduct);
+
+        } catch (dbError) {
+            await client.query('ROLLBACK');
+            console.error('[Admin API Error] 創建商品時資料庫操作失敗:', dbError);
+            res.status(500).json({ error: '創建商品失敗 (資料庫)', details: dbError.message });
+        } finally {
+            client.release();
         }
+
+    } catch (err) {
+        console.error('[Admin API Error] 創建商品預處理失敗:', err);
         res.status(500).json({ error: '創建商品失敗', details: err.message });
     }
 });
-adminRouter.put('/products/:id', productUpload.single('image'), async (req, res) => {
+
+
+
+
+
+
+// PUT /api/admin/products/:id - **已修改**
+adminRouter.put('/products/:id', async (req, res) => { // 移除了 productUpload 中介軟體
     try {
         const productId = parseInt(req.params.id);
         if (isNaN(productId)) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
             return res.status(400).json({ error: '無效的商品 ID' });
         }
 
-        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
+        // 直接從 req.body 獲取所有欄位
+        const { name, description, price, category, expiration_type, start_date, end_date, image_url, seven_eleven_url, tags } = req.body;
 
-        // Directly fetch existing product using pool.query
         const existingProductResult = await pool.query(
-            `SELECT id, name, description, price, image_url, category,
-                    click_count, expiration_type, start_date, end_date
-             FROM products WHERE id = $1`, // Removed 'stock', added 'click_count' for completeness if needed by existingProduct obj
+            `SELECT * FROM products WHERE id = $1`,
             [productId]
         );
 
         if (existingProductResult.rows.length === 0) {
-            if (req.file) {
-                fs.unlinkSync(req.file.path); // Clean up uploaded file if product not found
-            }
             return res.status(404).json({ error: '商品不存在' });
         }
         const existingProduct = existingProductResult.rows[0];
         
-        // Use image_url from the database as the base
-        let imagePath = existingProduct.image_url;
-        if (req.file) {
-            if (existingProduct.image && existingProduct.image.startsWith('/uploads/storemarket/')) {
-                const oldImagePath = path.join(__dirname, 'public', existingProduct.image);
-                 if (fs.existsSync(oldImagePath)) {
-                     try {
-                         fs.unlinkSync(oldImagePath);
-                     } catch (unlinkErr) {
-                         console.error('[Admin API Error] 刪除舊圖片失敗:', unlinkErr);
-                     }
-                 }
-            }
-            imagePath = `/uploads/storemarket/${req.file.filename}`;
-        }
-
         const productData = {
-            name: name !== undefined ? name : existingProduct.name,
-            description: description !== undefined ? description : existingProduct.description,
-            price: price !== undefined ? parseFloat(price) : existingProduct.price,
-            image_url: imagePath,
-            category: category !== undefined ? category : existingProduct.category, // stock removed
-            expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
-            start_date: start_date !== undefined ? start_date : existingProduct.start_date,
-            end_date: end_date !== undefined ? end_date : existingProduct.end_date
+            name: (name !== undefined ? name.trim() : existingProduct.name),
+            description: (description !== undefined ? description.trim() : existingProduct.description),
+            price: (price !== undefined && price !== null ? parseFloat(price) : existingProduct.price),
+            image_url: (image_url !== undefined ? image_url.trim() : existingProduct.image_url), // 從 req.body 讀取
+            category: (category !== undefined ? category.trim() : existingProduct.category),
+            seven_eleven_url: (seven_eleven_url !== undefined ? seven_eleven_url.trim() : existingProduct.seven_eleven_url), // 從 req.body 讀取
+            expiration_type: (expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type),
+            start_date: (start_date !== undefined ? start_date : existingProduct.start_date),
+            end_date: (end_date !== undefined ? end_date : existingProduct.end_date)
         };
 
         if (productData.expiration_type === 0) {
             productData.start_date = null;
             productData.end_date = null;
         }
-        
-        const updateQuery = `
-            UPDATE products
-            SET name = $1, description = $2, price = $3, image_url = $4, category = $5,
-                expiration_type = $6, start_date = $7, end_date = $8, updated_at = NOW()
-            WHERE id = $9
-            RETURNING *`; // Placeholders adjusted
-        const values = [
-            productData.name,
-            productData.description,
-            productData.price,
-            productData.image_url,
-            productData.category, // stock removed
-            productData.expiration_type,
-            productData.start_date,
-            productData.end_date,
-            productId
-        ]; // Placeholders adjusted
 
-        const result = await pool.query(updateQuery, values);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            const updateQuery = `
+                UPDATE products
+                SET name = $1, description = $2, price = $3, image_url = $4, category = $5, seven_eleven_url = $6,
+                    expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW()
+                WHERE id = $10
+                RETURNING *`;
+            const values = [
+                productData.name, productData.description, productData.price, productData.image_url,
+                productData.category, productData.seven_eleven_url, productData.expiration_type,
+                productData.start_date, productData.end_date, productId
+            ];
+            
+            const result = await client.query(updateQuery, values);
+            const updatedProduct = result.rows[0];
 
-        if (result.rows.length === 0) {
-             if (req.file && imagePath === `/uploads/storemarket/${req.file.filename}`) { // imagePath here is the new path if a file was uploaded
-                 fs.unlinkSync(req.file.path);
-             }
-             return res.status(500).json({ error: '更新商品失敗 (資料庫操作未返回更新後的記錄)' });
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 失敗:`, err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (更新商品時):', unlinkErr);
+            // 更新標籤
+            await client.query('DELETE FROM product_tags WHERE product_id = $1', [productId]);
+            let updatedTagIds = [];
+            if (tags && Array.isArray(tags) && tags.length > 0) {
+                const validTagIds = tags.filter(tagId => typeof tagId === 'number' && Number.isInteger(tagId));
+                if (validTagIds.length > 0) {
+                    const tagInsertPromises = validTagIds.map(tagId => {
+                        return client.query(
+                            'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING tag_id',
+                            [productId, tagId]
+                        );
+                    });
+                    const tagInsertResults = await Promise.all(tagInsertPromises);
+                    updatedTagIds = tagInsertResults.map(r => r.rows[0] ? r.rows[0].tag_id : null).filter(id => id !== null);
+                }
             }
+
+            await client.query('COMMIT');
+
+            let tagNames = [];
+            if (updatedTagIds.length > 0) {
+                const tagNamesResult = await pool.query('SELECT tag_name FROM tags WHERE tag_id = ANY($1::int[])', [updatedTagIds]);
+                tagNames = tagNamesResult.rows.map(row => row.tag_name);
+            }
+            updatedProduct.tags = tagNames; // 將標籤名稱陣列加入回傳物件
+
+            if (!updatedProduct) { // 理論上如果更新成功，這裡不會是 null
+                 return res.status(500).json({ error: '更新商品失敗 (資料庫操作未返回更新後的記錄)' });
+            }
+            res.json(updatedProduct);
+
+        } catch (dbError) {
+            await client.query('ROLLBACK');
+            console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 時資料庫操作失敗:`, dbError);
+            res.status(500).json({ error: '更新商品失敗 (資料庫)', details: dbError.message });
+        } finally {
+            client.release();
         }
+    } catch (err) {
+        console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 預處理失敗:`, err);
         res.status(500).json({ error: '更新商品失敗', details: err.message });
     }
 });
+
+
+
+
+
+
+
+
 adminRouter.delete('/products/:id', async (req, res) => {
     const { id } = req.params;
     // Logic from public/store/store-routes.js router.delete('/products/:id',...)
@@ -8215,24 +8200,46 @@ adminRouter.delete('/products/:id', async (req, res) => {
     }
 });
 
-// --- 音樂管理 API (受保護 - POST/PUT/DELETE) ---
-app.post('/api/admin/music', async (req, res) => {
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    const client = await pool.connect();
+
+// DELETE /api/admin/products/:id (這裡的邏輯保持不變，但確保它是 adminRouter 的一部分)
+adminRouter.delete('/products/:id', async (req, res) => {
+    const { id } = req.params;
     try {
-        await client.query('BEGIN');
-        const musicInsertQuery = `INSERT INTO music (title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;`;
-        const musicResult = await client.query(musicInsertQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null]);
-        const newMusic = musicResult.rows[0];
-        if (scores && Array.isArray(scores) && scores.length > 0) {
-            const scoreInsertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-            for (const score of scores) { if (score.type && score.pdf_url) await client.query(scoreInsertQuery, [newMusic.id, score.type, score.pdf_url, score.display_order || 0]); }
+        const productId = parseInt(id);
+        if (isNaN(productId)) {
+            return res.status(400).json({ error: '無效的商品 ID' });
         }
-        await client.query('COMMIT'); newMusic.scores = scores || []; res.status(201).json(newMusic);
-    } catch (err) { await client.query('ROLLBACK'); console.error('新增音樂時出錯:', err.stack || err); res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
-    } finally { client.release(); }
+        
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            // 首先，刪除 product_tags 中的關聯記錄，以避免外鍵約束問題
+            await client.query("DELETE FROM product_tags WHERE product_id = $1", [productId]);
+            
+            // 然後，刪除 products 表中的商品本身
+            const deleteResult = await client.query("DELETE FROM products WHERE id = $1", [productId]);
+            
+            await client.query('COMMIT');
+
+            if (deleteResult.rowCount > 0) {
+                res.status(204).send(); // No Content, 表示成功刪除
+            } else {
+                // 如果沒有任何行被刪除，表示找不到該 ID
+                res.status(404).json({ error: '找不到商品，無法刪除 (或者已被刪除)。' });
+            }
+        } catch (dbErr) {
+            await client.query('ROLLBACK');
+            console.error(`[Admin API Error] 刪除商品 ID ${id} 時資料庫操作失敗:`, dbErr);
+            res.status(500).json({ error: '刪除商品失敗 (資料庫)', details: dbErr.message });
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error(`[Admin API Error] 刪除商品 ID ${id} 時出錯:`, err);
+        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
+    }
 });
+
 app.put('/api/admin/music/:id', async (req, res) => {
     const { id } = req.params; if (isNaN(parseInt(id, 10))) { return res.status(400).json({ error: '無效的音樂 ID' }); }
     const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
