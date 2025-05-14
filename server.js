@@ -1639,7 +1639,7 @@ const upload = multer({
     }
     cb(null, true);
   },
-  limits: { fileSize: 2 * 1024 * 1024 } // 限制 2MB
+  limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB
 });
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
