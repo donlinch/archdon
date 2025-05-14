@@ -121,12 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
         
         try { 
-            if (loadingMessage) loadingMessage.style.display = 'block'; 
-            if (productTable) productTable.style.display = 'none'; 
+            if (loadingMessage) loadingMessage.style.display = 'block';
+            if (productTable) productTable.style.display = 'none';
             
-            const response = await fetch('/api/products'); 
-            if (!response.ok) { 
-                throw new Error(`HTTP 錯誤！狀態: ${response.status}`); 
+            const response = await fetch('/api/storemarket/products'); // <--- 修改 API 路徑
+            if (!response.ok) {
+                throw new Error(`HTTP 錯誤！狀態: ${response.status}`);
             } 
             
             const products = await response.json(); 
@@ -347,10 +347,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: editProductCategory.value.trim() || null,
                 image_url: editProductImageUrl.value.trim() || null,
                 seven_eleven_url: editProductSevenElevenUrl.value.trim() || null,
-                expiration_type: editExpirationType ? parseInt(editExpirationType.value) : 0,
-                start_date: editStartDate && editExpirationType && editExpirationType.value === '1' ? (editStartDate.value || null) : null,
-                end_date: editEndDate && editExpirationType && editExpirationType.value === '1' ? (editEndDate.value || null) : null
+                // Correctly get expiration_type from the form, or keep existing if not available (though it should be)
+                expiration_type: editExpirationType ? parseInt(editExpirationType.value) : (existingProduct ? existingProduct.expiration_type : 0),
+                start_date: null, // Initialize, will be set below
+                end_date: null // Initialize, will be set below
             };
+
+            // Logic for setting start_date and end_date based on expiration_type for edit
+            if (updatedData.expiration_type === 1) {
+                updatedData.start_date = editStartDate ? (editStartDate.value || null) : null;
+                updatedData.end_date = editEndDate ? (editEndDate.value || null) : null;
+            } else { // expiration_type is 0 (or other, defaulting to no specific dates)
+                updatedData.start_date = null;
+                updatedData.end_date = null;
+            }
 
             if (editTagsContainer) {
                 const selectedTags = [];

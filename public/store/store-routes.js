@@ -55,30 +55,40 @@ router.get('/products', async (req, res) => {
         const productsFromDb = await storeDb.getAllProducts(category);
         
         const products = productsFromDb.map(product => {
-            let product_status = '有效'; // 預設為有效
-            if (product.expiration_type === 1) { // 限定日期
+            let calculated_status; // 使用不同的變數名以避免混淆
+            const expType = product.expiration_type; // 假設 pg driver 已轉換為數字或 null
+
+            if (expType === 0) {
+                calculated_status = '有效';
+            } else if (expType === 1) {
+                calculated_status = '有效'; // 預設為有效，再根據日期判斷
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); // 標準化今天的時間到午夜，以便只比較日期
+                today.setHours(0, 0, 0, 0);
 
                 const startDate = product.start_date ? new Date(product.start_date) : null;
                 const endDate = product.end_date ? new Date(product.end_date) : null;
 
                 if (startDate && endDate) {
                     if (today < startDate) {
-                        product_status = '尚未開始';
+                        calculated_status = '尚未開始';
                     } else if (today > endDate) {
-                        product_status = '已過期';
+                        calculated_status = '已過期';
                     }
-                    // 如果 today >= startDate 且 today <= endDate，則維持 "有效"
-                } else if (startDate && today < startDate) {
-                    // 只有開始日期，且尚未開始
-                    product_status = '尚未開始';
-                } else if (endDate && today > endDate) {
-                    // 只有結束日期，且已過期 (這種情況較少見，但以防萬一)
-                    product_status = '已過期';
+                } else if (startDate && !endDate && today < startDate) { // 只有開始日期且未到
+                    calculated_status = '尚未開始';
+                } else if (!startDate && endDate && today > endDate) { // 只有結束日期且已過
+                    calculated_status = '已過期';
+                } else if (startDate && !endDate && today >= startDate) { // 只有開始日期且已到或進行中
+                    calculated_status = '有效';
+                } else if (!startDate && endDate && today <= endDate) { // 只有結束日期且未到或進行中
+                    calculated_status = '有效';
                 }
+                // 如果 expiration_type=1 但日期都為 null，則維持 '有效' (或根據需求定義為 '日期未設定')
+            } else {
+                // expiration_type 為 null 或其他非預期值
+                calculated_status = '狀態未明';
             }
-            return { ...product, product_status };
+            return { ...product, product_status: calculated_status }; // 確保回傳的鍵名是 product_status
         });
         
         res.json(products);
