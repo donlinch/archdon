@@ -121,12 +121,26 @@ body {
     background-color: #90CAF9; /* 預設藍色 */
     color: white;
     display: inline-block; /* 確保正確顯示 */
+    position: relative; /* 為了 ::after 定位 */
 }
 
 .filter-btn.active {
     background-color: #FFB74D; /* 黃色 */
     color: white;
     box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+}
+
+.filter-btn.active::after {
+    content: '\f0d8'; /* Font Awesome caret-up icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900; /* Solid icon */
+    position: absolute;
+    top: 4px;       /* 調整垂直位置 */
+    right: 6px;     /* 調整水平位置 */
+    font-size: 12px;  /* 圖示大小 */
+    color: white;     /* 圖示顏色 */
+    line-height: 1;   /* 確保對齊 */
+    transition: all 0.3s; /* 平滑過渡 */
 }
 
 .filter-btn:hover {
