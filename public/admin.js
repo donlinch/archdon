@@ -1,5 +1,21 @@
 // public/admin.js
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Admin Password Check and Prompt ---
+    let adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+        adminPassword = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
+        if (adminPassword && adminPassword.trim() !== '') {
+            localStorage.setItem('adminPassword', adminPassword);
+            // 可選：立即重新載入頁面或提示用戶已儲存
+            // location.reload();
+        } else {
+            // 如果用戶取消或未輸入，可以顯示一個提示或阻止後續需要密碼的操作
+            alert('未輸入管理員密碼，部分管理功能可能受限。');
+            // 這裡可以決定是否要阻止後續的 API 呼叫，或者讓它們自然失敗
+        }
+    }
+    // --- End of Admin Password Check ---
+
     // --- DOM Element References (商品列表和 Modal) ---
     const productListBody = document.querySelector('#product-list-table tbody');
     const productListContainer = document.getElementById('product-list-container');
