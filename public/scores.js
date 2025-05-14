@@ -318,9 +318,12 @@ function renderSongsGrid(songs) {
             scoreButtonsHTML = song.scores
                 .filter(score => score.type && score.pdf_url && score.id)
                 .map(score => `
-                    <button class="score-type-btn" 
+                    <button class="score-type-btn"
                             data-song-id="${song.id}"
                             data-score-id="${score.id}"
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            data-song-title="${encodeURIComponent(song.title || '未知歌曲')}"
+                            data-score-type="${encodeURIComponent(score.type)}"
                             title="查看 ${song.title} - ${score.type}">
                         ${score.type}
                     </button>
@@ -374,9 +377,12 @@ function renderSongsList(songs) {
             scoreButtonsHTML = song.scores
                 .filter(score => score.type && score.pdf_url && score.id)
                 .map(score => `
-                    <button class="score-type-btn" 
+                    <button class="score-type-btn"
                             data-song-id="${song.id}"
                             data-score-id="${score.id}"
+                            data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                            data-song-title="${encodeURIComponent(song.title || '未知歌曲')}"
+                            data-score-type="${encodeURIComponent(score.type)}"
                             title="查看 ${song.title} - ${score.type}">
                         ${score.type}
                     </button>
@@ -443,10 +449,12 @@ function renderSongDetail(song) {
             song.scores.forEach(score => {
                 if (score.type && score.pdf_url && score.id) {
                     scoreButtonsHTML += `
-                        <button class="score-type-btn" 
+                        <button class="score-type-btn"
                                 data-song-id="${song.id}"
                                 data-score-id="${score.id}"
                                 data-pdf-url="${encodeURIComponent(score.pdf_url)}"
+                                data-song-title="${encodeURIComponent(song.title || '未知歌曲')}"
+                                data-score-type="${encodeURIComponent(score.type)}"
                                 title="查看 ${song.title} - ${score.type}">
                             ${score.type}
                         </button>
@@ -652,39 +660,38 @@ function handleSongCardClick(event) {
         event.preventDefault(); // 阻止可能的父元素<a>標籤跳轉
         event.stopPropagation(); // 阻止事件冒泡到卡片
         
-        const songId = scoreButton.dataset.songId;
-        const scoreId = scoreButton.dataset.scoreId; // 如果需要 scoreId
-        const pdfUrl = scoreButton.dataset.pdfUrl; // 從按鈕獲取 PDF URL
+        const pdfUrl = scoreButton.dataset.pdfUrl; // Already encoded
+        const songTitle = scoreButton.dataset.songTitle; // Already encoded
+        const scoreType = scoreButton.dataset.scoreType; // Already encoded
 
-        const song = allSongsData.find(s => s.id.toString() === songId);
-        if (song) {
-            currentSongId = song.id; // 更新當前歌曲ID
-            renderSongDetail(song); // 顯示歌曲詳情（包含所有樂譜按鈕）
-            if (pdfUrl) {
-                loadPdf(pdfUrl); // 直接加載被點擊的樂譜
-            } else {
-                 console.warn("PDF URL not found on score button for song:", song.title, "score ID:", scoreId);
-                 if(pdfError) pdfError.textContent = "找不到樂譜檔案路徑。";
-                 if(pdfViewerContainer) pdfViewerContainer.style.display = 'block'; // 確保容器可見以顯示錯誤
-                 if(pdfError) pdfError.style.display = 'block';
-            }
+        if (pdfUrl) {
+            const viewerUrl = `score-viewer.html?pdf=${pdfUrl}&title=${songTitle}&type=${scoreType}`;
+            window.location.href = viewerUrl;
+        } else {
+            console.error('PDF URL not found on score button dataset for songId:', scoreButton.dataset.songId);
+            alert('此樂譜暫無有效的 PDF 連結。');
         }
     } else if (card) { // 如果點擊的是卡片本身 (非樂譜按鈕)
         const songId = card.dataset.songId;
-        displaySongDetail(songId);
+        displaySongDetail(songId); // This will show details, and then user can click a score type button
     }
 }
 
 function handleScoreButtonClick(event) {
+    // This function is attached to scoreSelectorContainer.
+    // It will also handle clicks on .score-type-btn within the song detail view.
     if (event.target.classList.contains('score-type-btn')) {
-        const pdfUrl = event.target.dataset.pdfUrl;
+        const button = event.target;
+        const pdfUrl = button.dataset.pdfUrl; // Already encoded
+        const songTitle = button.dataset.songTitle; // Already encoded
+        const scoreType = button.dataset.scoreType; // Already encoded
+
         if (pdfUrl) {
-            loadPdf(pdfUrl);
+            const viewerUrl = `score-viewer.html?pdf=${pdfUrl}&title=${songTitle}&type=${scoreType}`;
+            window.location.href = viewerUrl;
         } else {
-            console.warn("PDF URL not found on score button.");
-            if(pdfError) pdfError.textContent = "找不到樂譜檔案路徑。";
-            if(pdfViewerContainer) pdfViewerContainer.style.display = 'block';
-            if(pdfError) pdfError.style.display = 'block';
+            console.error('PDF URL not found on score button (detail view) for songId:', button.dataset.songId);
+            alert('此樂譜暫無有效的 PDF 連結。');
         }
     }
 }
