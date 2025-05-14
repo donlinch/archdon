@@ -135,6 +135,12 @@ router.post('/products', upload.single('image'), async (req, res) => {
             end_date: end_date || null   // 如果沒提供則為 null
         };
 
+        // 如果 expiration_type 是 0 (不限期)，則強制 start_date 和 end_date 為 null
+        if (productData.expiration_type === 0) {
+            productData.start_date = null;
+            productData.end_date = null;
+        }
+
         const newProduct = await storeDb.createProduct(productData);
         res.status(201).json(newProduct);
     } catch (err) {
@@ -206,6 +212,12 @@ router.put('/products/:id', upload.single('image'), async (req, res) => {
             start_date: start_date !== undefined ? start_date : existingProduct.start_date,
             end_date: end_date !== undefined ? end_date : existingProduct.end_date
         };
+
+        // 如果 expiration_type 是 0 (不限期)，則強制 start_date 和 end_date 為 null
+        if (productData.expiration_type === 0) {
+            productData.start_date = null;
+            productData.end_date = null;
+        }
 
         const updatedProduct = await storeDb.updateProduct(productId, productData);
         if (!updatedProduct) {
