@@ -783,8 +783,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const tagName = addTagInput.value.trim();
             if (!tagName) { if (tagManagementError) tagManagementError.textContent = '標籤名稱不能為空'; return; }
             try {
+                const adminPassword = localStorage.getItem('adminPassword'); // 從 localStorage 獲取密碼
+                if (!adminPassword) {
+                    if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼，請先登入。';
+                    return;
+                }
+
                 const response = await fetch('/api/tags', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag_name: tagName })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPassword // 在標頭中新增密碼
+                    },
+                    body: JSON.stringify({ tag_name: tagName })
                 });
                 if (!response.ok) {
                     let errorMsg = `無法新增標籤 (HTTP ${response.status})`;
