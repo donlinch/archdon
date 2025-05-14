@@ -159,6 +159,28 @@
             font-weight: 600;
         }
         
+
+
+        /* AI 方案 TAB 樣式 */
+        #ai-scheme-tabs-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .ai-scheme-tab {
+            background-color: var(--medium-gray);
+            color: var(--dark-gray);
+        }
+        .ai-scheme-tab.active {
+            background-color: var(--secondary-color); /* 使用次要顏色表示選中 */
+            color: var(--white);
+        }
+        
+
         /* 手機版樣式 */
         @media (max-width: 600px) {
             body {
@@ -232,13 +254,20 @@
                 <label for="description">額外描述 (可選):</label>
                 <textarea id="description" name="description" placeholder="例如：這是一款新的無線耳機，音質清晰，電池續航力強..."></textarea>
             </div>
+
+ <!-- AI 方案選擇區域 -->
+            <h2>選擇 AI 助手模式:</h2>
+            <div id="ai-scheme-tabs-container">
+                <!-- AI 方案 TAB 按鈕將由 JavaScript 動態插入 -->
+                <p>正在載入 AI 方案...</p>
+            </div>
+
+
+
             <div class="button-group">
-                <button type="button" id="generateIntroButton">
-                    <span class="button-text">幫我想怎麼介紹</span>
-                </button>
-                <button type="button" id="identifyButton">
-                    <span class="button-text">告訴我這是什麼</span>
-                </button>
+               
+                                <button type="button" id="generateContentButton">開始生成</button>
+
             </div>
         </form>
         <div id="loading">
@@ -251,14 +280,19 @@
 
     <script>
         const contentForm = document.getElementById('contentForm');
-        const generateIntroButton = document.getElementById('generateIntroButton');
-        const identifyButton = document.getElementById('identifyButton');
+      
+                const generateContentButton = document.getElementById('generateContentButton');
+
         const resultDiv = document.getElementById('result');
         const loadingDiv = document.getElementById('loading');
         const imageInput = document.getElementById('images');
         const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-        const buttonTexts = document.querySelectorAll('.button-text');
 
+        const aiSchemeTabsContainer = document.getElementById('ai-scheme-tabs-container');
+
+        let currentSelectedSchemeIntentKey = null; // 用於存儲當前選中的方案 intent_key
+   
+        
         // 圖片預覽邏輯
         imageInput.addEventListener('change', function(event) {
             imagePreviewContainer.innerHTML = '';
@@ -293,14 +327,70 @@
             }
         });
 
-        // 綁定事件到兩個按鈕
-        generateIntroButton.addEventListener('click', () => handleGeneration('generate_introduction'));
-        identifyButton.addEventListener('click', () => handleGeneration('identify_content'));
+   // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadAISchemes();
+            generateContentButton.addEventListener('click', handleGeneration);
+        });
 
-        async function handleGeneration(intent) {
+        async function loadAISchemes() {
+            try {
+                aiSchemeTabsContainer.innerHTML = '<p>正在載入 AI 方案...</p>';
+                const response = await fetch('/api/unboxing-ai/schemes');
+                if (!response.ok) {
+                    throw new Error(`無法獲取 AI 方案: ${response.statusText}`);
+                }
+                const schemes = await response.json();
+                renderSchemeTabs(schemes);
+
+                if (schemes.length > 0) {
+                    // 預設選中第一個方案
+                    currentSelectedSchemeIntentKey = schemes[0].intent_key;
+                    setActiveTab(currentSelectedSchemeIntentKey);
+                } else {
+                    aiSchemeTabsContainer.innerHTML = '<p>目前沒有可用的 AI 方案。</p>';
+                    generateContentButton.disabled = true; // 如果沒有方案，禁用生成按鈕
+                }
+            } catch (error) {
+                console.error("初始化 AI 方案失敗:", error);
+                aiSchemeTabsContainer.innerHTML = `<p style="color: red;">載入 AI 方案失敗: ${error.message}</p>`;
+                generateContentButton.disabled = true; // 出錯時也禁用
+            }
+        }
+
+        function renderSchemeTabs(schemes) {
+            aiSchemeTabsContainer.innerHTML = ''; // 清空舊的 TAB
+            schemes.forEach(scheme => {
+                const tabButton = document.createElement('button');
+                tabButton.classList.add('ai-scheme-tab');
+                tabButton.textContent = scheme.name;
+                tabButton.dataset.intentKey = scheme.intent_key;
+                tabButton.type = 'button'; // 防止觸發表單提交
+                tabButton.addEventListener('click', () => {
+                    currentSelectedSchemeIntentKey = scheme.intent_key;
+                    setActiveTab(scheme.intent_key);
+                    console.log(`已選擇 AI 方案: ${scheme.name} (Key: ${scheme.intent_key})`);
+                });
+                aiSchemeTabsContainer.appendChild(tabButton);
+            });
+        }
+
+        function setActiveTab(intentKey) {
+            aiSchemeTabsContainer.querySelectorAll('.ai-scheme-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.intentKey === intentKey) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+
+
+        async function handleGeneration() {
+        
             // 禁用按鈕並顯示載入狀態
-            disableButtons(true);
-            buttonTexts.forEach(text => text.textContent = '處理中...');
+            generateContentButton.disabled = true;
+            generateContentButton.textContent = '處理中...';
+      
             loadingDiv.style.display = 'block';
             resultDiv.textContent = 'AI 正在處理中...';
 
@@ -327,7 +417,15 @@
                 formData.append('images', files[i]);
             }
             formData.append('description', document.getElementById('description').value);
-            formData.append('intent', intent);
+          
+             
+            if (!currentSelectedSchemeIntentKey) {
+                alert('請先選擇一個 AI 助手模式！');
+                resetUI();
+                return;
+            }
+            formData.append('scheme_intent_key', currentSelectedSchemeIntentKey);
+
 
             try {
                 // 發送請求
@@ -360,15 +458,12 @@
             }
         }
 
-        function disableButtons(disabled) {
-            generateIntroButton.disabled = disabled;
-            identifyButton.disabled = disabled;
-        }
+        
         
         function resetUI() {
-            disableButtons(false);
-            buttonTexts[0].textContent = '幫我想怎麼介紹';
-            buttonTexts[1].textContent = '告訴我這是什麼';
+             generateContentButton.disabled = false;
+            generateContentButton.textContent = '開始生成';
+            
             loadingDiv.style.display = 'none';
         }
     </script>

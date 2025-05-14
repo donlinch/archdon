@@ -23,7 +23,7 @@ const multer = require('multer');
 const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
 const fs = require('fs');
 const sharp = require('sharp')
-
+const unboxingAiRouter = express.Router();
 
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
@@ -4974,6 +4974,145 @@ const unboxingUpload = multer({
         }
     }
 });
+
+
+
+
+
+
+
+// GET /api/unboxing-ai/schemes - 獲取所有 AI 提示詞方案
+unboxingAiRouter.get('/schemes', async (req, res) => {
+    try {
+        // 只獲取啟用的方案，並按名稱排序
+        const result = await pool.query(
+            "SELECT id, name, intent_key, description, prompt_template, is_active, created_at, updated_at FROM unboxingAI_prompt_schemes WHERE is_active = TRUE ORDER BY name ASC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /unboxing-ai/schemes] Error fetching AI schemes:', err.stack || err);
+        res.status(500).json({ error: '無法獲取 AI 提示詞方案列表' });
+    }
+});
+
+// POST /api/unboxing-ai/schemes - 新增一個 AI 提示詞方案
+unboxingAiRouter.post('/schemes', async (req, res) => {
+    const { name, intent_key, prompt_template, description, is_active = true } = req.body;
+
+    if (!name || !intent_key || !prompt_template) {
+        return res.status(400).json({ error: '方案名稱 (name), 唯一鍵 (intent_key), 和提示詞模板 (prompt_template) 為必填項。' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(intent_key)) {
+        return res.status(400).json({ error: '唯一鍵 (intent_key) 只能包含英文字母、數字和底線。' });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO unboxingAI_prompt_schemes (name, intent_key, prompt_template, description, is_active)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id, name, intent_key, description, prompt_template, is_active, created_at, updated_at`,
+            [name.trim(), intent_key.trim(), prompt_template.trim(), description || null, is_active]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[API POST /unboxing-ai/schemes] Error creating AI scheme:', err.stack || err);
+        if (err.code === '23505') { // Unique constraint violation
+            if (err.constraint === 'unboxingai_prompt_schemes_intent_key_key') {
+                 return res.status(409).json({ error: '此唯一鍵 (intent_key) 已存在。' });
+            }
+        }
+        res.status(500).json({ error: '新增 AI 提示詞方案失敗' });
+    }
+});
+
+// PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
+unboxingAiRouter.put('/schemes/:id', async (req, res) => {
+    const { id } = req.params;
+    const schemeId = parseInt(id, 10);
+    const { name, intent_key, prompt_template, description, is_active } = req.body;
+
+    if (isNaN(schemeId)) {
+        return res.status(400).json({ error: '無效的方案 ID。' });
+    }
+    if (!name || !intent_key || !prompt_template) {
+        return res.status(400).json({ error: '方案名稱, 唯一鍵, 和提示詞模板為必填項。' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(intent_key)) {
+        return res.status(400).json({ error: '唯一鍵 (intent_key) 只能包含英文字母、數字和底線。' });
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE unboxingAI_prompt_schemes
+             SET name = $1, intent_key = $2, prompt_template = $3, description = $4, is_active = $5, updated_at = NOW()
+             WHERE id = $6
+             RETURNING id, name, intent_key, description, prompt_template, is_active, created_at, updated_at`,
+            [name.trim(), intent_key.trim(), prompt_template.trim(), description || null, is_active, schemeId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的 AI 提示詞方案。' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API PUT /unboxing-ai/schemes/${id}] Error updating AI scheme:`, err.stack || err);
+        if (err.code === '23505') {
+            if (err.constraint === 'unboxingai_prompt_schemes_intent_key_key') {
+                 return res.status(409).json({ error: '此唯一鍵 (intent_key) 已被其他方案使用。' });
+            }
+        }
+        res.status(500).json({ error: '更新 AI 提示詞方案失敗' });
+    }
+});
+
+// DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
+unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
+    const { id } = req.params;
+    const schemeId = parseInt(id, 10);
+
+    if (isNaN(schemeId)) {
+        return res.status(400).json({ error: '無效的方案 ID。' });
+    }
+
+    try {
+        // 檢查是否為預設方案 (如果你的預設方案 ID 是 1 和 2)
+        if (schemeId === 1 || schemeId === 2) {
+            // 或者你可以檢查 intent_key 是否為 'generate_introduction' 或 'identify_content'
+            // const schemeCheck = await pool.query("SELECT intent_key FROM unboxingAI_prompt_schemes WHERE id = $1", [schemeId]);
+            // if (schemeCheck.rows.length > 0 && (schemeCheck.rows[0].intent_key === 'generate_introduction' || schemeCheck.rows[0].intent_key === 'identify_content')) {
+            //     return res.status(403).json({ error: '預設的 AI 提示詞方案不能被刪除。' });
+            // }
+             return res.status(403).json({ error: '預設的 AI 提示詞方案 (ID 1 和 2) 不能被刪除。您可以將其 is_active 設為 false 來停用。' });
+        }
+
+        const result = await pool.query(
+            "DELETE FROM unboxingAI_prompt_schemes WHERE id = $1",
+            [schemeId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的 AI 提示詞方案。' });
+        }
+        res.status(204).send(); // No Content
+    } catch (err) {
+        console.error(`[API DELETE /unboxing-ai/schemes/${id}] Error deleting AI scheme:`, err.stack || err);
+        res.status(500).json({ error: '刪除 AI 提示詞方案失敗' });
+    }
+});
+
+// 將新的路由掛載到主應用程式
+app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上 basicAuthMiddleware 來保護這些管理 API
+// 如果需要保護，可以是： app.use('/api/unboxing-ai', basicAuthMiddleware, unboxingAiRouter);
+
+// --- END OF Unboxing AI Prompt Schemes API ---
+
+
+
+
+
+
+
+
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
 app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
