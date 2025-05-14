@@ -832,9 +832,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editTag = async function(id, currentName) {
         const newName = prompt('請輸入新的標籤名稱:', currentName);
         if (newName === null || newName.trim() === '') return;
+        
+        const storedPassword = localStorage.getItem('adminPassword');
+        if (!storedPassword) {
+            alert('錯誤：未找到管理員密碼，請先登入或重新整理頁面輸入。');
+            if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼。';
+            return;
+        }
+
         try {
             const response = await fetch(`/api/tags/${id}`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag_name: newName.trim() })
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-password': storedPassword
+                },
+                body: JSON.stringify({ tag_name: newName.trim() })
             });
             if (!response.ok) {
                 let errorMsg = `無法更新標籤 (HTTP ${response.status})`;
@@ -842,20 +855,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorMsg);
             }
             await fetchAndDisplayTags();
-        } catch (error) { console.error(`更新標籤 ${id} 失敗:`, error); alert(`更新標籤失敗: ${error.message}`); }
+            // Also refresh tag checkboxes in product forms
+            if (typeof populateTagCheckboxes === 'function') {
+                if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
+                if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
+            }
+        } catch (error) {
+            console.error(`更新標籤 ${id} 失敗:`, error);
+            if (tagManagementError) tagManagementError.textContent = `更新標籤失敗: ${error.message}`;
+            else alert(`更新標籤失敗: ${error.message}`);
+        }
     };
 
     window.deleteTag = async function(id) {
         if (confirm(`確定要刪除此標籤嗎？此操作無法復原，並會從所有使用此標籤的商品中移除。`)) {
+            const storedPassword = localStorage.getItem('adminPassword');
+            if (!storedPassword) {
+                alert('錯誤：未找到管理員密碼，請先登入或重新整理頁面輸入。');
+                if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼。';
+                return;
+            }
             try {
-                const response = await fetch(`/api/tags/${id}`, { method: 'DELETE' });
-                if (!response.ok) {
+                const response = await fetch(`/api/tags/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'x-admin-password': storedPassword
+                    }
+                });
+                if (!response.ok && response.status !== 204) { // 204 No Content is also a success
                     let errorMsg = `無法刪除標籤 (HTTP ${response.status})`;
                     try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
                     throw new Error(errorMsg);
                 }
-                await fetchAndDisplayTags(); await fetchAndDisplayProducts(); 
-            } catch (error) { console.error(`刪除標籤 ${id} 失敗:`, error); alert(`刪除標籤失敗: ${error.message}`); }
+                await fetchAndDisplayTags();
+                await fetchAndDisplayProducts(); // Refresh products as their tags might have changed
+                 // Also refresh tag checkboxes in product forms
+                if (typeof populateTagCheckboxes === 'function') {
+                    if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
+                    if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
+                }
+            } catch (error) {
+                console.error(`刪除標籤 ${id} 失敗:`, error);
+                if (tagManagementError) tagManagementError.textContent = `刪除標籤失敗: ${error.message}`;
+                else alert(`刪除標籤失敗: ${error.message}`);
+            }
         }
     };
 
