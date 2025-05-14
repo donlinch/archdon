@@ -5238,17 +5238,48 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         // 進行替換時，確保替換值也被正確格式化（例如，userDescription 需要被引號包圍）
         const actualUserDescription = userDescription || "使用者未提供額外描述。";
         
-        console.log("[DEBUG] Original promptTemplate from DB:", promptTemplate); // 新增日誌: 打印原始模板
+        console.log("[DEBUG] Original promptTemplate from DB:", promptTemplate);
 
-        console.log("[VERY DEBUG] imageInsights JUST BEFORE REPLACE:", imageInsights); // 更詳細的日誌
-        console.log("[VERY DEBUG] typeof imageInsights JUST BEFORE REPLACE:", typeof imageInsights); // 更詳細的日誌
-
-        let geminiPrompt = promptTemplate
-            .replace(userDescStringInTemplate, `"${actualUserDescription}"`) // 替換時確保引號
-            // 替換 imageInsights 時，確保替換後的內容也符合上下文，例如前面可能需要一個空格
-            .replace(imageInsightsStringInTemplate, ` ${imageInsights}`);
+        console.log("[VERY DEBUG] imageInsights JUST BEFORE REPLACE:", imageInsights);
+        console.log("[VERY DEBUG] typeof imageInsights JUST BEFORE REPLACE:", typeof imageInsights);
         
-        console.log("[DEBUG] geminiPrompt after replacements:", geminiPrompt); // 新增日誌: 打印替換後的提示詞
+        let geminiPrompt = promptTemplate;
+        const originalPromptForUserDescCheck = geminiPrompt; // 保存替換前的狀態用於檢查
+
+        // 替換 userDescription
+        const userDescValueForTemplate = `"${actualUserDescription}"`;
+        geminiPrompt = geminiPrompt.replace(userDescStringInTemplate, userDescValueForTemplate);
+        
+        // 檢查 userDescription 替換是否成功
+        if (originalPromptForUserDescCheck.includes(userDescStringInTemplate) && !geminiPrompt.includes(userDescValueForTemplate)) {
+            console.error("[ERROR] userDescStringInTemplate replacement seems to have FAILED. Placeholder was present but not replaced with new value.");
+            console.error("[ERROR] userDescStringInTemplate was:", userDescStringInTemplate);
+            console.error("[ERROR] actualUserDescription was:", actualUserDescription);
+        } else if (!originalPromptForUserDescCheck.includes(userDescStringInTemplate)) {
+            console.warn("[WARN] userDescStringInTemplate was NOT FOUND in promptTemplate. Skipping replacement.");
+        }
+
+        const originalPromptForImageInsightsCheck = geminiPrompt; // 保存替換前的狀態用於檢查
+
+        // 替換 imageInsights
+        // 確保 imageInsights 是一個準備好的字串，並且前面有一個空格，以匹配 ' ${imageInsights}'
+        const imageInsightsValueForTemplate = ` ${imageInsights}`;
+        geminiPrompt = geminiPrompt.replace(imageInsightsStringInTemplate, imageInsightsValueForTemplate);
+
+        // 檢查 imageInsights 替換是否成功
+        // 只在 imageInsights 應該有實質內容時報錯（避免 imageInsights 本身就是 "無" 或非常短的字串時誤報）
+        const minLengthForValidInsights = 20; // 假設有效的 insights 至少有20個字元
+        if (originalPromptForImageInsightsCheck.includes(imageInsightsStringInTemplate) &&
+            !geminiPrompt.includes(imageInsightsValueForTemplate.substring(0, minLengthForValidInsights)) && // 檢查替換後的值是否存在（至少一部分）
+            imageInsights.length > minLengthForValidInsights) {
+            console.error("[ERROR] imageInsightsStringInTemplate replacement seems to have FAILED or imageInsights was not correctly inserted.");
+            console.error("[ERROR] imageInsightsStringInTemplate was:", imageInsightsStringInTemplate);
+            console.error("[ERROR] imageInsights variable content at time of failure was:", imageInsights);
+        } else if (!originalPromptForImageInsightsCheck.includes(imageInsightsStringInTemplate)) {
+            console.warn("[WARN] imageInsightsStringInTemplate was NOT FOUND in promptTemplate. Skipping replacement.");
+        }
+        
+        console.log("[DEBUG] geminiPrompt after replacements:", geminiPrompt);
 
         // 確保替換後的 prompt 仍然有效
         if (!geminiPrompt || geminiPrompt.trim() === "") {
