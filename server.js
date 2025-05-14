@@ -5119,8 +5119,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
-  console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.scheme_intent_key}, Files: ${req.files ? req.files.length : 0}`); // <--- 非常早期的日誌, 已修正
-
+    // Removed: console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.scheme_intent_key}, Files: ${req.files ? req.files.length : 0}`);
     
     if (!visionClient || !geminiModel) {
         return res.status(503).json({ error: "AI 服務目前不可用。" });
@@ -5173,7 +5172,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
                     ],
                 });
 
-                console.log(`[Cloud Vision API Raw Response for ${file.originalname}]: ${JSON.stringify(result, null, 2)}`); // 詳細日誌
+                // Removed: console.log(`[Cloud Vision API Raw Response for ${file.originalname}]: ${JSON.stringify(result, null, 2)}`);
 
                 const labels = result.labelAnnotations ? result.labelAnnotations.map(label => label.description) : [];
                 const texts = result.textAnnotations ? result.textAnnotations.map(text => text.description) : [];
@@ -5226,7 +5225,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
             });
         }
 
-        console.log("[DEBUG] Constructed imageInsights string:", imageInsights);
+        // Removed: console.log("[DEBUG] Constructed imageInsights string:", imageInsights);
 
         // 3. 構造最終的 geminiPrompt，通過拼接方式組合
         // promptTemplate 現在被視為基礎指令框架
@@ -5246,7 +5245,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         // 確保 promptTemplate 不以過多換行結束，也不以 userDescriptionBlock/imageInsightsBlock 以過多換行開始
         const finalGeminiPrompt = `${promptTemplate.trim()}\n${userDescriptionBlock.trim()}\n${imageInsightsBlock.trim()}`;
         
-        console.log("[DEBUG] Final geminiPrompt to be sent (concatenated):", finalGeminiPrompt);
+        // Removed: console.log("[DEBUG] Final geminiPrompt to be sent (concatenated):", finalGeminiPrompt);
         
         // 確保 prompt 不為空
         if (!finalGeminiPrompt || finalGeminiPrompt.trim() === "") {
