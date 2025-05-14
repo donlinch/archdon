@@ -222,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         productList.forEach(product => {
             // 新增：檢查商品狀態，如果不是 '有效'，則跳過此商品
+            console.log('Product:', product.name, 'Status:', product.product_status); // 新增日誌記錄
             if (product.product_status !== '有效') {
                 return; // 跳到下一個商品
             }
