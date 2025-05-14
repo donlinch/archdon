@@ -120,8 +120,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = await response.json();
             
             if (categories.length > 0) {
+                // 定義一組顏色供分類按鈕使用
+                const categoryColors = [
+                    '#FFADAD', // 淡粉紅
+                    '#FFD6A5', // 淡橙
+                    '#FDFFB6', // 淡黃
+                    '#CAFFBF', // 淡綠
+                    '#9BF6FF', // 淡藍
+                    '#A0C4FF', // 另一種淡藍
+                    '#BDB2FF', // 淡紫
+                    '#FFC6FF'  // 淡洋紅
+                ];
                 categories.forEach((category, index) => {
-                    const button = createCategoryButton(category, category);
+                    const colorIndex = index % categoryColors.length;
+                    const selectedColor = categoryColors[colorIndex];
+                    const button = createCategoryButton(category, category, selectedColor);
                     categoryFilterContainer.appendChild(button);
                 });
             } else {
@@ -135,13 +148,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function createCategoryButton(categoryValue, categoryText) {
+    function createCategoryButton(categoryValue, categoryText, backgroundColor) {
         const button = document.createElement('button');
         button.classList.add('filter-btn', 'category-link');
         button.dataset.category = categoryValue;
         button.textContent = categoryText;
+        
+        // 設定背景顏色和邊框顏色
+        button.style.backgroundColor = backgroundColor;
+        // 選擇一個對比度較好的文字顏色，這裡簡單處理，實際可能需要更複雜的邏輯
+        // 例如，可以根據背景色的亮度來決定使用深色或淺色文字
+        button.style.color = isColorLight(backgroundColor) ? '#333333' : '#FFFFFF';
+        button.style.border = `2px solid ${darkenColor(backgroundColor, 20)}`; // 加深20%作為邊框顏色
+
         button.addEventListener('click', handleCategoryClick);
         return button;
+    }
+
+    // 輔助函式：判斷顏色是否為淺色 (簡易版)
+    function isColorLight(hexColor) {
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        // 計算相對亮度
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.6; // 可調整閾值
+    }
+
+    // 輔助函式：將顏色加深指定百分比
+    function darkenColor(hexColor, percent) {
+        let r = parseInt(hexColor.slice(1, 3), 16);
+        let g = parseInt(hexColor.slice(3, 5), 16);
+        let b = parseInt(hexColor.slice(5, 7), 16);
+
+        r = Math.max(0, Math.floor(r * (1 - percent / 100)));
+        g = Math.max(0, Math.floor(g * (1 - percent / 100)));
+        b = Math.max(0, Math.floor(b * (1 - percent / 100)));
+
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
     
     function handleCategoryClick(event) {
