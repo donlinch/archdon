@@ -1,5 +1,18 @@
 // public/music-admin.js
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Admin Password Check and Prompt ---
+    let adminPasswordGlobal = localStorage.getItem('adminPassword');
+    if (!adminPasswordGlobal) {
+        adminPasswordGlobal = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
+        if (adminPasswordGlobal && adminPasswordGlobal.trim() !== '') {
+            localStorage.setItem('adminPassword', adminPasswordGlobal);
+        } else {
+            alert('未輸入管理員密碼，部分管理功能可能受限。');
+            // Consider disabling form submissions or buttons if password is not provided
+        }
+    }
+    // --- End of Admin Password Check ---
+
     // --- DOM 元素引用 ---
     const albumListBody = document.querySelector('#album-list-table tbody');
     const albumListContainer = document.getElementById('album-list-container');
@@ -301,16 +314,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editMusic = openEditMusicModal;
     window.deleteMusic = async function(id) {
         if (confirm(`確定要刪除音樂 ID: ${id} 嗎？此操作也會刪除關聯的樂譜。`)) {
-            const adminPassword = prompt("請輸入管理員密碼以刪除音樂：");
-            if (!adminPassword) {
-                alert("未提供管理員密碼，操作取消。");
-                return;
+            const storedPassword = localStorage.getItem('adminPassword');
+            if (!storedPassword) {
+                alert("錯誤：未找到管理員密碼，請重新整理頁面並輸入。");
+                // Optionally, prompt again or disable functionality
+                // adminPasswordGlobal = prompt('請輸入管理員密碼以刪除音樂：');
+                // if (!adminPasswordGlobal) {
+                //     alert("未提供管理員密碼，操作取消。");
+                //     return;
+                // }
+                // localStorage.setItem('adminPassword', adminPasswordGlobal);
+                // storedPassword = adminPasswordGlobal; // Use the newly prompted password
+                return; // Or handle as per your preference if password not found
             }
             try {
                 const response = await fetch(`/api/music/${id}`, {
                     method: 'DELETE',
                     headers: {
-                        'X-Admin-Password': adminPassword
+                        'X-Admin-Password': storedPassword
                     }
                 });
                 if (response.status === 204 || response.ok) {
@@ -452,18 +473,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorAction = isEditMode ? '儲存' : '新增';
 
         try {
-            const adminPassword = prompt(`請輸入管理員密碼以${successAction}音樂：`);
-            if (!adminPassword) {
-                alert("未提供管理員密碼，操作取消。");
-                formErrorElement.textContent = '操作已取消。';
-                return;
+            const storedPassword = localStorage.getItem('adminPassword');
+            if (!storedPassword) {
+                alert("錯誤：未找到管理員密碼，請重新整理頁面並輸入。");
+                // Optionally, prompt again or disable functionality
+                // adminPasswordGlobal = prompt(`請輸入管理員密碼以${successAction}音樂：`);
+                // if (!adminPasswordGlobal) {
+                //     alert("未提供管理員密碼，操作取消。");
+                //     formErrorElement.textContent = '操作已取消。';
+                //     return;
+                // }
+                // localStorage.setItem('adminPassword', adminPasswordGlobal);
+                // storedPassword = adminPasswordGlobal; // Use the newly prompted password
+                formErrorElement.textContent = '錯誤：管理員密碼未設定。';
+                return; // Or handle as per your preference
             }
             console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2));
             const response = await fetch(apiUrl, {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Admin-Password': adminPassword
+                    'X-Admin-Password': storedPassword
                 },
                 body: JSON.stringify(formData)
             });
