@@ -1381,7 +1381,7 @@
                             uploadStatusDiv.textContent = '上傳中...';
                             uploadStatusDiv.style.color = 'blue';
                             const formData = new FormData();
-                            formData.append('file', file); // Changed 'image' to 'file' to match /api/admin/files/upload
+                            formData.append('image', file); // Match fieldName expected by /api/upload
 
                             try {
                                 const response = await fetch('/api/upload', { // Changed to use the public upload endpoint

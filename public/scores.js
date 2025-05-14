@@ -14,6 +14,12 @@ let pageNumPending = null;
 let currentViewMode = 'list'; // 修改預設為列表視圖
 let albumCovers = {}; // 儲存歌曲封面圖片的對應關係
 
+// --- 輔助函數 ---
+// 檢查 ID 是否有效 (非空、非 "null"、非 "undefined")
+function isValidId(id) {
+    return id && typeof id === 'string' && id.trim() !== "" && id !== "null" && id !== "undefined";
+}
+
 // 設定 PDF.js worker 的來源路徑
 if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
     try {
@@ -660,20 +666,28 @@ function handleSongCardClick(event) {
         event.preventDefault(); // 阻止可能的父元素<a>標籤跳轉
         event.stopPropagation(); // 阻止事件冒泡到卡片
         
-        const pdfUrl = scoreButton.dataset.pdfUrl; // Already encoded
-        const songTitle = scoreButton.dataset.songTitle; // Already encoded
-        const scoreType = scoreButton.dataset.scoreType; // Already encoded
+        const songId = scoreButton.dataset.songId;
+        const scoreId = scoreButton.dataset.scoreId;
+        // const songTitle = scoreButton.dataset.songTitle; // Already encoded by render function
+        // const scoreType = scoreButton.dataset.scoreType; // Already encoded by render function
 
-        if (pdfUrl) {
-            const viewerUrl = `score-viewer.html?pdf=${pdfUrl}&title=${songTitle}&type=${scoreType}`;
-            window.location.href = viewerUrl;
+        console.log(`[CardScoreClick] Attempting navigation. Song ID: ${songId}, Score ID: ${scoreId}`);
+
+        if (isValidId(songId) && isValidId(scoreId)) {
+            // No need to pass title and type, score-viewer.js will fetch them
+            window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
         } else {
-            console.error('PDF URL not found on score button dataset for songId:', scoreButton.dataset.songId);
-            alert('此樂譜暫無有效的 PDF 連結。');
+            console.error("錯誤[CardScoreClick]：無效或缺失的歌曲/樂譜 ID，無法導向。", { songId, scoreId });
+            alert('此樂譜的 ID 資訊不完整，無法開啟。');
         }
     } else if (card) { // 如果點擊的是卡片本身 (非樂譜按鈕)
         const songId = card.dataset.songId;
-        displaySongDetail(songId); // This will show details, and then user can click a score type button
+        if (isValidId(songId)) {
+            displaySongDetail(songId);
+        } else {
+            console.error("錯誤[CardClick]：無效的歌曲 ID。", { songId });
+            alert('無法顯示歌曲詳情，ID 資訊不完整。');
+        }
     }
 }
 
@@ -682,16 +696,19 @@ function handleScoreButtonClick(event) {
     // It will also handle clicks on .score-type-btn within the song detail view.
     if (event.target.classList.contains('score-type-btn')) {
         const button = event.target;
-        const pdfUrl = button.dataset.pdfUrl; // Already encoded
-        const songTitle = button.dataset.songTitle; // Already encoded
-        const scoreType = button.dataset.scoreType; // Already encoded
+        const songId = button.dataset.songId;
+        const scoreId = button.dataset.scoreId;
+        // const songTitle = button.dataset.songTitle; // Already encoded
+        // const scoreType = button.dataset.scoreType; // Already encoded
 
-        if (pdfUrl) {
-            const viewerUrl = `score-viewer.html?pdf=${pdfUrl}&title=${songTitle}&type=${scoreType}`;
-            window.location.href = viewerUrl;
+        console.log(`[ScoreButtonClick] Attempting navigation. Song ID: ${songId}, Score ID: ${scoreId}`);
+
+        if (isValidId(songId) && isValidId(scoreId)) {
+            // No need to pass title and type, score-viewer.js will fetch them
+            window.location.href = `/score-viewer.html?musicId=${songId}&scoreId=${scoreId}`;
         } else {
-            console.error('PDF URL not found on score button (detail view) for songId:', button.dataset.songId);
-            alert('此樂譜暫無有效的 PDF 連結。');
+            console.error("錯誤[ScoreButtonClick]：無效或缺失的歌曲/樂譜 ID，無法導向。", { songId, scoreId });
+            alert('此樂譜的 ID 資訊不完整，無法開啟。');
         }
     }
 }
