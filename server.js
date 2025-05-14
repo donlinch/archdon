@@ -44,8 +44,8 @@ if (GEMINI_API_KEY) {
         genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         // 選擇你的模型，例如 "gemini-pro" 或 "gemini-1.5-pro-latest"
         // 你之前截圖顯示 "gemini-2.5-pro-exp-03-25"，如果你確定它可用，可以在此處指定
-        geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-pro-exp-03-25" }); // <--- 確認模型名稱
-        console.log("[Gemini AI] Service initialized successfully with model 'gemini-2.5-pro-exp-03-25'.");
+        geminiModel = genAI.getGenerativeModel({ model: "models/gemini-2.5-pro-preview-03-25" }); // <--- 根據錯誤訊息建議修改模型名稱
+        console.log("[Gemini AI] Service initialized successfully with model 'models/gemini-2.5-pro-preview-03-25'.");
     } catch (error) {
         console.error("[Gemini AI] Failed to initialize GoogleGenerativeAI. Error:", error.message);
         console.error("[Gemini AI] AI reply generation will be disabled. Check your API key and model name in environment variables.");
