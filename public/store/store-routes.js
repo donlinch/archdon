@@ -52,7 +52,35 @@ const upload = multer({
 router.get('/products', async (req, res) => {
     try {
         const category = req.query.category;
-        const products = await storeDb.getAllProducts(category);
+        const productsFromDb = await storeDb.getAllProducts(category);
+        
+        const products = productsFromDb.map(product => {
+            let product_status = '有效'; // 預設為有效
+            if (product.expiration_type === 1) { // 限定日期
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // 標準化今天的時間到午夜，以便只比較日期
+
+                const startDate = product.start_date ? new Date(product.start_date) : null;
+                const endDate = product.end_date ? new Date(product.end_date) : null;
+
+                if (startDate && endDate) {
+                    if (today < startDate) {
+                        product_status = '尚未開始';
+                    } else if (today > endDate) {
+                        product_status = '已過期';
+                    }
+                    // 如果 today >= startDate 且 today <= endDate，則維持 "有效"
+                } else if (startDate && today < startDate) {
+                    // 只有開始日期，且尚未開始
+                    product_status = '尚未開始';
+                } else if (endDate && today > endDate) {
+                    // 只有結束日期，且已過期 (這種情況較少見，但以防萬一)
+                    product_status = '已過期';
+                }
+            }
+            return { ...product, product_status };
+        });
+        
         res.json(products);
     } catch (err) {
         console.error('[Store Routes] 獲取商品列表失敗:', err);
@@ -82,7 +110,7 @@ router.get('/products/:id', async (req, res) => {
 // 創建商品 (使用 upload.single('image') 來處理單個圖片上傳)
 router.post('/products', upload.single('image'), async (req, res) => {
     try {
-        const { name, description, price, stock, category } = req.body;
+        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
 
         if (!name || !price) {
             // 如果缺少必要字段，刪除可能已上傳的文件
@@ -101,7 +129,10 @@ router.post('/products', upload.single('image'), async (req, res) => {
             price: parseFloat(price),
             image: imagePath,
             stock: parseInt(stock || 0),
-            category
+            category,
+            expiration_type: parseInt(expiration_type || 0), // 預設為 0 (不限期)
+            start_date: start_date || null, // 如果沒提供則為 null
+            end_date: end_date || null   // 如果沒提供則為 null
         };
 
         const newProduct = await storeDb.createProduct(productData);
@@ -133,7 +164,7 @@ router.put('/products/:id', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: '無效的商品 ID' });
         }
 
-        const { name, description, price, stock, category } = req.body;
+        const { name, description, price, stock, category, expiration_type, start_date, end_date } = req.body;
 
         // 先獲取現有商品
         const existingProduct = await storeDb.getProductById(productId);
@@ -170,7 +201,10 @@ router.put('/products/:id', upload.single('image'), async (req, res) => {
             price: price !== undefined ? parseFloat(price) : existingProduct.price,
             image: imagePath,
             stock: stock !== undefined ? parseInt(stock) : existingProduct.stock,
-            category: category !== undefined ? category : existingProduct.category
+            category: category !== undefined ? category : existingProduct.category,
+            expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
+            start_date: start_date !== undefined ? start_date : existingProduct.start_date,
+            end_date: end_date !== undefined ? end_date : existingProduct.end_date
         };
 
         const updatedProduct = await storeDb.updateProduct(productId, productData);

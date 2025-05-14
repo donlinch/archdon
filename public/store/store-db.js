@@ -69,7 +69,7 @@ async function initStoreDatabase() {
  * @returns {Promise<Array>} 商品列表
  */
 async function getAllProducts(category = null) {
-    let query = 'SELECT * FROM store_schema.products';
+    let query = 'SELECT id, name, description, price, image, stock, category, created_at, updated_at, expiration_type, start_date, end_date FROM store_schema.products';
     const values = [];
 
     if (category) {
@@ -99,15 +99,15 @@ async function getProductById(id) {
  * @returns {Promise<Object>} 創建的商品
  */
 async function createProduct(productData) {
-    const { name, description, price, image, stock, category } = productData;
+    const { name, description, price, image, stock, category, expiration_type, start_date, end_date } = productData;
 
     const query = `
-        INSERT INTO store_schema.products (name, description, price, image, stock, category)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO store_schema.products (name, description, price, image, stock, category, expiration_type, start_date, end_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
     `;
 
-    const values = [name, description, price, image, stock || 0, category];
+    const values = [name, description, price, image, stock || 0, category, expiration_type, start_date, end_date];
     const { rows } = await pool.query(query, values);
     return rows[0];
 }
@@ -119,16 +119,17 @@ async function createProduct(productData) {
  * @returns {Promise<Object|null>} 更新後的商品
  */
 async function updateProduct(id, productData) {
-    const { name, description, price, image, stock, category } = productData;
+    const { name, description, price, image, stock, category, expiration_type, start_date, end_date } = productData;
 
     const query = `
         UPDATE store_schema.products
-        SET name = $1, description = $2, price = $3, image = $4, stock = $5, category = $6, updated_at = NOW()
-        WHERE id = $7
+        SET name = $1, description = $2, price = $3, image = $4, stock = $5, category = $6,
+            expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW()
+        WHERE id = $10
         RETURNING *
     `;
 
-    const values = [name, description, price, image, stock, category, id];
+    const values = [name, description, price, image, stock, category, expiration_type, start_date, end_date, id];
     const { rows } = await pool.query(query, values);
     return rows.length > 0 ? rows[0] : null;
 }

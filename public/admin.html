@@ -136,14 +136,17 @@
         }
 
         /* Adjust column widths if needed, or remove if table-layout: auto works well */
-        .product-list-table th:nth-child(1), .product-list-table td:nth-child(1) { width: 5%; }  /* ID */
-        .product-list-table th:nth-child(2), .product-list-table td:nth-child(2) { width: 20%; } /* 名稱 */
-        .product-list-table th:nth-child(3), .product-list-table td:nth-child(3) { width: 8%; text-align: right; } /* 價格 */
-        .product-list-table th:nth-child(4), .product-list-table td:nth-child(4) { width: 8%; text-align: center; } /* 點擊數 */
-        .product-list-table th:nth-child(5), .product-list-table td:nth-child(5) { width: 12%; } /* 分類 */
-        .product-list-table th:nth-child(6), .product-list-table td:nth-child(6) { width: 10%; text-align: center; } /* 圖片 */
-        .product-list-table th:nth-child(7), .product-list-table td:nth-child(7) { width: 17%; } /* 標籤 */
-        .product-list-table th:nth-child(8), .product-list-table td:nth-child(8) { width: 20%; text-align: center; } /* 操作 */
+        .product-list-table th:nth-child(1), .product-list-table td:nth-child(1) { width: 4%; }  /* ID */
+        .product-list-table th:nth-child(2), .product-list-table td:nth-child(2) { width: 15%; } /* 名稱 */
+        .product-list-table th:nth-child(3), .product-list-table td:nth-child(3) { width: 7%; text-align: right; } /* 價格 */
+        .product-list-table th:nth-child(4), .product-list-table td:nth-child(4) { width: 7%; text-align: center; } /* 點擊數 */
+        .product-list-table th:nth-child(5), .product-list-table td:nth-child(5) { width: 10%; } /* 分類 */
+        .product-list-table th:nth-child(6), .product-list-table td:nth-child(6) { width: 8%; text-align: center; } /* 圖片 */
+        .product-list-table th:nth-child(7), .product-list-table td:nth-child(7) { width: 10%; } /* 狀態 */
+        .product-list-table th:nth-child(8), .product-list-table td:nth-child(8) { width: 10%; } /* 開始日期 */
+        .product-list-table th:nth-child(9), .product-list-table td:nth-child(9) { width: 10%; } /* 結束日期 */
+        .product-list-table th:nth-child(10), .product-list-table td:nth-child(10) { width: 12%; } /* 標籤 */
+        .product-list-table th:nth-child(11), .product-list-table td:nth-child(11) { width: 17%; text-align: center; } /* 操作 */
         
         .product-list-table img {
             max-width: 60px;
@@ -726,6 +729,9 @@
                         <th>點擊</th>
                         <th>分類</th>
                         <th>圖片</th>
+                        <th>狀態</th>
+                        <th>開始日期</th>
+                        <th>結束日期</th>
                         <th>標籤</th>
                         <th>操作</th>
                     </tr>
@@ -849,6 +855,23 @@
                  </div>
              </div>
             <div class="form-group">
+                <label for="add-expiration-type">商品期限:</label>
+                <select id="add-expiration-type" name="expiration_type">
+                    <option value="0" selected>不限期</option>
+                    <option value="1">限定日期</option>
+                </select>
+            </div>
+            <div id="add-date-range-group" class="form-group" style="display: none;">
+                <div class="form-group" style="margin-bottom: 10px;"> <!-- Inner form group for start date -->
+                    <label for="add-start-date">開始日期:</label>
+                    <input type="date" id="add-start-date" name="start_date">
+                </div>
+                <div class="form-group"> <!-- Inner form group for end date -->
+                    <label for="add-end-date">結束日期:</label>
+                    <input type="date" id="add-end-date" name="end_date">
+                </div>
+            </div>
+            <div class="form-group">
                 <label for="add-product-image-url">圖片路徑</label>
                 <input type="url" id="add-product-image-url" placeholder="例如: /images/my_image.jpg 或 https://...">
             </div>
@@ -903,6 +926,23 @@
                       <small style="color: #888;">載入中...</small>
                  </div>
              </div>
+            <div class="form-group">
+                <label for="edit-expiration-type">商品期限:</label>
+                <select id="edit-expiration-type" name="expiration_type">
+                    <option value="0">不限期</option>
+                    <option value="1">限定日期</option>
+                </select>
+            </div>
+            <div id="edit-date-range-group" class="form-group" style="display: none;">
+                <div class="form-group" style="margin-bottom: 10px;"> <!-- Inner form group for start date -->
+                    <label for="edit-start-date">開始日期:</label>
+                    <input type="date" id="edit-start-date" name="start_date">
+                </div>
+                <div class="form-group"> <!-- Inner form group for end date -->
+                    <label for="edit-end-date">結束日期:</label>
+                    <input type="date" id="edit-end-date" name="end_date">
+                </div>
+            </div>
             <div class="form-group">
                 <label for="edit-product-image-url">圖片路徑</label>
                 <input type="url" id="edit-product-image-url" placeholder="例如: /images/my_image.jpg 或 https://...">

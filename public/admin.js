@@ -21,6 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const editExistingCategoriesDiv = document.getElementById('edit-existing-categories');
     // 標籤相關元素 - 編輯表單
     const editTagsContainer = document.getElementById('edit-tags-container');
+    // 編輯商品表單的期限相關元素
+    const editExpirationType = document.getElementById('edit-expiration-type');
+    const editDateRangeGroup = document.getElementById('edit-date-range-group');
+    const editStartDate = document.getElementById('edit-start-date');
+    const editEndDate = document.getElementById('edit-end-date');
 
     const addModal = document.getElementById('add-modal');
     const addForm = document.getElementById('add-product-form');
@@ -34,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const addExistingCategoriesDiv = document.getElementById('add-existing-categories');
     // 標籤相關元素 - 新增表單
     const addTagsContainer = document.getElementById('add-tags-container');
+    // 新增商品表單的期限相關元素
+    const addExpirationType = document.getElementById('add-expiration-type');
+    const addDateRangeGroup = document.getElementById('add-date-range-group');
+    const addStartDate = document.getElementById('add-start-date');
+    const addEndDate = document.getElementById('add-end-date');
     
     const categoryOptionsDatalist = document.getElementById('categoryOptions');
 
@@ -73,6 +83,27 @@ document.addEventListener('DOMContentLoaded', () => {
         endDate: new Date().toISOString().split('T')[0]
     };
 
+    // --- Event Listeners for Expiration Type Change ---
+    if (addExpirationType && addDateRangeGroup) {
+        addExpirationType.addEventListener('change', function() {
+            addDateRangeGroup.style.display = this.value === '1' ? 'block' : 'none';
+            if (this.value === '0') { // 如果是不限期，清空日期
+                if(addStartDate) addStartDate.value = '';
+                if(addEndDate) addEndDate.value = '';
+            }
+        });
+    }
+
+    if (editExpirationType && editDateRangeGroup) {
+        editExpirationType.addEventListener('change', function() {
+            editDateRangeGroup.style.display = this.value === '1' ? 'block' : 'none';
+            if (this.value === '0') { // 如果是不限期，清空日期
+                if(editStartDate) editStartDate.value = '';
+                if(editEndDate) editEndDate.value = '';
+            }
+        });
+    }
+
     // 初始化日期選擇器的值
     function initializeDatePickers() {
         if (startDateInput && endDateInput) {
@@ -102,15 +133,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingMessage) loadingMessage.style.display = 'none'; 
             if (productTable) productTable.style.display = 'table'; 
             
-            productListBody.innerHTML = ''; 
-            if (products.length === 0) { 
-                productListBody.innerHTML = '<tr><td colspan="7">目前沒有商品。</td></tr>'; 
-                return; 
-            } 
+            productListBody.innerHTML = '';
+            if (products.length === 0) {
+                productListBody.innerHTML = '<tr><td colspan="11">目前沒有商品。</td></tr>'; // Updated colspan
+                return;
+            }
             
-            products.forEach(product => { 
-                const row = document.createElement('tr'); 
-                row.dataset.productId = product.id; 
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.dataset.productId = product.id;
+
+                // Helper to format date as YYYY-MM-DD, or return 'N/A'
+                const formatDate = (dateString) => {
+                    if (!dateString) return 'N/A';
+                    try {
+                        const date = new Date(dateString);
+                        // Check if date is valid after parsing
+                        if (isNaN(date.getTime())) return 'N/A';
+                        return date.toISOString().split('T')[0];
+                    } catch (e) {
+                        return 'N/A'; // Handle invalid date strings
+                    }
+                };
+
+                const startDateDisplay = product.expiration_type === 1 ? formatDate(product.start_date) : 'N/A';
+                const endDateDisplay = product.expiration_type === 1 ? formatDate(product.end_date) : 'N/A';
+
                 row.innerHTML = `
                     <td>${product.id}</td>
                     <td>${product.name || ''}</td>
@@ -118,15 +166,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${product.click_count !== null ? product.click_count : '0'}</td>
                     <td>${product.category || '未分類'}</td>
                     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                    <td>${product.tags && product.tags.length ? product.tags.map(tag => 
+                    <td>${product.product_status || 'N/A'}</td>
+                    <td>${startDateDisplay}</td>
+                    <td>${endDateDisplay}</td>
+                    <td>${product.tags && product.tags.length ? product.tags.map(tag =>
                          `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
                     <td>
                         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
                         <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
                     </td>
-                `; 
-                productListBody.appendChild(row); 
-            }); 
+                `;
+                productListBody.appendChild(row);
+            });
         } catch (error) { 
             console.error("獲取管理商品列表失敗:", error); 
             if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。'; 
@@ -177,8 +228,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (editTagsContainer) {
                 await populateTagCheckboxes(editTagsContainer, product.tags || []);
             }
+
+            // --- 填充並處理商品期限欄位 ---
+            if (editExpirationType) {
+                editExpirationType.value = product.expiration_type !== undefined ? product.expiration_type.toString() : '0';
+            }
+            if (editStartDate) {
+                // 確保 product.start_date 存在且是有效日期字串才嘗試 split
+                editStartDate.value = product.start_date && typeof product.start_date === 'string' ? product.start_date.split('T')[0] : '';
+            }
+            if (editEndDate) {
+                editEndDate.value = product.end_date && typeof product.end_date === 'string' ? product.end_date.split('T')[0] : '';
+            }
+            if (editDateRangeGroup && editExpirationType) {
+                editDateRangeGroup.style.display = editExpirationType.value === '1' ? 'block' : 'none';
+            }
+            // --- 期限欄位處理結束 ---
             
-            editModal.style.display = 'flex'; 
+            editModal.style.display = 'flex';
         } catch (error) { 
             console.error(`獲取商品 ${id} 進行編輯時出錯:`, error); 
             alert(`無法載入編輯資料： ${error.message}`); 
@@ -279,7 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: priceValue,
                 category: editProductCategory.value.trim() || null,
                 image_url: editProductImageUrl.value.trim() || null,
-                seven_eleven_url: editProductSevenElevenUrl.value.trim() || null
+                seven_eleven_url: editProductSevenElevenUrl.value.trim() || null,
+                expiration_type: editExpirationType ? parseInt(editExpirationType.value) : 0,
+                start_date: editStartDate && editExpirationType && editExpirationType.value === '1' ? (editStartDate.value || null) : null,
+                end_date: editEndDate && editExpirationType && editExpirationType.value === '1' ? (editEndDate.value || null) : null
             };
 
             if (editTagsContainer) {
@@ -353,7 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: priceValue,
                 category: addProductCategory.value.trim() || null,
                 image_url: addProductImageUrl.value.trim() || null,
-                seven_eleven_url: addProductSevenElevenUrl.value.trim() || null
+                seven_eleven_url: addProductSevenElevenUrl.value.trim() || null,
+                expiration_type: addExpirationType ? parseInt(addExpirationType.value) : 0,
+                start_date: addStartDate && addExpirationType && addExpirationType.value === '1' ? (addStartDate.value || null) : null,
+                end_date: addEndDate && addExpirationType && addExpirationType.value === '1' ? (addEndDate.value || null) : null
             };
 
             if (addTagsContainer) {
