@@ -1641,6 +1641,21 @@ const upload = multer({
   },
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB
 });
+
+// --- 新增 publicSafeUpload 的定義 ---
+const publicSafeUpload = multer({
+  storage, // 重用相同的儲存設定
+  fileFilter: (req, file, cb) => {
+    const allowedImageTypes = ['.png', '.jpg', '.jpeg', '.gif'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowedImageTypes.includes(ext)) {
+        return cb(new Error('只允許上傳圖片檔案 (png, jpg, jpeg, gif)！'), false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
+});
+// --- END OF publicSafeUpload 定義 ---
 app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
         const file = req.file;
