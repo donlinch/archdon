@@ -4978,6 +4978,16 @@ const unboxingUpload = multer({
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
 app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
+
+
+  console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.intent}, Files: ${req.files ? req.files.length : 0}`); // <--- 非常早期的日誌
+
+    // 馬上返回一個簡單的成功訊息，先不執行任何 AI 或 Vision 邏輯
+    return res.status(200).json({ success: true, message: "Debug: Request received by backend.", intent: req.body.intent });
+
+
+
+    /*
     if (!visionClient || !geminiModel) {
         return res.status(503).json({ error: "AI 服務目前不可用。" });
     }
@@ -5106,6 +5116,9 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
         console.error(`[Content Gen API] Error with intent '${intent}':`, error.message, error.stack);
         res.status(500).json({ error: 'AI 內容產生失敗，請稍後再試。' });
     }
+
+
+    */ 
 });
 
 
@@ -7721,6 +7734,7 @@ const controllerClients = new Set();
 
 // --- 404 Handler ---
 app.use((req, res, next) => {
+    
     console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
     res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
