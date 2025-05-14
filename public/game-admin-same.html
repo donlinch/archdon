@@ -798,18 +798,18 @@
             
             if (templateId) {
                 // 更新現有模板
-                const adminPassword = prompt("請輸入管理員密碼以更新模板：");
-                if (!adminPassword) {
-                    showAlert('未提供管理員密碼，操作取消。', 'warning');
-                    return;
-                }
+                // const adminPassword = prompt("請輸入管理員密碼以更新模板："); // Removed
+                // if (!adminPassword) { // Removed
+                //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+                //     return; // Removed
+                // } // Removed
                 $.ajax({
                     url: `/api/samegame/templates/${templateId}`,
                     type: 'PUT',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': adminPassword
-                    },
+                    // headers: { // Removed password header
+                    //     'X-Admin-Password': adminPassword // Removed
+                    // }, // Removed
                     data: JSON.stringify(templateData),
                     success: function(data) {
                         $('#templateModal').modal('hide');
@@ -833,18 +833,18 @@
                 });
             } else {
                 // 創建新模板
-                const adminPassword = prompt("請輸入管理員密碼以創建模板：");
-                if (!adminPassword) {
-                    showAlert('未提供管理員密碼，操作取消。', 'warning');
-                    return;
-                }
+                // const adminPassword = prompt("請輸入管理員密碼以創建模板："); // Removed
+                // if (!adminPassword) { // Removed
+                //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+                //     return; // Removed
+                // } // Removed
                 $.ajax({
                     url: '/api/samegame/templates',
                     type: 'POST',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': adminPassword
-                    },
+                    // headers: { // Removed password header
+                    //     'X-Admin-Password': adminPassword // Removed
+                    // }, // Removed
                     data: JSON.stringify(templateData),
                     success: function(data) {
                         $('#templateModal').modal('hide');
@@ -915,18 +915,18 @@
             
             if (levelId) {
                 // 更新現有關卡
-                const adminPassword = prompt("請輸入管理員密碼以更新關卡：");
-                if (!adminPassword) {
-                    showAlert('未提供管理員密碼，操作取消。', 'warning');
-                    return;
-                }
+                // const adminPassword = prompt("請輸入管理員密碼以更新關卡："); // Removed
+                // if (!adminPassword) { // Removed
+                //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+                //     return; // Removed
+                // } // Removed
                 $.ajax({
                     url: `/api/samegame/levels/${levelId}`,
                     type: 'PUT',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': adminPassword
-                    },
+                    // headers: { // Removed password header
+                    //     'X-Admin-Password': adminPassword // Removed
+                    // }, // Removed
                     data: JSON.stringify(levelData),
                     success: function(data) {
                         $('#levelModal').modal('hide');
@@ -945,18 +945,18 @@
                 });
             } else {
                 // 創建新關卡
-                const adminPassword = prompt("請輸入管理員密碼以創建關卡：");
-                if (!adminPassword) {
-                    showAlert('未提供管理員密碼，操作取消。', 'warning');
-                    return;
-                }
+                // const adminPassword = prompt("請輸入管理員密碼以創建關卡："); // Removed
+                // if (!adminPassword) { // Removed
+                //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+                //     return; // Removed
+                // } // Removed
                 $.ajax({
                     url: `/api/samegame/templates/${templateId}/levels`,
                     type: 'POST',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': adminPassword
-                    },
+                    // headers: { // Removed password header
+                    //     'X-Admin-Password': adminPassword // Removed
+                    // }, // Removed
                     data: JSON.stringify(levelData),
                     success: function(data) {
                         $('#levelModal').modal('hide');
@@ -978,17 +978,17 @@
         
         // 刪除模板
         function deleteTemplate(templateId) {
-            const adminPassword = prompt("請輸入管理員密碼以刪除模板：");
-            if (!adminPassword) {
-                showAlert('未提供管理員密碼，操作取消。', 'warning');
-                return;
-            }
+            // const adminPassword = prompt("請輸入管理員密碼以刪除模板："); // Removed
+            // if (!adminPassword) { // Removed
+            //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+            //     return; // Removed
+            // } // Removed
             $.ajax({
                 url: `/api/samegame/templates/${templateId}`,
                 type: 'DELETE',
-                headers: {
-                    'X-Admin-Password': adminPassword
-                },
+                // headers: { // Removed password header
+                //     'X-Admin-Password': adminPassword // Removed
+                // }, // Removed
                 success: function() {
                     showAlert('模板已成功刪除', 'success');
                     
@@ -1012,17 +1012,17 @@
         
         // 刪除關卡
         function deleteLevel(levelId) {
-            const adminPassword = prompt("請輸入管理員密碼以刪除關卡：");
-            if (!adminPassword) {
-                showAlert('未提供管理員密碼，操作取消。', 'warning');
-                return;
-            }
+            // const adminPassword = prompt("請輸入管理員密碼以刪除關卡："); // Removed
+            // if (!adminPassword) { // Removed
+            //     showAlert('未提供管理員密碼，操作取消。', 'warning'); // Removed
+            //     return; // Removed
+            // } // Removed
             $.ajax({
                 url: `/api/samegame/levels/${levelId}`,
                 type: 'DELETE',
-                headers: {
-                    'X-Admin-Password': adminPassword
-                },
+                // headers: { // Removed password header
+                //     'X-Admin-Password': adminPassword // Removed
+                // }, // Removed
                 success: function() {
                     showAlert('關卡已成功刪除', 'success');
                     

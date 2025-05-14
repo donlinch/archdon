@@ -428,20 +428,14 @@
 
 
             try {
-                const adminPassword = prompt("請輸入管理員密碼以開始生成：");
-                if (!adminPassword) {
-                    alert("未提供管理員密碼，操作取消。");
-                    resetUI();
-                    resultDiv.textContent = '操作已取消。';
-                    return;
-                }
-                // 將密碼加入 formData (或者透過標頭，但 formData 對於檔案上傳更直接)
-                formData.append('adminPassword', adminPassword);
+                // --- 移除了管理員密碼提示和 formData.append('adminPassword', adminPassword); ---
 
                 // 發送請求
                 const response = await fetch('/api/generate-unboxing-post', {
                     method: 'POST',
                     body: formData,
+                    // 如果後端需要通過 header 驗證，可以在這裡添加，但目前是移除客戶端密碼處理
+                    // headers: { 'X-Admin-Password': somePasswordVariableIfAvailable }
                 });
 
                 if (!response.ok) {
