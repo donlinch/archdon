@@ -7837,14 +7837,25 @@ adminRouter.get('/products', async (req, res) => {
     try {
         // 直接使用 pool.query 獲取商品，包含所有需要的欄位
         const result = await pool.query(
-            `SELECT id, name, description, price, image_url, category, click_count,
-                    expiration_type, start_date, end_date, created_at, updated_at
-             FROM products
-             ORDER BY id DESC` // 或者其他排序方式
+            `SELECT p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
+                    p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
+                    COALESCE(
+                        (SELECT json_agg(t.tag_name ORDER BY t.tag_name)
+                         FROM product_tags pt
+                         JOIN tags t ON pt.tag_id = t.tag_id
+                         WHERE pt.product_id = p.id),
+                        '[]'::json
+                    ) AS tags
+             FROM products p
+             ORDER BY p.id DESC`
         );
         const productsFromDb = result.rows;
 
         const products = productsFromDb.map(product => {
+            // 'tags' field from query is already an array of tag names (or empty array)
+            // product.tags will be used directly by frontend if it's an array of strings
+            // If frontend expects array of objects {tag_id, tag_name}, query needs adjustment
+            // For now, assuming frontend's product.tags.map(tag => `<span class="product-tag">${tag}</span>`) expects tag names
             let calculated_status;
             // pg driver 通常會將 INTEGER 轉為 number, DATE 轉為 Date object or string
             // 確保 expiration_type 是數字進行比較
