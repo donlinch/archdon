@@ -822,6 +822,64 @@ body {
     to { transform: scale(1); opacity: 1; }
 }
 
+/* --- 蝦皮推廣 美化 --- */
+.contribution-info {
+    text-align: center;
+    padding: 20px; /* 增加內邊距 */
+    margin: 20px auto; /* 上下邊距，左右自動使其居中 */
+    background-color: #f9f9f9; /* 淡灰色背景 */
+    border-radius: 10px; /* 圓角 */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 細微陰影 */
+    max-width: 450px; /* 設定最大寬度 */
+    display: block; /* 改為 block 以便 margin auto 生效 */
+}
+
+.shopee-link {
+    display: flex; /* 改為 flex 佈局 */
+    flex-direction: column; /* 垂直排列子元素 */
+    align-items: center; /* 水平居中對齊 */
+    text-decoration: none;
+    color: #333;
+    gap: 10px; /* 子元素之間的間距 */
+}
+
+.shopee-main-text {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* 文字和蝦皮圖標之間的間距 */
+    font-size: 1.1em; /* 稍大字體 */
+    font-weight: bold;
+    color: #d0011b; /* 蝦皮紅 */
+}
+
+.shopee-logo-main {
+    height: 30px; /* 主要蝦皮圖標高度 */
+    width: auto;
+    vertical-align: middle;
+}
+
+.payment-icons-text {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 10px; /* 與上方元素的間距 */
+}
+
+.payment-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* 支付圖標之間的間距 */
+    margin-top: 5px; /* 與上方文字的間距 */
+}
+
+.payment-icon {
+    height: 30px; /* 支付圖標高度 */
+    width: auto;
+    border: 1px solid #eee; /* 細邊框 */
+    border-radius: 4px; /* 輕微圓角 */
+    padding: 2px; /* 內邊距讓圖標不貼邊 */
+}
+
 </style>
 
     <!-- Swiper CSS -->
@@ -864,9 +922,17 @@ body {
     <!-- 蝦皮推廣 -->
     <div class="contribution-info">
         <a href="https://shopee.tw/shop/43397905" target="_blank" rel="noopener noreferrer" class="shopee-link">
-            <span>習慣使用蝦皮？點此前往</span> 
-            <img src="/images/shopee.png" alt="蝦皮"> 
-            <span>蝦皮賣場選購</span>
+            <div class="shopee-main-text">
+                <span>習慣使用蝦皮？點此前往</span>
+                <img src="/images/shopee.png" alt="蝦皮" class="shopee-logo-main">
+                <span>蝦皮賣場選購</span>
+            </div>
+            <div class="payment-icons-text">支援的付款方式：</div>
+            <div class="payment-icons">
+                <img src="/images/visa.png" alt="Visa" class="payment-icon">
+                <img src="/images/mastercard.png" alt="Mastercard" class="payment-icon">
+                <img src="/images/greenpay.png" alt="綠界科技" class="payment-icon">
+            </div>
         </a>
     </div>
     
