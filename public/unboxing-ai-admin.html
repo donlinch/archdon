@@ -289,9 +289,17 @@
             const url = id ? `${API_BASE_URL}/${id}` : API_BASE_URL;
 
             try {
+                const adminPassword = prompt(`請輸入管理員密碼以${id ? '更新' : '新增'}方案：`);
+                if (!adminPassword) {
+                    showFormMessage('未提供管理員密碼，操作取消。', true);
+                    return;
+                }
                 const response = await fetch(url, {
                     method: method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
                     body: JSON.stringify(data)
                 });
 
@@ -326,8 +334,16 @@
             }
 
             try {
+                const adminPassword = prompt("請輸入管理員密碼以刪除方案：");
+                if (!adminPassword) {
+                    alert("未提供管理員密碼，操作取消。");
+                    return;
+                }
                 const response = await fetch(`${API_BASE_URL}/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'X-Admin-Password': adminPassword
+                    }
                 });
 
                 if (!response.ok) {

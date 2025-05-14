@@ -5050,7 +5050,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5090,7 +5090,7 @@ unboxingAiRouter.put('/schemes/:id', async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5139,7 +5139,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', verifyAdminPassword, unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 

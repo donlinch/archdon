@@ -428,6 +428,16 @@
 
 
             try {
+                const adminPassword = prompt("請輸入管理員密碼以開始生成：");
+                if (!adminPassword) {
+                    alert("未提供管理員密碼，操作取消。");
+                    resetUI();
+                    resultDiv.textContent = '操作已取消。';
+                    return;
+                }
+                // 將密碼加入 formData (或者透過標頭，但 formData 對於檔案上傳更直接)
+                formData.append('adminPassword', adminPassword);
+
                 // 發送請求
                 const response = await fetch('/api/generate-unboxing-post', {
                     method: 'POST',
