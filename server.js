@@ -5203,9 +5203,22 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
                 if (vr.error) {
                     imageInsights += `  - 分析時遇到問題: ${vr.error}\n`;
                 } else {
-                    if (vr.labels && vr.labels.length > 0) imageInsights += `  - 它看起來像是包含：${vr.labels.join('、')}。\n`;
-                    if (vr.detectedText) imageInsights += `  - 圖片中可能辨識出的文字有：「${vr.detectedText}」。\n`;
-                    if (vr.detectedObjects && vr.detectedObjects.length > 0) imageInsights += `  - 主要的物件有：${vr.detectedObjects.join('、')}。\n`;
+                    let hasAnyVisionData = false;
+                    const labelsText = (vr.labels && vr.labels.length > 0) ? vr.labels.join('、') : '無';
+                    imageInsights += `  - 標籤分析結果：${labelsText}\n`;
+                    if (labelsText !== '無') hasAnyVisionData = true;
+
+                    const detectedTextContent = vr.detectedText || '無';
+                    imageInsights += `  - 文字識別結果：「${detectedTextContent}」\n`;
+                    if (detectedTextContent !== '無') hasAnyVisionData = true;
+                    
+                    const objectsText = (vr.detectedObjects && vr.detectedObjects.length > 0) ? vr.detectedObjects.join('、') : '無';
+                    imageInsights += `  - 物件偵測結果：${objectsText}\n`;
+                    if (objectsText !== '無') hasAnyVisionData = true;
+
+                    if (!hasAnyVisionData) {
+                        imageInsights += `  - (綜合來看，未能從此圖片中提取到具體的標籤、文字或物件資訊。)\n`;
+                    }
                 }
                 imageInsights += "\n";
             });
