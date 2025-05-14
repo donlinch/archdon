@@ -4982,12 +4982,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
 
   console.log(`[DEBUG /api/generate-unboxing-post] Received request. Intent: ${req.body.intent}, Files: ${req.files ? req.files.length : 0}`); // <--- 非常早期的日誌
 
-    // 馬上返回一個簡單的成功訊息，先不執行任何 AI 或 Vision 邏輯
-    return res.status(200).json({ success: true, message: "Debug: Request received by backend.", intent: req.body.intent });
-
-
-
-    /*
+    
     if (!visionClient || !geminiModel) {
         return res.status(503).json({ error: "AI 服務目前不可用。" });
     }
@@ -5118,7 +5113,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
     }
 
 
-    */ 
+    
 });
 
 
