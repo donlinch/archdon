@@ -5173,6 +5173,8 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
                     ],
                 });
 
+                console.log(`[Cloud Vision API Raw Response for ${file.originalname}]: ${JSON.stringify(result, null, 2)}`); // 詳細日誌
+
                 const labels = result.labelAnnotations ? result.labelAnnotations.map(label => label.description) : [];
                 const texts = result.textAnnotations ? result.textAnnotations.map(text => text.description) : [];
                 const fullTextAnnotation = texts.length > 0 ? texts[0].replace(/\n/g, ' ').trim() : "";
