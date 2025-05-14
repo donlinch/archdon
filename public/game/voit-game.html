@@ -1,3 +1,4 @@
+ 
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -607,7 +608,7 @@
     <div id="settings-drawer" class="drawer">
         <div class="drawer-header">
             <h2>管理投票項目</h2>
-            <button id="close-drawer-button" class="drawer-close-button">&times;</button>
+            <button id="close-drawer-button" class="drawer-close-button">×</button>
         </div>
         <div class="drawer-content">
             <ul id="drawer-item-list" class="drawer-item-list">
@@ -648,7 +649,7 @@
     </div> <!-- .main-content-wrapper ends -->
 
     <div id="myLightbox" class="lightbox">
-        <span class="lightbox-close">&times;</span>
+        <span class="lightbox-close">×</span>
         <div class="lightbox-content">
             <img id="lightboxImg" src="#" alt="Lightbox Image">
         </div>
@@ -766,7 +767,7 @@
                                 optionDiv.classList.add('option-with-image'); // 添加class以便CSS控制
                                 const zoomIconSpan = document.createElement('span');
                                 zoomIconSpan.className = 'zoom-icon';
-                                zoomIconSpan.innerHTML = '&#128269;';
+                                zoomIconSpan.innerHTML = '';
                                 
                                 const imgElement = document.createElement('img');
                                 imgElement.src = opt.image_url;
@@ -989,13 +990,13 @@
             function escapeHtml(unsafe) {
                 if (typeof unsafe !== 'string') return '';
                 return unsafe
-                      .replace(/&/g, '&amp;')
+                      .replace(/&/g, '&')
         
                 // < 轉成 & l t ;
-                .replace(/</g, '&lt;')
+                .replace(/</g, '<')
         
                 // > 轉成 & g t ;
-                .replace(/>/g, '&gt;')
+                .replace(/>/g, '>')
         
                 // " 轉成 & q u o t ;
                 .replace(/"/g, '&quot;')
@@ -1389,16 +1390,18 @@
                                     body: formData
                                 });
                                 const result = await response.json();
-                                // Assuming /api/upload endpoint returns { success: true, filePath: '...' } or similar
-                                if (response.ok && result.success && result.filePath) {
-                                    hiddenImageUrlInput.value = result.filePath; // Use filePath from the response
-                                    imagePreview.src = result.filePath;    // Use filePath for preview
+                                // --- START OF MODIFICATION ---
+                                // Assuming /api/upload endpoint returns { success: true, url: '...' }
+                                if (response.ok && result.success && result.url) { // Check for result.url
+                                    hiddenImageUrlInput.value = result.url; // Use result.url
+                                    imagePreview.src = result.url;    // Use result.url for preview
                                     imagePreview.style.display = 'block';
                                     uploadStatusDiv.textContent = '上傳成功！';
                                     uploadStatusDiv.style.color = 'green';
                                 } else {
                                     throw new Error(result.message || result.error || '上傳失敗或回傳資料格式不符');
                                 }
+                                // --- END OF MODIFICATION ---
                             } catch (error) {
                                 console.error('圖片上傳失敗:', error);
                                 uploadStatusDiv.textContent = `上傳失敗: ${error.message}`;
@@ -1503,3 +1506,4 @@
     </nav>
 </body>
 </html>
+ 
