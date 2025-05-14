@@ -312,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
+            console.log('Raw editProductImageUrl.value:', editProductImageUrl.value); // 新增日誌
+            console.log('Raw editProductSevenElevenUrl.value:', editProductSevenElevenUrl.value); // 新增日誌
             const updatedData = {
                 name: editProductName.value.trim(),
                 description: editProductDescription.value.trim(),
@@ -388,6 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
             addFormError.textContent = '';
 
             let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value);
+            console.log('Raw addProductImageUrl.value:', addProductImageUrl.value); // 新增日誌
+            console.log('Raw addProductSevenElevenUrl.value:', addProductSevenElevenUrl.value); // 新增日誌
             const newData = {
                 name: addProductName.value.trim(),
                 description: addProductDescription.value.trim(),
