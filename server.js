@@ -5136,7 +5136,7 @@ app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async
     }
 
     const userDescription = req.body.description || "";
-    const intent = req.body.intent;
+    const intent = req.body.scheme_intent_key; // <--- 從 scheme_intent_key 讀取
 
     if (!intent || (intent !== 'generate_introduction' && intent !== 'identify_content')) {
         return res.status(400).json({ error: '無效的請求意圖。' });
