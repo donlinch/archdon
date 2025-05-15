@@ -640,23 +640,63 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const labels = trafficData.map(item => item.date || item.month);
             const dataPoints = trafficData.map(item => item.count);
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: { 
-                    labels: labels, 
-                    datasets: [{ 
-                        label: granularity === 'daily' ? '每日頁面瀏覽量' : '每月頁面瀏覽量', data: dataPoints, 
-                        borderColor: granularity === 'daily' ? 'rgb(54, 162, 235)' : 'rgb(255, 159, 64)', 
-                        backgroundColor: granularity === 'daily' ? 'rgba(54, 162, 235, 0.1)' : 'rgba(255, 159, 64, 0.1)', 
-                        fill: true, tension: 0.2 
-                    }] 
-                },
-                options: { 
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: granularity === 'daily' ? 1 : undefined } } }, 
-                    responsive: true, maintainAspectRatio: false, 
-                    plugins: { title: { display: false }, legend: { display: true, position: 'top' } } 
+
+
+
+
+ // --- 主要修改在這裡 ---
+ currentChart = new Chart(ctx, {
+    type: 'bar', // <--- 將 'line' 修改為 'bar'
+    data: {
+        labels: labels,
+        datasets: [{
+            label: granularity === 'daily' ? '每日頁面瀏覽量' : '每月頁面瀏覽量',
+            data: dataPoints,
+            // 柱狀圖的顏色設定
+            backgroundColor: granularity === 'daily' ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 159, 64, 0.7)', // 實色背景，可以調整透明度
+            borderColor: granularity === 'daily' ? 'rgb(54, 162, 235)' : 'rgb(255, 159, 64)',             // 邊框顏色
+            borderWidth: 1 // 邊框寬度
+            // fill: true, // 柱狀圖通常不需要 fill
+            // tension: 0.2 // tension 屬性主要用於折線圖
+        }]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: granularity === 'daily' ? 1 : undefined // 如果是每日，可以考慮步長為1
                 }
-            });
+            },
+            x: {
+                // 對於柱狀圖，如果標籤太多，可能需要旋轉
+                ticks: {
+                    // autoSkip: true, // 自動跳過一些標籤以避免重疊
+                    // maxRotation: 90,
+                    // minRotation: 45
+                }
+            }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            title: {
+                display: false // 沿用原設定，如果需要標題可以設為 true
+            },
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+// --- 修改結束 ---
+
+
+
+
+
+
             setTimeout(() => { displayPageRankingChart(); setTimeout(() => { displayPageComparisonChart(); }, 300); }, 300);
         } catch (error) {
             console.error(`繪製 ${granularity} 流量圖表失敗:`, error);
