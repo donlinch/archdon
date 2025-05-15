@@ -505,12 +505,48 @@ app.get('/api/news-categories', async (req, res) => {
    
 // --- 基本 Express 設定 ---
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+
+ 
 app.use(express.urlencoded({ extended: true }));
 
 
+// --- 記錄 Page View 中間件 ---
+app.use(async (req, res, next) => {
+    const pathsToLog = [
+        '/', '/index.html', '/music.html', '/news.html', '/scores.html',
+        '/guestbook.html', '/message-detail.html',
+        '/game/card-game.html', // <-- 新增
+        '/game/wheel-game.html', // <-- 新增
+        '/game/brige-game.html',  // <-- 新增
+        
+'/games.html'
 
+
+    ]; // 添加 scores.html
+    // 確保只記錄 'GET' 請求且路徑在列表中
+    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
+
+            if (shouldLog) {
+                const pagePath = req.path;
+                console.log(`[PV Mid DEBUG] Attempting to log page view for: ${pagePath} at ${new Date().toISOString()}`); // <--- 新增日誌
+                try {
+                    const sql = `...`;
+                    const params = [pagePath];
+                    await pool.query(sql, params);
+                    console.log(`[PV Mid DEBUG] Successfully logged page view for: ${pagePath}`); // <--- 新增日誌
+                } catch (err) {
+                    console.error(`[PV Mid DEBUG] CAUGHT ERROR for ${pagePath}: Code: ${err.code}, Message: ${err.message}, Stack: ${err.stack || err}`); // <--- 修改日誌，更詳細
+                    if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
+                        console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
+                    } else {
+                        console.error('[PV Mid] Error logging page view (OTHER ERROR):', err.stack || err); // <--- 區分錯誤類型
+                    }
+                }
+            }
+            next();
+        });
+ 
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 遊戲房間 WebSocket 相關 ---
  
@@ -1951,63 +1987,8 @@ const basicAuthMiddleware = (req, res, next) => {
     }
 };
 
- // --- 記錄 Page View 中間件 ---
-app.use(async (req, res, next) => {
-    const pathsToLog = [
-        '/', '/index.html', '/music.html', '/news.html', '/scores.html',
-        '/guestbook.html', '/message-detail.html',
-        '/game/card-game.html',
-        '/game/wheel-game.html',
-        '/game/brige-game.html',
-        '/games.html'
-        // 可以繼續添加更多需要追踪的路徑
-    ];
-
-    // 確保只記錄 'GET' 請求且路徑在列表中
-    const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
-
-    if (shouldLog) {
-        const pagePath = req.path;
-        // const viewDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD, or use CURRENT_DATE in SQL
-
-        console.log(`[PV Mid DEBUG] Attempting to log page view for: ${pagePath} at ${new Date().toISOString()}`);
-        try {
-            // SQL 語句：
-            // - 插入新記錄 (如果 page 和 view_date 組合不存在)
-            // - 如果已存在，則將 view_count 加 1
-            // - 假設 page_views 表有一個 UNIQUE 約束在 (page, view_date) 上
-            // - 或者，如果沒有 last_updated_at, 可以移除該欄位
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date) DO UPDATE SET
-                    view_count = page_views.view_count + 1;
-            `;
-            // 如果你的 page_views 表有 last_updated_at 欄位，可以使用這個版本:
-            // const sql = `
-            //     INSERT INTO page_views (page, view_date, view_count, last_updated_at)
-            //     VALUES ($1, CURRENT_DATE, 1, NOW())
-            //     ON CONFLICT (page, view_date) DO UPDATE SET
-            //         view_count = page_views.view_count + 1,
-            //         last_updated_at = NOW();
-            // `;
-
-            const params = [pagePath];
-            await pool.query(sql, params);
-            console.log(`[PV Mid DEBUG] Successfully logged/updated page view for: ${pagePath}`);
-        } catch (err) {
-            console.error(`[PV Mid DEBUG] CAUGHT ERROR for ${pagePath}: Code: ${err.code}, Message: ${err.message}, Stack: ${err.stack || err}`);
-            // PostgreSQL 的 '23505' 是 unique_violation
-            if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled or logging as warning.`);
-            } else {
-                console.error('[PV Mid] Error logging page view (OTHER ERROR):', err.stack || err);
-            }
-        }
-    }
-    next();
-});
  
+
 
  
 
