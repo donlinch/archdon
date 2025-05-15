@@ -1951,8 +1951,7 @@ const basicAuthMiddleware = (req, res, next) => {
     }
 };
 
- 
-// --- 記錄 Page View 中間件 ---
+ // --- 記錄 Page View 中間件 ---
 app.use(async (req, res, next) => {
     const pathsToLog = [
         '/', '/index.html', '/music.html', '/news.html', '/scores.html',
@@ -1961,7 +1960,7 @@ app.use(async (req, res, next) => {
         '/game/wheel-game.html',
         '/game/brige-game.html',
         '/games.html'
-        // 你可以繼續添加更多需要追踪的路徑
+        // 可以繼續添加更多需要追踪的路徑
     ];
 
     // 確保只記錄 'GET' 請求且路徑在列表中
@@ -1969,32 +1968,36 @@ app.use(async (req, res, next) => {
 
     if (shouldLog) {
         const pagePath = req.path;
-        // 使用 SQL 的 CURRENT_DATE 來獲取當前日期，這樣更準確且與資料庫時區一致
-        // const viewDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 格式
+        // const viewDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD, or use CURRENT_DATE in SQL
 
         console.log(`[PV Mid DEBUG] Attempting to log page view for: ${pagePath} at ${new Date().toISOString()}`);
         try {
             // SQL 語句：
-            // - 插入新記錄（如果 page 和 view_date 組合不存在）
+            // - 插入新記錄 (如果 page 和 view_date 組合不存在)
             // - 如果已存在，則將 view_count 加 1
             // - 假設 page_views 表有一個 UNIQUE 約束在 (page, view_date) 上
-            // - 假設 page_views 表有一個 last_updated_at 欄位 (可選，但推薦)
+            // - 或者，如果沒有 last_updated_at, 可以移除該欄位
             const sql = `
-                INSERT INTO page_views (page, view_date, view_count, last_updated_at)
-                VALUES ($1, CURRENT_DATE, 1, NOW())
+                INSERT INTO page_views (page, view_date, view_count)
+                VALUES ($1, CURRENT_DATE, 1)
                 ON CONFLICT (page, view_date) DO UPDATE SET
-                    view_count = page_views.view_count + 1,
-                    last_updated_at = NOW();
+                    view_count = page_views.view_count + 1;
             `;
+            // 如果你的 page_views 表有 last_updated_at 欄位，可以使用這個版本:
+            // const sql = `
+            //     INSERT INTO page_views (page, view_date, view_count, last_updated_at)
+            //     VALUES ($1, CURRENT_DATE, 1, NOW())
+            //     ON CONFLICT (page, view_date) DO UPDATE SET
+            //         view_count = page_views.view_count + 1,
+            //         last_updated_at = NOW();
+            // `;
+
             const params = [pagePath];
             await pool.query(sql, params);
             console.log(`[PV Mid DEBUG] Successfully logged/updated page view for: ${pagePath}`);
         } catch (err) {
             console.error(`[PV Mid DEBUG] CAUGHT ERROR for ${pagePath}: Code: ${err.code}, Message: ${err.message}, Stack: ${err.stack || err}`);
             // PostgreSQL 的 '23505' 是 unique_violation
-            // "ON CONFLICT DO UPDATE command cannot affect row a second time" 這個錯誤比較罕見，
-            // 通常發生在極高併發下，多個事務嘗試更新同一行但 ON CONFLICT 處理出現問題。
-            // 對於 page_views 這種統計數據，如果偶爾發生，可能可以容忍或記錄為警告。
             if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
                 console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled or logging as warning.`);
             } else {
