@@ -1969,28 +1969,25 @@ app.use(async (req, res, next) => {
     // 確保只記錄 'GET' 請求且路徑在列表中
     const shouldLog = pathsToLog.includes(req.path) && req.method === 'GET';
 
-    if (shouldLog) {
-        const pagePath = req.path;
-        try {
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count)
-                VALUES ($1, CURRENT_DATE, 1)
-                ON CONFLICT (page, view_date)
-                DO UPDATE SET view_count = page_views.view_count + 1;
-            `;
-            const params = [pagePath];
-            await pool.query(sql, params);
-        } catch (err) {
-            if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
-            } else {
-                console.error('[PV Mid] Error logging page view:', err.stack || err);
+            if (shouldLog) {
+                const pagePath = req.path;
+                console.log(`[PV Mid DEBUG] Attempting to log page view for: ${pagePath} at ${new Date().toISOString()}`); // <--- 新增日誌
+                try {
+                    const sql = `...`;
+                    const params = [pagePath];
+                    await pool.query(sql, params);
+                    console.log(`[PV Mid DEBUG] Successfully logged page view for: ${pagePath}`); // <--- 新增日誌
+                } catch (err) {
+                    console.error(`[PV Mid DEBUG] CAUGHT ERROR for ${pagePath}: Code: ${err.code}, Message: ${err.message}, Stack: ${err.stack || err}`); // <--- 修改日誌，更詳細
+                    if (err.code === '23505' || err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time')) {
+                        console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
+                    } else {
+                        console.error('[PV Mid] Error logging page view (OTHER ERROR):', err.stack || err); // <--- 區分錯誤類型
+                    }
+                }
             }
-        }
-    }
-    next(); // 確保總是調用 next()
-});
-
+            next();
+        });
  
 
  
