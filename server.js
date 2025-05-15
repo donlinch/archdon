@@ -523,6 +523,16 @@ app.use(async (req, res, next) => {
         '/game/card-game.html',
         '/game/wheel-game.html',
         '/game/brige-game.html',
+        '/games.html',
+        '/game/text-display.html',
+        '/game/voit-game.html',
+        '/game/text-game.html',
+        '/game/same-game.html', 
+        '/rich/index.html', 
+        
+
+
+
         '/games.html'
     ];
 
@@ -530,8 +540,7 @@ app.use(async (req, res, next) => {
 
     if (shouldLog) {
         const pagePath = req.path;
-        console.log(`[PV Mid DEBUG] Attempting to log page view for: ${pagePath} at ${new Date().toISOString()}`);
-        try {
+         try {
             // --- ↓↓↓ 關鍵修改在這裡 ↓↓↓ ---
             const sql = `
                 INSERT INTO page_views (page, view_date, view_count)
@@ -553,14 +562,10 @@ app.use(async (req, res, next) => {
 
             const params = [pagePath];
             await pool.query(sql, params);
-            console.log(`[PV Mid DEBUG] Successfully logged/updated page view for: ${pagePath}`);
-        } catch (err) {
-            console.error(`[PV Mid DEBUG] CAUGHT ERROR for ${pagePath}: Code: ${err.code}, Message: ${err.message}, Stack: ${err.stack || err}`);
-            if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
-                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled or logging as warning.`);
-            } else {
-                console.error('[PV Mid] Error logging page view (OTHER ERROR):', err.stack || err);
-            }
+         } catch (err) {
+             if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
+             } else {
+             }
         }
     }
     next();
@@ -6063,8 +6068,7 @@ app.get('/api/products', async (req, res) => {
     // queryText += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     // queryParams.push(limit, offset);
     
-    console.log("Executing SQL for product list:", queryText, queryParams); // 調試用
-    
+     
     try {
         const result = await pool.query(queryText, queryParams);
         // json_agg 會返回 JSON 數組字符串，前端 JS可以直接 JSON.parse() 或直接使用
