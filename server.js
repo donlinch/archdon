@@ -7138,11 +7138,13 @@ adminRouter.delete('/identities/:id', async (req, res) => {
 
 
 
-
-// --- ★ 新增: 管理員發表新留言 API ---
+// --- ★ 新增: 管理員發表新留言 API (已更新處理 image_url) ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
-    const { admin_identity_id, content } = req.body;
+    // 從請求 body 中獲取 image_url
+    const { admin_identity_id, content, image_url } = req.body;
     const identityIdInt = parseInt(admin_identity_id, 10);
+    // 驗證 image_url (如果是提供的)
+    const imageUrlToSave = (image_url && typeof image_url === 'string' && image_url.trim() !== '') ? image_url.trim() : null;
 
     if (isNaN(identityIdInt)) { return res.status(400).json({ error: '無效的管理員身份 ID。' }); }
     if (!content || content.trim() === '') { return res.status(400).json({ error: '留言內容不能為空。' }); }
@@ -7156,14 +7158,16 @@ adminRouter.post('/guestbook/messages', async (req, res) => {
 
         const insertQuery = `
             INSERT INTO guestbook_messages (
-                author_name, content, is_admin_post, admin_identity_id,
+                author_name, content, image_url, /* <--- 新增 image_url 欄位 */
+                is_admin_post, admin_identity_id,
                 last_activity_at, created_at, is_visible,
                 reply_count, view_count, like_count
             )
-            VALUES ($1, $2, TRUE, $3, NOW(), NOW(), TRUE, 0, 0, 0)
-            RETURNING id, author_name, content, is_admin_post, admin_identity_id, created_at, last_activity_at, reply_count, view_count, like_count, is_visible;
+            VALUES ($1, $2, $3, TRUE, $4, NOW(), NOW(), TRUE, 0, 0, 0) /* <--- 新增 $3 給 image_url */
+            RETURNING id, author_name, content, image_url, is_admin_post, admin_identity_id, created_at, last_activity_at, reply_count, view_count, like_count, is_visible;
         `;
-        const insertParams = [adminIdentityName, trimmedContent, identityIdInt];
+        // 調整參數順序以匹配 SQL
+        const insertParams = [adminIdentityName, trimmedContent, imageUrlToSave, identityIdInt];
         const newMessageResult = await client.query(insertQuery, insertParams);
 
         console.log('[API POST /admin/guestbook/messages] 管理員留言已新增:', newMessageResult.rows[0]);
