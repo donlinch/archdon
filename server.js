@@ -27,75 +27,117 @@ const pgSession = require('connect-pg-simple')(session);
 
  
 
+// --- 資料庫連接池設定 ---
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
+});
 
 
 
-// Middleware to check if admin is logged in
-const isAdmin = (req, res, next) => {
-    if (req.session && req.session.isAdmin) {
+
+
+app.use(session({
+    store: new pgSession({ // <----------- ★★★ 新增這行，並傳入 pgSession 實例 ★★★
+        pool: pool,                // 使用您已初始化的 PostgreSQL 連接池
+        tableName: 'user_sessions',  // 資料庫中儲存 session 的表格名稱 (可以自訂)
+        createTableIfMissing: true // 如果表格不存在，自動創建
+    }),
+    secret: process.env.SESSION_SECRET, // <--- ★★★ 確保這裡使用的是您強的 SESSION_SECRET ★★★
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
+    }
+})); 
+
+
+
+
+// --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
+const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
+    if (req.session && req.session.isAdmin) {      // (之前叫 isAdmin，建議改名)
         return next();
+    }
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
     } else {
-        // If not logged in, redirect to login page
-        // You might want to save the intended URL to redirect back after login: req.session.returnTo = req.originalUrl;
-        return res.redirect('/admin-login.html');
+        req.session.returnTo = req.originalUrl;
+        return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
     }
 };
 
-// Admin Login Route
-app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
-    const { username, password } = req.body;
+// 因為全域已經設定了 express.json()
+app.post('/api/admin/login', (req, res) => { // ★★★ 建議路徑為 /api/admin/login
+    const { username, password } = req.body; // req.body 應該已經被 express.json() 或 express.urlencoded() 解析
     const adminUsername = process.env.ADMIN_LOGIN;
     const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
 
     if (!adminUsername || !adminPassword) {
-        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD environment variables are not set.');
-        return res.status(500).send('Admin authentication is not configured on the server.');
+        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD 環境變數未設定。');
+        // 登入 API 應該返回 JSON
+        return res.status(500).json({ success: false, error: '伺服器認證配置錯誤。' });
     }
 
     if (username === adminUsername && password === adminPassword) {
-        req.session.isAdmin = true;
-        // Redirect to an admin dashboard or main admin page
-        // For now, let's assume you have or will create an /admin/dashboard route/page
-        res.redirect('/admin/dashboard'); // You can change this to an existing admin page
+        // ★★★ 在這裡，req.session 應該是存在的 ★★★
+        if (!req.session) {
+            // 如果到這裡 req.session 還是 undefined，表示 session 中介軟體沒有正確工作
+            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！Session 中介軟體可能未正確初始化或順序錯誤。');
+            return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
+        }
+        req.session.isAdmin = true; // <--- 錯誤發生在這裡，因為 req.session 是 undefined
+        console.log(`[Admin Login] 使用者 '${username}' 登入成功。`);
+        const returnTo = req.session.returnTo || '/admin/dashboard'; // 假設您有這個頁面
+        delete req.session.returnTo;
+        // 登入 API 應該返回 JSON，讓前端處理重定向
+        res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
     } else {
-        // Send an error message back to the login page (e.g., via query parameter)
-        res.redirect('/admin-login.html?error=1');
+        console.warn(`[Admin Login] 使用者 '${username}' 登入失敗：帳號或密碼錯誤。`);
+        // 登入 API 應該返回 JSON
+        res.status(401).json({ success: false, error: '帳號或密碼錯誤。' });
     }
 });
 
 // Admin Logout Route
-app.get('/admin/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Session destruction error:', err);
-            return res.status(500).send('Could not log out.');
-        }
-        res.redirect('/admin-login.html');
-    });
+app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/admin/logout 且為 POST
+    if (req.session) { // 先檢查 req.session 是否存在
+        req.session.destroy(err => {
+            if (err) {
+                console.error('Session 銷毀失敗:', err);
+                return res.status(500).json({ success: false, error: '登出失敗。' });
+            }
+            res.clearCookie('connect.sid'); // 假設 'connect.sid' 是您的 session cookie 名稱
+            console.log("[Admin Logout] Session 已成功銷毀。");
+            res.json({ success: true, message: '已成功登出。' });
+        });
+    } else {
+        // 如果沒有 session，也算登出成功
+        console.log("[Admin Logout] 沒有活動的 session，無需銷毀。");
+        res.json({ success: true, message: '已登出 (無活動 session)。' });
+    }
 });
-
-// Example of a protected admin route (you can create more like this)
-// We'll need to create an actual admin dashboard or some protected content later.
-app.get('/admin/dashboard', isAdmin, (req, res) => {
+// Example of a protected admin route
+app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
     res.send(`
         <h1>Admin Dashboard</h1>
         <p>Welcome, admin!</p>
-        <p><a href="/admin/logout">Logout</a></p>
+        <p><a href="#" onclick="logout()">Logout</a></p> <!-- 改為 JS 登出 -->
         <p>Protected content here.</p>
+        <script>
+            async function logout() {
+                const response = await fetch('/api/admin/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/admin-login.html';
+                } else {
+                    alert('登出失敗');
+                }
+            }
+        </script>
     `);
 });
-
-const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
-const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
-// const storeDb = require('./public/store/store-db'); // Removed as /public/store is deleted
-// const storeRoutes = require('./public/store/store-routes'); // Removed as /public/store is deleted
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// 管理員密碼 (從環境變數讀取)
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-if (!ADMIN_PASSWORD) {
-    console.warn("警告：ADMIN_PASSWORD 環境變數未設定。標籤管理 API 將無法受到密碼保護。");
-}
 
 // 密碼驗證中介軟體
 const verifyAdminPassword = (req, res, next) => {
@@ -549,32 +591,6 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
 
 
 
-
-// --- 資料庫連接池設定 ---
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
-});
-
-
-
-
-
-app.use(session({
-    store: new pgSession({ // <----------- ★★★ 新增這行，並傳入 pgSession 實例 ★★★
-        pool: pool,                // 使用您已初始化的 PostgreSQL 連接池
-        tableName: 'user_sessions',  // 資料庫中儲存 session 的表格名稱 (可以自訂)
-        createTableIfMissing: true // 如果表格不存在，自動創建
-    }),
-    secret: process.env.SESSION_SECRET, // <--- ★★★ 確保這裡使用的是您強的 SESSION_SECRET ★★★
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
-    }
-})); 
 
 
 

@@ -68,28 +68,72 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2>Admin Login</h2>
-        <div id="errorMessage" class="error-message" style="display: none;">Invalid username or password.</div>
-        <form action="/admin/login" method="POST">
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">Login</button>
-        </form>
+   <!-- admin-login.html -->
+   <div class="login-container">
+    <h2>Admin Login</h2>
+    <div id="errorMessageContainer" class="error-message" style="display: none;">
+        <span id="errorMessageText"></span>
     </div>
+    <form id="loginForm"> <!-- 移除 action 和 method -->
+        <div class="input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+</div>
 
-    <script>
-        // Check for error query parameter and display message
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('error')) {
-            document.getElementById('errorMessage').style.display = 'block';
+<script>
+    const loginForm = document.getElementById('loginForm');
+    const errorMessageContainer = document.getElementById('errorMessageContainer');
+    const errorMessageText = document.getElementById('errorMessageText');
+
+    // 檢查 URL 中是否有 error 參數 (來自舊的重定向方式，可以保留以兼容)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('error')) {
+        errorMessageText.textContent = '帳號或密碼錯誤 (來自舊版重定向)。';
+        errorMessageContainer.style.display = 'block';
+        // 清除 URL 中的 error 參數，避免刷新時再次顯示
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    loginForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        errorMessageContainer.style.display = 'none';
+        errorMessageText.textContent = '';
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/api/admin/login', { // ★★★ 指向新的 API 路徑
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // 登入成功
+                window.location.href = result.redirectTo || '/admin/dashboard'; // 使用伺服器返回的重定向 URL
+            } else {
+                // 登入失敗
+                errorMessageText.textContent = result.error || '登入失敗，請檢查您的憑證。';
+                errorMessageContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('登入請求錯誤:', error);
+            errorMessageText.textContent = '登入時發生網路或伺服器錯誤。';
+            errorMessageContainer.style.display = 'block';
         }
-    </script>
+    });
+</script>
 </body>
 </html>
