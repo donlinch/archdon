@@ -167,8 +167,7 @@ const verifyAdminPassword = (req, res, next) => {
     next();
 };
 
-const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
-
+ 
 const unboxingAiRouter = express.Router();
 
 // --- Multer Configuration for Product Images (used by adminRouter) ---
