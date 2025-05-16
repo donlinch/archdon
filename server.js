@@ -98,7 +98,7 @@ app.post('/api/admin/login', (req, res) => {
             return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
         }
         req.session.isAdmin = true;
-        const returnTo = req.session.returnTo || '/admin-nav.html'; // ★★★ 登入成功後去 admin-nav.html ★★★
+        const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
         delete req.session.returnTo;
         console.log('[Login Success] Session isAdmin set. Attempting to save session. redirectTo:', returnTo); // 新日誌
 
