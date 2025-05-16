@@ -1,17 +1,6 @@
 // public/music-admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Admin Password Check and Prompt ---
-    let adminPasswordGlobal = localStorage.getItem('adminPassword');
-    if (!adminPasswordGlobal) {
-        adminPasswordGlobal = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
-        if (adminPasswordGlobal && adminPasswordGlobal.trim() !== '') {
-            localStorage.setItem('adminPassword', adminPasswordGlobal);
-        } else {
-            alert('未輸入管理員密碼，部分管理功能可能受限。');
-            // Consider disabling form submissions or buttons if password is not provided
-        }
-    }
-    // --- End of Admin Password Check ---
+    // ---密碼功能已移除---
 
     // --- DOM 元素引用 ---
     const albumListBody = document.querySelector('#album-list-table tbody');
@@ -54,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 預覽圖片功能 ---
     function setupImagePreview(inputElement, previewElement) {
         if (inputElement && previewElement) {
-            inputElement ('input', () => {
+            inputElement.addEventListener('input', () => { // 修改: addEventListener
                 const url = inputElement.value.trim();
                 previewElement.src = url;
                 if (url) {
@@ -126,7 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const releaseDateFormatted = music.release_date
                 ? new Date(music.release_date).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' })
                 : 'N/A';
-            // 假設 music.artists 是一個像 [{id: 1, name: '歌手A'}, {id: 2, name: '歌手B'}] 的陣列
             const artistsDisplay = music.artists && music.artists.length > 0 
                 ? music.artists.map(a => a.name).join(', ') 
                 : 'N/A';
@@ -153,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         artistFilterButtonsContainer.innerHTML = ''; 
 
-        // 從 music.artists 陣列中提取所有唯一的歌手名稱
         const artistsWithDuplicates = musicList.flatMap(music => 
             music.artists ? music.artists.map(artist => artist.name) : []
         );
@@ -170,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         artistFilterButtonsContainer.appendChild(showAllButton);
 
-        artists.forEach(artistName => { // Changed variable name for clarity
+        artists.forEach(artistName => {
             const button = document.createElement('button');
             button.textContent = artistName;
             button.classList.add('action-btn');
@@ -195,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const buttons = artistFilterButtonsContainer.querySelectorAll('button');
         buttons.forEach(btn => {
             btn.style.backgroundColor = ''; 
-            btn.style.color = ''; // Reset text color as well
+            btn.style.color = ''; 
             btn.style.fontWeight = 'normal';
         });
         activeBtn.style.backgroundColor = '#007bff'; 
@@ -205,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- 獲取並顯示所有音樂 ---
-    async function fetchAndDisplayMusic(filterArtistName = null) { // Parameter renamed for clarity
+    async function fetchAndDisplayMusic(filterArtistName = null) {
         if (!albumListBody || !albumListContainer || !albumTable || !loadingMessage) {
             console.error("音樂列表的 DOM 元素不完整。");
             return;
@@ -226,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingMessage.style.display = 'none';
 
             let musicToDisplay = allMusicData;
-            if (filterArtistName) { // Use renamed parameter
+            if (filterArtistName) {
                 musicToDisplay = allMusicData.filter(music => 
                     music.artists && music.artists.some(a => a.name === filterArtistName)
                 );
@@ -267,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             editMusicId.value = music.id;
             editMusicTitle.value = music.title || '';
-            // 將 artists 陣列轉換為逗號分隔的字串填入 textarea
             editMusicArtist.value = music.artists && music.artists.length > 0 
                 ? music.artists.map(a => a.name).join(', ') 
                 : '';
@@ -314,29 +300,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editMusic = openEditMusicModal;
     window.deleteMusic = async function(id) {
         if (confirm(`確定要刪除音樂 ID: ${id} 嗎？此操作也會刪除關聯的樂譜。`)) {
-            const storedPassword = localStorage.getItem('adminPassword');
-            if (!storedPassword) {
-                alert("錯誤：未找到管理員密碼，請重新整理頁面並輸入。");
-                // Optionally, prompt again or disable functionality
-                // adminPasswordGlobal = prompt('請輸入管理員密碼以刪除音樂：');
-                // if (!adminPasswordGlobal) {
-                //     alert("未提供管理員密碼，操作取消。");
-                //     return;
-                // }
-                // localStorage.setItem('adminPassword', adminPasswordGlobal);
-                // storedPassword = adminPasswordGlobal; // Use the newly prompted password
-                return; // Or handle as per your preference if password not found
-            }
+            // 密碼檢查已移除
             try {
                 const response = await fetch(`/api/music/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Admin-Password': storedPassword
-                    }
+                    method: 'DELETE'
+                    // 移除了 headers: { 'X-Admin-Password': storedPassword }
                 });
                 if (response.status === 204 || response.ok) {
                     console.log(`音樂 ID ${id} 已刪除。`);
-                    allMusicData = []; // 清空緩存以便重新獲取
+                    allMusicData = []; 
                     await fetchAndDisplayMusic();
                 } else {
                     let errorMsg = `刪除失敗 (HTTP ${response.status})`;
@@ -365,14 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addCoverPreview.style.display = 'none'; 
         addModal.style.display = 'flex';
     }
-
-    // --- 點擊 Modal 外部關閉 (已停用，僅能透過關閉按鈕關閉) ---
-    /*
-    window.onclick = function(event) {
-        if (event.target == editModal) closeEditMusicModal();
-        else if (event.target == addModal) closeAddMusicModal();
-    }
-    */
 
     // --- 表單提交處理函數 (共用邏輯) ---
     async function handleFormSubmit(event, isEditMode) {
@@ -473,27 +437,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorAction = isEditMode ? '儲存' : '新增';
 
         try {
-            const storedPassword = localStorage.getItem('adminPassword');
-            if (!storedPassword) {
-                alert("錯誤：未找到管理員密碼，請重新整理頁面並輸入。");
-                // Optionally, prompt again or disable functionality
-                // adminPasswordGlobal = prompt(`請輸入管理員密碼以${successAction}音樂：`);
-                // if (!adminPasswordGlobal) {
-                //     alert("未提供管理員密碼，操作取消。");
-                //     formErrorElement.textContent = '操作已取消。';
-                //     return;
-                // }
-                // localStorage.setItem('adminPassword', adminPasswordGlobal);
-                // storedPassword = adminPasswordGlobal; // Use the newly prompted password
-                formErrorElement.textContent = '錯誤：管理員密碼未設定。';
-                return; // Or handle as per your preference
-            }
+            // 密碼檢查和 localStorage 相關邏輯已移除
             console.log(`Sending ${method} data to ${apiUrl}:`, JSON.stringify(formData, null, 2));
             const response = await fetch(apiUrl, {
                 method: method,
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Admin-Password': storedPassword
+                    'Content-Type': 'application/json'
+                    // 移除了 'X-Admin-Password': storedPassword
                 },
                 body: JSON.stringify(formData)
             });
@@ -510,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 closeAddMusicModal();
             }
-            allMusicData = []; // 清空緩存以便重新獲取更新後的列表
+            allMusicData = []; 
             await fetchAndDisplayMusic(); 
 
         } catch (error) {
@@ -521,13 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 綁定表單提交事件 ---
     if (editForm) {
-        editForm ('submit', (event) => handleFormSubmit(event, true));
+        editForm.addEventListener('submit', (event) => handleFormSubmit(event, true)); // 修改: addEventListener
     } else {
         console.error("編輯音樂表單元素未找到。");
     }
 
     if (addForm) {
-        addForm ('submit', (event) => handleFormSubmit(event, false));
+        addForm.addEventListener('submit', (event) => handleFormSubmit(event, false)); // 修改: addEventListener
     } else {
         console.error("新增音樂表單元素未找到。");
     }
