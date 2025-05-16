@@ -48,21 +48,23 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use(session({
-    store: new pgSession({ // <----------- ★★★ 新增這行，並傳入 pgSession 實例 ★★★
-        pool: pool,                // 使用您已初始化的 PostgreSQL 連接池
-        tableName: 'user_sessions',  // 資料庫中儲存 session 的表格名稱 (可以自訂)
-        createTableIfMissing: true // 如果表格不存在，自動創建
+    name: 'myadminsession.sid', // 給你的 session cookie 一個獨特的名稱
+    store: new pgSession({
+        pool: pool,
+        tableName: 'user_sessions',
+        createTableIfMissing: true
     }),
-    secret: process.env.SESSION_SECRET, // <--- ★★★ 確保這裡使用的是您強的 SESSION_SECRET ★★★
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
+        path: '/', // ★★★ 確保 cookie 對整個域名下的所有路徑都有效 ★★★
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax' // 嘗試 'lax'
     }
-})); 
-
+}));
 
 
 
@@ -78,39 +80,39 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
         return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
     }
 };
-
-// 因為全域已經設定了 express.json()
-app.post('/api/admin/login', (req, res) => { // ★★★ 建議路徑為 /api/admin/login
-    const { username, password } = req.body; // req.body 應該已經被 express.json() 或 express.urlencoded() 解析
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
     const adminUsername = process.env.ADMIN_LOGIN;
     const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
 
     if (!adminUsername || !adminPassword) {
         console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD 環境變數未設定。');
-        // 登入 API 應該返回 JSON
         return res.status(500).json({ success: false, error: '伺服器認證配置錯誤。' });
     }
 
     if (username === adminUsername && password === adminPassword) {
-        // ★★★ 在這裡，req.session 應該是存在的 ★★★
         if (!req.session) {
-            // 如果到這裡 req.session 還是 undefined，表示 session 中介軟體沒有正確工作
-            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！Session 中介軟體可能未正確初始化或順序錯誤。');
+            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！');
             return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
         }
-        req.session.isAdmin = true; // <--- 錯誤發生在這裡，因為 req.session 是 undefined
-        console.log(`[Admin Login] 使用者 '${username}' 登入成功。`);
-        const returnTo = req.session.returnTo || '/admin/dashboard'; // 假設您有這個頁面
+        req.session.isAdmin = true;
+        const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
         delete req.session.returnTo;
-        // 登入 API 應該返回 JSON，讓前端處理重定向
-        res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
+
+        // 保存 session 然後再發送回應
+        req.session.save(err => {
+            if (err) {
+                console.error("Session 保存失敗:", err);
+                return res.status(500).json({ success: false, error: 'Session 保存失敗，無法登入。' });
+            }
+            console.log(`[Admin Login] 使用者 '${username}' 登入成功。Session ID: ${req.sessionID}`);
+            res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
+        });
     } else {
         console.warn(`[Admin Login] 使用者 '${username}' 登入失敗：帳號或密碼錯誤。`);
-        // 登入 API 應該返回 JSON
         res.status(401).json({ success: false, error: '帳號或密碼錯誤。' });
     }
 });
-
 // Admin Logout Route
 app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/admin/logout 且為 POST
     if (req.session) { // 先檢查 req.session 是否存在
@@ -216,6 +218,7 @@ const productUpload = multer({
 
 
 app.get('/admin-main.html', isAdminAuthenticated, (req, res) => {
+    console.log(`[Access /admin-main.html] Session ID: ${req.sessionID}, isAdmin: ${req.session.isAdmin}`); // 添加日誌
     res.sendFile(path.join(__dirname, 'public', 'admin-main.html'));
 });
 
@@ -5900,7 +5903,7 @@ app.get('/api/tags', async (req, res) => {
 
 
 // 新增：建立新標籤
-app.post('/api/tags', verifyAdminPassword, async (req, res) => {
+app.post('/api/tags', isAdminAuthenticated, async (req, res) =>  {
     const { tag_name } = req.body; // 從請求 body 獲取 tag_name
 
     // 驗證輸入
@@ -5929,7 +5932,7 @@ app.post('/api/tags', verifyAdminPassword, async (req, res) => {
 
 
 // 新增：更新標籤名稱
-app.put('/api/tags/:tag_id', verifyAdminPassword, async (req, res) => {
+app.put('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
     const { tag_name } = req.body; // 從請求 body 獲取新的 tag_name
 
@@ -5970,7 +5973,7 @@ app.put('/api/tags/:tag_id', verifyAdminPassword, async (req, res) => {
 // --- 標籤 API ---
 // ... (GET, POST, PUT /api/tags) ...
 // 新增：刪除標籤
-app.delete('/api/tags/:tag_id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
 
     // 驗證輸入

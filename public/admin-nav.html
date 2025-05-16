@@ -98,122 +98,29 @@
 </head>
 <body>
     <nav class="navbar">
+        <!-- 主導覽項目將由 JavaScript 填充到這裡 -->
         <ul id="nav-list">
             <div id="loading-nav">載入導覽列中...</div>
         </ul>
 
-         <!-- 在 ul 外部或內部都合適，這裡放在 ul 內部作為最後一個 li -->
-         <ul style="margin-left: auto;"> <!-- 讓登出按鈕靠右 -->
-            <li><a href="#" id="logout-button" style="background-color: #dc3545; color: white !important;">登出</a></li>
-       </ul>
+        <!-- 認證相關操作 (例如登出按鈕) 放在這裡，這樣 showLevel 不會影響它 -->
+        <ul id="auth-actions" style="margin-left: auto; "> 
+            <!-- 登出按鈕會由 JavaScript 動態添加到這裡 -->
+        </ul>
     </nav>
-
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            const navList = document.getElementById('nav-list');
+            const navList = document.getElementById('nav-list'); // 用於顯示主導覽項目
+            const authActionsList = document.getElementById('auth-actions'); // 用於顯示登出按鈕
             const loadingIndicator = document.getElementById('loading-nav');
-            let currentLevel = 'main'; // 'main' or the parent ID
-            let linkMap = {};
-            let tree = [];
-
-            try {
-                const response = await fetch('/api/admin/nav-links');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const links = await response.json();
-
-                // 建立樹狀結構
-                linkMap = {};
-                tree = [];
-                links.forEach(link => { linkMap[link.id] = { ...link, children: [] }; });
-                links.forEach(link => {
-                    if (link.parent_id && linkMap[link.parent_id]) {
-                        linkMap[link.parent_id].children.push(linkMap[link.id]);
-                    } else {
-                        tree.push(linkMap[link.id]);
-                    }
-                });
-
-                // 顯示主層級
-                showLevel('main');
-
-                if (loadingIndicator) {
-                    loadingIndicator.remove();
-                }
-
-            } catch (error) {
-                console.error('無法載入導覽連結:', error);
-                if (loadingIndicator) {
-                    loadingIndicator.textContent = '載入導覽列失敗';
-                } else {
-                    navList.innerHTML = '<li>載入導覽列失敗</li>';
-                }
-            }
-
-            function showLevel(levelId) {
-                let html = '';
-                let items = [];
-
-                if (levelId === 'main') {
-                    items = tree;
-                } else {
-                    // 顯示子層級
-                    const parentItem = linkMap[levelId];
-                    if (parentItem && parentItem.children) {
-                        items = parentItem.children;
-                        // 添加回主管理層按鈕
-                        html += `<li><a href="#" class="back-to-main" data-action="back">← 回主管理層</a></li>`;
-                    }
-                }
-
-                // 生成當前層級的連結
-                items.sort((a, b) => a.display_order - b.display_order);
-                items.forEach(item => {
-                    const hasChildren = item.children.length > 0;
-                    const hasValidUrl = item.url && item.url !== '#';
-
-                    if (hasChildren) {
-                        // 有子選單的項目
-                        html += `<li class="has-children">
-                            <span data-action="drill-down" data-parent-id="${item.id}">${item.name}</span>
-                        </li>`;
-                    } else if (hasValidUrl) {
-                        // 一般連結
-                        html += `<li>
-                            <a href="${item.url}" target="contentFrame">${item.name}</a>
-                        </li>`;
-                    }
-                });
-
-                navList.innerHTML = html;
-                currentLevel = levelId;
-
-                // 重新綁定事件
-                bindEvents();
-            }
-
-            function bindEvents() {
-                // 處理點擊有子選單的項目
-                const drillDownItems = navList.querySelectorAll('[data-action="drill-down"]');
-                drillDownItems.forEach(item => {
-                    item.addEventListener('click', function() {
-                        const parentId = this.dataset.parentId;
-                        showLevel(parentId);
-                    });
-                });
-
-                // 處理回主管理層按鈕
-                const backButton = navList.querySelector('[data-action="back"]');
-                if (backButton) {
-                    backButton.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        showLevel('main');
-                    });
-                }
-
-
-
+        
+            let currentLevel = 'main'; // 'main' 或父層級的 ID
+            let linkMap = {};          // 扁平化的連結映射，方便查找
+            let tree = [];             // 樹狀結構的頂層節點
+            let isLoggedIn = false;    // 標記登入狀態
+        
+            // 綁定登出按鈕事件的函數 (因為按鈕是動態添加的)
+            function bindLogoutButtonEvent() {
                 const logoutButton = document.getElementById('logout-button');
                 if (logoutButton) {
                     logoutButton.addEventListener('click', async function(e) {
@@ -222,8 +129,7 @@
                             const response = await fetch('/api/admin/logout', { method: 'POST' });
                             const result = await response.json();
                             if (response.ok && result.success) {
-                                // 登出成功後，父框架 (admin-main.html) 需要重定向到登入頁
-                                // 因為 admin-nav.html 是在 iframe 中
+                                // 登出成功後，讓最頂層的視窗重定向到登入頁
                                 window.top.location.href = '/admin-login.html';
                             } else {
                                 alert('登出失敗: ' + (result.error || '未知錯誤'));
@@ -234,15 +140,143 @@
                         }
                     });
                 }
-
-
-
             }
-
-
-
-            
+        
+            // 更新認證相關 UI (例如登出按鈕)
+            function updateAuthUI(loggedIn) {
+                if (!authActionsList) return;
+                if (loggedIn) {
+                    authActionsList.innerHTML = `<li><a href="#" id="logout-button" style="background-color: #dc3545; color: white !important; font-weight: bold;">登出</a></li>`;
+                    bindLogoutButtonEvent(); // 按鈕添加到 DOM 後再綁定事件
+                } else {
+                    authActionsList.innerHTML = ''; // 未登入則清空（或顯示登入按鈕，但通常由父框架處理）
+                }
+            }
+        
+            // 顯示特定層級的導覽項目
+            function showLevel(levelId) {
+                if (!navList) return;
+        
+                let html = '';
+                let itemsToDisplay = [];
+                currentLevel = levelId; // 更新當前層級
+        
+                if (levelId === 'main') {
+                    itemsToDisplay = tree; // 主層級顯示樹的頂層節點
+                } else {
+                    const parentItem = linkMap[levelId];
+                    if (parentItem && parentItem.children) {
+                        itemsToDisplay = parentItem.children; // 子層級顯示父項目的子節點
+                        // 添加 "回上一層" 或 "回主管理層" 按鈕
+                        // 判斷 parentItem.parent_id 是否存在來決定是回上一層還是回主層
+                        const backTargetId = parentItem.parent_id || 'main';
+                        const backText = parentItem.parent_id ? `← 回 ${linkMap[parentItem.parent_id].name}` : '← 回主管理層';
+                        html += `<li><a href="#" class="back-to-main" data-action="back" data-level-id="${backTargetId}">${backText}</a></li>`;
+                    }
+                }
+        
+                // 對要顯示的項目進行排序
+                itemsToDisplay.sort((a, b) => a.display_order - b.display_order);
+        
+                // 生成 HTML
+                itemsToDisplay.forEach(item => {
+                    const hasChildren = item.children && item.children.length > 0;
+                    const hasValidUrl = item.url && item.url.trim() !== '' && item.url !== '#';
+        
+                    if (hasChildren) {
+                        html += `<li class="has-children">
+                                    <span data-action="drill-down" data-level-id="${item.id}">${item.name}</span>
+                                 </li>`;
+                    } else if (hasValidUrl) {
+                        html += `<li>
+                                    <a href="${item.url}" target="contentFrame">${item.name}</a>
+                                 </li>`;
+                    } else {
+                         // 如果沒有子項目也沒有有效 URL，可以選擇不渲染，或者渲染成不可點擊的文本
+                         // html += `<li><span class="no-action">${item.name}</span></li>`;
+                    }
+                });
+        
+                navList.innerHTML = html; // 更新導覽列內容
+                bindNavListEvents();      // 為新生成的項目綁定事件
+            }
+        
+            // 為導覽列中的項目綁定事件
+            function bindNavListEvents() {
+                if (!navList) return;
+        
+                // 處理點擊有子選單的項目 (向下鑽取)
+                const drillDownItems = navList.querySelectorAll('[data-action="drill-down"]');
+                drillDownItems.forEach(item => {
+                    // 使用事件委派或者在重新渲染後確保只綁定一次
+                    // 簡單起見，這裡假設每次 showLevel 後都重新綁定
+                    item.addEventListener('click', function() {
+                        const targetLevelId = this.dataset.levelId;
+                        showLevel(targetLevelId);
+                    });
+                });
+        
+                // 處理點擊 "回上一層/主管理層" 按鈕
+                const backButton = navList.querySelector('[data-action="back"]');
+                if (backButton) {
+                    backButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const targetLevelId = this.dataset.levelId;
+                        showLevel(targetLevelId);
+                    });
+                }
+            }
+        
+            // ---- 主執行邏輯 ----
+            try {
+                // 嘗試獲取導覽連結，這同時也作為一個間接的登入狀態檢查
+                const response = await fetch('/api/admin/nav-links');
+                if (!response.ok) {
+                    if (response.status === 401) { // 未授權
+                        isLoggedIn = false;
+                        console.log('未授權獲取導覽連結，假設未登入。父框架應處理重定向。');
+                        // 在這種情況下，父框架 admin-main.html 應該已經因為 isAdminAuthenticated 中介軟體而重定向了。
+                        // admin-nav.html 本身可能不需要做額外的跳轉，因為它在 iframe 內。
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                } else {
+                    const links = await response.json();
+                    isLoggedIn = true; // 成功獲取連結，視為已登入
+        
+                    // 清理並建立樹狀結構
+                    linkMap = {};
+                    tree = [];
+                    links.forEach(link => {
+                        linkMap[link.id] = { ...link, children: [] };
+                    });
+                    links.forEach(link => {
+                        if (link.parent_id && linkMap[link.parent_id]) {
+                            linkMap[link.parent_id].children.push(linkMap[link.id]);
+                        } else {
+                            tree.push(linkMap[link.id]);
+                        }
+                    });
+        
+                    showLevel('main'); // 顯示主層級導覽
+                }
+        
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+        
+            } catch (error) {
+                console.error('無法載入導覽連結:', error);
+                if (loadingIndicator) {
+                    loadingIndicator.textContent = '載入導覽列失敗';
+                }
+                isLoggedIn = false; // 出錯也視為未登入
+            }
+        
+            updateAuthUI(isLoggedIn); // 根據最終的登入狀態更新 UI (例如登出按鈕)
+            // 注意：bindNavListEvents() 是在 showLevel() 內部調用的，因為導覽項目是動態生成的。
+            // bindLogoutButtonEvent() 是在 updateAuthUI() 內部調用的。
         });
-    </script>
+        </script>
 </body>
 </html>
