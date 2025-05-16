@@ -25,7 +25,9 @@ const PORT = process.env.PORT || 3000;
 
 
 
-
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1); // 信任第一個代理 (Render 通常是這樣)
+}
 // Session Middleware Setup
 
 
@@ -96,7 +98,7 @@ app.post('/api/admin/login', (req, res) => {
             return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
         }
         req.session.isAdmin = true;
-        const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
+        const returnTo = req.session.returnTo || '/admin-nav.html'; // ★★★ 登入成功後去 admin-nav.html ★★★
         delete req.session.returnTo;
         console.log('[Login Success] Session isAdmin set. Attempting to save session. redirectTo:', returnTo); // 新日誌
 
@@ -219,9 +221,9 @@ const productUpload = multer({
 
 
 
-app.get('/admin-main.html', isAdminAuthenticated, (req, res) => {
-    console.log(`[Access /admin-main.html] Session ID: ${req.sessionID}, isAdmin: ${req.session.isAdmin}`); // 添加日誌
-    res.sendFile(path.join(__dirname, 'public', 'admin-main.html'));
+app.get('/admin-nav.html', isAdminAuthenticated, (req, res) => {
+    console.log(`[Access /admin-nav.html] Session ID: ${req.sessionID}, isAdmin: ${req.session.isAdmin}`); // 添加日誌
+    res.sendFile(path.join(__dirname, 'public', 'admin-nav.html'));
 });
 
 
