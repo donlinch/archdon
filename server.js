@@ -4126,12 +4126,12 @@ app.use([
 
 
 
-
+// isAdminAuthenticated （ basicAuthMiddleware ）
 
 
 
 // 保護所有 /api/admin 和 /api/analytics 開頭的 API
-app.use(['/api/admin', '/api/analytics'], basicAuthMiddleware);
+app.use(['/api/admin', '/api/analytics'], isAdminAuthenticated);
 
 // --- 靜態文件服務 ---
  
