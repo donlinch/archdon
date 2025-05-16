@@ -9,8 +9,17 @@ const path = require('path');
 const { Pool } = require('pg');
 const WebSocket = require('ws'); // <--- Import the ws library
 // const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
-const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const { v4: uuidv4 } = require('uuid');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session); 
+const multer = require('multer');
+const { ImageAnnotatorClient } = require('@google-cloud/vision');
+const fs = require('fs');
+const sharp = require('sharp')
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
+const createReportRateLimiter = require('./report-ip-limiter');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,8 +27,6 @@ const PORT = process.env.PORT || 3000;
 
 
 // Session Middleware Setup
-const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session); 
 
 
 
@@ -34,7 +41,10 @@ const pool = new Pool({
 });
 
 
+app.use(express.json({ limit: '10mb' }));
 
+ 
+app.use(express.urlencoded({ extended: true }));
 
 
 app.use(session({
@@ -157,10 +167,8 @@ const verifyAdminPassword = (req, res, next) => {
     next();
 };
 
-const multer = require('multer');
 const { ImageAnnotatorClient } = require('@google-cloud/vision'); // <--- 新增這一行
-const fs = require('fs');
-const sharp = require('sharp')
+
 const unboxingAiRouter = express.Router();
 
 // --- Multer Configuration for Product Images (used by adminRouter) ---
@@ -614,10 +622,7 @@ app.get('/api/news-categories', async (req, res) => {
    
    
 // --- 基本 Express 設定 ---
-app.use(express.json({ limit: '10mb' }));
 
- 
-app.use(express.urlencoded({ extended: true }));
 
 
 
@@ -2816,6 +2821,7 @@ app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- �
 
 
 // 2. 創建 IP 限制器實例（設置每日每IP最大報告數為10）
+const reportTemplatesRouter = express.Router();
 const reportRateLimiter = createReportRateLimiter(3);
 
 // 3. 將這段代碼加入到報告路由處理部分
