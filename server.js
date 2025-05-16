@@ -2797,7 +2797,7 @@ app.delete('/api/card-game/templates/:id', async (req, res) => {
 
 
 // GET /api/admin/files - 獲取檔案列表 (分頁、篩選、排序)
-app.get('/api/admin/files', basicAuthMiddleware, async (req, res) => { // <-- 添加 basicAuthMiddleware
+app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- 添加 basicAuthMiddleware
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15; // 每頁數量
     const offset = (page - 1) * limit;
@@ -3166,7 +3166,7 @@ app.use('/api/reports', reportTemplatesRouter);
 
 
 // POST /api/admin/files/upload - 上傳檔案
-app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), async (req, res) => {
+app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
     }
@@ -3288,7 +3288,7 @@ app.post('/api/admin/files/upload', basicAuthMiddleware, upload.single('file'), 
     }
 });
 // DELETE /api/admin/files/:id - 刪除檔案
-app.delete('/api/admin/files/:id', basicAuthMiddleware, async (req, res) => {
+app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
     const fileId = parseInt(req.params.id);
     if (isNaN(fileId)) {
         return res.status(400).json({ error: '無效的檔案 ID' });
@@ -4122,7 +4122,7 @@ app.get('/rich-admin.html', (req, res) => {
 // --- 受保護的管理頁面和 API Routes ---
 app.use([
     
-], basicAuthMiddleware);
+], isAdminAuthenticated);
 
 
 
@@ -4217,7 +4217,7 @@ function updateGameState(roomId, updates) {
 // --- 新增 Admin API 路由 (受保護的管理 API) ---
 
 // GET /api/admin/reports - 獲取報告列表 (包含分頁和搜尋功能)
-app.get('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
+app.get('/api/admin/reports', isAdminAuthenticated, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -4270,7 +4270,7 @@ app.get('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
 });
 
 // GET /api/admin/reports/:id - 獲取單一報告詳情 (用於編輯)
-app.get('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+app.get('/api/admin/reports/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     
     // 驗證 ID 格式 (UUID 格式)
@@ -4299,7 +4299,7 @@ app.get('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
 });
 
 // POST /api/admin/reports - 新增報告
-app.post('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
+app.post('/api/admin/reports', isAdminAuthenticated, async (req, res) => {
     const { title, html_content, size_bytes } = req.body;
     const creatorIp = req.ip || 'unknown'; // 獲取 IP
     const reportUUID = uuidv4(); // 生成 UUID
@@ -4347,7 +4347,7 @@ app.post('/api/admin/reports', basicAuthMiddleware, async (req, res) => {
 });
 
 // PUT /api/admin/reports/:id - 更新報告
-app.put('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+app.put('/api/admin/reports/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { title, html_content, size_bytes } = req.body;
 
@@ -4401,7 +4401,7 @@ app.put('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
 });
 
 // DELETE /api/admin/reports/:id - 刪除報告
-app.delete('/api/admin/reports/:id', basicAuthMiddleware, async (req, res) => {
+app.delete('/api/admin/reports/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
 
     // 驗證 ID 格式 (UUID 格式)
@@ -4537,7 +4537,7 @@ app.get('/api/ui-elements/:id', async (req, res) => {
 });
 
 // POST /api/ui-elements - 創建新UI元素
-app.post('/api/ui-elements', basicAuthMiddleware, async (req, res) => {
+app.post('/api/ui-elements', isAdminAuthenticated, async (req, res) => {
     const { 
         element_type, is_visible, image_url, alt_text,
         position_top, position_left, position_right,
@@ -4580,7 +4580,7 @@ app.post('/api/ui-elements', basicAuthMiddleware, async (req, res) => {
 });
 
 // PUT /api/ui-elements/:id - 更新UI元素
-app.put('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
+app.put('/api/ui-elements/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) {
         return res.status(400).json({ error: '無效的UI元素ID格式' });
@@ -4677,7 +4677,7 @@ app.put('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
 });
 
 // PUT /api/ui-elements/:id/visibility - 更新UI元素顯示狀態
-app.put('/api/ui-elements/:id/visibility', basicAuthMiddleware, async (req, res) => {
+app.put('/api/ui-elements/:id/visibility', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { is_visible } = req.body;
     
@@ -4710,7 +4710,7 @@ app.put('/api/ui-elements/:id/visibility', basicAuthMiddleware, async (req, res)
 });
 
 // DELETE /api/ui-elements/:id - 刪除UI元素
-app.delete('/api/ui-elements/:id', basicAuthMiddleware, async (req, res) => {
+app.delete('/api/ui-elements/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) {
         return res.status(400).json({ error: '無效的UI元素ID格式' });
@@ -5521,7 +5521,7 @@ unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) =>
 });
 
 // 將新的路由掛載到主應用程式
-app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上 basicAuthMiddleware 來保護這些管理 API
+app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上 isAdminAuthenticated 來保護這些管理 API
 // 如果需要保護，可以是： app.use('/api/unboxing-ai', basicAuthMiddleware, unboxingAiRouter);
 
 // --- END OF Unboxing AI Prompt Schemes API ---
@@ -7768,7 +7768,7 @@ adminRouter.get('/games/stats/today', async (req, res) => {
 
 
 // GET /api/admin/disk-files - 列出 /data/uploads 目錄下的實體檔案 (支持排序和分頁)
-adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => {
+adminRouter.get('/disk-files', isAdminAuthenticated, async (req, res) => {
     try {
         const directoryPath = uploadDir;
         if (!fs.existsSync(directoryPath)) {
@@ -7857,7 +7857,7 @@ adminRouter.get('/disk-files', basicAuthMiddleware, async (req, res) => {
 });
 
 // DELETE /api/admin/disk-files/:filename - 刪除 /data/uploads 目錄下的指定實體檔案
-adminRouter.delete('/disk-files/:filename', basicAuthMiddleware, async (req, res) => {
+adminRouter.delete('/disk-files/:filename', isAdminAuthenticated, async (req, res) => {
     const unsafeFilename = req.params.filename;
 
     // 安全性：清理檔名，只取基本名稱部分，防止路徑遍歷
