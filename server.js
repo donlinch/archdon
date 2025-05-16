@@ -14,25 +14,21 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
+
+
 // Session Middleware Setup
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session); 
 
-app.use(session({
-    store: new pgSession({ // <----------- ★★★ 新增這行，並傳入 pgSession 實例 ★★★
-        pool: pool,                // 使用您已初始化的 PostgreSQL 連接池
-        tableName: 'user_sessions',  // 資料庫中儲存 session 的表格名稱 (可以自訂)
-        createTableIfMissing: true // 如果表格不存在，自動創建
-    }),
-    secret: process.env.SESSION_SECRET, // <--- ★★★ 確保這裡使用的是您強的 SESSION_SECRET ★★★
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
-    }
-}));
+
+
+
+
+ 
+
+
+
 
 // Middleware to check if admin is logged in
 const isAdmin = (req, res, next) => {
@@ -559,6 +555,28 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
 });
+
+
+
+
+
+app.use(session({
+    store: new pgSession({ // <----------- ★★★ 新增這行，並傳入 pgSession 實例 ★★★
+        pool: pool,                // 使用您已初始化的 PostgreSQL 連接池
+        tableName: 'user_sessions',  // 資料庫中儲存 session 的表格名稱 (可以自訂)
+        createTableIfMissing: true // 如果表格不存在，自動創建
+    }),
+    secret: process.env.SESSION_SECRET, // <--- ★★★ 確保這裡使用的是您強的 SESSION_SECRET ★★★
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
+    }
+})); 
+
+
 
 
 app.get('/api/news-categories', async (req, res) => {
