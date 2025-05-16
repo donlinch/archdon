@@ -1,139 +1,188 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-S">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login</title>
+    <title>管理員登入</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f4f4f4;
+            background-color: #f0f2f5;
             margin: 0;
+            color: #333;
         }
         .login-container {
             background-color: #fff;
-            padding: 25px 30px;
+            padding: 30px 40px;
             border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 360px;
+            max-width: 380px;
+            text-align: center;
         }
         h2 {
-            text-align: center;
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            font-weight: 600;
         }
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            text-align: left;
         }
         .input-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             color: #555;
             font-size: 0.9em;
+            font-weight: 500;
         }
         .input-group input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 12px;
+            border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 1em;
+        }
+        .input-group input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+            outline: none;
         }
         button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s;
         }
         button:hover {
             background-color: #0056b3;
         }
-        .error-message {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 10px;
+        button:active {
+            background-color: #004085;
+        }
+        .error-message-container {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border: 1px solid #f5c6cb;
             border-radius: 4px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             text-align: center;
             font-size: 0.9em;
         }
     </style>
 </head>
 <body>
-   <!-- admin-login.html -->
-   <div class="login-container">
-    <h2>Admin Login</h2>
-    <div id="errorMessageContainer" class="error-message" style="display: none;">
-        <span id="errorMessageText"></span>
+    <div class="login-container">
+        <h2>管理員登入</h2>
+        <div id="errorMessageContainer" class="error-message-container" style="display: none;">
+            <span id="errorMessageText"></span>
+        </div>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">帳號 (Username)</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="input-group">
+                <label for="password">密碼 (Password)</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" id="loginButton">登入</button>
+        </form>
     </div>
-    <form id="loginForm"> <!-- 移除 action 和 method -->
-        <div class="input-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        <div class="input-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        <button type="submit">Login</button>
-    </form>
-</div>
 
-<script>
-    const loginForm = document.getElementById('loginForm');
-    const errorMessageContainer = document.getElementById('errorMessageContainer');
-    const errorMessageText = document.getElementById('errorMessageText');
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginButton = document.getElementById('loginButton');
+            const errorMessageContainer = document.getElementById('errorMessageContainer');
+            const errorMessageText = document.getElementById('errorMessageText');
 
-    // 檢查 URL 中是否有 error 參數 (來自舊的重定向方式，可以保留以兼容)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('error')) {
-        errorMessageText.textContent = '帳號或密碼錯誤 (來自舊版重定向)。';
-        errorMessageContainer.style.display = 'block';
-        // 清除 URL 中的 error 參數，避免刷新時再次顯示
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    loginForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        errorMessageContainer.style.display = 'none';
-        errorMessageText.textContent = '';
-
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            const response = await fetch('/api/admin/login', { // ★★★ 指向新的 API 路徑
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                // 登入成功
-                window.location.href = result.redirectTo || '/admin/dashboard'; // 使用伺服器返回的重定向 URL
-            } else {
-                // 登入失敗
-                errorMessageText.textContent = result.error || '登入失敗，請檢查您的憑證。';
+            // Check for error query parameter from traditional form submission (for backward compatibility or specific server responses)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('error')) {
+                let errorMsg = '帳號或密碼錯誤。';
+                if (urlParams.get('error') === 'config') {
+                    errorMsg = '伺服器認證配置錯誤。';
+                } else if (urlParams.get('error') === 'session') {
+                    errorMsg = 'Session 初始化錯誤，無法登入。';
+                }
+                errorMessageText.textContent = errorMsg;
                 errorMessageContainer.style.display = 'block';
+                // Clean the URL
+                if (window.history.replaceState) {
+                    const cleanURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({ path: cleanURL }, '', cleanURL);
+                }
             }
-        } catch (error) {
-            console.error('登入請求錯誤:', error);
-            errorMessageText.textContent = '登入時發生網路或伺服器錯誤。';
-            errorMessageContainer.style.display = 'block';
-        }
-    });
-</script>
+
+            loginForm.addEventListener('submit', async function(event) {
+                event.preventDefault(); // Prevent traditional form submission
+
+                // Clear previous error messages and disable button
+                errorMessageContainer.style.display = 'none';
+                errorMessageText.textContent = '';
+                loginButton.disabled = true;
+                loginButton.textContent = '登入中...';
+
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value; // Password should not be trimmed typically
+
+                if (!username || !password) {
+                    errorMessageText.textContent = '帳號和密碼皆為必填。';
+                    errorMessageContainer.style.display = 'block';
+                    loginButton.disabled = false;
+                    loginButton.textContent = '登入';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/admin/login', { // Ensure this path matches your server route
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, password }),
+                    });
+
+                    const result = await response.json(); // Always try to parse JSON
+
+                    if (response.ok && result.success) {
+                        console.log('Login successful, server response:', result);
+                        console.log('Redirecting to:', result.redirectTo || '/admin-main.html');
+                   
+                        window.location.href = result.redirectTo || '/admin-main.html'; // Or '/admin/dashboard' etc.
+                    } else {
+                        // Handle errors (e.g., 401, 500, or custom error in JSON)
+                        console.error('Login failed, server response:', result);
+                        errorMessageText.textContent = result.error || `登入失敗 (狀態碼: ${response.status})`;
+                        errorMessageContainer.style.display = 'block';
+                    }
+                } catch (error) {
+                    // Network errors or if response is not JSON (e.g. server crashes before sending JSON)
+                    console.error('Login request error:', error);
+                    errorMessageText.textContent = '登入請求失敗，請檢查網路連線或稍後再試。';
+                    errorMessageContainer.style.display = 'block';
+                } finally {
+                    // Re-enable the button
+                    loginButton.disabled = false;
+                    loginButton.textContent = '登入';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

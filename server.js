@@ -98,6 +98,8 @@ app.post('/api/admin/login', (req, res) => {
         req.session.isAdmin = true;
         const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
         delete req.session.returnTo;
+        console.log('[Login Success] Session isAdmin set. Attempting to save session. redirectTo:', returnTo); // 新日誌
+
 
         // 保存 session 然後再發送回應
         req.session.save(err => {
@@ -105,7 +107,7 @@ app.post('/api/admin/login', (req, res) => {
                 console.error("Session 保存失敗:", err);
                 return res.status(500).json({ success: false, error: 'Session 保存失敗，無法登入。' });
             }
-            console.log(`[Admin Login] 使用者 '${username}' 登入成功。Session ID: ${req.sessionID}`);
+            console.log(`[Login Success] Session saved. Responding with JSON. Session ID: ${req.sessionID}`); // 新日誌
             res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
         });
     } else {
