@@ -101,6 +101,11 @@
         <ul id="nav-list">
             <div id="loading-nav">載入導覽列中...</div>
         </ul>
+
+         <!-- 在 ul 外部或內部都合適，這裡放在 ul 內部作為最後一個 li -->
+         <ul style="margin-left: auto;"> <!-- 讓登出按鈕靠右 -->
+            <li><a href="#" id="logout-button" style="background-color: #dc3545; color: white !important;">登出</a></li>
+       </ul>
     </nav>
 
     <script>
@@ -206,7 +211,37 @@
                         showLevel('main');
                     });
                 }
+
+
+
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', async function(e) {
+                        e.preventDefault();
+                        try {
+                            const response = await fetch('/api/admin/logout', { method: 'POST' });
+                            const result = await response.json();
+                            if (response.ok && result.success) {
+                                // 登出成功後，父框架 (admin-main.html) 需要重定向到登入頁
+                                // 因為 admin-nav.html 是在 iframe 中
+                                window.top.location.href = '/admin-login.html';
+                            } else {
+                                alert('登出失敗: ' + (result.error || '未知錯誤'));
+                            }
+                        } catch (error) {
+                            console.error('登出請求錯誤:', error);
+                            alert('登出時發生網路錯誤。');
+                        }
+                    });
+                }
+
+
+
             }
+
+
+
+            
         });
     </script>
 </body>

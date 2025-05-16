@@ -149,6 +149,14 @@ app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ �
     `);
 });
 
+
+
+
+
+
+
+
+
 // 密碼驗證中介軟體
 const verifyAdminPassword = (req, res, next) => {
     if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
@@ -197,6 +205,29 @@ const productUpload = multer({
     }
 });
 // --- End of Multer Configuration ---
+
+
+
+
+
+
+
+
+
+
+app.get('/admin-main.html', isAdminAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-main.html'));
+});
+
+
+
+
+
+
+
+
+
+
 
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
