@@ -220,19 +220,27 @@ const productUpload = multer({
 
 
 
+ 
 
-app.get('/admin-nav.html', isAdminAuthenticated, (req, res) => {
-    console.log(`[Access /admin-nav.html] Session ID: ${req.sessionID}, isAdmin: ${req.session.isAdmin}`); // 添加日誌
-    res.sendFile(path.join(__dirname, 'public', 'admin-nav.html'));
+const sessionProtectedAdminPages = [
+    // 注意：admin-main.html 和 admin-nav.html 已有特定處理，這裡僅為示例結構
+    '/admin-main.html',
+    '/admin-nav.html',
+    '/figures-admin.html',
+    // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
+    // 例如: '/inventory-admin.html', (如果它需要 session 保護而不是 basic auth)
+    // 注意：你有一些頁面是用 basicAuthMiddleware 保護的，不要混淆
+];
+
+sessionProtectedAdminPages.forEach(pagePath => {
+    // 假設檔案都在 public 資料夾的根目錄下
+    // 如果路徑是像 /store/report/report-admin.html 這樣的巢狀結構，
+    // 則 path.join(__dirname, 'public', pagePath) 需要相應調整。
+    // 例如： path.join(__dirname, 'public', 'store', 'report', 'report-admin.html')
+    app.get(pagePath, isAdminAuthenticated, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', pagePath));
+    });
 });
-
-
-
-
-
-
-
-
 
 
 
