@@ -4121,18 +4121,7 @@ app.get('/rich-admin.html', (req, res) => {
 
 // --- 受保護的管理頁面和 API Routes ---
 app.use([
-    '/admin.html',
-    '/music-admin.html',
-    '/news-admin.html',
-    '/banner-admin.html',
-    '/sales-report.html',
-    '/figures-admin.html',
-    '/guestbook-admin.html',
-    '/admin-identities.html',
-    '/admin-message-detail.html',
-    '/inventory-admin.html',
-   '/blacklist.html',
-    '/store/report/report-admin.html'
+    
 ], basicAuthMiddleware);
 
 
