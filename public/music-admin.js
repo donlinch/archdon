@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 預覽圖片功能 ---
     function setupImagePreview(inputElement, previewElement) {
         if (inputElement && previewElement) {
-            inputElement.addEventListener('input', () => {
+            inputElement ('input', () => {
                 const url = inputElement.value.trim();
                 previewElement.src = url;
                 if (url) {
@@ -521,13 +521,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 綁定表單提交事件 ---
     if (editForm) {
-        editForm.addEventListener('submit', (event) => handleFormSubmit(event, true));
+        editForm ('submit', (event) => handleFormSubmit(event, true));
     } else {
         console.error("編輯音樂表單元素未找到。");
     }
 
     if (addForm) {
-        addForm.addEventListener('submit', (event) => handleFormSubmit(event, false));
+        addForm ('submit', (event) => handleFormSubmit(event, false));
     } else {
         console.error("新增音樂表單元素未找到。");
     }
