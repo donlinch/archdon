@@ -13,6 +13,76 @@ const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Session Middleware Setup
+const session = require('express-session');
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'YOUR_VERY_SECRET_KEY', // REPLACE THIS IN PRODUCTION with a strong secret from env vars
+    resave: false,
+    saveUninitialized: false, // Changed to false: only save sessions that have been modified
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
+        httpOnly: true, // Helps prevent XSS
+        maxAge: 24 * 60 * 60 * 1000 // Session timeout: 24 hours
+    }
+}));
+
+// Middleware to check if admin is logged in
+const isAdmin = (req, res, next) => {
+    if (req.session && req.session.isAdmin) {
+        return next();
+    } else {
+        // If not logged in, redirect to login page
+        // You might want to save the intended URL to redirect back after login: req.session.returnTo = req.originalUrl;
+        return res.redirect('/admin-login.html');
+    }
+};
+
+// Admin Login Route
+app.post('/admin/login', express.urlencoded({ extended: false }), (req, res) => {
+    const { username, password } = req.body;
+    const adminUsername = process.env.ADMIN_LOGIN;
+    const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
+
+    if (!adminUsername || !adminPassword) {
+        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD environment variables are not set.');
+        return res.status(500).send('Admin authentication is not configured on the server.');
+    }
+
+    if (username === adminUsername && password === adminPassword) {
+        req.session.isAdmin = true;
+        // Redirect to an admin dashboard or main admin page
+        // For now, let's assume you have or will create an /admin/dashboard route/page
+        res.redirect('/admin/dashboard'); // You can change this to an existing admin page
+    } else {
+        // Send an error message back to the login page (e.g., via query parameter)
+        res.redirect('/admin-login.html?error=1');
+    }
+});
+
+// Admin Logout Route
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Session destruction error:', err);
+            return res.status(500).send('Could not log out.');
+        }
+        res.redirect('/admin-login.html');
+    });
+});
+
+// Example of a protected admin route (you can create more like this)
+// We'll need to create an actual admin dashboard or some protected content later.
+app.get('/admin/dashboard', isAdmin, (req, res) => {
+    res.send(`
+        <h1>Admin Dashboard</h1>
+        <p>Welcome, admin!</p>
+        <p><a href="/admin/logout">Logout</a></p>
+        <p>Protected content here.</p>
+    `);
+});
+
 const createReportRateLimiter = require('./report-ip-limiter'); //限制器 html生成器
 const reportTemplatesRouter = express.Router();   //做 html 網頁用的 report-view.html
 // const storeDb = require('./public/store/store-db'); // Removed as /public/store is deleted
