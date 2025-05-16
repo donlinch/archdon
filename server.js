@@ -227,6 +227,23 @@ const sessionProtectedAdminPages = [
     '/admin-main.html',
     '/admin-nav.html',
     '/figures-admin.html',
+    '/admin.html',
+    '/sales-report.html',
+    '/blacklist.html',
+    '/music-admin.html',
+    '/rich/rich-admin.html',
+    '/game-admin-same.html',
+    '/news-admin.html',
+    '/banner-admin.html',
+    '/file-admin.html',
+    '/admin-nav-manager.html',
+    '/store/report/report-admin.html',
+    '/unboxing.html',
+    '/unboxing-ai-admin.html',
+    '/guestbook-admin.html',
+    '/admin-identities.html',
+   
+
     // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
     // 例如: '/inventory-admin.html', (如果它需要 session 保護而不是 basic auth)
     // 注意：你有一些頁面是用 basicAuthMiddleware 保護的，不要混淆
