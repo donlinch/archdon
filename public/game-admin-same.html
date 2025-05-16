@@ -449,19 +449,7 @@
         
         // 當文檔加載完成時執行
         $(document).ready(function() {
-            // --- Admin Password Check and Prompt (adapted from admin.js) ---
-            let adminPassword = localStorage.getItem('adminPassword');
-            if (!adminPassword) {
-                const inputPassword = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
-                if (inputPassword && inputPassword.trim() !== '') {
-                    localStorage.setItem('adminPassword', inputPassword);
-                    adminPassword = inputPassword; // Update the variable for current session
-                } else {
-                    alert('未輸入管理員密碼，管理功能可能受限或無法使用。');
-                    // 後續操作如果需要密碼但 adminPassword 為 null，將會失敗或被阻止
-                }
-            }
-            // --- End of Admin Password Check ---
+            // --- 管理員密碼功能已移除 ---
 
             // 初始化加載
             loadTemplates();
@@ -812,27 +800,17 @@
             
             if (templateId) {
                 // 更新現有模板
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 $.ajax({
                     url: `/api/samegame/templates/${templateId}`,
                     type: 'PUT',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': storedPassword
-                    },
+                    // headers: { 'X-Admin-Password': storedPassword }, // 移除
                     data: JSON.stringify(templateData),
                     success: function(data) {
                         $('#templateModal').modal('hide');
                         showAlert('模板更新成功', 'success');
-                        
-                        // 重新加載模板列表
                         loadTemplates();
-                        
-                        // 如果當前正在查看這個模板，則更新詳情
                         if (currentTemplateId && currentTemplateId === templateId) {
                             viewTemplateDetail(templateId);
                         }
@@ -847,27 +825,17 @@
                 });
             } else {
                 // 創建新模板
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 $.ajax({
                     url: '/api/samegame/templates',
                     type: 'POST',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': storedPassword
-                    },
+                    // headers: { 'X-Admin-Password': storedPassword }, // 移除
                     data: JSON.stringify(templateData),
                     success: function(data) {
                         $('#templateModal').modal('hide');
                         showAlert('模板創建成功', 'success');
-                        
-                        // 重新加載模板列表
                         loadTemplates();
-                        
-                        // 自動查看新創建的模板
                         viewTemplateDetail(data.id);
                     },
                     error: function(xhr, status, error) {
@@ -889,13 +857,11 @@
             const gridRows = $('#gridRows').val();
             const gridColumns = $('#gridColumns').val();
             
-            // 檢查輸入是否有效
             if (!levelNumber || !gridRows || !gridColumns) {
                 showAlert('請填寫所有必填欄位', 'warning');
                 return;
             }
             
-            // 收集所有圖片 URL
             const images = [];
             $('.image-input').each(function() {
                 const url = $(this).val().trim();
@@ -908,12 +874,10 @@
                 showAlert('請至少添加2張圖片', 'warning');
                 return;
             }
-            
             if (images.length % 2 !== 0) {
                 showAlert('圖片數量必須是偶數', 'warning');
                 return;
             }
-            
             const maxPairs = (parseInt(gridRows) * parseInt(gridColumns)) / 2;
             if (images.length > maxPairs * 2) {
                 showAlert(`圖片數量不能超過網格大小的兩倍 (最多 ${maxPairs * 2} 張)`, 'warning');
@@ -929,24 +893,16 @@
             
             if (levelId) {
                 // 更新現有關卡
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 $.ajax({
                     url: `/api/samegame/levels/${levelId}`,
                     type: 'PUT',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': storedPassword
-                    },
+                    // headers: { 'X-Admin-Password': storedPassword }, // 移除
                     data: JSON.stringify(levelData),
                     success: function(data) {
                         $('#levelModal').modal('hide');
                         showAlert('關卡更新成功', 'success');
-                        
-                        // 重新加載模板詳情以顯示更新後的關卡
                         viewTemplateDetail(templateId);
                     },
                     error: function(xhr, status, error) {
@@ -959,24 +915,16 @@
                 });
             } else {
                 // 創建新關卡
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 $.ajax({
                     url: `/api/samegame/templates/${templateId}/levels`,
                     type: 'POST',
                     contentType: 'application/json',
-                    headers: {
-                        'X-Admin-Password': storedPassword
-                    },
+                    // headers: { 'X-Admin-Password': storedPassword }, // 移除
                     data: JSON.stringify(levelData),
                     success: function(data) {
                         $('#levelModal').modal('hide');
                         showAlert('關卡創建成功', 'success');
-                        
-                        // 重新加載模板詳情以顯示新關卡
                         viewTemplateDetail(templateId);
                     },
                     error: function(xhr, status, error) {
@@ -992,26 +940,16 @@
         
         // 刪除模板
         function deleteTemplate(templateId) {
-            const storedPassword = localStorage.getItem('adminPassword');
-            if (!storedPassword) {
-                showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                return;
-            }
+            // 密碼相關邏輯已移除
             $.ajax({
                 url: `/api/samegame/templates/${templateId}`,
                 type: 'DELETE',
-                headers: {
-                    'X-Admin-Password': storedPassword
-                },
+                // headers: { 'X-Admin-Password': storedPassword }, // 移除
                 success: function() {
                     showAlert('模板已成功刪除', 'success');
-                    
-                    // 如果正在查看被刪除的模板，則隱藏詳情視圖
                     if (currentTemplateId === templateId) {
                         hideTemplateDetail();
                     }
-                    
-                    // 重新加載模板列表
                     loadTemplates();
                 },
                 error: function(xhr, status, error) {
@@ -1026,21 +964,13 @@
         
         // 刪除關卡
         function deleteLevel(levelId) {
-            const storedPassword = localStorage.getItem('adminPassword');
-            if (!storedPassword) {
-                showAlert('未找到管理員密碼，請重新整理頁面並輸入密碼。', 'danger');
-                return;
-            }
+            // 密碼相關邏輯已移除
             $.ajax({
                 url: `/api/samegame/levels/${levelId}`,
                 type: 'DELETE',
-                headers: {
-                    'X-Admin-Password': storedPassword
-                },
+                // headers: { 'X-Admin-Password': storedPassword }, // 移除
                 success: function() {
                     showAlert('關卡已成功刪除', 'success');
-                    
-                    // 重新加載模板詳情以更新關卡列表
                     viewTemplateDetail(currentTemplateId);
                 },
                 error: function(xhr, status, error) {
@@ -1147,20 +1077,16 @@
             formData.append('file', imageFile);
             
             $.ajax({
-                url: '/api/admin/files/upload',
+                url: '/api/admin/files/upload', // 注意：此API端點沒有在前端處理密碼
                 type: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,
                 success: function(response) {
                     if (response.success && response.file && response.file.file_path) {
-                        // 關閉上傳模態框
                         $('#uploadHelperModal').modal('hide');
-                        
-                        // 更新圖片輸入框的值
                         const imageUrl = response.file.file_path;
                         $(`#${targetId} .image-input`).val(imageUrl).trigger('input');
-                        
                         showAlert('圖片上傳成功', 'success');
                     } else {
                         showAlert('圖片上傳失敗：伺服器返回無效的響應', 'danger');
@@ -1188,7 +1114,6 @@
             
             $('#alertContainer').append(alertHtml);
             
-            // 3 秒後自動關閉
             setTimeout(function() {
                 $(`#${alertId}`).alert('close');
             }, 3000);

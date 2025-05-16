@@ -1,20 +1,6 @@
 // public/admin.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Admin Password Check and Prompt ---
-    let adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-        adminPassword = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
-        if (adminPassword && adminPassword.trim() !== '') {
-            localStorage.setItem('adminPassword', adminPassword);
-            // 可選：立即重新載入頁面或提示用戶已儲存
-            // location.reload();
-        } else {
-            // 如果用戶取消或未輸入，可以顯示一個提示或阻止後續需要密碼的操作
-            alert('未輸入管理員密碼，部分管理功能可能受限。');
-            // 這裡可以決定是否要阻止後續的 API 呼叫，或者讓它們自然失敗
-        }
-    }
-    // --- End of Admin Password Check ---
+    // --- 管理員密碼功能已移除 ---
 
     // --- DOM Element References (商品列表和 Modal) ---
     const productListBody = document.querySelector('#product-list-table tbody');
@@ -133,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingMessage) loadingMessage.style.display = 'block'; 
             if (productTable) productTable.style.display = 'none'; 
             
-            const response = await fetch('/api/admin/products'); // Corrected API path
+            const response = await fetch('/api/admin/products');
             if (!response.ok) { 
                 throw new Error(`HTTP 錯誤！狀態: ${response.status}`); 
             } 
@@ -144,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             productListBody.innerHTML = ''; 
             if (products.length === 0) { 
-                productListBody.innerHTML = '<tr><td colspan="11">目前沒有商品。</td></tr>'; // Adjusted colspan for new columns
+                productListBody.innerHTML = '<tr><td colspan="11">目前沒有商品。</td></tr>'; 
                 return; 
             } 
             
@@ -207,14 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
         editImagePreview.src = ''; 
         
         try { 
-            const response = await fetch(`/api/products/${id}`); // Reverted to /api/products/ based on backup
+            const response = await fetch(`/api/products/${id}`); 
             if (!response.ok) {
                 if (response.status === 404) throw new Error('找不到該商品。');
                 throw new Error(`無法獲取商品資料 (HTTP ${response.status})`); 
             } 
             
             const product = await response.json();
-            console.log('Product data for editing:', JSON.stringify(product, null, 2)); // 调试日志
+            console.log('Product data for editing:', JSON.stringify(product, null, 2));
             editProductId.value = product.id;
             editProductName.value = product.name || '';
             editProductDescription.value = product.description || ''; 
@@ -274,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteProduct = async function(id) {
         if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
             try {
+                // 前端原本就沒有在此處發送密碼，所以這裡不需要改動密碼相關邏輯
                 const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
                 if (response.status === 204 || response.ok) {
                     await fetchAndDisplayProducts();
@@ -304,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         addFormError.textContent = ''; 
         addForm.reset(); 
-        // Reset expiration type and hide date range
         if(addExpirationType) addExpirationType.value = '0';
         if(addDateRangeGroup) addDateRangeGroup.style.display = 'none';
         if(addStartDate) addStartDate.value = '';
@@ -329,8 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let priceValue = editProductPrice.value.trim() === '' ? null : parseFloat(editProductPrice.value);
-            console.log('Raw editProductImageUrl.value:', editProductImageUrl.value); // 新增日誌
-            console.log('Raw editProductSevenElevenUrl.value:', editProductSevenElevenUrl.value); // 新增日誌
             const updatedData = {
                 name: editProductName.value.trim(),
                 description: editProductDescription.value.trim(),
@@ -375,8 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            console.log('Submitting updated product data:', updatedData); // 新增日誌記錄
+            console.log('Submitting updated product data:', updatedData);
             try {
+                // 前端原本就沒有在此處發送密碼
                 const response = await fetch(`/api/admin/products/${productId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -407,8 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addFormError.textContent = '';
 
             let priceValue = addProductPrice.value.trim() === '' ? null : parseFloat(addProductPrice.value);
-            console.log('Raw addProductImageUrl.value:', addProductImageUrl.value); // 新增日誌
-            console.log('Raw addProductSevenElevenUrl.value:', addProductSevenElevenUrl.value); // 新增日誌
             const newData = {
                 name: addProductName.value.trim(),
                 description: addProductDescription.value.trim(),
@@ -453,8 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            console.log('Submitting new product data:', newData); // 新增日誌記錄
+            console.log('Submitting new product data:', newData);
             try {
+                // 前端原本就沒有在此處發送密碼
                 const response = await fetch('/api/admin/products', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -641,62 +625,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const labels = trafficData.map(item => item.date || item.month);
             const dataPoints = trafficData.map(item => item.count);
 
-
-
-
- // --- 主要修改在這裡 ---
- currentChart = new Chart(ctx, {
-    type: 'bar', // <--- 將 'line' 修改為 'bar'
-    data: {
-        labels: labels,
-        datasets: [{
-            label: granularity === 'daily' ? '每日頁面瀏覽量' : '每月頁面瀏覽量',
-            data: dataPoints,
-            // 柱狀圖的顏色設定
-            backgroundColor: granularity === 'daily' ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 159, 64, 0.7)', // 實色背景，可以調整透明度
-            borderColor: granularity === 'daily' ? 'rgb(54, 162, 235)' : 'rgb(255, 159, 64)',             // 邊框顏色
-            borderWidth: 1 // 邊框寬度
-            // fill: true, // 柱狀圖通常不需要 fill
-            // tension: 0.2 // tension 屬性主要用於折線圖
-        }]
-    },
-    options: {
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    stepSize: granularity === 'daily' ? 1 : undefined // 如果是每日，可以考慮步長為1
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: granularity === 'daily' ? '每日頁面瀏覽量' : '每月頁面瀏覽量',
+                        data: dataPoints,
+                        backgroundColor: granularity === 'daily' ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 159, 64, 0.7)',
+                        borderColor: granularity === 'daily' ? 'rgb(54, 162, 235)' : 'rgb(255, 159, 64)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: granularity === 'daily' ? 1 : undefined
+                            }
+                        },
+                        x: { ticks: {} }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: false },
+                        legend: { display: true, position: 'top' }
+                    }
                 }
-            },
-            x: {
-                // 對於柱狀圖，如果標籤太多，可能需要旋轉
-                ticks: {
-                    // autoSkip: true, // 自動跳過一些標籤以避免重疊
-                    // maxRotation: 90,
-                    // minRotation: 45
-                }
-            }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            title: {
-                display: false // 沿用原設定，如果需要標題可以設為 true
-            },
-            legend: {
-                display: true,
-                position: 'top'
-            }
-        }
-    }
-});
-// --- 修改結束 ---
-
-
-
-
-
-
+            });
             setTimeout(() => { displayPageRankingChart(); setTimeout(() => { displayPageComparisonChart(); }, 300); }, 300);
         } catch (error) {
             console.error(`繪製 ${granularity} 流量圖表失敗:`, error);
@@ -762,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!categoryOptionsDatalist) return;
         const displayDivsExist = addExistingCategoriesDiv && editExistingCategoriesDiv;
         try {
-            const response = await fetch('/api/products/categories'); // This API path might need to be /api/admin/products/categories if handled by adminRouter
+            const response = await fetch('/api/products/categories');
             if (!response.ok) throw new Error(`無法獲取分類列表 (HTTP ${response.status})`);
             const categories = await response.json();
             categoryOptionsDatalist.innerHTML = ''; 
@@ -802,13 +760,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const tags = await response.json();
             container.innerHTML = '';
             if (tags.length === 0) { container.innerHTML = '<p class="no-tags-message">尚無標籤，請先在標籤管理頁面新增標籤。</p>'; return; }
-            console.log('populateTagCheckboxes - selectedTags:', selectedTags); // 新增日誌
             tags.forEach(tag => {
-                console.log('populateTagCheckboxes - current tag_id:', tag.tag_id, 'type:', typeof tag.tag_id, 'selectedTags includes:', selectedTags.includes(tag.tag_id)); // 新增日誌
                 const checkboxId = `tag-${container.id}-${tag.tag_id}`;
                 const wrapper = document.createElement('div'); wrapper.className = 'tag-checkbox-wrapper';
                 const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = tag.tag_id;
-                // 確保比較時類型一致，selectedTags 中的 id 可能是字串或數字
                 checkbox.checked = selectedTags.map(String).includes(String(tag.tag_id));
                 const label = document.createElement('label'); label.htmlFor = checkboxId; label.textContent = tag.tag_name;
                 wrapper.appendChild(checkbox); wrapper.appendChild(label); container.appendChild(wrapper);
@@ -846,17 +801,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const tagName = addTagInput.value.trim();
             if (!tagName) { if (tagManagementError) tagManagementError.textContent = '標籤名稱不能為空'; return; }
             try {
-                const adminPassword = localStorage.getItem('adminPassword'); // 從 localStorage 獲取密碼
-                if (!adminPassword) {
-                    if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼，請先登入。';
-                    return;
-                }
-
+                // 密碼相關邏輯已移除
                 const response = await fetch('/api/tags', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-password': adminPassword // 在標頭中新增密碼
+                        'Content-Type': 'application/json'
+                        // 移除了 'x-admin-password'
                     },
                     body: JSON.stringify({ tag_name: tagName })
                 });
@@ -874,19 +824,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const newName = prompt('請輸入新的標籤名稱:', currentName);
         if (newName === null || newName.trim() === '') return;
         
-        const storedPassword = localStorage.getItem('adminPassword');
-        if (!storedPassword) {
-            alert('錯誤：未找到管理員密碼，請先登入或重新整理頁面輸入。');
-            if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼。';
-            return;
-        }
-
+        // 密碼相關邏輯已移除
         try {
             const response = await fetch(`/api/tags/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-password': storedPassword
+                    'Content-Type': 'application/json'
+                    // 移除了 'x-admin-password'
                 },
                 body: JSON.stringify({ tag_name: newName.trim() })
             });
@@ -896,7 +840,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorMsg);
             }
             await fetchAndDisplayTags();
-            // Also refresh tag checkboxes in product forms
             if (typeof populateTagCheckboxes === 'function') {
                 if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
                 if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
@@ -910,27 +853,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.deleteTag = async function(id) {
         if (confirm(`確定要刪除此標籤嗎？此操作無法復原，並會從所有使用此標籤的商品中移除。`)) {
-            const storedPassword = localStorage.getItem('adminPassword');
-            if (!storedPassword) {
-                alert('錯誤：未找到管理員密碼，請先登入或重新整理頁面輸入。');
-                if (tagManagementError) tagManagementError.textContent = '錯誤：未找到管理員密碼。';
-                return;
-            }
+            // 密碼相關邏輯已移除
             try {
                 const response = await fetch(`/api/tags/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'x-admin-password': storedPassword
-                    }
+                    method: 'DELETE'
+                    // 移除了 headers: { 'x-admin-password': ... }
                 });
-                if (!response.ok && response.status !== 204) { // 204 No Content is also a success
+                if (!response.ok && response.status !== 204) { 
                     let errorMsg = `無法刪除標籤 (HTTP ${response.status})`;
                     try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
                     throw new Error(errorMsg);
                 }
                 await fetchAndDisplayTags();
-                await fetchAndDisplayProducts(); // Refresh products as their tags might have changed
-                 // Also refresh tag checkboxes in product forms
+                await fetchAndDisplayProducts(); 
                 if (typeof populateTagCheckboxes === 'function') {
                     if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
                     if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
@@ -953,12 +888,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById(targetTab).style.display = 'block';
                 this.classList.add('active');
                 if (targetTab === 'tag-management-tab') { fetchAndDisplayTags(); }
-                if (targetTab === 'analytics-tab') { refreshAllCharts(); } // Refresh charts when analytics tab is shown
+                if (targetTab === 'analytics-tab') { refreshAllCharts(); }
             });
         });
     }
     
-    // Initial active tab logic
     const activeTabButton = document.querySelector('.tab-button.active');
     if (activeTabButton) {
         const activeTabId = activeTabButton.getAttribute('data-tab');
@@ -967,7 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (activeTabId === 'tag-management-tab') { fetchAndDisplayTags(); }
         if (activeTabId === 'analytics-tab') { refreshAllCharts(); }
-    } else if (tabButtons.length > 0) { // Default to first tab if none are active
+    } else if (tabButtons.length > 0) { 
         tabButtons[0].click();
     }
 

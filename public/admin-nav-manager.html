@@ -518,18 +518,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Admin Password Check and Prompt (Ensure this is declared only once at the top) ---
-            let adminPasswordGlobal = localStorage.getItem('adminPassword');
-            if (!adminPasswordGlobal) {
-                adminPasswordGlobal = prompt('請輸入管理員密碼 (此密碼將用於後續操作):', '');
-                if (adminPasswordGlobal && adminPasswordGlobal.trim() !== '') {
-                    localStorage.setItem('adminPassword', adminPasswordGlobal);
-                } else {
-                    alert('未輸入管理員密碼，部分管理功能可能受限。');
-                    // Optionally disable UI elements that require password
-                }
-            }
-            // --- End of Admin Password Check ---
+            // --- 管理員密碼功能已移除 ---
 
             const listContainer = document.querySelector('#nav-links-list ul');
             const loadingDiv = document.querySelector('#nav-links-list .loading');
@@ -734,15 +723,11 @@
                 if (data.parent_id === '') delete data.parent_id;
                 data.display_order = parseInt(data.display_order) || 0;
 
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    displayError(addFormError, "管理員密碼未設定，請重新整理頁面並輸入。");
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 try {
                     const response = await fetch('/api/admin/nav-links', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                        headers: { 'Content-Type': 'application/json' /*, 'X-Admin-Password': storedPassword */ }, // 移除密碼 header
                         body: JSON.stringify(data)
                     });
                     const result = await response.json();
@@ -785,15 +770,11 @@
                     return;
                 }
                 
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    displayError(editFormError, "管理員密碼未設定，請重新整理頁面並輸入。");
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 try {
                     const response = await fetch(`/api/admin/nav-links/${linkId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                        headers: { 'Content-Type': 'application/json' /*, 'X-Admin-Password': storedPassword */ }, // 移除密碼 header
                         body: JSON.stringify(data)
                     });
                     const result = await response.json();
@@ -814,15 +795,11 @@
 
             window.deleteLink = async function(id, name) { 
                 if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) return;
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showToast("管理員密碼未設定，請重新整理頁面並輸入。", "error");
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 try {
                     const response = await fetch(`/api/admin/nav-links/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'X-Admin-Password': storedPassword }
+                        method: 'DELETE'
+                        // headers: { 'X-Admin-Password': storedPassword } // 移除密碼 header
                     });
                     if (!response.ok && response.status !== 204) {
                         let errorMsg = `HTTP error! status: ${response.status}`;
@@ -838,11 +815,7 @@
             }
 
             window.handleSort = async function(linkId, direction) { 
-                const storedPassword = localStorage.getItem('adminPassword');
-                if (!storedPassword) {
-                    showToast("管理員密碼未設定，請重新整理頁面並輸入。", "error");
-                    return;
-                }
+                // 密碼相關邏輯已移除
                 const linkToMove = allLinks.find(l => l.id === linkId);
                 if (!linkToMove) return;
                 const siblings = allLinks.filter(l => l.parent_id === linkToMove.parent_id).sort((a,b) => a.display_order - b.display_order);
@@ -868,7 +841,7 @@
                     for (const update of updates) {
                          const response = await fetch(`/api/admin/nav-links/${update.id}`, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'X-Admin-Password': storedPassword },
+                            headers: { 'Content-Type': 'application/json' /*, 'X-Admin-Password': storedPassword */ }, // 移除密碼 header
                             body: JSON.stringify({ display_order: update.display_order }) 
                         });
                         if (!response.ok) {
