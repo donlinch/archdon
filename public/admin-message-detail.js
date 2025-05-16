@@ -10,16 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitAdminReplyBtn = document.getElementById('submit-admin-reply-btn');
     const messageIdDisplay = document.getElementById('message-id-display');
     const backToListLink = document.querySelector('a[href="/guestbook-admin.html"]');
-    const adminReplyEmojiTrigger = document.getElementById('admin-reply-emoji-trigger');
+    const adminReplyEmojiTrigger = document.getElementById('admin-reply-emoji-trigger'); // 你可能沒有這個，只是示例
     const adminReplyFormLabel = document.querySelector('#admin-reply-form label[for="admin-reply-content"]');
     const cancelAdminReplyTargetBtn = document.getElementById('cancel-admin-reply-target-btn');
     const getAiReplyBtn = document.getElementById('get-ai-reply-btn');
 
+    // START: 新增的圖片上傳相關 DOM 元素
+    const adminReplyImageInput = document.getElementById('admin-reply-image');
+    const adminReplyImagePreviewContainer = document.getElementById('admin-reply-image-preview-container');
+    const clearAdminReplyImageBtn = document.getElementById('clear-admin-reply-image-btn');
+    const adminReplyImageUploadStatusContainer = document.getElementById('admin-reply-image-upload-status-container');
+    const adminReplyImageUploadStatus = document.getElementById('admin-reply-image-upload-status');
+    // END: 新增的圖片上傳相關 DOM 元素
+
     // --- 狀態變數 ---
     let currentMessageId = null;
     let isReplyingCooldown = false;
-    let currentAdminParentReplyId = null; // 用於記錄正在回覆的父回覆 ID
-    let mainMessageData = null; // 用於緩存主留言數據
+    let currentAdminParentReplyId = null;
+    let mainMessageData = null;
 
     // --- 函數：從 URL 獲取 message ID ---
     function getMessageIdFromUrl() {
@@ -45,10 +53,49 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelAdminReplyTargetBtn) {
         cancelAdminReplyTargetBtn.addEventListener('click', () => {
             currentAdminParentReplyId = null;
-            if (adminReplyContent) adminReplyContent.value = ''; // 清空回覆框
+            if (adminReplyContent) adminReplyContent.value = '';
             updateAdminReplyFormLabel();
         });
     }
+    
+    // START: 圖片上傳的函式與事件監聽
+    function updateAdminReplyImagePreview() {
+        if (!adminReplyImageInput || !adminReplyImagePreviewContainer || !clearAdminReplyImageBtn) return;
+
+        adminReplyImagePreviewContainer.innerHTML = ''; // 清空預覽
+        if (adminReplyImageInput.files && adminReplyImageInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '200px';
+                img.style.maxHeight = '150px';
+                img.style.borderRadius = '4px';
+                adminReplyImagePreviewContainer.appendChild(img);
+            };
+            reader.readAsDataURL(adminReplyImageInput.files[0]);
+            clearAdminReplyImageBtn.style.display = 'inline-block';
+        } else {
+            clearAdminReplyImageBtn.style.display = 'none';
+        }
+    }
+
+    if (adminReplyImageInput) {
+        adminReplyImageInput.addEventListener('change', updateAdminReplyImagePreview);
+    }
+
+    if (clearAdminReplyImageBtn) {
+        clearAdminReplyImageBtn.addEventListener('click', () => {
+            if (adminReplyImageInput) {
+                adminReplyImageInput.value = ''; // 清空 file input
+            }
+            updateAdminReplyImagePreview(); // 更新預覽 (會清空)
+            if(adminReplyImageUploadStatusContainer) adminReplyImageUploadStatusContainer.style.display = 'none';
+            if(adminReplyImageUploadStatus) adminReplyImageUploadStatus.textContent = '';
+        });
+    }
+    // END: 圖片上傳的函式与事件監聽
+
 
     // --- 函數：獲取並顯示留言詳情和所有回覆 ---
     async function fetchAdminMessageDetail(messageId) {
@@ -80,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('API 返回的資料結構不正確，缺少 message 物件。');
             }
 
-            mainMessageData = data.message; // 緩存主留言數據
+            mainMessageData = data.message;
             renderAdminMessageDetail(data.message);
             renderAdminReplyList(data.replies || []);
 
@@ -106,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 函數：渲染主留言詳情 ---
     function renderAdminMessageDetail(message) {
-        // (這部分與你之前的程式碼相同，保持不變)
         if (!messageDetailContainer || !message) return;
         messageDetailContainer.innerHTML = '';
 
@@ -137,17 +183,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const hr = document.createElement('hr');
         const contentLabel = document.createElement('strong'); contentLabel.textContent = '內容:';
         const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content'; // 確保這個 class 存在，AI 建議按鈕會用到
+        contentDiv.className = 'message-content'; 
         contentDiv.style.backgroundColor = '#f8f9fa'; contentDiv.style.padding = '10px'; contentDiv.style.borderRadius = '4px'; contentDiv.style.marginTop = '5px';
         contentDiv.textContent = message.content || '';
         contentDiv.style.whiteSpace = 'pre-wrap'; contentDiv.style.wordWrap = 'break-word';
 
         [authorP, activityP, statusP, replyCountP, hr, contentLabel, contentDiv].forEach(el => messageDetailContainer.appendChild(el));
+        
+        // 如果主留言有圖片，也顯示出來
+        if (message.image_url) {
+            const imageContainer = document.createElement('div');
+            imageContainer.style.marginTop = '10px';
+            imageContainer.style.marginBottom = '10px';
+            const imgLabel = document.createElement('strong');
+            imgLabel.textContent = '圖片: ';
+            imageContainer.appendChild(imgLabel);
+            
+            const img = document.createElement('img');
+            img.src = message.image_url;
+            img.alt = '留言圖片';
+            img.style.maxWidth = '300px';
+            img.style.maxHeight = '250px';
+            img.style.borderRadius = '4px';
+            img.style.display = 'block';
+            img.style.marginTop = '5px';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => window.open(message.image_url, '_blank'));
+            imageContainer.appendChild(img);
+            messageDetailContainer.appendChild(imageContainer);
+        }
     }
 
     // --- 函數：渲染回覆列表 (包含樓層和操作按鈕) ---
     function renderAdminReplyList(replies) {
-        // (這部分與你之前的程式碼相同，保持不變)
         if (!replyListContainer) return;
         replyListContainer.innerHTML = '';
 
@@ -179,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function renderRepliesRecursive(parentId, level = 0) {
             const children = repliesByParentId.get(parentId) || [];
             children.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            if (children.length === 0 && level === 0 && parentId === 'root') return; // 避免在沒有根回覆時出錯
+            if (children.length === 0 && level === 0 && parentId === 'root') return;
 
             children.forEach((reply) => {
                 const floorNumber = floorMap.get(reply.id) || '?';
@@ -223,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 replyDiv.appendChild(metaP); replyDiv.appendChild(contentDiv);
-                if (reply.image_url) {
+                if (reply.image_url) { // 這裡處理回覆的圖片顯示
                     const imageContainer = document.createElement('div'); imageContainer.style.marginTop = '8px'; imageContainer.style.marginBottom = '8px';
                     const img = document.createElement('img'); img.src = reply.image_url; img.alt = '回覆圖片'; img.style.maxWidth = '200px'; img.style.maxHeight = '150px'; img.style.borderRadius = '4px'; img.style.display = 'block'; img.style.cursor = 'pointer';
                     img.addEventListener('click', () => window.open(reply.image_url, '_blank'));
@@ -242,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 函數：獲取並填充管理員身份下拉選單 ---
     async function fetchAndPopulateIdentities() {
-        // (這部分與你之前的程式碼相同，保持不變)
         if (!identitySelect) return;
         identitySelect.disabled = true;
         identitySelect.innerHTML = '<option value="">載入中...</option>';
@@ -265,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Emoji Picker 初始化 ---
+    // --- Emoji Picker 初始化 (如果有用到) ---
     if (adminReplyEmojiTrigger && adminReplyContent && window.EmojiButton && typeof window.EmojiButton.EmojiButton === 'function') {
         try {
             const adminPicker = new EmojiButton.EmojiButton({ position: 'top-start', autoHide: true });
@@ -276,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error initializing Emoji Picker for admin reply:", e);
         }
     } else {
-        console.warn("Admin reply Emoji Picker elements not found or EmojiButton library not fully loaded.");
+        // console.warn("Admin reply Emoji Picker elements not found or EmojiButton library not fully loaded.");
     }
 
     // --- 事件監聽：點擊回覆列表中的「回覆」或「引用」按鈕 ---
@@ -303,57 +370,147 @@ document.addEventListener('DOMContentLoaded', () => {
                 let prefix = `回覆 ${targetFloor}：\n`;
                 if (isQuote) {
                     const quoteSnippet = (targetContentForQuote || '').substring(0, 50) + ((targetContentForQuote || '').length > 50 ? '...' : '');
-                    const formattedQuote = quoteSnippet.split('\n').map(line => `> ${line}`).join('\n'); // 每行都加 >
+                    const formattedQuote = quoteSnippet.split('\n').map(line => `> ${line}`).join('\n');
                     prefix = `引用 ${targetFloor}：\n${formattedQuote}\n---\n`;
                 }
                 updateAdminReplyFormLabel();
                 if (adminReplyContent) {
                     adminReplyContent.value = prefix;
                     adminReplyContent.focus();
-                    adminReplyContent.setSelectionRange(prefix.length, prefix.length); // 將光標移到前綴之後
+                    adminReplyContent.setSelectionRange(prefix.length, prefix.length);
                 }
                 adminReplyForm?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
     }
 
-    // --- 事件監聽：提交管理員回覆 ---
+    // --- 事件監聽：提交管理員回覆 (已更新處理圖片上傳) ---
     if (adminReplyForm && submitAdminReplyBtn && adminReplyStatus && identitySelect) {
         adminReplyForm.addEventListener('submit', async (e) => {
-            // (這部分與你之前的程式碼相同，保持不變)
             e.preventDefault();
             if (!currentMessageId) return;
             if (isReplyingCooldown) { adminReplyStatus.textContent = '回覆過於頻繁...'; adminReplyStatus.style.color = 'orange'; return; }
+            
             const selectedIdentityId = identitySelect.value;
             const content = adminReplyContent.value.trim();
+            // 獲取選擇的圖片檔案
+            const imageFile = adminReplyImageInput && adminReplyImageInput.files[0] ? adminReplyImageInput.files[0] : null;
+    
             if (!selectedIdentityId) { adminReplyStatus.textContent = '請選擇回覆身份！'; adminReplyStatus.style.color = 'orange'; return; }
             if (!content) { adminReplyStatus.textContent = '回覆內容不能為空！'; adminReplyStatus.style.color = 'orange'; return; }
-            submitAdminReplyBtn.disabled = true; adminReplyStatus.textContent = '正在送出...'; adminReplyStatus.style.color = 'blue'; isReplyingCooldown = true;
+    
+            submitAdminReplyBtn.disabled = true;
+            adminReplyStatus.textContent = '正在送出...';
+            adminReplyStatus.style.color = 'blue';
+            isReplyingCooldown = true;
+    
+            let uploadedImageUrl = null; // 用於儲存上傳成功後的圖片 URL
+    
+            // 步驟 1: 如果有圖片，先上傳圖片
+            if (imageFile) {
+                if (adminReplyImageUploadStatusContainer) adminReplyImageUploadStatusContainer.style.display = 'block';
+                if (adminReplyImageUploadStatus) {
+                    adminReplyImageUploadStatus.textContent = '正在上傳圖片...';
+                    adminReplyImageUploadStatus.style.color = 'blue';
+                }
+    
+                const formData = new FormData();
+                formData.append('image', imageFile); // 'image' 欄位名需要與後端 multer 設定一致
+    
+                try {
+                    // 使用你現有的安全圖片上傳端點
+                    const uploadResponse = await fetch('/api/upload', { // <--- 修改這裡
+                        method: 'POST',
+                        body: formData,
+                        // 注意：使用 FormData 時，不需要手動設定 Content-Type header，瀏覽器會自動處理
+                    });
+    
+                    const uploadData = await uploadResponse.json();
+                    if (!uploadResponse.ok || !uploadData.success) {
+                        throw new Error(uploadData.error || `圖片上傳失敗 (${uploadResponse.status})`);
+                    }
+                    uploadedImageUrl = uploadData.url; // 從後端獲取圖片 URL
+                    if (adminReplyImageUploadStatus) {
+                        adminReplyImageUploadStatus.textContent = '圖片上傳成功！';
+                        adminReplyImageUploadStatus.style.color = 'green';
+                    }
+                    // 短暫顯示成功訊息後隱藏
+                    setTimeout(() => {
+                        if(adminReplyImageUploadStatusContainer) adminReplyImageUploadStatusContainer.style.display = 'none';
+                    }, 2000);
+    
+                } catch (uploadError) {
+                    console.error('圖片上傳失敗:', uploadError);
+                    adminReplyStatus.textContent = `圖片上傳失敗：${uploadError.message}`;
+                    adminReplyStatus.style.color = 'red';
+                    if (adminReplyImageUploadStatus) {
+                        adminReplyImageUploadStatus.textContent = `圖片上傳失敗：${uploadError.message}`;
+                        adminReplyImageUploadStatus.style.color = 'red';
+                    }
+                    submitAdminReplyBtn.disabled = false;
+                    // 稍微縮短冷卻時間，讓使用者可以重試
+                    setTimeout(() => { isReplyingCooldown = false; }, 1000); 
+                    return; // 圖片上傳失敗，終止後續操作
+                }
+            } else {
+                // 如果沒有圖片，確保上傳狀態區域是隱藏的
+                if(adminReplyImageUploadStatusContainer) adminReplyImageUploadStatusContainer.style.display = 'none';
+                if(adminReplyImageUploadStatus) adminReplyImageUploadStatus.textContent = '';
+            }
+    
+            // 步驟 2: 送出回覆 (包含圖片 URL，如果有的話)
             try {
+                const replyPayload = {
+                    message_id: currentMessageId,
+                    parent_reply_id: currentAdminParentReplyId,
+                    content: content,
+                    admin_identity_id: selectedIdentityId,
+                };
+                if (uploadedImageUrl) {
+                    replyPayload.image_url = uploadedImageUrl; // 將圖片 URL 加入 payload
+                }
+    
                 const response = await fetch('/api/admin/guestbook/replies', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message_id: currentMessageId, parent_reply_id: currentAdminParentReplyId, content: content, admin_identity_id: selectedIdentityId }),
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(replyPayload),
                 });
                 const responseData = await response.json();
                 if (!response.ok) throw new Error(responseData.error || `HTTP 錯誤 ${response.status}`);
-                adminReplyStatus.textContent = '管理員回覆成功！'; adminReplyStatus.style.color = 'green'; adminReplyForm.reset(); identitySelect.value = ""; currentAdminParentReplyId = null; updateAdminReplyFormLabel(); fetchAdminMessageDetail(currentMessageId);
+    
+                adminReplyStatus.textContent = '管理員回覆成功！';
+                adminReplyStatus.style.color = 'green';
+                adminReplyForm.reset(); // 重設整個表單
+                identitySelect.value = ""; // 確保身份選擇也被重設
+                currentAdminParentReplyId = null;
+                updateAdminReplyFormLabel();
+                if (adminReplyImageInput) adminReplyImageInput.value = ''; // 清除圖片選擇
+                updateAdminReplyImagePreview(); // 清除預覽
+                if(adminReplyImageUploadStatusContainer) adminReplyImageUploadStatusContainer.style.display = 'none'; // 隱藏圖片上傳狀態
+    
+                fetchAdminMessageDetail(currentMessageId); // 重新載入留言和回覆
                 setTimeout(() => { adminReplyStatus.textContent = ''; }, 3000);
+    
             } catch (error) {
-                console.error('管理員回覆失敗:', error); adminReplyStatus.textContent = `回覆失敗：${error.message}`; adminReplyStatus.style.color = 'red';
+                console.error('管理員回覆失敗:', error);
+                adminReplyStatus.textContent = `回覆失敗：${error.message}`;
+                adminReplyStatus.style.color = 'red';
             } finally {
-                submitAdminReplyBtn.disabled = false; setTimeout(() => { isReplyingCooldown = false; }, 15000);
+                submitAdminReplyBtn.disabled = false;
+                setTimeout(() => { isReplyingCooldown = false; }, 15000); // 正常冷卻時間
             }
         });
     }
 
-    // --- ★★★ 修改後的「取得 AI 回覆建議」按鈕事件監聽 ★★★ ---
+
+    // --- 「取得 AI 回覆建議」按鈕事件監聽 (保持不變) ---
     if (getAiReplyBtn && adminReplyContent) {
         getAiReplyBtn.addEventListener('click', async () => {
             if (!currentMessageId) {
                 alert('錯誤：尚未載入留言詳情，無法提供 AI 建議。');
                 return;
             }
-            if (!mainMessageData) { // 確保主留言數據已載入
+            if (!mainMessageData) {
                 alert('錯誤：主留言資料尚未載入，請稍候再試。');
                 return;
             }
@@ -361,30 +518,24 @@ document.addEventListener('DOMContentLoaded', () => {
             getAiReplyBtn.textContent = 'AI 思考中...';
             getAiReplyBtn.disabled = true;
 
-            // 1. 獲取主留言作者和內容
             const mainAuthor = mainMessageData.author_name || "某用戶";
             const mainContent = mainMessageData.content || "";
-
-            // 2. 獲取被引用的回覆內容 (如果 currentAdminParentReplyId 有值)
             let quotedContentText = null;
-            let targetForAiReplyText = mainContent; // 預設 AI 針對主留言回覆
+            let targetForAiReplyText = mainContent;
 
             if (currentAdminParentReplyId) {
                 const targetReplyDiv = document.querySelector(`.reply-item[data-reply-id="${currentAdminParentReplyId}"]`);
                 const targetReplyContentElement = targetReplyDiv ? targetReplyDiv.querySelector('.reply-content') : null;
                 if (targetReplyContentElement) {
                     quotedContentText = targetReplyContentElement.textContent.trim();
-                    targetForAiReplyText = quotedContentText; // AI 針對這則引用的回覆
+                    targetForAiReplyText = quotedContentText;
                 } else {
                     console.warn(`AI建議：找不到 ID 為 ${currentAdminParentReplyId} 的引用回覆內容，將以主留言為目標。`);
-                    // targetForAiReplyText 保持為 mainContent
                 }
             }
 
-            // 3. 獲取管理員回覆框中已有的草稿
-            //    去除可能由「引用」或「回覆」功能添加的固定前綴
             let currentDraftText = adminReplyContent.value.trim();
-            if (currentAdminParentReplyId) { // 只有在回覆子留言時才嘗試去除前綴
+            if (currentAdminParentReplyId) {
                 const targetReplyDiv = document.querySelector(`.reply-item[data-reply-id="${currentAdminParentReplyId}"]`);
                 const floor = targetReplyDiv ? targetReplyDiv.dataset.floor : `ID ${currentAdminParentReplyId}`;
                 const replyPrefix = `回覆 ${floor}：\n`;
@@ -397,7 +548,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-
             console.log("AI 建議請求上下文:", {
                 mainMessageAuthor: mainAuthor,
                 mainMessageContent: mainContent.substring(0,100)+"...",
@@ -406,7 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetCommentForReply: targetForAiReplyText.substring(0,100)+"..."
             });
 
-
             try {
                 const response = await fetch('/api/generate-guestbook-reply', {
                     method: 'POST',
@@ -414,8 +563,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         mainMessageAuthor: mainAuthor,
                         mainMessageContent: mainContent,
-                        quotedReplyContent: quotedContentText, // 可能為 null
-                        currentReplyDraft: currentDraftText,   // 可能為空字串
+                        quotedReplyContent: quotedContentText,
+                        currentReplyDraft: currentDraftText,
                         targetCommentForReply: targetForAiReplyText
                     })
                 });
@@ -428,10 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const data = await response.json();
                 const suggestedReply = data.suggestedReply;
-
-                // 智慧地填充到 adminReplyContent
                 let prefixToKeep = "";
-                if (currentAdminParentReplyId) { // 只有在回覆子留言時才保留前綴
+                if (currentAdminParentReplyId) {
                     const targetReplyDiv = document.querySelector(`.reply-item[data-reply-id="${currentAdminParentReplyId}"]`);
                     const floor = targetReplyDiv ? targetReplyDiv.dataset.floor : `ID ${currentAdminParentReplyId}`;
                      if (adminReplyContent.value.trim().startsWith(`引用 ${floor}：`)) {
@@ -446,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 adminReplyContent.selectionStart = adminReplyContent.value.length;
                 adminReplyContent.selectionEnd = adminReplyContent.value.length;
 
-
             } catch (error) {
                 console.error('取得 AI 回覆失敗:', error);
                 alert(`取得 AI 回覆建議失敗：${error.message}`);
@@ -458,11 +604,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 事件委派：處理主留言和回覆列表中的按鈕點擊 (顯隱、刪除、解除檢舉) ---
+    // (這部分保持不變)
     document.body.addEventListener('click', async (event) => {
         const target = event.target;
 
         if (target.matches('.toggle-visibility-btn')) {
-            // (這部分與你之前的程式碼相同，保持不變)
             const id = target.dataset.id; const type = target.dataset.type; const targetVisibility = target.dataset.targetVisibility === 'true';
             const endpoint = type === 'message' ? `/api/admin/guestbook/messages/${id}/visibility` : `/api/admin/guestbook/replies/${id}/visibility`;
             target.disabled = true;
@@ -472,7 +618,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchAdminMessageDetail(currentMessageId);
             } catch (error) { console.error(`切換 ${type} ${id} 可見度失敗:`, error); alert(`操作失敗：${error.message}`); target.disabled = false; }
         } else if (target.matches('.delete-item-btn')) {
-            // (這部分與你之前的程式碼相同，保持不變)
             const id = target.dataset.id; const type = target.dataset.type; const name = target.dataset.name || `項目 #${id}`; const itemTypeText = type === 'message' ? '留言' : '回覆';
             if (confirm(`確定要刪除這個 ${itemTypeText} (${name}) 嗎？\n(如果是留言，其下的所有回覆也會被刪除)`)) {
                 const endpoint = type === 'message' ? `/api/admin/guestbook/messages/${id}` : `/api/admin/guestbook/replies/${id}`;
@@ -485,7 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) { console.error(`刪除 ${type} ${id} 失敗:`, error); alert(`刪除失敗：${error.message}`); target.disabled = false; }
             }
         } else if (target.matches('.unreport-reply-btn')) {
-            // (這部分與你之前的程式碼相同，保持不變)
             const replyId = target.dataset.replyId; if (!replyId) { console.error('解除檢舉按鈕缺少 replyId'); alert('操作失敗：缺少回覆 ID。'); return; }
             if (confirm(`確定要解除對此回覆 (ID: ${replyId}) 的檢舉嗎？\n這會將其標記為未檢舉且設為可見。`)) {
                 target.disabled = true; const endpoint = `/api/admin/guestbook/replies/${replyId}/status`; const body = { is_reported: false, is_visible: true };
@@ -498,15 +642,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 輔助函數：創建帶標籤的段落 ---
+    // --- 輔助函數 ---
     function createParagraphWithLabel(label, textContent) {
         const p = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = label; p.appendChild(strong); p.appendChild(document.createTextNode(textContent || '')); return p;
     }
-    // --- 輔助函數：添加時間戳 Span ---
     function addTimestamp(parentElement, textContent) {
         const span = document.createElement('span'); span.className = 'timestamp'; span.textContent = textContent || ''; parentElement.appendChild(document.createTextNode(' ')); parentElement.appendChild(span);
     }
-    // --- 輔助函數：在光標處插入文本 ---
     function insertTextAtCursor(textarea, text) {
         if (!textarea) return; const start = textarea.selectionStart; const end = textarea.selectionEnd; const value = textarea.value; textarea.value = value.substring(0, start) + text + value.substring(end); textarea.selectionStart = textarea.selectionEnd = start + text.length; textarea.focus();
     }
@@ -514,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 頁面初始載入 ---
     currentMessageId = getMessageIdFromUrl();
     if (currentMessageId) {
-        fetchAdminMessageDetail(currentMessageId); // 會在這裡緩存 mainMessageData
+        fetchAdminMessageDetail(currentMessageId);
         fetchAndPopulateIdentities();
         updateAdminReplyFormLabel();
     } else {

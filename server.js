@@ -7258,28 +7258,72 @@ adminRouter.get('/guestbook/message/:id', async (req, res) => {
         res.json({ message: messageResult.rows[0], replies: repliesResult.rows });
     } catch (err) { console.error(`[API GET /admin/guestbook/message/${id}] Error:`, err); res.status(500).json({ error: '無法獲取留言詳情' }); } finally { client.release(); }
 });
+
+
 adminRouter.post('/guestbook/replies', async (req, res) => {
-    const { message_id, parent_reply_id, content, admin_identity_id } = req.body;
+    // 從請求 body 中獲取 image_url
+    const { message_id, parent_reply_id, content, admin_identity_id, image_url } = req.body; 
     const messageIdInt = parseInt(message_id, 10);
     const identityIdInt = parseInt(admin_identity_id, 10);
     const parentIdInt = parent_reply_id ? parseInt(parent_reply_id, 10) : null;
+    // 驗證 image_url (如果是提供的)
+    const imageUrlToSave = (image_url && typeof image_url === 'string' && image_url.trim() !== '') ? image_url.trim() : null;
 
-    if (isNaN(messageIdInt) || isNaN(identityIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) return res.status(400).json({ error: '無效的留言/父回覆/身份 ID' });
-    if (!content || content.trim() === '') return res.status(400).json({ error: '回覆內容不能為空' });
+    if (isNaN(messageIdInt) || isNaN(identityIdInt) || (parentIdInt !== null && isNaN(parentIdInt))) {
+        return res.status(400).json({ error: '無效的留言/父回覆/身份 ID' });
+    }
+    if (!content || content.trim() === '') {
+        return res.status(400).json({ error: '回覆內容不能為空' });
+    }
 
-    const client = await pool.connect(); try { await client.query('BEGIN');
-        const identityCheck = await client.query('SELECT 1 FROM admin_identities WHERE id = $1', [identityIdInt]);
-        if (identityCheck.rowCount === 0) { await client.query('ROLLBACK'); return res.status(400).json({ error: '無效的管理員身份' }); }
+    const client = await pool.connect(); 
+    try { 
+        await client.query('BEGIN');
+        // 獲取管理員身份的名稱，用於 author_name
+        const identityCheck = await client.query('SELECT name FROM admin_identities WHERE id = $1', [identityIdInt]);
+        if (identityCheck.rowCount === 0) { 
+            await client.query('ROLLBACK'); 
+            return res.status(400).json({ error: '無效的管理員身份' }); 
+        }
+        const adminAuthorName = identityCheck.rows[0].name; // 使用管理員身份的名稱作為作者
 
+        // 插入回覆，包含 author_name 和 image_url
         const replyResult = await client.query(
-            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, is_visible, like_count)
-             VALUES ($1, $2, '匿名', $3, TRUE, $4, TRUE, 0)
-             RETURNING *, (SELECT name FROM admin_identities WHERE id = $4) AS admin_identity_name`,
-            [messageIdInt, parentIdInt, content.trim(), identityIdInt]
+            `INSERT INTO guestbook_replies (message_id, parent_reply_id, author_name, content, is_admin_reply, admin_identity_id, image_url, is_visible, like_count)
+             VALUES ($1, $2, $3, $4, TRUE, $5, $6, TRUE, 0)
+             RETURNING *, (SELECT name FROM admin_identities WHERE id = $5) AS admin_identity_name, image_url`, // 確保返回 image_url
+            [messageIdInt, parentIdInt, adminAuthorName, content.trim(), identityIdInt, imageUrlToSave] // 傳入 adminAuthorName 和 imageUrlToSave
         );
-        await client.query('COMMIT'); res.status(201).json(replyResult.rows[0]);
-    } catch (err) { await client.query('ROLLBACK'); console.error('[API POST /admin/guestbook/replies] Error:', err); if (err.code === '23503') return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' }); res.status(500).json({ error: '無法新增管理員回覆' }); } finally { client.release(); }
+        
+        // 更新主留言的 reply_count 和 last_activity_at
+        await client.query(
+            'UPDATE guestbook_messages SET last_activity_at = NOW(), reply_count = reply_count + 1 WHERE id = $1',
+            [messageIdInt]
+        );
+
+        await client.query('COMMIT'); 
+        res.status(201).json(replyResult.rows[0]); // 返回新增的回覆
+    } catch (err) { 
+        await client.query('ROLLBACK'); 
+        console.error('[API POST /admin/guestbook/replies] Error:', err); 
+        // 更細緻的錯誤判斷
+        if (err.code === '23503') { // 外鍵約束失敗
+            if (err.constraint && (err.constraint.includes('message_id_fkey') || err.constraint.includes('parent_reply_id_fkey'))) {
+                 return res.status(404).json({ error: '找不到要回覆的留言或父回覆。' });
+            }
+            if (err.constraint && err.constraint.includes('admin_identity_id_fkey')) {
+                return res.status(400).json({ error: '指定的管理員身份無效。'});
+            }
+        }
+        res.status(500).json({ error: '無法新增管理員回覆' }); 
+    } finally { 
+        client.release(); 
+    }
 });
+
+
+
+
 adminRouter.put('/guestbook/messages/:id/visibility', async (req, res) => {
     const { id } = req.params; const messageId = parseInt(id, 10); const { is_visible } = req.body; if (isNaN(messageId) || typeof is_visible !== 'boolean') return res.status(400).json({ error: '無效的請求參數' });
     try { const result = await pool.query('UPDATE guestbook_messages SET is_visible = $1 WHERE id = $2 RETURNING id, is_visible', [is_visible, messageId]); if (result.rowCount === 0) return res.status(404).json({ error: '找不到留言' }); res.json(result.rows[0]);
