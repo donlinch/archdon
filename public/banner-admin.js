@@ -83,12 +83,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 獲取位置顯示名稱
     const getLocationDisplayName = (locationKey) => {
-        switch(locationKey) {
-            case 'home': return '首頁';
-            case 'music': return '音樂頁';
-            case 'news': return '最新消息頁';
-            default: return locationKey || '未知';
-        }
+        const locationMap = {
+            'home': '首頁',
+            'music': '音樂頁',
+            'news': '最新消息頁',
+            'advertisement': '廣告頁',  // 新增
+            'warehouse': '倉庫頁'       // 新增
+        };
+        return locationMap[locationKey] || locationKey;
     };
 
     // 獲取元素類型顯示名稱
@@ -154,6 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 home: [],
                 music: [],
                 news: [],
+                advertisement: [],  // 新增
+                warehouse: [],      // 新增
                 other: [] // 用於存放 page_location 為 null 或其他未知值的 banner
             };
 
@@ -169,6 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'news':
                         groupedBanners.news.push(banner);
                         break;
+                    case 'advertisement':  // 新增
+                        groupedBanners.advertisement.push(banner);
+                        break;
+                    case 'warehouse':      // 新增
+                        groupedBanners.warehouse.push(banner);
+                        break;
                     default:
                         groupedBanners.other.push(banner);
                         break;
@@ -180,6 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
             groupedBanners.home.sort(sortFn);
             groupedBanners.music.sort(sortFn);
             groupedBanners.news.sort(sortFn);
+            groupedBanners.advertisement.sort(sortFn);  // 新增
+            groupedBanners.warehouse.sort(sortFn);          // 新增
             groupedBanners.other.sort(sortFn); // 其他組也排序
 
             // --- **開始渲染分組後的列表** ---
@@ -224,6 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderGroup('首頁 (Home)', groupedBanners.home);
             renderGroup('音樂頁 (Music)', groupedBanners.music);
             renderGroup('最新消息頁 (News)', groupedBanners.news);
+            renderGroup('廣告頁 (Advertisement)', groupedBanners.advertisement);  // 新增
+            renderGroup('倉庫頁 (Warehouse)', groupedBanners.warehouse);          // 新增
 
             // (可選) 如果需要顯示未分類的 Banner
             if (groupedBanners.other.length > 0) {
