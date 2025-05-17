@@ -6753,6 +6753,23 @@ app.post('/api/news/:id/like', async (req, res) => {
 
 
 
+// --- 分類 API (非管理，用於前台展示) ---
+app.get('/api/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order 
+            FROM news_categories 
+            WHERE is_active = TRUE
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('獲取新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+
 
 
 
@@ -8767,23 +8784,6 @@ console.log('註冊路由: /api/news-categories');
 
 
 
-
-
-// --- 分類 API (非管理，用於前台展示) ---
-app.get('/api/news-categories', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT id, name, slug, description, display_order 
-            FROM news_categories 
-            WHERE is_active = TRUE
-            ORDER BY display_order ASC, name ASC
-        `);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error('獲取新聞分類時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
 // --- 分類管理 API (需要身份驗證) ---
 adminRouter.get('/news-categories', async (req, res) => {
