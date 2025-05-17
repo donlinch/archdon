@@ -58,36 +58,108 @@
   margin-top: 0.5em;
 }
 
+/* 分類標籤樣式 - 从 news.html 复制 */
+.category-tabs {
+    display: flex;
+    justify-content: center;
+    padding: 12px 16px;
+    background-color: rgba(255, 255, 255, 0.95);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.category-tabs a, .category-tabs button {
+    padding: 8px 16px;
+    margin: 0 6px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    background-color: #f0f0f0; /* 默認淺灰色背景 */
+    color: #666;
+}
+
+.category-tabs a:hover, .category-tabs button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    opacity: 0.9;
+}
+
+/* 分類標籤顏色 */
+.category-tabs a.category-index-all.active {
+    background-color: #9575CD; /* 紫色 - 全部消息 */
+    color: white;
+}
+
+.category-tabs a.category-index-0.active {
+    background-color: #4DB6AC; /* 青綠色 - 順序 1 */
+    color: white;
+}
+
+.category-tabs a.category-index-1.active {
+    background-color: #FFB74D; /* 橙色 - 順序 2 */
+    color: white;
+}
+
+.category-tabs a.category-index-2.active {
+    background-color: #7986CB; /* 藍色 - 順序 3 */
+    color: white;
+}
+
+.category-tabs a.category-index-3.active {
+    background-color: #F06292; /* 粉紅色 - 順序 4 */
+    color: white;
+}
+
+/* 順序 5 及以後的分類，或未匹配的 active 標籤，使用灰色 */
+.category-tabs a.active:not(.category-index-all):not(.category-index-0):not(.category-index-1):not(.category-index-2):not(.category-index-3) {
+    background-color: #B0BEC5; /* 灰色 */
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 保持陰影 */
+}
+/* 確保特定索引的顏色優先級更高 */
+.category-tabs a.category-index-all.active,
+.category-tabs a.category-index-0.active,
+.category-tabs a.category-index-1.active,
+.category-tabs a.category-index-2.active,
+.category-tabs a.category-index-3.active {
+     box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 添加陰影 */
+}
+
 </style>
 
 </head>
 <body>
     <main>
-       
+       <!-- 分類導航 - 从 news.html 复制 -->
+       <div id="category-tabs" class="category-tabs">
+           <!-- Category links/buttons will be dynamically inserted here by news-share.js -->
+           <a href="#" class="active">載入中...</a> <!-- Placeholder -->
+       </div>
 
+       <div id="news-detail-modal" class="modal" style="display: flex; position: static; background: none; box-shadow: none; height: auto; min-height: 100vh; align-items: flex-start; justify-content: center;">
+           <div class="modal-content" style="box-shadow: none; max-width: 800px; width: 100%; margin: 40px auto;">
+               <div class="modal-body">
+                   <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
+                   <img id="detail-image" src="" alt="消息圖片" style="display: none;">
+                   <h2 id="detail-title" class="modal-title"></h2>
+                   <div id="detail-meta" class="modal-meta"></div>
+                   <div id="detail-body" class="modal-content-text"></div>
+                   <div id="news-share-link" class="news-share-link">
+                       <a href="#" target="_blank">https://sunnyyummy.onrender.com/news/<span class="news-id"></span></a>
+                   </div>
+               </div>
+           </div>
+       </div>
 
-
-
-                <div id="news-detail-modal" class="modal" style="display: flex; position: static; background: none; box-shadow: none; height: auto; min-height: 100vh; align-items: flex-start; justify-content: center;">
-                    <div class="modal-content" style="box-shadow: none; max-width: 800px; width: 100%; margin: 40px auto;">
-                        <div class="modal-body">
-                            <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>                           <img id="detail-image" src="" alt="消息圖片" style="display: none;">
-                            <h2 id="detail-title" class="modal-title"></h2>
-                            <div id="detail-meta" class="modal-meta"></div>
-                            <div id="detail-body" class="modal-content-text"></div>
-                            <div id="news-share-link" class="news-share-link">
-                                <a href="#" target="_blank">https://sunnyyummy.onrender.com/news/<span class="news-id"></span></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-
-
-            </div>
-        </article>
     </main>
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="/news-share.js"></script>
 </body>
-</html> 
+</html>

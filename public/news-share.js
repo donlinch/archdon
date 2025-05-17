@@ -1,20 +1,19 @@
-// public/news-share.js
+// news-share.js
 // 這個檔案用於 news-share.html，支援 ?id= 參數顯示新聞詳情
 
 document.addEventListener('DOMContentLoaded', async () => {
     const contentArea = document.getElementById('news-content-area');
     const detailImage = document.getElementById('detail-image');
-   
+    const detailTitle = document.getElementById('detail-title');
+    const detailMeta = document.getElementById('detail-meta');
+    const detailBody = document.getElementById('detail-body');
     const loadingMessage = document.getElementById('loading-message');
-
-
-    const detailTitleElement = document.getElementById('detail-title');  // 而不是 'news-detail-title'
-    const detailMeta = document.getElementById('detail-meta');          // 而不是 'news-detail-meta'
-    const detailBody = document.getElementById('detail-body');  
-
-
+    const categoryTabs = document.getElementById('category-tabs');
 
     console.log('loadingMessage:', loadingMessage);
+
+    // 用於存儲 category.id -> index 的映射
+    let categoryIndexMap = {}; 
 
     // --- 取得 ?id= 參數 ---
     function getNewsIdFromQuery() {
@@ -22,6 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return parseInt(params.get('id'));
     }
     const newsId = getNewsIdFromQuery();
+
+    // --- 加載分類標籤 ---
+    loadCategories();
 
     // --- ID 無效處理 ---
     if (isNaN(newsId)) {
@@ -53,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             detailImage.alt = newsItem.title || '新聞圖片';
             detailImage.style.display = 'block';
         }
-        detailTitleElement.textContent = newsItem.title || '無標題';
+        detailTitle.textContent = newsItem.title || '無標題';
         let metaText = '';
         if (newsItem.event_date) metaText += `活動日期: ${new Date(newsItem.event_date).toLocaleDateString('zh-TW')} | `;
         metaText += `更新時間: ${new Date(newsItem.updated_at).toLocaleString('zh-TW')}`;
@@ -117,4 +119,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert(`載入新聞詳情失敗：${error.message}`);
         }
     }
-}); 
+
+    // --- 加載分類標籤 ---
+    async function loadCategories() {
+        categoryIndexMap = {}; // 重置映射
+        try {
+            const response = await fetch('/api/news-categories'); // API應按所需順序返回分類
+            if (!response.ok) throw new Error('API請求失敗');
+            const categories = await response.json();
+
+            if (Array.isArray(categories) && categories.length > 0) {
+                const validCategories = categories.filter(cat => cat && cat.id && cat.name);
+                // 建立索引映射
+                validCategories.forEach((category, index) => {
+                    categoryIndexMap[category.id] = index; 
+                });
+                renderCategories(validCategories); 
+            } else {
+                console.warn('API返回的分類數據無效或為空，使用備用分類');
+                useBackupCategories(); 
+            }
+        } catch (error) {
+            console.error('加載分類失敗:', error);
+            useBackupCategories(); 
+        }
+    }
+
+    // 使用備用分類
+    function useBackupCategories() {
+         const backupCats = [
+            { id: 1, name: '最新消息', slug: 'latest' },
+            { id: 2, name: '活動預告', slug: 'events' },
+            { id: 3, name: '媒體報導', slug: 'media' },
+            { id: 4, name: '合作推廣', slug: 'cooperation' }
+         ];
+         categoryIndexMap = {}; // 重置
+         backupCats.forEach((category, index) => {
+            categoryIndexMap[category.id] = index;
+         });
+         renderCategories(backupCats);
+    }
+
+    // 渲染分類標籤
+    function renderCategories(categories) {
+        if (!categoryTabs) return;
+        categoryTabs.innerHTML = '';
+
+        const allLink = document.createElement('a');
+        allLink.className = 'category-link active category-index-all'; // "全部" 的 class
+        allLink.setAttribute('data-category', 'all');
+        allLink.href = '/news.html';
+        allLink.textContent = '全部消息';
+        categoryTabs.appendChild(allLink);
+
+        categories.forEach(category => {
+            const categoryIndex = categoryIndexMap[category.id]; // 獲取索引
+            if (categoryIndex === undefined) return; // 如果映射中沒有，跳過
+
+            const link = document.createElement('a');
+            link.className = `category-link category-index-${categoryIndex}`; // 基於索引的 class
+            link.setAttribute('data-category', category.id); 
+            link.href = `/news.html?category=${category.id}`;
+            link.textContent = category.name;
+            categoryTabs.appendChild(link);
+        });
+    }
+});
