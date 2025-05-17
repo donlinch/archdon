@@ -19,6 +19,8 @@
 body {
   margin: 0;
   padding: 0;
+  padding-bottom: 70px; /* 為底部導航留出空間 */
+
   font-family: 'Noto Sans TC', sans-serif;
 }
 
@@ -215,6 +217,36 @@ body {
     box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
 
+/* 分享連結樣式優化 */
+.news-share-link .copy-link {
+    position: relative;
+    cursor: copy; /* 顯示複製游標 */
+    transition: all 0.3s ease;
+}
+
+.news-share-link .copy-link:hover {
+    background-color: #E6E6FA; /* 淡紫色提示可點擊 */
+}
+
+.news-share-link .copy-link::after {
+    content: '已複製！';
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.news-share-link .copy-link.copied::after {
+    opacity: 1;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .modal-title {
@@ -233,6 +265,10 @@ body {
         font-size: 13px;
     }
 }
+
+
+
+
 
 
         /* --- 底部導航 --- */
@@ -320,7 +356,7 @@ body {
                    <div id="detail-meta" class="modal-meta"></div>
                    <div id="detail-body" class="modal-content-text"></div>
                    <div id="news-share-link" class="news-share-link">
-                       <a href="#" target="_blank">分享此網站：<span class="share-url">https://sunnyyummy.onrender.com/news-share.html?id=</span><span class="news-id"></span></a>
+                       <a href="#" id="share-link-copy" class="copy-link" title="點擊複製連結">分享此網站：<span class="share-url">https://sunnyyummy.onrender.com/news-share.html?id=</span><span class="news-id"></span></a>
                    </div>
                </div>
            </div>
