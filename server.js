@@ -799,7 +799,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
+app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -837,7 +837,7 @@ app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -887,7 +887,7 @@ app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -910,7 +910,7 @@ app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) => {
     try {
         const updates = req.body;
         
@@ -1045,7 +1045,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', async (req, res) => {
+app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -1083,7 +1083,7 @@ app.post('/api/admin/nav-links', async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', async (req, res) => {
+app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -1133,7 +1133,7 @@ app.put('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', async (req, res) => {
+app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -7203,7 +7203,7 @@ adminRouter.get('/guestbook', async (req, res) => {
             SELECT m.id, m.author_name,
                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible,
-                   m.is_reported, m.can_be_reported -- 新增 is_reported 和 can_be_reported
+                   m.is_reported, m.can_be_reported
             FROM guestbook_messages m
             ${whereSql} ${orderByClause}
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
