@@ -3,7 +3,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     const contentArea = document.getElementById('news-content-area');
-    const detailImage = document.getElementById('news-detail-image');
+    const detailImage = document.getElementById('detail-image');
     const detailTitleElement = document.getElementById('news-detail-title');
     const detailMeta = document.getElementById('news-detail-meta');
     const detailBody = document.getElementById('news-detail-body');
