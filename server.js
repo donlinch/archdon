@@ -795,7 +795,7 @@ app.use('/api/voit', voitRouter);
 
 
 
-
+/*
 document.addEventListener('DOMContentLoaded', () => {
     // 以下是需要修改的地方 - fetch、post、put、delete 請求
 
@@ -944,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
+*/
 
 
 
