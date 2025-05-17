@@ -319,10 +319,11 @@ body {
 }
 
 .product-card .card-img-top {
-    height: 150px; /* Reduced from 160px for mobile */
-    object-fit: cover; /* Use 'cover' for better filling */
-    transition: transform 0.5s ease;
-    width: 100%; /* Ensure image takes full width */
+    height: 150px; /* 或你想要的高度 */
+    object-fit: contain;
+    background: #fff; /* 可選，讓左右空白是白色 */
+    width: 100%;
+    display: block;
 }
 
 .product-card:hover .card-img-top {
