@@ -63,15 +63,29 @@
 </head>
 <body>
     <main>
-        <article id="news-content-area">
-            <div class="news-detail-container">
-                <div class="news-detail-text-content">
-                    <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
-                    <img src="" alt="" id="news-detail-image" style="display: none;">
-                    <h1 id="news-detail-title"></h1>
-                    <div class="modal-meta" id="news-detail-meta"></div>
-                    <div class="modal-content-text" id="news-detail-body"></div>
+       
+
+
+
+
+                <div id="news-detail-modal" class="modal" style="display: flex; position: static; background: none; box-shadow: none; height: auto; min-height: 100vh; align-items: flex-start; justify-content: center;">
+                    <div class="modal-content" style="box-shadow: none; max-width: 800px; width: 100%; margin: 40px auto;">
+                        <div class="modal-body">
+                            <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
+                            <img id="detail-image" src="" alt="消息圖片" style="display: none;">
+                            <h2 id="detail-title" class="modal-title"></h2>
+                            <div id="detail-meta" class="modal-meta"></div>
+                            <div id="detail-body" class="modal-content-text"></div>
+                            <div id="news-share-link" class="news-share-link">
+                                <a href="#" target="_blank">https://sunnyyummy.onrender.com/news/<span class="news-id"></span></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+
+
+
             </div>
         </article>
     </main>
