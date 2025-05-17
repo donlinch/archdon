@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.title = `${newsItem.title || 'SunnyYummy 新聞'} | SunnyYummy 新聞分享`;
     } catch (error) {
         console.error("載入新聞詳情失敗:", error);
-        if (loadingMessage) {
+        if (typeof loadingMessage !== 'undefined' && loadingMessage !== null) {
             loadingMessage.textContent = `錯誤：${error.message}`;
             loadingMessage.style.color = 'red';
         }
