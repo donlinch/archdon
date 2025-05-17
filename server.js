@@ -662,25 +662,7 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
 
 
 
-
-
-
-app.get('/api/news-categories', async (req, res) => {
-    try {
-        console.log('收到分類請求');  // 添加日誌
-        const result = await pool.query(`
-            SELECT id, name, slug, description, display_order 
-            FROM news_categories 
-            WHERE is_active = TRUE
-            ORDER BY display_order ASC, name ASC
-        `);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error('獲取新聞分類時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-
+ 
    
    
 // --- 基本 Express 設定 ---
