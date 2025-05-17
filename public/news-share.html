@@ -42,7 +42,7 @@
   line-height: 1.7;
 }
 
-.news-detail-text-content img {
+.news-detail-text-content img, #detail-image {
   display: block;
   margin: 1.5em auto;
   max-width: 100%;
@@ -91,14 +91,25 @@
     opacity: 0.9;
 }
 
+/* 定义图片容器样式 */
+.image-container {
+  text-align: center;
+  margin: 1em 0;
+  width: 100%;
+}
+
+.image-container img {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 12px;
+  margin: 0 auto;
+  display: block;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
 /* 分類標籤顏色 */
 .category-tabs a.category-index-all.active {
     background-color: #9575CD; /* 紫色 - 全部消息 */
-    color: white;
-}
-
-.category-tabs a.category-index-0.active {
-    background-color: #4DB6AC; /* 青綠色 - 順序 1 */
     color: white;
 }
 
@@ -147,7 +158,9 @@
            <div class="modal-content" style="box-shadow: none; max-width: 800px; width: 100%; margin: 40px auto;">
                <div class="modal-body">
                    <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
-                   <img id="detail-image" src="" alt="消息圖片" style="display: none;">
+                   <div class="image-container">
+                       <img id="detail-image" src="" alt="消息圖片" style="display: none;">
+                   </div>
                    <h2 id="detail-title" class="modal-title"></h2>
                    <div id="detail-meta" class="modal-meta"></div>
                    <div id="detail-body" class="modal-content-text"></div>
