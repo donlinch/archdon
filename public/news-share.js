@@ -18,8 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- ID 無效處理 ---
     if (isNaN(newsId)) {
-        loadingMessage.textContent = '錯誤：網址缺少 ?id= 參數或格式錯誤。';
-        loadingMessage.style.color = 'red';
+        if (loadingMessage) {
+            loadingMessage.textContent = '錯誤：網址缺少 ?id= 參數或格式錯誤。';
+            loadingMessage.style.color = 'red';
+        }
         return;
     }
 
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newsItem = await response.json();
 
         // 隱藏載入訊息
-        loadingMessage.style.display = 'none';
+        if (loadingMessage) loadingMessage.style.display = 'none';
 
         // --- 填充基本內容 ---
         if (newsItem.image_url) {
@@ -98,7 +100,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.title = `${newsItem.title || 'SunnyYummy 新聞'} | SunnyYummy 新聞分享`;
     } catch (error) {
         console.error("載入新聞詳情失敗:", error);
-        loadingMessage.textContent = `錯誤：${error.message}`;
-        loadingMessage.style.color = 'red';
+        if (loadingMessage) {
+            loadingMessage.textContent = `錯誤：${error.message}`;
+            loadingMessage.style.color = 'red';
+        }
     }
 }); 
