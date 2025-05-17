@@ -680,13 +680,15 @@ body {
         gap: 12px;
         padding: 16px;
     }
-    /* Adjusted card image height for mobile */
     .product-card .card-img-top {
-        height: 180px; /* Even smaller on phones */
+        height: 180px;
+        object-fit: contain;
+        background: #fff;
+        width: 100%;
+        display: block;
     }
-    /* Match container height to image */
     .product-card .position-relative {
-        height: 130px;
+        height: 180px;
     }
     .desktop-footer {
         display: block;
