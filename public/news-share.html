@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -19,17 +16,10 @@
     <meta property="og:url" content="https://sunnyyummy.onrender.com/news-share.html" />
 <style>
 /* 統一新聞詳情內容樣式 */
-.news-detail-container {
-  background: #fff;
-  border-radius: 16px;
-  max-width: 800px;
-  margin: 32px auto;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
-  padding: 32px 24px;
-}
-
-.news-detail-text-content {
+body {
+  margin: 0;
   padding: 0;
+  font-family: 'Noto Sans TC', sans-serif;
 }
 
 .news-detail-text-content h1,
@@ -47,9 +37,9 @@
 
 .news-detail-text-content img, #detail-image {
   display: block;
-  margin: 1.5em auto;
+  width: 100%;
   max-width: 100%;
-  border-radius: 12px;
+  margin: 0;
 }
 
 .news-detail-text-content .caption,
@@ -61,91 +51,188 @@
   margin-top: 0.5em;
 }
 
-/* 分類標籤樣式 - 从 news.html 复制 */
+.image-container {
+  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.image-container img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  display: block;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 分類標籤樣式 - 重新设计 */
 .category-tabs {
     display: flex;
     justify-content: center;
     padding: 12px 16px;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: #fff;
     position: sticky;
     top: 0;
     z-index: 30;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-radius: 0 0 15px 15px;
 }
 
 .category-tabs a, .category-tabs button {
-    padding: 8px 16px;
-    margin: 0 6px;
-    border-radius: 20px;
+    padding: 8px 18px;
+    margin: 0 8px;
+    border-radius: 30px;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 14px;
     transition: all 0.3s;
     border: none;
     cursor: pointer;
-    background-color: #f0f0f0; /* 默認淺灰色背景 */
-    color: #666;
+    background-color: #f5f5f5;
+    color: #555;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .category-tabs a:hover, .category-tabs button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    opacity: 0.9;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* 定义图片容器样式 */
-.image-container {
-  text-align: center;
-  margin: 1em 0;
-  width: 100%;
-}
-
-.image-container img {
-  max-width: 100%;
-  max-height: 500px;
-  border-radius: 12px;
-  margin: 0 auto;
-  display: block;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-}
-
-/* 分類標籤顏色 */
+/* 分類標籤顏色 - 全新配色方案 */
+.category-tabs a.category-index-all, 
 .category-tabs a.category-index-all.active {
-    background-color: #9575CD; /* 紫色 - 全部消息 */
+    background: linear-gradient(135deg, #9C27B0, #673AB7);
     color: white;
 }
 
+.category-tabs a.category-index-0, 
+.category-tabs a.category-index-0.active {
+    background: linear-gradient(135deg, #00BCD4, #03A9F4);
+    color: white;
+}
+
+.category-tabs a.category-index-1, 
 .category-tabs a.category-index-1.active {
-    background-color: #FFB74D; /* 橙色 - 順序 2 */
+    background: linear-gradient(135deg, #FF9800, #FF5722);
     color: white;
 }
 
+.category-tabs a.category-index-2, 
 .category-tabs a.category-index-2.active {
-    background-color: #7986CB; /* 藍色 - 順序 3 */
+    background: linear-gradient(135deg, #4CAF50, #8BC34A);
     color: white;
 }
 
+.category-tabs a.category-index-3, 
 .category-tabs a.category-index-3.active {
-    background-color: #F06292; /* 粉紅色 - 順序 4 */
+    background: linear-gradient(135deg, #E91E63, #F44336);
     color: white;
 }
 
-/* 順序 5 及以後的分類，或未匹配的 active 標籤，使用灰色 */
-.category-tabs a.active:not(.category-index-all):not(.category-index-0):not(.category-index-1):not(.category-index-2):not(.category-index-3) {
-    background-color: #B0BEC5; /* 灰色 */
+.category-tabs a.category-index-4, 
+.category-tabs a.category-index-4.active {
+    background: linear-gradient(135deg, #607D8B, #455A64);
     color: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 保持陰影 */
-}
-/* 確保特定索引的顏色優先級更高 */
-.category-tabs a.category-index-all.active,
-.category-tabs a.category-index-0.active,
-.category-tabs a.category-index-1.active,
-.category-tabs a.category-index-2.active,
-.category-tabs a.category-index-3.active {
-     box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 添加陰影 */
 }
 
+/* 新闻内容满版设计 */
+.modal {
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.modal-content {
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+.modal-body {
+    padding: 0 !important;
+}
+
+/* 新闻标题样式改进 */
+.modal-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0 20px;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 100%;
+}
+
+/* 元数据样式优化 */
+.modal-meta {
+    text-align: center;
+    color: #666;
+    margin-bottom: 2rem;
+    padding: 0 20px;
+    font-size: 0.95rem;
+}
+
+/* 内容区样式优化 */
+.modal-content-text {
+    padding: 0 20px;
+    line-height: 1.8;
+    font-size: 1.05rem;
+    max-width: 100%;
+}
+
+/* 分享链接样式优化 */
+.news-share-link {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding: 15px 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+.news-share-link a {
+    display: inline-block;
+    color: #5C6BC0;
+    text-decoration: none;
+    font-size: 0.95rem;
+    padding: 10px 20px;
+    border-radius: 30px;
+    background-color: #EDE7F6;
+    transition: all 0.3s ease;
+}
+
+.news-share-link a:hover {
+    background-color: #D1C4E9;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modal-title {
+        font-size: 1.5rem;
+        padding: 0 15px;
+    }
+    
+    .modal-content-text {
+        padding: 0 15px;
+        font-size: 1rem;
+    }
+    
+    .category-tabs a, .category-tabs button {
+        padding: 6px 12px;
+        margin: 0 4px;
+        font-size: 13px;
+    }
+}
 </style>
 
 </head>
@@ -157,8 +244,8 @@
            <a href="#" class="active">載入中...</a> <!-- Placeholder -->
        </div>
 
-       <div id="news-detail-modal" class="modal" style="display: flex; position: static; background: none; box-shadow: none; height: auto; min-height: 100vh; align-items: flex-start; justify-content: center;">
-           <div class="modal-content" style="box-shadow: none; max-width: 800px; width: 100%; margin: 40px auto;">
+       <div id="news-detail-modal" class="modal" style="display: block; position: static; background: none; height: auto; width: 100%;">
+           <div class="modal-content" style="width: 100%; margin: 0; border-radius: 0;">
                <div class="modal-body">
                    <p id="loading-message" style="text-align: center; padding: 2rem 0;">正在載入新聞內容...</p>
                    <div class="image-container">
@@ -168,7 +255,8 @@
                    <div id="detail-meta" class="modal-meta"></div>
                    <div id="detail-body" class="modal-content-text"></div>
                    <div id="news-share-link" class="news-share-link">
-                    </div>
+                       <a href="#" target="_blank">分享此網站：<span class="share-url">https://sunnyyummy.onrender.com/news-share.html?id=</span><span class="news-id"></span></a>
+                   </div>
                </div>
            </div>
        </div>
@@ -177,4 +265,4 @@
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="/news-share.js"></script>
 </body>
-</html>
+</html> 
