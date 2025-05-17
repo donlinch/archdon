@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const detailTitleElement = document.getElementById('news-detail-title');
     const detailMeta = document.getElementById('news-detail-meta');
     const detailBody = document.getElementById('news-detail-body');
-    const loadingMessage = contentArea.querySelector('p');
+    const loadingMessage = document.getElementById('loading-message');
 
     // --- 取得 ?id= 參數 ---
     function getNewsIdFromQuery() {
