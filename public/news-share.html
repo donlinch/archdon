@@ -370,6 +370,56 @@ main {
     margin-bottom: 3px;
 }
 
+/* 電腦版響應式容器 */
+@media (min-width: 1024px) {
+    main {
+        display: flex;
+        justify-content: center;
+        padding-bottom: 80px;
+    }
+
+    #news-detail-modal {
+        width: 75%;
+        max-width: 900px;
+        background-color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        margin: 0 !important;
+        border-radius: 15px !important;
+    }
+
+    .modal-body {
+        padding: 0;
+    }
+
+    #detail-image {
+        max-height: 500px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .modal-title {
+        padding: 20px;
+    }
+
+    .modal-meta {
+        padding: 0 20px 20px;
+    }
+
+    .modal-content-text {
+        padding: 0 20px 20px;
+    }
+
+    .news-share-link {
+        padding: 20px;
+    }
+}
+
 </style>
 
 </head>
