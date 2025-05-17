@@ -85,17 +85,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             contentToRender = contentToRender.trim();
 
             // 渲染處理後的內容
-            detailBody.innerHTML = contentToRender;
-
-            // 確保所有鏈接在新標籤打開
-            const links = detailBody.querySelectorAll('a');
-            links.forEach(link => {
-                if (!link.hasAttribute('target')) {
-                    link.setAttribute('target', '_blank');
-                }
-            });
+            if (detailBody) {
+                detailBody.innerHTML = contentToRender;
+                // 確保所有鏈接在新標籤打開
+                const links = detailBody.querySelectorAll('a');
+                links.forEach(link => {
+                    if (!link.hasAttribute('target')) {
+                        link.setAttribute('target', '_blank');
+                    }
+                });
+            }
         } else {
-            detailBody.textContent = '沒有詳細內容。';
+            if (detailBody) {
+                detailBody.textContent = '沒有詳細內容。';
+            }
         }
 
         // 動態更新頁面 Title
@@ -106,9 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadingMessage.textContent = `錯誤：${error.message}`;
             loadingMessage.style.color = 'red';
         } else {
-            // fallback
             alert(`載入新聞詳情失敗：${error.message}`);
-            // 或 document.body.insertAdjacentHTML('afterbegin', `<div style="color:red">錯誤：${error.message}</div>`);
         }
     }
 }); 
