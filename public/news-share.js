@@ -51,13 +51,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         detailMeta.textContent = metaText;
         if (newsItem.content) {
             let contentToRender = newsItem.content || '';
+
+            // 1. 移除多餘的空行
             contentToRender = contentToRender.replace(/\n{3,}/g, "\n\n");
-            contentToRender = contentToRender.replace(/<br>\s*<br>\s*<br>/gi, '<br><br>');
+
+            // 2. 多餘 <br> 合併
+            contentToRender = contentToRender.replace(/(<br>[\s]*){2,}/gi, '<br>');
+
+            // 3. 空段落處理
             contentToRender = contentToRender.replace(/<p>\s*<\/p>/gi, '');
+
+            // 4. 標準化段落間距
             contentToRender = contentToRender.replace(/<\/p>\s*<p>/gi, '</p><p>');
+
+            // 5. 移除段落前後多餘空白
             contentToRender = contentToRender.trim();
-            contentToRender = contentToRender.replace(/\n/g, '');
+
+            // 6. 移除所有換行符（避免多餘空白）
+            contentToRender = contentToRender.replace(/\n+/g, '');
+
+            // 7. 移除段落開頭和結尾的 <br>
+            contentToRender = contentToRender.replace(/^(<br\s*\/?>)+/i, '');
+            contentToRender = contentToRender.replace(/(<br\s*\/?>)+$/i, '');
+
+            // 8. 移除多餘的空白字元
+            contentToRender = contentToRender.replace(/&nbsp;/g, ' ');
+
+            // 9. 最後再 trim 一次
+            contentToRender = contentToRender.trim();
+
+            // 渲染處理後的內容
             detailBody.innerHTML = contentToRender;
+
+            // 確保所有鏈接在新標籤打開
             const links = detailBody.querySelectorAll('a');
             links.forEach(link => {
                 if (!link.hasAttribute('target')) {
