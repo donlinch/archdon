@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const detailBody = document.getElementById('news-detail-body');
     const loadingMessage = document.getElementById('loading-message');
 
+    console.log('loadingMessage:', loadingMessage);
+
     // --- 取得 ?id= 參數 ---
     function getNewsIdFromQuery() {
         const params = new URLSearchParams(window.location.search);
@@ -100,9 +102,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.title = `${newsItem.title || 'SunnyYummy 新聞'} | SunnyYummy 新聞分享`;
     } catch (error) {
         console.error("載入新聞詳情失敗:", error);
-        if (typeof loadingMessage !== 'undefined' && loadingMessage !== null) {
+        if (loadingMessage) {
             loadingMessage.textContent = `錯誤：${error.message}`;
             loadingMessage.style.color = 'red';
+        } else {
+            // fallback
+            alert(`載入新聞詳情失敗：${error.message}`);
+            // 或 document.body.insertAdjacentHTML('afterbegin', `<div style="color:red">錯誤：${error.message}</div>`);
         }
     }
 }); 
