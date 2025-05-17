@@ -3,43 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy - 廣告頁</title>
+    <title>SunnyYummy - 廣告展示範例</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
 </head>
 <body>
-    <!-- Banner -->
-    <div class="banner-container">
-        <div id="advertisement-banner-carousel" class="swiper-container">
-            <div class="swiper-wrapper">
-                <!-- Banner slides 將由JavaScript動態插入 -->
-                <div class="swiper-slide"><img src="/images/loading-banner.png" alt="載入中..."></div>
-            </div>
-            <div class="swiper-pagination"></div>
-            <div class="swiper-button-prev"></div>
-            <div class="swiper-button-next"></div>
+    <div class="container">
+        <h1>廣告展示範例</h1>
+        
+        <h2>1. 使用 fetch 獲取廣告</h2>
+        <pre><code>
+// JavaScript 範例
+fetch('/api/banners?page=advertisement')
+    .then(response => response.json())
+    .then(banners => {
+        // 處理廣告邏輯
+        banners.forEach(banner => {
+            const adElement = document.createElement('div');
+            const img = document.createElement('img');
+            img.src = banner.image_url;
+            img.alt = banner.alt_text || '廣告';
+            
+            if (banner.link_url) {
+                const link = document.createElement('a');
+                link.href = banner.link_url;
+                link.appendChild(img);
+                adElement.appendChild(link);
+            } else {
+                adElement.appendChild(img);
+            }
+            
+            document.getElementById('ad-container').appendChild(adElement);
+        });
+    });
+        </code></pre>
+
+        <h2>2. 實際展示區域</h2>
+        <div id="ad-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <!-- 廣告將在這裡動態插入 -->
+        </div>
+
+        <h2>3. 隨機選擇廣告的範例</h2>
+        <pre><code>
+// 隨機選擇一個廣告
+fetch('/api/banners?page=advertisement')
+    .then(response => response.json())
+    .then(banners => {
+        if (banners.length > 0) {
+            // 隨機選擇一個廣告
+            const randomAd = banners[Math.floor(Math.random() * banners.length)];
+            const adElement = document.createElement('div');
+            const img = document.createElement('img');
+            img.src = randomAd.image_url;
+            img.alt = randomAd.alt_text || '隨機廣告';
+            
+            if (randomAd.link_url) {
+                const link = document.createElement('a');
+                link.href = randomAd.link_url;
+                link.appendChild(img);
+                adElement.appendChild(link);
+            } else {
+                adElement.appendChild(img);
+            }
+            
+            document.getElementById('random-ad-container').appendChild(adElement);
+        }
+    });
+        </code></pre>
+
+        <h2>4. 隨機廣告展示區</h2>
+        <div id="random-ad-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <!-- 隨機廣告將在這裡動態插入 -->
         </div>
     </div>
 
-    <!-- 頁面內容 -->
-    <div class="container">
-        <h1>廣告專區</h1>
-        <!-- 在這裡添加廣告內容 -->
-    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 獲取所有廣告
+        fetch('/api/banners?page=advertisement')
+            .then(response => response.json())
+            .then(banners => {
+                const adContainer = document.getElementById('ad-container');
+                const randomAdContainer = document.getElementById('random-ad-container');
 
-    <!-- 底部導航 -->
-    <nav class="bottom-nav">
-        <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
-        </ul>
-    </nav>
+                // 展示所有廣告
+                banners.forEach(banner => {
+                    const adElement = document.createElement('div');
+                    const img = document.createElement('img');
+                    img.src = banner.image_url;
+                    img.alt = banner.alt_text || '廣告';
+                    img.style.maxWidth = '300px';
+                    
+                    if (banner.link_url) {
+                        const link = document.createElement('a');
+                        link.href = banner.link_url;
+                        link.appendChild(img);
+                        adElement.appendChild(link);
+                    } else {
+                        adElement.appendChild(img);
+                    }
+                    
+                    adContainer.appendChild(adElement);
+                });
 
-    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="advertisement.js"></script>
+                // 隨機選擇一個廣告
+                if (banners.length > 0) {
+                    const randomAd = banners[Math.floor(Math.random() * banners.length)];
+                    const randomAdElement = document.createElement('div');
+                    const randomImg = document.createElement('img');
+                    randomImg.src = randomAd.image_url;
+                    randomImg.alt = randomAd.alt_text || '隨機廣告';
+                    randomImg.style.maxWidth = '300px';
+                    
+                    if (randomAd.link_url) {
+                        const randomLink = document.createElement('a');
+                        randomLink.href = randomAd.link_url;
+                        randomLink.appendChild(randomImg);
+                        randomAdElement.appendChild(randomLink);
+                    } else {
+                        randomAdElement.appendChild(randomImg);
+                    }
+                    
+                    randomAdContainer.appendChild(randomAdElement);
+                }
+            });
+    });
+    </script>
 </body>
 </html> 
