@@ -162,24 +162,7 @@ app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ �
 
 
 
-
-// 密碼驗證中介軟體
-const verifyAdminPassword = (req, res, next) => {
-    if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
-        console.warn("警告：ADMIN_PASSWORD 未設定，跳過標籤管理 API 的密碼驗證。");
-        return next();
-    }
-
-    const password = req.headers['x-admin-password'] || req.body.adminPassword;
-
-    if (!password) {
-        return res.status(401).json({ error: '未提供管理員密碼。' });
-    }
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(403).json({ error: '管理員密碼錯誤。' });
-    }
-    next();
-};
+ 
 
  
 const unboxingAiRouter = express.Router();
@@ -806,152 +789,19 @@ app.use('/api/voit', voitRouter);
 // 移除 verifyAdminPassword 相關的程式碼
 // 修正前端 AJAX 請求
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 以下是需要修改的地方 - fetch、post、put、delete 請求
 
-    async function loadLinks() {
-        loadingDiv.style.display = 'block';
-        listContainer.innerHTML = '';
-        clearError(addFormError);
-        clearError(editFormError);
-        editFormDiv.style.display = 'none';
-        try {
-            const response = await fetch('/api/admin/nav-links');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            allLinks = await response.json();
-            const tree = buildTree(allLinks);
-            renderList(tree, listContainer);
-            populateParentSelects(allLinks);
-            loadingDiv.style.display = 'none';
-        } catch (error) {
-            console.error('無法載入連結:', error);
-            loadingDiv.style.display = 'none';
-            listContainer.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><h3>載入失敗</h3><p>${error.message}</p></div>`;
-        }
-    }
 
-    addForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearError(addFormError);
-        const formData = new FormData(addForm);
-        const data = Object.fromEntries(formData.entries());
-        if (data.parent_id === '') delete data.parent_id;
-        data.display_order = parseInt(data.display_order) || 0;
 
-        try {
-            const response = await fetch('/api/admin/nav-links', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            addForm.reset();
-            document.getElementById('add-order').value = '0';
-            loadLinks();
-            showToast('連結新增成功！');
-        } catch (error) {
-            console.error('新增連結失敗:', error);
-            displayError(addFormError, `新增失敗: ${error.message}`);
-        }
-    });
 
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearError(editFormError);
-        const formData = new FormData(editForm);
-        const data = Object.fromEntries(formData.entries());
-        const linkId = data.id;
-        if (data.parent_id === '') delete data.parent_id;
-        else data.parent_id = parseInt(data.parent_id);
-        data.display_order = parseInt(data.display_order) || 0;
 
-        if (data.parent_id && (data.parent_id === parseInt(linkId) || isDescendant(allLinks, parseInt(linkId), data.parent_id))) {
-            displayError(editFormError, "不能將連結的父層級設為其自身或其子項目。");
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/admin/nav-links/${linkId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            editFormDiv.style.display = 'none';
-            loadLinks();
-            showToast('連結更新成功！');
-        } catch (error) {
-            console.error('更新連結失敗:', error);
-            displayError(editFormError, `更新失敗: ${error.message}`);
-        }
-    });
 
-    window.deleteLink = async function(id, name) { 
-        if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) return;
-        try {
-            const response = await fetch(`/api/admin/nav-links/${id}`, {
-                method: 'DELETE'
-            });
-            if (!response.ok && response.status !== 204) {
-                let errorMsg = `HTTP error! status: ${response.status}`;
-                try { const result = await response.json(); errorMsg = result.error || errorMsg; } catch (e) {}
-                throw new Error(errorMsg);
-            }
-            loadLinks();
-            showToast('連結刪除成功！');
-        } catch (error) {
-            console.error('刪除連結失敗:', error);
-            showToast(`刪除失敗: ${error.message}`, 'error');
-        }
-    }
+ 
 
-    window.handleSort = async function(linkId, direction) { 
-        const linkToMove = allLinks.find(l => l.id === linkId);
-        if (!linkToMove) return;
-        const siblings = allLinks.filter(l => l.parent_id === linkToMove.parent_id).sort((a,b) => a.display_order - b.display_order);
-        const currentIndex = siblings.findIndex(l => l.id === linkId);
-        let siblingToSwap = null;
-        if (direction === 'up' && currentIndex > 0) {
-            siblingToSwap = siblings[currentIndex - 1];
-        } else if (direction === 'down' && currentIndex < siblings.length - 1) {
-            siblingToSwap = siblings[currentIndex + 1];
-        }
 
-        if (!siblingToSwap) return;
 
-        const tempOrder = linkToMove.display_order;
-        linkToMove.display_order = siblingToSwap.display_order;
-        siblingToSwap.display_order = tempOrder;
 
-        try {
-            const updates = [
-                { id: linkToMove.id, display_order: linkToMove.display_order },
-                { id: siblingToSwap.id, display_order: siblingToSwap.display_order }
-            ];
-            for (const update of updates) {
-                    const response = await fetch(`/api/admin/nav-links/${update.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ display_order: update.display_order }) 
-                });
-                if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error || `HTTP error! status: ${response.status} for ID ${update.id}`);
-                }
-            }
-            showToast('排序已更新！');
-            await loadLinks();
-        } catch (error) {
-            console.error('更新排序失敗:', error);
-            showToast(`排序更新失敗: ${error.message}`, 'error');
-            siblingToSwap.display_order = linkToMove.display_order; 
-            linkToMove.display_order = tempOrder; 
-            await loadLinks(); 
-        }
-    }
-});
+
+
 
 // --- 黑名單管理 API Router ---
 const blacklistRouter = express.Router();
@@ -3215,7 +3065,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates', async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3240,7 +3090,7 @@ app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/templates/:id', async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3277,7 +3127,7 @@ app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/templates/:id', async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3300,7 +3150,7 @@ app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) 
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels' , async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3402,7 +3252,7 @@ app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, asyn
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/levels/:id' , async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3493,7 +3343,7 @@ app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/levels/:id' , async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -5202,7 +5052,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.put('/schemes/:id' , async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5242,7 +5092,7 @@ unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id' , async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5291,7 +5141,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', verifyAdminPassword, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post' , unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -6147,7 +5997,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', verifyAdminPassword, async (req, res) => {
+app.post('/api/music' , async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6293,7 +6143,7 @@ app.post('/api/music', verifyAdminPassword, async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/music/:id' , async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6392,7 +6242,7 @@ app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/music/:id' , async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
