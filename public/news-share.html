@@ -247,6 +247,41 @@ body {
     opacity: 1;
 }
 
+/* 分享連結輸入框樣式 */
+.news-share-link {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    padding: 15px 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+.share-link-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    font-size: 0.95rem;
+    text-align: center;
+    cursor: copy;
+    transition: all 0.3s ease;
+    color: #5C6BC0;
+    font-weight: bold;
+}
+
+.share-link-input:focus {
+    outline: none;
+    border-color: #5C6BC0;
+    box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.2);
+}
+
+.share-link-input.copied {
+    background-color: #4CAF50;
+    color: white;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .modal-title {
@@ -266,68 +301,69 @@ body {
     }
 }
 
+/* 確保底部內容不被導航欄遮蓋 */
+main {
+    padding-bottom: 80px; /* 比底部導航高度稍大一些 */
+    box-sizing: border-box;
+}
 
+/* --- 底部導航 --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 1000;
+    padding: 5px 0;
+}
 
+.bottom-nav ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
 
+.bottom-nav li {
+    text-align: center;
+}
 
+.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px;
+    text-decoration: none;
+    color: #777;
+    font-size: 0.7rem;
+    transition: all 0.3s;
+}
 
-        /* --- 底部導航 --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: white;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            z-index: 1000;
-            padding: 5px 0;
-        }
+.bottom-nav a.active {
+    color: #FFB74D;
+    background-color: rgba(255, 183, 77, 0.1);
+    border-radius: 20px;
+    animation: pulse 2s infinite;
+}
 
-        .bottom-nav ul {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
+.bottom-nav .icon {
+    font-size: 1.5rem;
+    margin-bottom: 3px;
+}
 
-        .bottom-nav li {
-            text-align: center;
-        }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
 
-        .bottom-nav a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 5px;
-            text-decoration: none;
-            color: #777;
-            font-size: 0.7rem;
-            transition: all 0.3s;
-        }
-
-        .bottom-nav a.active {
-            color: #FFB74D;
-            background-color: rgba(255, 183, 77, 0.1);
-            border-radius: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        .bottom-nav .icon {
-            font-size: 1.5rem;
-            margin-bottom: 3px;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .bottom-nav .icon {
+.bottom-nav .icon {
     width: 40px;
     height: 40px;
     object-fit: contain;
@@ -356,7 +392,7 @@ body {
                    <div id="detail-meta" class="modal-meta"></div>
                    <div id="detail-body" class="modal-content-text"></div>
                    <div id="news-share-link" class="news-share-link">
-                       <a href="#" id="share-link-copy" class="copy-link" title="點擊複製連結">分享此網站：<span class="share-url">https://sunnyyummy.onrender.com/news-share.html?id=</span><span class="news-id"></span></a>
+                       <input type="text" id="share-link-input" class="share-link-input" readonly value="https://sunnyyummy.onrender.com/news-share.html?id=" title="點擊複製完整連結">
                    </div>
                </div>
            </div>

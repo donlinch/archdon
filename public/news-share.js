@@ -128,13 +128,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 更新分享链接
-        const newsIdSpan = document.querySelector('.news-id');
-        if (newsIdSpan) {
-            newsIdSpan.textContent = newsId;
-            const shareLink = newsIdSpan.closest('a');
-            if (shareLink) {
-                shareLink.href = `https://sunnyyummy.onrender.com/news-share.html?id=${newsId}`;
-            }
+        const shareInput = document.getElementById('share-link-input');
+        if (shareInput) {
+            const fullShareUrl = `https://sunnyyummy.onrender.com/news-share.html?id=${newsId}`;
+            shareInput.value = fullShareUrl;
+
+            // 分享連結複製功能
+            shareInput.addEventListener('click', function() {
+                // 選中所有文字
+                this.select();
+                
+                // 使用 Clipboard API 複製
+                navigator.clipboard.writeText(this.value).then(() => {
+                    // 添加複製成功的視覺反饋
+                    this.classList.add('copied');
+                    
+                    // 2秒後移除複製成功的類別
+                    setTimeout(() => {
+                        this.classList.remove('copied');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('複製失敗', err);
+                    alert('複製連結失敗，請手動複製');
+                });
+            });
         }
 
         // 动态更新页面 Title
@@ -142,36 +159,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // 添加样式到分类标签
         applyStylesToElements();
-        
-        // 分享連結複製功能
-        const shareLinkCopy = document.getElementById('share-link-copy');
-        if (shareLinkCopy) {
-            shareLinkCopy.addEventListener('click', function(e) {
-                e.preventDefault(); // 防止跳轉
-                
-                // 取得完整的分享連結
-                const shareUrlSpan = this.querySelector('.share-url');
-                const newsIdSpan = this.querySelector('.news-id');
-                
-                if (shareUrlSpan && newsIdSpan) {
-                    const fullShareUrl = shareUrlSpan.textContent + newsIdSpan.textContent;
-                    
-                    // 使用 Clipboard API 複製
-                    navigator.clipboard.writeText(fullShareUrl).then(() => {
-                        // 添加複製成功的視覺反饋
-                        this.classList.add('copied');
-                        
-                        // 2秒後移除複製成功的類別
-                        setTimeout(() => {
-                            this.classList.remove('copied');
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('複製失敗', err);
-                        alert('複製連結失敗，請手動複製');
-                    });
-                }
-            });
-        }
     } catch (error) {
         console.error("載入新聞詳情失敗:", error);
         if (loadingMessage) {
