@@ -241,6 +241,7 @@ const sessionProtectedAdminPages = [
     '/unboxing.html',
     '/unboxing-ai-admin.html',
     '/guestbook-admin.html',
+    '/advertisement.html',
     '/admin-identities.html',
    
 
@@ -802,376 +803,153 @@ app.post('/api/game-rooms', async (req, res) => {
 // 在 Express 路由設定區域添加
 // app.use('/api/storemarket', storeRoutes); // Removed as storeRoutes is deleted
 app.use('/api/voit', voitRouter);
+// 移除 verifyAdminPassword 相關的程式碼
+// 修正前端 AJAX 請求
 
-// --- 管理後台導覽連結 API ---
-app.get('/api/admin/nav-links', async (req, res) => {
-    try {
-        const { rows } = await pool.query(
-            `SELECT id, name, url, parent_id, display_order
-             FROM admin_nav_links
-             ORDER BY display_order ASC, name ASC`
-        );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error('[API GET /api/admin/nav-links] 獲取導覽連結失敗:', err.stack || err);
-        res.status(500).json({ error: '無法獲取導覽連結' });
-    }
-});
+document.addEventListener('DOMContentLoaded', () => {
+    // 以下是需要修改的地方 - fetch、post、put、delete 請求
 
-// POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
-    const { name, url, parent_id, display_order } = req.body;
-
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    // parent_id 可以是 null 或數字
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-    if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-    }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     // URL 可以是空字串或 null，代表是父層級選單
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-
-    try {
-        const { rows } = await pool.query(
-            `INSERT INTO admin_nav_links (name, url, parent_id, display_order)
-             VALUES ($1, $2, $3, $4)
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder]
-        );
-        res.status(201).json(rows[0]);
-    } catch (err) {
-        console.error('[API POST /api/admin/nav-links] 新增導覽連結失敗:', err.stack || err);
-        // 檢查外鍵約束錯誤
-        if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-        }
-        res.status(500).json({ error: '新增導覽連結時發生錯誤' });
-    }
-});
-
-// PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
-    const { id } = req.params;
-    const { name, url, parent_id, display_order } = req.body;
-    const linkId = parseInt(id, 10);
-
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-     if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-     }
-     // 防止將連結設置為自己的父級
-     if (parentId === linkId) {
-         return res.status(400).json({ error: '不能將連結設置為自己的父層級' });
-     }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-    try {
-        // 可選：檢查 parent_id 是否會造成循環引用 (更複雜的檢查)
-
-        const { rows } = await pool.query(
-            `UPDATE admin_nav_links
-             SET name = $1, url = $2, parent_id = $3, display_order = $4
-             WHERE id = $5
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder, linkId]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ error: '找不到要更新的導覽連結' });
-        }
-        res.status(200).json(rows[0]);
-    } catch (err) {
-        console.error(`[API PUT /api/admin/nav-links/${id}] 更新導覽連結失敗:`, err.stack || err);
-         if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-         }
-        res.status(500).json({ error: '更新導覽連結時發生錯誤' });
-    }
-});
-
-// DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
-    const { id } = req.params;
-     const linkId = parseInt(id, 10);
-
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-
-    try {
-        // 由於設置了 ON DELETE CASCADE，刪除父連結會自動刪除子連結
-        const result = await pool.query('DELETE FROM admin_nav_links WHERE id = $1', [linkId]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的導覽連結' });
-        }
-        res.status(204).send(); // No Content, 表示成功刪除
-    } catch (err) {
-        console.error(`[API DELETE /api/admin/nav-links/${id}] 刪除導覽連結失敗:`, err.stack || err);
-        res.status(500).json({ error: '刪除導覽連結時發生錯誤' });
-    }
-});
-
-// 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
-    try {
-        const updates = req.body;
-        
-        console.log('[REORDER] 收到原始請求數據:', JSON.stringify(updates, null, 2));
-        console.log('[REORDER] 請求數據類型:', typeof updates);
-        console.log('[REORDER] 是否為陣列:', Array.isArray(updates));
-        
-        // 驗證輸入
-        if (!Array.isArray(updates)) {
-            console.error('[REORDER] 錯誤：數據不是陣列格式');
-            return res.status(400).json({ error: '請求數據必須是陣列格式' });
-        }
-        
-        if (updates.length === 0) {
-            console.error('[REORDER] 錯誤：陣列為空');
-            return res.status(400).json({ error: '更新數據不能為空' });
-        }
-        
-        // 驗證並解析每個更新項目
-        const parsedUpdates = [];
-        for (let i = 0; i < updates.length; i++) {
-            const update = updates[i];
-            console.log(`[REORDER] 處理第 ${i + 1} 項:`, update);
-            
-            if (!update || typeof update !== 'object') {
-                const msg = `第 ${i + 1} 項數據不是有效的物件`;
-                console.error('[REORDER] ' + msg);
-                return res.status(400).json({ error: msg });
-            }
-            
-            // 檢查 id 字段
-            let id;
-            if (update.id === undefined || update.id === null) {
-                const msg = `第 ${i + 1} 項缺少 ID 字段`;
-                console.error('[REORDER] ' + msg);
-                return res.status(400).json({ error: msg });
-            }
-            
-            // 確保 id 是數字
-            id = parseInt(update.id, 10);
-            if (isNaN(id)) {
-                const msg = `第 ${i + 1} 項 ID 無法轉換為數字: ${update.id}`;
-                console.error('[REORDER] ' + msg);
-                return res.status(400).json({ error: msg });
-            }
-            
-            // 檢查 display_order 字段
-            let order;
-            if (update.display_order === undefined || update.display_order === null) {
-                const msg = `第 ${i + 1} 項缺少 display_order 字段`;
-                console.error('[REORDER] ' + msg);
-                return res.status(400).json({ error: msg });
-            }
-            
-            // 確保 display_order 是數字
-            order = parseInt(update.display_order, 10);
-            if (isNaN(order)) {
-                const msg = `第 ${i + 1} 項 display_order 無法轉換為數字: ${update.display_order}`;
-                console.error('[REORDER] ' + msg);
-                return res.status(400).json({ error: msg });
-            }
-            
-            parsedUpdates.push({ id, display_order: order });
-            console.log(`[REORDER] 第 ${i + 1} 項解析完成: id=${id}, order=${order}`);
-        }
-        
-        console.log('[REORDER] 所有數據解析完成:', parsedUpdates);
-        
-        // 使用事務處理
-        const client = await pool.connect();
+    async function loadLinks() {
+        loadingDiv.style.display = 'block';
+        listContainer.innerHTML = '';
+        clearError(addFormError);
+        clearError(editFormError);
+        editFormDiv.style.display = 'none';
         try {
-            await client.query('BEGIN');
-            console.log('[REORDER] 開始事務');
-            
-            // 逐一更新每個項目
-            for (const update of parsedUpdates) {
-                const { id, display_order } = update;
-                
-                console.log(`[REORDER] 正在更新 ID ${id} 為順序 ${display_order}`);
-                
-                const result = await client.query(
-                    'UPDATE admin_nav_links SET display_order = $1 WHERE id = $2',
-                    [display_order, id]
-                );
-                
-                console.log(`[REORDER] 更新結果: 影響行數 ${result.rowCount}`);
-                
-                if (result.rowCount === 0) {
-                    throw new Error(`找不到 ID 為 ${id} 的連結`);
+            const response = await fetch('/api/admin/nav-links');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            allLinks = await response.json();
+            const tree = buildTree(allLinks);
+            renderList(tree, listContainer);
+            populateParentSelects(allLinks);
+            loadingDiv.style.display = 'none';
+        } catch (error) {
+            console.error('無法載入連結:', error);
+            loadingDiv.style.display = 'none';
+            listContainer.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><h3>載入失敗</h3><p>${error.message}</p></div>`;
+        }
+    }
+
+    addForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError(addFormError);
+        const formData = new FormData(addForm);
+        const data = Object.fromEntries(formData.entries());
+        if (data.parent_id === '') delete data.parent_id;
+        data.display_order = parseInt(data.display_order) || 0;
+
+        try {
+            const response = await fetch('/api/admin/nav-links', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            addForm.reset();
+            document.getElementById('add-order').value = '0';
+            loadLinks();
+            showToast('連結新增成功！');
+        } catch (error) {
+            console.error('新增連結失敗:', error);
+            displayError(addFormError, `新增失敗: ${error.message}`);
+        }
+    });
+
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError(editFormError);
+        const formData = new FormData(editForm);
+        const data = Object.fromEntries(formData.entries());
+        const linkId = data.id;
+        if (data.parent_id === '') delete data.parent_id;
+        else data.parent_id = parseInt(data.parent_id);
+        data.display_order = parseInt(data.display_order) || 0;
+
+        if (data.parent_id && (data.parent_id === parseInt(linkId) || isDescendant(allLinks, parseInt(linkId), data.parent_id))) {
+            displayError(editFormError, "不能將連結的父層級設為其自身或其子項目。");
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/admin/nav-links/${linkId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            editFormDiv.style.display = 'none';
+            loadLinks();
+            showToast('連結更新成功！');
+        } catch (error) {
+            console.error('更新連結失敗:', error);
+            displayError(editFormError, `更新失敗: ${error.message}`);
+        }
+    });
+
+    window.deleteLink = async function(id, name) { 
+        if (!confirm(`確定要刪除連結「${name}」嗎？\n\n⚠️ 注意：所有子連結也會一併刪除。`)) return;
+        try {
+            const response = await fetch(`/api/admin/nav-links/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok && response.status !== 204) {
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try { const result = await response.json(); errorMsg = result.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            loadLinks();
+            showToast('連結刪除成功！');
+        } catch (error) {
+            console.error('刪除連結失敗:', error);
+            showToast(`刪除失敗: ${error.message}`, 'error');
+        }
+    }
+
+    window.handleSort = async function(linkId, direction) { 
+        const linkToMove = allLinks.find(l => l.id === linkId);
+        if (!linkToMove) return;
+        const siblings = allLinks.filter(l => l.parent_id === linkToMove.parent_id).sort((a,b) => a.display_order - b.display_order);
+        const currentIndex = siblings.findIndex(l => l.id === linkId);
+        let siblingToSwap = null;
+        if (direction === 'up' && currentIndex > 0) {
+            siblingToSwap = siblings[currentIndex - 1];
+        } else if (direction === 'down' && currentIndex < siblings.length - 1) {
+            siblingToSwap = siblings[currentIndex + 1];
+        }
+
+        if (!siblingToSwap) return;
+
+        const tempOrder = linkToMove.display_order;
+        linkToMove.display_order = siblingToSwap.display_order;
+        siblingToSwap.display_order = tempOrder;
+
+        try {
+            const updates = [
+                { id: linkToMove.id, display_order: linkToMove.display_order },
+                { id: siblingToSwap.id, display_order: siblingToSwap.display_order }
+            ];
+            for (const update of updates) {
+                    const response = await fetch(`/api/admin/nav-links/${update.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ display_order: update.display_order }) 
+                });
+                if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status} for ID ${update.id}`);
                 }
             }
-            
-            await client.query('COMMIT');
-            console.log('[REORDER] 事務提交成功');
-            res.status(200).json({ 
-                message: '排序更新成功', 
-                updated: parsedUpdates.length,
-                updates: parsedUpdates
-            });
-            
+            showToast('排序已更新！');
+            await loadLinks();
         } catch (error) {
-            await client.query('ROLLBACK');
-            console.error('[REORDER] 事務回滾:', error);
-            throw error;
-        } finally {
-            client.release();
+            console.error('更新排序失敗:', error);
+            showToast(`排序更新失敗: ${error.message}`, 'error');
+            siblingToSwap.display_order = linkToMove.display_order; 
+            linkToMove.display_order = tempOrder; 
+            await loadLinks(); 
         }
-        
-    } catch (error) {
-        console.error('[API PUT /api/admin/nav-links/reorder] 排序失敗:', error.stack || error);
-        res.status(500).json({ 
-            error: `排序失敗: ${error.message}`,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
-    }
-});
-
-// 其他 API 保持不變
-// GET /api/admin/nav-links
-app.get('/api/admin/nav-links', async (req, res) => {
-    try {
-        const { rows } = await pool.query(
-            `SELECT id, name, url, parent_id, display_order
-             FROM admin_nav_links
-             ORDER BY display_order ASC, name ASC`
-        );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error('[API GET /api/admin/nav-links] 獲取導覽連結失敗:', err.stack || err);
-        res.status(500).json({ error: '無法獲取導覽連結' });
-    }
-});
-
-// POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', async (req, res) => {
-    const { name, url, parent_id, display_order } = req.body;
-
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    // parent_id 可以是 null 或數字
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-    if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-    }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     // URL 可以是空字串或 null，代表是父層級選單
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-
-    try {
-        const { rows } = await pool.query(
-            `INSERT INTO admin_nav_links (name, url, parent_id, display_order)
-             VALUES ($1, $2, $3, $4)
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder]
-        );
-        res.status(201).json(rows[0]);
-    } catch (err) {
-        console.error('[API POST /api/admin/nav-links] 新增導覽連結失敗:', err.stack || err);
-        // 檢查外鍵約束錯誤
-        if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-        }
-        res.status(500).json({ error: '新增導覽連結時發生錯誤' });
-    }
-});
-
-// PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, url, parent_id, display_order } = req.body;
-    const linkId = parseInt(id, 10);
-
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-     if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-     }
-     // 防止將連結設置為自己的父級
-     if (parentId === linkId) {
-         return res.status(400).json({ error: '不能將連結設置為自己的父層級' });
-     }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-    try {
-        // 可選：檢查 parent_id 是否會造成循環引用 (更複雜的檢查)
-
-        const { rows } = await pool.query(
-            `UPDATE admin_nav_links
-             SET name = $1, url = $2, parent_id = $3, display_order = $4
-             WHERE id = $5
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder, linkId]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ error: '找不到要更新的導覽連結' });
-        }
-        res.status(200).json(rows[0]);
-    } catch (err) {
-        console.error(`[API PUT /api/admin/nav-links/${id}] 更新導覽連結失敗:`, err.stack || err);
-         if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-         }
-        res.status(500).json({ error: '更新導覽連結時發生錯誤' });
-    }
-});
-
-// DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', async (req, res) => {
-    const { id } = req.params;
-     const linkId = parseInt(id, 10);
-
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-
-    try {
-        // 由於設置了 ON DELETE CASCADE，刪除父連結會自動刪除子連結
-        const result = await pool.query('DELETE FROM admin_nav_links WHERE id = $1', [linkId]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的導覽連結' });
-        }
-        res.status(204).send(); // No Content, 表示成功刪除
-    } catch (err) {
-        console.error(`[API DELETE /api/admin/nav-links/${id}] 刪除導覽連結失敗:`, err.stack || err);
-        res.status(500).json({ error: '刪除導覽連結時發生錯誤' });
     }
 });
 
