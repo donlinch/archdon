@@ -105,75 +105,88 @@
 
     .category-tabs a:hover, .category-tabs button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        opacity: 0.9;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
-    /* 分類標籤顏色 */
+    /* 分類標籤顏色 - 全新配色方案 */
+    .category-tabs a.category-index-all, 
     .category-tabs a.category-index-all.active {
-        background-color: #9575CD; /* 紫色 - 全部消息 */
+        background: linear-gradient(135deg, #9C27B0, #673AB7);
         color: white;
     }
 
+    .category-tabs a.category-index-0, 
     .category-tabs a.category-index-0.active {
-        background-color: #4DB6AC; /* 青綠色 - 順序 1 */
+        background: linear-gradient(135deg, #00BCD4, #03A9F4);
         color: white;
     }
 
+    .category-tabs a.category-index-1, 
     .category-tabs a.category-index-1.active {
-        background-color: #FFB74D; /* 橙色 - 順序 2 */
+        background: linear-gradient(135deg, #FF9800, #FF5722);
         color: white;
     }
 
+    .category-tabs a.category-index-2, 
     .category-tabs a.category-index-2.active {
-        background-color: #7986CB; /* 藍色 - 順序 3 */
+        background: linear-gradient(135deg, #4CAF50, #8BC34A);
         color: white;
     }
 
+    .category-tabs a.category-index-3, 
     .category-tabs a.category-index-3.active {
-        background-color: #F06292; /* 粉紅色 - 順序 4 */
+        background: linear-gradient(135deg, #E91E63, #F44336);
         color: white;
     }
 
-    /* 順序 5 及以後的分類，或未匹配的 active 標籤，使用灰色 */
-    .category-tabs a.active:not(.category-index-all):not(.category-index-0):not(.category-index-1):not(.category-index-2):not(.category-index-3) {
-        background-color: #B0BEC5; /* 灰色 */
+    .category-tabs a.category-index-4, 
+    .category-tabs a.category-index-4.active {
+        background: linear-gradient(135deg, #607D8B, #455A64);
         color: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 保持陰影 */
     }
-    /* 確保特定索引的顏色優先級更高 */
-    .category-tabs a.category-index-all.active,
-    .category-tabs a.category-index-0.active,
-    .category-tabs a.category-index-1.active,
-    .category-tabs a.category-index-2.active,
-    .category-tabs a.category-index-3.active {
-         box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 添加陰影 */
+
+    /* 預設未指定的分類 */
+    .category-tabs a.active:not(.category-index-all):not(.category-index-0):not(.category-index-1):not(.category-index-2):not(.category-index-3):not(.category-index-4) {
+        background: linear-gradient(135deg, #9C27B0, #673AB7);
+        color: white;
     }
 
     /* 日曆下方的分類標籤顏色 */
+    .category-label.cat-index-all {
+        background: linear-gradient(135deg, #9C27B0, #673AB7);
+        color: white;
+    }
+
     .category-label.cat-index-0 {
-        background-color: #4DB6AC; /* 青綠色 */
+        background: linear-gradient(135deg, #00BCD4, #03A9F4);
+        color: white;
     }
 
     .category-label.cat-index-1 {
-        background-color: #FFB74D; /* 橙色 */
+        background: linear-gradient(135deg, #FF9800, #FF5722);
+        color: white;
     }
 
     .category-label.cat-index-2 {
-        background-color: #7986CB; /* 藍色 */
+        background: linear-gradient(135deg, #4CAF50, #8BC34A);
+        color: white;
     }
 
     .category-label.cat-index-3 {
-        background-color: #F06292; /* 粉紅色 */
+        background: linear-gradient(135deg, #E91E63, #F44336);
+        color: white;
     }
 
-    /* 順序 5 及以後，或未匹配到的分類 (cat-other) */
+    .category-label.cat-index-4 {
+        background: linear-gradient(135deg, #607D8B, #455A64);
+        color: white;
+    }
+
+    /* 順序 5 及以後，或未匹配到的分類 */
     .category-label.cat-other,
-    .category-label.cat-index-4, /* 假設第5個開始用灰色 */
-    .category-label.cat-index-5,
-    /* 你可以繼續添加更多索引，或者讓 cat-other 涵蓋所有未指定的 */
-    .category-label:not(.cat-index-0):not(.cat-index-1):not(.cat-index-2):not(.cat-index-3) {
-        background-color: #B0BEC5; /* 灰色 */
+    .category-label:not(.cat-index-0):not(.cat-index-1):not(.cat-index-2):not(.cat-index-3):not(.cat-index-4) {
+        background: linear-gradient(135deg, #9C27B0, #673AB7);
+        color: white;
     }
 
     /* --- 浮動角色 --- */
