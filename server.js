@@ -4119,11 +4119,7 @@ app.get('/rich-admin.html', (req, res) => {
 
 
 
-// --- 受保護的管理頁面和 API Routes ---
-app.use([
-    
-], isAdminAuthenticated);
-
+ 
 
 
 // isAdminAuthenticated （ basicAuthMiddleware ）
