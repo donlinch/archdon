@@ -1,12 +1,110 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 翻牌對對碰遊戲</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>SunnyYummy 翻牌對對碰遊戲 - 互動記憶遊戲</title>
+    <meta name="description" content="SunnyYummy 推出的互動翻牌記憶遊戲，挑戰你的記憶力和反應速度。多種主題模板，趣味無限！">
+    <meta name="keywords" content="記憶遊戲, 翻牌遊戲, 互動遊戲, SunnyYummy, 線上遊戲, 腦力遊戲">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.sunnyyummy.com/game/same-game">
+    <meta property="og:title" content="SunnyYummy 翻牌對對碰遊戲">
+    <meta property="og:description" content="SunnyYummy 推出的互動翻牌記憶遊戲，挑戰你的記憶力和反應速度。多種主題模板，趣味無限！">
+    <meta property="og:image" content="/images/game-preview.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.sunnyyummy.com/game/same-game">
+    <meta name="twitter:title" content="SunnyYummy 翻牌對對碰遊戲">
+    <meta name="twitter:description" content="SunnyYummy 推出的互動翻牌記憶遊戲，挑戰你的記憶力和反應速度。多種主題模板，趣味無限！">
+    <meta name="twitter:image" content="/images/game-preview.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://www.sunnyyummy.com/game/same-game">
+    
+    <!-- Preload and Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Robots Meta Tag -->
+    <meta name="robots" content="index, follow">
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "SunnyYummy 翻牌對對碰遊戲",
+        "description": "SunnyYummy 推出的互動翻牌記憶遊戲，挑戰你的記憶力和反應速度。多種主題模板，趣味無限！",
+        "publisher": {
+            "@type": "Organization",
+            "name": "SunnyYummy",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "/images/logo.png"
+            }
+        }
+    }
+    </script>
+    
+    <!-- Structured Data - Game -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Game",
+        "name": "翻牌對對碰",
+        "description": "一款互動記憶遊戲，玩家需要翻開卡片找出相同的圖案",
+        "applicationCategory": "Entertainment",
+        "operatingSystem": "All"
+    }
+    </script>
+
+    <!-- Performance Optimization -->
+    <link rel="preload" href="/images/footicon_store.png" as="image">
+    <link rel="preload" href="/images/footicon_music.png" as="image">
+    <link rel="preload" href="/images/footicon_nuews.png" as="image">
+    <link rel="preload" href="/images/footicon_score.png" as="image">
+    <link rel="preload" href="/images/footicon_game.png" as="image">
+    <link rel="preload" href="/images/footicon_guestbook.png" as="image">
+    
+    <!-- Performance and Accessibility -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <!-- Microsoft Tile Color -->
+    <meta name="msapplication-TileColor" content="#FFB74D">
+    <meta name="theme-color" content="#FFB74D">
+    
+    <!-- Alternate Language Links (if applicable) -->
+    <link rel="alternate" hreflang="zh-TW" href="https://www.sunnyyummy.com/game/same-game">
+    <link rel="alternate" hreflang="en" href="https://www.sunnyyummy.com/en/game/same-game">
+    
+    <!-- Critical CSS Inline -->
+    <style>
+        /* Minimal critical CSS for initial render */
+        body{font-family:'Noto Sans TC',sans-serif;background-color:#fff5f7;margin:0;padding:0;box-sizing:border-box}
+        .loading-container{text-align:center;padding:30px}
+        .loading-spinner{display:inline-block;width:50px;height:50px;border:5px solid rgba(255,183,77,0.3);border-radius:50%;border-top-color:#FFB74D;animation:spin 1s ease-in-out infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+    
+    <!-- Defer non-critical CSS -->
+    <link rel="stylesheet" href="/styles/game.css" media="print" onload="this.media='all'"
+
     <style>
 
 
@@ -804,71 +902,87 @@ body {
 </head>
 <body>
     <div class="page-container">
-        <header class="page-header">
-            <h1 class="page-title">翻牌對對碰</h1>
+        <header class="page-header" role="banner">
+            <h1 class="page-title" itemprop="name">翻牌對對碰</h1>
         </header>
         
-        <main class="game-container">
-            <!-- 模板選擇 (初始畫面) -->
-            <div id="templateSelectionArea" class="template-selection-area">
-                <h2 class="section-title">選擇遊戲模板</h2>
-                <div id="templatesList" class="template-grid">
-                    <!-- 模板卡片將通過 JavaScript 動態生成 -->
-                    <div class="loading-container">
-                        <div class="loading-spinner"></div>
-                        <p class="mt-3">正在載入模板...</p>
+        <main class="page-container" role="main">
+            <section class="game-container" aria-labelledby="game-section-title">
+                <h2 id="game-section-title" class="sr-only">遊戲區域</h2>
+                
+                <!-- 模板選擇 (初始畫面) -->
+                <div id="templateSelectionArea" class="template-selection-area" aria-live="polite">
+                    <h3 class="section-title">選擇遊戲模板</h3>
+                    <div id="templatesList" class="template-grid" role="list">
+                        <!-- 模板卡片將通過 JavaScript 動態生成 -->
+                        <div class="loading-container" aria-busy="true">
+                            <div class="loading-spinner" aria-hidden="true"></div>
+                            <p class="mt-3">正在載入模板...</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- 遊戲區域 (初始隱藏) -->
-            <div id="gameArea" style="display: none;">
-                <!-- Leaderboard Button -->
-                <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
                 
-                <!-- Game Info -->
-                <div class="game-info">
-                    <div class="level-info">
-                        <span id="templateNameDisplay">未選擇模板</span> - 
-                        第 <span id="currentLevel">1</span> 關
+                <!-- 遊戲區域 (初始隱藏) -->
+                <div id="gameArea" style="display: none;" aria-live="polite">
+                    <!-- Leaderboard Button -->
+                    <button id="leaderboardBtn" class="leaderboard-btn" aria-label="查看排行榜">排行榜</button>
+                    
+                    <!-- Game Info -->
+                    <div class="game-info">
+                        <div class="level-info" aria-live="polite">
+                            <span id="templateNameDisplay">未選擇模板</span> - 
+                            第 <span id="currentLevel">1</span> 關
+                        </div>
+                        <div class="moves-counter" aria-live="polite">移動次數: <span id="moveCounter">0</span></div>
                     </div>
-                    <div class="moves-counter">移動次數: <span id="moveCounter">0</span></div>
+                    
+                    <!-- Game Board -->
+                    <div id="gameBoard" class="game-board" role="grid" aria-label="遊戲卡片"></div>
+                    
+                    <!-- Win Message (Hidden by default) -->
+                    <div id="winMessage" class="win-message" style="display: none;" aria-live="assertive">
+                        <h2 class="win-message-title">恭喜！你贏了！</h2>
+                        <p id="winMessageText">總共使用了 <span id="levelMoves">0</span> 次移動完成本關。</p>
+                    </div>
+                    
+                    <!-- Game Controls -->
+                    <div class="game-controls">
+                        <button id="exitBtn" class="reset-btn" aria-label="退出遊戲">退出</button>
+                        <button id="nextLevelBtn" class="next-level-btn" style="display: none;" aria-label="進入下一關">進入下一關</button>
+                    </div>
+                    
+                    <!-- Fireworks (Hidden by default) -->
+                    <div id="fireworksContainer" class="fireworks-container" style="display: none;" aria-hidden="true">
+                        <div class="firework"></div>
+                        <div class="firework"></div>
+                        <div class="firework"></div>
+                        <div class="firework"></div>
+                    </div>
                 </div>
                 
-                <!-- Game Board -->
-                <div id="gameBoard" class="game-board"></div>
-                
-                <!-- Win Message (Hidden by default) -->
-                <div id="winMessage" class="win-message" style="display: none;">
-                    <h2 class="win-message-title">恭喜！你贏了！</h2>
-                    <p id="winMessageText">總共使用了 <span id="levelMoves">0</span> 次移動完成本關。</p>
+                <!-- 載入中顯示 -->
+                <div id="loadingContainer" class="loading-container" style="display: none;" aria-live="polite">
+                    <div class="loading-spinner" aria-hidden="true"></div>
+                    <p class="mt-3">正在載入遊戲資源...</p>
                 </div>
-                
-                <!-- Game Controls -->
-                <div class="game-controls">
-                    <button id="exitBtn" class="reset-btn">退出</button>
-                    <button id="nextLevelBtn" class="next-level-btn" style="display: none;">進入下一關</button>
-                </div>
-                
-                <!-- Fireworks (Hidden by default) -->
-                <div id="fireworksContainer" class="fireworks-container" style="display: none;">
-                    <div class="firework"></div>
-                    <div class="firework"></div>
-                    <div class="firework"></div>
-                    <div class="firework"></div>
-                </div>
-            </div>
-            
-            <!-- 載入中顯示 -->
-            <div id="loadingContainer" class="loading-container" style="display: none;">
-                <div class="loading-spinner"></div>
-                <p class="mt-3">正在載入遊戲資源...</p>
-            </div>
+            </section>
         </main>
-        
-        <footer class="footer">
-            <p>© 2025 SunnyYummy. All rights reserved.</p>
+
+        <footer class="footer" role="contentinfo">
+            <p>© 2025 SunnyYummy. All rights reserved. <a href="/privacy" rel="nofollow">隱私政策</a> | <a href="/terms" rel="nofollow">使用條款</a></p>
         </footer>
+
+        <!-- 底部導航 -->
+        <nav class="bottom-nav" role="navigation" aria-label="主要導航">
+            <ul>
+                <li><a href="/" aria-label="商品頁面"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+                <li><a href="/music.html" aria-label="音樂頁面"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+                <li><a href="/news.html" aria-label="消息頁面"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+                <li><a href="/scores.html" aria-label="樂譜頁面"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+                <li><a href="/games.html" class="active" aria-label="遊戲頁面"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+                <li><a href="/guestbook.html" aria-label="留言頁面"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+            </ul>
+        </nav>
     </div>
     
     <!-- 排行榜模態框 -->
@@ -907,18 +1021,6 @@ body {
             <button id="submitNameBtn" class="submit-name-btn">提交</button>
         </div>
     </div>
-    
-    <!-- 底部導航 -->
-    <nav class="bottom-nav">
-        <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
-        </ul>
-    </nav>
      
     <script>
 
@@ -1034,8 +1136,8 @@ function exitToTemplateSelection() {
 // 載入遊戲模板列表
 function loadTemplates() {
     elements.templatesList.innerHTML = `
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
+        <div class="loading-container" aria-busy="true">
+            <div class="loading-spinner" aria-hidden="true"></div>
             <p class="mt-3">正在載入模板...</p>
         </div>
     `;

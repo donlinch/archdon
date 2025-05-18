@@ -1,19 +1,61 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 命運輪盤遊戲</title>
-    <meta name="description" content="SunnyYummy 命運輪盤遊戲遊戲，顏色也可自定義內容互動體驗。">
-    <!-- 絕對路徑 CSS -->
-    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>SunnyYummy 命運輪盤遊戲 - 互動娛樂體驗</title>
+    <meta name="description" content="體驗SunnyYummy的命運輪盤遊戲！自定義顏色和內容，享受有趣的互動遊戲，為您的決策增添樂趣和驚喜。">
+    <meta name="keywords" content="SunnyYummy, 命運輪盤, 互動遊戲, 娛樂, 決策遊戲, 線上遊戲">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.sunnyyummy.com/game/wheel-game.html">
+    <meta property="og:title" content="SunnyYummy 命運輪盤遊戲">
+    <meta property="og:description" content="體驗SunnyYummy的命運輪盤遊戲！自定義顏色和內容，享受有趣的互動遊戲，為您的決策增添樂趣和驚喜。">
+    <meta property="og:image" content="/images/wheel-game-og-image.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.sunnyyummy.com/game/wheel-game.html">
+    <meta name="twitter:title" content="SunnyYummy 命運輪盤遊戲">
+    <meta name="twitter:description" content="體驗SunnyYummy的命運輪盤遊戲！自定義顏色和內容，享受有趣的互動遊戲，為您的決策增添樂趣和驚喜。">
+    <meta name="twitter:image" content="/images/wheel-game-og-image.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://www.sunnyyummy.com/game/wheel-game.html">
+    
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- Preload and Prefetch -->
+    <link rel="preload" href="/style.css" as="style">
+    <link rel="preload" href="wheel-game.js" as="script">
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "SunnyYummy 命運輪盤遊戲",
+      "description": "體驗SunnyYummy的命運輪盤遊戲！自定義顏色和內容，享受有趣的互動遊戲，為您的決策增添樂趣和驚喜。",
+      "mainEntity": {
+        "@type": "Game",
+        "name": "命運輪盤",
+        "description": "一個互動性強、趣味十足的線上輪盤遊戲"
+      }
+    }
+    </script>
      <style>
 /* --- Footer --- */
         .footer {
@@ -842,79 +884,77 @@
 
     </style>
 </head>
-<body>
+<body itemscope itemtype="https://schema.org/WebPage">
 
 
 
 
 
-    <header class="page-title-header">
-        <h1 class="page-title">轉到什麼做什麼</h1>
+    <header class="page-title-header" role="banner">
+        <h1 class="page-title" itemprop="name">轉到什麼做什麼</h1>
     </header>
 
 
 
  <!-- 新增可折疊導航欄 -->
- <div class="game-header" id="gameHeader">
+ <div class="game-header" id="gameHeader" role="navigation" aria-label="主要導航">
  
     <header class="page-title-header">
         <h1 class="page-title">轉到什麼做什麼</h1>
     </header>
-    <nav class="category-nav">
-        <a href="/">週邊商品</a>
-        <a href="/music.html">音樂專輯</a>
-        <a href="/news.html">最新消息</a>
-        <a href="/scores.html">樂譜與舞蹈</a>
-        <a href="/game/card-game.html" class="active">互動遊戲</a>
-        <a href="/guestbook.html">留言板</a>
+    <nav class="category-nav" aria-label="網站分類">
+        <a href="/" aria-label="週邊商品">週邊商品</a>
+        <a href="/music.html" aria-label="音樂專輯">音樂專輯</a>
+        <a href="/news.html" aria-label="最新消息">最新消息</a>
+        <a href="/scores.html" aria-label="樂譜與舞蹈">樂譜與舞蹈</a>
+        <a href="/game/card-game.html" class="active" aria-label="互動遊戲">互動遊戲</a>
+        <a href="/guestbook.html" aria-label="留言板">留言板</a>
     </nav>
     
-    <nav class="games-nav">
-
-        <a href="/game/card-game.html ">洞洞樂</a>
-        <a href="/game/wheel-game.html " class="active" >命運輪盤</a>
-        <a href="/game/brige-game.html" >玻璃橋挑戰</a>
+    <nav class="games-nav" aria-label="遊戲導航">
+        <a href="/game/card-game.html" aria-label="洞洞樂遊戲">洞洞樂</a>
+        <a href="/game/wheel-game.html" class="active" aria-label="命運輪盤遊戲">命運輪盤</a>
+        <a href="/game/brige-game.html" aria-label="玻璃橋挑戰遊戲">玻璃橋挑戰</a>
     </nav>
 </div>
 
 <!-- 導航切換按鈕 -->
-<button class="nav-toggle" id="navToggle">≡</button>
+<button class="nav-toggle" id="navToggle" aria-label="切換導航" aria-expanded="false">≡</button>
 
 
     
     <!-- 新增：遊戲導覽 -->
  
 
-    <div class="container">
-        <div class="wheel-container">
-            <div class="pointer"></div>
-            <canvas id="wheel" width="350" height="350"></canvas>
+    <main role="main" itemprop="mainContentOfPage">
+        <div class="container">
+            <div class="wheel-container" aria-label="命運輪盤">
+                <div class="pointer" aria-hidden="true"></div>
+                <canvas id="wheel" width="350" height="350" aria-label="旋轉輪盤"></canvas>
+            </div>
+
+            <button id="spin" aria-label="開始旋轉輪盤">開始旋轉</button>
+
+            <div class="result" id="result" aria-live="polite" aria-atomic="true"></div>
         </div>
 
-        <button id="spin">開始旋轉</button>
+        <button id="editOptions" class="edit-options-btn" aria-label="編輯輪盤選項">編輯選項</button>
 
-        <div class="result" id="result"></div>
-    </div>
-
-   
-
-    
-    <button id="editOptions" class="edit-options-btn">編輯選項</button>
-
-    <!-- 選項編輯彈出視窗 -->
-    <div id="optionsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>編輯選項</h2>
-                <span class="close">×</span>
-            </div>
-            <div class="options-container" id="optionsContainer"></div>
-            <button id="addOption" class="add-option">+ 新增選項</button>
-            <div class="modal-footer">
-                <button class="save-options" id="saveOptions">儲存選項</button>
+        <!-- 選項編輯彈出視窗 -->
+        <div id="optionsModal" class="modal" role="dialog" aria-labelledby="optionsModalTitle" aria-modal="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="optionsModalTitle">編輯選項</h2>
+                    <span class="close" aria-label="關閉">×</span>
+                </div>
+                <div class="options-container" id="optionsContainer" aria-label="輪盤選項列表"></div>
+                <button id="addOption" class="add-option" aria-label="新增選項">+ 新增選項</button>
+                <div class="modal-footer">
+                    <button class="save-options" id="saveOptions" aria-label="儲存選項">儲存選項</button>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
 
 

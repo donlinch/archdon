@@ -1,21 +1,75 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 洞洞樂遊戲</title>
-    <meta name="description" content="SunnyYummy 趣味洞洞樂遊戲，自定義內容互動體驗。">
-    <!-- 絕對路徑 CSS -->
-    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>SunnyYummy 洞洞樂遊戲 - 互動趣味遊戲體驗</title>
+    <meta name="description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗，適合所有年齡層。">
+    <meta name="keywords" content="SunnyYummy, 互動遊戲, 洞洞樂, 記憶遊戲, 兒童遊戲, 教育遊戲, 互動學習">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.sunnyyummy.com/game/card-game.html">
+    <meta property="og:title" content="SunnyYummy 洞洞樂遊戲">
+    <meta property="og:description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗。">
+    <meta property="og:image" content="/images/game-og-image.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.sunnyyummy.com/game/card-game.html">
+    <meta name="twitter:title" content="SunnyYummy 洞洞樂遊戲">
+    <meta name="twitter:description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗。">
+    <meta name="twitter:image" content="/images/game-og-image.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://www.sunnyyummy.com/game/card-game.html">
+    
+    <!-- Robots Meta Tag -->
+    <meta name="robots" content="index, follow">
+    
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/style.css" as="style">
+    <link rel="preload" href="card-game拷貝.js" as="script">
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <!-- Optional: Add animation library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "SunnyYummy 洞洞樂遊戲",
+      "description": "SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗。",
+      "publisher": {
+        "@type": "Organization",
+        "name": "SunnyYummy",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "/images/logo.png"
+        }
+      },
+      "mainEntity": {
+        "@type": "Game",
+        "name": "洞洞樂遊戲",
+        "description": "互動記憶翻牌遊戲，可自定義內容",
+        "applicationCategory": "Entertainment"
+      }
+    }
+    </script>
+    
+    <!-- Performance Optimization -->
     <style>
         /* --- 自定義動畫效果 --- */
         @keyframes floatAnimation {

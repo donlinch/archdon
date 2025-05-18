@@ -1,9 +1,28 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文字遊戲 - 單行顯示與繪圖功能</title>
+    
+    <!-- SEO Optimization -->
+    <title>互動文字遊戲 - 單行文字顯示與繪圖工具</title>
+    <meta name="description" content="一個互動性強的文字遊戲應用，支持單行文字顯示和即時繪圖功能。適合創意表達和娛樂。">
+    <meta name="keywords" content="文字遊戲, 互動應用, 繪圖工具, 創意表達, 單行文字">
+    
+    <!-- Open Graph Meta Tags for Social Media Sharing -->
+    <meta property="og:title" content="互動文字遊戲">
+    <meta property="og:description" content="一個互動性強的文字遊戲應用，支持單行文字顯示和即時繪圖功能。">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon and App Icons (recommend creating these) -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Canonical URL to prevent duplicate content -->
+    <link rel="canonical" href="https://yourwebsite.com/game/text-display.html">
+    
+    <!-- Robots Meta Tag -->
+    <meta name="robots" content="index, follow">
+    
     <style>
         body {
             margin: 0;
@@ -155,27 +174,33 @@
     </style>
 </head>
 <body>
-    <div class="input-area">
-        <a href="/games.html" class="return-btn">返回遊戲頁面</a>
-        <input type="text" id="text-input" placeholder="請輸入文字..." autocomplete="off">
+    <header class="input-area" role="banner">
+        <nav>
+            <a href="/games.html" class="return-btn" aria-label="返回遊戲頁面">返回遊戲頁面</a>
+        </nav>
+        <input type="text" id="text-input" placeholder="請輸入文字..." autocomplete="off" aria-label="文字輸入框">
         <div class="tools-container">
-            <button id="draw-toggle" class="control-btn">繪圖功能</button>
-            <div id="drawing-tools" class="drawing-tools">
-                <button id="clear-canvas" class="control-btn">清除畫布</button>
+            <button id="draw-toggle" class="control-btn" aria-pressed="false">繪圖功能</button>
+            <div id="drawing-tools" class="drawing-tools" role="toolbar" aria-hidden="true">
+                <button id="clear-canvas" class="control-btn" aria-label="清除畫布">清除畫布</button>
                 <span class="color-label">顏色：</span>
-                <div id="red-btn" class="color-btn red selected" data-color="#FF0000"></div>
-                <div id="green-btn" class="color-btn green" data-color="#00FF00"></div>
-                <div id="black-btn" class="color-btn black" data-color="#000000"></div>
-                <div id="yellow-btn" class="color-btn yellow" data-color="#FFFF00"></div>
-                <div id="blue-btn" class="color-btn blue" data-color="#0000FF"></div>
+                <div id="red-btn" class="color-btn red selected" data-color="#FF0000" role="button" aria-label="紅色" tabindex="0"></div>
+                <div id="green-btn" class="color-btn green" data-color="#00FF00" role="button" aria-label="綠色" tabindex="0"></div>
+                <div id="black-btn" class="color-btn black" data-color="#000000" role="button" aria-label="黑色" tabindex="0"></div>
+                <div id="yellow-btn" class="color-btn yellow" data-color="#FFFF00" role="button" aria-label="黃色" tabindex="0"></div>
+                <div id="blue-btn" class="color-btn blue" data-color="#0000FF" role="button" aria-label="藍色" tabindex="0"></div>
             </div>
         </div>
-    </div>
+    </header>
     
-    <div class="display-area">
-        <div id="text-display"></div>
-        <canvas id="drawing-canvas"></canvas>
-    </div>
+    <main class="display-area" role="main">
+        <output id="text-display" aria-live="polite"></output>
+        <canvas id="drawing-canvas" aria-label="繪圖畫布"></canvas>
+    </main>
+
+    <footer class="page-footer" role="contentinfo">
+        <p>© 2024 互動文字遊戲. 保留所有權利.</p>
+    </footer>
 
     <script>
         const textInput = document.getElementById('text-input');
@@ -188,6 +213,27 @@
         const clearCanvas = document.getElementById('clear-canvas');
         const colorButtons = document.querySelectorAll('.color-btn');
         
+        // 無障礙輔助功能：鍵盤支持
+        function setupKeyboardSupport() {
+            // 顏色按鈕鍵盤支持
+            colorButtons.forEach(button => {
+                button.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        this.click();
+                        e.preventDefault();
+                    }
+                });
+            });
+
+            // 繪圖切換鍵盤支持
+            drawToggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    this.click();
+                    e.preventDefault();
+                }
+            });
+        }
+        
         // 繪圖狀態
         let isDrawing = false;
         let lastX = 0;
@@ -199,6 +245,7 @@
         window.addEventListener('DOMContentLoaded', function() {
             setCanvasDimensions();
             updateDisplayText();
+            setupKeyboardSupport();
         });
         
         // 設置畫布尺寸
@@ -220,6 +267,9 @@
             
             // 設置顯示文字
             textDisplay.textContent = text || "請輸入文字...";
+            
+            // 無障礙：更新 aria-live 區域
+            textDisplay.setAttribute('aria-label', text || "請輸入文字...");
             
             // 獲取容器尺寸
             const containerWidth = displayArea.clientWidth * 0.9;  // 使用90%的寬度
@@ -309,11 +359,15 @@
             
             if (drawingEnabled) {
                 drawToggle.textContent = "關閉繪圖";
+                drawToggle.setAttribute('aria-pressed', 'true');
                 drawingTools.classList.add('active');
+                drawingTools.setAttribute('aria-hidden', 'false');
                 canvas.style.cursor = 'crosshair';
             } else {
                 drawToggle.textContent = "繪圖功能";
+                drawToggle.setAttribute('aria-pressed', 'false');
                 drawingTools.classList.remove('active');
+                drawingTools.setAttribute('aria-hidden', 'true');
                 canvas.style.cursor = 'default';
             }
         }

@@ -1,13 +1,59 @@
- 
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖片投票遊戲</title>
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>SunnyYummy 圖片投票遊戲 - 互動娛樂體驗</title>
+    <meta name="description" content="參與SunnyYummy的互動圖片投票遊戲，享受有趣的選擇和即時結果！快來體驗最新的娛樂互動方式。">
+    <meta name="keywords" content="投票遊戲, 互動娛樂, 圖片投票, SunnyYummy, 線上遊戲, 互動體驗">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.sunnyyummy.com/game/voit-game.html">
+    <meta property="og:title" content="SunnyYummy 圖片投票遊戲">
+    <meta property="og:description" content="參與SunnyYummy的互動圖片投票遊戲，享受有趣的選擇和即時結果！">
+    <meta property="og:image" content="/images/og-image-vote-game.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.sunnyyummy.com/game/voit-game.html">
+    <meta name="twitter:title" content="SunnyYummy 圖片投票遊戲">
+    <meta name="twitter:description" content="參與SunnyYummy的互動圖片投票遊戲，享受有趣的選擇和即時結果！">
+    <meta name="twitter:image" content="/images/og-image-vote-game.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://www.sunnyyummy.com/game/voit-game.html">
+    
+    <!-- Robots Meta Tag -->
+    <meta name="robots" content="index, follow">
+    
+    <!-- Preconnect and Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Structured Data - WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SunnyYummy 圖片投票遊戲",
+      "url": "https://www.sunnyyummy.com/game/voit-game.html",
+      "description": "互動圖片投票遊戲，讓使用者參與有趣的投票活動",
+      "applicationCategory": "Entertainment",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TWD"
+      }
+    }
+    </script>
     <style>
         body {
             font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
@@ -599,54 +645,54 @@
     </style>
 </head>
 <body>
-    <header class="page-header">
-        <h1 class="page-title">圖片投票遊戲</h1>
+    <header class="page-header" role="banner">
+        <h1 class="page-title" itemprop="name">圖片投票遊戲</h1>
     </header>
-    <div class="main-content-wrapper">
-    <button id="settings-fab" class="settings-fab">⚙️</button>
+    <main class="main-content-wrapper" role="main">
+    <button id="settings-fab" class="settings-fab" aria-label="設定" title="管理投票設定">⚙️</button>
 
-    <div id="settings-drawer" class="drawer">
+    <aside id="settings-drawer" class="drawer" role="complementary" aria-label="投票管理抽屜">
         <div class="drawer-header">
             <h2>管理投票項目</h2>
-            <button id="close-drawer-button" class="drawer-close-button">×</button>
+            <button id="close-drawer-button" class="drawer-close-button" aria-label="關閉抽屜">×</button>
         </div>
         <div class="drawer-content">
-            <ul id="drawer-item-list" class="drawer-item-list">
+            <ul id="drawer-item-list" class="drawer-item-list" aria-label="投票活動列表">
                 <li><span>(此處將顯示現有投票活動列表)</span></li>
             </ul>
-            <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
+            <button id="drawer-add-new-button" class="button drawer-add-new-button" aria-label="新增投票活動">新增投票活動</button>
         </div>
-    </div>
-    <div id="drawer-overlay" class="drawer-overlay"></div>
+    </aside>
+    <div id="drawer-overlay" class="drawer-overlay" aria-hidden="true"></div>
 
-    <div class="container">
-        <div id="campaign-selection-area">
-            <h1>選擇一個投票活動</h1>
-            <ul id="campaign-list">
+    <section class="container">
+        <section id="campaign-selection-area" aria-labelledby="campaign-selection-heading">
+            <h2 id="campaign-selection-heading">選擇一個投票活動</h2>
+            <ul id="campaign-list" aria-live="polite">
             </ul>
-        </div>
+        </section>
 
-        <div id="vote-area" style="display: none;">
-            <h1 id="vote-title"></h1>
-            <div class="options">
+        <section id="vote-area" style="display: none;" aria-labelledby="vote-title">
+            <h2 id="vote-title"></h2>
+            <div class="options" role="group" aria-label="投票選項">
             </div>
-            <button id="vote-button" class="button" disabled>投票</button>
+            <button id="vote-button" class="button" disabled aria-label="提交投票">投票</button>
             
-            <div class="results">
-                <h2>投票結果</h2>
+            <section class="results" aria-live="polite">
+                <h3>投票結果</h3>
                 <!-- Share link placeholder will be populated by JS -->
-            </div>
+            </section>
             <div id="share-link-area" class="share-link-container" style="display: none;">
                 <p>分享此投票活動連結：</p>
-                <input type="text" id="shareable-link-input" readonly>
-                <button id="copy-share-link-button">複製</button>
+                <input type="text" id="shareable-link-input" readonly aria-label="投票活動分享連結">
+                <button id="copy-share-link-button" aria-label="複製分享連結">複製</button>
             </div>
-            <div class="thank-you">感謝您的投票！</div>
-            <button id="restart-button" class="button restart-button" style="display: none;">再次投票</button>
-        </div>
-    </div> <!-- .container ends -->
-    <button id="back-to-campaigns-button" class="button moved-button" style="background-color: #7f8c8d;">返回活動列表</button>
-    </div> <!-- .main-content-wrapper ends -->
+            <div class="thank-you" role="alert">感謝您的投票！</div>
+            <button id="restart-button" class="button restart-button" style="display: none;" aria-label="再次投票">再次投票</button>
+        </section>
+    </section> <!-- .container ends -->
+    <button id="back-to-campaigns-button" class="button moved-button" style="background-color: #7f8c8d;" aria-label="返回活動列表">返回活動列表</button>
+    </main> <!-- .main-content-wrapper ends -->
 
     <div id="myLightbox" class="lightbox">
         <span class="lightbox-close">×</span>
@@ -655,841 +701,858 @@
         </div>
     </div>
 
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=fetch" defer></script>
     <script>
-        const API_BASE_URL = '/api/voit'; 
-
-        let currentCampaignData = null; 
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const campaignIdFromUrl = urlParams.get('campaign_id');
-
-            const campaignSelectionArea = document.getElementById('campaign-selection-area');
-            const campaignListUl = document.getElementById('campaign-list');
-            const voteArea = document.getElementById('vote-area');
-            const voteTitleH1 = document.getElementById('vote-title');
-            const optionsContainer = voteArea.querySelector('.options');
-            const voteButton = document.getElementById('vote-button');
-            const resultsDiv = voteArea.querySelector('.results');
-            const thankYouMessage = voteArea.querySelector('.thank-you');
-            const restartButton = document.getElementById('restart-button');
-            const backToCampaignsButton = document.getElementById('back-to-campaigns-button');
-            
-            const lightbox = document.getElementById('myLightbox');
-            const lightboxImg = document.getElementById('lightboxImg');
-            const closeLightboxButton = document.querySelector('.lightbox-close');
-
-            const settingsFab = document.getElementById('settings-fab');
-            const settingsDrawer = document.getElementById('settings-drawer');
-            const closeDrawerButton = document.getElementById('close-drawer-button');
-            const drawerOverlay = document.getElementById('drawer-overlay');
-            const drawerContent = settingsDrawer.querySelector('.drawer-content'); 
-            
-            let selectedOptionId = null;
-
-            async function renderCampaignList() {
-                campaignListUl.innerHTML = '<li>載入中...</li>';
-                try {
-                    const response = await fetch(`${API_BASE_URL}/campaigns`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const campaigns = await response.json();
-                    
-                    campaignListUl.innerHTML = ''; 
-                    if (campaigns && campaigns.length > 0) {
-                        campaigns.forEach(campaign => {
-                            const listItem = document.createElement('li');
-                            listItem.textContent = campaign.title;
-                            listItem.style.cursor = 'pointer';
-                            listItem.style.padding = '10px';
-                            listItem.style.borderBottom = '1px solid #eee';
-                            listItem.addEventListener('click', () => loadCampaign(campaign.campaign_id));
-                            campaignListUl.appendChild(listItem);
-                        });
-                    } else {
-                        campaignListUl.innerHTML = '<li>目前沒有可投票的活動。</li>';
-                    }
-                } catch (error) {
-                    console.error("無法獲取投票活動列表:", error);
-                    campaignListUl.innerHTML = '<li>無法載入投票活動，請稍後再試。</li>';
-                }
-                campaignSelectionArea.style.display = 'block';
-                voteArea.style.display = 'none';
+        // Defer script execution and add performance optimizations
+        (function() {
+            // Performance optimization: Defer heavy initialization
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeVoteGame);
+            } else {
+                initializeVoteGame();
             }
 
-            async function loadCampaign(campaignId) {
-                optionsContainer.innerHTML = '<p>載入投票選項中...</p>';
-                voteTitleH1.textContent = '載入中...';
-                campaignSelectionArea.style.display = 'none';
-                voteArea.style.display = 'block'; 
+            function initializeVoteGame() {
+                const API_BASE_URL = '/api/voit'; 
 
-                try {
-                    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    currentCampaignData = await response.json(); 
-                    
-                    if (!currentCampaignData || !currentCampaignData.options) {
-                        throw new Error('無效的活動數據格式');
-                    }
+                let currentCampaignData = null; 
 
-                    voteTitleH1.textContent = currentCampaignData.title;
-                    optionsContainer.innerHTML = ''; 
-                    selectedOptionId = null;
-                    voteButton.disabled = true;
+                const urlParams = new URLSearchParams(window.location.search);
+                const campaignIdFromUrl = urlParams.get('campaign_id');
 
-                    if (currentCampaignData.currentUserHasVoted) {
-                        optionsContainer.style.display = 'none';
-                        voteButton.style.display = 'none';
-                        resultsDiv.style.display = 'block';
-                        thankYouMessage.textContent = '您已對此活動投過票。';
-                        thankYouMessage.style.display = 'block';
-                        restartButton.textContent = '查看/刷新結果'; 
-                        restartButton.style.display = 'block';
-                        showResultsForCampaign();
-                    } else {
-                        resultsDiv.style.display = 'none';
-                        thankYouMessage.style.display = 'none';
-                        restartButton.style.display = 'none';
-                        optionsContainer.style.display = 'grid';
-                        voteButton.style.display = 'block';
-                        voteButton.textContent = '投票'; 
+                const campaignSelectionArea = document.getElementById('campaign-selection-area');
+                const campaignListUl = document.getElementById('campaign-list');
+                const voteArea = document.getElementById('vote-area');
+                const voteTitleH1 = document.getElementById('vote-title');
+                const optionsContainer = voteArea.querySelector('.options');
+                const voteButton = document.getElementById('vote-button');
+                const resultsDiv = voteArea.querySelector('.results');
+                const thankYouMessage = voteArea.querySelector('.thank-you');
+                const restartButton = document.getElementById('restart-button');
+                const backToCampaignsButton = document.getElementById('back-to-campaigns-button');
+                
+                const lightbox = document.getElementById('myLightbox');
+                const lightboxImg = document.getElementById('lightboxImg');
+                const closeLightboxButton = document.querySelector('.lightbox-close');
+
+                const settingsFab = document.getElementById('settings-fab');
+                const settingsDrawer = document.getElementById('settings-drawer');
+                const closeDrawerButton = document.getElementById('close-drawer-button');
+                const drawerOverlay = document.getElementById('drawer-overlay');
+                const drawerContent = settingsDrawer.querySelector('.drawer-content'); 
+                
+                let selectedOptionId = null;
+
+                async function renderCampaignList() {
+                    campaignListUl.innerHTML = '<li>載入中...</li>';
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const campaigns = await response.json();
                         
-                        currentCampaignData.options.forEach(opt => { 
-                            const optionDiv = document.createElement('div');
-                            optionDiv.className = 'option';
-                            optionDiv.setAttribute('data-id', opt.option_id);
-                            optionDiv.setAttribute('data-name', opt.name);
+                        campaignListUl.innerHTML = ''; 
+                        if (campaigns && campaigns.length > 0) {
+                            campaigns.forEach(campaign => {
+                                const listItem = document.createElement('li');
+                                listItem.textContent = campaign.title;
+                                listItem.style.cursor = 'pointer';
+                                listItem.style.padding = '10px';
+                                listItem.style.borderBottom = '1px solid #eee';
+                                listItem.addEventListener('click', () => loadCampaign(campaign.campaign_id));
+                                campaignListUl.appendChild(listItem);
+                            });
+                        } else {
+                            campaignListUl.innerHTML = '<li>目前沒有可投票的活動。</li>';
+                        }
+                    } catch (error) {
+                        console.error("無法獲取投票活動列表:", error);
+                        campaignListUl.innerHTML = '<li>無法載入投票活動，請稍後再試。</li>';
+                    }
+                    campaignSelectionArea.style.display = 'block';
+                    voteArea.style.display = 'none';
+                }
 
-                            const optionContentDiv = document.createElement('div');
-                            optionContentDiv.className = 'option-content';
-                            optionContentDiv.textContent = opt.name;
+                async function loadCampaign(campaignId) {
+                    optionsContainer.innerHTML = '<p>載入投票選項中...</p>';
+                    voteTitleH1.textContent = '載入中...';
+                    campaignSelectionArea.style.display = 'none';
+                    voteArea.style.display = 'block'; 
 
-                            if (opt.image_url && opt.image_url.trim() !== '') {
-                                optionDiv.classList.add('option-with-image'); // 添加class以便CSS控制
-                                const zoomIconSpan = document.createElement('span');
-                                zoomIconSpan.className = 'zoom-icon';
-                                zoomIconSpan.innerHTML = '';
-                                
-                                const imgElement = document.createElement('img');
-                                imgElement.src = opt.image_url;
-                                imgElement.alt = opt.name;
-                                
-                                imgElement.onerror = () => { 
-                                    if(zoomIconSpan.parentNode) zoomIconSpan.remove(); 
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        currentCampaignData = await response.json(); 
+                        
+                        if (!currentCampaignData || !currentCampaignData.options) {
+                            throw new Error('無效的活動數據格式');
+                        }
+
+                        voteTitleH1.textContent = currentCampaignData.title;
+                        optionsContainer.innerHTML = ''; 
+                        selectedOptionId = null;
+                        voteButton.disabled = true;
+
+                        if (currentCampaignData.currentUserHasVoted) {
+                            optionsContainer.style.display = 'none';
+                            voteButton.style.display = 'none';
+                            resultsDiv.style.display = 'block';
+                            thankYouMessage.textContent = '您已對此活動投過票。';
+                            thankYouMessage.style.display = 'block';
+                            restartButton.textContent = '查看/刷新結果'; 
+                            restartButton.style.display = 'block';
+                            showResultsForCampaign();
+                        } else {
+                            resultsDiv.style.display = 'none';
+                            thankYouMessage.style.display = 'none';
+                            restartButton.style.display = 'none';
+                            optionsContainer.style.display = 'grid';
+                            voteButton.style.display = 'block';
+                            voteButton.textContent = '投票'; 
+                            
+                            currentCampaignData.options.forEach(opt => { 
+                                const optionDiv = document.createElement('div');
+                                optionDiv.className = 'option';
+                                optionDiv.setAttribute('data-id', opt.option_id);
+                                optionDiv.setAttribute('data-name', opt.name);
+
+                                const optionContentDiv = document.createElement('div');
+                                optionContentDiv.className = 'option-content';
+                                optionContentDiv.textContent = opt.name;
+
+                                if (opt.image_url && opt.image_url.trim() !== '') {
+                                    optionDiv.classList.add('option-with-image'); // 添加class以便CSS控制
+                                    const zoomIconSpan = document.createElement('span');
+                                    zoomIconSpan.className = 'zoom-icon';
+                                    zoomIconSpan.innerHTML = '';
+                                    
+                                    const imgElement = document.createElement('img');
+                                    imgElement.src = opt.image_url;
+                                    imgElement.alt = opt.name;
+                                    
+                                    imgElement.onerror = () => { 
+                                        if(zoomIconSpan.parentNode) zoomIconSpan.remove(); 
+                                        optionContentDiv.style.position = 'static';
+                                        optionContentDiv.style.background = 'transparent';
+                                        optionContentDiv.style.color = '#555'; 
+                                        optionContentDiv.style.height = '100%';
+                                        optionContentDiv.style.display = 'flex';
+                                        optionContentDiv.style.alignItems = 'center';
+                                        optionContentDiv.style.justifyContent = 'center';
+                                        optionDiv.style.backgroundColor = '#f0f0f0'; 
+                                        if (imgElement.parentNode) imgElement.remove(); 
+                                    };
+                                    if (imgElement.complete && typeof imgElement.naturalHeight !== "undefined" && imgElement.naturalHeight === 0 && imgElement.src) {
+                                        imgElement.onerror(); 
+                                    }
+
+                                    optionDiv.appendChild(zoomIconSpan);
+                                    optionDiv.appendChild(imgElement);
+                                    optionDiv.appendChild(optionContentDiv); 
+
+                                    zoomIconSpan.addEventListener('click', (event) => {
+                                        event.stopPropagation();
+                                        if(imgElement.src && typeof imgElement.naturalHeight !== "undefined" && imgElement.naturalHeight !== 0) { 
+                                            lightboxImg.src = imgElement.src;
+                                            lightbox.style.display = 'flex';
+                                        }
+                                    });
+                                } else {
                                     optionContentDiv.style.position = 'static';
                                     optionContentDiv.style.background = 'transparent';
-                                    optionContentDiv.style.color = '#555'; 
+                                    optionContentDiv.style.color = '#333';
                                     optionContentDiv.style.height = '100%';
                                     optionContentDiv.style.display = 'flex';
                                     optionContentDiv.style.alignItems = 'center';
                                     optionContentDiv.style.justifyContent = 'center';
-                                    optionDiv.style.backgroundColor = '#f0f0f0'; 
-                                    if (imgElement.parentNode) imgElement.remove(); 
-                                };
-                                if (imgElement.complete && typeof imgElement.naturalHeight !== "undefined" && imgElement.naturalHeight === 0 && imgElement.src) {
-                                    imgElement.onerror(); 
+                                    optionContentDiv.style.padding = '10px';
+                                    optionDiv.style.backgroundColor = '#e9ecef'; 
+                                    optionDiv.appendChild(optionContentDiv);
                                 }
+                                
+                                optionsContainer.appendChild(optionDiv);
 
-                                optionDiv.appendChild(zoomIconSpan);
-                                optionDiv.appendChild(imgElement);
-                                optionDiv.appendChild(optionContentDiv); 
+                                optionDiv.addEventListener('click', function() {
+                                    if (voteButton.style.display === 'none') return;
+                                    document.querySelectorAll('#vote-area .option').forEach(o => o.classList.remove('selected'));
+                                    this.classList.add('selected');
+                                    selectedOptionId = this.getAttribute('data-id');
+                                    voteButton.disabled = false;
+                                });
+                            });
+                        }
+                        
+                        initializeResultsStructureForCampaign(); 
 
-                                zoomIconSpan.addEventListener('click', (event) => {
-                                    event.stopPropagation();
-                                    if(imgElement.src && typeof imgElement.naturalHeight !== "undefined" && imgElement.naturalHeight !== 0) { 
-                                        lightboxImg.src = imgElement.src;
-                                        lightbox.style.display = 'flex';
-                                    }
+                    } catch (error) {
+                        console.error(`無法載入投票活動 ${campaignId}:`, error);
+                        voteTitleH1.textContent = '錯誤';
+                        optionsContainer.innerHTML = `<p>無法載入投票選項，請<a href="#" onclick="loadCampaign(${campaignId}); return false;">重試</a>或返回活動列表。</p>`;
+                    }
+                }
+                
+                backToCampaignsButton.addEventListener('click', renderCampaignList);
+
+                function initializeResultsStructureForCampaign() {
+                    resultsDiv.innerHTML = '<h2>投票結果</h2>'; 
+                    if (!currentCampaignData || !currentCampaignData.options) return;
+
+                    currentCampaignData.options.forEach(opt => {
+                        const resultItemHTML = `
+                            <div class="result-item" data-result-id="${opt.option_id}">
+                                <div class="result-label">
+                                    <div>
+                                        ${opt.image_url && opt.image_url.trim() !== '' ? `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">` : '<span class="result-item-no-image"></span>'}
+                                        <span>${opt.name}</span>
+                                    </div>
+                                    <span class="percentage">0% (0票)</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}">0%</div>
+                                </div>
+                            </div>
+                        `;
+                        resultsDiv.insertAdjacentHTML('beforeend', resultItemHTML);
+                    });
+                }
+                
+                voteButton.addEventListener('click', async function() {
+                    if (selectedOptionId && currentCampaignData) {
+                        voteButton.disabled = true;
+                        voteButton.textContent = '投票中...';
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/vote`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ option_id: selectedOptionId })
+                            });
+                            
+                            if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({ message: '投票失敗，請稍後再試。' }));
+                                if (response.status === 429) {
+                                    console.warn("投票失敗: IP 限制 (429).", errorData.error || errorData.message);
+                                    optionsContainer.style.display = 'none';
+                                    voteButton.style.display = 'none';
+                                    resultsDiv.style.display = 'block';
+                                    thankYouMessage.textContent = errorData.error || '您已對此活動投過票，這是目前的結果。';
+                                    thankYouMessage.style.display = 'block';
+                                    restartButton.textContent = '查看/刷新結果';
+                                    restartButton.style.display = 'block';
+                                    showResultsForCampaign();
+                                    return; 
+                                }
+                                throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
+                            }
+                            
+                            optionsContainer.style.display = 'none';
+                            voteButton.style.display = 'none';
+                            resultsDiv.style.display = 'block';
+                            thankYouMessage.textContent = '感謝您的投票！';
+                            thankYouMessage.style.display = 'block';
+                            restartButton.textContent = '再次投票';
+                            restartButton.style.display = 'block';
+                            showResultsForCampaign(); // This will now also show the share link
+                        } catch (error) {
+                            console.error("投票失敗:", error);
+                            if (error.message && !error.message.includes('您已對此活動投過票')) { 
+                               alert(`投票失敗：${error.message}`);
+                            }
+                        } finally {
+                            if (optionsContainer.style.display !== 'none') { 
+                                voteButton.disabled = false;
+                                voteButton.textContent = '投票';
+                            }
+                        }
+                    }
+                });
+
+                async function showResultsForCampaign() {
+                    if (!currentCampaignData) return;
+                    resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>';
+                    const shareLinkArea = document.getElementById('share-link-area');
+                    const shareLinkInput = document.getElementById('shareable-link-input');
+                    const copyShareLinkButton = document.getElementById('copy-share-link-button');
+
+                    if (shareLinkArea) shareLinkArea.style.display = 'none'; // Hide initially
+
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const resultsData = await response.json(); 
+
+                        initializeResultsStructureForCampaign(); 
+
+                        let totalVotes = 0;
+                        currentCampaignData.options.forEach(opt => {
+                            totalVotes += (resultsData[opt.option_id] || 0);
+                        });
+                    
+                        currentCampaignData.options.forEach((opt, index) => {
+                            const votesForOption = resultsData[opt.option_id] || 0;
+                            const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
+                            
+                            const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${opt.option_id}"]`);
+                            if (resultItem) {
+                                const progressBar = resultItem.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
+                                const percentageSpan = resultItem.querySelector('.percentage');
+                                
+                                setTimeout(() => {
+                                    progressBar.style.width = `${percentage.toFixed(1)}%`;
+                                    progressBar.textContent = `${percentage.toFixed(1)}%`;
+                                    percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
+                                }, 50 * (index + 1)); 
+                            }
+                        });
+
+                        // Display share link
+                        if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
+                            const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
+                            shareLinkInput.value = shareUrl;
+                            shareLinkArea.style.display = 'block';
+
+                            copyShareLinkButton.onclick = () => {
+                                shareLinkInput.select();
+                                shareLinkInput.setSelectionRange(0, 99999); // For mobile devices
+                                try {
+                                    document.execCommand('copy');
+                                    copyShareLinkButton.textContent = '已複製!';
+                                    setTimeout(() => { copyShareLinkButton.textContent = '複製'; }, 2000);
+                                } catch (err) {
+                                    console.error('無法複製連結: ', err);
+                                    alert('無法自動複製連結，請手動複製。');
+                                }
+                            };
+                        }
+
+                    } catch (error) {
+                         console.error("無法獲取投票結果:", error);
+                         resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
+                    }
+                }
+                
+                restartButton.addEventListener('click', function() {
+                    if (!currentCampaignData) return;
+                    loadCampaign(currentCampaignData.campaign_id);
+                });
+
+                if (closeLightboxButton) {
+                    closeLightboxButton.addEventListener('click', () => { lightbox.style.display = 'none'; });
+                }
+                if (lightbox) {
+                    lightbox.addEventListener('click', (event) => {
+                        if (event.target === lightbox) { lightbox.style.display = 'none'; }
+                    });
+                }
+
+                function escapeHtml(unsafe) {
+                    if (typeof unsafe !== 'string') return '';
+                    return unsafe
+                          .replace(/&/g, '&')
+              
+                    // < 轉成 & l t ;
+                    .replace(/</g, '<')
+              
+                    // > 轉成 & g t ;
+                    .replace(/>/g, '>')
+              
+                    // " 轉成 & q u o t ;
+                    .replace(/"/g, '&quot;')
+              
+                    // ' 轉成 & # 3 9 ;  (數字實體)
+                    .replace(/'/g, '&#39;');
+                }
+
+                if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
+                    settingsFab.addEventListener('click', () => {
+                        settingsDrawer.classList.add('open');
+                        drawerOverlay.classList.add('active');
+                        showDefaultDrawerContent(); 
+                    });
+                    function closeDrawer() {
+                        settingsDrawer.classList.remove('open');
+                        drawerOverlay.classList.remove('active');
+                    }
+                    closeDrawerButton.addEventListener('click', closeDrawer);
+                    drawerOverlay.addEventListener('click', closeDrawer);
+
+                    async function showDefaultDrawerContent() { 
+                        if (!drawerContent) return; 
+                        
+                        drawerContent.innerHTML = `
+                            <ul id="drawer-item-list" class="drawer-item-list">
+                                <li>載入活動列表中...</li>
+                            </ul>
+                            <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
+                        `;
+                        const newDrawerButton = document.getElementById('drawer-add-new-button');
+                        if (newDrawerButton) {
+                            newDrawerButton.addEventListener('click', showAddNewCampaignForm);
+                        }
+
+                        const itemListUl = document.getElementById('drawer-item-list');
+                        if (!itemListUl) return;
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns`);
+                            if (!response.ok) throw new Error('無法獲取活動列表');
+                            const campaigns = await response.json();
+
+                            itemListUl.innerHTML = ''; 
+                            if (campaigns && campaigns.length > 0) {
+                                campaigns.forEach(campaign => {
+                                    const listItem = document.createElement('li');
+                                    listItem.innerHTML = `
+                                        <span>${escapeHtml(campaign.title)}</span>
+                                        <div>
+                                            <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">編輯</button>
+                                            <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
+                                        </div>
+                                    `;
+                                    itemListUl.appendChild(listItem);
+                                    listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
+                                    listItem.querySelector('.delete-item-button').addEventListener('click', handleDeleteCampaignClick);
                                 });
                             } else {
-                                optionContentDiv.style.position = 'static';
-                                optionContentDiv.style.background = 'transparent';
-                                optionContentDiv.style.color = '#333';
-                                optionContentDiv.style.height = '100%';
-                                optionContentDiv.style.display = 'flex';
-                                optionContentDiv.style.alignItems = 'center';
-                                optionContentDiv.style.justifyContent = 'center';
-                                optionContentDiv.style.padding = '10px';
-                                optionDiv.style.backgroundColor = '#e9ecef'; 
-                                optionDiv.appendChild(optionContentDiv);
+                                itemListUl.innerHTML = '<li>目前沒有可管理的投票活動。</li>';
                             }
-                            
-                            optionsContainer.appendChild(optionDiv);
-
-                            optionDiv.addEventListener('click', function() {
-                                if (voteButton.style.display === 'none') return;
-                                document.querySelectorAll('#vote-area .option').forEach(o => o.classList.remove('selected'));
-                                this.classList.add('selected');
-                                selectedOptionId = this.getAttribute('data-id');
-                                voteButton.disabled = false;
-                            });
-                        });
+                        } catch (error) {
+                            console.error("在抽屜中載入活動列表失敗:", error);
+                            itemListUl.innerHTML = '<li>載入活動列表失敗。</li>';
+                        }
                     }
-                    
-                    initializeResultsStructureForCampaign(); 
 
-                } catch (error) {
-                    console.error(`無法載入投票活動 ${campaignId}:`, error);
-                    voteTitleH1.textContent = '錯誤';
-                    optionsContainer.innerHTML = `<p>無法載入投票選項，請<a href="#" onclick="loadCampaign(${campaignId}); return false;">重試</a>或返回活動列表。</p>`;
-                }
-            }
-            
-            backToCampaignsButton.addEventListener('click', renderCampaignList);
-
-            function initializeResultsStructureForCampaign() {
-                resultsDiv.innerHTML = '<h2>投票結果</h2>'; 
-                if (!currentCampaignData || !currentCampaignData.options) return;
-
-                currentCampaignData.options.forEach(opt => {
-                    const resultItemHTML = `
-                        <div class="result-item" data-result-id="${opt.option_id}">
-                            <div class="result-label">
-                                <div>
-                                    ${opt.image_url && opt.image_url.trim() !== '' ? `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">` : '<span class="result-item-no-image"></span>'}
-                                    <span>${opt.name}</span>
-                                </div>
-                                <span class="percentage">0% (0票)</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}">0%</div>
-                            </div>
-                        </div>
-                    `;
-                    resultsDiv.insertAdjacentHTML('beforeend', resultItemHTML);
-                });
-            }
-            
-            voteButton.addEventListener('click', async function() {
-                if (selectedOptionId && currentCampaignData) {
-                    voteButton.disabled = true;
-                    voteButton.textContent = '投票中...';
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/vote`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ option_id: selectedOptionId })
-                        });
+                    async function handleEditCampaignClick(event) { 
+                        const campaignId = event.target.dataset.campaignId;
+                        const campaignTitle = event.target.dataset.campaignTitle; // 從 data attribute 獲取標題
                         
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({ message: '投票失敗，請稍後再試。' }));
-                            if (response.status === 429) {
-                                console.warn("投票失敗: IP 限制 (429).", errorData.error || errorData.message);
-                                optionsContainer.style.display = 'none';
-                                voteButton.style.display = 'none';
-                                resultsDiv.style.display = 'block';
-                                thankYouMessage.textContent = errorData.error || '您已對此活動投過票，這是目前的結果。';
-                                thankYouMessage.style.display = 'block';
-                                restartButton.textContent = '查看/刷新結果';
-                                restartButton.style.display = 'block';
-                                showResultsForCampaign();
-                                return; 
-                            }
-                            throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
-                        }
+                        const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位):`);
                         
-                        optionsContainer.style.display = 'none';
-                        voteButton.style.display = 'none';
-                        resultsDiv.style.display = 'block';
-                        thankYouMessage.textContent = '感謝您的投票！';
-                        thankYouMessage.style.display = 'block';
-                        restartButton.textContent = '再次投票';
-                        restartButton.style.display = 'block';
-                        showResultsForCampaign(); // This will now also show the share link
-                    } catch (error) {
-                        console.error("投票失敗:", error);
-                        if (error.message && !error.message.includes('您已對此活動投過票')) { 
-                           alert(`投票失敗：${error.message}`);
-                        }
-                    } finally {
-                        if (optionsContainer.style.display !== 'none') { 
-                            voteButton.disabled = false;
-                            voteButton.textContent = '投票';
-                        }
-                    }
-                }
-            });
-
-            async function showResultsForCampaign() {
-                if (!currentCampaignData) return;
-                resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>';
-                const shareLinkArea = document.getElementById('share-link-area');
-                const shareLinkInput = document.getElementById('shareable-link-input');
-                const copyShareLinkButton = document.getElementById('copy-share-link-button');
-
-                if (shareLinkArea) shareLinkArea.style.display = 'none'; // Hide initially
-
-                try {
-                    const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const resultsData = await response.json(); 
-
-                    initializeResultsStructureForCampaign(); 
-
-                    let totalVotes = 0;
-                    currentCampaignData.options.forEach(opt => {
-                        totalVotes += (resultsData[opt.option_id] || 0);
-                    });
-                
-                    currentCampaignData.options.forEach((opt, index) => {
-                        const votesForOption = resultsData[opt.option_id] || 0;
-                        const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
-                        
-                        const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${opt.option_id}"]`);
-                        if (resultItem) {
-                            const progressBar = resultItem.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
-                            const percentageSpan = resultItem.querySelector('.percentage');
-                            
-                            setTimeout(() => {
-                                progressBar.style.width = `${percentage.toFixed(1)}%`;
-                                progressBar.textContent = `${percentage.toFixed(1)}%`;
-                                percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
-                            }, 50 * (index + 1)); 
-                        }
-                    });
-
-                    // Display share link
-                    if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
-                        const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
-                        shareLinkInput.value = shareUrl;
-                        shareLinkArea.style.display = 'block';
-
-                        copyShareLinkButton.onclick = () => {
-                            shareLinkInput.select();
-                            shareLinkInput.setSelectionRange(0, 99999); // For mobile devices
-                            try {
-                                document.execCommand('copy');
-                                copyShareLinkButton.textContent = '已複製!';
-                                setTimeout(() => { copyShareLinkButton.textContent = '複製'; }, 2000);
-                            } catch (err) {
-                                console.error('無法複製連結: ', err);
-                                alert('無法自動複製連結，請手動複製。');
-                            }
-                        };
-                    }
-
-                } catch (error) {
-                     console.error("無法獲取投票結果:", error);
-                     resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
-                }
-            }
-            
-            restartButton.addEventListener('click', function() {
-                if (!currentCampaignData) return;
-                loadCampaign(currentCampaignData.campaign_id);
-            });
-
-            if (closeLightboxButton) {
-                closeLightboxButton.addEventListener('click', () => { lightbox.style.display = 'none'; });
-            }
-            if (lightbox) {
-                lightbox.addEventListener('click', (event) => {
-                    if (event.target === lightbox) { lightbox.style.display = 'none'; }
-                });
-            }
-
-            function escapeHtml(unsafe) {
-                if (typeof unsafe !== 'string') return '';
-                return unsafe
-                      .replace(/&/g, '&')
-        
-                // < 轉成 & l t ;
-                .replace(/</g, '<')
-        
-                // > 轉成 & g t ;
-                .replace(/>/g, '>')
-        
-                // " 轉成 & q u o t ;
-                .replace(/"/g, '&quot;')
-        
-                // ' 轉成 & # 3 9 ;  (數字實體)
-                .replace(/'/g, '&#39;');
-            }
-
-            if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
-                settingsFab.addEventListener('click', () => {
-                    settingsDrawer.classList.add('open');
-                    drawerOverlay.classList.add('active');
-                    showDefaultDrawerContent(); 
-                });
-                function closeDrawer() {
-                    settingsDrawer.classList.remove('open');
-                    drawerOverlay.classList.remove('active');
-                }
-                closeDrawerButton.addEventListener('click', closeDrawer);
-                drawerOverlay.addEventListener('click', closeDrawer);
-
-                async function showDefaultDrawerContent() { 
-                    if (!drawerContent) return; 
-                    
-                    drawerContent.innerHTML = `
-                        <ul id="drawer-item-list" class="drawer-item-list">
-                            <li>載入活動列表中...</li>
-                        </ul>
-                        <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
-                    `;
-                    const newDrawerButton = document.getElementById('drawer-add-new-button');
-                    if (newDrawerButton) {
-                        newDrawerButton.addEventListener('click', showAddNewCampaignForm);
-                    }
-
-                    const itemListUl = document.getElementById('drawer-item-list');
-                    if (!itemListUl) return;
-
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns`);
-                        if (!response.ok) throw new Error('無法獲取活動列表');
-                        const campaigns = await response.json();
-
-                        itemListUl.innerHTML = ''; 
-                        if (campaigns && campaigns.length > 0) {
-                            campaigns.forEach(campaign => {
-                                const listItem = document.createElement('li');
-                                listItem.innerHTML = `
-                                    <span>${escapeHtml(campaign.title)}</span>
-                                    <div>
-                                        <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">編輯</button>
-                                        <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
-                                    </div>
-                                `;
-                                itemListUl.appendChild(listItem);
-                                listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
-                                listItem.querySelector('.delete-item-button').addEventListener('click', handleDeleteCampaignClick);
-                            });
-                        } else {
-                            itemListUl.innerHTML = '<li>目前沒有可管理的投票活動。</li>';
-                        }
-                    } catch (error) {
-                        console.error("在抽屜中載入活動列表失敗:", error);
-                        itemListUl.innerHTML = '<li>載入活動列表失敗。</li>';
-                    }
-                }
-
-                async function handleEditCampaignClick(event) { 
-                    const campaignId = event.target.dataset.campaignId;
-                    const campaignTitle = event.target.dataset.campaignTitle; // 從 data attribute 獲取標題
-                    
-                    const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位):`);
-                    
-                    if (password === null) { 
-                        return;
-                    }
-
-                    if (password.trim() === '') {
-                        alert('請輸入編輯密碼。');
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ password: password })
-                        });
-                        
-                        const result = await response.json();
-
-                        if (response.ok && result.verified) {
-                            showEditCampaignForm(campaignId); 
-                        } else {
-                            alert(result.error || '密碼驗證失敗，請重試。');
-                        }
-                    } catch (error) {
-                        console.error('驗證編輯密碼時出錯:', error);
-                        alert('驗證密碼時發生錯誤，請稍後再試。');
-                    }
-                }
-
-                async function handleDeleteCampaignClick(event) {
-                    const campaignId = event.target.dataset.campaignId;
-                    const campaignTitle = event.target.dataset.campaignTitle; // Already escaped from render
-
-                    if (!confirm(`您確定要刪除投票活動 "${campaignTitle}" 嗎？此操作無法復原。`)) {
-                        return;
-                    }
-
-                    const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位) 以確認刪除:`);
-                    
-                    if (password === null) { // User cancelled prompt
-                        return;
-                    }
-                    if (password.trim() === '') {
-                        alert('請輸入編輯密碼以進行刪除。');
-                        return;
-                    }
-
-                    try {
-                        // Step 1: Verify password
-                        const verifyResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ password: password })
-                        });
-                        
-                        const verifyResult = await verifyResponse.json();
-
-                        if (!verifyResponse.ok || !verifyResult.verified) {
-                            alert(verifyResult.error || '密碼驗證失敗，無法刪除。');
+                        if (password === null) { 
                             return;
                         }
 
-                        // Step 2: Delete campaign if password is verified
-                        const deleteResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
-                            method: 'DELETE',
-                            // No body needed for DELETE if password was verified in a separate step
-                            // If backend handles password in DELETE, include it here:
-                            // headers: { 'Content-Type': 'application/json' },
-                            // body: JSON.stringify({ password: password })
+                        if (password.trim() === '') {
+                            alert('請輸入編輯密碼。');
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ password: password })
+                            });
+                            
+                            const result = await response.json();
+
+                            if (response.ok && result.verified) {
+                                showEditCampaignForm(campaignId); 
+                            } else {
+                                alert(result.error || '密碼驗證失敗，請重試。');
+                            }
+                        } catch (error) {
+                            console.error('驗證編輯密碼時出錯:', error);
+                            alert('驗證密碼時發生錯誤，請稍後再試。');
+                        }
+                    }
+
+                    async function handleDeleteCampaignClick(event) {
+                        const campaignId = event.target.dataset.campaignId;
+                        const campaignTitle = event.target.dataset.campaignTitle; // Already escaped from render
+
+                        if (!confirm(`您確定要刪除投票活動 "${campaignTitle}" 嗎？此操作無法復原。`)) {
+                            return;
+                        }
+
+                        const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位) 以確認刪除:`);
+                        
+                        if (password === null) { // User cancelled prompt
+                            return;
+                        }
+                        if (password.trim() === '') {
+                            alert('請輸入編輯密碼以進行刪除。');
+                            return;
+                        }
+
+                        try {
+                            // Step 1: Verify password
+                            const verifyResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ password: password })
+                            });
+                            
+                            const verifyResult = await verifyResponse.json();
+
+                            if (!verifyResponse.ok || !verifyResult.verified) {
+                                alert(verifyResult.error || '密碼驗證失敗，無法刪除。');
+                                return;
+                            }
+
+                            // Step 2: Delete campaign if password is verified
+                            const deleteResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                                method: 'DELETE',
+                                // No body needed for DELETE if password was verified in a separate step
+                                // If backend handles password in DELETE, include it here:
+                                // headers: { 'Content-Type': 'application/json' },
+                                // body: JSON.stringify({ password: password })
+                            });
+
+                            if (!deleteResponse.ok) {
+                                const errorData = await deleteResponse.json().catch(() => ({ error: '刪除失敗，請檢查伺服器日誌。' }));
+                                throw new Error(errorData.error || `HTTP error! status: ${deleteResponse.status}`);
+                            }
+
+                            alert(`投票活動 "${campaignTitle}" 已成功刪除！`);
+                            showDefaultDrawerContent(); // Refresh drawer list
+                            renderCampaignList(); // Refresh main campaign list if the deleted one was active or for general update
+                            // If the currently loaded campaign is the one deleted, navigate back to selection
+                            if (currentCampaignData && currentCampaignData.campaign_id.toString() === campaignId.toString()) { // Ensure comparison is robust
+                                currentCampaignData = null; // Clear current campaign
+                                renderCampaignList(); // Show campaign selection screen
+                            }
+
+                        } catch (error) {
+                            console.error('刪除投票活動時出錯:', error);
+                            alert(`刪除失敗：${error.message}`);
+                        }
+                    }
+                    
+                    async function showEditCampaignForm(campaignId) {
+                        if (!drawerContent) return;
+                        drawerContent.innerHTML = `<p style="text-align:center; padding:20px;">正在載入活動資料進行編輯...</p>`;
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
+                            if (!response.ok) {
+                                const errData = await response.json().catch(() => ({error: '無法載入活動資料'}));
+                                throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                            }
+                            const campaignToEdit = await response.json();
+
+                            if (!campaignToEdit) {
+                                throw new Error('找不到要編輯的活動資料。');
+                            }
+
+                            drawerContent.innerHTML = `
+                                <h3>編輯投票活動: ${escapeHtml(campaignToEdit.title)}</h3>
+                                <form id="edit-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="hidden" name="campaign_id" value="${campaignId}">
+                                    <div>
+                                        <label for="edit-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
+                                        <input type="text" id="edit-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;" value="${escapeHtml(campaignToEdit.title || '')}">
+                                    </div>
+                                    <div>
+                                        <label for="edit-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
+                                        <textarea id="edit-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;">${escapeHtml(campaignToEdit.description || '')}</textarea>
+                                    </div>
+                                    
+                                    <h4>投票選項</h4>
+                                    <div id="edit-campaign-options-container">
+                                    </div>
+                                    <button type="button" id="edit-add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
+                                    
+                                    <hr style="margin: 15px 0;">
+                                    <p style="font-size:0.9em; color:#555;">注意：更新活動將會重置現有投票結果。</p>
+                                    <button type="submit" class="button">更新活動</button>
+                                    <button type="button" id="cancel-edit-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消編輯</button>
+                                </form>
+                            `;
+
+                            const optionsContainerEl = document.getElementById('edit-campaign-options-container');
+                            if (campaignToEdit.options && campaignToEdit.options.length > 0) {
+                                campaignToEdit.options.forEach((opt, index) => {
+                                    addCampaignOptionInput(optionsContainerEl, opt, index + 1, true); 
+                                });
+                            } else {
+                                addCampaignOptionInput(optionsContainerEl, {}, 1, true);
+                            }
+                            
+                            document.getElementById('cancel-edit-campaign').addEventListener('click', showDefaultDrawerContent);
+                            document.getElementById('edit-add-another-option-button').addEventListener('click', () => addCampaignOptionInput(optionsContainerEl, {}, optionsContainerEl.querySelectorAll('.campaign-option-input-group').length + 1, true));
+                            document.getElementById('edit-campaign-form').addEventListener('submit', (event) => handleUpdateCampaignSubmit(event, campaignId));
+
+                        } catch (error) {
+                            console.error('載入編輯表單失敗:', error);
+                            drawerContent.innerHTML = `<p style="color:red; text-align:center; padding:20px;">載入編輯資料失敗：${escapeHtml(error.message)}</p><button id="back-to-list-btn" class="button">返回列表</button>`;
+                            const backBtn = document.getElementById('back-to-list-btn');
+                            if(backBtn) backBtn.addEventListener('click', showDefaultDrawerContent);
+                        }
+                    }
+
+                    async function handleUpdateCampaignSubmit(event, campaignId) {
+                        event.preventDefault();
+                        const form = event.target;
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        if (!submitButton) {
+                            console.error("更新按鈕未找到");
+                            return;
+                        }
+                        submitButton.disabled = true;
+                        submitButton.textContent = '更新中...';
+
+                        const title = form.elements['title'].value.trim();
+                        const description = form.elements['description'].value.trim();
+                        
+                        const optionInputsContainer = document.getElementById('edit-campaign-options-container'); // 確保使用正確的容器ID
+                        const optionGroups = optionInputsContainer.querySelectorAll('.campaign-option-input-group');
+                        const options = [];
+
+                        optionGroups.forEach(group => {
+                            const nameInput = group.querySelector('input[name="option_name[]"]');
+                            // Get image URL from the hidden input field
+                            const imageUrlInput = group.querySelector('input[name="option_image_url[]"]');
+                            if (nameInput && nameInput.value.trim() !== '') {
+                                options.push({
+                                    name: nameInput.value.trim(),
+                                    image_url: (imageUrlInput && imageUrlInput.value.trim() !== '') ? imageUrlInput.value.trim() : null
+                                });
+                            }
                         });
 
-                        if (!deleteResponse.ok) {
-                            const errorData = await deleteResponse.json().catch(() => ({ error: '刪除失敗，請檢查伺服器日誌。' }));
-                            throw new Error(errorData.error || `HTTP error! status: ${deleteResponse.status}`);
+                        if (title === '') {
+                            alert('活動標題為必填項。');
+                            submitButton.disabled = false;
+                            submitButton.textContent = '更新活動';
+                            return;
                         }
-
-                        alert(`投票活動 "${campaignTitle}" 已成功刪除！`);
-                        showDefaultDrawerContent(); // Refresh drawer list
-                        renderCampaignList(); // Refresh main campaign list if the deleted one was active or for general update
-                        // If the currently loaded campaign is the one deleted, navigate back to selection
-                        if (currentCampaignData && currentCampaignData.campaign_id.toString() === campaignId.toString()) { // Ensure comparison is robust
-                            currentCampaignData = null; // Clear current campaign
-                            renderCampaignList(); // Show campaign selection screen
+                        if (options.length === 0) {
+                            alert('請至少保留一個有效的投票選項名稱。');
+                            submitButton.disabled = false;
+                            submitButton.textContent = '更新活動';
+                            return;
                         }
+                        
+                        const campaignData = { title, description, options };
 
-                    } catch (error) {
-                        console.error('刪除投票活動時出錯:', error);
-                        alert(`刪除失敗：${error.message}`);
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(campaignData)
+                            });
+                            if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({ error: '更新失敗，請檢查輸入或伺服器日誌。' }));
+                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                            }
+                            alert('投票活動更新成功！');
+                            closeDrawer(); 
+                            renderCampaignList(); 
+                            showDefaultDrawerContent(); 
+                        } catch (error) {
+                            console.error("更新投票活動失敗:", error);
+                            alert(`更新失敗：${error.message}`);
+                        } finally {
+                            submitButton.disabled = false;
+                            submitButton.textContent = '更新活動';
+                        }
                     }
-                }
-                
-                async function showEditCampaignForm(campaignId) {
-                    if (!drawerContent) return;
-                    drawerContent.innerHTML = `<p style="text-align:center; padding:20px;">正在載入活動資料進行編輯...</p>`;
 
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
-                        if (!response.ok) {
-                            const errData = await response.json().catch(() => ({error: '無法載入活動資料'}));
-                            throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-                        }
-                        const campaignToEdit = await response.json();
-
-                        if (!campaignToEdit) {
-                            throw new Error('找不到要編輯的活動資料。');
-                        }
-
+                    function showAddNewCampaignForm() {
+                        if (!drawerContent) return;
                         drawerContent.innerHTML = `
-                            <h3>編輯投票活動: ${escapeHtml(campaignToEdit.title)}</h3>
-                            <form id="edit-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
-                                <input type="hidden" name="campaign_id" value="${campaignId}">
+                            <h3>新增投票活動</h3>
+                            <form id="add-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
                                 <div>
-                                    <label for="edit-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
-                                    <input type="text" id="edit-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;" value="${escapeHtml(campaignToEdit.title || '')}">
+                                    <label for="new-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
+                                    <input type="text" id="new-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;">
                                 </div>
                                 <div>
-                                    <label for="edit-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
-                                    <textarea id="edit-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;">${escapeHtml(campaignToEdit.description || '')}</textarea>
+                                    <label for="new-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
+                                    <textarea id="new-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;"></textarea>
                                 </div>
-                                
-                                <h4>投票選項</h4>
-                                <div id="edit-campaign-options-container">
+                                <div>
+                                    <label for="new-campaign-password" style="display: block; margin-bottom: 5px;">編輯密碼 (4-6位):</label>
+                                    <input type="password" id="new-campaign-password" name="edit_password" required minlength="4" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
                                 </div>
-                                <button type="button" id="edit-add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
-                                
+                                <h4>投票選項 (至少1個)</h4>
+                                <div id="new-campaign-options-container">
+                                </div>
+                                <button type="button" id="add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
                                 <hr style="margin: 15px 0;">
-                                <p style="font-size:0.9em; color:#555;">注意：更新活動將會重置現有投票結果。</p>
-                                <button type="submit" class="button">更新活動</button>
-                                <button type="button" id="cancel-edit-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消編輯</button>
+                                <button type="submit" class="button">創建活動</button>
+                                <button type="button" id="cancel-add-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消</button>
                             </form>
                         `;
+                        const newOptionsContainer = document.getElementById('new-campaign-options-container');
+                        addCampaignOptionInput(newOptionsContainer, {}, 1, false); 
 
-                        const optionsContainerEl = document.getElementById('edit-campaign-options-container');
-                        if (campaignToEdit.options && campaignToEdit.options.length > 0) {
-                            campaignToEdit.options.forEach((opt, index) => {
-                                addCampaignOptionInput(optionsContainerEl, opt, index + 1, true); 
-                            });
-                        } else {
-                            addCampaignOptionInput(optionsContainerEl, {}, 1, true);
-                        }
-                        
-                        document.getElementById('cancel-edit-campaign').addEventListener('click', showDefaultDrawerContent);
-                        document.getElementById('edit-add-another-option-button').addEventListener('click', () => addCampaignOptionInput(optionsContainerEl, {}, optionsContainerEl.querySelectorAll('.campaign-option-input-group').length + 1, true));
-                        document.getElementById('edit-campaign-form').addEventListener('submit', (event) => handleUpdateCampaignSubmit(event, campaignId));
-
-                    } catch (error) {
-                        console.error('載入編輯表單失敗:', error);
-                        drawerContent.innerHTML = `<p style="color:red; text-align:center; padding:20px;">載入編輯資料失敗：${escapeHtml(error.message)}</p><button id="back-to-list-btn" class="button">返回列表</button>`;
-                        const backBtn = document.getElementById('back-to-list-btn');
-                        if(backBtn) backBtn.addEventListener('click', showDefaultDrawerContent);
-                    }
-                }
-
-                async function handleUpdateCampaignSubmit(event, campaignId) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    if (!submitButton) {
-                        console.error("更新按鈕未找到");
-                        return;
-                    }
-                    submitButton.disabled = true;
-                    submitButton.textContent = '更新中...';
-
-                    const title = form.elements['title'].value.trim();
-                    const description = form.elements['description'].value.trim();
-                    
-                    const optionInputsContainer = document.getElementById('edit-campaign-options-container'); // 確保使用正確的容器ID
-                    const optionGroups = optionInputsContainer.querySelectorAll('.campaign-option-input-group');
-                    const options = [];
-
-                    optionGroups.forEach(group => {
-                        const nameInput = group.querySelector('input[name="option_name[]"]');
-                        // Get image URL from the hidden input field
-                        const imageUrlInput = group.querySelector('input[name="option_image_url[]"]');
-                        if (nameInput && nameInput.value.trim() !== '') {
-                            options.push({
-                                name: nameInput.value.trim(),
-                                image_url: (imageUrlInput && imageUrlInput.value.trim() !== '') ? imageUrlInput.value.trim() : null
-                            });
-                        }
-                    });
-
-                    if (title === '') {
-                        alert('活動標題為必填項。');
-                        submitButton.disabled = false;
-                        submitButton.textContent = '更新活動';
-                        return;
-                    }
-                    if (options.length === 0) {
-                        alert('請至少保留一個有效的投票選項名稱。');
-                        submitButton.disabled = false;
-                        submitButton.textContent = '更新活動';
-                        return;
+                        document.getElementById('cancel-add-campaign').addEventListener('click', showDefaultDrawerContent);
+                        document.getElementById('add-another-option-button').addEventListener('click', () => addCampaignOptionInput(newOptionsContainer, {}, newOptionsContainer.querySelectorAll('.campaign-option-input-group').length + 1, false));
+                        document.getElementById('add-campaign-form').addEventListener('submit', handleAddNewCampaignSubmit);
                     }
                     
-                    const campaignData = { title, description, options };
+                    function addCampaignOptionInput(containerElement, optionData = {}, optionNumber, isEditMode = false) {
+                        const optionName = optionData.name || '';
+                        let optionImageUrl = optionData.image_url || ''; // Make it let to update
+                        const optionId = optionData.option_id || null;
 
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(campaignData)
+                        const newInputGroup = document.createElement('div');
+                        newInputGroup.className = 'campaign-option-input-group';
+                        newInputGroup.style.marginBottom = '10px';
+                        newInputGroup.style.paddingBottom = '10px';
+                        newInputGroup.style.borderBottom = '1px dashed #ccc';
+                        if (isEditMode && optionId) {
+                            newInputGroup.setAttribute('data-existing-option-id', optionId);
+                        }
+
+                        const imagePreviewId = `option-image-preview-${optionNumber}-${Date.now()}`;
+                        const hiddenImageUrlId = `hidden-option-image-url-${optionNumber}-${Date.now()}`;
+                        const fileInputId = `file-option-image-${optionNumber}-${Date.now()}`;
+                        const uploadStatusId = `upload-status-${optionNumber}-${Date.now()}`;
+
+                        newInputGroup.innerHTML = `
+                            <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 名稱:</label>
+                            <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionName)}">
+                            
+                            <label for="${fileInputId}" style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片 (可選, JPG/PNG):</label>
+                            <input type="file" id="${fileInputId}" name="option_image_file[]" accept=".jpg,.jpeg,.png" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                            <input type="hidden" id="${hiddenImageUrlId}" name="option_image_url[]" value="${escapeHtml(optionImageUrl)}">
+                            <img id="${imagePreviewId}" src="${escapeHtml(optionImageUrl)}" alt="圖片預覽" style="max-width: 100px; max-height: 100px; display: ${optionImageUrl ? 'block' : 'none'}; margin-top: 5px;">
+                            <div id="${uploadStatusId}" style="font-size: 0.8em; margin-top: 3px;"></div>
+                            <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
+                        `;
+
+                        const fileInput = newInputGroup.querySelector(`#${fileInputId}`);
+                        const imagePreview = newInputGroup.querySelector(`#${imagePreviewId}`);
+                        const hiddenImageUrlInput = newInputGroup.querySelector(`#${hiddenImageUrlId}`);
+                        const uploadStatusDiv = newInputGroup.querySelector(`#${uploadStatusId}`);
+
+                        fileInput.addEventListener('change', async function(event) {
+                            const file = event.target.files[0];
+                            if (file) {
+                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { // 根據 publicSafeUpload 的 fileFilter 調整
+                                    uploadStatusDiv.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
+                                    uploadStatusDiv.style.color = 'red';
+                                    imagePreview.style.display = 'none';
+                                    hiddenImageUrlInput.value = ''; // Clear previous URL if any
+                                    return;
+                                }
+                               if (file.size > 4 * 1024 * 1024) { // 4MB limit
+                                    uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 4MB。'; // Updated message
+                                    uploadStatusDiv.style.color = 'red';
+                                    imagePreview.style.display = 'none';
+                                    hiddenImageUrlInput.value = '';
+                                    return;
+                                }
+
+                                uploadStatusDiv.textContent = '上傳中...';
+                                uploadStatusDiv.style.color = 'blue';
+                                const formData = new FormData();
+                                formData.append('image', file); // Match fieldName expected by /api/upload
+
+                                try {
+                                    const response = await fetch('/api/upload-safe-image', { // <--- 修改這裡！
+                                        method: 'POST',
+                                        body: formData
+                                    });
+                                    const result = await response.json();
+                                    // --- START OF MODIFICATION ---
+                                    // Assuming /api/upload endpoint returns { success: true, url: '...' }
+                                    if (response.ok && result.success && result.url) { // Check for result.url
+                                        hiddenImageUrlInput.value = result.url; // Use result.url
+                                        imagePreview.src = result.url;    // Use result.url for preview
+                                        imagePreview.style.display = 'block';
+                                        uploadStatusDiv.textContent = '上傳成功！';
+                                        uploadStatusDiv.style.color = 'green';
+                                    } else {
+                                        throw new Error(result.message || result.error || '上傳失敗或回傳資料格式不符');
+                                    }
+                                    // --- END OF MODIFICATION ---
+                                } catch (error) {
+                                    console.error('圖片上傳失敗:', error);
+                                    uploadStatusDiv.textContent = `上傳失敗: ${error.message}`;
+                                    uploadStatusDiv.style.color = 'red';
+                                    imagePreview.style.display = 'none';
+                                    hiddenImageUrlInput.value = ''; // Clear on failure
+                                }
+                            } else {
+                                // No file selected, clear preview and hidden URL if needed
+                                // imagePreview.style.display = 'none';
+                                // hiddenImageUrlInput.value = ''; // Keep existing URL if user clears file input but had one before
+                                uploadStatusDiv.textContent = '';
+                            }
                         });
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({ error: '更新失敗，請檢查輸入或伺服器日誌。' }));
-                            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                        }
-                        alert('投票活動更新成功！');
-                        closeDrawer(); 
-                        renderCampaignList(); 
-                        showDefaultDrawerContent(); 
-                    } catch (error) {
-                        console.error("更新投票活動失敗:", error);
-                        alert(`更新失敗：${error.message}`);
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = '更新活動';
+
+                        newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
+                            this.parentElement.remove();
+                        });
+                        containerElement.appendChild(newInputGroup);
                     }
-                }
 
-                function showAddNewCampaignForm() {
-                    if (!drawerContent) return;
-                    drawerContent.innerHTML = `
-                        <h3>新增投票活動</h3>
-                        <form id="add-campaign-form" style="display: flex; flex-direction: column; gap: 10px;">
-                            <div>
-                                <label for="new-campaign-title" style="display: block; margin-bottom: 5px;">活動標題:</label>
-                                <input type="text" id="new-campaign-title" name="title" required style="width: 100%; padding: 8px; box-sizing: border-box;">
-                            </div>
-                            <div>
-                                <label for="new-campaign-description" style="display: block; margin-bottom: 5px;">活動描述 (可選):</label>
-                                <textarea id="new-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;"></textarea>
-                            </div>
-                            <div>
-                                <label for="new-campaign-password" style="display: block; margin-bottom: 5px;">編輯密碼 (4-6位):</label>
-                                <input type="password" id="new-campaign-password" name="edit_password" required minlength="4" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
-                            </div>
-                            <h4>投票選項 (至少1個)</h4>
-                            <div id="new-campaign-options-container">
-                            </div>
-                            <button type="button" id="add-another-option-button" class="button" style="background-color: #5cb85c; width: auto; padding: 8px 12px; font-size: 0.9em;">增加選項</button>
-                            <hr style="margin: 15px 0;">
-                            <button type="submit" class="button">創建活動</button>
-                            <button type="button" id="cancel-add-campaign" class="button" style="background-color: #7f8c8d; margin-top:5px;">取消</button>
-                        </form>
-                    `;
-                    const newOptionsContainer = document.getElementById('new-campaign-options-container');
-                    addCampaignOptionInput(newOptionsContainer, {}, 1, false); 
+                    async function handleAddNewCampaignSubmit(event) {
+                        event.preventDefault();
+                        const form = event.target;
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        submitButton.disabled = true;
+                        submitButton.textContent = '創建中...';
 
-                    document.getElementById('cancel-add-campaign').addEventListener('click', showDefaultDrawerContent);
-                    document.getElementById('add-another-option-button').addEventListener('click', () => addCampaignOptionInput(newOptionsContainer, {}, newOptionsContainer.querySelectorAll('.campaign-option-input-group').length + 1, false));
-                    document.getElementById('add-campaign-form').addEventListener('submit', handleAddNewCampaignSubmit);
+                        const title = form.title.value;
+                        const description = form.description.value;
+                        const edit_password = form.edit_password.value;
+                        
+                        const optionNames = Array.from(form.querySelectorAll('input[name="option_name[]"]')).map(input => input.value.trim());
+                        // Get image URLs from the hidden input fields
+                        const optionImageUrls = Array.from(form.querySelectorAll('input[name="option_image_url[]"]')).map(input => input.value.trim());
+
+                        const options = optionNames.map((name, index) => ({
+                            name: name,
+                            image_url: optionImageUrls[index] || null
+                        })).filter(opt => opt.name && opt.name.trim() !== '');
+
+                        if (options.length === 0) {
+                            alert('請至少填寫一個有效的投票選項名稱。');
+                            submitButton.disabled = false;
+                            submitButton.textContent = '創建活動';
+                            return;
+                        }
+                         if (edit_password.length < 4 || edit_password.length > 6) {
+                            alert('編輯密碼必須是4到6位。');
+                            submitButton.disabled = false;
+                            submitButton.textContent = '創建活動';
+                            return;
+                        }
+
+                        const campaignData = { title, description, edit_password, options };
+                        
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/campaigns`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(campaignData)
+                            });
+                            if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({ error: '創建失敗，請檢查輸入或伺服器日誌。' }));
+                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                            }
+                            alert('投票活動創建成功！');
+                            closeDrawer();
+                            renderCampaignList();
+                            showDefaultDrawerContent(); 
+                        } catch (error) {
+                            console.error("創建投票活動失敗:", error);
+                            alert(`創建失敗：${error.message}`);
+                        } finally {
+                            if (form.querySelector('button[type="submit"]')) {
+                               form.querySelector('button[type="submit"]').disabled = false;
+                               form.querySelector('button[type="submit"]').textContent = '創建活動';
+                            }
+                        }
+                    }
                 }
                 
-                function addCampaignOptionInput(containerElement, optionData = {}, optionNumber, isEditMode = false) {
-                    const optionName = optionData.name || '';
-                    let optionImageUrl = optionData.image_url || ''; // Make it let to update
-                    const optionId = optionData.option_id || null;
-
-                    const newInputGroup = document.createElement('div');
-                    newInputGroup.className = 'campaign-option-input-group';
-                    newInputGroup.style.marginBottom = '10px';
-                    newInputGroup.style.paddingBottom = '10px';
-                    newInputGroup.style.borderBottom = '1px dashed #ccc';
-                    if (isEditMode && optionId) {
-                        newInputGroup.setAttribute('data-existing-option-id', optionId);
-                    }
-
-                    const imagePreviewId = `option-image-preview-${optionNumber}-${Date.now()}`;
-                    const hiddenImageUrlId = `hidden-option-image-url-${optionNumber}-${Date.now()}`;
-                    const fileInputId = `file-option-image-${optionNumber}-${Date.now()}`;
-                    const uploadStatusId = `upload-status-${optionNumber}-${Date.now()}`;
-
-                    newInputGroup.innerHTML = `
-                        <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 名稱:</label>
-                        <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionName)}">
-                        
-                        <label for="${fileInputId}" style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片 (可選, JPG/PNG):</label>
-                        <input type="file" id="${fileInputId}" name="option_image_file[]" accept=".jpg,.jpeg,.png" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
-                        <input type="hidden" id="${hiddenImageUrlId}" name="option_image_url[]" value="${escapeHtml(optionImageUrl)}">
-                        <img id="${imagePreviewId}" src="${escapeHtml(optionImageUrl)}" alt="圖片預覽" style="max-width: 100px; max-height: 100px; display: ${optionImageUrl ? 'block' : 'none'}; margin-top: 5px;">
-                        <div id="${uploadStatusId}" style="font-size: 0.8em; margin-top: 3px;"></div>
-                        <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
-                    `;
-
-                    const fileInput = newInputGroup.querySelector(`#${fileInputId}`);
-                    const imagePreview = newInputGroup.querySelector(`#${imagePreviewId}`);
-                    const hiddenImageUrlInput = newInputGroup.querySelector(`#${hiddenImageUrlId}`);
-                    const uploadStatusDiv = newInputGroup.querySelector(`#${uploadStatusId}`);
-
-                    fileInput.addEventListener('change', async function(event) {
-                        const file = event.target.files[0];
-                        if (file) {
-                            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { // 根據 publicSafeUpload 的 fileFilter 調整
-                                uploadStatusDiv.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
-                                uploadStatusDiv.style.color = 'red';
-                                imagePreview.style.display = 'none';
-                                hiddenImageUrlInput.value = ''; // Clear previous URL if any
-                                return;
-                            }
-                           if (file.size > 4 * 1024 * 1024) { // 4MB limit
-                                uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 4MB。'; // Updated message
-                                uploadStatusDiv.style.color = 'red';
-                                imagePreview.style.display = 'none';
-                                hiddenImageUrlInput.value = '';
-                                return;
-                            }
-
-                            uploadStatusDiv.textContent = '上傳中...';
-                            uploadStatusDiv.style.color = 'blue';
-                            const formData = new FormData();
-                            formData.append('image', file); // Match fieldName expected by /api/upload
-
-                            try {
-                                const response = await fetch('/api/upload-safe-image', { // <--- 修改這裡！
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                const result = await response.json();
-                                // --- START OF MODIFICATION ---
-                                // Assuming /api/upload endpoint returns { success: true, url: '...' }
-                                if (response.ok && result.success && result.url) { // Check for result.url
-                                    hiddenImageUrlInput.value = result.url; // Use result.url
-                                    imagePreview.src = result.url;    // Use result.url for preview
-                                    imagePreview.style.display = 'block';
-                                    uploadStatusDiv.textContent = '上傳成功！';
-                                    uploadStatusDiv.style.color = 'green';
-                                } else {
-                                    throw new Error(result.message || result.error || '上傳失敗或回傳資料格式不符');
-                                }
-                                // --- END OF MODIFICATION ---
-                            } catch (error) {
-                                console.error('圖片上傳失敗:', error);
-                                uploadStatusDiv.textContent = `上傳失敗: ${error.message}`;
-                                uploadStatusDiv.style.color = 'red';
-                                imagePreview.style.display = 'none';
-                                hiddenImageUrlInput.value = ''; // Clear on failure
-                            }
-                        } else {
-                            // No file selected, clear preview and hidden URL if needed
-                            // imagePreview.style.display = 'none';
-                            // hiddenImageUrlInput.value = ''; // Keep existing URL if user clears file input but had one before
-                            uploadStatusDiv.textContent = '';
-                        }
-                    });
-
-                    newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
-                        this.parentElement.remove();
-                    });
-                    containerElement.appendChild(newInputGroup);
-                }
-
-                async function handleAddNewCampaignSubmit(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    submitButton.disabled = true;
-                    submitButton.textContent = '創建中...';
-
-                    const title = form.title.value;
-                    const description = form.description.value;
-                    const edit_password = form.edit_password.value;
-                    
-                    const optionNames = Array.from(form.querySelectorAll('input[name="option_name[]"]')).map(input => input.value.trim());
-                    // Get image URLs from the hidden input fields
-                    const optionImageUrls = Array.from(form.querySelectorAll('input[name="option_image_url[]"]')).map(input => input.value.trim());
-
-                    const options = optionNames.map((name, index) => ({
-                        name: name,
-                        image_url: optionImageUrls[index] || null
-                    })).filter(opt => opt.name && opt.name.trim() !== '');
-
-                    if (options.length === 0) {
-                        alert('請至少填寫一個有效的投票選項名稱。');
-                        submitButton.disabled = false;
-                        submitButton.textContent = '創建活動';
-                        return;
-                    }
-                     if (edit_password.length < 4 || edit_password.length > 6) {
-                        alert('編輯密碼必須是4到6位。');
-                        submitButton.disabled = false;
-                        submitButton.textContent = '創建活動';
-                        return;
-                    }
-
-                    const campaignData = { title, description, edit_password, options };
-                    
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(campaignData)
-                        });
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({ error: '創建失敗，請檢查輸入或伺服器日誌。' }));
-                            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                        }
-                        alert('投票活動創建成功！');
-                        closeDrawer();
-                        renderCampaignList();
-                        showDefaultDrawerContent(); 
-                    } catch (error) {
-                        console.error("創建投票活動失敗:", error);
-                        alert(`創建失敗：${error.message}`);
-                    } finally {
-                        if (form.querySelector('button[type="submit"]')) {
-                           form.querySelector('button[type="submit"]').disabled = false;
-                           form.querySelector('button[type="submit"]').textContent = '創建活動';
-                        }
-                    }
+                if (campaignIdFromUrl) {
+                    loadCampaign(campaignIdFromUrl);
+                } else {
+                    renderCampaignList();
                 }
             }
-            
-            if (campaignIdFromUrl) {
-                loadCampaign(campaignIdFromUrl);
-            } else {
-                renderCampaignList();
-            }
-        });
+
+            // Performance and SEO: Add error tracking
+            window.addEventListener('error', function(event) {
+                console.error('Unhandled error:', event.error);
+                // Optional: Send error to monitoring service
+            });
+        })();
     </script>
     <footer class="footer">
         <p>© 2025 SunnyYummy. All rights reserved.</p>

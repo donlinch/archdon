@@ -1,52 +1,86 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 文字接龍遊戲</title>
-    <meta name="description" content="SunnyYummy 文字接龍遊戲，自定義內容互動體驗。">
-    <!-- 絕對路徑 CSS -->
-    <link rel="stylesheet" href="https://sunnyyummy.onrender.com/style.css">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>SunnyYummy 文字接龍遊戲 - 互動文字遊戲</title>
+    <meta name="description" content="與朋友一起玩有趣的文字接龍遊戲！創造性的互動體驗，培養語言表達能力和創造力。適合所有年齡層的娛樂遊戲。">
+    <meta name="keywords" content="文字接龍, 互動遊戲, 語言遊戲, 創意遊戲, SunnyYummy, 線上遊戲">
+    
+    <!-- Open Graph / Facebook Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/game/text-game.html">
+    <meta property="og:title" content="SunnyYummy 文字接龍遊戲">
+    <meta property="og:description" content="與朋友一起玩有趣的文字接龍遊戲！創造性的互動體驗，培養語言表達能力和創造力。">
+    <meta property="og:image" content="/images/game-preview.jpg">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://sunnyyummy.onrender.com/game/text-game.html">
+    <meta name="twitter:title" content="SunnyYummy 文字接龍遊戲">
+    <meta name="twitter:description" content="與朋友一起玩有趣的文字接龍遊戲！創造性的互動體驗，培養語言表達能力和創造力。">
+    <meta name="twitter:image" content="/images/game-preview.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://sunnyyummy.onrender.com/game/text-game.html">
+    
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <!-- Fonts -->
+    
+    <!-- Preload and Prefetch -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Optional: Add animation library -->
+    
+    <!-- Stylesheet Links -->
+    <link rel="stylesheet" href="https://sunnyyummy.onrender.com/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    
+    <!-- Structured Data - WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SunnyYummy 文字接龍遊戲",
+      "url": "https://sunnyyummy.onrender.com/game/text-game.html",
+      "description": "與朋友一起玩有趣的文字接龍遊戲！創造性的互動體驗，培養語言表達能力和創造力。",
+      "applicationCategory": "Entertainment",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TWD"
+      }
+    }
+    </script>
     <style>
-        /* --- 自定義動畫效果 --- */
-        @keyframes floatAnimation {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-            100% { transform: translateY(0px); }
+        /* Critical CSS for initial page load */
+        :root {
+            --primary-color: #FFB74D;
+            --secondary-color: #64B5F6;
+            --text-color: #333;
+            --background-color: #fff5f7;
         }
-        
-        @keyframes pulseGlow {
-            0% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(255, 183, 77, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(255, 183, 77, 0.5); }
-        }
-        
-        @keyframes revealSpin {
-            0% { transform: rotateY(0) }
-            50% { transform: rotateY(90deg)  }
-            100% { transform: rotateY(180deg)   }
-        }
-        
-        /* --- 基本樣式 --- */
+
+        /* CSS Optimization: Minimize repaints and reflows */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            will-change: transform, opacity;
         }
 
         body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #fff5f7; /* 淡粉色背景 */
-            color: #333;
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             padding-bottom: 70px; /* 為底部導航留出空間 */
             overflow-x: hidden; /* 防止水平滾動 */
         }
@@ -1180,10 +1214,14 @@
     margin-bottom: 3px;
 }
   </style>
+
+    <!-- Defer non-critical CSS -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></noscript>
 </head>
 <body>
-<header class="page-title-header">
-        <h1 class="page-title"> 文字接龍遊戲</h1>
+<header class="page-title-header" role="banner">
+        <h1 class="page-title" itemprop="name">文字接龍遊戲</h1>
     </header>
 
 
@@ -1192,38 +1230,39 @@
 <div><br></div>
  
 
-  <div class="container">
-    <div class="game-card">
+  <main class="container" role="main">
+    <div class="game-card" aria-labelledby="game-title">
+      <h2 id="game-title" class="sr-only">文字接龍遊戲互動區</h2>
      
-      <div id="word-fields-container">
+      <div id="word-fields-container" aria-live="polite">
         <!-- Word fields will be generated here -->
       </div>
     </div>
     
-    <div class="actions">
-      <button id="btn-complete" class="action-button btn-complete">完成遊戲</button>
-      <button id="btn-reset" class="action-button btn-reset">重置遊戲</button>
+    <div class="actions" role="region" aria-label="遊戲控制">
+      <button id="btn-complete" class="action-button btn-complete" aria-controls="word-fields-container">完成遊戲</button>
+      <button id="btn-reset" class="action-button btn-reset" aria-controls="word-fields-container">重置遊戲</button>
     </div>
-  </div>
+  </main>
   
-  <div id="fireworks-container" class="fireworks-container"></div>
+  <div id="fireworks-container" class="fireworks-container" aria-hidden="true"></div>
   
  <!-- 底部導航 -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" role="navigation" aria-label="主要導航">
         <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+            <li><a href="/" aria-label="商品頁面"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+            <li><a href="/music.html" aria-label="音樂頁面"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+            <li><a href="/news.html" aria-label="消息頁面"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+            <li><a href="/scores.html" aria-label="樂譜頁面"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active" aria-label="遊戲頁面"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html" aria-label="留言頁面"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
         </ul>
     </nav>
     
     <!-- 頁腳 - 在大屏幕設備上顯示 -->
-    <footer class="desktop-footer">
+    <footer class="desktop-footer" role="contentinfo">
         <div class="footer-container">
-            <nav class="footer-nav">
+            <nav class="footer-nav" aria-label="網站導航">
                 <a href="/">週邊商品</a>
                 <a href="/music.html">音樂專輯</a>
                 <a href="/news.html">最新消息</a>

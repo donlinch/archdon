@@ -3,12 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>樂譜與舞蹈 - SunnyYummy</title>
+    
+    <!-- SEO Optimization Meta Tags -->
+    <title>SunnyYummy 樂譜與舞蹈 - 免費音樂樂譜與舞蹈教學資源</title>
+    <meta name="description" content="探索SunnyYummy的免費音樂樂譜與舞蹈教學資源。提供多種風格的樂譜PDF、YouTube教學影片，幫助音樂愛好者輕鬆學習。">
+    <meta name="keywords" content="樂譜, 舞蹈教學, 音樂資源, PDF樂譜, 免費音樂, 舞蹈學習">
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="SunnyYummy 樂譜與舞蹈">
+    <meta property="og:description" content="探索SunnyYummy的免費音樂樂譜與舞蹈教學資源。提供多種風格的樂譜PDF、YouTube教學影片，幫助音樂愛好者輕鬆學習。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sunnyyummy.onrender.com/scores.html">
+    <meta property="og:image" content="https://sunnyyummy.onrender.com/images/scoreH1.jpg">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SunnyYummy 樂譜與舞蹈">
+    <meta name="twitter:description" content="探索SunnyYummy的免費音樂樂譜與舞蹈教學資源。提供多種風格的樂譜PDF、YouTube教學影片，幫助音樂愛好者輕鬆學習。">
+    <meta name="twitter:image" content="https://sunnyyummy.onrender.com/images/scoreH1.jpg">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://sunnyyummy.onrender.com/scores.html">
+    
+    <!-- Preconnect and Preload Optimizations -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon and Touch Icons -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "SunnyYummy 樂譜與舞蹈",
+      "description": "探索SunnyYummy的免費音樂樂譜與舞蹈教學資源。提供多種風格的樂譜PDF、YouTube教學影片，幫助音樂愛好者輕鬆學習。",
+      "mainEntity": {
+        "@type": "WebSite",
+        "name": "SunnyYummy",
+        "url": "https://sunnyyummy.onrender.com"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SunnyYummy",
+      "url": "https://sunnyyummy.onrender.com",
+      "logo": "https://sunnyyummy.onrender.com/images/apple-touch-icon.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "paulaqueenatina@gmail.com",
+        "contactType": "Customer Service"
+      }
+    }
+    </script>
 
     <!-- PDF.js CSS (可選, 用於文字層/註釋，如果需要選取文字等功能) -->
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css"> -->
@@ -807,41 +862,43 @@
 </head>
 
 <body>
-    <header class="page-title-header">
-        <h1 class="page-title"><img src="/images/scoreH1.jpg" alt="SunnyYummy 樂譜與舞蹈"></h1>
+    <header class="page-title-header" role="banner">
+        <h1 class="page-title">
+            <img src="/images/scoreH1.jpg" alt="SunnyYummy 樂譜與舞蹈 - 音樂資源平台" width="100%" height="auto">
+        </h1>
     </header>
     
     <!-- 分類標籤 -->
-    <div class="category-tabs">
-        <a href="#" class="view-mode-link" data-mode="grid">格狀顯示</a>
-        <a href="#" class="view-mode-link active" data-mode="list">列表顯示</a>
-        <button id="filter-toggle" class="filter-toggle">歌手分類</button>
-    </div>
+    <nav class="category-tabs" aria-label="顯示模式和篩選選項">
+        <a href="#" class="view-mode-link" data-mode="grid" aria-label="格狀顯示">格狀顯示</a>
+        <a href="#" class="view-mode-link active" data-mode="list" aria-label="列表顯示">列表顯示</a>
+        <button id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="artist-filter-panel">歌手分類</button>
+    </nav>
     
     <!-- 歌手分類面板 -->
-    <div id="artist-filter-panel" class="artist-filter-panel">
+    <section id="artist-filter-panel" class="artist-filter-panel" aria-label="歌手篩選">
         <!-- 歌手按鈕將由 JavaScript 動態生成 -->
         <p>載入歌手中...</p>
-    </div>
+    </section>
     
-    <main class="scores-container">
+    <main class="scores-container" role="main">
         <!-- 歌曲列表 -->
-        <div id="songs-container" class="songs-list">
+        <section id="songs-container" class="songs-list" aria-label="歌曲列表">
             <!-- 歌曲列表將由 JavaScript 動態生成 -->
             <p class="loading-message">載入歌曲中...</p>
-        </div>
+        </section>
         
         <!-- 歌曲詳情 -->
-        <div id="song-detail-container" class="song-detail-container">
+        <section id="song-detail-container" class="song-detail-container" aria-label="歌曲詳細資訊">
             <h2 id="song-info" class="song-detail-header">請先從列表選擇歌曲</h2>
             
             <!-- YouTube 播放器容器 -->
-            <div id="youtube-player" class="youtube-player">
+            <div id="youtube-player" class="youtube-player" aria-label="YouTube 教學影片">
                 <!-- YouTube iframe 會動態插入這裡 -->
             </div>
             
             <!-- 樂譜選擇器 -->
-            <div id="score-selector" class="score-selector">
+            <div id="score-selector" class="score-selector" aria-label="樂譜類型選擇">
                 <h3>選擇樂譜類型:</h3>
                 <!-- 樂譜類型按鈕/列表會動態插入這裡 -->
                 <p id="score-loading-msg" style="display: none;">載入樂譜選項...</p>
@@ -849,58 +906,58 @@
             </div>
             
             <!-- PDF 預覽容器 -->
-            <div id="pdf-viewer-container" class="pdf-viewer-container" style="display: none;">
+            <div id="pdf-viewer-container" class="pdf-viewer-container" style="display: none;" aria-label="PDF 樂譜預覽">
                 <div id="pdf-loading" style="display: none;">正在載入樂譜...</div>
                 <div id="pdf-error" style="display: none; color: red;">無法載入樂譜。</div>
                 
                 <div class="pdf-canvas-container">
-                    <canvas id="pdf-canvas"></canvas>
+                    <canvas id="pdf-canvas" aria-label="樂譜預覽"></canvas>
                 </div>
                 
                 <!-- PDF 分頁控制 -->
-                <div id="pdf-pagination" class="pdf-pagination" style="display: none;">
-                    <button id="pdf-prev" disabled>< 上一頁</button>
+                <div id="pdf-pagination" class="pdf-pagination" style="display: none;" aria-label="PDF 分頁控制">
+                    <button id="pdf-prev" disabled aria-label="上一頁">< 上一頁</button>
                     <span>第 <span id="pdf-page-num"></span> / <span id="pdf-page-count"></span> 頁</span>
-                    <button id="pdf-next" disabled>下一頁 ></button>
+                    <button id="pdf-next" disabled aria-label="下一頁">下一頁 ></button>
                 </div>
             </div>
-        </div>
+        </section>
         
         <!-- 貢獻信息 -->
-        <div class="contribution-info">
-            本區提供 PDF 樂譜與相關 YouTube 教學影片連結。若您有相關歌曲的完整舞蹈、手勢舞教學或其他形式的教學資源，並願意分享給更多同好，歡迎至<a href="/guestbook.html">留言板</a>或 Email 至：<a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a> 進行投稿。
-        </div>
+        <section class="contribution-info" aria-label="貢獻資訊">
+            本區提供 PDF 樂譜與相關 YouTube 教學影片連結。若您有相關歌曲的完整舞蹈、手勢舞教學或其他形式的教學資源，並願意分享給更多同好，歡迎至<a href="/guestbook.html" aria-label="前往留言板">留言板</a>或 Email 至：<a href="mailto:paulaqueenatina@gmail.com" aria-label="發送電子郵件">paulaqueenatina@gmail.com</a> 進行投稿。
+        </section>
     </main>
     
     <!-- 返回頂部按鈕 -->
-    <button id="back-to-top" class="back-to-top">
+    <button id="back-to-top" class="back-to-top" aria-label="回到頁面頂部">
         <div class="logo-circle">
-            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy" />
+            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy 回到頂部" />
         </div>
     </button>
     
     <!-- 底部導航 -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" role="navigation" aria-label="網站導航">
         <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html" class="active"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+            <li><a href="/" aria-label="商品頁面"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+            <li><a href="/music.html" aria-label="音樂頁面"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+            <li><a href="/news.html" aria-label="消息頁面"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+            <li><a href="/scores.html" class="active" aria-label="樂譜頁面"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+            <li><a href="/games.html" aria-label="遊戲頁面"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html" aria-label="留言板頁面"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
         </ul>
     </nav>
     
    <!-- 頁腳 - 在大屏幕設備上顯示 -->
-   <footer class="desktop-footer">
+   <footer class="desktop-footer" role="contentinfo">
         
-    <div class="footer-copyright">
-        <p>© 2023 SunnyYummy. All rights reserved.</p>
-        <p>信箱：paulaqueenatina@gmail.com</p>
-    <p>客服時間：週一～週五 08:00～17:00</p>
-        
+    <div class="footer-container">
+        <div class="footer-copyright">
+            <p>© 2023 SunnyYummy. All rights reserved.</p>
+            <p>信箱：<a href="mailto:paulaqueenatina@gmail.com">paulaqueenatina@gmail.com</a></p>
+            <p>客服時間：週一～週五 08:00～17:00</p>
+        </div>
     </div>
-</div>
 </footer>
     
     <!-- PDF.js 函式庫 (使用 ES Module 版本) -->

@@ -1,14 +1,72 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 留言板</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- Primary Meta Tags -->
+    <title>SunnyYummy 留言板 - 分享你的音樂與創意</title>
+    <meta name="description" content="歡迎來到SunnyYummy留言板！在這裡分享你的音樂Cover、舞蹈教學、創意想法，與社群互動交流。">
+    <meta name="keywords" content="音樂留言板, 創意分享, 樂譜, 音樂社群, 互動平台">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sunnyyummy.com/guestbook.html">
+    <meta property="og:title" content="SunnyYummy 留言板 - 分享你的音樂與創意">
+    <meta property="og:description" content="歡迎來到SunnyYummy留言板！在這裡分享你的音樂Cover、舞蹈教學、創意想法，與社群互動交流。">
+    <meta property="og:image" content="https://sunnyyummy.com/images/guestbookH1.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://sunnyyummy.com/guestbook.html">
+    <meta name="twitter:title" content="SunnyYummy 留言板 - 分享你的音樂與創意">
+    <meta name="twitter:description" content="歡迎來到SunnyYummy留言板！在這裡分享你的音樂Cover、舞蹈教學、創意想法，與社群互動交流。">
+    <meta name="twitter:image" content="https://sunnyyummy.com/images/guestbookH1.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://sunnyyummy.com/guestbook.html">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    
+    <!-- Preconnect to Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SunnyYummy",
+      "url": "https://sunnyyummy.com",
+      "logo": "https://sunnyyummy.com/images/logo.png",
+      "description": "音樂與創意分享平台",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "paulaqueenatina@gmail.com",
+        "contactType": "Customer Service"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "SunnyYummy 留言板",
+      "description": "歡迎來到SunnyYummy留言板！在這裡分享你的音樂Cover、舞蹈教學、創意想法，與社群互動交流。",
+      "mainEntity": {
+        "@type": "DiscussionForumPosting",
+        "headline": "SunnyYummy 社群留言板"
+      }
+    }
+    </script>
     <style>
         /* --- 基本樣式 --- */
         * {
@@ -781,37 +839,52 @@
     z-index: 1;
 }
 
+/* Accessibility: Visually hidden class */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
     </style>
 </head>
 <body>
-    <header class="page-title-header">
-        <h1 class="page-title"><img src="/images/guestbookH1.jpg" alt="SunnyYummy 留言板"></h1>
+    <header class="page-title-header" role="banner">
+        <h1 class="page-title">
+            <img src="/images/guestbookH1.jpg" alt="SunnyYummy 留言板 - 音樂創意分享平台" width="100%" height="auto">
+        </h1>
     </header>
     
     <!-- 分類標籤 -->
-    <div class="category-tabs">
-        <button class="sort-btn active" data-sort="latest">最新</button>
+    <nav class="category-tabs" aria-label="留言排序與顯示方式">
+        <button class="sort-btn active" data-sort="latest" aria-pressed="true">最新</button>
         <button class="sort-btn" data-sort="popular">熱門</button>
         <button class="sort-btn" data-sort="most_replies">最多</button>
-        <a href="#" class="view-mode-link active" data-view="grid">格狀</a>
+        <a href="#" class="view-mode-link active" data-view="grid" aria-pressed="true">格狀</a>
         <a href="#" class="view-mode-link" data-view="list">列表</a>
-    </div>
+    </nav>
     
-    <main class="guestbook-container">
+    <main class="guestbook-container" role="main">
         <div class="guestbook-header">
-            <small>歡迎留言分享！無論是你的樂譜 Cover 演奏、精彩的舞蹈教學影片，或是任何想和大家交流的想法，都可以在這裡分享喔！(發表前請留意留言規範)</small>
+            <small aria-label="留言板使用說明">歡迎留言分享！無論是你的樂譜 Cover 演奏、精彩的舞蹈教學影片，或是任何想和大家交流的想法，都可以在這裡分享喔！(發表前請留意留言規範)</small>
             <div class="post-button-container">
-                <button id="new-post-btn" class="btn btn-primary">發表留言</button>
-                <img src="/images/a01girlmove.gif" alt="小女孩動畫" class="girl-animation-header">
+                <button id="new-post-btn" class="btn btn-primary" aria-label="發表新留言">發表留言</button>
+                <img src="/images/a01girlmove.gif" alt="小女孩動畫" class="girl-animation-header" aria-hidden="true">
             </div>
         </div>
         
-        <section class="message-list-section">
-         
-            <div id="message-list-container" class="messages-grid">
+        <section class="message-list-section" aria-labelledby="message-section-title">
+            <h2 id="message-section-title" class="visually-hidden">留言列表</h2>
+            <div id="message-list-container" class="messages-grid" aria-live="polite">
                 <p>正在載入留言...</p>
             </div>
-            <div id="pagination-container" class="pagination-controls"></div>
+            <div id="pagination-container" class="pagination-controls" aria-label="留言分頁導航"></div>
         </section>
 
         <!-- 發表新留言的 Modal 視窗 -->
@@ -891,7 +964,7 @@
             </div>
         </div>
 
-        <div class="contribution-info">
+        <div class="contribution-info" role="note" aria-label="留言板使用規範">
             請理性討論，友善發言，禁止發表不實資訊、人身攻擊或廣告內容。
             管理員有權刪除不當留言。發言請遵守相關法律法規。
         </div>
