@@ -1,15 +1,67 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動遊戲集 - SunnyYummy</title>
+    
+    <!-- SEO Optimization Meta Tags -->
+    <title>SunnyYummy 互動遊戲集 - 趣味音樂遊戲</title>
+    <meta name="description" content="探索SunnyYummy精心設計的互動音樂遊戲，為您帶來歡樂和創意的遊戲體驗。適合所有年齡層的有趣遊戲！">
+    <meta name="keywords" content="音樂遊戲, 互動遊戲, SunnyYummy, 創意遊戲, 線上遊戲">
+    
+    <!-- Open Graph Meta Tags for Social Media Sharing -->
+    <meta property="og:title" content="SunnyYummy 互動遊戲集">
+    <meta property="og:description" content="探索SunnyYummy精心設計的互動音樂遊戲，為您帶來歡樂和創意的遊戲體驗。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sunnyyummy.com/games.html">
+    <meta property="og:image" content="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SunnyYummy 互動遊戲集">
+    <meta name="twitter:description" content="探索SunnyYummy精心設計的互動音樂遊戲，為您帶來歡樂和創意的遊戲體驗。">
+    <meta name="twitter:image" content="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://sunnyyummy.com/games.html">
+    
+    <!-- Favicon and Stylesheet Links -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    
+    <!-- Structured Data - WebPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "SunnyYummy 互動遊戲集",
+      "description": "探索SunnyYummy精心設計的互動音樂遊戲，為您帶來歡樂和創意的遊戲體驗。",
+      "publisher": {
+        "@type": "Organization",
+        "name": "SunnyYummy",
+        "logo": "https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SunnyYummy",
+      "url": "https://sunnyyummy.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://sunnyyummy.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
     <style>
         /* --- 基本樣式 --- */
         * {
@@ -498,54 +550,55 @@
     </style>
 </head>
 <body>
-    <header class="page-title-header">
-        <h1 class="page-title"><img src="/images/gameH1.jpg" alt="SunnyYummy 互動遊戲集"></h1>
+    <header class="page-title-header" role="banner">
+        <h1 class="page-title">
+            <img src="/images/gameH1.jpg" alt="SunnyYummy 互動音樂遊戲集" loading="lazy">
+        </h1>
     </header>
     
     <!-- 分類標籤 -->
-    <div class="category-tabs">
-        <a href="#" class="view-mode-link active" data-view="grid">格狀顯示</a>
-        <a href="#" class="view-mode-link" data-view="list">列表顯示</a>
-    </div>
+    <nav class="category-tabs" aria-label="遊戲顯示模式">
+        <a href="#" class="view-mode-link active" data-view="grid" aria-pressed="true">格狀顯示</a>
+        <a href="#" class="view-mode-link" data-view="list" aria-pressed="false">列表顯示</a>
+    </nav>
     
-    <main class="games-container">
-        <div id="games-container" class="games-grid">
+    <main class="games-container" role="main">
+        <div id="games-container" class="games-grid" aria-live="polite">
             <!-- 遊戲列表將由 JavaScript 動態生成 -->
         </div>
     </main>
 
     <!-- 返回頂部按鈕 -->
-    <button id="back-to-top" class="back-to-top">
+    <button id="back-to-top" class="back-to-top" aria-label="回到頂部">
         <div class="logo-circle">
-            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy" />
+            <img src="https://sunnyyummy.onrender.com/uploads/1744875326039-16458.png" alt="SunnyYummy 回到頂部" loading="lazy">
         </div>
     </button>
     
     <!-- 底部導航 -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" role="navigation" aria-label="網站導航">
         <ul>
-            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
-            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
-            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
-            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
-            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon" loading="lazy"><span>商品</span></a></li>
+            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon" loading="lazy"><span>音樂</span></a></li>
+            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon" loading="lazy"><span>消息</span></a></li>
+            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon" loading="lazy"><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon" loading="lazy"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon" loading="lazy"><span>留言</span></a></li>
         </ul>
     </nav>
     
    <!-- 頁腳 - 在大屏幕設備上顯示 -->
-   <footer class="desktop-footer">
-        
-    <div class="footer-copyright">
-        <p>© 2023 SunnyYummy. All rights reserved.</p>
-        <p>信箱：paulaqueenatina@gmail.com</p>
-    <p>客服時間：週一～週五 08:00～17:00</p>
-        
+   <footer class="desktop-footer" role="contentinfo">
+    <div class="footer-container">
+        <div class="footer-copyright">
+            <p>© 2023 SunnyYummy. All rights reserved.</p>
+            <p>信箱：paulaqueenatina@gmail.com</p>
+            <p>客服時間：週一～週五 08:00～17:00</p>
+        </div>
     </div>
-</div>
 </footer>
     
     <!-- 引入外部 JavaScript 文件 -->
-    <script src="games.js"></script>
+    <script src="games.js" defer></script>
 </body>
 </html>
