@@ -14,6 +14,14 @@
     <meta property="og:description" content="查看 SunnyYummy 最新消息與活動！" />
     <meta property="og:image" content="https://sunnyyummy.onrender.com/images/share-preview.jpg" />
     <meta property="og:url" content="https://sunnyyummy.onrender.com/news-share.html" />
+    <meta name="description" content="SunnyYummy 最新消息與活動，提供音樂、商品和遊戲相關的精彩資訊。隨時掌握最新動態！">
+    <meta name="keywords" content="SunnyYummy, 音樂, 商品, 遊戲, 新聞, 活動">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://sunnyyummy.onrender.com/news-share.html">
+    <meta name="author" content="SunnyYummy Team">
+    <link rel="preload" href="/news-share.js" as="script">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
 <style>
 /* 統一新聞詳情內容樣式 */
 body {
@@ -464,5 +472,25 @@ main {
 
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
     <script src="/news-share.js"></script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": "SunnyYummy 最新消息",
+        "description": "SunnyYummy 最新消息與活動，提供音樂、商品和遊戲相關的精彩資訊",
+        "publisher": {
+            "@type": "Organization",
+            "name": "SunnyYummy",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://sunnyyummy.onrender.com/images/logo.png"
+            }
+        },
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https://sunnyyummy.onrender.com/news-share.html"
+        }
+    }
+    </script>
 </body>
 </html> 
