@@ -6500,39 +6500,47 @@ app.get('/api/products', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
+
+
 app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
-    
-    // *** 修改 SQL 查詢以包含標籤 ***
-    // 與獲取列表類似，使用 LEFT JOIN 和 json_agg
-    const queryText = `
-        SELECT 
-            p.id, p.name, p.description, p.price, p.image_url, 
-            p.seven_eleven_url, p.click_count, p.category,
-            COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
-        FROM products p
-        LEFT JOIN product_tags pt ON p.id = pt.product_id
-        LEFT JOIN tags t ON pt.tag_id = t.tag_id
-        WHERE p.id = $1  -- 篩選特定商品 ID
-        GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category -- 同樣需要 GROUP BY
-    `;
-    
-    console.log("Executing SQL for single product:", queryText, [id]); // 調試用
-
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
+    }
     try {
+        // 修改查詢以包含所有需要的字段和標籤
+        const queryText = `
+            SELECT 
+                p.id, p.name, p.description, p.price, p.category, p.image_url, 
+                p.seven_eleven_url, p.click_count, p.expiration_type, p.start_date, p.end_date,
+                COALESCE(
+                  (SELECT json_agg(t.tag_id) 
+                   FROM product_tags pt 
+                   JOIN tags t ON pt.tag_id = t.tag_id 
+                   WHERE pt.product_id = p.id), 
+                  '[]'::json
+                ) AS tags
+            FROM products p
+            WHERE p.id = $1
+        `;
         const result = await pool.query(queryText, [id]);
         if (result.rows.length === 0) { 
-            // 考慮到 JOIN 可能不會返回任何行如果 ID 不存在，這個檢查仍然有效
             return res.status(404).json({ error: '找不到商品。' }); 
         }
-        // json_agg 返回的 tags 是 JSON 數組字符串
-        res.json(result.rows[0]); // 回傳單一商品物件，包含 tags 陣列
+        res.json(result.rows[0]);
     } catch (err) {
         console.error(`獲取商品 ID ${id} 時出錯:`, err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
+
+
 app.post('/api/products/:id/click', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
