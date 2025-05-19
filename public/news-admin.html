@@ -182,12 +182,13 @@
         }
 
         /* Table column widths */
-        #news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 8%; }  /* ID */
-        #news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 30%; } /* 標題 */
-        #news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 15%; } /* 活動日期 */
-        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 12%; text-align: center; } /* 縮圖 */
-        #news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 15%; } /* 更新時間 */
-        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 20%; text-align: center; } /* 操作 */
+        #news-list-table th:nth-child(1), #news-list-table td:nth-child(1) { width: 5%; min-width: 60px; }  /* ID */
+        #news-list-table th:nth-child(2), #news-list-table td:nth-child(2) { width: 25%; min-width: 200px; } /* 標題 */
+        #news-list-table th:nth-child(3), #news-list-table td:nth-child(3) { width: 10%; min-width: 100px; } /* 分類 */
+        #news-list-table th:nth-child(4), #news-list-table td:nth-child(4) { width: 10%; min-width: 100px; } /* 活動日期 */
+        #news-list-table th:nth-child(5), #news-list-table td:nth-child(5) { width: 10%; min-width: 100px; text-align: center; } /* 縮圖 */
+        #news-list-table th:nth-child(6), #news-list-table td:nth-child(6) { width: 15%; min-width: 120px; } /* 更新時間 */
+        #news-list-table th:nth-child(7), #news-list-table td:nth-child(7) { width: 15%; min-width: 150px; text-align: center; } /* 操作 */
 
         /* Table thumbnail */
         .thumbnail-preview {
@@ -595,6 +596,19 @@
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
+        }
+
+        /* Container for news list */
+        #news-list-container {
+            width: 100%;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Make sure tab content properly contains tables */
+        .tab-content {
+            width: 100%;
+            overflow: hidden;
         }
     </style>
 </head>
