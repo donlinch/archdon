@@ -602,6 +602,11 @@ async function fetchAndDisplayArtists() {
             // 使用漸入效果顯示專輯
             animateAlbumsIn();
 
+            // 在渲染完成後添加這行
+            if (window.rebindConversionTracking) {
+                window.rebindConversionTracking();
+            }
+
         } catch (error) {
             console.error("[Music] Fetch albums error:", error);
             if (musicListContainer) {
@@ -873,6 +878,12 @@ async function fetchAndDisplayArtists() {
             allSongsData = await fetchApi(url, `Error fetching songs for artist ${decodedArtist}`);
             
             renderSongList(allSongsData);
+
+            // 在渲染完成後添加這行
+            if (window.rebindConversionTracking) {
+                window.rebindConversionTracking();
+            }
+
         } catch (error) {
             console.error('獲取樂譜歌曲列表失敗:', error);
             songList.innerHTML = '<p style="color: red;">無法載入歌曲列表。</p>';

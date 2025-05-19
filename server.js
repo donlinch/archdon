@@ -731,14 +731,31 @@ app.use(async (req, res, next) => {
                 }
             }
             
+            // 為會話創建ID（如果不存在）
+            if (!req.session.visitor_id) {
+                req.session.visitor_id = uuidv4(); // 需要引入 uuid 包
+                req.session.page_views = [];
+            }
+            
+            const visitorId = req.session.visitor_id;
+            
+            // 記錄此訪客瀏覽的頁面
+            if (!req.session.page_views.includes(pagePath)) {
+                req.session.page_views.push(pagePath);
+            }
+            
+            // 更新 is_bounce 狀態
+            const isBounce = req.session.page_views.length <= 1;
+            
             // 將來源資訊寫入資料庫
             const sourceSql = `
-                INSERT INTO source_page_views (page, view_date, source_type, source_name, source_url, view_count)
-                VALUES ($1, CURRENT_DATE, $2, $3, $4, 1)
+                INSERT INTO source_page_views (page, view_date, source_type, source_name, source_url, view_count, is_bounce)
+                VALUES ($1, CURRENT_DATE, $2, $3, $4, 1, $5)
                 ON CONFLICT (page, view_date, source_type, source_name) DO UPDATE SET
-                    view_count = source_page_views.view_count + 1;
+                    view_count = source_page_views.view_count + 1,
+                    is_bounce = $5;
             `;
-            await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl]);
+            await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl, isBounce]);
 
          } catch (err) {
             console.error('記錄頁面訪問或來源數據時出錯:', err);
@@ -749,8 +766,151 @@ app.use(async (req, res, next) => {
     next();
 });
 
+// 記錄轉換事件
+app.post('/api/track/conversion', async (req, res) => {
+    try {
+        const { conversionType, sourcePath } = req.body;
+        
+        if (!req.session.visitor_id) {
+            return res.status(400).json({ error: '無法識別訪客' });
+        }
+        
+        // 更新訪客來源的轉換狀態
+        const updateQuery = `
+            UPDATE source_page_views 
+            SET has_conversion = TRUE 
+            WHERE source_type IN (
+                SELECT source_type FROM source_page_views 
+                WHERE page = $1
+                ORDER BY view_date DESC
+                LIMIT 1
+            )
+            AND view_date >= CURRENT_DATE - INTERVAL '30 days';
+        `;
+        
+        await pool.query(updateQuery, [sourcePath || '/']);
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('記錄轉換事件失敗:', err);
+        res.status(500).json({ error: '伺服器錯誤' });
+    }
+});
+
+
  
 app.use(express.static(path.join(__dirname, 'public')));
+
+
+
+
+
+
+
+// 添加跳出率追蹤中間件
+app.use(async (req, res, next) => {
+    // 只處理非API請求，避免不必要的處理
+    if (!req.path.startsWith('/api/') && req.method === 'GET') {
+        try {
+            // 初始化會話數據
+            if (!req.session.pageViews) {
+                req.session.pageViews = [];
+                req.session.firstVisitTime = Date.now();
+                req.session.visitor_id = uuidv4(); // 需要引入 uuid 庫
+            }
+
+            // 記錄當前頁面
+            if (!req.session.pageViews.includes(req.path)) {
+                req.session.pageViews.push(req.path);
+            }
+
+            // 計算跳出狀態 - 超過一個頁面訪問即非跳出
+            const isBounce = req.session.pageViews.length <= 1;
+
+            // 更新數據庫中的跳出狀態
+            await pool.query(`
+                UPDATE source_page_views 
+                SET is_bounce = $1 
+                WHERE page = $2 
+                AND view_date = CURRENT_DATE
+            `, [isBounce, req.path]);
+        } catch (err) {
+            console.error('更新跳出率失敗:', err);
+            // 繼續執行請求，不中斷用戶體驗
+        }
+    }
+    next();
+});
+
+
+
+
+// 添加跳出率追蹤中間件
+app.use(async (req, res, next) => {
+    // 只處理非API請求，避免不必要的處理
+    if (!req.path.startsWith('/api/') && req.method === 'GET') {
+        try {
+            // 初始化會話數據
+            if (!req.session.pageViews) {
+                req.session.pageViews = [];
+                req.session.firstVisitTime = Date.now();
+            }
+
+            // 記錄當前頁面
+            if (!req.session.pageViews.includes(req.path)) {
+                req.session.pageViews.push(req.path);
+            }
+
+            // 計算跳出狀態 - 超過一個頁面訪問即非跳出
+            const isBounce = req.session.pageViews.length <= 1;
+
+            // 更新數據庫中的跳出狀態
+            await pool.query(`
+                UPDATE source_page_views 
+                SET is_bounce = $1 
+                WHERE page = $2 
+                AND view_date = CURRENT_DATE
+            `, [isBounce, req.path]);
+        } catch (err) {
+            console.error('更新跳出率失敗:', err);
+            // 繼續執行請求，不中斷用戶體驗
+        }
+    }
+    next();
+});
+
+
+
+
+
+
+
+
+// 添加轉換追蹤 API
+app.post('/api/track/conversion', async (req, res) => {
+    try {
+        const { conversionType, sourcePath } = req.body;
+        
+        // 記錄轉換事件
+        const updateQuery = `
+            UPDATE source_page_views 
+            SET has_conversion = TRUE 
+            WHERE page = $1
+            AND view_date = CURRENT_DATE
+        `;
+        
+        await pool.query(updateQuery, [sourcePath || req.path || '/']);
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('記錄轉換事件失敗:', err);
+        res.status(500).json({ error: '伺服器錯誤' });
+    }
+});
+
+
+
+
+
+
 
 
 
@@ -8301,360 +8461,6 @@ app.get('/api/admin/sales/summary', async (req, res) => {
         res.status(200).json({ totalItems, topProducts, salesTrend });
     } catch (err) { console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err); res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' }); }
 });
-app.post('/api/admin/sales', async (req, res) => {
-    const { product_name, quantity_sold, sale_timestamp } = req.body;
-    if (!product_name || !quantity_sold) { return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' }); }
-    const quantity = parseInt(quantity_sold);
-    if (isNaN(quantity) || quantity <= 0) { return res.status(400).json({ error: '銷售數量必須是正整數。' }); }
-    let timestampToInsert = sale_timestamp ? new Date(sale_timestamp) : new Date();
-    if (isNaN(timestampToInsert.getTime())) { timestampToInsert = new Date(); }
-    try {
-        const queryText = `INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp) VALUES ($1, $2, $3) RETURNING id, product_name, quantity_sold, sale_timestamp;`;
-        const result = await pool.query(queryText, [ product_name.trim(), quantity, timestampToInsert ]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[Admin API Error] 新增銷售紀錄時出錯:', err.stack || err); res.status(500).json({ error: '新增銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-app.put('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params; const { product_name, quantity_sold, sale_timestamp } = req.body;
-    const recordId = parseInt(id); if (isNaN(recordId)) { return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' }); }
-    if (!product_name || !quantity_sold) { return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' }); }
-    const quantity = parseInt(quantity_sold); if (isNaN(quantity) || quantity <= 0) { return res.status(400).json({ error: '銷售數量必須是正整數。' }); }
-    let timestampToUpdate = new Date(sale_timestamp); if (isNaN(timestampToUpdate.getTime())) { return res.status(400).json({ error: '無效的銷售時間格式。' }); }
-    try {
-        const queryText = `UPDATE sales_log SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW() WHERE id = $4 RETURNING id, product_name, quantity_sold, sale_timestamp;`;
-        const result = await pool.query(queryText, [ product_name.trim(), quantity, timestampToUpdate, recordId ]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要更新的銷售紀錄。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`[Admin API Error] 更新銷售紀錄 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '更新銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-app.delete('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params; const recordId = parseInt(id); if (isNaN(recordId)) { return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' }); }
-    try {
-        const queryText = 'DELETE FROM sales_log WHERE id = $1';
-        const result = await pool.query(queryText, [recordId]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`[Admin API Error] 刪除銷售紀錄 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-
-// --- 公仔庫存管理 API (受保護) ---
-app.get('/api/admin/figures', async (req, res) => {
-    try {
-        const queryText = ` SELECT f.id, f.name, f.image_url, f.purchase_price, f.selling_price, f.ordering_method, f.created_at, f.updated_at, COALESCE( (SELECT json_agg( json_build_object( 'id', v.id, 'name', v.name, 'quantity', v.quantity ) ORDER BY v.name ASC ) FROM figure_variations v WHERE v.figure_id = f.id), '[]'::json ) AS variations FROM figures f ORDER BY f.created_at DESC; `;
-        const result = await pool.query(queryText);
-        res.json(result.rows);
-    } catch (err) { console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err); res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' }); }
-});
-app.post('/api/admin/figures', async (req, res) => {
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
-    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const figureInsertQuery = ` INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method) VALUES ($1, $2, $3, $4, $5) RETURNING *; `;
-        const figureResult = await client.query(figureInsertQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null ]);
-        const newFigure = figureResult.rows[0]; const newFigureId = newFigure.id;
-        let insertedVariations = [];
-        if (variations && variations.length > 0) {
-            const variationInsertQuery = ` INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *; `;
-            for (const variation of variations) {
-                if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
-                const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
-                const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
-                insertedVariations.push(variationResult.rows[0]);
-            }
-        }
-        await client.query('COMMIT'); newFigure.variations = insertedVariations; res.status(201).json(newFigure);
-    } catch (err) {
-        await client.query('ROLLBACK'); console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
-        else { res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` }); }
-    } finally { client.release(); }
-});
-app.put('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params; const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
-    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const figureUpdateQuery = ` UPDATE figures SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW() WHERE id = $6 RETURNING *; `;
-        const figureResult = await client.query(figureUpdateQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id ]);
-        if (figureResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要更新的公仔。' }); }
-        const updatedFigure = figureResult.rows[0];
-        const variationsToProcess = variations || []; const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
-        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]); const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
-        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
-        if (variationIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [variationIdsToDelete]); }
-        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
-        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
-        let finalVariations = [];
-        for (const variation of variationsToProcess) {
-            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
-            const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
-            const variationId = variation.id ? parseInt(variation.id) : null;
-            if (variationId && existingVariationIds.has(variationId)) { await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]); finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity }); }
-            else { const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]); finalVariations.push(insertResult.rows[0]); }
-        }
-        await client.query('COMMIT'); updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); res.status(200).json(updatedFigure);
-    } catch (err) {
-        await client.query('ROLLBACK'); console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
-        else { res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` }); }
-    } finally { client.release(); }
-});
-app.delete('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-    try {
-        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的公仔。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
-});
-
-// --- Banner 管理 API ---
-app.get('/api/admin/banners', async (req, res) => {
-    try {
-        const result = await pool.query(`SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at FROM banners ORDER BY display_order ASC, id ASC`);
-        res.json(result.rows);
-    } catch (err) { console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err); res.status(500).json({ error: '伺服器內部錯誤' }); }
-});
-app.get('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query(`SELECT id, image_url, link_url, display_order, alt_text, page_location FROM banners WHERE id = $1`, [id]);
-        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到指定的 Banner。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '伺服器內部錯誤' }); }
-});
-app.post('/api/admin/banners', async (req, res) => {
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
-    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(`INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[Admin API Error] 新增 Banner 時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
-});
-app.put('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    const { image_url, link_url, display_order, alt_text, page_location } = req.body; if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
-    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
-    try {
-        const result = await pool.query(`UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
-});
-app.delete('/api/admin/banners/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
-    try {
-        const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
-
-// --- 商品管理 API (受保護) ---
-// GET /api/admin/products - 獲取所有商品列表供管理後台使用
-adminRouter.get('/products', async (req, res) => {
-    try {
-        // 直接使用 pool.query 獲取商品，包含所有需要的欄位
-        const result = await pool.query(
-            `SELECT p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
-                    p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
-                    COALESCE(
-                        (SELECT json_agg(t.tag_name ORDER BY t.tag_name)
-                         FROM product_tags pt
-                         JOIN tags t ON pt.tag_id = t.tag_id
-                         WHERE pt.product_id = p.id),
-                        '[]'::json
-                    ) AS tags
-             FROM products p
-             ORDER BY p.id DESC`
-        );
-        const productsFromDb = result.rows;
-
-        const products = productsFromDb.map(product => {
-            // 'tags' field from query is already an array of tag names (or empty array)
-            // product.tags will be used directly by frontend if it's an array of strings
-            // If frontend expects array of objects {tag_id, tag_name}, query needs adjustment
-            // For now, assuming frontend's product.tags.map(tag => `<span class="product-tag">${tag}</span>`) expects tag names
-            let calculated_status;
-            // pg driver 通常會將 INTEGER 轉為 number, DATE 轉為 Date object or string
-            // 確保 expiration_type 是數字進行比較
-            const expType = product.expiration_type !== null ? parseInt(product.expiration_type) : null;
-
-            if (expType === 0) {
-                calculated_status = '有效';
-            } else if (expType === 1) {
-                calculated_status = '有效'; // 預設
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                // product.start_date 和 product.end_date 可能直接是 Date 物件或 ISO 字串
-                const startDate = product.start_date ? new Date(product.start_date) : null;
-                const endDate = product.end_date ? new Date(product.end_date) : null;
-
-                if (startDate && endDate) {
-                    if (today < startDate) calculated_status = '尚未開始';
-                    else if (today > endDate) calculated_status = '已過期';
-                } else if (startDate && !endDate && today < startDate) { // 只有開始日期且未到
-                    calculated_status = '尚未開始';
-                } else if (!startDate && endDate && today > endDate) { // 只有結束日期且已過
-                    calculated_status = '已過期';
-                } else if (startDate && !endDate && today >= startDate) { // 只有開始日期且已到或進行中
-                    calculated_status = '有效';
-                } else if (!startDate && endDate && today <= endDate) { // 只有結束日期且未到或進行中
-                    calculated_status = '有效';
-                }
-                // 如果 expiration_type=1 但日期都為 null，則維持 '有效'
-            } else {
-                // expiration_type 為 null 或其他非預期值 (例如資料庫中有些舊資料是 NULL)
-                calculated_status = '有效'; // 或者 '狀態未明'，根據需求，這裡暫設為有效
-            }
-            return { ...product, product_status: calculated_status };
-        });
-        res.json(products);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取商品列表失敗:', err);
-        res.status(500).json({ error: '獲取商品列表失敗', details: err.message });
-    }
-});
-
-// GET /api/admin/products/:id - 獲取單個商品詳情供編輯使用
-adminRouter.get('/products/:id', async (req, res) => {
-    const { id } = req.params;
-    const productId = parseInt(id);
-
-    if (isNaN(productId)) {
-        return res.status(400).json({ error: '無效的商品 ID 格式。' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT
-                p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
-                p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
-                COALESCE(
-                    (SELECT json_agg(pt_inner.tag_id) -- 選擇 tag_id
-                     FROM product_tags pt_inner
-                     WHERE pt_inner.product_id = p.id),
-                    '[]'::json
-                ) AS tags
-             FROM products p
-             WHERE p.id = $1`,
-            [productId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到該商品。' });
-        }
-        // 不需要計算 product_status，前端 openEditModal 會處理顯示邏輯
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 獲取商品 ID ${id} 詳情失敗:`, err);
-        res.status(500).json({ error: '獲取商品詳情失敗', details: err.message });
-    }
-});
-
-adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
-    try {
-        // Logic from public/store/store-routes.js router.post('/products',...)
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url, tags } = req.body; // Added seven_eleven_url, body_image_url, and tags
-
-        if (!name || !price) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
-            return res.status(400).json({ error: '商品名稱和價格為必填項' });
-        }
-
-        let final_image_url = req.file ? `/uploads/storemarket/${req.file.filename}` : (body_image_url || null);
-
-        const productData = {
-            name,
-            description,
-            price: parseFloat(price),
-            image_url: final_image_url, // Use final_image_url which considers body_image_url
-            category,
-            expiration_type: parseInt(expiration_type || 0),
-            start_date: start_date || null,
-            end_date: end_date || null,
-            seven_eleven_url: seven_eleven_url || null // Added seven_eleven_url
-            // stock field removed
-            // click_count will be default in DB or handled by other logic
-        };
-        
-        // If expiration_type is 0 (unlimited), force start_date and end_date to null
-        if (productData.expiration_type === 0) {
-            productData.start_date = null;
-            productData.end_date = null;
-        }
-        
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            const insertQuery = `
-                INSERT INTO products
-                    (name, description, price, image_url, category,
-                     expiration_type, start_date, end_date, seven_eleven_url, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-                RETURNING *`; // Placeholders count adjusted
-            const values = [
-                productData.name,
-                productData.description,
-                productData.price,
-                productData.image_url, // Corrected to use productData.image_url
-                productData.category,
-                productData.expiration_type,
-                productData.start_date,
-                productData.end_date,
-                productData.seven_eleven_url // Added seven_eleven_url
-            ]; // stock removed
-            
-            const result = await client.query(insertQuery, values);
-            const newProduct = result.rows[0];
-
-            if (tags && Array.isArray(tags) && tags.length > 0) {
-                const insertProductTagQuery = 'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2)';
-                for (const tagId of tags) {
-                    // Ensure tagId is an integer
-                    const parsedTagId = parseInt(tagId, 10);
-                    if (!isNaN(parsedTagId)) {
-                        await client.query(insertProductTagQuery, [newProduct.id, parsedTagId]);
-                    } else {
-                        console.warn(`[Admin API Post Product] Invalid tag_id skipped: ${tagId}`);
-                    }
-                }
-            }
-
-            await client.query('COMMIT');
-            // To return tags with the product, you might need another query or adjust frontend to refetch
-            res.status(201).json(newProduct);
-        } catch (commitErr) {
-            await client.query('ROLLBACK');
-            console.error('[Admin API Error] 創建商品並處理標籤時事務失敗:', commitErr);
-            // req.file cleanup is handled by the outer catch block
-            throw commitErr; // Re-throw to be caught by the outer catch block
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error('[Admin API Error] 創建商品失敗:', err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (創建商品時):', unlinkErr);
-            }
-        }
-        res.status(500).json({ error: '創建商品失敗', details: err.message });
-    }
-});
 adminRouter.put('/products/:id', productUpload.single('image'), async (req, res) => {
     try {
         const productId = parseInt(req.params.id);
@@ -8787,357 +8593,6 @@ adminRouter.put('/products/:id', productUpload.single('image'), async (req, res)
             }
         }
         res.status(500).json({ error: '更新商品失敗', details: err.message });
-    }
-});
-adminRouter.delete('/products/:id', async (req, res) => {
-    const { id } = req.params;
-    // Logic from public/store/store-routes.js router.delete('/products/:id',...)
-    // This typically involves:
-    // 1. Parsing productId
-    // 2. Getting product by ID to find image path (if deleting associated image)
-    // 3. Deleting image file from disk
-    // 4. Deleting product from database using storeDb.deleteProduct(productId)
-    // For now, using the simpler delete logic already present in server.js for adminRouter,
-    // but ideally, it should also handle image file deletion like in store-routes.js.
-    // We'll keep the existing simple delete for now to avoid further complexity in this step,
-    // but acknowledge that image files won't be deleted from disk with this.
-    try {
-        const productId = parseInt(id);
-        if (isNaN(productId)) {
-            return res.status(400).json({ error: '無效的商品 ID' });
-        }
-        
-        // Fetch product to delete its image using pool.query
-        const productResult = await pool.query("SELECT image_url FROM products WHERE id = $1", [productId]);
-
-        if (productResult.rows.length > 0) {
-            const product = productResult.rows[0];
-            // Ensure product.image_url is used, as 'image' might not exist or be correct
-            if (product.image_url && product.image_url.startsWith('/uploads/storemarket/')) {
-                const imagePathToDelete = path.join(__dirname, 'public', product.image_url);
-                if (fs.existsSync(imagePathToDelete)) {
-                    try {
-                        fs.unlinkSync(imagePathToDelete);
-                        console.log(`[Admin API] Deleted image file: ${imagePathToDelete}`);
-                    } catch (unlinkErr) {
-                        console.error(`[Admin API] Error deleting image file ${imagePathToDelete}:`, unlinkErr);
-                    }
-                }
-            }
-        }
-        
-        // Delete product from database using pool.query
-        const deleteResult = await pool.query("DELETE FROM products WHERE id = $1", [productId]);
-
-        if (deleteResult.rowCount > 0) {
-            res.status(204).send();
-        } else {
-            // This case might occur if the product was already deleted by another request,
-            // or if the ID was valid but somehow not found during the delete operation itself.
-            // If productResult found it, but deleteResult didn't, it's an anomaly.
-            // However, if productResult didn't find it, we might not even reach here if we threw 404 earlier.
-            // For simplicity, if delete didn't affect rows, assume it wasn't found for deletion.
-            res.status(404).json({ error: '找不到商品，無法刪除 (或者已被刪除)。' });
-        }
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// --- 音樂管理 API (受保護 - POST/PUT/DELETE) ---
-app.post('/api/admin/music', async (req, res) => {
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const musicInsertQuery = `INSERT INTO music (title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;`;
-        const musicResult = await client.query(musicInsertQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null]);
-        const newMusic = musicResult.rows[0];
-        if (scores && Array.isArray(scores) && scores.length > 0) {
-            const scoreInsertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-            for (const score of scores) { if (score.type && score.pdf_url) await client.query(scoreInsertQuery, [newMusic.id, score.type, score.pdf_url, score.display_order || 0]); }
-        }
-        await client.query('COMMIT'); newMusic.scores = scores || []; res.status(201).json(newMusic);
-    } catch (err) { await client.query('ROLLBACK'); console.error('新增音樂時出錯:', err.stack || err); res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
-    } finally { client.release(); }
-});
-app.put('/api/admin/music/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id, 10))) { return res.status(400).json({ error: '無效的音樂 ID' }); }
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const musicUpdateQuery = `UPDATE music SET title = $1, artist = $2, release_date = $3, description = $4, cover_art_url = $5, platform_url = $6, youtube_video_id = $7, updated_at = NOW() WHERE id = $8 RETURNING *;`;
-        const musicResult = await client.query(musicUpdateQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null, id]);
-        if (musicResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到音樂' }); }
-        const updatedMusic = musicResult.rows[0];
-        const incomingScoreIds = new Set(); const scoresToUpdate = []; const scoresToInsert = [];
-        if (scores && Array.isArray(scores)) {
-             scores.forEach(score => {
-                 if (score.type && score.pdf_url) {
-                     if (score.id) { const scoreIdInt = parseInt(score.id, 10); if (!isNaN(scoreIdInt)) { incomingScoreIds.add(scoreIdInt); scoresToUpdate.push(score); } else { scoresToInsert.push(score); } }
-                     else { scoresToInsert.push(score); }
-                 }
-             });
-         }
-         const existingScoresResult = await client.query('SELECT id FROM scores WHERE music_id = $1', [id]);
-         const existingScoreIds = new Set(existingScoresResult.rows.map(r => r.id));
-         const scoreIdsToDelete = [...existingScoreIds].filter(existingId => !incomingScoreIds.has(existingId));
-         if (scoreIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM scores WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [scoreIdsToDelete]); }
-         if (scoresToUpdate.length > 0) {
-             const updateQuery = `UPDATE scores SET type = $1, pdf_url = $2, display_order = $3, updated_at = NOW() WHERE id = $4 AND music_id = $5;`;
-             for (const score of scoresToUpdate) { if (existingScoreIds.has(parseInt(score.id, 10))) { await client.query(updateQuery, [score.type, score.pdf_url, score.display_order || 0, score.id, id]); } }
-         }
-         if (scoresToInsert.length > 0) {
-             const insertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-             for (const score of scoresToInsert) { await client.query(insertQuery, [id, score.type, score.pdf_url, score.display_order || 0]); }
-         }
-        await client.query('COMMIT');
-         const finalScoresResult = await pool.query('SELECT id, type, pdf_url, display_order FROM scores WHERE music_id = $1 ORDER BY display_order ASC, type ASC', [id]);
-         updatedMusic.scores = finalScoresResult.rows; res.json(updatedMusic);
-    } catch (err) {
-         if (!res.headersSent) { await client.query('ROLLBACK'); res.status(500).json({ error: '更新音樂時發生內部伺服器錯誤' }); }
-         console.error(`[DEBUG PUT /api/music/${id}] Error occurred, rolling back transaction. Error:`, err.stack || err);
-    } finally { client.release(); }
-});
-app.delete('/api/admin/music/:id', async (req, res) => {
-    const { id } = req.params;
-    try { const result = await pool.query('DELETE FROM music WHERE id = $1', [id]); if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法刪除。' }); } res.status(204).send(); }
-    catch (err) { console.error(`刪除音樂 ID ${id} 時出錯：`, err.stack || err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
-
-
-
-// --- 路由 ---
-app.get('/news/:id(\\d+)', (req, res) => res.sendFile(path.join(__dirname, 'public', 'news-detail.html')));
-app.get('/scores', (req, res) => res.sendFile(path.join(__dirname, 'public', 'scores.html')));
-app.get('/guestbook', (req, res) => res.sendFile(path.join(__dirname, 'public', 'guestbook.html')));
-app.get('/message-detail.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'message-detail.html')));
-app.get('/rich.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich.html')));
-app.get('/rich-control.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich-control.html')));
-
-// --- Create HTTP Server ---
- 
-// --- WebSocket Server Setup ---
- 
-let gameClient = null;
-const controllerClients = new Set();
-
-
-
-
-
-// --- 404 Handler ---
-app.use((req, res, next) => {
-    
-    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
-    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-});
-
-/// --- Global Error Handler ---
-app.use((err, req, res, next) => {
-    console.error("全局錯誤處理:", {
-        message: err.message,
-        status: err.status,
-        // 在開發模式下顯示堆疊，生產環境隱藏或記錄到文件
-        stack: process.env.NODE_ENV !== 'production' ? err.stack : 'Stack trace hidden in production',
-        url: req.originalUrl,
-        method: req.method,
-        ip: req.ip
-    });
-
-    if (res.headersSent) {
-        return next(err);
-    }
-
-    const errorStatus = err.status || 500;
-    const errorMessageForClient = (process.env.NODE_ENV === 'production' && errorStatus === 500)
-        ? '伺服器發生了一些問題！請稍後再試。' // 更友好的生產環境消息
-        : err.message || '未知伺服器錯誤';
-
-    res.status(errorStatus).json({ // <--- 確保這裡回傳 JSON
-        success: false,
-        error: errorMessageForClient
-    });
-});
-// --- END OF FILE server.js ---
-
- 
-server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
-    console.log(`Server running on port ${PORT}`);
-    // 可能還有其他現有的啟動代碼
-
-    // 初始化來源分析表格
-    await setupSourcePageViewsTable();
-
-    // ---> 添加以下代碼來初始化商店數據庫 <---
-    // try {
-    //     await storeDb.initStoreDatabase(); // storeDb is removed
-    //     // 初始化成功日誌已在 storeDb.initStoreDatabase 內部處理
-    // } catch (err) {
-    //     // 錯誤日誌已在 storeDb.initStoreDatabase 內部處理
-    //     // 您可以選擇在這裡添加額外的錯誤處理，例如退出應用
-    //     console.error('*** 商店數據庫初始化失敗，應用可能無法正常運行商店功能 ***'); // This was related to storeDb
-    // }
-    // ---> 添加結束 <---
-
-});
-
-// --- 初始化來源分析資料表 ---
-async function setupSourcePageViewsTable() {
-    try {
-        // 確保 source_page_views 表格存在且包含所有需要的欄位
-        const tableQuery = `
-            CREATE TABLE IF NOT EXISTS source_page_views (
-                id SERIAL PRIMARY KEY,
-                page VARCHAR(255) NOT NULL,
-                view_date DATE NOT NULL,
-                source_type VARCHAR(100) NOT NULL,
-                source_name VARCHAR(255),
-                source_url TEXT,
-                view_count INTEGER NOT NULL DEFAULT 0,
-                time_on_site FLOAT DEFAULT 0, -- 平均停留時間（秒）
-                is_bounce BOOLEAN DEFAULT FALSE, -- 是否跳出
-                has_conversion BOOLEAN DEFAULT FALSE, -- 是否轉換
-                region VARCHAR(100) DEFAULT 'unknown', -- 地理區域
-                UNIQUE(page, view_date, source_type, source_name)
-            );
-        `;
-        
-        await pool.query(tableQuery);
-        
-        // 檢查是否需要新增欄位
-        const checkColumnsQuery = `
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'source_page_views';
-        `;
-        
-        const { rows } = await pool.query(checkColumnsQuery);
-        const existingColumns = rows.map(row => row.column_name);
-        
-        // 需要檢查的新欄位
-        const newColumns = [
-            { name: 'time_on_site', type: 'FLOAT DEFAULT 0' },
-            { name: 'is_bounce', type: 'BOOLEAN DEFAULT FALSE' },
-            { name: 'has_conversion', type: 'BOOLEAN DEFAULT FALSE' },
-            { name: 'region', type: 'VARCHAR(100) DEFAULT \'unknown\'' }
-        ];
-        
-        // 為缺少的欄位添加 ALTER TABLE 語句
-        for (const column of newColumns) {
-            if (!existingColumns.includes(column.name)) {
-                const alterQuery = `
-                    ALTER TABLE source_page_views
-                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type};
-                `;
-                await pool.query(alterQuery);
-                console.log(`添加欄位 ${column.name} 到 source_page_views 表格`);
-            }
-        }
-        
-        console.log('source_page_views 表格初始化成功');
-    } catch (err) {
-        console.error('初始化 source_page_views 表格時出錯:', err);
-    }
-}
-
-console.log('註冊路由: /api/news-categories');
-
- 
-
-
-
-
-
-
-
-
-
-// --- 分類管理 API (需要身份驗證) ---
-adminRouter.get('/news-categories', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
-            FROM news_categories 
-            ORDER BY display_order ASC, name ASC
-        `);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
-    }
-});
-
-adminRouter.post('/news-categories', async (req, res) => {
-    const { name, slug, description, display_order, is_active } = req.body;
-    
-    // 必填驗證
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '分類名稱為必填項。' });
-    }
-    if (!slug || slug.trim() === '') {
-        return res.status(400).json({ error: '分類標識符為必填項。' });
-    }
-    
-    try {
-        const result = await pool.query(`
-            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-            RETURNING *
-        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
-            display_order || 0, is_active !== false]);
-        
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
-        if (err.code === '23505') { // 唯一約束衝突
-            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
-        }
-        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
-    }
-});
-
-adminRouter.put('/news-categories/:id', async (req, res) => {
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-    if (isNaN(categoryId)) {
-        return res.status(400).json({ error: '無效的分類 ID 格式。' });
-    }
-    
-    const { name, slug, description, display_order, is_active } = req.body;
-    
-    // 必填驗證
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '分類名稱為必填項。' });
-    }
-    if (!slug || slug.trim() === '') {
-        return res.status(400).json({ error: '分類標識符為必填項。' });
-    }
-    
-    try {
-        const result = await pool.query(`
-            UPDATE news_categories
-            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
-            WHERE id = $6
-            RETURNING *
-        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
-            display_order || 0, is_active !== false, categoryId]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要更新的分類。' });
-        }
-        
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
-        if (err.code === '23505') { // 唯一約束衝突
-            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
-        }
-        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
     }
 });
 

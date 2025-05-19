@@ -196,6 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // 使用漸入效果顯示新聞
             animateNewsIn();
             
+            // 在渲染完成後添加這行
+            if (window.rebindConversionTracking) {
+                window.rebindConversionTracking();
+            }
+            
         } catch (error) {
             console.error('獲取新聞失敗:', error);
             newsListContainer.innerHTML = `<p class="error-text">無法加載最新消息，請稍後再試。</p>`;
@@ -628,6 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNewsCards(data.news);
             renderPagination(totalPages, currentPage); 
             animateNewsIn(); 
+
+            // 在渲染完成後添加這行
+            if (window.rebindConversionTracking) {
+                window.rebindConversionTracking();
+            }
+            
         } catch (error) {
             console.error('获取新闻失败:', error);
             newsListContainer.innerHTML = `<p class="error-text">無法加載最新消息，請稍後再試。</p>`;

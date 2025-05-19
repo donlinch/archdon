@@ -1,4 +1,3 @@
-// app.js
 document.addEventListener('DOMContentLoaded', () => {
     // 獲取DOM元素
     const grid = document.getElementById('product-grid');
@@ -335,6 +334,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         animateProductsIn();
+
+        if (window.rebindConversionTracking) {
+            window.rebindConversionTracking();
+        }
     }
     
     /**
