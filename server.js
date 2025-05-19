@@ -8623,3 +8623,7 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
     }
 });
+
+app.listen(PORT, () => {
+    console.log(`伺服器正在監聽端口 ${PORT}`);
+  });
