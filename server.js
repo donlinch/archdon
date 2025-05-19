@@ -243,6 +243,7 @@ sessionProtectedAdminPages.forEach(pagePath => {
 
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
+const reportTemplatesRouter = express.Router();
 
 
 
@@ -3001,7 +3002,7 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 
 
 // 2. 創建 IP 限制器實例（設置每日每IP最大報告數為10）
-const reportTemplatesRouter = express.Router();
+
 const reportRateLimiter = createReportRateLimiter(3);
 
 // 3. 將這段代碼加入到報告路由處理部分
