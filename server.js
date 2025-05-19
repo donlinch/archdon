@@ -8468,7 +8468,6 @@ app.get('/api/admin/banners', async (req, res) => {
         res.json(result.rows);
     } catch (err) { console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err); res.status(500).json({ error: '伺服器內部錯誤' }); }
 });
-
 app.get('/api/admin/banners/:id', async (req, res) => {
     const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
     try {
@@ -8477,7 +8476,6 @@ app.get('/api/admin/banners/:id', async (req, res) => {
         res.status(200).json(result.rows[0]);
     } catch (err) { console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '伺服器內部錯誤' }); }
 });
-
 app.post('/api/admin/banners', async (req, res) => {
     const { image_url, link_url, display_order, alt_text, page_location } = req.body;
     if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
@@ -8487,7 +8485,6 @@ app.post('/api/admin/banners', async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (err) { console.error('[Admin API Error] 新增 Banner 時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
 });
-
 app.put('/api/admin/banners/:id', async (req, res) => {
     const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
     const { image_url, link_url, display_order, alt_text, page_location } = req.body; if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
@@ -8498,7 +8495,6 @@ app.put('/api/admin/banners/:id', async (req, res) => {
         res.status(200).json(result.rows[0]);
     } catch (err) { console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
 });
-
 app.delete('/api/admin/banners/:id', async (req, res) => {
     const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
     try {
