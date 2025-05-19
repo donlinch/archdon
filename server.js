@@ -1884,21 +1884,30 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
         let finalImageUrl = '/uploads/' + fileToProcess.filename;
 
-        // 只對 JPG/PNG 進行縮放
+        // 只對 JPG/PNG 進行處理
         if (['.jpg', '.jpeg', '.png'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行處理。`);
             try {
-                                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`); // 新增日誌
+                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`);
 
-  
-                // --- START OF MODIFICATION for Orientation ---
+                // 檢查是否為 PNG 格式
+                const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+                
+                // 初始化 sharp 實例
                 let sharpInstance = sharp(originalFilePath);
-  const rotatedImageBuffer = await sharpInstance.rotate().toBuffer(); // 旋轉並獲取 buffer
-                sharpInstance = sharp(rotatedImageBuffer); // 用旋轉後的 buffer 重新初始化 sharp
- 
+                
+                // 如果是 PNG，設置輸出格式為 JPEG
+                if (isPNG) {
+                    sharpInstance = sharpInstance.jpeg({ quality: 90 });
+                    console.log(`[API /api/upload] Converting PNG to JPG for file: ${file.originalname}`);
+                }
 
-                const metadata = await sharp(originalFilePath).metadata();
-                               console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`); // 新增日誌
+                // 自動旋轉
+                const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
+                sharpInstance = sharp(rotatedImageBuffer);
+
+                const metadata = await sharpInstance.metadata();
+                console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`);
 
                 const originalWidth = metadata.width;
                 let targetWidth = originalWidth;
@@ -1914,56 +1923,26 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
                     needsResize = true;
                 }
-                // 可以根據需求增加更多縮放級別或固定寬度
-                // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
-
-
-
-
-
-
-
 
                 if (needsResize) {
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                    const tempResizedPath = originalFilePath + '_guestbook_resized_temp' + lowerExt;
-                    
-                 // 使用已經是正確方向的 sharpInstance 進行縮放
-                    await sharpInstance 
+                    const processedBuffer = await sharpInstance
                         .resize({ width: targetWidth })
-                        .toFile(tempResizedPath); // 保存處理後的圖片 (已旋轉和縮放)
+                        .toBuffer();
                     
-                    console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`);
-
- 
-                    // 刪除 multer 最初上傳的原始檔案
-                    if (fs.existsSync(originalFilePath)) {
-                        fs.unlinkSync(originalFilePath);
-                        console.log(`[API /api/upload] 已刪除原始 multer 檔案: ${originalFilePath}`);
-                    }
-
-                    // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
-                    fs.renameSync(tempResizedPath, originalFilePath);
-                    // fileToProcess.path 更新不是必要的，因為檔名沒變，URL路徑也沒變
-                    
+                    await fs.promises.writeFile(originalFilePath, processedBuffer);
                     const newStats = fs.statSync(originalFilePath);
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功縮放並覆蓋原檔案，新大小: ${newStats.size} bytes`);
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} bytes`);
                 } else {
-
-
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
-
-
-
-
+                    // 如果不需要縮放，但可能需要旋轉或格式轉換
+                    await fs.promises.writeFile(originalFilePath, rotatedImageBuffer);
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已完成處理 (無需縮放)。`);
                 }
             } catch (sharpError) {
-
- // <<<--- 這裡非常重要 ---<<<
                 console.error(`[API /api/upload] Sharp processing FAILED for ${fileToProcess.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
-                console.error("[API /api/upload] Full Sharp Error Object:", sharpError); // 記錄完整的錯誤物件
-                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack); // 記錄堆疊追蹤
-                // --- >>> ---
+                console.error("[API /api/upload] Full Sharp Error Object:", sharpError);
+                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack);
+                
                 try {
                     if (fs.existsSync(originalFilePath)) {
                         fs.unlinkSync(originalFilePath);
@@ -1975,28 +1954,26 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                 return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
             }
         } else {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行縮放。`);
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行處理。`);
         }
-          console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`); // 新增日誌
 
-        res.json({ success: true, url: finalImageUrl }); // 修改這裡，確保回傳 'url'
+        console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`);
+        res.json({ success: true, url: finalImageUrl });
 
     } catch (err) {
-              console.error('[API /api/upload] Outer catch block error:', err); // 修改日誌
-
-      console.error('[API /api/upload] 上傳圖片錯誤:', err);
-      // 確保如果檔案已部分處理或存在，嘗試清理
-      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-          try {
-              fs.unlinkSync(req.file.path);
-              console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
-          } catch (cleanupErr) {
-              console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
-          }
-      }
-      res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
+        console.error('[API /api/upload] Outer catch block error:', err);
+        console.error('[API /api/upload] 上傳圖片錯誤:', err);
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+            try {
+                fs.unlinkSync(req.file.path);
+                console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
+            }
+        }
+        res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
     }
-  });
+});
 
 
 
@@ -8573,6 +8550,10 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 console.log('註冊路由: /api/news-categories');
 
  
+
+
+
+
 
 
 
