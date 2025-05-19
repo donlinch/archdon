@@ -7156,6 +7156,107 @@ app.get('/api/analytics/source-trend', async (req, res) => {
     }
 });
 
+// --- 新增缺少的來源分析 API 端點 ---
+app.get('/api/analytics/source-details', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                SUM(view_count) as total_views,
+                COUNT(DISTINCT page) as unique_pages,
+                AVG(time_on_site) as avg_time_on_site,
+                AVG(CASE WHEN is_bounce THEN 1 ELSE 0 END) as bounce_rate,
+                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name
+            ORDER BY total_views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源詳細數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/source-ranking', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                SUM(view_count) as total_views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name
+            ORDER BY total_views DESC
+            LIMIT 20;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源排名數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/source-conversion', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                SUM(view_count) as total_views,
+                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type
+            ORDER BY conversion_rate DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源轉換率數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/source-geo', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                region,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY region
+            ORDER BY views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源地理數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
 const adminRouter = express.Router();
@@ -8868,6 +8969,9 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
     console.log(`Server running on port ${PORT}`);
     // 可能還有其他現有的啟動代碼
 
+    // 初始化來源分析表格
+    await setupSourcePageViewsTable();
+
     // ---> 添加以下代碼來初始化商店數據庫 <---
     // try {
     //     await storeDb.initStoreDatabase(); // storeDb is removed
@@ -8881,8 +8985,64 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 
 });
 
-
-
+// --- 初始化來源分析資料表 ---
+async function setupSourcePageViewsTable() {
+    try {
+        // 確保 source_page_views 表格存在且包含所有需要的欄位
+        const tableQuery = `
+            CREATE TABLE IF NOT EXISTS source_page_views (
+                id SERIAL PRIMARY KEY,
+                page VARCHAR(255) NOT NULL,
+                view_date DATE NOT NULL,
+                source_type VARCHAR(100) NOT NULL,
+                source_name VARCHAR(255),
+                source_url TEXT,
+                view_count INTEGER NOT NULL DEFAULT 0,
+                time_on_site FLOAT DEFAULT 0, -- 平均停留時間（秒）
+                is_bounce BOOLEAN DEFAULT FALSE, -- 是否跳出
+                has_conversion BOOLEAN DEFAULT FALSE, -- 是否轉換
+                region VARCHAR(100) DEFAULT 'unknown', -- 地理區域
+                UNIQUE(page, view_date, source_type, source_name)
+            );
+        `;
+        
+        await pool.query(tableQuery);
+        
+        // 檢查是否需要新增欄位
+        const checkColumnsQuery = `
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'source_page_views';
+        `;
+        
+        const { rows } = await pool.query(checkColumnsQuery);
+        const existingColumns = rows.map(row => row.column_name);
+        
+        // 需要檢查的新欄位
+        const newColumns = [
+            { name: 'time_on_site', type: 'FLOAT DEFAULT 0' },
+            { name: 'is_bounce', type: 'BOOLEAN DEFAULT FALSE' },
+            { name: 'has_conversion', type: 'BOOLEAN DEFAULT FALSE' },
+            { name: 'region', type: 'VARCHAR(100) DEFAULT \'unknown\'' }
+        ];
+        
+        // 為缺少的欄位添加 ALTER TABLE 語句
+        for (const column of newColumns) {
+            if (!existingColumns.includes(column.name)) {
+                const alterQuery = `
+                    ALTER TABLE source_page_views
+                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type};
+                `;
+                await pool.query(alterQuery);
+                console.log(`添加欄位 ${column.name} 到 source_page_views 表格`);
+            }
+        }
+        
+        console.log('source_page_views 表格初始化成功');
+    } catch (err) {
+        console.error('初始化 source_page_views 表格時出錯:', err);
+    }
+}
 
 console.log('註冊路由: /api/news-categories');
 

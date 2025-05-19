@@ -13,13 +13,13 @@
   "dependencies": {
     "@google-cloud/vision": "^4.x.x",
     "@google/generative-ai": "^0.7.0",
-    "connect-pg-simple": "^9.0.1",  
+    "connect-pg-simple": "^9.0.1",
     "dotenv": "^16.x.x",
     "express": "^4.x.x",
-    "express-session": "^1.18.0",  
+    "express-session": "^1.18.1",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.x.x",
-    "sharp": "^0.34.1",  
+    "sharp": "^0.34.1",
     "uuid": "^9.x.x",
     "ws": "^8.17.0"
   }
