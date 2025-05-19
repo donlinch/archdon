@@ -7153,27 +7153,7 @@ app.put('/api/products/:id', async (req, res) => {
  
 
 
-
-
-// 在 server.js 中添加以下代碼，放在適當的位置（比如在留言板 API 相關程式碼後面）
-
-// --- 產品 API 路徑 ---
-app.get('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { 
-        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
-    }
-    try {
-        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
-        if (result.rows.length === 0) { 
-            return res.status(404).json({ error: '找不到商品。' }); 
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
+ 
 
 // --- 頁面分析相關的 API ---
 app.get('/api/analytics/page-list', async (req, res) => {
