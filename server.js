@@ -8507,6 +8507,117 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
 
 
 
+// --- 分類管理 API (需要身份驗證) ---
+adminRouter.get('/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
+            FROM news_categories 
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
+    }
+});
+
+adminRouter.post('/news-categories', async (req, res) => {
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
+    }
+});
+
+adminRouter.put('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE news_categories
+            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
+            WHERE id = $6
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false, categoryId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的分類。' });
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
+    }
+});
+
+adminRouter.delete('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查該分類是否有關聯的新聞
+        const checkResult = await pool.query('SELECT COUNT(*) FROM news WHERE category_id = $1', [categoryId]);
+        if (parseInt(checkResult.rows[0].count) > 0) {
+            return res.status(400).json({ 
+                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。' 
+            });
+        }
+        
+        const result = await pool.query('DELETE FROM news_categories WHERE id = $1', [categoryId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的分類。' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 刪除分類 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
+    }
+});
 
 // --- 銷售報告 API (受保護) ---
 app.get('/api/analytics/sales-report', async (req, res) => {
