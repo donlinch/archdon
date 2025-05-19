@@ -1827,8 +1827,19 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    // 檢查是否為 PNG 文件
+    const originalExt = path.extname(file.originalname).toLowerCase();
+    const isPNG = originalExt === '.png' || file.mimetype.toLowerCase() === 'image/png';
+    
+    // 如果是 PNG，保存為 JPG
+    const ext = isPNG ? '.jpg' : originalExt;
     const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + ext;
+    
+    if (isPNG) {
+      // 如果是 PNG，修改 mimetype
+      file.mimetype = 'image/jpeg';
+    }
+    
     cb(null, uniqueName);
   }
 });
@@ -2068,6 +2079,13 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         
         // 自動旋轉（如果需要，基於之前的討論）
         let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
         const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
         sharpInstance = sharp(rotatedImageBuffer);
         
@@ -2075,9 +2093,6 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
 
         const originalWidth = metadata.width;
-        // ... (你的圖片尺寸限制檢查 MAX_DIMENSION, MAX_PIXELS - 如果需要的話) ...
-        // 如果尺寸超限，記得刪除 file.path 並返回錯誤
-
         let targetWidth = originalWidth;
         let needsResize = false;
         if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
@@ -2085,65 +2100,24 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
 
         let processedBuffer;
-        let finalFileExt = path.extname(fileToProcess.filename);
         let finalFilename = fileToProcess.filename;
-        let finalImageUrl = '/uploads/' + fileToProcess.filename; // 相對於 public 的路徑
+        let finalImageUrl;
 
-        if (isPNG) {
-            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
-            
-            // 如果需要縮放
-            if (needsResize) {
-                console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px and converting to JPG`);
-                processedBuffer = await sharpInstance
-                    .resize({ width: targetWidth })
-                    .jpeg({ quality: 90 }) // 可以調整 JPG 質量 (0-100)
-                    .toBuffer();
-            } else {
-                // 不需要縮放，只轉換格式
-                console.log(`[API /upload-safe-image] Converting PNG to JPG without resizing: ${file.originalname}`);
-                processedBuffer = await sharpInstance
-                    .jpeg({ quality: 90 })
-                    .toBuffer();
-            }
-
-            // 修改文件名: 將 .png 替換為 .jpg
-            finalFilename = fileToProcess.filename.replace(/\.png$/i, '.jpg');
-            if (finalFilename === fileToProcess.filename) {
-                // 如果文件名沒有 .png 結尾，直接添加 .jpg
-                finalFilename = path.basename(fileToProcess.filename, path.extname(fileToProcess.filename)) + '.jpg';
-            }
-            
-            finalImageUrl = '/uploads/' + finalFilename;
-            const finalFilePath = path.join(path.dirname(originalFilePath), finalFilename);
-            
-            // 保存新的 JPG 文件
-            fs.writeFileSync(finalFilePath, processedBuffer);
-            
-            // 刪除原始 PNG 文件
-            if (fs.existsSync(originalFilePath)) {
-                fs.unlinkSync(originalFilePath);
-                console.log(`[API /upload-safe-image] Deleted original PNG file: ${originalFilePath}`);
-            }
-            
-            const newStats = fs.statSync(finalFilePath);
-            console.log(`[API /upload-safe-image] PNG successfully converted to JPG. New file: ${finalFilename}, size: ${newStats.size} bytes`);
-            
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
         } else {
-            // 非 PNG 文件的原始處理邏輯
-            if (needsResize) {
-                console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-                const resizedBuffer = await sharpInstance.resize({ width: targetWidth }).toBuffer();
-                fs.writeFileSync(originalFilePath, resizedBuffer); // 用處理後的 buffer 覆蓋 multer 保存的檔案
-                const newStats = fs.statSync(originalFilePath);
-                console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
-            } else {
-                // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
-                fs.writeFileSync(originalFilePath, rotatedImageBuffer); // 用旋轉後的 buffer 覆蓋
-                console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
-            }
+            // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
+            await fs.promises.writeFile(originalFilePath, rotatedImageBuffer);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
         }
         
+        finalImageUrl = '/uploads/' + fileToProcess.filename;
         console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
         res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
 
@@ -5770,6 +5744,13 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         
         // 自動旋轉（如果需要，基於之前的討論）
         let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
         const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
         sharpInstance = sharp(rotatedImageBuffer);
         
@@ -5777,9 +5758,6 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
 
         const originalWidth = metadata.width;
-        // ... (你的圖片尺寸限制檢查 MAX_DIMENSION, MAX_PIXELS - 如果需要的話) ...
-        // 如果尺寸超限，記得刪除 file.path 並返回錯誤
-
         let targetWidth = originalWidth;
         let needsResize = false;
         if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
@@ -5787,65 +5765,24 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
 
         let processedBuffer;
-        let finalFileExt = path.extname(fileToProcess.filename);
         let finalFilename = fileToProcess.filename;
-        let finalImageUrl = '/uploads/' + fileToProcess.filename; // 相對於 public 的路徑
+        let finalImageUrl;
 
-        if (isPNG) {
-            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
-            
-            // 如果需要縮放
-            if (needsResize) {
-                console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px and converting to JPG`);
-                processedBuffer = await sharpInstance
-                    .resize({ width: targetWidth })
-                    .jpeg({ quality: 90 }) // 可以調整 JPG 質量 (0-100)
-                    .toBuffer();
-            } else {
-                // 不需要縮放，只轉換格式
-                console.log(`[API /upload-safe-image] Converting PNG to JPG without resizing: ${file.originalname}`);
-                processedBuffer = await sharpInstance
-                    .jpeg({ quality: 90 })
-                    .toBuffer();
-            }
-
-            // 修改文件名: 將 .png 替換為 .jpg
-            finalFilename = fileToProcess.filename.replace(/\.png$/i, '.jpg');
-            if (finalFilename === fileToProcess.filename) {
-                // 如果文件名沒有 .png 結尾，直接添加 .jpg
-                finalFilename = path.basename(fileToProcess.filename, path.extname(fileToProcess.filename)) + '.jpg';
-            }
-            
-            finalImageUrl = '/uploads/' + finalFilename;
-            const finalFilePath = path.join(path.dirname(originalFilePath), finalFilename);
-            
-            // 保存新的 JPG 文件
-            fs.writeFileSync(finalFilePath, processedBuffer);
-            
-            // 刪除原始 PNG 文件
-            if (fs.existsSync(originalFilePath)) {
-                fs.unlinkSync(originalFilePath);
-                console.log(`[API /upload-safe-image] Deleted original PNG file: ${originalFilePath}`);
-            }
-            
-            const newStats = fs.statSync(finalFilePath);
-            console.log(`[API /upload-safe-image] PNG successfully converted to JPG. New file: ${finalFilename}, size: ${newStats.size} bytes`);
-            
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
         } else {
-            // 非 PNG 文件的原始處理邏輯
-            if (needsResize) {
-                console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-                const resizedBuffer = await sharpInstance.resize({ width: targetWidth }).toBuffer();
-                fs.writeFileSync(originalFilePath, resizedBuffer); // 用處理後的 buffer 覆蓋 multer 保存的檔案
-                const newStats = fs.statSync(originalFilePath);
-                console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
-            } else {
-                // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
-                fs.writeFileSync(originalFilePath, rotatedImageBuffer); // 用旋轉後的 buffer 覆蓋
-                console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
-            }
+            // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
+            await fs.promises.writeFile(originalFilePath, rotatedImageBuffer);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
         }
         
+        finalImageUrl = '/uploads/' + fileToProcess.filename;
         console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
         res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
 
