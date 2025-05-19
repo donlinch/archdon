@@ -711,7 +711,6 @@
         <button class="tab-button active" data-tab="product-list-tab"><i class="fas fa-box-open"></i> 商品列表</button>
         <button class="tab-button" data-tab="tag-management-tab"><i class="fas fa-tags"></i> 標籤管理</button>
         <button class="tab-button" data-tab="analytics-tab"><i class="fas fa-chart-line"></i> 流量分析</button>
-        <button class="tab-button" data-tab="source-analysis-tab"><i class="fas fa-route"></i> 來源分析</button>
     </div>
 
     <!-- Tab Content: Product List -->
@@ -848,80 +847,7 @@
                             <tr>
                                 <th>來源類型</th>
                                 <th>來源名稱</th>
-                                <th>總訪問量</th>
-                                <th>不重複頁面數</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="source-data-body">
-                            <!-- 數據將由 JavaScript 填充 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 新增：來源分析 Tab -->
-    <div id="source-analysis-tab" class="tab-content">
-        <h1><i class="fas fa-route"></i> 流量來源分析</h1>
-        
-        <!-- 日期範圍選擇器 -->
-        <div class="chart-controls date-range-selector">
-            <label for="source-start-date">日期範圍:</label>
-            <input type="date" id="source-start-date">
-            <span> - </span>
-            <input type="date" id="source-end-date">
-            <button id="source-apply-date" class="primary-btn"><i class="fas fa-check"></i> 套用日期</button>
-            <button id="source-reset-date" class="secondary-btn"><i class="fas fa-undo"></i> 重設 (近30天)</button>
-        </div>
-
-        <div class="dashboard-container">
-            <!-- 來源分布圓餅圖 -->
-            <div class="chart-card">
-                <h2>流量來源分布</h2>
-                <div class="chart-container">
-                    <canvas id="source-distribution-chart"></canvas>
-                    <div id="source-chart-loading" class="chart-message" style="display: none;">載入圖表中...</div>
-                </div>
-            </div>
-
-            <!-- 來源趨勢圖 -->
-            <div class="chart-card">
-                <h2>來源趨勢分析</h2>
-                <div class="chart-container">
-                    <canvas id="source-trend-chart"></canvas>
-                    <div id="source-trend-loading" class="chart-message" style="display: none;">載入圖表中...</div>
-                </div>
-            </div>
-
-            <!-- 熱門來源排行 -->
-            <div class="chart-card">
-                <h2>熱門來源排行 (Top 10)</h2>
-                <div class="chart-container">
-                    <canvas id="source-ranking-chart"></canvas>
-                    <div id="source-ranking-loading" class="chart-message" style="display: none;">載入圖表中...</div>
-                </div>
-            </div>
-
-            <!-- 來源轉換率分析 -->
-            <div class="chart-card">
-                <h2>來源轉換率分析</h2>
-                <div class="chart-container">
-                    <canvas id="source-conversion-chart"></canvas>
-                    <div id="source-conversion-loading" class="chart-message" style="display: none;">載入圖表中...</div>
-                </div>
-            </div>
-
-            <!-- 來源詳細數據表格 -->
-            <div class="chart-card" style="grid-column: 1 / -1;">
-                <h2>流量來源詳細數據</h2>
-                <div class="table-container">
-                    <table class="source-data-table">
-                        <thead>
-                            <tr>
-                                <th>來源類型</th>
-                                <th>來源名稱</th>
+                                <th>來源URL</th>
                                 <th>總訪問量</th>
                                 <th>不重複頁面數</th>
                                 <th>平均停留時間</th>
@@ -935,14 +861,13 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-
-            <!-- 來源地理分布 -->
-            <div class="chart-card" style="grid-column: 1 / -1;">
-                <h2>來源地理分布</h2>
-                <div class="chart-container" style="height: 400px;">
-                    <canvas id="source-geo-chart"></canvas>
-                    <div id="source-geo-loading" class="chart-message" style="display: none;">載入圖表中...</div>
+                <div style="margin-top: 1rem; font-size: 0.9em; color: var(--gray-color);">
+                    <p><strong>說明：</strong></p>
+                    <ul>
+                        <li><strong>跳出率</strong> - 用戶僅瀏覽單一頁面就離開網站的比例</li>
+                        <li><strong>轉換率</strong> - 完成指定目標（如購物、註冊）的訪問比例</li>
+                        <li><strong>查看詳情</strong> - 顯示該來源的訪問頁面明細及數據</li>
+                    </ul>
                 </div>
             </div>
         </div>

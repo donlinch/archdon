@@ -7164,6 +7164,7 @@ app.get('/api/analytics/source-details', async (req, res) => {
             SELECT 
                 source_type,
                 source_name,
+                source_url,
                 SUM(view_count) as total_views,
                 COUNT(DISTINCT page) as unique_pages,
                 AVG(time_on_site) as avg_time_on_site,
@@ -7171,7 +7172,7 @@ app.get('/api/analytics/source-details', async (req, res) => {
                 AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
             FROM source_page_views
             WHERE view_date BETWEEN $1 AND $2
-            GROUP BY source_type, source_name
+            GROUP BY source_type, source_name, source_url
             ORDER BY total_views DESC;
         `;
         const result = await pool.query(query, [

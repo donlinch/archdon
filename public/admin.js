@@ -1340,6 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.innerHTML = `
                     <td>${item.source_type}</td>
                     <td>${item.source_name || '-'}</td>
+                    <td>${item.source_url || '-'}</td>
                     <td>${item.total_views}</td>
                     <td>${item.unique_pages}</td>
                     <td>${formatDuration(item.avg_time_on_site)}</td>
@@ -1355,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('更新來源數據表格失敗:', error);
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">載入數據失敗</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: red;">載入數據失敗</td></tr>';
         }
     }
 
@@ -1413,6 +1414,65 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // 實現查看詳情功能
+    window.viewSourceDetails = async function(sourceType, sourceName) {
+        try {
+            // 獲取指定日期範圍內該來源的詳細數據
+            const response = await fetch(`/api/analytics/source-pages?sourceType=${encodeURIComponent(sourceType)}&sourceName=${encodeURIComponent(sourceName)}&startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            const data = await response.json();
+            
+            // 創建一個模態框來顯示詳細信息
+            const modalDiv = document.createElement('div');
+            modalDiv.className = 'modal';
+            modalDiv.style.display = 'flex';
+            
+            let tableRows = '';
+            data.forEach(item => {
+                tableRows += `
+                    <tr>
+                        <td>${item.page}</td>
+                        <td>${item.views}</td>
+                    </tr>
+                `;
+            });
+            
+            modalDiv.innerHTML = `
+                <div class="modal-content" style="max-width: 800px;">
+                    <button class="close-btn" onclick="this.closest('.modal').remove()">&times;</button>
+                    <h2><i class="fas fa-chart-bar"></i> 來源頁面訪問詳情</h2>
+                    <p><strong>來源類型:</strong> ${sourceType}</p>
+                    <p><strong>來源名稱:</strong> ${sourceName || '-'}</p>
+                    <p><strong>日期範圍:</strong> ${currentTimeRange.startDate} 至 ${currentTimeRange.endDate}</p>
+                    
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                        <table class="product-list-table">
+                            <thead>
+                                <tr>
+                                    <th>頁面路徑</th>
+                                    <th>訪問量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows || '<tr><td colspan="2" style="text-align: center;">無數據</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="primary-btn" onclick="this.closest('.modal').remove()">關閉</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modalDiv);
+            
+        } catch (error) {
+            console.error('獲取來源詳情失敗:', error);
+            alert(`無法獲取詳細資訊: ${error.message}`);
+        }
+    };
 
 }); // --- End of DOMContentLoaded ---
 
