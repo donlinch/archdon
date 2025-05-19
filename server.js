@@ -222,7 +222,6 @@ const sessionProtectedAdminPages = [
     '/guestbook-admin.html',
     '/advertisement.html',
     '/admin-identities.html',
-   
 
     // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
     // 例如: '/inventory-admin.html', (如果它需要 session 保護而不是 basic auth)
@@ -8459,6 +8458,60 @@ app.get('/api/analytics/page-views', async (req, res) => {
 
 
 
+
+
+
+// --- Banner 管理 API ---
+app.get('/api/admin/banners', async (req, res) => {
+    try {
+        const result = await pool.query(`SELECT id, image_url, link_url, display_order, alt_text, page_location, updated_at FROM banners ORDER BY display_order ASC, id ASC`);
+        res.json(result.rows);
+    } catch (err) { console.error('[Admin API Error] 獲取管理 Banners 時出錯:', err); res.status(500).json({ error: '伺服器內部錯誤' }); }
+});
+
+app.get('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    try {
+        const result = await pool.query(`SELECT id, image_url, link_url, display_order, alt_text, page_location FROM banners WHERE id = $1`, [id]);
+        if (result.rows.length === 0) { return res.status(404).json({ error: '找不到指定的 Banner。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`[Admin API Error] 獲取 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '伺服器內部錯誤' }); }
+});
+
+app.post('/api/admin/banners', async (req, res) => {
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body;
+    if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    try {
+        const result = await pool.query(`INSERT INTO banners (image_url, link_url, display_order, alt_text, page_location, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) { console.error('[Admin API Error] 新增 Banner 時出錯:', err); res.status(500).json({ error: '新增過程中發生伺服器內部錯誤。' }); }
+});
+
+app.put('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    const { image_url, link_url, display_order, alt_text, page_location } = req.body; if (!image_url) return res.status(400).json({ error: '圖片網址不能為空。'}); if (!page_location) return res.status(400).json({ error: '必須指定顯示頁面。'});
+    const order = (display_order !== undefined && display_order !== null) ? parseInt(display_order) : 0; if (isNaN(order)) return res.status(400).json({ error: '排序必須是數字。'});
+    try {
+        const result = await pool.query(`UPDATE banners SET image_url = $1, link_url = $2, display_order = $3, alt_text = $4, page_location = $5, updated_at = NOW() WHERE id = $6 RETURNING *`, [image_url.trim(), link_url ? link_url.trim() : null, order, alt_text ? alt_text.trim() : null, page_location, id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法更新。' }); }
+        res.status(200).json(result.rows[0]);
+    } catch (err) { console.error(`[Admin API Error] 更新 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '更新過程中發生伺服器內部錯誤。' }); }
+});
+
+app.delete('/api/admin/banners/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的 Banner ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM banners WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到 Banner，無法刪除。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
+});
+
+
+
+
+
 // --- 銷售報告 API (受保護) ---
 app.get('/api/analytics/sales-report', async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -8500,6 +8553,84 @@ app.get('/api/analytics/sales-report', async (req, res) => {
     } finally {
         client.release();
     }
+});
+
+
+// --- 公仔庫存管理 API (受保護) ---
+app.get('/api/admin/figures', async (req, res) => {
+    try {
+        const queryText = ` SELECT f.id, f.name, f.image_url, f.purchase_price, f.selling_price, f.ordering_method, f.created_at, f.updated_at, COALESCE( (SELECT json_agg( json_build_object( 'id', v.id, 'name', v.name, 'quantity', v.quantity ) ORDER BY v.name ASC ) FROM figure_variations v WHERE v.figure_id = f.id), '[]'::json ) AS variations FROM figures f ORDER BY f.created_at DESC; `;
+        const result = await pool.query(queryText);
+        res.json(result.rows);
+    } catch (err) { console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err); res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' }); }
+});
+app.post('/api/admin/figures', async (req, res) => {
+    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureInsertQuery = ` INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method) VALUES ($1, $2, $3, $4, $5) RETURNING *; `;
+        const figureResult = await client.query(figureInsertQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null ]);
+        const newFigure = figureResult.rows[0]; const newFigureId = newFigure.id;
+        let insertedVariations = [];
+        if (variations && variations.length > 0) {
+            const variationInsertQuery = ` INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *; `;
+            for (const variation of variations) {
+                if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
+                const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+                const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
+                insertedVariations.push(variationResult.rows[0]);
+            }
+        }
+        await client.query('COMMIT'); newFigure.variations = insertedVariations; res.status(201).json(newFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.put('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureUpdateQuery = ` UPDATE figures SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW() WHERE id = $6 RETURNING *; `;
+        const figureResult = await client.query(figureUpdateQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id ]);
+        if (figureResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要更新的公仔。' }); }
+        const updatedFigure = figureResult.rows[0];
+        const variationsToProcess = variations || []; const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
+        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]); const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
+        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
+        if (variationIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [variationIdsToDelete]); }
+        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
+        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
+        let finalVariations = [];
+        for (const variation of variationsToProcess) {
+            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
+            const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+            const variationId = variation.id ? parseInt(variation.id) : null;
+            if (variationId && existingVariationIds.has(variationId)) { await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]); finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity }); }
+            else { const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]); finalVariations.push(insertResult.rows[0]); }
+        }
+        await client.query('COMMIT'); updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); res.status(200).json(updatedFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.delete('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的公仔。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
 });
 
 // --- 銷售紀錄管理 API (受保護) ---

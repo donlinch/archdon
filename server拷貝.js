@@ -22,7 +22,7 @@ const createReportRateLimiter = require('./report-ip-limiter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const unboxingAiRouter = express.Router();
+
 
 
 if (process.env.NODE_ENV === 'production') {
@@ -163,6 +163,27 @@ app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ �
 
 
 
+// 密碼驗證中介軟體
+const verifyAdminPassword = (req, res, next) => {
+    if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
+        console.warn("警告：ADMIN_PASSWORD 未設定，跳過標籤管理 API 的密碼驗證。");
+        return next();
+    }
+
+    const password = req.headers['x-admin-password'] || req.body.adminPassword;
+
+    if (!password) {
+        return res.status(401).json({ error: '未提供管理員密碼。' });
+    }
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(403).json({ error: '管理員密碼錯誤。' });
+    }
+    next();
+};
+
+ 
+const unboxingAiRouter = express.Router();
+
 // --- Multer Configuration for Product Images (used by adminRouter) ---
 const productStorage = multer.diskStorage({
     destination: function(req, file, cb) {
@@ -220,7 +241,6 @@ const sessionProtectedAdminPages = [
     '/unboxing.html',
     '/unboxing-ai-admin.html',
     '/guestbook-admin.html',
-    '/advertisement.html',
     '/admin-identities.html',
    
 
@@ -668,6 +688,10 @@ app.use(async (req, res, next) => {
         '/game/text-game.html',
         '/game/same-game.html', 
         '/rich/index.html', 
+        
+
+
+
         '/games.html'
     ];
 
@@ -676,76 +700,33 @@ app.use(async (req, res, next) => {
     if (shouldLog) {
         const pagePath = req.path;
          try {
-            // 記錄基本頁面訪問
+            // --- ↓↓↓ 關鍵修改在這裡 ↓↓↓ ---
             const sql = `
                 INSERT INTO page_views (page, view_date, view_count)
                 VALUES ($1, CURRENT_DATE, 1)
                 ON CONFLICT (page, view_date) DO UPDATE SET
                     view_count = page_views.view_count + 1;
             `;
+            // 如果你的 page_views 表有 last_updated_at 欄位，並且你想更新它，可以使用下面這個版本：
+            /*
+            const sql = `
+                INSERT INTO page_views (page, view_date, view_count, last_updated_at)
+                VALUES ($1, CURRENT_DATE, 1, NOW())
+                ON CONFLICT (page, view_date) DO UPDATE SET
+                    view_count = page_views.view_count + 1,
+                    last_updated_at = NOW();
+            `;
+            */
+            // --- ↑↑↑ 關鍵修改在這裡 ↑↑↑ ---
+
             const params = [pagePath];
             await pool.query(sql, params);
-
-            // --- 記錄來源資訊 ---
-            const referer = req.get('Referer') || '';
-            const userAgent = req.get('User-Agent') || '';
-            
-            // 判斷來源類型
-            let sourceType = 'direct';
-            let sourceName = '';
-            let sourceUrl = referer;
-
-            if (referer) {
-                try {
-                    const refererUrl = new URL(referer);
-                    
-                    // 搜尋引擎檢測
-                    if (refererUrl.hostname.includes('google.') || 
-                        refererUrl.hostname.includes('bing.') || 
-                        refererUrl.hostname.includes('yahoo.') ||
-                        refererUrl.hostname.includes('baidu.')) {
-                        sourceType = 'search_engine';
-                        sourceName = refererUrl.hostname.split('.')[1];
-                    }
-                    // 社交媒體檢測
-                    else if (refererUrl.hostname.includes('facebook.') || 
-                            refererUrl.hostname.includes('instagram.') || 
-                            refererUrl.hostname.includes('twitter.') || 
-                            refererUrl.hostname.includes('linkedin.') ||
-                            refererUrl.hostname.includes('line.me')) {
-                        sourceType = 'social';
-                        sourceName = refererUrl.hostname.split('.')[0];
-                    }
-                    // 其他外部連結
-                    else if (!refererUrl.hostname.includes(req.hostname)) {
-                        sourceType = 'referral';
-                        sourceName = refererUrl.hostname;
-                    } else {
-                        sourceType = 'internal';
-                        sourceName = 'internal';
-                    }
-                } catch (urlError) {
-                    console.warn('Invalid referer URL:', referer);
-                    sourceType = 'other';
-                    sourceName = 'invalid_url';
-                }
-            }
-            
-            // 將來源資訊寫入資料庫
-            const sourceSql = `
-                INSERT INTO source_page_views (page, view_date, source_type, source_name, source_url, view_count)
-                VALUES ($1, CURRENT_DATE, $2, $3, $4, 1)
-                ON CONFLICT (page, view_date, source_type, source_name) DO UPDATE SET
-                    view_count = source_page_views.view_count + 1;
-            `;
-            await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl]);
-
          } catch (err) {
-            console.error('記錄頁面訪問或來源數據時出錯:', err);
-            // 但不中斷用戶體驗，繼續處理請求
-         }
+             if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
+             } else {
+             }
+        }
     }
-    
     next();
 });
 
@@ -838,7 +819,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
+app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -876,7 +857,7 @@ app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -926,7 +907,7 @@ app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -949,7 +930,7 @@ app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) =>
 });
 
 // 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) => {
+app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
     try {
         const updates = req.body;
         
@@ -1084,7 +1065,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
+app.post('/api/admin/nav-links', async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -1122,7 +1103,7 @@ app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/admin/nav-links/:id', async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -1172,7 +1153,7 @@ app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/admin/nav-links/:id', async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -1866,19 +1847,8 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    // 檢查是否為 PNG 文件
-    const originalExt = path.extname(file.originalname).toLowerCase();
-    const isPNG = originalExt === '.png' || file.mimetype.toLowerCase() === 'image/png';
-    
-    // 如果是 PNG，保存為 JPG
-    const ext = isPNG ? '.jpg' : originalExt;
+    const ext = path.extname(file.originalname);
     const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + ext;
-    
-    if (isPNG) {
-      // 如果是 PNG，修改 mimetype
-      file.mimetype = 'image/jpeg';
-    }
-    
     cb(null, uniqueName);
   }
 });
@@ -1917,46 +1887,27 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
         }
 
-        let fileToProcess = { ...file };
+        let fileToProcess = { ...file }; // 複製檔案資訊
         const originalFilePath = fileToProcess.path;
-        const imageBuffer = await fs.promises.readFile(originalFilePath); // 讀取為 buffer
         const lowerMimetype = fileToProcess.mimetype.toLowerCase();
         const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
         let finalImageUrl = '/uploads/' + fileToProcess.filename;
 
-        // 只對 JPG/PNG 進行處理
+        // 只對 JPG/PNG 進行縮放
         if (['.jpg', '.jpeg', '.png'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行處理。`);
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
             try {
-                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`);
+                                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`); // 新增日誌
 
-                // 檢查是否為 PNG 格式
-                const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
-                
-                // 初始化 sharp 實例（使用 buffer）
-                let sharpInstance = sharp(imageBuffer);
-                
-                // 設置基本的壓縮選項
-                const compressionOptions = {
-                    quality: 85,            // 較低的質量設置
-                    chromaSubsampling: '4:2:0'  // 更積極的色度抽樣
-                };
+  
+                // --- START OF MODIFICATION for Orientation ---
+                let sharpInstance = sharp(originalFilePath);
+  const rotatedImageBuffer = await sharpInstance.rotate().toBuffer(); // 旋轉並獲取 buffer
+                sharpInstance = sharp(rotatedImageBuffer); // 用旋轉後的 buffer 重新初始化 sharp
+ 
 
-                // 如果是 PNG，設置輸出格式為 JPEG
-                if (isPNG) {
-                    sharpInstance = sharpInstance.jpeg(compressionOptions);
-                    console.log(`[API /api/upload] Converting PNG to JPG for file: ${file.originalname}`);
-                } else {
-                    // 如果已經是 JPEG，仍然應用壓縮設置
-                    sharpInstance = sharpInstance.jpeg(compressionOptions);
-                }
-
-                // 自動旋轉
-                const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
-                sharpInstance = sharp(rotatedImageBuffer);
-
-                const metadata = await sharpInstance.metadata();
-                console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`);
+                const metadata = await sharp(originalFilePath).metadata();
+                               console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`); // 新增日誌
 
                 const originalWidth = metadata.width;
                 let targetWidth = originalWidth;
@@ -1972,34 +1923,56 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
                     needsResize = true;
                 }
+                // 可以根據需求增加更多縮放級別或固定寬度
+                // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
 
-                let finalBuffer;
+
+
+
+
+
+
+
                 if (needsResize) {
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                    finalBuffer = await sharpInstance
-                        .resize({ 
-                            width: targetWidth,
-                            withoutEnlargement: true  // 防止小圖被放大
-                        })
-                        .toBuffer();
+                    const tempResizedPath = originalFilePath + '_guestbook_resized_temp' + lowerExt;
+                    
+                 // 使用已經是正確方向的 sharpInstance 進行縮放
+                    await sharpInstance 
+                        .resize({ width: targetWidth })
+                        .toFile(tempResizedPath); // 保存處理後的圖片 (已旋轉和縮放)
+                    
+                    console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`);
+
+ 
+                    // 刪除 multer 最初上傳的原始檔案
+                    if (fs.existsSync(originalFilePath)) {
+                        fs.unlinkSync(originalFilePath);
+                        console.log(`[API /api/upload] 已刪除原始 multer 檔案: ${originalFilePath}`);
+                    }
+
+                    // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
+                    fs.renameSync(tempResizedPath, originalFilePath);
+                    // fileToProcess.path 更新不是必要的，因為檔名沒變，URL路徑也沒變
+                    
+                    const newStats = fs.statSync(originalFilePath);
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功縮放並覆蓋原檔案，新大小: ${newStats.size} bytes`);
                 } else {
-                    finalBuffer = rotatedImageBuffer;
-                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+
+
+                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+
+
+
+
                 }
-
-                // 最終的壓縮處理
-                const finalImage = sharp(finalBuffer).jpeg(compressionOptions);
-                const processedBuffer = await finalImage.toBuffer();
-                
-                await fs.promises.writeFile(originalFilePath, processedBuffer);
-                const newStats = fs.statSync(originalFilePath);
-                console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} bytes`);
-
             } catch (sharpError) {
+
+ // <<<--- 這裡非常重要 ---<<<
                 console.error(`[API /api/upload] Sharp processing FAILED for ${fileToProcess.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
-                console.error("[API /api/upload] Full Sharp Error Object:", sharpError);
-                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack);
-                
+                console.error("[API /api/upload] Full Sharp Error Object:", sharpError); // 記錄完整的錯誤物件
+                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack); // 記錄堆疊追蹤
+                // --- >>> ---
                 try {
                     if (fs.existsSync(originalFilePath)) {
                         fs.unlinkSync(originalFilePath);
@@ -2011,26 +1984,28 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                 return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
             }
         } else {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行處理。`);
+            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行縮放。`);
         }
+          console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`); // 新增日誌
 
-        console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`);
-        res.json({ success: true, url: finalImageUrl });
+        res.json({ success: true, url: finalImageUrl }); // 修改這裡，確保回傳 'url'
 
     } catch (err) {
-        console.error('[API /api/upload] Outer catch block error:', err);
-        console.error('[API /api/upload] 上傳圖片錯誤:', err);
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            try {
-                fs.unlinkSync(req.file.path);
-                console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
-            } catch (cleanupErr) {
-                console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
-            }
-        }
-        res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
+              console.error('[API /api/upload] Outer catch block error:', err); // 修改日誌
+
+      console.error('[API /api/upload] 上傳圖片錯誤:', err);
+      // 確保如果檔案已部分處理或存在，嘗試清理
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+          try {
+              fs.unlinkSync(req.file.path);
+              console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
+          } catch (cleanupErr) {
+              console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
+          }
+      }
+      res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
     }
-});
+  });
 
 
 
@@ -2107,19 +2082,10 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
         const lowerMimetype = fileToProcess.mimetype.toLowerCase();
         const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-        
-        // 檢查是否為 PNG 格式
-        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
-        
+        let finalImageUrl = '/uploads/' + fileToProcess.filename; // 相對於 public 的路徑
+
         // 自動旋轉（如果需要，基於之前的討論）
         let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
-        
-        // 如果是 PNG，設置輸出格式為 JPEG
-        if (isPNG) {
-            sharpInstance = sharpInstance.jpeg({ quality: 90 });
-            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
-        }
-        
         const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
         sharpInstance = sharp(rotatedImageBuffer);
         
@@ -2127,37 +2093,29 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
 
         const originalWidth = metadata.width;
+        // ... (你的圖片尺寸限制檢查 MAX_DIMENSION, MAX_PIXELS - 如果需要的話) ...
+        // 如果尺寸超限，記得刪除 file.path 並返回錯誤
+
         let targetWidth = originalWidth;
         let needsResize = false;
         if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
         else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
         else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
 
-        let processedBuffer;
-        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
-        let finalImageUrl;
-
         if (needsResize) {
             console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-            processedBuffer = await sharpInstance
-                .resize({ width: targetWidth })
-                .toBuffer();
-            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const resizedBuffer = await sharpInstance.resize({ width: targetWidth }).toBuffer();
+            fs.writeFileSync(originalFilePath, resizedBuffer); // 用處理後的 buffer 覆蓋 multer 保存的檔案
             const newStats = fs.statSync(originalFilePath);
             console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
         } else {
-            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
-            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
-            // For JPGs only rotated, rotatedImageBuffer is the one to save.
-            // The key is that sharpInstance was updated if a conversion happened.
-            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
-            await fs.promises.writeFile(originalFilePath, bufferToSave);
-            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
+             // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
+            fs.writeFileSync(originalFilePath, rotatedImageBuffer); // 用旋轉後的 buffer 覆蓋
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
         }
         
-        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
         console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
-        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
+        res.json({ success: true, url: finalImageUrl }); // 和 /api/upload 一樣返回 'url'
 
     } catch (err) {
         console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
@@ -3479,7 +3437,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
+app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3504,7 +3462,7 @@ app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3541,7 +3499,7 @@ app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) =>
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3564,7 +3522,7 @@ app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res)
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3666,7 +3624,7 @@ app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, asy
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3757,7 +3715,7 @@ app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3862,7 +3820,7 @@ app.get('/api/samegame/active-templates', async (req, res) => {
             SELECT id, name, description, difficulty
             FROM samegame_templates
             WHERE is_active = TRUE
-            ORDER BY updated_at DESC
+            ORDER BY name ASC
         `);
         res.json(result.rows);
     } catch (err) {
@@ -5466,7 +5424,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5506,7 +5464,7 @@ unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', isAdminAuthenticated, async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5555,7 +5513,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', isAdminAuthenticated, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', verifyAdminPassword, unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -6411,7 +6369,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', isAdminAuthenticated, async (req, res) => {
+app.post('/api/music', verifyAdminPassword, async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6557,7 +6515,7 @@ app.post('/api/music', isAdminAuthenticated, async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6656,7 +6614,7 @@ app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/music/:id', verifyAdminPassword, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
@@ -7079,184 +7037,17 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => {
     }
 });
 
-// --- 新增來源分析相關的 API 端點 ---
-app.get('/api/analytics/source-traffic', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                source_type,
-                source_name,
-                SUM(view_count) as total_views,
-                COUNT(DISTINCT page) as unique_pages
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY source_type, source_name
-            ORDER BY total_views DESC;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源分析數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-app.get('/api/analytics/source-pages', async (req, res) => {
-    const { sourceType, sourceName, startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                page,
-                SUM(view_count) as views
-            FROM source_page_views
-            WHERE source_type = $1
-            AND source_name = $2
-            AND view_date BETWEEN $3 AND $4
-            GROUP BY page
-            ORDER BY views DESC;
-        `;
-        const result = await pool.query(query, [
-            sourceType,
-            sourceName,
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源頁面數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-app.get('/api/analytics/source-trend', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                view_date,
-                source_type,
-                SUM(view_count) as views
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY view_date, source_type
-            ORDER BY view_date ASC, source_type;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源趨勢數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-// --- 新增缺少的來源分析 API 端點 ---
-app.get('/api/analytics/source-details', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                source_type,
-                source_name,
-                source_url,
-                SUM(view_count) as total_views,
-                COUNT(DISTINCT page) as unique_pages,
-                AVG(time_on_site) as avg_time_on_site,
-                AVG(CASE WHEN is_bounce THEN 1 ELSE 0 END) as bounce_rate,
-                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY source_type, source_name, source_url
-            ORDER BY total_views DESC;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源詳細數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-app.get('/api/analytics/source-ranking', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                source_type,
-                source_name,
-                SUM(view_count) as total_views
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY source_type, source_name
-            ORDER BY total_views DESC
-            LIMIT 20;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源排名數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-app.get('/api/analytics/source-conversion', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                source_type,
-                SUM(view_count) as total_views,
-                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY source_type
-            ORDER BY conversion_rate DESC;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源轉換率數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
 
-app.get('/api/analytics/source-geo', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    try {
-        const query = `
-            SELECT 
-                region,
-                SUM(view_count) as views
-            FROM source_page_views
-            WHERE view_date BETWEEN $1 AND $2
-            GROUP BY region
-            ORDER BY views DESC;
-        `;
-        const result = await pool.query(query, [
-            startDate || '2023-01-01',
-            endDate || 'CURRENT_DATE'
-        ]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('獲取來源地理數據失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
+
+
+
+
+
 
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
@@ -7342,7 +7133,7 @@ adminRouter.delete('/identities/:id', async (req, res) => {
 
 
 
-// --- 新增: 管理員發表新留言 API (已更新處理 image_url) ---
+// --- ★ 新增: 管理員發表新留言 API (已更新處理 image_url) ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
     // 從請求 body 中獲取 image_url
     const { admin_identity_id, content, image_url } = req.body;
@@ -7432,7 +7223,7 @@ adminRouter.get('/guestbook', async (req, res) => {
             SELECT m.id, m.author_name,
                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible,
-                   m.is_reported, m.can_be_reported
+                   m.is_reported, m.can_be_reported -- 新增 is_reported 和 can_be_reported
             FROM guestbook_messages m
             ${whereSql} ${orderByClause}
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
@@ -7749,6 +7540,100 @@ adminRouter.get('/news/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息詳情' });
     }
 });
+
+
+
+
+
+// --- 分類管理 API (需要身份驗證) ---
+adminRouter.get('/news-categories', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
+            FROM news_categories 
+            ORDER BY display_order ASC, name ASC
+        `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
+    }
+});
+
+adminRouter.post('/news-categories', async (req, res) => {
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
+    }
+});
+
+adminRouter.put('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    const { name, slug, description, display_order, is_active } = req.body;
+    
+    // 必填驗證
+    if (!name || name.trim() === '') {
+        return res.status(400).json({ error: '分類名稱為必填項。' });
+    }
+    if (!slug || slug.trim() === '') {
+        return res.status(400).json({ error: '分類標識符為必填項。' });
+    }
+    
+    try {
+        const result = await pool.query(`
+            UPDATE news_categories
+            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
+            WHERE id = $6
+            RETURNING *
+        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
+            display_order || 0, is_active !== false, categoryId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的分類。' });
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505') { // 唯一約束衝突
+            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
+        }
+        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
+    }
+});
+
+
+
+
+
+
 adminRouter.post('/news', async (req, res) => {
     const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
     
@@ -8970,9 +8855,6 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
     console.log(`Server running on port ${PORT}`);
     // 可能還有其他現有的啟動代碼
 
-    // 初始化來源分析表格
-    await setupSourcePageViewsTable();
-
     // ---> 添加以下代碼來初始化商店數據庫 <---
     // try {
     //     await storeDb.initStoreDatabase(); // storeDb is removed
@@ -8986,72 +8868,12 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 
 });
 
-// --- 初始化來源分析資料表 ---
-async function setupSourcePageViewsTable() {
-    try {
-        // 確保 source_page_views 表格存在且包含所有需要的欄位
-        const tableQuery = `
-            CREATE TABLE IF NOT EXISTS source_page_views (
-                id SERIAL PRIMARY KEY,
-                page VARCHAR(255) NOT NULL,
-                view_date DATE NOT NULL,
-                source_type VARCHAR(100) NOT NULL,
-                source_name VARCHAR(255),
-                source_url TEXT,
-                view_count INTEGER NOT NULL DEFAULT 0,
-                time_on_site FLOAT DEFAULT 0, -- 平均停留時間（秒）
-                is_bounce BOOLEAN DEFAULT FALSE, -- 是否跳出
-                has_conversion BOOLEAN DEFAULT FALSE, -- 是否轉換
-                region VARCHAR(100) DEFAULT 'unknown', -- 地理區域
-                UNIQUE(page, view_date, source_type, source_name)
-            );
-        `;
-        
-        await pool.query(tableQuery);
-        
-        // 檢查是否需要新增欄位
-        const checkColumnsQuery = `
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'source_page_views';
-        `;
-        
-        const { rows } = await pool.query(checkColumnsQuery);
-        const existingColumns = rows.map(row => row.column_name);
-        
-        // 需要檢查的新欄位
-        const newColumns = [
-            { name: 'time_on_site', type: 'FLOAT DEFAULT 0' },
-            { name: 'is_bounce', type: 'BOOLEAN DEFAULT FALSE' },
-            { name: 'has_conversion', type: 'BOOLEAN DEFAULT FALSE' },
-            { name: 'region', type: 'VARCHAR(100) DEFAULT \'unknown\'' }
-        ];
-        
-        // 為缺少的欄位添加 ALTER TABLE 語句
-        for (const column of newColumns) {
-            if (!existingColumns.includes(column.name)) {
-                const alterQuery = `
-                    ALTER TABLE source_page_views
-                    ADD COLUMN IF NOT EXISTS ${column.name} ${column.type};
-                `;
-                await pool.query(alterQuery);
-                console.log(`添加欄位 ${column.name} 到 source_page_views 表格`);
-            }
-        }
-        
-        console.log('source_page_views 表格初始化成功');
-    } catch (err) {
-        console.error('初始化 source_page_views 表格時出錯:', err);
-    }
-}
+
+
 
 console.log('註冊路由: /api/news-categories');
 
  
-
-
-
-
 
 
 
