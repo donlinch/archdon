@@ -143,6 +143,9 @@
             margin-top: 1.5rem;
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
+            width: 100%;
+            max-width: 100%;
+            display: block;
         }
 
         #news-list-table {
@@ -151,7 +154,7 @@
             border-spacing: 0;
             margin-top: 0;
             background-color: white;
-            table-layout: fixed;
+            min-width: 800px; /* Ensures table won't shrink too much on small screens */
         }
 
         #news-list-table th, 
