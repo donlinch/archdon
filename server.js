@@ -1530,10 +1530,99 @@ const server = http.createServer(app);
 // --- WebSocket 服務器設置 ---
 const wss = new WebSocket.Server({ server });
 
+// Add missing admin product routes
+app.get('/api/admin/products', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.*, 
+                (SELECT array_agg(t.tag_name) FROM tags t 
+                JOIN product_tags pt ON t.tag_id = pt.tag_id 
+                WHERE pt.product_id = p.id) as tags
+            FROM products p
+            ORDER BY p.id DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching admin products:', err);
+        res.status(500).json({ error: '無法獲取商品列表' });
+    }
+});
 
+app.post('/api/admin/products', async (req, res) => {
+    try {
+        const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
+        
+        // Insert new product
+        const result = await pool.query(
+            'INSERT INTO products (name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+            [name, description, price, category, image_url, seven_eleven_url, expiration_type || 0, start_date, end_date]
+        );
+        
+        const productId = result.rows[0].id;
+        
+        // Handle tags if provided
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+            const tagValues = tags.map((tagId) => `(${productId}, ${tagId})`).join(',');
+            await pool.query(`INSERT INTO product_tags (product_id, tag_id) VALUES ${tagValues}`);
+        }
+        
+        res.status(201).json({ id: productId });
+    } catch (err) {
+        console.error('Error creating product:', err);
+        res.status(500).json({ error: '新增商品失敗' });
+    }
+});
 
+app.put('/api/admin/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
+        
+        // Update product
+        await pool.query(
+            'UPDATE products SET name = $1, description = $2, price = $3, category = $4, image_url = $5, seven_eleven_url = $6, expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW() WHERE id = $10',
+            [name, description, price, category, image_url, seven_eleven_url, expiration_type || 0, start_date, end_date, id]
+        );
+        
+        // Handle tags if provided
+        if (tags && Array.isArray(tags)) {
+            // Delete existing tag associations
+            await pool.query('DELETE FROM product_tags WHERE product_id = $1', [id]);
+            
+            // Add new tag associations if any
+            if (tags.length > 0) {
+                const tagValues = tags.map((tagId) => `(${id}, ${tagId})`).join(',');
+                await pool.query(`INSERT INTO product_tags (product_id, tag_id) VALUES ${tagValues}`);
+            }
+        }
+        
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('Error updating product:', err);
+        res.status(500).json({ error: '更新商品失敗' });
+    }
+});
 
-
+app.delete('/api/admin/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // First delete product tag associations
+        await pool.query('DELETE FROM product_tags WHERE product_id = $1', [id]);
+        
+        // Then delete the product
+        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的商品' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error('Error deleting product:', err);
+        res.status(500).json({ error: '刪除商品失敗' });
+    }
+});
 
 // --- ★★★ 修改 wss.on('connection') ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
@@ -1645,13 +1734,6 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
    
 });
 
-
-
-
-
-
-
-
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息
  * @param {WebSocket} ws WebSocket 連接對象
@@ -1673,75 +1755,69 @@ async function handleSimpleWalkerMessage(ws, message) {
         const parsedMessage = JSON.parse(message);
         console.log(`[WS Simple Walker] Received message from ${playerId} in room ${roomId}:`, parsedMessage);
 
-
-
-// 處理模板應用請求 - 添加到 handleSimpleWalkerMessage 函數中 "// ← INSERT HERE" 位置
-if (parsedMessage.type === 'applyTemplate') {
-    const { templateId } = parsedMessage;
-    
-    if (!templateId) {
-      console.warn(`[WS Simple Walker] 收到無效的模板應用請求: ${JSON.stringify(parsedMessage)}`);
-      return;
-    }
-    
-    console.log(`[WS Simple Walker] 玩家 ${playerId} 請求應用模板 ${templateId} 到房間 ${roomId}`);
-    
-    try {
-      // 1. 從資料庫獲取模板詳情
-      const templateResult = await pool.query(
-        'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
-        [templateId]
-      );
-      
-      if (templateResult.rows.length === 0) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: '找不到指定的模板'
-        }));
-        return;
-      }
-      
-      const templateData = templateResult.rows[0];
-      
-      // 2. 更新房間狀態 - 添加模板 ID (可選，如果你想追蹤每個房間使用的模板)
-      const roomData = await dbClient.getRoom(roomId);
-      if (!roomData || !roomData.game_state) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: '無法更新房間：找不到房間狀態'
-        }));
-        return;
-      }
-      
-      // 將模板 ID 添加到房間狀態（假設 gameState 有個 templateId 屬性）
-      const gameState = roomData.game_state;
-      gameState.templateId = templateId;
-      
-      // 更新資料庫中的房間狀態
-      const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
-      
-      // 3. 廣播模板更新消息給房間內所有玩家
-      broadcastToSimpleWalkerRoom(roomId, {
-        type: 'templateUpdate',
-        templateId: templateId,
-        templateData: templateData
-      });
-     
-      console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
-    } catch (err) {
-      console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: '應用模板時發生錯誤'
-      }));
-    }
-    
-    return; // 處理完畢，結束函數
-  }
-
-
-
-
+        // 處理模板應用請求 - 添加到 handleSimpleWalkerMessage 函數中 "// ← INSERT HERE" 位置
+        if (parsedMessage.type === 'applyTemplate') {
+            const { templateId } = parsedMessage;
+            
+            if (!templateId) {
+              console.warn(`[WS Simple Walker] 收到無效的模板應用請求: ${JSON.stringify(parsedMessage)}`);
+              return;
+            }
+            
+            console.log(`[WS Simple Walker] 玩家 ${playerId} 請求應用模板 ${templateId} 到房間 ${roomId}`);
+            
+            try {
+              // 1. 從資料庫獲取模板詳情
+              const templateResult = await pool.query(
+                'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+                [templateId]
+              );
+              
+              if (templateResult.rows.length === 0) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: '找不到指定的模板'
+                }));
+                return;
+              }
+              
+              const templateData = templateResult.rows[0];
+              
+              // 2. 更新房間狀態 - 添加模板 ID (可選，如果你想追蹤每個房間使用的模板)
+              const roomData = await dbClient.getRoom(roomId);
+              if (!roomData || !roomData.game_state) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: '無法更新房間：找不到房間狀態'
+                }));
+                return;
+              }
+              
+              // 將模板 ID 添加到房間狀態（假設 gameState 有個 templateId 屬性）
+              const gameState = roomData.game_state;
+              gameState.templateId = templateId;
+              
+              // 更新資料庫中的房間狀態
+              const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
+              
+              // 3. 廣播模板更新消息給房間內所有玩家
+              broadcastToSimpleWalkerRoom(roomId, {
+                type: 'templateUpdate',
+                templateId: templateId,
+                templateData: templateData
+              });
+             
+              console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
+            } catch (err) {
+              console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: '應用模板時發生錯誤'
+              }));
+            }
+            
+            return; // 處理完畢，結束函數
+          }
 
         // 根據消息類型進行不同處理
         if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
