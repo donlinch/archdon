@@ -22,7 +22,7 @@ const createReportRateLimiter = require('./report-ip-limiter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+const unboxingAiRouter = express.Router();
 
 
 if (process.env.NODE_ENV === 'production') {
@@ -163,27 +163,6 @@ app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ �
 
 
 
-// 密碼驗證中介軟體
-const verifyAdminPassword = (req, res, next) => {
-    if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
-        console.warn("警告：ADMIN_PASSWORD 未設定，跳過標籤管理 API 的密碼驗證。");
-        return next();
-    }
-
-    const password = req.headers['x-admin-password'] || req.body.adminPassword;
-
-    if (!password) {
-        return res.status(401).json({ error: '未提供管理員密碼。' });
-    }
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(403).json({ error: '管理員密碼錯誤。' });
-    }
-    next();
-};
-
- 
-const unboxingAiRouter = express.Router();
-
 // --- Multer Configuration for Product Images (used by adminRouter) ---
 const productStorage = multer.diskStorage({
     destination: function(req, file, cb) {
@@ -241,6 +220,7 @@ const sessionProtectedAdminPages = [
     '/unboxing.html',
     '/unboxing-ai-admin.html',
     '/guestbook-admin.html',
+    '/advertisement.html',
     '/admin-identities.html',
    
 
@@ -819,7 +799,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
+app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -857,7 +837,7 @@ app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -907,7 +887,7 @@ app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -930,7 +910,7 @@ app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) => {
     try {
         const updates = req.body;
         
@@ -1065,7 +1045,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
 });
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', async (req, res) => {
+app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -1103,7 +1083,7 @@ app.post('/api/admin/nav-links', async (req, res) => {
 });
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', async (req, res) => {
+app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -1153,7 +1133,7 @@ app.put('/api/admin/nav-links/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', async (req, res) => {
+app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -3437,7 +3417,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3462,7 +3442,7 @@ app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3499,7 +3479,7 @@ app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3522,7 +3502,7 @@ app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) 
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3624,7 +3604,7 @@ app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, asyn
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3715,7 +3695,7 @@ app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3820,7 +3800,7 @@ app.get('/api/samegame/active-templates', async (req, res) => {
             SELECT id, name, description, difficulty
             FROM samegame_templates
             WHERE is_active = TRUE
-            ORDER BY name ASC
+            ORDER BY updated_at DESC
         `);
         res.json(result.rows);
     } catch (err) {
@@ -5424,7 +5404,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5464,7 +5444,7 @@ unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5513,7 +5493,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', verifyAdminPassword, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', isAdminAuthenticated, unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -6369,7 +6349,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', verifyAdminPassword, async (req, res) => {
+app.post('/api/music', isAdminAuthenticated, async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6515,7 +6495,7 @@ app.post('/api/music', verifyAdminPassword, async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6614,7 +6594,7 @@ app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
@@ -7223,7 +7203,7 @@ adminRouter.get('/guestbook', async (req, res) => {
             SELECT m.id, m.author_name,
                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible,
-                   m.is_reported, m.can_be_reported -- 新增 is_reported 和 can_be_reported
+                   m.is_reported, m.can_be_reported
             FROM guestbook_messages m
             ${whereSql} ${orderByClause}
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;

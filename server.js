@@ -244,6 +244,25 @@ sessionProtectedAdminPages.forEach(pagePath => {
 // --- Voit (投票系統) API Router ---
 const voitRouter = express.Router();
 const reportTemplatesRouter = express.Router();
+const uiElementsRouter = express.Router();
+
+// 定義 uiElementsRouter 的基本路由
+uiElementsRouter.get('/', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases, settings, 
+                   created_at, updated_at
+            FROM ui_elements
+            ORDER BY element_type, id
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取UI元素列表失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
 
 
@@ -3067,10 +3086,6 @@ reportTemplatesRouter.post('/', reportRateLimiter, async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法儲存報告。', detail: err.message });
     }
 });
-
-
-
-
 
 
 
