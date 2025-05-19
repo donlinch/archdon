@@ -668,10 +668,6 @@ app.use(async (req, res, next) => {
         '/game/text-game.html',
         '/game/same-game.html', 
         '/rich/index.html', 
-        
-
-
-
         '/games.html'
     ];
 
@@ -680,34 +676,158 @@ app.use(async (req, res, next) => {
     if (shouldLog) {
         const pagePath = req.path;
          try {
-            // --- ↓↓↓ 關鍵修改在這裡 ↓↓↓ ---
+            // 記錄基本頁面訪問
             const sql = `
                 INSERT INTO page_views (page, view_date, view_count)
                 VALUES ($1, CURRENT_DATE, 1)
                 ON CONFLICT (page, view_date) DO UPDATE SET
                     view_count = page_views.view_count + 1;
             `;
-            // 如果你的 page_views 表有 last_updated_at 欄位，並且你想更新它，可以使用下面這個版本：
-            /*
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count, last_updated_at)
-                VALUES ($1, CURRENT_DATE, 1, NOW())
-                ON CONFLICT (page, view_date) DO UPDATE SET
-                    view_count = page_views.view_count + 1,
-                    last_updated_at = NOW();
-            `;
-            */
-            // --- ↑↑↑ 關鍵修改在這裡 ↑↑↑ ---
-
             const params = [pagePath];
             await pool.query(sql, params);
+
+            // --- 新增：記錄來源資訊 ---
+            const referer = req.get('Referer') || '';
+            const userAgent = req.get('User-Agent') || '';
+            
+            // 判斷來源類型
+            let sourceType = 'direct';
+            let sourceName = '';
+            let sourceUrl = referer;
+
+            if (referer) {
+                try {
+                    const refererUrl = new URL(referer);
+                    
+                    // 搜尋引擎檢測
+                    if (refererUrl.hostname.includes('google.') || 
+                        refererUrl.hostname.includes('bing.') || 
+                        refererUrl.hostname.includes('yahoo.') ||
+                        refererUrl.hostname.includes('baidu.')) {
+                        sourceType = 'search_engine';
+                        sourceName = refererUrl.hostname.split('.')[1];
+                    }
+                    // 社交媒體檢測
+                    else if (refererUrl.hostname.includes('facebook.') || 
+                            refererUrl.hostname.includes('instagram.') || 
+                            refererUrl.hostname.includes('twitter.') || 
+                            refererUrl.hostname.includes('linkedin.') ||
+                            refererUrl.hostname.includes('line.me')) {
+                        sourceType = 'social';
+                        sourceName = refererUrl.hostname.split('.')[0];
+                    }
+                    // 其他外部連結
+                    else if (!refererUrl.hostname.includes(req.hostname)) {
+                        sourceType = 'referral';
+                        sourceName = refererUrl.hostname;
+                    } else {
+                        sourceType = 'internal';
+                        sourceName = 'internal';
+                    }
+                } catch (urlError) {
+                    console.warn('Invalid referer URL:', referer);
+                    sourceType = 'other';
+                    sourceName = 'invalid_url';
+                }
+            }
+
+            // 插入來源資訊
+            const sourceSQL = `
+                INSERT INTO source_page_views 
+                (page, source_type, source_name, source_url, user_agent)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (page, view_date, source_type, source_name)
+                DO UPDATE SET 
+                    view_count = source_page_views.view_count + 1;
+            `;
+            await pool.query(sourceSQL, [pagePath, sourceType, sourceName, sourceUrl, userAgent]);
+
          } catch (err) {
              if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
+                console.warn(`[PV Mid] CONFLICT/Race condition during view count update for ${pagePath}. Handled.`);
              } else {
+                console.error('[PV Mid] Error logging page view:', err.stack || err);
              }
         }
     }
     next();
+});
+
+// --- 新增來源分析相關的 API 端點 ---
+app.get('/api/analytics/source-traffic', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                SUM(view_count) as total_views,
+                COUNT(DISTINCT page) as unique_pages
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name
+            ORDER BY total_views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源分析數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/source-pages', async (req, res) => {
+    const { sourceType, sourceName, startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                page,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE source_type = $1
+            AND source_name = $2
+            AND view_date BETWEEN $3 AND $4
+            GROUP BY page
+            ORDER BY views DESC;
+        `;
+        const result = await pool.query(query, [
+            sourceType,
+            sourceName,
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源頁面數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+app.get('/api/analytics/source-trend', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                view_date,
+                source_type,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY view_date, source_type
+            ORDER BY view_date ASC, source_type;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源趨勢數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
 });
 
  
@@ -792,7 +912,7 @@ app.get('/api/admin/nav-links', async (req, res) => {
              ORDER BY display_order ASC, name ASC`
         );
         res.status(200).json(rows);
-    } catch (err) {
+         } catch (err) {
         console.error('[API GET /api/admin/nav-links] 獲取導覽連結失敗:', err.stack || err);
         res.status(500).json({ error: '無法獲取導覽連結' });
     }

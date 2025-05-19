@@ -465,6 +465,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function refreshAllCharts() {
         displayTrafficChart(currentGranularity);
+        displayPageRankingChart();
+        displayPageComparisonChart();
+        displaySourceDistribution();
+        displaySourceTrend();
+        updateSourceTable();
     }
 
     async function initializePageSelect() {
@@ -904,6 +909,301 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (tabButtons.length > 0) { 
         tabButtons[0].click();
     }
+
+    // --- 來源分析相關函數 ---
+    async function displaySourceDistribution() {
+        const ctx = document.getElementById('source-distribution-chart').getContext('2d');
+        const loadingMsg = document.getElementById('source-chart-loading');
+        
+        if (loadingMsg) loadingMsg.style.display = 'block';
+        
+        try {
+            const response = await fetch(`/api/analytics/source-traffic?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            const data = await response.json();
+            
+            // 按來源類型分組數據
+            const sourceTypes = {};
+            data.forEach(item => {
+                if (!sourceTypes[item.source_type]) {
+                    sourceTypes[item.source_type] = 0;
+                }
+                sourceTypes[item.source_type] += parseInt(item.total_views);
+            });
+
+            if (window.sourceDistributionChart) {
+                window.sourceDistributionChart.destroy();
+            }
+
+            window.sourceDistributionChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(sourceTypes).map(type => {
+                        const total = sourceTypes[type];
+                        const percentage = ((total / Object.values(sourceTypes).reduce((a, b) => a + b, 0)) * 100).toFixed(1);
+                        return `${type} (${percentage}%)`;
+                    }),
+                    datasets: [{
+                        data: Object.values(sourceTypes),
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const meta = chart.getDatasetMeta(0);
+                                            const style = meta.controller.getStyle(i);
+                                            return {
+                                                text: label,
+                                                fillStyle: style.backgroundColor,
+                                                strokeStyle: style.borderColor,
+                                                lineWidth: style.borderWidth,
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: ${value} 訪問`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('載入來源分布圖表失敗:', error);
+            if (ctx.canvas) {
+                ctx.canvas.style.display = 'none';
+            }
+        } finally {
+            if (loadingMsg) loadingMsg.style.display = 'none';
+        }
+    }
+
+    async function displaySourceTrend() {
+        const ctx = document.getElementById('source-trend-chart').getContext('2d');
+        const loadingMsg = document.getElementById('source-trend-loading');
+        
+        if (loadingMsg) loadingMsg.style.display = 'block';
+        
+        try {
+            const response = await fetch(`/api/analytics/source-trend?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            const data = await response.json();
+            
+            // 整理數據
+            const dates = [...new Set(data.map(item => item.view_date))].sort();
+            const sourceTypes = [...new Set(data.map(item => item.source_type))];
+            
+            const datasets = sourceTypes.map((sourceType, index) => {
+                const color = [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF'
+                ][index % 5];
+                
+                return {
+                    label: sourceType,
+                    data: dates.map(date => {
+                        const match = data.find(item => item.view_date === date && item.source_type === sourceType);
+                        return match ? match.views : 0;
+                    }),
+                    borderColor: color,
+                    backgroundColor: color + '40',
+                    fill: true,
+                    tension: 0.4
+                };
+            });
+
+            if (window.sourceTrendChart) {
+                window.sourceTrendChart.destroy();
+            }
+
+            window.sourceTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            stacked: true
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y} 訪問`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('載入來源趨勢圖表失敗:', error);
+            if (ctx.canvas) {
+                ctx.canvas.style.display = 'none';
+            }
+        } finally {
+            if (loadingMsg) loadingMsg.style.display = 'none';
+        }
+    }
+
+    async function updateSourceTable() {
+        const tbody = document.getElementById('source-data-body');
+        if (!tbody) return;
+        
+        try {
+            const response = await fetch(`/api/analytics/source-traffic?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            const data = await response.json();
+            
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.source_type}</td>
+                    <td>${item.source_name || '-'}</td>
+                    <td>${item.total_views}</td>
+                    <td>${item.unique_pages}</td>
+                    <td>
+                        <button class="action-btn" onclick="viewSourceDetails('${item.source_type}', '${item.source_name}')">
+                            查看詳情
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('更新來源數據表格失敗:', error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">載入數據失敗</td></tr>';
+        }
+    }
+
+    window.viewSourceDetails = async function(sourceType, sourceName) {
+        try {
+            const response = await fetch(`/api/analytics/source-pages?sourceType=${encodeURIComponent(sourceType)}&sourceName=${encodeURIComponent(sourceName)}&startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
+            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
+            const data = await response.json();
+            
+            // 創建一個模態框來顯示詳細資訊
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                padding-top: 50px;
+                z-index: 1000;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 800px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+            
+            content.innerHTML = `
+                <h3 style="margin-top: 0;">來源詳細資訊</h3>
+                <p><strong>類型:</strong> ${sourceType}</p>
+                <p><strong>來源:</strong> ${sourceName}</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 8px; border-bottom: 2px solid #eee;">頁面</th>
+                            <th style="text-align: right; padding: 8px; border-bottom: 2px solid #eee;">訪問量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(item => `
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.page}</td>
+                                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #eee;">${item.views}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div style="text-align: right; margin-top: 15px;">
+                    <button onclick="this.closest('.modal').remove()" style="padding: 8px 15px;">關閉</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+            
+            // 點擊背景關閉
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        } catch (error) {
+            console.error('獲取來源詳細資訊失敗:', error);
+            alert('無法載入詳細資訊');
+        }
+    };
+
+    // 初始化來源分析圖表
+    setTimeout(() => {
+        displaySourceDistribution();
+        displaySourceTrend();
+        updateSourceTable();
+    }, 500);
 
 }); // --- End of DOMContentLoaded ---
 

@@ -807,6 +807,24 @@
                  </div>
             </div>
 
+            <!-- 新增：來源分布圓餅圖 -->
+            <div class="chart-card">
+                <h2>流量來源分布</h2>
+                <div class="chart-container">
+                    <canvas id="source-distribution-chart"></canvas>
+                    <div id="source-chart-loading" class="chart-message" style="display: none;">載入圖表中...</div>
+                </div>
+            </div>
+
+            <!-- 新增：來源趨勢圖 -->
+            <div class="chart-card">
+                <h2>來源趨勢分析</h2>
+                <div class="chart-container">
+                    <canvas id="source-trend-chart"></canvas>
+                    <div id="source-trend-loading" class="chart-message" style="display: none;">載入圖表中...</div>
+                </div>
+            </div>
+
             <!-- Page Comparison Chart Card -->
              <div class="chart-card" style="grid-column: 1 / -1;"> <!-- Span full width -->
                  <h2>熱門頁面訪問量對比</h2>
@@ -819,6 +837,27 @@
                      <canvas id="page-comparison-chart"></canvas>
                  </div>
              </div>
+
+            <!-- 新增：來源詳細數據表格 -->
+            <div class="chart-card" style="grid-column: 1 / -1;">
+                <h2>流量來源詳細數據</h2>
+                <div class="table-container">
+                    <table class="source-data-table">
+                        <thead>
+                            <tr>
+                                <th>來源類型</th>
+                                <th>來源名稱</th>
+                                <th>總訪問量</th>
+                                <th>不重複頁面數</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="source-data-body">
+                            <!-- 數據將由 JavaScript 填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
