@@ -3800,7 +3800,7 @@ app.get('/api/samegame/active-templates', async (req, res) => {
             SELECT id, name, description, difficulty
             FROM samegame_templates
             WHERE is_active = TRUE
-            ORDER BY name ASC
+            ORDER BY updated_at DESC
         `);
         res.json(result.rows);
     } catch (err) {
