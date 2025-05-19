@@ -1878,8 +1878,9 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
         }
 
-        let fileToProcess = { ...file }; // 複製檔案資訊
+        let fileToProcess = { ...file };
         const originalFilePath = fileToProcess.path;
+        const imageBuffer = await fs.promises.readFile(originalFilePath); // 讀取為 buffer
         const lowerMimetype = fileToProcess.mimetype.toLowerCase();
         const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
         let finalImageUrl = '/uploads/' + fileToProcess.filename;
@@ -1893,13 +1894,22 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                 // 檢查是否為 PNG 格式
                 const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
                 
-                // 初始化 sharp 實例
-                let sharpInstance = sharp(originalFilePath);
+                // 初始化 sharp 實例（使用 buffer）
+                let sharpInstance = sharp(imageBuffer);
                 
+                // 設置基本的壓縮選項
+                const compressionOptions = {
+                    quality: 85,            // 較低的質量設置
+                    chromaSubsampling: '4:2:0'  // 更積極的色度抽樣
+                };
+
                 // 如果是 PNG，設置輸出格式為 JPEG
                 if (isPNG) {
-                    sharpInstance = sharpInstance.jpeg({ quality: 90 });
+                    sharpInstance = sharpInstance.jpeg(compressionOptions);
                     console.log(`[API /api/upload] Converting PNG to JPG for file: ${file.originalname}`);
+                } else {
+                    // 如果已經是 JPEG，仍然應用壓縮設置
+                    sharpInstance = sharpInstance.jpeg(compressionOptions);
                 }
 
                 // 自動旋轉
@@ -1924,20 +1934,27 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
                     needsResize = true;
                 }
 
+                let finalBuffer;
                 if (needsResize) {
                     console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                    const processedBuffer = await sharpInstance
-                        .resize({ width: targetWidth })
+                    finalBuffer = await sharpInstance
+                        .resize({ 
+                            width: targetWidth,
+                            withoutEnlargement: true  // 防止小圖被放大
+                        })
                         .toBuffer();
-                    
-                    await fs.promises.writeFile(originalFilePath, processedBuffer);
-                    const newStats = fs.statSync(originalFilePath);
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} bytes`);
                 } else {
-                    // 如果不需要縮放，但可能需要旋轉或格式轉換
-                    await fs.promises.writeFile(originalFilePath, rotatedImageBuffer);
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已完成處理 (無需縮放)。`);
+                    finalBuffer = rotatedImageBuffer;
                 }
+
+                // 最終的壓縮處理
+                const finalImage = sharp(finalBuffer).jpeg(compressionOptions);
+                const processedBuffer = await finalImage.toBuffer();
+                
+                await fs.promises.writeFile(originalFilePath, processedBuffer);
+                const newStats = fs.statSync(originalFilePath);
+                console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} bytes`);
+
             } catch (sharpError) {
                 console.error(`[API /api/upload] Sharp processing FAILED for ${fileToProcess.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
                 console.error("[API /api/upload] Full Sharp Error Object:", sharpError);
@@ -3235,6 +3252,7 @@ app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'),
         console.error('[API POST /admin/files/upload] Error inserting file record (after potential resize):', err);
         // 如果資料庫儲存失敗，此時檔案可能已經被縮放並覆蓋了原始檔案
         // 由於我們策略是縮放失敗時就已刪除檔案並返回，這裡主要是處理資料庫錯誤
+        // 如果需要，可以考慮是否要刪除已處理的檔案，但通常資料庫錯誤更應關注
         // 如果需要，可以考慮是否要刪除已處理的檔案，但通常資料庫錯誤更應關注
         const fullDiskPathToClean = path.join(uploadDir, fileToSave.filename);
          try {
