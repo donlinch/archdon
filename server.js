@@ -264,6 +264,187 @@ uiElementsRouter.get('/', async (req, res) => {
     }
 });
 
+// 添加其他 UI 元素路由
+uiElementsRouter.get('/type/:type', async (req, res) => {
+    const { type } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases, settings, 
+                   created_at, updated_at
+            FROM ui_elements
+            WHERE element_type = $1
+            ORDER BY id
+        `, [type]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(`獲取類型 ${type} 的UI元素失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+uiElementsRouter.get('/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT id, element_type, is_visible, image_url, alt_text, 
+                   position_top, position_left, position_right, 
+                   animation_type, speech_phrases, settings, 
+                   created_at, updated_at
+            FROM ui_elements
+            WHERE id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的UI元素' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`獲取UI元素 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+uiElementsRouter.post('/', isAdminAuthenticated, async (req, res) => {
+    const {
+        element_type,
+        image_url,
+        alt_text,
+        position_top,
+        position_left,
+        position_right,
+        animation_type,
+        speech_phrases,
+        settings
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO ui_elements (
+                element_type, image_url, alt_text, position_top, position_left, position_right,
+                animation_type, speech_phrases, settings, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+            RETURNING *
+        `, [
+            element_type,
+            image_url,
+            alt_text,
+            position_top,
+            position_left,
+            position_right,
+            animation_type,
+            speech_phrases,
+            settings
+        ]);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('新增UI元素失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+// 添加更新和删除路由
+uiElementsRouter.put('/:id', isAdminAuthenticated, async (req, res) => {
+    const { id } = req.params;
+    const {
+        element_type,
+        image_url,
+        alt_text,
+        position_top,
+        position_left,
+        position_right,
+        animation_type,
+        speech_phrases,
+        settings
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE ui_elements
+            SET element_type = $1,
+                image_url = $2,
+                alt_text = $3,
+                position_top = $4,
+                position_left = $5,
+                position_right = $6,
+                animation_type = $7,
+                speech_phrases = $8,
+                settings = $9,
+                updated_at = NOW()
+            WHERE id = $10
+            RETURNING *
+        `, [
+            element_type,
+            image_url,
+            alt_text,
+            position_top,
+            position_left,
+            position_right,
+            animation_type,
+            speech_phrases,
+            settings,
+            id
+        ]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到要更新的UI元素' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新UI元素 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+uiElementsRouter.put('/:id/visibility', isAdminAuthenticated, async (req, res) => {
+    const { id } = req.params;
+    const { is_visible } = req.body;
+
+    if (typeof is_visible !== 'boolean') {
+        return res.status(400).json({ error: 'is_visible 必須是布林值' });
+    }
+
+    try {
+        const result = await pool.query(`
+            UPDATE ui_elements
+            SET is_visible = $1,
+                updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `, [is_visible, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到要更新的UI元素' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`更新UI元素 ${id} 可見性失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
+uiElementsRouter.delete('/:id', isAdminAuthenticated, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('DELETE FROM ui_elements WHERE id = $1', [id]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的UI元素' });
+        }
+
+        res.status(204).send();
+    } catch (err) {
+        console.error(`刪除UI元素 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
+
 
 
 
@@ -1488,6 +1669,8 @@ const server = http.createServer(app);
 
 // --- WebSocket 服務器設置 ---
 const wss = new WebSocket.Server({ server });
+
+
 
 
 
@@ -7074,7 +7257,7 @@ adminRouter.delete('/identities/:id', async (req, res) => {
 
 
 
-// --- ★ 新增: 管理員發表新留言 API (已更新處理 image_url) ---
+// --- 新增: 管理員發表新留言 API (已更新處理 image_url) ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
     // 從請求 body 中獲取 image_url
     const { admin_identity_id, content, image_url } = req.body;
