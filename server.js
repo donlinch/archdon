@@ -1352,7 +1352,25 @@ blacklistRouter.delete('/:id', async (req, res) => {
     }
 });
 
+// --- 公開 API Routes (保持不變) ---
+// ... (保留所有其他的公開 API，如 guestbook, scores, news, products, music, banners 等) ...
 app.use('/api/blacklist', blacklistRouter);
+app.use('/api/reports', reportTemplatesRouter);
+app.use('/api/ui-elements', uiElementsRouter);
+app.use('/api/guestbook', guestbookRouter);
+
+// --- 管理員認證中介軟體 ---
+// 保護所有 /api/admin 和 /api/analytics 開頭的 API
+app.use(['/api/admin', '/api/analytics'], isAdminAuthenticated);
+
+// --- 受保護的管理員 API ---
+app.use('/api/admin', adminRouter);
+app.use('/api/admin/walk_map', walkMapAdminRouter);
+
+// --- 靜態文件服務 ---
+app.use('/uploads', express.static(uploadDir));
+console.log(`設定靜態檔案服務: /uploads 將映射到 ${uploadDir}`);
+
 // --- 獲取活躍房間列表 API ---
 app.get('/api/game-rooms', async (req, res) => {
     try {
@@ -3244,7 +3262,7 @@ reportTemplatesRouter.delete('/:id', async (req, res) => {
 // *** 非常重要：將定義好的 Router 掛載到 Express App 上 ***
 // 這行告訴 Express，所有指向 /api/reports 的請求都由 reportTemplatesRouter 來處理
 app.use('/store/api/reports', reportTemplatesRouter);
-app.use('/api/reports', reportTemplatesRouter);
+ 
 
 // --- 結束 Report Templates API ---
 
@@ -3743,7 +3761,7 @@ app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, asy
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/samegame/levels/:id', async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3834,7 +3852,7 @@ app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/samegame/levels/:id', async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -4192,8 +4210,7 @@ walkMapAdminRouter.delete('/templates/:templateId', async (req, res) => {
  
 
 
-app.use('/api/admin/walk_map', walkMapAdminRouter); // <-- Add this line
-
+ 
 
 
 
@@ -7850,8 +7867,7 @@ adminRouter.delete('/disk-files/:filename', isAdminAuthenticated, async (req, re
     }
 });
 
-app.use('/api/admin', adminRouter); // 將 adminRouter 掛載到 /api/admin 路徑下
-
+ 
 
 // --- 流量分析 API ---
 app.get('/api/analytics/traffic', async (req, res) => {
@@ -8688,6 +8704,14 @@ server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
 console.log('註冊路由: /api/news-categories');
 
  
+
+
+
+
+
+
+
+
 
 
 
