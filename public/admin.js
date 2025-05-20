@@ -164,6 +164,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 const startDateDisplay = product.expiration_type === 1 ? formatDate(product.start_date) : 'N/A';
                 const endDateDisplay = product.expiration_type === 1 ? formatDate(product.end_date) : 'N/A';
 
+                // Calculate product status based on expiration dates
+                let statusDisplay = '';
+                let statusClass = '';
+                
+                if (product.expiration_type === 1 && product.start_date && product.end_date) {
+                    const now = new Date();
+                    const startDate = new Date(product.start_date);
+                    const endDate = new Date(product.end_date);
+                    
+                    // Check if dates are valid
+                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                        if (now < startDate) {
+                            // Product period has not started yet
+                            statusDisplay = '未開始';
+                            statusClass = 'status-not-started';
+                        } else if (now > endDate) {
+                            // Product period has expired
+                            statusDisplay = '已過期';
+                            statusClass = 'status-expired';
+                        } else {
+                            // Product is within its active period - calculate days remaining
+                            const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                            statusDisplay = `期限內 (剩餘 ${daysRemaining} 天)`;
+                            statusClass = 'status-active';
+                        }
+                    } else {
+                        statusDisplay = '日期錯誤';
+                        statusClass = 'status-error';
+                    }
+                } else {
+                    // No expiration date set
+                    statusDisplay = '不限期';
+                    statusClass = 'status-unlimited';
+                }
+
                 row.innerHTML = `
                     <td>${product.id}</td>
                     <td>${product.name || ''}</td>
@@ -171,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${product.click_count !== null ? product.click_count : '0'}</td>
                     <td>${product.category || '未分類'}</td>
                     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                    <td>${product.product_status || 'N/A'}</td>
+                    <td><span class="${statusClass}">${statusDisplay}</span></td>
                     <td>${startDateDisplay}</td>
                     <td>${endDateDisplay}</td>
                     <td>${product.tags && product.tags.length ? product.tags.map(tag => 
