@@ -757,10 +757,10 @@ app.use(async (req, res, next) => {
             `;
             await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl, isBounce]);
 
-         } catch (err) {
+        } catch (err) {
             console.error('記錄頁面訪問或來源數據時出錯:', err);
             // 但不中斷用戶體驗，繼續處理請求
-         }
+        }
     }
     
     next();
@@ -804,23 +804,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 
-
-
-// 添加跳出率追蹤中間件
 app.use(async (req, res, next) => {
     // 只處理非API請求，避免不必要的處理
     if (!req.path.startsWith('/api/') && req.method === 'GET') {
         try {
-            // 初始化會話數據
-            if (!req.session.pageViews) {
+            // 確保 pageViews 存在且為陣列
+            if (!req.session.pageViews || !Array.isArray(req.session.pageViews)) {
                 req.session.pageViews = [];
                 req.session.firstVisitTime = Date.now();
-                req.session.visitor_id = uuidv4(); // 需要引入 uuid 庫
             }
 
-            // 記錄當前頁面
-            if (!req.session.pageViews.includes(req.path)) {
-                req.session.pageViews.push(req.path);
+            // 安全地記錄當前頁面
+            const currentPath = req.path;
+            if (!req.session.pageViews.includes(currentPath)) {
+                req.session.pageViews.push(currentPath);
             }
 
             // 計算跳出狀態 - 超過一個頁面訪問即非跳出
@@ -832,44 +829,7 @@ app.use(async (req, res, next) => {
                 SET is_bounce = $1 
                 WHERE page = $2 
                 AND view_date = CURRENT_DATE
-            `, [isBounce, req.path]);
-        } catch (err) {
-            console.error('更新跳出率失敗:', err);
-            // 繼續執行請求，不中斷用戶體驗
-        }
-    }
-    next();
-});
-
-
-
-
-// 添加跳出率追蹤中間件
-app.use(async (req, res, next) => {
-    // 只處理非API請求，避免不必要的處理
-    if (!req.path.startsWith('/api/') && req.method === 'GET') {
-        try {
-            // 初始化會話數據
-            if (!req.session.pageViews) {
-                req.session.pageViews = [];
-                req.session.firstVisitTime = Date.now();
-            }
-
-            // 記錄當前頁面
-            if (!req.session.pageViews.includes(req.path)) {
-                req.session.pageViews.push(req.path);
-            }
-
-            // 計算跳出狀態 - 超過一個頁面訪問即非跳出
-            const isBounce = req.session.pageViews.length <= 1;
-
-            // 更新數據庫中的跳出狀態
-            await pool.query(`
-                UPDATE source_page_views 
-                SET is_bounce = $1 
-                WHERE page = $2 
-                AND view_date = CURRENT_DATE
-            `, [isBounce, req.path]);
+            `, [isBounce, currentPath]);
         } catch (err) {
             console.error('更新跳出率失敗:', err);
             // 繼續執行請求，不中斷用戶體驗
