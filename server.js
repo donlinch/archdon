@@ -6651,7 +6651,12 @@ app.post('/api/products/:id/click', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
     try {
+        // 更新商品點擊計數
         await pool.query('UPDATE products SET click_count = click_count + 1 WHERE id = $1', [id]);
+        
+        // 記錄點擊事件到 product_click_events 表
+        await pool.query('INSERT INTO product_click_events (product_id) VALUES ($1)', [id]);
+        
         res.status(204).send();
     } catch (err) {
         console.error(`記錄商品 ID ${id} 點擊時出錯:`, err);
