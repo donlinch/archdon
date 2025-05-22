@@ -1428,6 +1428,7 @@ const server = http.createServer(app);
 // --- WebSocket 服務器設置 ---
 const wss = new WebSocket.Server({ server });
 
+
 app.get('/api/admin/products', async (req, res) => {
     try {
         const today = new Date();
@@ -1439,10 +1440,10 @@ app.get('/api/admin/products', async (req, res) => {
         const sqlQuery = `
             WITH product_daily_clicks AS (
                 SELECT
-                    product_id, -- 假設 product_click_events 表中關聯 products 的欄位是 product_id
+                    product_id,
                     COUNT(*) AS calculated_today_clicks
                 FROM product_click_events
-                WHERE click_timestamp >= $1 AND click_timestamp < $2
+                WHERE clicked_at >= $1 AND clicked_at < $2  -- <<--- 修改這裡：click_timestamp 改為 clicked_at
                 GROUP BY product_id
             )
             SELECT
@@ -1456,23 +1457,18 @@ app.get('/api/admin/products', async (req, res) => {
             ORDER BY p.id DESC;
         `;
         
-        // 傳遞日期參數給 SQL 查詢
         const result = await pool.query(sqlQuery, [today.toISOString(), tomorrow.toISOString()]);
 
-        // 將當日點擊數加到原有的 click_count 上
         const productsWithTodayClicks = result.rows.map(product => {
             return {
                 ...product,
-                // 將現有 click_count (假設是歷史總數) 與今日點擊數相加
                 click_count: (product.click_count || 0) + (parseInt(product.today_clicks, 10) || 0)
             };
         });
 
-        res.json(productsWithTodayClicks); // 返回合併後的數據
+        res.json(productsWithTodayClicks);
     } catch (err) {
-        // 改進錯誤日誌，記錄完整的堆疊追蹤
         console.error('Error fetching admin products with today clicks:', err.stack || err);
-        // 在回應中可以選擇性地包含更詳細的錯誤信息 (err.message)，或保持通用錯誤
         res.status(500).json({ error: '無法獲取商品列表', detail: err.message });
     }
 });
