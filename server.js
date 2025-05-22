@@ -3652,6 +3652,22 @@ app.post('/api/product-clicks', async (req, res) => {
 app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
     const { startDate, endDate, granularity, productId } = req.query;
 
+
+
+    // 增加日期驗證
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ error: '無效的日期格式' });
+    }
+
+    if (start > end) {
+        return res.status(400).json({ error: '開始日期不能晚於結束日期' });
+    }
+
+
+
     if (!startDate || !endDate) {
         return res.status(400).json({ error: '需要提供開始日期和結束日期' });
     }
