@@ -18,7 +18,7 @@ const sharp = require('sharp')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const createReportRateLimiter = require('./report-ip-limiter');
-
+const adminRouter = express.Router();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
@@ -3516,7 +3516,7 @@ app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
 
  
 // ===============================================
-// 新增 API: 記錄商品點擊事件
+// 新增 API: 記錄商品點擊事件 pool.query
  // ===============================================
 app.post('/api/product-clicks', async (req, res) => {
     const { productId } = req.body;
@@ -3584,8 +3584,9 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
     let paramIndex = 3; // Start from 3 since $1 and $2 are used
     
     if (productId) {
-        query += ` AND pce.product_id = $${paramIndex++}`; // Corrected paramIndex usage
+        query += ` AND pce.product_id = $${paramIndex}`; // <<--- 直接使用 paramIndex
         queryParams.push(productId);
+        paramIndex++; // <<--- 在這裡遞增以備將來可能的更多參數
     }
 
     query += `
@@ -7480,7 +7481,7 @@ app.get('/api/analytics/source-geo', async (req, res) => {
 
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
-const adminRouter = express.Router();
+
 
 // --- 身份管理 (Identities Management) ---
 adminRouter.get('/identities', async (req, res) => {
