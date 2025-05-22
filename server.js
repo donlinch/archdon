@@ -1428,23 +1428,43 @@ const server = http.createServer(app);
 // --- WebSocket 服務器設置 ---
 const wss = new WebSocket.Server({ server });
 
-// Add missing admin product routes
 app.get('/api/admin/products', async (req, res) => {
     try {
+        // 1. 計算當日的開始和結束時間 (使用伺服器時區)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 設定到今天開始
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1); // 設定到明天開始
+
         const result = await pool.query(`
-            SELECT p.*, 
-                (SELECT array_agg(t.tag_name) FROM tags t 
-                JOIN product_tags pt ON t.tag_id = pt.tag_id 
-                WHERE pt.product_id = p.id) as tags
+            SELECT
+                p.*,
+                (SELECT array_agg(t.tag_name) FROM tags t
+                 JOIN product_tags pt ON t.tag_id = pt.tag_id
+                 WHERE pt.product_id = p.id) as tags,
+                COALESCE(SUM(CASE WHEN pce.click_timestamp >= $1 AND pce.click_timestamp < $2 THEN 1 ELSE 0 END), 0) AS today_clicks -- 計算當日點擊數
             FROM products p
+            LEFT JOIN product_click_events pce ON p.id = pce.product_id
+            GROUP BY p.id -- 按商品ID分組
             ORDER BY p.id DESC
-        `);
-        res.json(result.rows);
+        `, [today.toISOString(), tomorrow.toISOString()]); // 使用ISO格式傳遞時間戳
+
+        // 將當日點擊數加到原有的 click_count 上
+        const productsWithTodayClicks = result.rows.map(product => {
+            return {
+                ...product,
+                // 將現有 click_count (假設是歷史總數) 與今日點擊數相加
+                click_count: (product.click_count || 0) + (parseInt(product.today_clicks, 10) || 0)
+            };
+        });
+
+        res.json(productsWithTodayClicks); // 返回合併後的數據
     } catch (err) {
-        console.error('Error fetching admin products:', err);
+        console.error('Error fetching admin products with today clicks:', err);
         res.status(500).json({ error: '無法獲取商品列表' });
     }
 });
+
 
 app.post('/api/admin/products', async (req, res) => {
     try {
