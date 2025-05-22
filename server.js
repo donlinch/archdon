@@ -1436,22 +1436,22 @@ app.get('/api/admin/products', async (req, res) => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1); // 設定到明天開始
 
-        // 使用 CTE 優化 SQL 查詢
         const sqlQuery = `
             WITH product_daily_clicks AS (
                 SELECT
                     product_id,
                     COUNT(*) AS calculated_today_clicks
                 FROM product_click_events
-                WHERE clicked_at >= $1 AND clicked_at < $2  -- <<--- 修改這裡：click_timestamp 改為 clicked_at
+                WHERE clicked_at >= $1 AND clicked_at < $2
                 GROUP BY product_id
             )
             SELECT
-                p.*,
+                p.*, -- 選擇 products 表的所有欄位
+                p.click_count AS historical_click_count, -- 將 products.click_count 明確命名為歷史點擊
                 (SELECT array_agg(t.tag_name) FROM tags t
                  JOIN product_tags pt ON t.tag_id = pt.tag_id
                  WHERE pt.product_id = p.id) as tags,
-                COALESCE(pdc.calculated_today_clicks, 0) AS today_clicks
+                COALESCE(pdc.calculated_today_clicks, 0) AS today_click_increment -- 今日新增的點擊
             FROM products p
             LEFT JOIN product_daily_clicks pdc ON p.id = pdc.product_id
             ORDER BY p.id DESC;
@@ -1459,14 +1459,20 @@ app.get('/api/admin/products', async (req, res) => {
         
         const result = await pool.query(sqlQuery, [today.toISOString(), tomorrow.toISOString()]);
 
-        const productsWithTodayClicks = result.rows.map(product => {
+        // 現在 API 會返回包含 historical_click_count 和 today_click_increment 的數據
+        // 前端將負責組合顯示
+        const productsData = result.rows.map(product => {
             return {
-                ...product,
-                click_count: (product.click_count || 0) + (parseInt(product.today_clicks, 10) || 0)
+                ...product, // 保留所有原始欄位
+                // historical_click_count 已經是 p.click_count 的值
+                // today_click_increment 已經是計算出的今日點擊
+                // 前端將使用這兩個欄位來組合顯示
+                // 如果需要一個 "總點擊數" 欄位 (歷史+今日) 也可以在這裡計算
+                // total_clicks_combined: (product.historical_click_count || 0) + (parseInt(product.today_click_increment, 10) || 0)
             };
         });
 
-        res.json(productsWithTodayClicks);
+        res.json(productsData);
     } catch (err) {
         console.error('Error fetching admin products with today clicks:', err.stack || err);
         res.status(500).json({ error: '無法獲取商品列表', detail: err.message });

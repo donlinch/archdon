@@ -160,64 +160,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         return 'N/A';
                     }
                 };
+ // 從 API 獲取歷史點擊和今日增量
+ const historicalClicks = product.historical_click_count !== null ? parseInt(product.historical_click_count, 10) : 0;
+ const todayIncrement = product.today_click_increment !== null ? parseInt(product.today_click_increment, 10) : 0;
+ 
+ // 計算總點擊 (歷史 + 今日)
+ const totalClicksCombined = historicalClicks + todayIncrement;
 
-                const startDateDisplay = product.expiration_type === 1 ? formatDate(product.start_date) : 'N/A';
-                const endDateDisplay = product.expiration_type === 1 ? formatDate(product.end_date) : 'N/A';
+ // 構建點擊數的 HTML
+ let clickDisplayHtml = `${totalClicksCombined}`; // 總點擊數
+ if (todayIncrement > 0) {
+     clickDisplayHtml += ` <span style="color: red;">(+${todayIncrement})</span>`; // 今日新增，紅色
+ }
 
-                // Calculate product status based on expiration dates
-                let statusDisplay = '';
-                let statusClass = '';
-                
-                if (product.expiration_type === 1 && product.start_date && product.end_date) {
-                    const now = new Date();
-                    const startDate = new Date(product.start_date);
-                    const endDate = new Date(product.end_date);
-                    
-                    // Check if dates are valid
-                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                        if (now < startDate) {
-                            // Product period has not started yet
-                            statusDisplay = '未開始';
-                            statusClass = 'status-not-started';
-                        } else if (now > endDate) {
-                            // Product period has expired
-                            statusDisplay = '已過期';
-                            statusClass = 'status-expired';
-                        } else {
-                            // Product is within its active period - calculate days remaining
-                            const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-                            statusDisplay = `期限內 (剩餘 ${daysRemaining} 天)`;
-                            statusClass = 'status-active';
-                        }
-                    } else {
-                        statusDisplay = '日期錯誤';
-                        statusClass = 'status-error';
-                    }
-                } else {
-                    // No expiration date set
-                    statusDisplay = '不限期';
-                    statusClass = 'status-unlimited';
-                }
-
-                row.innerHTML = `
-                    <td>${product.id}</td>
-                    <td>${product.name || ''}</td>
-                    <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
-                    <td>${product.click_count !== null ? product.click_count : '0'}</td>
-                    <td>${product.category || '未分類'}</td>
-                    <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-                    <td><span class="${statusClass}">${statusDisplay}</span></td>
-                    <td>${startDateDisplay}</td>
-                    <td>${endDateDisplay}</td>
-                    <td>${product.tags && product.tags.length ? product.tags.map(tag => 
-                         `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
-                    <td>
-                        <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
-                        <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
-                    </td>
-                `; 
-                productListBody.appendChild(row); 
-            }); 
+ row.innerHTML = `
+     <td>${product.id}</td>
+     <td>${product.name || ''}</td>
+     <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
+     <td>${clickDisplayHtml}</td> {/* <--- 修改這裡 */}
+     <td>${product.category || '未分類'}</td>
+     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+     {/* ... 其他欄位保持與您 admin.html 中一致 ... */}
+     <td><span class="${statusClass}">${statusDisplay}</span></td>
+     <td>${startDateDisplay}</td>
+     <td>${endDateDisplay}</td>
+     <td>${product.tags && product.tags.length ? product.tags.map(tag => 
+          `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
+     <td>
+         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
+         <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
+     </td>
+ `; 
+ productListBody.appendChild(row); 
+}); 
         } catch (error) { 
             console.error("獲取管理商品列表失敗:", error); 
             if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。'; 
