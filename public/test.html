@@ -1,159 +1,275 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楊桃媽的山西尋寶記</title>
-  <style>
-    body {
-      font-family: 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.8;
-      color: #333;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f9f7f4;
-    }
-    
-    h1 {
-      color: #c33;
-      font-size: 2em;
-      text-align: center;
-      margin-bottom: 1em;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 0.5em;
-    }
-    
-    h2 {
-      color: #853;
-      margin-top: 1.5em;
-    }
-    
-    .intro {
-      font-size: 1.1em;
-      background-color: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    
-    .treasure {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    
-    img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 5px;
-      margin: 10px 0;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-    }
-    
-    .image-gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .image-gallery img {
-      width: 32%;
-      object-fit: cover;
-    }
-    
-    .conclusion {
-      font-size: 1.1em;
-      background-color: #ffebcd;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 30px;
-    }
-    
-    @media (max-width: 600px) {
-      .image-gallery img {
-        width: 100%;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>劇情分鏡描述與繪圖提示詞</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Helvetica Neue', '微軟正黑體', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #5a4a9b;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            margin-top: 25px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+        h3 {
+            margin-top: 20px;
+            color: #7d6fb3;
+        }
+        .scene {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .scene p {
+            margin-bottom: 8px;
+        }
+        .scene p strong {
+            color: #555;
+            display: inline-block;
+            width: 100px; /* Align keys */
+            vertical-align: top;
+        }
+        .drawing-prompt {
+            font-style: italic;
+            color: #3f8a82;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .character-description, .general-scene-description {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 5px;
+        }
+        .character-description p, .general-scene-description p {
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
-  <h1>【楊桃媽的山西尋寶記】帶回7大神秘土產！女兒們爆笑試吃實錄！</h1>
-  
-  <div class="intro">
-    <p>嗨，大家好！我是亞米媽！</p>
-    <p>前陣子去了一趟山西，當然不能空手而回啦！特地搜羅了當地最有名的幾樣特產，準備回來給大米和安娜一個驚喜（或驚嚇？哈哈！）。今天就帶大家一起來看看，這些山西的特色伴手禮到底有哪些，味道又如何呢？女兒們的反應可是超級真實喔！</p>
-  </div>
+    <div class="container">
+        <h1>劇情分鏡描述與繪圖提示詞</h1>
 
-  <div class="treasure">
-    <h2>第一寶：黃梨膏 - 聽說對氣管很好？</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 2" src="https://pic.pimg.tw/yourich/1747631304-2342674497-g_n.jpg" title="大陸買的東西 2">
-      <img alt="大陸買的東西 3" src="https://pic.pimg.tw/yourich/1747631323-3709286296-g_n.jpg" title="大陸買的東西 3">
-      <img alt="大陸買的東西 4" src="https://pic.pimg.tw/yourich/1747631323-939210908-g_n.jpg" title="大陸買的東西 4">
+        <div class="character-description">
+            <h2>角色設定</h2>
+            <p><strong>小女孩</strong> 核心形象： 被精心打扮，但可能流露出不情願或疲憊。<br>中文提示詞參考：一個7歲的東亞小女孩，穿著粉色蓬蓬公主裙和蕾絲，頭髮精心編成複雜的辮子，戴著閃亮髮夾。化著淡淡的兒童彩妝，臉上帶著勉強的微笑，眼神有些疲憊。</p>
+            <p><strong>媽媽</strong> 核心形象： 時尚、強勢、全神貫注於拍攝效果。<br>中文提示詞參考：一位約30多歲的東亞時尚女性，穿著時髦的緊身連衣裙，妝容精緻，髮型完美。她拿著手機</p>
+            <p><strong>爸爸</strong> 核心形象： 拿著攝影器材，比較低調但配合。<br>中文提示詞參考：一位約30多歲的東亞男性，穿著休閒潮牌T恤和牛仔褲，戴著棒球帽。他手持專業相機或手機穩定器</p>
+        </div>
+
+        <div class="general-scene-description">
+            <h2>場景設定</h2>
+            <p><strong>家庭客廳</strong> 一個現代風格的明亮客廳，採用淺色調 (例如白色、米色、淺灰色) 和木質元素。有一張時尚的布藝沙發 (可能是L型或三人座)，上面放著幾個精心搭配的抱枕。咖啡桌上擺放著裝飾性的書籍、香氛蠟燭和一個小花瓶。背景牆可能有一面特色牆 (例如文化石、特殊漆料或掛著大幅抽象畫)。角落裡可能隱約看到拍攝用的環形燈或柔光箱。整體感覺非常乾淨，甚至有點過於完美，缺乏生活雜物。</p>
+            <p><strong>小女孩的夢幻臥室</strong> 一個小女孩的夢幻臥室，以粉色、白色或馬卡龍色系為主。有一張帶有床幔的公主床，床上堆放著許多可愛的絨毛玩偶 (可能都是新的、品牌贊助的)。牆上貼著可愛的壁貼或掛著童趣的畫作。有一個玩具收納區，裡面的玩具都擺放得非常整齊，像是在展示。可能有一個小小的梳妝台或書桌，上面也擺著可愛的文具和飾品。房間光線充足，色彩飽和，看起來非常上鏡。</p>
+        </div>
+
+        <h2>分鏡畫面</h2>
+
+        <div class="scene">
+            <h3>畫面 1</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂的眼睛，7歲。眼神清澈但帶有一絲不易察覺的疲憊和迷茫。可能剛睡醒，睫毛上還掛著睡意。她的眼角可能還有一點點睡眠留下的痕跡。</p>
+            <p><strong>場景/事物：</strong> 背景模糊，可能是她的枕頭一角，材質柔軟，顏色溫和。光線昏暗，從窗外透進微弱的晨光，暗示清晨。</p>
+            <p><strong>氛圍：</strong> 寧靜，但隱含著一天即將開始的壓力。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up of the eyes of Lele, a 7-year-old East Asian girl, in a dimly lit room with weak morning light from a window. Her clear eyes show subtle fatigue and confusion, with traces of sleepiness on her eyelashes and eye corners. The background is blurred, showing a corner of a soft, gently colored pillow.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 2</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot)</p>
+            <p><strong>人物/動作：</strong> 媽媽（美美）進入樂樂的房間，表情略帶急切，伸手輕輕推醒還在床上的樂樂。樂樂揉著眼睛，不太情願地坐起來。</p>
+            <p><strong>場景/事物：</strong> 樂樂的臥室，床上放著一個她真正喜歡的、有些舊的絨毛小熊。房間裝飾得很夢幻，但此刻光線不足。</p>
+            <p><strong>氛圍：</strong> 日常的開始，但帶有任務感。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Medium Shot. Mother (Meimei) enters Lele's dream-like bedroom, looking slightly anxious. She gently wakes Lele, who is on the bed and reluctant to get up, rubbing her eyes. A well-loved, slightly worn teddy bear is beside Lele on the bed. The room is dimly lit.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 3</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 媽媽的手正在為樂樂梳理頭髮，動作可能略顯用力，樂樂微微皺眉，表情有些不適，甚至可能因為拉扯感到疼痛。頭髮絲在梳子間滑動。</p>
+            <p><strong>場景/事物：</strong> 精緻的髮梳，可能是鍍金或鑲鑽的。樂樂的頭髮被拉扯，髮絲緊繃。背景是梳妝台的一角，上面擺滿了各種色彩鮮豔、包裝精美的兒童化妝品和髮飾。</p>
+            <p><strong>氛圍：</strong> 強迫的精緻，孩子的不適感。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Mother's (Meimei's) hand is forcefully combing Lele's hair. Lele's partially visible face shows discomfort or pain from the pulling. Hair strands are sliding through a refined comb, possibly gilded or镶钻 (inlaid with diamonds). The background is a corner of a dressing table filled with various colorful, beautifully packaged children's cosmetics and hair accessories.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 4</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot)</p>
+            <p><strong>人物/動作：</strong> 樂樂穿著華麗但明顯不合身、可能有些扎人的粉色公主裙，媽媽正在彎腰細心地幫她調整裙擺和腰身。樂樂低頭看著自己的裙子，表情有些木然或無奈，雙手可能輕輕抓著裙子。</p>
+            <p><strong>場景/事物：</strong> 衣櫃打開，裡面掛滿了各種看起來像是演出服或拍攝用的華麗服裝，色彩鮮豔但不實用。房間地板上可能散落著其他準備好的服裝或配飾。</p>
+            <p><strong>氛圍：</strong> 被動的裝扮，失去自主。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Medium Shot. Lele wears a gorgeous but ill-fitting pink princess dress that might be itchy. Mother (Meimei) is bent over, carefully adjusting the hem and waist of the dress. Lele looks down at her dress with a blank or helpless expression, possibly gently grasping the skirt with her hands. An open closet in the background is filled with various colorful but impractical performance or photo shoot costumes. Other prepared clothing or accessories might be scattered on the floor.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 5</h3>
+            <p><strong>鏡頭：</strong> 全景 (Full Shot) 或遠景 (Long Shot)</p>
+            <p><strong>人物/動作：</strong> 客廳被佈置成了簡易攝影棚。爸爸（阿強）穿著休閒服，正專注地調整環形燈和反光板的位置，檢查設備。樂樂穿著華麗的服裝，站在佈景中央，顯得有些渺小和孤立。媽媽在一旁拿著手機或平板，似乎在看腳本、檢查拍攝清單或與品牌方溝通，表情嚴肅。</p>
+            <p><strong>場景/事物：</strong> 客廳，家具被移開，地上有纏繞的電線、專業的三腳架、可能還有背景布或大型道具。背景是精心選擇的拍攝背景布或客廳的特色牆。</p>
+            <p><strong>氛圍：</strong> 專業但冰冷的拍攝準備，缺乏家庭溫馨感。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Full Shot or Long Shot. The living room is set up as a simple photo studio. Father (Aqiang), in casual clothes, is focused on adjusting the position of a ring light and reflector, checking equipment. Lele, in gorgeous clothing, stands in the center of the setup, looking small and isolated. Mother (Meimei) is nearby, holding a phone or tablet, seemingly checking the script, shooting list, or communicating with the brand, with a serious expression. The living room furniture has been moved, with tangled wires, professional tripods, possibly a backdrop cloth or large props on the floor. The background is a carefully selected backdrop or the living room's feature wall.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 6</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 手機鏡頭的特寫，鏡頭玻璃可能有些反光，可以看到鏡頭的光圈。鏡頭正對著觀眾（模擬樂樂看到的視角），給人一種被直視、被審視的感覺。</p>
+            <p><strong>場景/事物：</strong> 手機螢幕亮著，顯示的是錄影模式的界面，可能有紅色的錄影點或計時器。螢幕周圍是手機的邊框和一部分握著手機的手。</p>
+            <p><strong>氛圍：</strong> 壓迫感，被審視的感覺，冰冷的科技感。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Extreme close-up shot of a smartphone camera lens, appearing cold and imposing, with possible reflections on the glass, showing the aperture. The lens is pointed directly at the viewer, simulating Lele's perspective of being filmed, giving a sense of being stared at and scrutinized. The phone screen is lit, showing a recording mode interface, possibly with a red recording dot or timer. The phone's bezel and part of the hand holding the phone are visible around the screen.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 7</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot) - 從樂樂的視角看父母</p>
+            <p><strong>人物/動作：</strong> 從低角度拍攝，彷彿是樂樂蹲下或坐著的視角。媽媽化著精緻的妝容，臉上帶著職業性的、略顯僵硬的微笑，高舉著手機對準樂樂，語氣卻是命令式的：「樂樂，笑！再甜一點！」。爸爸在媽媽身後，戴著棒球帽，表情專注地看著手機螢幕或相機的預覽畫面，可能還在微調設備。</p>
+            <p><strong>場景/事物：</strong> 他們身後的客廳背景，可能看到攝影器材的邊緣。光線可能是環形燈打出的均勻、有些刺眼的光。</p>
+            <p><strong>氛圍：</strong> 父母的期望與壓力，一種居高臨下的審視。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Low Angle Medium Shot, from Lele's perspective (as if she is crouching or sitting). Mother (Meimei), wearing delicate makeup, has a professional, slightly stiff smile and is holding up a phone aimed at Lele, giving commanding instructions like "Lele, smile! Sweeter!". Father (Aqiang) is behind Mother, wearing a baseball cap, focused on the phone screen or camera preview, possibly fine-tuning equipment. The living room background is behind them, possibly showing the edges of photographic equipment. The light might be uniform and somewhat dazzling from the ring light.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 8</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂的臉部特寫，她努力擠出一個不自然的、嘴角上揚但眼底沒有笑意的微笑。眼神空洞，似乎靈魂不在這裡。臉頰上的腮紅和唇上的唇彩顯得有些過重或不搭。</p>
+            <p><strong>場景/事物：</strong> 臉頰上的粉色腮紅，泛著光澤的唇彩。光線可能比較強烈，強調了妝容的不自然感。</p>
+            <p><strong>氛圍：</strong> 強顏歡笑，內心的空洞與不情願。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Close-up of Lele's face. She forces an unnatural smile, with the corners of her mouth turned up but no smile in her eyes. Her eyes are empty, as if her soul is not present. The blush on her cheeks and lipstick on her lips appear slightly heavy or mismatched. Strong light might emphasize the unnaturalness of the makeup. Pink blush on the cheeks, shiny lipstick on the lips are visible. She struggles to maintain the expression.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 9</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot)</p>
+            <p><strong>人物/動作：</strong> 拍攝吃點心的場景。樂樂坐在裝飾精美的桌子前，面前擺著一個色彩鮮豔、裝飾華麗但看起來並不吸引人、甚至有些人工的蛋糕或甜點。她拿起精緻的叉子，動作有些猶豫和不確定。</p>
+            <p><strong>場景/事物：</strong> 裝飾性的桌布或桌面，精緻但不常用的小叉子，刻意擺放得非常完美的點心盤和背景。</p>
+            <p><strong>氛圍：</strong> 虛假的美味，表演的開始，為了拍攝而存在的場景。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Medium Shot. Scene of eating snacks being filmed. Lele sits before a beautifully decorated table with a colorful, elaborately decorated but seemingly unappealing, even artificial, cake or dessert in front of her. She picks up an exquisite fork, her movements hesitant and uncertain. The scene includes a decorative tablecloth or table surface, an exquisite but rarely used small fork, and deliberately perfectly arranged dessert plates and background.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 10</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂小口吃下蛋糕，努力做出「美味」的表情，但臉部肌肉顯得僵硬，喉嚨似乎有些難以下嚥或反胃的感覺，眉頭可能微不可察地皺了一下。蛋糕的奶油沾到嘴唇邊緣。</p>
+            <p><strong>場景/事物：</strong> 蛋糕的奶油特寫，質地可能看起來不太真實。她的嘴唇，可能沾有一點奶油，努力控制著表情。</p>
+            <p><strong>氛圍：</strong> 壓抑真實感受，努力迎合成人世界的期望。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Close-up of Lele taking a small bite of the cake, trying to make an expression of "deliciousness," but her facial muscles appear stiff. She seems to have difficulty swallowing or feels nauseated, her brow might furrow almost imperceptibly. Cream from the cake is on the edge of her lips. The cake cream is in close-up, its texture might look unreal. Her lips, possibly with a bit of cream, are visible as she struggles to control her expression.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 11</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot) - 隔著門縫的窺視鏡頭</p>
+            <p><strong>人物/動作：</strong> 鏡頭位於一扇半開的門後，從門縫中向外窺視。樂樂瘦小的身影躲在門後，偷偷看著客廳裡的父母。父母坐在沙發上，正對著手機螢幕，表情興奮或專注地討論著什麼（例如影片的按讚數、觀看次數、粉絲留言、甚至是「業配」的成效）。他們的臉被手機屏幕的光線照亮。</p>
+            <p><strong>場景/事物：</strong> 門縫形成一個狹窄的視角。客廳裡父母的身影和被手機螢幕的光亮映照出的臉。背景是客廳的拍攝佈景。</p>
+            <p><strong>氛圍：</strong> 孩子的隔閡感與好奇，父母沉浸在自身世界的疏離感，偷窺帶來的距離感。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Medium Shot, a peeking shot from through a door crack. The camera is behind a half-open door, peeking out. Lele's small figure is hidden behind the door, secretly watching her parents in the living room. The parents are sitting on the sofa, facing a phone screen, discussing something with excited or focused expressions (e.g., video likes, views, fan comments, or even the effectiveness of "sponsored content"). Their faces are illuminated by the light from the phone screen. The door crack forms a narrow perspective. The parents' figures in the living room and their faces illuminated by the phone screen light are visible. The background is the living room's filming setup.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 12</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 媽媽手機螢幕的特寫，上面顯示著樂樂影片的頁面，清晰地看到影片的標題、封面圖、高企的按讚數和不斷增加的粉絲留言區。數字以動畫效果不斷跳動上升。</p>
+            <p><strong>場景/事物：</strong> 手機螢幕的亮光，各種表情符號（例如愛心、讚、哭臉等）組成的留言內容，以及跳動的數字。</p>
+            <p><strong>氛圍：</strong> 數據化的成功，冰冷且抽象的數字世界，與孩子的真實感受形成對比。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Extreme close-up of Mother's (Meimei's) phone screen, displaying Lele's video page. The video title, thumbnail, high like count, and constantly increasing fan comment section are clearly visible. The numbers are rapidly animating and increasing. The scene shows the bright light of the phone screen, comment content composed of various emojis (e.g., hearts, thumbs up, crying faces), and the animating numbers.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 13</h3>
+            <p><strong>鏡頭：</strong> 低角度中景 (Low Angle Medium Shot)</p>
+            <p><strong>人物/動作：</strong> 樂樂獨自坐在她的房間地板上，身體蜷縮，抱著那個有些舊、顏色不再鮮豔、毛絨可能也有些磨損的小熊。周圍是堆滿了嶄新的、色彩鮮豔、包裝完整的品牌贊助玩具，形成鮮明對比。她的表情落寞，眼神沒有光彩。</p>
+            <p><strong>場景/事物：</strong> 樂樂的房間地板，周圍是像道具一樣擺放整齊的各種新玩具。窗外的天色漸暗，房間光線變冷。</p>
+            <p><strong>氛圍：</strong> 物質豐富但精神空虛，被新玩具包圍的孤獨感與失落。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Low Angle Medium Shot. Lele sits alone on her room floor, curled up, hugging her slightly old, faded, and possibly worn teddy bear. She is surrounded by neatly arranged piles of brand-new, colorful, perfectly packaged sponsored toys, creating a stark contrast. Her expression is dejected, and her eyes lack luster. The scene shows Lele on her room floor, surrounded by various new toys arranged like props. The sky outside the window is darkening, and the room light turns cold.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 14</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂的臉頰特寫，一顆晶瑩的眼淚從眼角緩緩滑落，經過臉頰上的淡妝痕跡。她緊緊閉著嘴，雙唇緊抿成一條直線，臉部肌肉緊繃，努力不發出哭泣的聲音。</p>
+            <p><strong>場景/事物：</strong> 眼淚的軌跡，緊抿的嘴唇，臉頰上殘留的腮紅或粉底痕跡。</p>
+            <p><strong>氛圍：</strong> 無聲的哭泣，壓抑的悲傷和無助。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Close-up of Lele's cheek. A single, clear tear slowly rolls down from the corner of her eye, tracing a path over the remnants of light makeup on her cheek. Her mouth is tightly closed, lips pressed into a thin line, facial muscles tense, trying hard not to make a sound of crying. The scene focuses on the path of the tear, the tightly pressed lips, and traces of blush or foundation remaining on her cheek.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 15</h3>
+            <p><strong>鏡頭：</strong> 想像畫面 - 暖色調，夢幻感</p>
+            <p><strong>人物/動作：</strong> 畫面風格突然轉變，變得柔和、明亮，色彩飽和度高，帶有溫暖的濾鏡效果。樂樂穿著普通的、舒適的棉質連衣裙，赤腳或穿著簡單的鞋子，在陽光明媚、綠意盎然的草地上自由自在地奔跑，髮絲在風中飛揚，臉上是發自內心的、燦爛無憂的笑容。她可能追逐著蝴蝶或小動物。</p>
+            <p><strong>場景/事物：</strong> 廣闊的綠草地，藍天白雲，溫暖的陽光，可能還有野花、飛舞的蝴蝶、遠處模糊的樹林。畫面邊緣可能帶有柔焦效果。</p>
+            <p><strong>氛圍：</strong> 自由，快樂，童真，充滿生命力，是現實壓抑的對比和對美好童年的渴望。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Imaginary Scene - Warm tones, dreamlike feel. The scene style suddenly shifts, becoming soft, bright, with high color saturation and a warm filter effect. Lele wears a simple, comfortable cotton dress, barefoot or in simple shoes, running freely on a sunlit, green grass field. Her hair flies in the wind, and her face shows a genuine, bright, carefree smile. She might be chasing butterflies or small animals. The scene depicts a vast green grass field, blue sky and white clouds, warm sunlight, possibly wildflowers, flying butterflies, and blurred trees in the distance. The edges of the image might have a soft focus effect.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 16</h3>
+            <p><strong>鏡頭：</strong> 從想像畫面拉回現實 - 色調變冷</p>
+            <p><strong>人物/動作：</strong> 畫面色調瞬間變回現實世界的冷色調和較低的亮度。樂樂依然孤獨地坐在房間的地板上，抱著小熊，眼神空洞地望向窗外。她的表情落寞，與剛才想像中的快樂形成鮮明對比。</p>
+            <p><strong>場景/事物：</strong> 窗戶邊緣，窗外的夜景或路燈的光暈，映照在玻璃上，同時玻璃反射出樂樂落寞的表情和房間昏暗的景象。</p>
+            <p><strong>氛圍：</strong> 現實的沉重感，渴望與冰冷現實之間的巨大落差。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Transition from imaginary scene back to reality - Colors turn cold. The scene's color tone instantly returns to the cold tones and lower brightness of the real world. Lele is still sitting alone on her room floor, hugging the teddy bear, gazing blankly out the window. Her expression is dejected, a stark contrast to the happiness in the previous imaginary scene. The scene includes the edge of the window, the night view or the halo of street lights outside the window reflected on the glass. The glass also reflects Lele's dejected expression and the dim view of the room.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 17</h3>
+            <p><strong>鏡頭：</strong> 中景 (Medium Shot)</p>
+            <p><strong>人物/動作：</strong> 父母在客廳，坐姿放鬆但表情嚴肅或帶有算計。媽媽拿著平板電腦在仔細查看，可能是數據報表或合約條款。爸爸可能在旁邊用筆記型電腦工作或查看文件。他們之間的對話內容圍繞著「業配」、「合作夥伴」、「數據分析」、「轉化率」、「合約細節」、「法律條款」等商業相關的詞彙，語氣可能是冷靜分析或帶著興奮的商業考量。樂樂站在遠處，看著他們，無法理解他們在討論什麼。</p>
+            <p><strong>場景/事物：</strong> 客廳的一部分，可能看到沙發、茶几。平板電腦和筆記型電腦的螢幕亮著，可能隱約看到屏幕上的表格、圖表或文件內容。背景是客廳的常規佈置。</p>
+            <p><strong>氛圍：</strong> 成人世界的複雜與現實，孩子無法理解的商業運作和父母的功利心，孩子與父母世界的隔閡。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Medium Shot. Parents in the living room, sitting in relaxed postures but with serious or calculating expressions. Mother (Meimei) is meticulously examining a tablet, possibly a data report or contract terms. Father (Aqiang) might be working on a laptop nearby or reviewing documents. Their conversation revolves around business-related terms like "sponsored content," "partners," "data analysis," "conversion rates," "contract details," "legal terms," etc. Their tone might be calmly analytical or filled with excited business considerations. Lele stands in the distance, watching them, unable to understand what they are discussing. The scene shows part of the living room, possibly including the sofa and coffee table. The tablet and laptop screens are lit, possibly vaguely showing tables, charts, or document content. The background is the regular living room setup.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 18</h3>
+            <p><strong>鏡頭：</strong> 特寫 (Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂站在鏡子前，看著鏡子裡映出的自己。鏡子裡的她穿著拍攝時的華麗服裝，化著不屬於她年紀的妝容，眼神卻是困惑和迷失的。她緩緩伸出手，指尖接近鏡子的表面，似乎想觸摸鏡中的自己，又有些猶豫和不確定，像是在確認鏡中人是不是自己。</p>
+            <p><strong>場景/事物：</strong> 鏡子的反射，映出精心打扮但眼神迷茫的樂樂。鏡子周圍可能是房間的牆壁或家具邊緣。</p>
+            <p><strong>氛圍：</strong> 自我認知混亂，迷失感，對鏡像中非真實自我的疑問。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Close-up. Lele stands before a mirror, looking at her reflection. In the mirror, she wears the elaborate clothing from the photo shoot and makeup that doesn't suit her age, but her eyes are confused and lost. She slowly extends her hand, fingertips approaching the mirror surface, seemingly wanting to touch her reflection, yet hesitant and uncertain, as if confirming if the person in the mirror is herself. The scene shows the mirror's reflection, reflecting the carefully dressed but lost-eyed Lele. The area around the mirror might be the room's wall or furniture edges.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 19</h3>
+            <p><strong>鏡頭：</strong> 俯瞰鏡頭 (Bird's-eye View / Top Shot)</p>
+            <p><strong>人物/動作：</strong> 從天花板的角度俯拍。樂樂小小一團，身體蜷縮著，側臥或平躺在寬大的床上，緊緊抱著那個舊舊的小熊。周圍是廣闊的床鋪和房間的黑暗。只有一束從門縫或窗戶透進來的微弱的、冷色的光線，細長地照在她的身上和懷裡的小熊上。</p>
+            <p><strong>場景/事物：</strong> 黑暗的房間內部，床鋪，蜷縮在床上的樂樂和小熊。地面和牆壁都隱沒在黑暗中。唯一的光源是細長的光束。</p>
+            <p><strong>氛圍：</strong> 孤獨，渺小，無助，在巨大的黑暗中尋找微弱的光明和慰藉。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> Bird's-eye View / Top Shot. From the ceiling angle. Lele is a small figure, curled up, lying on her side or back on the wide bed, tightly hugging the old teddy bear. Around her is the vast bed and the darkness of the room. Only a thin, cold beam of light from a door crack or window penetrates, illuminating her and the teddy bear she holds. The scene shows the dark interior of the room, the bed, Lele curled up on the bed with the teddy bear. The floor and walls are hidden in darkness. The only light source is the thin beam of light.</p>
+        </div>
+
+        <div class="scene">
+            <h3>畫面 20</h3>
+            <p><strong>鏡頭：</strong> 極特寫 (Extreme Close-up)</p>
+            <p><strong>人物/動作：</strong> 樂樂的眼睛的極致特寫。這次眼神中充滿了未經掩飾的疑問、恐懼和一絲被捕捉的無處可逃的感覺。瞳孔中心反射出一個微小的、清晰的、冰冷的光點，那是攝影鏡頭的標誌性反光，強調了她一直處於被觀看、被拍攝的狀態。</p>
+            <p><strong>場景/事物：</strong> 眼睛的虹膜、瞳孔、睫毛細節清晰可見。瞳孔中反射出的微小、刺眼、幾何形狀的光點（鏡頭反光）。</p>
+            <p><strong>氛圍：</strong> 懸而未決的疑問，對未來和持續被控制的迷茫與恐懼，冰冷的現實通過鏡頭反光體現。</p>
+            <p class="drawing-prompt"><strong>繪圖提示詞：</strong> An extreme close-up of the child's eyes. The pupil reflects a small, bright, cold light source, representing the camera lens, conveying her fear and the feeling of being constantly watched and captured. The scene clearly shows the iris, pupil, and eyelash details of the eye. A small, dazzling, geometric light spot (camera lens reflection) is reflected in the pupil.</p>
+        </div>
+
     </div>
-    <p>首先登場的是這個「黃梨膏」！聽說山西的黃梨（就是我們的水梨）很有名，這個膏狀的產品據說對氣管很好。現在換季，女兒們有時候會咳個幾聲，剛好試試看！</p>
-    <p>我們泡了一杯，大米一開始還很懷疑，安娜也是一臉「這是什麼？」的表情。喝起來嘛…嗯，味道很特別，有點像枇杷膏但又不太一樣，女兒們的表情說明了一切，哈哈！</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第二寶：黃梨片 - 可以直接吃也可以煮水！</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 5" src="https://pic.pimg.tw/yourich/1747631330-1913499128-g_n.jpg" title="大陸買的東西 5">
-      <img alt="大陸買的東西 6" src="https://pic.pimg.tw/yourich/1747631330-926765273-g_n.jpg" title="大陸買的東西 6">
-    </div>
-    <p>接下來是「黃梨片」！這個看起來就很天然，是可以直接當零食吃，也可以拿來煮水喝的。大米還問可不可以直接吃，安娜已經忍不住拿一片起來研究了。</p>
-    <p>我們煮了一壺黃梨水，顏色淡淡的，喝起來味道也比黃梨膏清淡許多，有種水梨自然的甜味。直接吃的黃梨片，安娜說還不錯，脆脆甜甜的。</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第三寶：黃梨酥 - 山西版的鳳梨酥？</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 7" src="https://pic.pimg.tw/yourich/1747631342-4227327004-g_n.jpg" title="大陸買的東西 7">
-      <img alt="大陸買的東西 8" src="https://pic.pimg.tw/yourich/1747631342-2671023773-g_n.jpg" title="大陸買的東西 8">
-    </div>
-    <p>再來是「黃梨酥」！外表看起來跟我們的鳳梨酥有點像，不過內餡是用黃梨做的。吃起來外皮酥鬆，內餡一絲一絲的，甜度不會太高，女兒們覺得跟鳳梨酥比起來，各有千秋啦！</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第四寶：黃梨潤喉糖 - 清涼提神好夥伴！</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 9" src="https://pic.pimg.tw/yourich/1747631354-1042710951-g_n.jpg" title="大陸買的東西 9">
-    </div>
-    <p>這個「黃梨潤喉糖」包裝小巧可愛，含一顆在嘴裡，哇～超級涼！比一般的薄荷糖還要有勁，女兒們說含完一顆整個喉嚨都暢通了，精神也來了！</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第五寶：太古餅 - 傳統古早味！</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 11" src="https://pic.pimg.tw/yourich/1747631366-2637887906-g_n.jpg" title="大陸買的東西 11">
-    </div>
-    <p>這個「太古餅」是山西很有歷史的一種餅。看起來樸實無華，吃起來鬆軟，帶有一種穀物的香氣，很像我們小時候吃的那種傳統麵餅，女兒們一開始還吃不太習慣，但越嚼越香。</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第六寶：奶棗 - 甜而不膩新奇組合！</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 12" src="https://pic.pimg.tw/yourich/1747631373-1225027380-g_n.jpg" title="大陸買的東西 12">
-    </div>
-    <p>「奶棗」這個就比較特別了！紅棗外面裹著一層奶粉和麥芽糖，裡面還夾了杏仁。大米一吃，哇～可以拉絲耶！吃起來甜甜的，有奶香、棗香還有杏仁的堅果香，口感很豐富，這個女兒們都蠻喜歡的！</p>
-  </div>
-
-  <div class="treasure">
-    <h2>第七寶：黑巧棉棉棗 - 巧克力與紅棗的碰撞！</h2>
-    <div class="image-gallery">
-      <img alt="大陸買的東西 13" src="https://pic.pimg.tw/yourich/1747631379-464506168-g_n.jpg" title="大陸買的東西 13">
-    </div>
-    <p>最後是這個「黑巧棉棉棗」！紅棗去籽後，外面裹上一層厚厚的黑巧克力。這個組合很新奇，安娜一看到巧克力眼睛都亮了，馬上搶去吃！巧克力的微苦剛好中和了紅棗的甜，意外地搭耶！</p>
-  </div>
-
-  <div class="conclusion">
-    <p>這次的山西特產開箱，女兒們的反應真的很有趣！有的喜歡，有的覺得味道太奇特，這就是品嚐各地美食的樂趣嘛！不知道大家看完，對哪一樣最有興趣呢？歡迎在下面留言告訴我喔！下次楊桃媽再帶大家去尋寶！</p>
-  </div>
 </body>
 </html>
