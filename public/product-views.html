@@ -460,6 +460,25 @@ document.addEventListener('DOMContentLoaded', () => {
                  };
              });
 
+            // Calculate total clicks per date/month
+            const totalClicksByPeriod = dates.map(date => {
+                return data
+                    .filter(item => item[granularity === 'daily' ? 'date' : 'month'] === date)
+                    .reduce((sum, item) => sum + item.clicks, 0);
+            });
+
+            // Add a dataset for total clicks
+            datasets.push({
+                label: '總計點擊次數', // Label for the total line
+                data: totalClicksByPeriod,
+                borderColor: '#e63946', // A distinct color, e.g., red/danger color
+                backgroundColor: '#e6394640', // Semi-transparent fill for total
+                borderWidth: 3, // Make the total line thicker
+                tension: 0.2,
+                fill: false,
+                hidden: false // Always show the total line
+            });
+
             // --- Display Chart ---
             clickTrendChartCanvas.style.display = 'block';
             const ctx = clickTrendChartCanvas.getContext('2d');
