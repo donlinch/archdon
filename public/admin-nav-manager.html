@@ -198,15 +198,6 @@
             transform: none;
         }
 
-        .btn-move-up, .btn-move-down {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-move-up:hover, .btn-move-down:hover {
-            background: #5a6268;
-        }
-
         .btn-edit {
             background: #28a745;
             color: white;
@@ -458,7 +449,7 @@
         @media (min-width: 1200px) {
             .container {
                 display: grid;
-                grid-template-columns: 2fr 1fr;
+                grid-template-columns: 1fr;
                 gap: 20px;
             }
 
@@ -467,11 +458,25 @@
             }
 
             #add-link-form, #edit-link-form {
-                grid-column: 2;
-                position: sticky;
-                top: 20px;
-                align-self: start;
+                grid-column: 1;
+                position: static;
+                margin-top: 20px;
             }
+        }
+
+        /* 表單置底樣式 */
+        #add-link-form, #edit-link-form {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        #edit-link-form {
+            display: none; /* 保持原有的隱藏邏輯 */
         }
 
         /* 动画和交互效果 */
@@ -718,22 +723,6 @@
                     const actionsDiv = document.createElement('div');
                     actionsDiv.classList.add('link-actions');
                     
-                    const moveUpBtn = document.createElement('button');
-                    moveUpBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                    moveUpBtn.classList.add('btn', 'btn-move-up');
-                    moveUpBtn.title = "上移";
-                    moveUpBtn.disabled = index === 0;
-                    moveUpBtn.onclick = () => handleSort(item.id, 'up');
-                    actionsDiv.appendChild(moveUpBtn);
-
-                    const moveDownBtn = document.createElement('button');
-                    moveDownBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                    moveDownBtn.classList.add('btn', 'btn-move-down');
-                    moveDownBtn.title = "下移";
-                    moveDownBtn.disabled = index === arr.length - 1;
-                    moveDownBtn.onclick = () => handleSort(item.id, 'down');
-                    actionsDiv.appendChild(moveDownBtn);
-                    
                     const editBtn = document.createElement('button');
                     editBtn.innerHTML = '<i class="fas fa-edit"></i> 編輯';
                     editBtn.classList.add('btn', 'btn-edit');
@@ -931,51 +920,6 @@
                 }
             }
 
-            window.handleSort = async function(linkId, direction) { 
-                // 密碼相關邏輯已移除
-                const linkToMove = allLinks.find(l => l.id === linkId);
-                if (!linkToMove) return;
-                const siblings = allLinks.filter(l => l.parent_id === linkToMove.parent_id).sort((a,b) => a.display_order - b.display_order);
-                const currentIndex = siblings.findIndex(l => l.id === linkId);
-                let siblingToSwap = null;
-                if (direction === 'up' && currentIndex > 0) {
-                    siblingToSwap = siblings[currentIndex - 1];
-                } else if (direction === 'down' && currentIndex < siblings.length - 1) {
-                    siblingToSwap = siblings[currentIndex + 1];
-                }
-
-                if (!siblingToSwap) return;
-
-                const tempOrder = linkToMove.display_order;
-                linkToMove.display_order = siblingToSwap.display_order;
-                siblingToSwap.display_order = tempOrder;
-
-                try {
-                    const updates = [
-                        { id: linkToMove.id, display_order: linkToMove.display_order },
-                        { id: siblingToSwap.id, display_order: siblingToSwap.display_order }
-                    ];
-                    for (const update of updates) {
-                         const response = await fetch(`/api/admin/nav-links/${update.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' /*, 'X-Admin-Password': storedPassword */ }, // 移除密碼 header
-                            body: JSON.stringify({ display_order: update.display_order }) 
-                        });
-                        if (!response.ok) {
-                             const errorData = await response.json().catch(() => ({}));
-                             throw new Error(errorData.error || `HTTP error! status: ${response.status} for ID ${update.id}`);
-                        }
-                    }
-                    showToast('排序已更新！');
-                    await loadLinks();
-                } catch (error) {
-                    console.error('更新排序失敗:', error);
-                    showToast(`排序更新失敗: ${error.message}`, 'error');
-                    siblingToSwap.display_order = linkToMove.display_order; 
-                    linkToMove.display_order = tempOrder; 
-                    await loadLinks(); 
-                }
-            }
             loadLinks();
         });
     </script>
