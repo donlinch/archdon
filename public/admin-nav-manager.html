@@ -398,6 +398,95 @@
                 transform: translateX(0);
             }
         }
+
+        /* 树状结构和折叠效果 */
+        #nav-links-list .tree-node {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        #nav-links-list .tree-node.collapsed > ul {
+            display: none;
+        }
+
+        #nav-links-list .tree-node > .node-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        #nav-links-list .tree-node > .node-header:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        #nav-links-list .tree-node > .node-header::before {
+            content: '▶';
+            margin-right: 10px;
+            font-size: 0.8em;
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+
+        #nav-links-list .tree-node:not(.collapsed) > .node-header::before {
+            transform: rotate(90deg);
+        }
+
+        /* 多层级背景和阴影 */
+        #nav-links-list .tree-node {
+            margin-left: 20px;
+            border-left: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        #nav-links-list .tree-node:nth-child(1) { 
+            border-left-color: #667eea; 
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.05), transparent);
+        }
+        #nav-links-list .tree-node:nth-child(2) { 
+            border-left-color: #764ba2; 
+            background: linear-gradient(to right, rgba(118, 75, 162, 0.05), transparent);
+        }
+        #nav-links-list .tree-node:nth-child(3) { 
+            border-left-color: #28a745; 
+            background: linear-gradient(to right, rgba(40, 167, 69, 0.05), transparent);
+        }
+
+        /* 响应式布局 */
+        @media (min-width: 1200px) {
+            .container {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 20px;
+            }
+
+            #nav-links-list {
+                grid-column: 1;
+            }
+
+            #add-link-form, #edit-link-form {
+                grid-column: 2;
+                position: sticky;
+                top: 20px;
+                align-self: start;
+            }
+        }
+
+        /* 动画和交互效果 */
+        .tree-node {
+            opacity: 0;
+            transform: translateY(-10px);
+            animation: fadeInSlide 0.4s ease forwards;
+        }
+
+        @keyframes fadeInSlide {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -584,7 +673,7 @@
                 return tree;
             }
 
-            function renderList(items, container) {
+            function renderList(items, container, depth = 0) {
                 container.innerHTML = '';
                 if (items.length === 0 && container === listContainer) {
                     container.innerHTML = `<div class="empty-state"><i class="fas fa-folder-open"></i><h3>尚未建立任何導覽連結</h3><p>點擊下方的「新增連結」按鈕開始建立導覽結構</p></div>`;
@@ -592,24 +681,40 @@
                 }
                 items.forEach((item, index, arr) => { 
                     const li = document.createElement('li');
+                    li.classList.add('tree-node');
+                    
+                    // 如果超過3層自動折疊
+                    if (depth >= 2) {
+                        li.classList.add('collapsed');
+                    }
+
                     li.dataset.id = item.id;
+                    
+                    // 創建節點標題區域
+                    const nodeHeader = document.createElement('div');
+                    nodeHeader.classList.add('node-header');
+                    
                     const infoDiv = document.createElement('div');
                     infoDiv.classList.add('link-info');
                     const nameDiv = document.createElement('div');
                     nameDiv.classList.add('link-name');
                     nameDiv.textContent = item.name;
                     infoDiv.appendChild(nameDiv);
+                    
                     if (item.url && item.url !== '#') {
                         const urlDiv = document.createElement('div');
                         urlDiv.classList.add('link-url');
                         urlDiv.textContent = item.url;
                         infoDiv.appendChild(urlDiv);
                     }
+                    
                     const detailsDiv = document.createElement('div');
                     detailsDiv.classList.add('link-details');
                     detailsDiv.innerHTML = `<span><i class="fas fa-fingerprint"></i> ID: ${item.id}</span> <span><i class="fas fa-sort"></i> 順序: ${item.display_order}</span> <span><i class="fas fa-sitemap"></i> 父級: ${item.parent_id || '無'}</span>`;
                     infoDiv.appendChild(detailsDiv);
-                    li.appendChild(infoDiv);
+                    
+                    nodeHeader.appendChild(infoDiv);
+                    
                     const actionsDiv = document.createElement('div');
                     actionsDiv.classList.add('link-actions');
                     
@@ -634,18 +739,30 @@
                     editBtn.classList.add('btn', 'btn-edit');
                     editBtn.onclick = () => showEditForm(item);
                     actionsDiv.appendChild(editBtn);
+                    
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
                     deleteBtn.classList.add('btn', 'btn-delete');
                     deleteBtn.onclick = () => deleteLink(item.id, item.name);
                     actionsDiv.appendChild(deleteBtn);
-                    li.appendChild(actionsDiv);
-                    container.appendChild(li);
+                    
+                    nodeHeader.appendChild(actionsDiv);
+                    
+                    // 添加展開/收起事件
+                    nodeHeader.addEventListener('click', (e) => {
+                        if (e.target.closest('.link-actions')) return; // 防止與按鈕衝突
+                        li.classList.toggle('collapsed');
+                    });
+                    
+                    li.appendChild(nodeHeader);
+                    
                     if (item.children && item.children.length > 0) {
                         const subUl = document.createElement('ul');
+                        renderList(item.children, subUl, depth + 1);
                         li.appendChild(subUl);
-                        renderList(item.children, subUl);
                     }
+                    
+                    container.appendChild(li);
                 });
             }
 
@@ -694,26 +811,26 @@
                  return check(parentLink.children);
             }
 
-            async function loadLinks() {
-                loadingDiv.style.display = 'block';
-                listContainer.innerHTML = '';
-                clearError(addFormError);
-                clearError(editFormError);
-                editFormDiv.style.display = 'none';
-                try {
-                    const response = await fetch('/api/admin/nav-links');
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    allLinks = await response.json();
-                    const tree = buildTree(allLinks);
-                    renderList(tree, listContainer);
-                    populateParentSelects(allLinks);
-                    loadingDiv.style.display = 'none';
-                } catch (error) {
-                    console.error('無法載入連結:', error);
-                    loadingDiv.style.display = 'none';
-                    listContainer.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><h3>載入失敗</h3><p>${error.message}</p></div>`;
-                }
-            }
+           async function loadLinks() {
+    loadingDiv.style.display = 'block';
+    listContainer.innerHTML = '';
+    clearError(addFormError);
+    clearError(editFormError);
+    editFormDiv.style.display = 'none';
+    try {
+        const response = await fetch('/api/admin/nav-links');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        allLinks = await response.json();
+        const tree = buildTree(allLinks);
+        renderList(tree, listContainer);  // 不需要改变
+        populateParentSelects(allLinks);
+        loadingDiv.style.display = 'none';
+    } catch (error) {
+        console.error('無法載入連結:', error);
+        loadingDiv.style.display = 'none';
+        listContainer.innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><h3>載入失敗</h3><p>${error.message}</p></div>`;
+    }
+}
 
             addForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
