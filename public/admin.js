@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editFormError = document.getElementById('edit-form-error');
     const editExistingCategoriesDiv = document.getElementById('edit-existing-categories');
     const editTagsContainer = document.getElementById('edit-tags-container');
-    // --- 新增：編輯表單的期限相關元素 ---
     const editExpirationType = document.getElementById('edit-expiration-type');
     const editDateRangeGroup = document.getElementById('edit-date-range-group');
     const editStartDate = document.getElementById('edit-start-date');
@@ -39,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const addFormError = document.getElementById('add-form-error');
     const addExistingCategoriesDiv = document.getElementById('add-existing-categories');
     const addTagsContainer = document.getElementById('add-tags-container');
-    // --- 新增：新增表單的期限相關元素 ---
     const addExpirationType = document.getElementById('add-expiration-type');
     const addDateRangeGroup = document.getElementById('add-date-range-group');
     const addStartDate = document.getElementById('add-start-date');
@@ -47,14 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const categoryOptionsDatalist = document.getElementById('categoryOptions');
 
-    // 標籤管理相關元素
-    const tagManagementSection = document.getElementById('tag-management-section');
     const tagsList = document.getElementById('tags-list');
     const addTagForm = document.getElementById('add-tag-form');
     const addTagInput = document.getElementById('add-tag-input');
     const tagManagementError = document.getElementById('tag-management-error');
 
-    // --- *** 圖表相關元素 *** ---
     const trafficChartCanvas = document.getElementById('traffic-chart');
     const pageRankingChartCanvas = document.getElementById('page-ranking-chart');
     const pageComparisonChartCanvas = document.getElementById('page-comparison-chart');
@@ -80,12 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
         endDate: new Date().toISOString().split('T')[0]
     };
 
-    // --- 來源分析相關變量 ---
     let sourceDistributionChart = null;
     let sourceTrendChart = null;
-    let sourceRankingChart = null;
-    let sourceConversionChart = null;
-    let sourceGeoChart = null;
+    let sourceRankingChart = null; // 雖然HTML中沒有此ID，但保留變數以防未來使用
+    let sourceConversionChart = null; // 同上
+    let sourceGeoChart = null; // 同上
 
     let sourceTimeRange = {
         startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
@@ -99,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Event Listeners for Expiration Type Change ---
     if (addExpirationType && addDateRangeGroup) {
         addExpirationType.addEventListener('change', function() {
             addDateRangeGroup.style.display = this.value === '1' ? 'block' : 'none';
@@ -160,42 +153,89 @@ document.addEventListener('DOMContentLoaded', () => {
                         return 'N/A';
                     }
                 };
- // 從 API 獲取歷史點擊和今日增量
- const historicalClicks = product.historical_click_count !== null ? parseInt(product.historical_click_count, 10) : 0;
- const todayIncrement = product.today_click_increment !== null ? parseInt(product.today_click_increment, 10) : 0;
- 
- // 計算總點擊 (歷史 + 今日)
- const totalClicksCombined = historicalClicks + todayIncrement;
 
- // 構建點擊數的 HTML
- let clickDisplayHtml = `${totalClicksCombined}`; // 總點擊數
- if (todayIncrement > 0) {
-     clickDisplayHtml += ` <span style="color: red;">(+${todayIncrement})</span>`; // 今日新增，紅色
- }
+                // --- 開始：在前端計算商品狀態 ---
+                let statusDisplay = '';
+                let statusClass = '';
+                
+                const expirationType = product.expiration_type !== undefined ? product.expiration_type : 0;
 
- row.innerHTML = `
-     <td>${product.id}</td>
-     <td>${product.name || ''}</td>
-     <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
-     <td>${clickDisplayHtml}</td> {/* <--- 修改這裡 */}
-     <td>${product.category || '未分類'}</td>
-     <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
-     {/* ... 其他欄位保持與您 admin.html 中一致 ... */}
-     <td><span class="${statusClass}">${statusDisplay}</span></td>
-     <td>${startDateDisplay}</td>
-     <td>${endDateDisplay}</td>
-     <td>${product.tags && product.tags.length ? product.tags.map(tag => 
-          `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
-     <td>
-         <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
-         <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
-     </td>
- `; 
- productListBody.appendChild(row); 
-}); 
+                if (expirationType === 1 && product.start_date && product.end_date) {
+                    const now = new Date();
+                    const startDateString = product.start_date;
+                    const endDateString = product.end_date;
+                    
+                    let startDate = null;
+                    let endDate = null;
+
+                    if(startDateString) {
+                        try { startDate = new Date(startDateString); } catch(e) { console.warn("Invalid start_date string for product", product.id, ":", startDateString); }
+                    }
+                    if(endDateString) {
+                        try { endDate = new Date(endDateString); } catch(e) { console.warn("Invalid end_date string for product", product.id, ":", endDateString); }
+                    }
+
+                    if (startDate && !isNaN(startDate.getTime()) && endDate && !isNaN(endDate.getTime())) {
+                        const endOfDayEndDate = new Date(endDate);
+                        endOfDayEndDate.setHours(23, 59, 59, 999);
+
+                        if (now < startDate) {
+                            statusDisplay = '未開始';
+                            statusClass = 'status-not-started';
+                        } else if (now > endOfDayEndDate) {
+                            statusDisplay = '已過期';
+                            statusClass = 'status-expired';
+                        } else {
+                            const daysRemaining = Math.ceil((endOfDayEndDate - now) / (1000 * 60 * 60 * 24));
+                            statusDisplay = `期限內 (剩 ${daysRemaining} 天)`;
+                            statusClass = 'status-active';
+                        }
+                    } else {
+                        statusDisplay = '日期錯誤';
+                        statusClass = 'status-error';
+                    }
+                } else if (expirationType === 0) {
+                    statusDisplay = '不限期';
+                    statusClass = 'status-unlimited';
+                } else {
+                    statusDisplay = '日期未設'; 
+                    statusClass = 'status-error';
+                }
+                // --- 結束：在前端計算商品狀態 ---
+
+                const startDateDisplay = expirationType === 1 ? formatDate(product.start_date) : 'N/A';
+                const endDateDisplay = expirationType === 1 ? formatDate(product.end_date) : 'N/A';
+                
+                const historicalClicks = product.historical_click_count !== null ? parseInt(product.historical_click_count, 10) : 0;
+                const todayIncrement = product.today_click_increment !== null ? parseInt(product.today_click_increment, 10) : 0;
+                const totalClicksCombined = historicalClicks + todayIncrement;
+                let clickDisplayHtml = `${totalClicksCombined}`;
+                if (todayIncrement > 0) {
+                    clickDisplayHtml += ` <span style="color: red;">(+${todayIncrement})</span>`;
+                }
+
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name || ''}</td>
+                    <td>${product.price !== null ? Math.floor(product.price) : 'N/A'}</td>
+                    <td>${clickDisplayHtml}</td>
+                    <td>${product.category || '未分類'}</td>
+                    <td><img src="${product.image_url || '/images/placeholder.png'}" alt="${product.name || ''}" style="width: 50px; height: auto; border: 1px solid #eee;"></td>
+                    <td><span class="${statusClass}">${statusDisplay}</span></td>
+                    <td>${startDateDisplay}</td>
+                    <td>${endDateDisplay}</td>
+                    <td>${product.tags && product.tags.length ? product.tags.map(tag => 
+                         `<span class="product-tag">${tag}</span>`).join('') : '無標籤'}</td>
+                    <td>
+                        <button class="action-btn edit-btn" onclick="editProduct(${product.id})">編輯</button>
+                        <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">刪除</button>
+                    </td>
+                `; 
+                productListBody.appendChild(row); 
+            }); 
         } catch (error) { 
             console.error("獲取管理商品列表失敗:", error); 
-            if (loadingMessage) loadingMessage.textContent = '無法載入商品列表。'; 
+            if (loadingMessage) loadingMessage.textContent = `無法載入商品列表: ${error.message}`; 
             if (productTable) productTable.style.display = 'none'; 
         }
     }
@@ -222,14 +262,23 @@ document.addEventListener('DOMContentLoaded', () => {
             } 
             
             const product = await response.json();
-            console.log('Product data for editing:', JSON.stringify(product, null, 2));
             editProductId.value = product.id;
+            // 填充ID顯示
+            const idDisplaySpan = document.getElementById('edit-product-id-display');
+            if (idDisplaySpan) idDisplaySpan.textContent = product.id;
+
             editProductName.value = product.name || '';
             editProductDescription.value = product.description || ''; 
             editProductPrice.value = product.price !== null ? product.price : ''; 
             editProductImageUrl.value = product.image_url || ''; 
             editProductSevenElevenUrl.value = product.seven_eleven_url || ''; 
-            editProductClickCount.textContent = product.click_count !== null ? product.click_count : '0'; 
+            
+            // 處理點擊數顯示
+            const historicalClicks = product.historical_click_count !== null ? parseInt(product.historical_click_count, 10) : 0;
+            const todayIncrement = product.today_click_increment !== null ? parseInt(product.today_click_increment, 10) : 0;
+            const totalClicksCombinedForEdit = historicalClicks + todayIncrement;
+            editProductClickCount.textContent = `${totalClicksCombinedForEdit} ${todayIncrement > 0 ? '(今日 +' + todayIncrement + ')' : ''}`;
+            
             editProductCategory.value = product.category || '';
             
             if (product.image_url) { 
@@ -253,6 +302,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (editTagsContainer) {
+                // product.tags 從伺服器端返回的是 tag_name 陣列，但 populateTagCheckboxes 需要 tag_id 陣列
+                // 因此，我們需要先根據 tag_name 找到對應的 tag_id
+                // 假設 /api/products/:id 返回的 tags 是 id 陣列 (如 server.js 中 COALESCE(json_agg(t.tag_id)...)
                 await populateTagCheckboxes(editTagsContainer, product.tags || []);
             }
             
@@ -282,7 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteProduct = async function(id) {
         if (confirm(`確定要刪除商品 ID: ${id} 嗎？此操作無法復原！`)) {
             try {
-                // 前端原本就沒有在此處發送密碼，所以這裡不需要改動密碼相關邏輯
                 const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
                 if (response.status === 204 || response.ok) {
                     await fetchAndDisplayProducts();
@@ -381,9 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            console.log('Submitting updated product data:', updatedData);
             try {
-                // 前端原本就沒有在此處發送密碼
                 const response = await fetch(`/api/admin/products/${productId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -404,8 +453,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 editFormError.textContent = `儲存錯誤：${error.message}`;
             }
         });
-    } else {
-        console.error("編輯表單元素未找到。");
     }
  
     if (addForm) {
@@ -458,10 +505,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            console.log('Submitting new product data:', newData);
             try {
-                // 前端原本就沒有在此處發送密碼
-                const response = await fetch('/api/admin/products', {
+                const response = await fetch('/api/admin/products', { // 注意：這裡應該是 /api/admin/products
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newData)
@@ -481,17 +526,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 addFormError.textContent = `新增錯誤：${error.message}`;
             }
         });
-    } else {
-        console.error("新增表單元素未找到。");
     }
 
     function refreshAllCharts() {
-        displayTrafficChart(currentGranularity);
-        displayPageRankingChart();
-        displayPageComparisonChart();
-        displaySourceDistribution();
-        displaySourceTrend();
-        updateSourceTable();
+        if (typeof displayTrafficChart === 'function') displayTrafficChart(currentGranularity);
+        if (typeof displayPageRankingChart === 'function') displayPageRankingChart();
+        if (typeof displayPageComparisonChart === 'function') displayPageComparisonChart();
+        if (typeof displaySourceDistribution === 'function') displaySourceDistribution();
+        if (typeof displaySourceTrend === 'function') displaySourceTrend();
+        if (typeof updateSourceTable === 'function') updateSourceTable();
     }
 
     async function initializePageSelect() {
@@ -507,23 +550,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = page;
                 pageSelectMulti.appendChild(option);
             });
-            Array.from(pageSelectMulti.options).slice(0, 5).forEach(opt => opt.selected = true);
+            Array.from(pageSelectMulti.options).slice(0, Math.min(5, pageSelectMulti.options.length)).forEach(opt => opt.selected = true);
+            if (typeof displayPageComparisonChart === 'function') { // 確保圖表已初始化
+                const selectedPages = Array.from(pageSelectMulti.selectedOptions).map(opt => opt.value);
+                displayPageComparisonChart(selectedPages);
+            }
         } catch (error) {
             console.error('获取页面列表失败:', error);
         }
     }
 
     async function displayPageComparisonChart(selectedPages = []) {
-        if (!pageComparisonChartCanvas) {
-            console.warn("找不到頁面對比圖表元素。");
-            return;
-        }
+        if (!pageComparisonChartCanvas) return;
         if (chartLoadingMsg) chartLoadingMsg.style.display = 'block';
         if (chartErrorMsg) chartErrorMsg.style.display = 'none';
-        if (pageComparisonChart) {
-            pageComparisonChart.destroy();
-            pageComparisonChart = null;
-        }
+        if (pageComparisonChart) pageComparisonChart.destroy();
+        
         try {
             const response = await fetch(`/api/analytics/page-views?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
@@ -535,63 +577,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 pageData[item.page][item.view_date] = item.count;
                 dates.add(item.view_date);
             });
-            const sortedDates = Array.from(dates).sort();
-            let datasets = Object.keys(pageData)
-                .sort((a, b) => {
-                    const totalA = Object.values(pageData[a]).reduce((sum, val) => sum + val, 0);
-                    const totalB = Object.values(pageData[b]).reduce((sum, val) => sum + val, 0);
-                    return totalB - totalA;
-                })
-                .map((page, index) => {
-                    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#4BC0C0', '#9966FF', '#36A2EB', '#FF6384'];
+            const sortedDates = Array.from(dates).sort((a, b) => new Date(a) - new Date(b)); // Sort dates chronologically
+            
+            let datasetsToDisplay = [];
+            if (selectedPages && selectedPages.length > 0) {
+                 datasetsToDisplay = selectedPages.map((page, index) => {
+                    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
                     return {
                         label: page,
-                        data: sortedDates.map(date => pageData[page][date] || 0),
+                        data: sortedDates.map(date => pageData[page]?.[date] || 0),
                         borderColor: colors[index % colors.length],
                         backgroundColor: 'transparent',
                         tension: 0.2
                     };
-                });
-            if (selectedPages && selectedPages.length > 0) {
-                const filteredDatasets = datasets.filter(ds => selectedPages.includes(ds.label));
-                if (filteredDatasets.length > 0) {
-                    datasets = filteredDatasets;
-                } else {
-                    datasets = datasets.slice(0, 5);
-                }
-            } else {
-                datasets = datasets.slice(0, 5);
+                }).filter(ds => ds.data.some(d => d > 0)); // Filter out pages with no data in range
             }
+             if (datasetsToDisplay.length === 0 && Object.keys(pageData).length > 0) { // Fallback if selected pages have no data or none selected
+                const allPagesSortedByTotal = Object.keys(pageData).sort((a, b) => {
+                    const totalA = Object.values(pageData[a]).reduce((sum, val) => sum + val, 0);
+                    const totalB = Object.values(pageData[b]).reduce((sum, val) => sum + val, 0);
+                    return totalB - totalA;
+                });
+                datasetsToDisplay = allPagesSortedByTotal.slice(0, 5).map((page, index) => {
+                     const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                     return {
+                         label: page,
+                         data: sortedDates.map(date => pageData[page]?.[date] || 0),
+                         borderColor: colors[index % colors.length],
+                         backgroundColor: 'transparent',
+                         tension: 0.2
+                     };
+                 });
+            }
+            
             const ctx = pageComparisonChartCanvas.getContext('2d');
             pageComparisonChart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: sortedDates, datasets: datasets },
+                data: { labels: sortedDates, datasets: datasetsToDisplay },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 45, minRotation: 45 } } },
+                    scales: { y: { beginAtZero: true, stacked: false }, x: { ticks: { maxRotation: 45, minRotation: 45 } } },
                     plugins: { title: { display: true, text: '熱門頁面訪問量對比' }, tooltip: { mode: 'index', intersect: false } }
                 }
             });
-            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
         } catch (error) {
             console.error('加載頁面對比圖表失敗:', error);
-            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
             if (chartErrorMsg) {
                 chartErrorMsg.textContent = `無法加載頁面對比圖表: ${error.message}`;
                 chartErrorMsg.style.display = 'block';
             }
+        } finally {
+            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
         }
     }
 
     async function displayPageRankingChart() {
-        if (!pageRankingChartCanvas) { console.warn("找不到頁面排行榜圖表元素。"); return; }
-        if (pageRankingChart) { pageRankingChart.destroy(); pageRankingChart = null; }
+        if (!pageRankingChartCanvas) return;
+        if (pageRankingChart) pageRankingChart.destroy();
         try {
             const response = await fetch(`/api/analytics/page-views/ranking?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             const data = await response.json();
-            data.sort((a, b) => b.total_count - a.total_count);
-            const top10Pages = data.slice(0, 10);
+            const top10Pages = data.slice(0, 10); // Already sorted by API
             const ctx = pageRankingChartCanvas.getContext('2d');
             pageRankingChart = new Chart(ctx, {
                 type: 'bar',
@@ -604,49 +651,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { title: { display: true, text: '頁面訪問量排行榜 (前10名)' }, legend: { display: false } }
+                    plugins: { title: { display: true, text: `頁面訪問量排行榜 (Top 10)` }, legend: { display: false } }
                 }
             });
         } catch (error) { console.error('加載頁面排行榜圖表失敗:', error); }
     }
 
     async function displayTrafficChart(granularity = 'daily') {
-        if (!trafficChartCanvas) { console.warn("找不到 traffic-chart canvas 元素。"); return; }
+        if (!trafficChartCanvas) return;
         const ctx = trafficChartCanvas.getContext('2d');
         currentGranularity = granularity;
-        if (granularity === 'daily') {
-            if (!startDateInput || !endDateInput || startDateInput.value === '' || endDateInput.value === '') {
-                currentTimeRange.startDate = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
-                currentTimeRange.endDate = new Date().toISOString().split('T')[0];
-            }
-        } else if (granularity === 'monthly') {
-            if (!startDateInput || !endDateInput || startDateInput.value === '' || endDateInput.value === '') {
-                currentTimeRange.startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
-                currentTimeRange.endDate = new Date().toISOString().split('T')[0];
-            }
+
+        if (startDateInput && endDateInput) { // Ensure date inputs are updated
+            currentTimeRange.startDate = startDateInput.value || currentTimeRange.startDate;
+            currentTimeRange.endDate = endDateInput.value || currentTimeRange.endDate;
         }
-        if (startDateInput && endDateInput) {
-            startDateInput.value = currentTimeRange.startDate;
-            endDateInput.value = currentTimeRange.endDate;
-        }
+        
         if (chartLoadingMsg) chartLoadingMsg.style.display = 'block';
         if (chartErrorMsg) chartErrorMsg.style.display = 'none';
-        if (currentChart) { currentChart.destroy(); currentChart = null; }
+        if (currentChart) currentChart.destroy();
         trafficChartCanvas.style.display = 'none';
+        
         let apiUrl = granularity === 'monthly' ? '/api/analytics/monthly-traffic' : '/api/analytics/traffic';
         apiUrl += `?startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`;
+        
         try {
             const response = await fetch(apiUrl);
             if (!response.ok) { 
-                let errorMsg = `無法獲取流量數據 (HTTP ${response.status})`; 
-                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e){} 
-                throw new Error(errorMsg); 
+                let errorData = await response.json().catch(() => ({ error: `HTTP錯誤 ${response.status}` }));
+                throw new Error(errorData.error || `HTTP錯誤 ${response.status}`); 
             }
             const trafficData = await response.json();
-            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
             trafficChartCanvas.style.display = 'block';
             if (trafficData.length === 0) {
-                if (chartErrorMsg) { chartErrorMsg.textContent = '（尚無流量數據）'; chartErrorMsg.style.display = 'block'; chartErrorMsg.style.color = '#888'; }
+                if (chartErrorMsg) { chartErrorMsg.textContent = '（選定日期範圍內尚無流量數據）'; chartErrorMsg.style.display = 'block'; chartErrorMsg.style.color = '#888'; }
                 return;
             }
             const labels = trafficData.map(item => item.date || item.month);
@@ -665,28 +703,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }]
                 },
                 options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: granularity === 'daily' ? 1 : undefined
-                            }
-                        },
-                        x: { ticks: {} }
-                    },
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: false },
-                        legend: { display: true, position: 'top' }
-                    }
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { autoSkip: true, maxTicksLimit: granularity === 'daily' ? 15 : 12 } } },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { title: { display: false }, legend: { display: true, position: 'top' } }
                 }
             });
-            setTimeout(() => { displayPageRankingChart(); setTimeout(() => { displayPageComparisonChart(); }, 300); }, 300);
         } catch (error) {
             console.error(`繪製 ${granularity} 流量圖表失敗:`, error);
-            if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
             if (chartErrorMsg) { chartErrorMsg.textContent = `無法載入圖表: ${error.message}`; chartErrorMsg.style.display = 'block'; chartErrorMsg.style.color = 'red'; }
+        } finally {
+             if (chartLoadingMsg) chartLoadingMsg.style.display = 'none';
         }
     }
 
@@ -695,18 +721,19 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const newGranularity = button.dataset.granularity;
-                if (newGranularity !== currentGranularity) {
-                    toggleButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    displayTrafficChart(newGranularity);
-                }
+                toggleButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                displayTrafficChart(newGranularity); 
             });
         });
-    } else { console.warn("找不到圖表切換按鈕。"); }
+    }
     
     if (applyDateBtn) {
         applyDateBtn.addEventListener('click', function() {
             if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+                if (new Date(startDateInput.value) > new Date(endDateInput.value)) {
+                    alert('開始日期不能晚於結束日期。'); return;
+                }
                 currentTimeRange.startDate = startDateInput.value;
                 currentTimeRange.endDate = endDateInput.value;
                 refreshAllCharts();
@@ -736,12 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
             displayPageComparisonChart(selectedPages);
         });
     }
-
-    fetchAndDisplayProducts(); 
-    fetchCategories();         
-    initializeDatePickers(); 
-    initializePageSelect(); 
-    setTimeout(() => { displayTrafficChart('daily'); }, 300);
 
     async function fetchCategories() {
         if (!categoryOptionsDatalist) return;
@@ -778,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function populateTagCheckboxes(container, selectedTags = []) {
+    async function populateTagCheckboxes(container, selectedTagIds = []) {
         if (!container) return;
         try {
             container.innerHTML = '<div class="tag-loading">載入中...</div>';
@@ -791,7 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const checkboxId = `tag-${container.id}-${tag.tag_id}`;
                 const wrapper = document.createElement('div'); wrapper.className = 'tag-checkbox-wrapper';
                 const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = tag.tag_id;
-                checkbox.checked = selectedTags.map(String).includes(String(tag.tag_id));
+                // 確保比較時類型一致
+                checkbox.checked = selectedTagIds.map(id => String(id)).includes(String(tag.tag_id));
                 const label = document.createElement('label'); label.htmlFor = checkboxId; label.textContent = tag.tag_name;
                 wrapper.appendChild(checkbox); wrapper.appendChild(label); container.appendChild(wrapper);
             });
@@ -812,8 +834,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tagItem.innerHTML = `
                     <span class="tag-name">${tag.tag_name}</span>
                     <div class="tag-actions">
-                        <button class="edit-tag-btn" onclick="editTag(${tag.tag_id}, '${tag.tag_name}')">編輯</button>
-                        <button class="delete-tag-btn" onclick="deleteTag(${tag.tag_id})">刪除</button>
+                        <button class="action-btn edit-btn" onclick="editTag(${tag.tag_id}, '${tag.tag_name.replace(/'/g, "\\'")}')">編輯</button>
+                        <button class="action-btn delete-btn" onclick="deleteTag(${tag.tag_id})">刪除</button>
                     </div>
                 `;
                 tagsList.appendChild(tagItem);
@@ -828,19 +850,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const tagName = addTagInput.value.trim();
             if (!tagName) { if (tagManagementError) tagManagementError.textContent = '標籤名稱不能為空'; return; }
             try {
-                // 密碼相關邏輯已移除
                 const response = await fetch('/api/tags', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                        // 移除了 'x-admin-password'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tag_name: tagName })
                 });
                 if (!response.ok) {
-                    let errorMsg = `無法新增標籤 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-                    throw new Error(errorMsg);
+                    let errorData = await response.json().catch(() => ({error: `無法新增標籤 (HTTP ${response.status})`}));
+                    throw new Error(errorData.error);
                 }
                 addTagInput.value = ''; await fetchAndDisplayTags();
             } catch (error) { console.error('新增標籤失敗:', error); if (tagManagementError) tagManagementError.textContent = `新增標籤錯誤: ${error.message}`; }
@@ -851,516 +868,204 @@ document.addEventListener('DOMContentLoaded', () => {
         const newName = prompt('請輸入新的標籤名稱:', currentName);
         if (newName === null || newName.trim() === '') return;
         
-        // 密碼相關邏輯已移除
         try {
             const response = await fetch(`/api/tags/${id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                    // 移除了 'x-admin-password'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tag_name: newName.trim() })
             });
             if (!response.ok) {
-                let errorMsg = `無法更新標籤 (HTTP ${response.status})`;
-                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-                throw new Error(errorMsg);
+                let errorData = await response.json().catch(() => ({error: `無法更新標籤 (HTTP ${response.status})`}));
+                throw new Error(errorData.error);
             }
             await fetchAndDisplayTags();
-            if (typeof populateTagCheckboxes === 'function') {
-                if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
-                if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
+            // Optionally refresh product tag checkboxes if they are visible
+            if (addTagsContainer && addModal.style.display === 'flex') await populateTagCheckboxes(addTagsContainer, []);
+            if (editTagsContainer && editModal.style.display === 'flex') {
+                const currentProductId = editProductId.value;
+                if(currentProductId) { // Re-fetch product to get updated tag list for checkboxes
+                    const productResponse = await fetch(`/api/products/${currentProductId}`);
+                    const product = await productResponse.json();
+                    await populateTagCheckboxes(editTagsContainer, product.tags || []);
+                }
             }
         } catch (error) {
             console.error(`更新標籤 ${id} 失敗:`, error);
-            if (tagManagementError) tagManagementError.textContent = `更新標籤失敗: ${error.message}`;
-            else alert(`更新標籤失敗: ${error.message}`);
+            const targetErrorDisplay = tagManagementError || { textContent: '' }; // Fallback if tagManagementError is not visible
+            targetErrorDisplay.textContent = `更新標籤失敗: ${error.message}`;
+            if (!tagManagementError) alert(`更新標籤失敗: ${error.message}`);
         }
     };
 
     window.deleteTag = async function(id) {
         if (confirm(`確定要刪除此標籤嗎？此操作無法復原，並會從所有使用此標籤的商品中移除。`)) {
-            // 密碼相關邏輯已移除
             try {
-                const response = await fetch(`/api/tags/${id}`, {
-                    method: 'DELETE'
-                    // 移除了 headers: { 'x-admin-password': ... }
-                });
+                const response = await fetch(`/api/tags/${id}`, { method: 'DELETE' });
                 if (!response.ok && response.status !== 204) { 
-                    let errorMsg = `無法刪除標籤 (HTTP ${response.status})`;
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-                    throw new Error(errorMsg);
+                    let errorData = await response.json().catch(() => ({error: `無法刪除標籤 (HTTP ${response.status})`}));
+                    throw new Error(errorData.error);
                 }
                 await fetchAndDisplayTags();
                 await fetchAndDisplayProducts(); 
-                if (typeof populateTagCheckboxes === 'function') {
-                    if (addTagsContainer) await populateTagCheckboxes(addTagsContainer, []);
-                    if (editTagsContainer) await populateTagCheckboxes(editTagsContainer, []);
+                // Optionally refresh product tag checkboxes
+                if (addTagsContainer && addModal.style.display === 'flex') await populateTagCheckboxes(addTagsContainer, []);
+                if (editTagsContainer && editModal.style.display === 'flex') {
+                     const currentProductId = editProductId.value;
+                     if(currentProductId) {
+                         const productResponse = await fetch(`/api/products/${currentProductId}`);
+                         const product = await productResponse.json();
+                         await populateTagCheckboxes(editTagsContainer, product.tags || []);
+                     } else {
+                         await populateTagCheckboxes(editTagsContainer, []);
+                     }
                 }
             } catch (error) {
                 console.error(`刪除標籤 ${id} 失敗:`, error);
-                if (tagManagementError) tagManagementError.textContent = `刪除標籤失敗: ${error.message}`;
-                else alert(`刪除標籤失敗: ${error.message}`);
+                const targetErrorDisplay = tagManagementError || { textContent: '' };
+                targetErrorDisplay.textContent = `刪除標籤失敗: ${error.message}`;
+                if (!tagManagementError) alert(`刪除標籤失敗: ${error.message}`);
             }
         }
     };
 
     const tabButtons = document.querySelectorAll('.tab-button');
-    if (tabButtons.length > 0) {
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                const targetTab = this.getAttribute('data-tab');
-                document.querySelectorAll('.tab-content').forEach(content => { content.style.display = 'none'; });
-                tabButtons.forEach(btn => { btn.classList.remove('active'); });
-                document.getElementById(targetTab).style.display = 'block';
-                this.classList.add('active');
-                if (targetTab === 'tag-management-tab') { fetchAndDisplayTags(); }
-                if (targetTab === 'analytics-tab') { refreshAllCharts(); }
-            });
-        });
-    }
-    
-    const activeTabButton = document.querySelector('.tab-button.active');
-    if (activeTabButton) {
-        const activeTabId = activeTabButton.getAttribute('data-tab');
+    function switchTab(targetTabId) {
         document.querySelectorAll('.tab-content').forEach(content => {
-            content.style.display = content.id === activeTabId ? 'block' : 'none';
+            content.style.display = content.id === targetTabId ? 'block' : 'none';
+            content.classList.toggle('active', content.id === targetTabId);
         });
-        if (activeTabId === 'tag-management-tab') { fetchAndDisplayTags(); }
-        if (activeTabId === 'analytics-tab') { refreshAllCharts(); }
-    } else if (tabButtons.length > 0) { 
-        tabButtons[0].click();
+        tabButtons.forEach(button => {
+            button.classList.toggle('active', button.getAttribute('data-tab') === targetTabId);
+        });
+        if (targetTabId === 'tag-management-tab') fetchAndDisplayTags();
+        if (targetTabId === 'analytics-tab') {
+            initializeDatePickers(); // Ensure dates are set for analytics
+            refreshAllCharts();
+        }
     }
 
-    // --- 來源分析相關函數 ---
+    if (tabButtons.length > 0) {
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                switchTab(this.getAttribute('data-tab'));
+            });
+        });
+        // Initialize first tab or remembered tab
+        const defaultTab = 'product-list-tab'; // Or read from localStorage
+        switchTab(defaultTab);
+    }
+    
+    // Initial data load
+    fetchAndDisplayProducts(); 
+    fetchCategories();         
+    initializePageSelect(); 
+    // Analytics charts will be loaded when tab is clicked
+
+    // --- Source Analytics related functions (copied from previous context) ---
     function initializeSourceDatePickers() {
-        const sourceStartDate = document.getElementById('source-start-date');
-        const sourceEndDate = document.getElementById('source-end-date');
-        if (sourceStartDate && sourceEndDate) {
-            sourceStartDate.value = sourceTimeRange.startDate;
-            sourceEndDate.value = sourceTimeRange.endDate;
+        const sourceStartDateEl = document.getElementById('source-start-date'); // Assuming you might add these later
+        const sourceEndDateEl = document.getElementById('source-end-date');
+        if (sourceStartDateEl && sourceEndDateEl) {
+            sourceStartDateEl.value = sourceTimeRange.startDate;
+            sourceEndDateEl.value = sourceTimeRange.endDate;
         }
     }
 
     function refreshSourceCharts() {
-        displaySourceDistribution();
-        displaySourceTrend();
-        displaySourceRanking();
-        displaySourceConversion();
-        displaySourceGeo();
-        updateSourceTable();
+        if (typeof displaySourceDistribution === 'function') displaySourceDistribution();
+        if (typeof displaySourceTrend === 'function') displaySourceTrend();
+        // if (typeof displaySourceRanking === 'function') displaySourceRanking(); // HTML element for this chart might be missing
+        // if (typeof displaySourceConversion === 'function') displaySourceConversion(); // HTML element for this chart might be missing
+        // if (typeof displaySourceGeo === 'function') displaySourceGeo(); // HTML element for this chart might be missing
+        if (typeof updateSourceTable === 'function') updateSourceTable();
     }
 
     async function displaySourceDistribution() {
-        const ctx = document.getElementById('source-distribution-chart').getContext('2d');
+        const canvas = document.getElementById('source-distribution-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         const loadingMsg = document.getElementById('source-chart-loading');
-        
         if (loadingMsg) loadingMsg.style.display = 'block';
-        
         try {
             const response = await fetch(`/api/analytics/source-traffic?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             const data = await response.json();
-            
             const sourceTypes = {};
+            let totalViewsOverall = 0;
             data.forEach(item => {
-                if (!sourceTypes[item.source_type]) {
-                    sourceTypes[item.source_type] = 0;
-                }
-                sourceTypes[item.source_type] += parseInt(item.total_views);
+                const views = parseInt(item.total_views) || 0; // Use total_views if available from API
+                if (!sourceTypes[item.source_type]) sourceTypes[item.source_type] = 0;
+                sourceTypes[item.source_type] += views;
+                totalViewsOverall += views;
             });
-
-            if (sourceDistributionChart) {
-                sourceDistributionChart.destroy();
-            }
-
+            if (sourceDistributionChart) sourceDistributionChart.destroy();
             sourceDistributionChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: Object.keys(sourceTypes).map(type => {
                         const total = sourceTypes[type];
-                        const percentage = ((total / Object.values(sourceTypes).reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-                        return `${type} (${percentage}%)`;
+                        const percentage = totalViewsOverall > 0 ? ((total / totalViewsOverall) * 100).toFixed(1) : 0;
+                        return `${type} (${total} / ${percentage}%)`;
                     }),
-                    datasets: [{
-                        data: Object.values(sourceTypes),
-                        backgroundColor: [
-                            '#FF6384',
-                            '#36A2EB',
-                            '#FFCE56',
-                            '#4BC0C0',
-                            '#9966FF'
-                        ]
-                    }]
+                    datasets: [{ data: Object.values(sourceTypes), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'] }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const meta = chart.getDatasetMeta(0);
-                                            const style = meta.controller.getStyle(i);
-                                            return {
-                                                text: label,
-                                                fillStyle: style.backgroundColor,
-                                                strokeStyle: style.borderColor,
-                                                lineWidth: style.borderWidth,
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    return `${label}: ${value} 訪問`;
-                                }
-                            }
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} 訪問` } } } }
             });
-        } catch (error) {
-            console.error('載入來源分布圖表失敗:', error);
-            if (ctx.canvas) {
-                ctx.canvas.style.display = 'none';
-            }
-        } finally {
-            if (loadingMsg) loadingMsg.style.display = 'none';
-        }
+        } catch (error) { console.error('載入來源分布圖表失敗:', error); } finally { if (loadingMsg) loadingMsg.style.display = 'none'; }
     }
 
     async function displaySourceTrend() {
-        const ctx = document.getElementById('source-trend-chart').getContext('2d');
+        const canvas = document.getElementById('source-trend-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         const loadingMsg = document.getElementById('source-trend-loading');
-        
         if (loadingMsg) loadingMsg.style.display = 'block';
-        
         try {
             const response = await fetch(`/api/analytics/source-trend?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             const data = await response.json();
-            
-            const dates = [...new Set(data.map(item => item.view_date))].sort();
-            const sourceTypes = [...new Set(data.map(item => item.source_type))];
-            
-            const datasets = sourceTypes.map((sourceType, index) => {
-                const color = [
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56',
-                    '#4BC0C0',
-                    '#9966FF'
-                ][index % 5];
-                
+            const dates = [...new Set(data.map(item => item.view_date))].sort((a,b) => new Date(a) - new Date(b));
+            const sourceTypesPresent = [...new Set(data.map(item => item.source_type))];
+            const datasets = sourceTypesPresent.map((sourceType, index) => {
+                const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
                 return {
                     label: sourceType,
-                    data: dates.map(date => {
-                        const match = data.find(item => item.view_date === date && item.source_type === sourceType);
-                        return match ? match.views : 0;
-                    }),
-                    borderColor: color,
-                    backgroundColor: color + '40',
-                    fill: true,
-                    tension: 0.4
+                    data: dates.map(date => data.find(item => item.view_date === date && item.source_type === sourceType)?.views || 0),
+                    borderColor: colors[index % colors.length], backgroundColor: colors[index % colors.length] + '40', fill: true, tension: 0.4
                 };
             });
-
-            if (sourceTrendChart) {
-                sourceTrendChart.destroy();
-            }
-
+            if (sourceTrendChart) sourceTrendChart.destroy();
             sourceTrendChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            stacked: true
-                        },
-                        x: {
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.parsed.y} 訪問`;
-                                }
-                            }
-                        }
-                    }
-                }
+                type: 'line', data: { labels: dates, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index'}, scales: { y: { beginAtZero: true, stacked: true }, x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 15 } } }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} 訪問` } } } }
             });
-        } catch (error) {
-            console.error('載入來源趨勢圖表失敗:', error);
-            if (ctx.canvas) {
-                ctx.canvas.style.display = 'none';
-            }
-        } finally {
-            if (loadingMsg) loadingMsg.style.display = 'none';
-        }
+        } catch (error) { console.error('載入來源趨勢圖表失敗:', error); } finally { if (loadingMsg) loadingMsg.style.display = 'none'; }
     }
-
-    async function displaySourceRanking() {
-        const ctx = document.getElementById('source-ranking-chart').getContext('2d');
-        const loadingMsg = document.getElementById('source-ranking-loading');
-        
-        if (loadingMsg) loadingMsg.style.display = 'block';
-        
-        try {
-            const response = await fetch(`/api/analytics/source-ranking?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
-            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
-            const data = await response.json();
-            
-            // 取前10名來源
-            const top10Sources = data.slice(0, 10);
-            
-            if (sourceRankingChart) {
-                sourceRankingChart.destroy();
-            }
-
-            sourceRankingChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: top10Sources.map(item => item.source_name || item.source_type),
-                    datasets: [{
-                        label: '訪問量',
-                        data: top10Sources.map(item => item.total_views),
-                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `訪問量: ${context.parsed.x}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('載入來源排行圖表失敗:', error);
-            if (ctx.canvas) {
-                ctx.canvas.style.display = 'none';
-            }
-        } finally {
-            if (loadingMsg) loadingMsg.style.display = 'none';
-        }
-    }
-
-    async function displaySourceConversion() {
-        const ctx = document.getElementById('source-conversion-chart').getContext('2d');
-        const loadingMsg = document.getElementById('source-conversion-loading');
-        
-        if (loadingMsg) loadingMsg.style.display = 'block';
-        
-        try {
-            const response = await fetch(`/api/analytics/source-conversion?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
-            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
-            const data = await response.json();
-            
-            if (sourceConversionChart) {
-                sourceConversionChart.destroy();
-            }
-
-            sourceConversionChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.map(item => item.source_type),
-                    datasets: [
-                        {
-                            label: '轉換率 (%)',
-                            data: data.map(item => (item.conversion_rate * 100).toFixed(2)),
-                            backgroundColor: 'rgba(75, 192, 192, 0.8)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: '訪問量',
-                            data: data.map(item => item.total_views),
-                            backgroundColor: 'rgba(54, 162, 235, 0.4)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: '轉換率 (%)'
-                            }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: '訪問量'
-                            },
-                            grid: {
-                                drawOnChartArea: false
-                            }
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('載入來源轉換率圖表失敗:', error);
-            if (ctx.canvas) {
-                ctx.canvas.style.display = 'none';
-            }
-        } finally {
-            if (loadingMsg) loadingMsg.style.display = 'none';
-        }
-    }
-
-    async function displaySourceGeo() {
-        const ctx = document.getElementById('source-geo-chart').getContext('2d');
-        const loadingMsg = document.getElementById('source-geo-loading');
-        
-        if (loadingMsg) loadingMsg.style.display = 'block';
-        
-        try {
-            const response = await fetch(`/api/analytics/source-geo?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
-            if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
-            const data = await response.json();
-            
-            if (sourceGeoChart) {
-                sourceGeoChart.destroy();
-            }
-
-            // 按國家/地區分組數據
-            const regions = {};
-            data.forEach(item => {
-                if (!regions[item.region]) {
-                    regions[item.region] = 0;
-                }
-                regions[item.region] += parseInt(item.views);
-            });
-
-            sourceGeoChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(regions),
-                    datasets: [{
-                        label: '訪問量',
-                        data: Object.values(regions),
-                        backgroundColor: 'rgba(153, 102, 255, 0.8)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        title: {
-                            display: true,
-                            text: '各地區訪問量分布'
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('載入地理分布圖表失敗:', error);
-            if (ctx.canvas) {
-                ctx.canvas.style.display = 'none';
-            }
-        } finally {
-            if (loadingMsg) loadingMsg.style.display = 'none';
-        }
-    }
-
+    
     async function updateSourceTable() {
         const tbody = document.getElementById('source-data-body');
         if (!tbody) return;
-        
         try {
             const response = await fetch(`/api/analytics/source-details?startDate=${sourceTimeRange.startDate}&endDate=${sourceTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             const data = await response.json();
-            
             tbody.innerHTML = '';
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">選定日期範圍內無來源數據</td></tr>';
+                return;
+            }
             data.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${item.source_type}</td>
                     <td>${item.source_name || '-'}</td>
-                    <td>${item.source_url || '-'}</td>
+                    <td><a href="${item.source_url || '#'}" target="_blank" rel="noopener noreferrer">${item.source_url ? (item.source_url.length > 30 ? item.source_url.substring(0, 30) + '...' : item.source_url) : '-'}</a></td>
                     <td>${item.total_views}</td>
                     <td>${item.unique_pages}</td>
                     <td>${formatDuration(item.avg_time_on_site)}</td>
-                    <td>${(item.bounce_rate * 100).toFixed(2)}%</td>
-                    <td>${(item.conversion_rate * 100).toFixed(2)}%</td>
-                    <td>
-                        <button class="action-btn" onclick="viewSourceDetails('${item.source_type}', '${item.source_name}')">
-                            查看詳情
-                        </button>
-                    </td>
+                    <td>${(parseFloat(item.bounce_rate || 0) * 100).toFixed(2)}%</td>
+                    <td>${(parseFloat(item.conversion_rate || 0) * 100).toFixed(2)}%</td>
+                    <td><button class="action-btn" onclick="viewSourceDetails('${item.source_type}', '${item.source_name}')">詳情</button></td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1371,129 +1076,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatDuration(seconds) {
-        if (!seconds) return '-';
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-        return `${minutes}分${remainingSeconds}秒`;
+        if (seconds === null || seconds === undefined || isNaN(seconds)) return '-';
+        const totalSeconds = Math.round(seconds);
+        const minutes = Math.floor(totalSeconds / 60);
+        const remainingSeconds = totalSeconds % 60;
+        return `${minutes}分 ${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}秒`;
     }
 
-    // 初始化來源分析頁面
-    document.addEventListener('DOMContentLoaded', () => {
-        const sourceStartDate = document.getElementById('source-start-date');
-        const sourceEndDate = document.getElementById('source-end-date');
-        const sourceApplyDate = document.getElementById('source-apply-date');
-        const sourceResetDate = document.getElementById('source-reset-date');
-
-        if (sourceStartDate && sourceEndDate) {
-            initializeSourceDatePickers();
-        }
-
-        if (sourceApplyDate) {
-            sourceApplyDate.addEventListener('click', () => {
-                if (sourceStartDate && sourceEndDate && sourceStartDate.value && sourceEndDate.value) {
-                    sourceTimeRange.startDate = sourceStartDate.value;
-                    sourceTimeRange.endDate = sourceEndDate.value;
-                    refreshSourceCharts();
-                } else {
-                    alert('請選擇有效的開始和結束日期');
-                }
-            });
-        }
-
-        if (sourceResetDate) {
-            sourceResetDate.addEventListener('click', () => {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const today = new Date();
-
-                if (sourceStartDate && sourceEndDate) {
-                    sourceStartDate.value = thirtyDaysAgo.toISOString().split('T')[0];
-                    sourceEndDate.value = today.toISOString().split('T')[0];
-                    sourceTimeRange.startDate = sourceStartDate.value;
-                    sourceTimeRange.endDate = sourceEndDate.value;
-                    refreshSourceCharts();
-                }
-            });
-        }
-
-        // 當切換到來源分析 tab 時初始化圖表
-        const sourceTabButton = document.querySelector('.tab-button[data-tab="source-analysis-tab"]');
-        if (sourceTabButton) {
-            sourceTabButton.addEventListener('click', () => {
-                setTimeout(refreshSourceCharts, 100);
-            });
-        }
-    });
-
-    // 實現查看詳情功能
     window.viewSourceDetails = async function(sourceType, sourceName) {
         try {
-            // 獲取指定日期範圍內該來源的詳細數據
             const response = await fetch(`/api/analytics/source-pages?sourceType=${encodeURIComponent(sourceType)}&sourceName=${encodeURIComponent(sourceName)}&startDate=${currentTimeRange.startDate}&endDate=${currentTimeRange.endDate}`);
             if (!response.ok) throw new Error(`HTTP錯誤 ${response.status}`);
             const data = await response.json();
-            
-            // 創建一個模態框來顯示詳細信息
             const modalDiv = document.createElement('div');
             modalDiv.className = 'modal';
             modalDiv.style.display = 'flex';
-            
-            let tableRows = '';
-            data.forEach(item => {
-                tableRows += `
-                    <tr>
-                        <td>${item.page}</td>
-                        <td>${item.views}</td>
-                    </tr>
-                `;
-            });
-            
+            let tableRows = data.map(item => `<tr><td>${item.page}</td><td>${item.views}</td></tr>`).join('');
+            if(data.length === 0) tableRows = '<tr><td colspan="2" style="text-align: center;">此來源在此日期範圍內無特定頁面數據</td></tr>';
             modalDiv.innerHTML = `
                 <div class="modal-content" style="max-width: 800px;">
-                    <button class="close-btn" onclick="this.closest('.modal').remove()">&times;</button>
+                    <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
                     <h2><i class="fas fa-chart-bar"></i> 來源頁面訪問詳情</h2>
                     <p><strong>來源類型:</strong> ${sourceType}</p>
                     <p><strong>來源名稱:</strong> ${sourceName || '-'}</p>
                     <p><strong>日期範圍:</strong> ${currentTimeRange.startDate} 至 ${currentTimeRange.endDate}</p>
-                    
                     <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
-                        <table class="product-list-table">
-                            <thead>
-                                <tr>
-                                    <th>頁面路徑</th>
-                                    <th>訪問量</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRows || '<tr><td colspan="2" style="text-align: center;">無數據</td></tr>'}
-                            </tbody>
-                        </table>
+                        <table class="product-list-table"><thead><tr><th>頁面路徑</th><th>訪問量</th></tr></thead><tbody>${tableRows}</tbody></table>
                     </div>
-                    
-                    <div class="modal-actions">
-                        <button class="primary-btn" onclick="this.closest('.modal').remove()">關閉</button>
-                    </div>
-                </div>
-            `;
-            
+                    <div class="modal-actions"><button class="primary-btn" onclick="this.closest('.modal').remove()">關閉</button></div>
+                </div>`;
             document.body.appendChild(modalDiv);
-            
-        } catch (error) {
-            console.error('獲取來源詳情失敗:', error);
-            alert(`無法獲取詳細資訊: ${error.message}`);
-        }
+        } catch (error) { console.error('獲取來源詳情失敗:', error); alert(`無法獲取詳細資訊: ${error.message}`); }
     };
+});
 
-}); // --- End of DOMContentLoaded ---
-
-window.showTagManagement = function() {
-    const tagManagementTab = document.getElementById('tag-management-tab');
-    const tagTabButton = document.querySelector('.tab-button[data-tab="tag-management-tab"]');
-    if (tagManagementTab && tagTabButton) {
-        document.querySelectorAll('.tab-content').forEach(content => { content.style.display = 'none'; });
-        document.querySelectorAll('.tab-button').forEach(btn => { btn.classList.remove('active'); });
-        tagManagementTab.style.display = 'block';
-        tagTabButton.classList.add('active');
-        if (typeof fetchAndDisplayTags === 'function') { fetchAndDisplayTags(); }
-    }
+window.showTagManagement = function() { // Make sure this is globally accessible for admin.html
+    const tabButton = document.querySelector('.tab-button[data-tab="tag-management-tab"]');
+    if(tabButton) tabButton.click(); // Simulate click to use existing switchTab logic
 };
