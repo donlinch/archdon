@@ -1,5 +1,4 @@
-// --- START OF FILE server.js ---
- 
+
 // server.js
 require('dotenv').config();
 const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
@@ -801,70 +800,9 @@ app.post('/api/track/conversion', async (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 
+// --- 第二個跳出率更新中間件已被移除，因為其功能已包含在上面的「記錄 Page View 中間件」中 ---
 
-
-
-app.use(async (req, res, next) => {
-    // 只處理非API請求，避免不必要的處理
-    if (!req.path.startsWith('/api/') && req.method === 'GET') {
-        try {
-            // 確保 pageViews 存在且為陣列
-            if (!req.session.pageViews || !Array.isArray(req.session.pageViews)) {
-                req.session.pageViews = [];
-                req.session.firstVisitTime = Date.now();
-            }
-
-            // 安全地記錄當前頁面
-            const currentPath = req.path;
-            if (!req.session.pageViews.includes(currentPath)) {
-                req.session.pageViews.push(currentPath);
-            }
-
-            // 計算跳出狀態 - 超過一個頁面訪問即非跳出
-            const isBounce = req.session.pageViews.length <= 1;
-
-            // 更新數據庫中的跳出狀態
-            await pool.query(`
-                UPDATE source_page_views 
-                SET is_bounce = $1 
-                WHERE page = $2 
-                AND view_date = CURRENT_DATE
-            `, [isBounce, currentPath]);
-        } catch (err) {
-            console.error('更新跳出率失敗:', err);
-            // 繼續執行請求，不中斷用戶體驗
-        }
-    }
-    next();
-});
-
-
-
-
-
-
-
-
-// 添加轉換追蹤 API
-app.post('/api/track/conversion', async (req, res) => {
-    try {
-        const { conversionType, sourcePath } = req.body;
-        
-        // 記錄轉換事件
-        const updateQuery = `
-            UPDATE source_page_views 
-            SET has_conversion = TRUE 
-            WHERE page = $1
-            AND view_date = CURRENT_DATE
-        `;
-        
-        await pool.query(updateQuery, [sourcePath || req.path || '/']);
-        res.status(200).json({ success: true });
-    } catch (err) {
-        console.error('記錄轉換事件失敗:', err);
-        res.status(500).json({ error: '伺服器錯誤' });
-    }
-});
+// --- 重複的 /api/track/conversion 路由已被移除 ---
 
 
 
@@ -1760,7 +1698,7 @@ async function handleSimpleWalkerMessage(ws, message) {
               // 更新資料庫中的房間狀態
               const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
               
-              // 3. 廣播模板更新消息給房間內所有玩家
+              // 3. 廣播模板更新消息給房間内所有玩家
               broadcastToSimpleWalkerRoom(roomId, {
                 type: 'templateUpdate',
                 templateId: templateId,
@@ -3589,7 +3527,7 @@ app.post('/api/product-clicks', async (req, res) => {
 
     try {
         // 將點擊事件記錄到 product_click_events 表
-        const result = await db.query(
+        const result = await pool.query( // Changed db.query to pool.query
             'INSERT INTO product_click_events (product_id) VALUES ($1) RETURNING *',
             [productId]
         );
@@ -3629,7 +3567,7 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
     }
 
     // 構建查詢和參數
-    const query = `
+    let query = `
         SELECT
             to_char(${groupByClause}, '${dateFormat}') AS period,
             COUNT(*) AS total_clicks,
@@ -3643,9 +3581,10 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
     `;
     
     const queryParams = [startDate, endDate];
+    let paramIndex = 3; // Start from 3 since $1 and $2 are used
     
     if (productId) {
-        query += ' AND pce.product_id = $3';
+        query += ` AND pce.product_id = $${paramIndex++}`; // Corrected paramIndex usage
         queryParams.push(productId);
     }
 
