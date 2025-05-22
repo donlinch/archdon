@@ -221,6 +221,7 @@ const sessionProtectedAdminPages = [
     '/unboxing-ai-admin.html',
     '/guestbook-admin.html',
     '/advertisement.html',
+    '/product-views.html',
     '/admin-identities.html',
 
     // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
@@ -3647,39 +3648,29 @@ app.post('/api/product-clicks', async (req, res) => {
 // 可能需要管理員權限認證 (isAdminAuthenticated)
 // ===============================================
 // 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
+
 app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
     const { startDate, endDate, granularity, productId } = req.query;
 
-    // 檢查日期參數是否提供
     if (!startDate || !endDate) {
         return res.status(400).json({ error: '需要提供開始日期和結束日期' });
     }
-
-    // 檢查粒度參數是否有效
     if (granularity !== 'daily' && granularity !== 'monthly') {
-         return res.status(400).json({ error: '粒度參數無效，請使用 "daily" 或 "monthly"' });
+        return res.status(400).json({ error: '粒度參數無效，請使用 "daily" 或 "monthly"' });
     }
 
-    let dateFormat;
-    let groupByClause;
-    let orderByClause;
-
-    // 根據粒度設定日期格式和分組方式
+    let dateFormat, groupByClause;
     if (granularity === 'daily') {
-        // 提取日期部分 (YYYY-MM-DD)
         dateFormat = 'YYYY-MM-DD';
-        groupByClause = 'date_trunc(\'day\', clicked_at)';
-        orderByClause = 'date';
-    } else { // granularity === 'monthly'
-        // 提取月份部分 (YYYY-MM)
+        groupByClause = "date_trunc('day', clicked_at)";
+    } else {
         dateFormat = 'YYYY-MM';
-        groupByClause = 'date_trunc(\'month\', clicked_at)';
-        orderByClause = 'month';
+        groupByClause = "date_trunc('month', clicked_at)";
     }
 
     let query = `
         SELECT
-            to_char(${groupByClause}, '${dateFormat}') AS ${granularity === 'daily' ? 'date' : 'month'},
+            to_char(${groupByClause}, '${dateFormat}') AS period,
             COUNT(*) AS total_clicks,
             p.name AS product_name
         FROM
@@ -3687,49 +3678,31 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
         JOIN
             products p ON pce.product_id = p.id
         WHERE
-            clicked_at >= $1 AND clicked_at < $2 + INTERVAL '1 day'
+            clicked_at >= $1 AND clicked_at < ($2::date + INTERVAL '1 day')
     `;
-
-    const queryParams = [startDate, endDate]; // 注意結束日期需要包含當天整天，所以加一天
-
-    // 如果指定了商品 ID，則加入篩選條件
+    const queryParams = [startDate, endDate];
     if (productId) {
         query += ' AND pce.product_id = $3';
         queryParams.push(productId);
     }
-
-    // 根據粒度分組並排序
     query += `
-        GROUP BY
-            ${groupByClause}, p.name
-        ORDER BY
-            ${orderByClause}, p.name; -- 先按日期/月排序，再按商品名稱排序
+        GROUP BY ${groupByClause}, p.name
+        ORDER BY ${groupByClause}, p.name
     `;
-
-    console.log('Executing analytics query:', query, queryParams); // 用於偵錯
 
     try {
         const result = await db.query(query, queryParams);
-
-        // 整理數據格式，使其更容易被前端圖表庫處理 (例如 Chart.js)
-        // 針對多個商品，可能需要更複雜的數據結構，這裡先提供一個基本的按日期/月統計的例子
-        // 如果要按商品分開統計，前端可能需要對返回數據進行進一步處理
         const formattedData = result.rows.map(row => ({
-            date: row[granularity === 'daily' ? 'date' : 'month'], // 統一命名為 date/month
+            [granularity === 'daily' ? 'date' : 'month']: row.period,
             clicks: parseInt(row.total_clicks, 10),
-            product_name: row.product_name // 返回商品名稱以便前端顯示
+            product_name: row.product_name
         }));
-
-
         res.json(formattedData);
-
     } catch (error) {
         console.error('獲取商品點擊統計失敗:', error);
         res.status(500).json({ error: '獲取商品點擊統計時發生錯誤' });
     }
 });
- 
-
 
 
 
