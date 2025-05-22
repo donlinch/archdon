@@ -3648,25 +3648,10 @@ app.post('/api/product-clicks', async (req, res) => {
 // 可能需要管理員權限認證 (isAdminAuthenticated)
 // ===============================================
 // 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
-
 app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
-    const result = await pool.query(query, queryParams); 
+    const { startDate, endDate, granularity, productId } = req.query;
 
-
-    // 增加日期驗證
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        return res.status(400).json({ error: '無效的日期格式' });
-    }
-
-    if (start > end) {
-        return res.status(400).json({ error: '開始日期不能晚於結束日期' });
-    }
-
-
-
+    // 日期和粒度驗證
     if (!startDate || !endDate) {
         return res.status(400).json({ error: '需要提供開始日期和結束日期' });
     }
@@ -3683,7 +3668,8 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
         groupByClause = "date_trunc('month', clicked_at)";
     }
 
-    let query = `
+    // 構建查詢和參數
+    const query = `
         SELECT
             to_char(${groupByClause}, '${dateFormat}') AS period,
             COUNT(*) AS total_clicks,
@@ -3695,18 +3681,21 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
         WHERE
             clicked_at >= $1 AND clicked_at < ($2::date + INTERVAL '1 day')
     `;
+    
     const queryParams = [startDate, endDate];
+    
     if (productId) {
         query += ' AND pce.product_id = $3';
         queryParams.push(productId);
     }
+
     query += `
         GROUP BY ${groupByClause}, p.name
         ORDER BY ${groupByClause}, p.name
     `;
 
     try {
-        const result = await db.query(query, queryParams);
+        const result = await pool.query(query, queryParams);
         const formattedData = result.rows.map(row => ({
             [granularity === 'daily' ? 'date' : 'month']: row.period,
             clicks: parseInt(row.total_clicks, 10),
@@ -3718,7 +3707,6 @@ app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (re
         res.status(500).json({ error: '獲取商品點擊統計時發生錯誤' });
     }
 });
-
 
 
 
