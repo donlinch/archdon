@@ -1430,24 +1430,34 @@ const wss = new WebSocket.Server({ server });
 
 app.get('/api/admin/products', async (req, res) => {
     try {
-        // 1. 計算當日的開始和結束時間 (使用伺服器時區)
         const today = new Date();
         today.setHours(0, 0, 0, 0); // 設定到今天開始
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1); // 設定到明天開始
 
-        const result = await pool.query(`
+        // 使用 CTE 優化 SQL 查詢
+        const sqlQuery = `
+            WITH product_daily_clicks AS (
+                SELECT
+                    product_id, -- 假設 product_click_events 表中關聯 products 的欄位是 product_id
+                    COUNT(*) AS calculated_today_clicks
+                FROM product_click_events
+                WHERE click_timestamp >= $1 AND click_timestamp < $2
+                GROUP BY product_id
+            )
             SELECT
                 p.*,
                 (SELECT array_agg(t.tag_name) FROM tags t
                  JOIN product_tags pt ON t.tag_id = pt.tag_id
                  WHERE pt.product_id = p.id) as tags,
-                COALESCE(SUM(CASE WHEN pce.click_timestamp >= $1 AND pce.click_timestamp < $2 THEN 1 ELSE 0 END), 0) AS today_clicks -- 計算當日點擊數
+                COALESCE(pdc.calculated_today_clicks, 0) AS today_clicks
             FROM products p
-            LEFT JOIN product_click_events pce ON p.id = pce.product_id
-            GROUP BY p.id -- 按商品ID分組
-            ORDER BY p.id DESC
-        `, [today.toISOString(), tomorrow.toISOString()]); // 使用ISO格式傳遞時間戳
+            LEFT JOIN product_daily_clicks pdc ON p.id = pdc.product_id
+            ORDER BY p.id DESC;
+        `;
+        
+        // 傳遞日期參數給 SQL 查詢
+        const result = await pool.query(sqlQuery, [today.toISOString(), tomorrow.toISOString()]);
 
         // 將當日點擊數加到原有的 click_count 上
         const productsWithTodayClicks = result.rows.map(product => {
@@ -1460,34 +1470,10 @@ app.get('/api/admin/products', async (req, res) => {
 
         res.json(productsWithTodayClicks); // 返回合併後的數據
     } catch (err) {
-        console.error('Error fetching admin products with today clicks:', err);
-        res.status(500).json({ error: '無法獲取商品列表' });
-    }
-});
-
-
-app.post('/api/admin/products', async (req, res) => {
-    try {
-        const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
-        
-        // Insert new product
-        const result = await pool.query(
-            'INSERT INTO products (name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
-            [name, description, price, category, image_url, seven_eleven_url, expiration_type || 0, start_date, end_date]
-        );
-        
-        const productId = result.rows[0].id;
-        
-        // Handle tags if provided
-        if (tags && Array.isArray(tags) && tags.length > 0) {
-            const tagValues = tags.map((tagId) => `(${productId}, ${tagId})`).join(',');
-            await pool.query(`INSERT INTO product_tags (product_id, tag_id) VALUES ${tagValues}`);
-        }
-        
-        res.status(201).json({ id: productId });
-    } catch (err) {
-        console.error('Error creating product:', err);
-        res.status(500).json({ error: '新增商品失敗' });
+        // 改進錯誤日誌，記錄完整的堆疊追蹤
+        console.error('Error fetching admin products with today clicks:', err.stack || err);
+        // 在回應中可以選擇性地包含更詳細的錯誤信息 (err.message)，或保持通用錯誤
+        res.status(500).json({ error: '無法獲取商品列表', detail: err.message });
     }
 });
 
