@@ -3650,8 +3650,7 @@ app.post('/api/product-clicks', async (req, res) => {
 // 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
 
 app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
-    const { startDate, endDate, granularity, productId } = req.query;
-
+    const result = await pool.query(query, queryParams); 
 
 
     // 增加日期驗證
