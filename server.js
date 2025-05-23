@@ -2066,173 +2066,10 @@ const publicSafeUpload = multer({
 
 
 app.post('/api/upload', upload.single('image'), async (req, res) => {
-    try {
-        const file = req.file;
-        if (!file) {
-            // multer fileFilter 拒絕或沒有檔案上傳
-            // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
-            // 注意：這裡的錯誤訊息可能需要更新以反映 Multer 的 fileFilter
-             console.warn('[API /api/upload] No file uploaded or file type rejected by multer.');
-            return res.status(400).json({ success: false, error: file ? '不支援的檔案類型或檔案過大！' : '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
-        }
-
-        // 獲取 multer 儲存的檔案路徑
-        const originalFilePath = file.path;
-        const imageBuffer = await fs.promises.readFile(originalFilePath); // 讀取為 buffer
-
-        // 使用原始檔案的 mimetype 進行判斷
-        const originalFileMimetype = file.mimetype.toLowerCase();
-        // 注意 Multer 可能會根據副檔名來猜測 mimetype，不一定完全準確
-        // 更可靠的判斷可能需要檢查原始副檔名，並與常見圖片類型對比
-        const originalExt = path.extname(file.originalname).toLowerCase();
-        const isPNG = originalFileMimetype === 'image/png' || originalExt === '.png';
-        const isJPEG = originalFileMimetype === 'image/jpeg' || originalExt === '.jpg' || originalExt === '.jpeg';
-        const isGIF = originalFileMimetype === 'image/gif' || originalExt === '.gif';
-         const isPDF = originalFileMimetype === 'application/pdf' || originalExt === '.pdf';
-
-        // 生成最終的 URL 路徑（基於 Multer 修改後的檔案名，這個檔案名應該已經是 .jpg 如果原始是 png）
- 
-        // 只對圖片文件進行 Sharp 處理 (PNG, JPG, GIF)
-        // 注意：根據 fileFilter 的設定，這裡也可能會有 HTML 和 PDF，但 sharp 處理只針對圖片
-       
-       
-       
-       
-        if (isPNG || isJPEG || isGIF) {
-            console.log(`[API /api/upload] 檔案 ${file.originalname} 被識別為圖片，準備進行處理。`);
-           try {
-               // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
-               let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
-               const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
-               const lowerMimetype = fileToProcess.mimetype.toLowerCase();
-               const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-
-               // 檢查是否為 PNG 格式
-               const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
-
-               // 自動旋轉（如果需要，基於之前的討論）
-               let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
-
-               // 如果是 PNG，設置輸出格式為 JPEG
-               // 注意：這裡使用 quality: 90，這與 /api/upload-safe-image 一致
-               if (isPNG) {
-                   sharpInstance = sharpInstance.jpeg({ quality: 90 });
-                   console.log(`[API /api/upload] Converting PNG to JPG for file: ${file.originalname}`);
-               }
-
-               const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
-               sharpInstance = sharp(rotatedImageBuffer);
-
-               const metadata = await sharpInstance.metadata();
-               console.log(`[API /api/upload] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
-
-               const originalWidth = metadata.width;
-               let targetWidth = originalWidth;
-               let needsResize = false;
-               if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
-               else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
-               else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
-
-               let processedBuffer;
-               // let finalFilename = fileToProcess.filename; // Multer filename is already available
-               // let finalImageUrl; // finalImageUrl is generated later
-
-               if (needsResize) {
-                   console.log(`[API /api/upload] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-                   processedBuffer = await sharpInstance
-                       .resize({ width: targetWidth })
-                       .toBuffer();
-                   await fs.promises.writeFile(originalFilePath, processedBuffer);
-                   const newStats = fs.statSync(originalFilePath);
-                   console.log(`[API /api/upload] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
-               } else {
-                   // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
-                   // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
-                   // For JPGs only rotated, rotatedImageBuffer is the one to save.
-                   // The key is that sharpInstance was updated if a conversion happened.
-                    // Here, we use the sharpInstance directly if it was modified (e.g., by jpeg() or rotate())
-                   const bufferToSave = (isPNG || metadata.orientation) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
-                   await fs.promises.writeFile(originalFilePath, bufferToSave);
-                   console.log(`[API /api/upload] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
-               }
-
-               // finalImageUrl is generated below the if/else block
-               // console.log(`[API /api/upload] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
-               // res.json({ success: true, url: finalImageUrl }); // Response is sent later
-
-           } catch (sharpError) {
-               console.error(`[API /api/upload] Sharp processing FAILED for ${file.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
-
-               // 處理失敗時，嘗試刪除已上傳的檔案
-               try {
-                   if (fs.existsSync(originalFilePath)) {
-                       fs.unlinkSync(originalFilePath);
-                       console.warn(`[API /api/upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
-                   }
-               } catch (unlinkErr) {
-                   console.error(`[API /api/upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
-               }
-               return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
-           }
-       } else {
-            // 對於非圖片文件 (HTML, PDF)，直接使用 Multer 儲存的檔案，無需 Sharp 處理
-            console.log(`[API /api/upload] 檔案 ${file.originalname} (${originalFileMimetype || originalExt}) 為非圖片類型，不進行圖片處理。`);
-            // 檔案已經由 Multer 儲存，路徑是 originalFilePath
-            // finalImageUrl 也已經根據 Multer 的 filename 邏輯生成
-       }
-
-       // 生成最終的 URL 路徑（基於 Multer 修改後的檔案名，這個檔案名應該已經是 .jpg 如果原始是 png）
-       // This part is moved outside the if/else to ensure it's always generated
-       const finalImageUrl = '/uploads/' + file.filename; // Multer 已經處理了檔案名和副檔名轉換
-
-       console.log(`[API /api/upload] Successfully processed ${file.originalname}. Responding with URL: ${finalImageUrl}`);
-       // 成功時，回應包含檔案的 URL
-       res.json({ success: true, url: finalImageUrl });
 
 
 
 
-
-
-
-
-
-    } catch (err) {
-        console.error('[API /api/upload] Outer catch block error:', err);
-        console.error('[API /api/upload] 上傳圖片錯誤:', err);
-        // 清理 Multer 可能留下的檔案（如果在 sharp 處理或後續發生錯誤）
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            try {
-                fs.unlinkSync(req.file.path);
-                console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
-            } catch (cleanupErr) {
-                console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
-            }
-        }
-        res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
-    }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-// [app.use for voitRouter moved to an earlier position in the file]
-
-
-
-
-
-// --- 新的公開安全圖片上傳端點 ---
-app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
     // 'image' 是前端 input file 元素的 name 屬性
 
     if (!visionClient) { // 確保 Vision API 客戶端已初始化
@@ -2369,6 +2206,180 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         }
         return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
     }
+
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [app.use for voitRouter moved to an earlier position in the file]
+
+
+
+
+
+// --- 新的公開安全圖片上傳端點 ---
+app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    // 'image' 是前端 input file 元素的 name 屬性
+
+    if (!visionClient) { // 確保 Vision API 客戶端已初始化
+        console.error('[API /upload-safe-image] Vision API client not available.');
+        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
+    }
+
+    if (!req.file) {
+        // multer fileFilter 拒絕或沒有檔案上傳
+        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
+        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
+    }
+    
+    const file = req.file;
+    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
+                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
+
+    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+
+    try {
+        // --- 1. 安全搜尋偵測 ---
+        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
+        const [safeSearchResult] = await visionClient.annotateImage({
+            image: { content: imageBuffer },
+            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
+        });
+
+        const safeSearch = safeSearchResult.safeSearchAnnotation;
+        let isImageSafe = true;
+        let unsafeCategoriesDetected = [];
+
+        if (safeSearch) {
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('成人');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
+            }
+            // 你可以根據需要添加對 spoof, medical 的檢查
+        }
+
+        if (!isImageSafe) {
+            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
+            // 刪除已上傳的不安全圖片
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
+            }
+            return res.status(400).json({
+                success: false,
+                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
+            });
+        }
+        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
+
+        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
+        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
+        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
+        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
+        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
+        
+        // 檢查是否為 PNG 格式
+        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+        
+        // 自動旋轉（如果需要，基於之前的討論）
+        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
+        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
+        sharpInstance = sharp(rotatedImageBuffer);
+        
+        const metadata = await sharpInstance.metadata();
+        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
+
+        const originalWidth = metadata.width;
+        let targetWidth = originalWidth;
+        let needsResize = false;
+        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
+        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
+        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
+
+        let processedBuffer;
+        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
+        let finalImageUrl;
+
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
+        } else {
+            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
+            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
+            // For JPGs only rotated, rotatedImageBuffer is the one to save.
+            // The key is that sharpInstance was updated if a conversion happened.
+            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
+            await fs.promises.writeFile(originalFilePath, bufferToSave);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
+        }
+        
+        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
+        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
+        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
+
+    } catch (err) {
+        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
+        // 確保在錯誤時刪除已上傳的檔案
+        if (file && file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
+            }
+        }
+        // 使用你修改後的全局錯誤處理器，它會返回 JSON
+        // 但在這裡我們可以直接返回 JSON 錯誤
+        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
+            }
+            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
+        }
+        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
+    }
+
+
+
+
+
 });
 
 
