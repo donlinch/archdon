@@ -35,20 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadStatus = document.getElementById('upload-status');
     const confirmUploadBtn = document.getElementById('confirm-upload-btn');
     const uploadModalCancelBtns = uploadModal ? uploadModal.querySelectorAll('.close-modal-btn') : [];
+ // --- 狀態變數 ---
+ let currentPage = 1;
+ let totalPages = 1;
+ let currentSortBy = 'newest';       // For DB mode when/if switched
+ let currentFileType = 'all';        // For DB mode when/if switched
+ let currentSearch = '';           // For DB mode when/if switched
+ 
+ // ★★★ 設定期望的初始狀態 ★★★
+ let currentView = 'grid';           // 初始視圖為格狀
+ let currentDataMode = 'disk';         // 初始數據模式為磁碟
 
-    // --- 狀態變數 ---
-    let currentPage = 1;
-    let totalPages = 1;
-    let currentSortBy = 'newest'; // For DB mode
-    let currentFileType = 'all';  // For DB mode
-    let currentSearch = '';     // For DB mode
-    let currentView = 'list'; // 'list' or 'grid'
-    let currentDataMode = 'database'; // 'database' or 'disk'
-
-    // 磁碟檔案模式的狀態
-    let currentDiskPage = 1;
-    let totalDiskPages = 1;
-    let currentDiskSortBy = 'date_desc'; // Default for Disk mode
+ // 磁碟檔案模式的狀態
+ let currentDiskPage = 1;
+ let totalDiskPages = 1;
+ let currentDiskSortBy = 'date_desc';  // 初始排序 (磁碟模式)
 
     // --- 輔助函數 ---
     const showLoading = (show) => { if(fileLoading) fileLoading.style.display = show ? 'block' : 'none'; };
@@ -446,11 +447,20 @@ document.addEventListener('DOMContentLoaded', () => {
         paginationControls.appendChild(createButton(currentDiskPage + 1, '下一頁 >>', currentDiskPage === totalDiskPages));
     }
 
+
+
+
+
+
+
+
     function updateSortByOptions() {
         if (!sortBySelect) return;
-        const previousValue = sortBySelect.value;
+        const previousValue = sortBySelect.value; // 保存用戶可能已選的值
         sortBySelect.innerHTML = '';
         let options;
+        let defaultSortValue;
+
         if (currentDataMode === 'database') {
             options = [
                 { value: 'newest', text: '最新上傳 (資料庫)' },
@@ -460,8 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 { value: 'size_asc', text: '大小 (小→大)' },
                 { value: 'size_desc', text: '大小 (大→小)' }
             ];
-            currentSortBy = options.some(opt => opt.value === previousValue) ? previousValue : 'newest';
-            sortBySelect.value = currentSortBy;
+            defaultSortValue = 'newest';
+            currentSortBy = options.some(opt => opt.value === previousValue) && previousValue ? previousValue : defaultSortValue;
         } else { // disk mode
             options = [
                 { value: 'date_desc', text: '修改日期 (新→舊)' },
@@ -471,76 +481,147 @@ document.addEventListener('DOMContentLoaded', () => {
                 { value: 'size_asc', text: '大小 (小→大)' },
                 { value: 'size_desc', text: '大小 (大→小)' }
             ];
-            currentDiskSortBy = options.some(opt => opt.value === previousValue) ? previousValue : 'date_desc';
-            sortBySelect.value = currentDiskSortBy;
+            defaultSortValue = 'date_desc';
+            currentDiskSortBy = options.some(opt => opt.value === previousValue) && previousValue ? previousValue : defaultSortValue;
         }
+
         options.forEach(opt => {
             const optionEl = document.createElement('option');
             optionEl.value = opt.value;
             optionEl.textContent = opt.text;
             sortBySelect.appendChild(optionEl);
         });
-        // Restore selection after populating
-        if (currentDataMode === 'database') sortBySelect.value = currentSortBy;
-        else sortBySelect.value = currentDiskSortBy;
+        
+        // 設置 sortBySelect 的當前值
+        if (currentDataMode === 'database') {
+            sortBySelect.value = currentSortBy;
+        } else {
+            sortBySelect.value = currentDiskSortBy;
+        }
     }
 
-    function switchView(view) {
-        if (view === currentView) return;
+    function switchView(view) { // view 是 'list' 或 'grid'
+        if (view === currentView && 
+            ((currentDataMode === 'database' && (currentView === 'list' ? fileListView.style.display !== 'none' : fileGridView.style.display !== 'none')) ||
+             (currentDataMode === 'disk' && (currentView === 'list' ? diskFileListView.style.display !== 'none' : diskFileGridView.style.display !== 'none')))
+        ) {
+             // 如果目標視圖已經是當前視圖且已顯示，則不重複操作
+            return;
+        }
         currentView = view;
+
         if (viewListBtn) viewListBtn.classList.toggle('active', currentView === 'list');
         if (viewGridBtn) viewGridBtn.classList.toggle('active', currentView === 'grid');
 
-        document.querySelectorAll('.file-view').forEach(el => el.style.display = 'none');
-        let targetViewEl;
+        // 先隱藏所有主要視圖容器
+        if(fileListView) fileListView.style.display = 'none';
+        if(fileGridView) fileGridView.style.display = 'none';
+        if(diskFileListView) diskFileListView.style.display = 'none';
+        if(diskFileGridView) diskFileGridView.style.display = 'none';
+
+        // 根據 currentDataMode 和 currentView 顯示正確的容器
         if (currentDataMode === 'database') {
-            targetViewEl = (currentView === 'list') ? fileListView : fileGridView;
+            if (currentView === 'list' && fileListView) fileListView.style.display = 'block';
+            else if (currentView === 'grid' && fileGridView) fileGridView.style.display = 'grid';
         } else if (currentDataMode === 'disk') {
-            targetViewEl = (currentView === 'list') ? diskFileListView : diskFileGridView;
+            if (currentView === 'list' && diskFileListView) diskFileListView.style.display = 'block';
+            else if (currentView === 'grid' && diskFileGridView) diskFileGridView.style.display = 'grid';
         }
-        if (targetViewEl) {
-            targetViewEl.style.display = (currentView === 'grid' ? 'grid' : 'block');
-            // If switching view and the target content area is empty, fetch data
-            const contentArea = (currentView === 'list') ? 
-                                (currentDataMode === 'database' ? listTableBody : diskListTableBody) :
-                                (currentDataMode === 'database' ? fileGridView : diskFileGridView);
-            if (contentArea && (!contentArea.hasChildNodes() || (contentArea.firstElementChild && contentArea.firstElementChild.textContent.includes("找不到")))) {
-                if (currentDataMode === 'database') fetchFiles(currentPage);
-                else fetchDiskFiles(currentDiskPage);
-            }
+
+        // 如果切換到的視圖內容為空，則獲取數據
+        // 這個邏輯在 fetchDiskFiles/fetchFiles 內部已經有了清空提示，這裡主要是確保視圖容器正確顯示
+        const contentArea = (currentView === 'list') ?
+                            (currentDataMode === 'database' ? listTableBody : diskListTableBody) :
+                            (currentDataMode === 'database' ? fileGridView : diskFileGridView);
+        if (contentArea && (!contentArea.hasChildNodes() || (contentArea.firstElementChild && contentArea.firstElementChild.textContent.includes("找不到")))) {
+            if (currentDataMode === 'database' && currentPage > 0) fetchFiles(currentPage); // 確保 currentPage 有效
+            else if (currentDataMode === 'disk' && currentDiskPage > 0) fetchDiskFiles(currentDiskPage); // 確保 currentDiskPage 有效
         }
     }
 
-    function switchDataMode(mode) {
+
+
+
+    // --- 初始化 ---
+    async function initializePage() {
+        console.log("Initializing File Admin Page...");
+
+        // 1. JS 狀態變數已在頂部設定為 'disk' 和 'grid'
+
+        // 2. 更新 UI 按鈕以反映初始狀態
+        if(viewModeDbBtn) viewModeDbBtn.classList.toggle('active', currentDataMode === 'database');
+        if(viewModeDiskBtn) viewModeDiskBtn.classList.toggle('active', currentDataMode === 'disk');
+        if(viewListBtn) viewListBtn.classList.toggle('active', currentView === 'list');
+        if(viewGridBtn) viewGridBtn.classList.toggle('active', currentView === 'grid');
+
+        // 3. 根據初始模式更新排序選項和相關 UI
+        const isDbMode = currentDataMode === 'database';
+        if(searchInput) searchInput.style.display = isDbMode ? '' : 'none';
+        if(typeFilter) typeFilter.style.display = isDbMode ? '' : 'none';
+        updateSortByOptions();
+
+        // 4. 隱藏所有視圖容器
+        document.querySelectorAll('.file-view').forEach(el => el.style.display = 'none');
+        
+        // 5. 顯示預期的初始視圖容器
+        if (currentDataMode === 'disk') {
+            if (currentView === 'grid' && diskFileGridView) {
+                diskFileGridView.style.display = 'grid';
+            } else if (currentView === 'list' && diskFileListView) { // 雖然初始是grid，但以防萬一
+                diskFileListView.style.display = 'block';
+            }
+            await fetchDiskFiles(currentDiskPage); // 獲取初始數據
+        } else { // 'database' 模式 (雖然我們設定初始為 'disk')
+            if (currentView === 'grid' && fileGridView) {
+                fileGridView.style.display = 'grid';
+            } else if (currentView === 'list' && fileListView) {
+                fileListView.style.display = 'block';
+            }
+            await fetchFiles(currentPage); // 獲取初始數據
+        }
+    }
+
+    initializePage(); // 執行初始化
+
+    
+    function switchDataMode(mode) { // mode 是 'database' 或 'disk'
         if (mode === currentDataMode) return;
         currentDataMode = mode;
+
         if(viewModeDbBtn) viewModeDbBtn.classList.toggle('active', currentDataMode === 'database');
         if(viewModeDiskBtn) viewModeDiskBtn.classList.toggle('active', currentDataMode === 'disk');
         
         const isDbMode = currentDataMode === 'database';
-        if(searchInput) searchInput.style.display = isDbMode ? '' : 'none';
-        if(typeFilter) typeFilter.style.display = isDbMode ? '' : 'none';
-        if(sortBySelect) sortBySelect.style.display = ''; // Always visible
+        if(searchInput) searchInput.style.display = isDbMode ? '' : 'none'; // 搜尋只在 DB 模式下可用
+        if(typeFilter) typeFilter.style.display = isDbMode ? '' : 'none'; // 類型過濾只在 DB 模式下可用
         
-        updateSortByOptions(); // Update sort options for the new mode
-        if(paginationControls) paginationControls.innerHTML = ''; // Clear pagination
+        updateSortByOptions(); // 更新排序下拉選單以匹配新模式
+        if(paginationControls) paginationControls.innerHTML = ''; // 清空分頁
 
-        document.querySelectorAll('.file-view').forEach(el => el.style.display = 'none');
-
+        // 根據新模式獲取數據並觸發視圖更新
         if (currentDataMode === 'database') {
-            currentPage = 1;
-            currentSortBy = sortBySelect.value; // Sync with updated select
-            const targetView = (currentView === 'list') ? fileListView : fileGridView;
-            if(targetView) targetView.style.display = (currentView === 'grid' ? 'grid' : 'block');
-            fetchFiles(currentPage);
+            currentPage = 1; // 重置頁碼
+            // currentSortBy 已由 updateSortByOptions 處理
+            fetchFiles(currentPage); // fetchFiles 內部會調用 renderFiles，renderFiles 會根據 currentView 渲染
         } else if (currentDataMode === 'disk') {
-            currentDiskPage = 1;
-            currentDiskSortBy = sortBySelect.value; // Sync with updated select
-            const targetView = (currentView === 'list') ? diskFileListView : diskFileGridView;
-            if(targetView) targetView.style.display = (currentView === 'grid' ? 'grid' : 'block');
-            fetchDiskFiles(currentDiskPage);
+            currentDiskPage = 1; // 重置頁碼
+            // currentDiskSortBy 已由 updateSortByOptions 處理
+            fetchDiskFiles(currentDiskPage); // fetchDiskFiles 內部會調用 renderDiskFiles
         }
+        // 在 fetchXXX 完成後，確保視圖容器正確顯示
+        // switchView 函數會處理顯示哪個 view div
+        switchView(currentView);
     }
+
+
+
+
+
+
+
+
+
+
 
     async function handleUpload(event) {
         event.preventDefault();
