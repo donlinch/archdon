@@ -1427,6 +1427,12 @@ const server = http.createServer(app);
 // --- WebSocket 服務器設置 ---
 const wss = new WebSocket.Server({ server });
 
+// ... existing code ...
+
+// --- 啟動 HTTP 和 WebSocket 服務器 ---
+server.listen(PORT, () => {
+    console.log(`伺服器已啟動並監聽連接埠 ${PORT}`);
+});
 
 app.get('/api/admin/products', async (req, res) => {
     try {
