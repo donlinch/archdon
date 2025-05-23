@@ -1989,216 +1989,199 @@ function broadcastToSimpleWalkerRoom(roomId, message, senderWs = null) {
 // --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
 const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
 
-// 確保這個目錄存在 (如果不存在則創建)
+
+
+
+
+
+
+
+
+
 if (!fs.existsSync(uploadDir)) {
-  try {
-      fs.mkdirSync(uploadDir, { recursive: true });
-      console.log(`持久化上傳目錄已創建: ${uploadDir}`);
-  } catch (err) {
-      console.error(`無法創建持久化上傳目錄 ${uploadDir}:`, err);
-      // 根據你的需求，這裡可能需要拋出錯誤或有後備方案
-      // 例如，如果無法創建 /data/uploads，可能退回使用臨時目錄？
-      // 但最好的方式是確保 /data 磁碟已正確掛載且應用有權限寫入
-  }
-}
-
- 
- 
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    // 檢查是否為 PNG 文件
-    const originalExt = path.extname(file.originalname).toLowerCase();
-    const isPNG = originalExt === '.png' || file.mimetype.toLowerCase() === 'image/png';
-    
-    // 如果是 PNG，保存為 JPG
-    const ext = isPNG ? '.jpg' : originalExt;
-    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + ext;
-    
-    if (isPNG) {
-      // 如果是 PNG，修改 mimetype
-      file.mimetype = 'image/jpeg';
-    }
-    
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const allowed = ['.png', '.jpg', '.jpeg', '.gif','.html', '.pdf'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!allowed.includes(ext)) {
-        return cb(new Error('只允許上傳圖片 (png, jpg, gif) 或 PDF 檔案！'));
-    }
-    cb(null, true);
-  },
-  limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB
-});
-
-// --- 新增 publicSafeUpload 的定義 ---
-const publicSafeUpload = multer({
-  storage, // 重用相同的儲存設定
-  fileFilter: (req, file, cb) => {
-    const allowedImageTypes = ['.png', '.jpg', '.jpeg', '.gif'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!allowedImageTypes.includes(ext)) {
-        return cb(new Error('只允許上傳圖片檔案 (png, jpg, jpeg, gif)！'), false);
-    }
-    cb(null, true);
-  },
-  limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
-});
-// --- END OF publicSafeUpload 定義 ---
-
-
-app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
-        const file = req.file;
-        if (!file) {
-            // multer fileFilter 拒絕或沒有檔案上傳
-            // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
-            // 注意：這裡的錯誤訊息可能需要更新以反映 Multer 的 fileFilter
-             console.warn('[API /api/upload] No file uploaded or file type rejected by multer.');
-            return res.status(400).json({ success: false, error: file ? '不支援的檔案類型或檔案過大！' : '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
-        }
-
-        // 獲取 multer 儲存的檔案路徑
-        const originalFilePath = file.path;
-        const imageBuffer = await fs.promises.readFile(originalFilePath); // 讀取為 buffer
-
-        // 使用原始檔案的 mimetype 進行判斷
-        const originalFileMimetype = file.mimetype.toLowerCase();
-        // 注意 Multer 可能會根據副檔名來猜測 mimetype，不一定完全準確
-        // 更可靠的判斷可能需要檢查原始副檔名，並與常見圖片類型對比
-        const originalExt = path.extname(file.originalname).toLowerCase();
-        const isPNG = originalFileMimetype === 'image/png' || originalExt === '.png';
-        const isJPEG = originalFileMimetype === 'image/jpeg' || originalExt === '.jpg' || originalExt === '.jpeg';
-        const isGIF = originalFileMimetype === 'image/gif' || originalExt === '.gif';
-         const isPDF = originalFileMimetype === 'application/pdf' || originalExt === '.pdf';
-
-        // 生成最終的 URL 路徑（基於 Multer 修改後的檔案名，這個檔案名應該已經是 .jpg 如果原始是 png）
-        const finalImageUrl = '/uploads/' + file.filename; // Multer 已經處理了檔案名和副檔名轉換
-
-        // 只對圖片文件進行 Sharp 處理 (PNG, JPG, GIF)
-        // 注意：根據 fileFilter 的設定，這裡也可能會有 HTML 和 PDF，但 sharp 處理只針對圖片
-        if (isPNG || isJPEG || isGIF) {
-             console.log(`[API /api/upload] 檔案 ${file.originalname} 被識別為圖片，準備進行處理。`);
-            try {
-                let sharpInstance = sharp(imageBuffer);
-
-                const compressionOptions = {
-                    quality: 85,            // 較低的質量設置
-                    chromaSubsampling: '4:2:0'  // 更積極的色度抽樣
-                };
-
-                // 如果是 PNG，顯式轉換為 JPEG 並應用壓縮
-                if (isPNG) {
-                    console.log(`[API /api/upload] Converting PNG to JPG and applying compression for file: ${file.originalname}`);
-                    sharpInstance = sharpInstance.jpeg(compressionOptions);
-                } else if (isJPEG) {
-                    // 如果是 JPEG，僅應用壓縮設置 (如果需要重新壓縮的話)
-                     console.log(`[API /api/upload] Applying JPEG compression for file: ${file.originalname}`);
-                     sharpInstance = sharpInstance.jpeg(compressionOptions);
-                }
-                // 注意：GIF 文件目前沒有在這裡被 sharpInstance.jpeg() 處理，它們會跳過這個壓縮步驟
-                // 如果需要對 GIF 也進行某些處理（例如轉為 JPG 或 WebP），需要在這裡添加邏輯
-
-                // 自動旋轉 (對所有圖片類型執行)
-                // 如果是非 JPG/PNG (例如 GIF)，rotate().toBuffer() 會保留原格式，除非後面顯式轉換
-                const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
-
-                // 用旋轉後的 buffer 重新初始化 sharp，準備進行縮放
-                let sharpInstanceForResize = sharp(rotatedImageBuffer);
-
-
-                const metadata = await sharpInstanceForResize.metadata(); // 從旋轉後的 buffer 獲取 metadata
-                console.log(`[API /api/upload] Metadata after rotate for ${file.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`);
-
-
-                const originalWidth = metadata.width; // 使用旋轉後的圖片寬度
-                let targetWidth = originalWidth;
-                let needsResize = false;
-
-                if (originalWidth > 1500) {
-                    targetWidth = Math.round(originalWidth * 0.25); // 縮小到25%
-                    needsResize = true;
-                } else if (originalWidth > 800) {
-                    targetWidth = Math.round(originalWidth * 0.50); // 縮小到50%
-                    needsResize = true;
-                } else if (originalWidth > 500) {
-                    targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
-                    needsResize = true;
-                }
-
-                let finalBuffer;
-                if (needsResize) {
-                    console.log(`[API /api/upload] 圖片 ${file.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                    finalBuffer = await sharpInstanceForResize
-                        .resize({
-                            width: targetWidth,
-                            withoutEnlargement: true  // 防止小圖被放大
-                        })
-                        // 注意：resize 後不需要再次指定 jpeg()，因為如果在前面是 PNG 或 JPG 時，
-                        // 已經通過 sharpInstance.jpeg() 設置了輸出格式和壓縮選項，resize 會保留該設置
-                        .toBuffer();
-                } else {
-                    finalBuffer = rotatedImageBuffer; // 如果不需要 resize，使用旋轉後的 buffer
-                    console.log(`[API /api/upload] 圖片 ${file.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
-                }
-
-                // *** 移除這裡對 finalBuffer 再次調用 sharp().jpeg() 的程式碼 ***
-                // const finalImage = sharp(finalBuffer).jpeg(compressionOptions);
-                // const processedBuffer = await finalImage.toBuffer();
-                // 使用 resize 或 rotate 後得到的 finalBuffer 直接寫入
-
-                await fs.promises.writeFile(originalFilePath, finalBuffer); // 將最終的 buffer 寫回 Multer 儲存的路徑
-                const newStats = fs.statSync(originalFilePath);
-                console.log(`[API /api/upload] 圖片 ${file.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} bytes`);
-
-            } catch (sharpError) {
-                console.error(`[API /api/upload] Sharp processing FAILED for ${file.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
- 
-                // 處理失敗時，嘗試刪除已上傳的檔案
-                try {
-                    if (fs.existsSync(originalFilePath)) {
-                        fs.unlinkSync(originalFilePath);
-                        console.warn(`[API /api/upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
-                    }
-                } catch (unlinkErr) {
-                    console.error(`[API /api/upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
-                }
-                return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
-            }
-        } else {
-             // 對於非圖片文件 (HTML, PDF)，直接使用 Multer 儲存的檔案，無需 Sharp 處理
-             console.log(`[API /api/upload] 檔案 ${file.originalname} (${originalFileMimetype || originalExt}) 為非圖片類型，不進行圖片處理。`);
-             // 檔案已經由 Multer 儲存，路徑是 originalFilePath
-             // finalImageUrl 也已經根據 Multer 的 filename 邏輯生成
-        }
-
-
-        console.log(`[API /api/upload] Successfully processed ${file.originalname}. Responding with URL: ${finalImageUrl}`);
-        // 成功時，回應包含檔案的 URL
-        res.json({ success: true, url: finalImageUrl });
-
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log(`上傳目錄已創建: ${uploadDir}`);
     } catch (err) {
-        console.error('[API /api/upload] Outer catch block error:', err);
-        console.error('[API /api/upload] 上傳圖片錯誤:', err);
-        // 清理 Multer 可能留下的檔案（如果在 sharp 處理或後續發生錯誤）
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            try {
-                fs.unlinkSync(req.file.path);
-                console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
-            } catch (cleanupErr) {
-                console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
-            }
-        }
-        res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
+        console.error(`無法創建上傳目錄 ${uploadDir}:`, err);
+        // 根據需求處理錯誤
     }
-});
+  }
+  
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => {
+      // 檢查是否為 PNG 文件
+      const originalExt = path.extname(file.originalname).toLowerCase();
+      const isPNG = originalExt === '.png' || file.mimetype.toLowerCase() === 'image/png';
+  
+      // 如果是 PNG 或 GIF，最終保存為 JPG
+      // 其他圖片格式（如 JPG, JPEG）保留其原始副檔名（但內容會被 sharp 重新處理為 JPG）
+      // 非圖片檔案（PDF, HTML）保留其原始副檔名
+      let targetExt = originalExt;
+      if (isPNG || originalExt === '.gif' || originalExt === '.webp') { // WebP 也建議轉 JPG 以確保一致性
+          targetExt = '.jpg';
+      } else if (['.jpeg', '.jpg'].includes(originalExt)) {
+          targetExt = '.jpg'; // 確保 jpeg 也統一為 jpg
+      }
+      // PDF 和 HTML 會保留它們的副檔名
+  
+      const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + targetExt;
+  
+      // 如果原始是 PNG/GIF/WEBP，我們打算將其轉換為 JPG，所以修改 mimetype 以便後續邏輯
+      if (isPNG || originalExt === '.gif' || originalExt === '.webp') {
+        file.mimetype = 'image/jpeg'; // 告訴後續 sharp 處理器目標是 JPEG
+      } else if (['.jpeg', '.jpg'].includes(originalExt)) {
+        file.mimetype = 'image/jpeg'; // 確保 mimetype 一致
+      }
+      // 其他類型（PDF, HTML）的 mimetype 不在此處修改
+  
+      cb(null, uniqueName);
+    }
+  });
+  
+  const upload = multer({
+    storage: storage, // 使用上面定義的 storage
+    fileFilter: (req, file, cb) => {
+      const allowedExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.html', '.pdf']; // 新增 .webp
+      const allowedMimes = [
+          'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+          'text/html', 'application/pdf'
+      ];
+      const ext = path.extname(file.originalname).toLowerCase();
+      const mime = file.mimetype.toLowerCase();
+  
+      if (!allowedExts.includes(ext) || !allowedMimes.includes(mime)) {
+          console.warn(`[Multer /api/upload] 檔案類型被拒絕: ${file.originalname} (ext: ${ext}, mime: ${mime})`);
+          return cb(new Error('只允許上傳圖片 (png, jpg, jpeg, gif, webp), HTML 或 PDF 檔案！'), false);
+      }
+      cb(null, true);
+    },
+    limits: { fileSize: 10 * 1024 * 1024 } // 限制 10MB (可調整)
+  });
+  
+  // --- /api/upload 端點 ---
+  app.post('/api/upload', upload.single('image'), async (req, res) => {
+      // 'image' 是前端 input file 元素的 name 屬性
+  
+      if (!req.file) {
+          // fileFilter 拒絕或沒有檔案上傳，或者 Multer 因其他原因（如欄位名錯誤）未處理檔案
+          console.warn('[API /api/upload] 沒有檔案上傳，或檔案被 fileFilter 拒絕，或欄位名錯誤。');
+          // multer 的錯誤處理會在下面捕獲，但這裡做個保險
+          // req.fileValidationError 是 multer 在 fileFilter 中 cb(new Error(...)) 時可能設置的
+          const errorMessage = req.fileValidationError ? req.fileValidationError.message : '沒有上傳檔案，或欄位名稱不符 (應為 "image")，或不支援的檔案類型。';
+          return res.status(400).json({ success: false, error: errorMessage });
+      }
+  
+      const file = req.file; // Multer 處理後的檔案資訊
+      const originalFilePath = file.path; // Multer 儲存的原始檔案路徑 (例如 /data/uploads/xxxx.jpg)
+  
+      // 生成最終的 URL 路徑 (基於 Multer 修改後的檔案名，例如 /uploads/xxxx.jpg)
+      const finalFileUrl = '/uploads/' + file.filename;
+  
+      // 獲取原始副檔名和 mimetype 用於判斷
+      const originalExt = path.extname(file.originalname).toLowerCase(); // 來自上傳時的原始檔名
+      const processedMimeType = file.mimetype.toLowerCase(); // 這是 multer filename 邏輯中可能修改過的 mimetype
+  
+      // 判斷是否為需要 sharp 處理的圖片類型 (PNG, JPG, GIF, WEBP)
+      const isProcessableImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(originalExt) ||
+                               ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(processedMimeType);
+  
+      if (isProcessableImage) {
+          console.log(`[API /api/upload] 檔案 ${file.originalname} (處理後目標 mimetype: ${processedMimeType}) 被識別為可處理圖片，準備進行 Sharp 處理。`);
+          try {
+              const imageBuffer = await fs.promises.readFile(originalFilePath); // 讀取 Multer 儲存的檔案內容
+  
+              const compressionOptions = {
+                  quality: 85,            // JPEG 品質
+                  chromaSubsampling: '4:2:0' // 色度抽樣
+              };
+  
+              let processingInstance = sharp(imageBuffer); // 從讀取的 buffer 初始化 sharp
+  
+              // 1. 始終先應用旋轉 (自動校正方向)
+              processingInstance = processingInstance.rotate();
+  
+              // 2. 決定是否需要縮放
+              //    為安全起見，在旋轉後獲取 metadata。
+              const tempRotatedBufferForMeta = await processingInstance.toBuffer({ resolveWithObject: true });
+              // resolveWithObject: true 使 toBuffer 返回 { data, info }
+              // info 包含 format, width, height, size (處理後的大小，不是原始)
+              const metadata = tempRotatedBufferForMeta.info;
+              const currentWidth = metadata.width; // 這是旋轉後的寬度
+  
+              let targetWidth = currentWidth;
+              let needsResize = false;
+  
+              if (currentWidth > 1500) {
+                  targetWidth = Math.round(currentWidth * 0.25);
+                  needsResize = true;
+              } else if (currentWidth > 800) {
+                  targetWidth = Math.round(currentWidth * 0.50);
+                  needsResize = true;
+              } else if (currentWidth > 500) {
+                  targetWidth = Math.round(currentWidth * 0.75);
+                  needsResize = true;
+              }
+  
+              // 3. 如果需要縮放，則應用它
+              if (needsResize) {
+                  console.log(`[API /api/upload] 圖片 ${file.originalname} (旋轉後寬度: ${currentWidth}px) 需要縮放至 ${targetWidth}px`);
+                  processingInstance = processingInstance.resize({
+                      width: targetWidth,
+                      withoutEnlargement: true // 防止小圖被放大
+                  });
+              } else {
+                  console.log(`[API /api/upload] 圖片 ${file.originalname} (旋轉後寬度: ${currentWidth}px) 無需縮放。`);
+              }
+  
+              // 4. 關鍵：確保最終輸出是帶有指定壓縮選項的 JPEG。
+              // 這會將 PNG, GIF, WEBP 轉換為 JPG，並重新壓縮 JPG。
+              console.log(`[API /api/upload] 正在為 ${file.originalname} 應用最終的 JPEG 轉換/壓縮 (quality: ${compressionOptions.quality})。`);
+              processingInstance = processingInstance.jpeg(compressionOptions);
+  
+              // 5. 獲取最終處理後的 buffer
+              const finalProcessedBuffer = await processingInstance.toBuffer();
+  
+              // 6. 將處理後的 buffer 寫回 Multer 最初儲存的路徑 (覆蓋)
+              await fs.promises.writeFile(originalFilePath, finalProcessedBuffer);
+  
+              const newStats = fs.statSync(originalFilePath);
+              console.log(`[API /api/upload] 圖片 ${file.originalname} 已成功處理並覆蓋原檔案，新大小: ${newStats.size} 字節。最終 URL: ${finalFileUrl}`);
+  
+          } catch (sharpError) {
+              console.error(`[API /api/upload] Sharp 處理圖片 ${file.originalname} 時發生錯誤。錯誤名稱: ${sharpError.name}, 訊息: ${sharpError.message}`, sharpError.stack);
+              // 處理失敗時，嘗試刪除已上傳的檔案
+              try {
+                  if (fs.existsSync(originalFilePath)) {
+                      fs.unlinkSync(originalFilePath);
+                      console.warn(`[API /api/upload] 已刪除因 Sharp 處理失敗的原始檔案: ${originalFilePath}`);
+                  }
+              } catch (unlinkErr) {
+                  console.error(`[API /api/upload] 刪除因 Sharp 處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+              }
+              return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
+          }
+      } else {
+          // 對於非圖片文件 (如 PDF, HTML)，直接使用 Multer 儲存的檔案，無需 Sharp 處理
+          console.log(`[API /api/upload] 檔案 ${file.originalname} (類型: ${processedMimeType || originalExt}) 為非圖片類型或無需 Sharp 處理，直接使用上傳檔案。URL: ${finalFileUrl}`);
+          // 檔案已經由 Multer 儲存，路徑是 originalFilePath
+          // finalFileUrl 也已經根據 Multer 的 filename 邏輯生成
+      }
+  
+      // 成功時，回應包含檔案的 URL
+      res.json({ success: true, url: finalFileUrl });
+  
+  });
+
+
+
+
+
+
+
+
+
 
 
 
