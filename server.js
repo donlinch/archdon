@@ -3390,98 +3390,119 @@ app.use('/api/reports', reportTemplatesRouter);
 
 
 
-
-
-
 // POST /api/admin/files/upload - 上傳檔案
 app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
     }
     const file = req.file;
-    let fileToSave = { ...file }; // 複製一份檔案資訊，以便修改
-    const originalFilePath = fileToSave.path; // multer 儲存的原始檔案路徑
-
-    const fileUrlPath = '/uploads/' + fileToSave.filename;
+    let fileToSave = { ...file }; // 複製一份檔案資訊
+    const originalFilePath = fileToSave.path; // Multer 儲存的檔案路徑
+    const fileUrlPath = '/uploads/' + fileToSave.filename; // Multer 產生的 URL 路徑
 
     let fileType = 'other';
-    const lowerMimetype = fileToSave.mimetype.toLowerCase();
-    const lowerExt = path.extname(fileToSave.originalname).toLowerCase();
+    const originalFileExt = path.extname(fileToSave.originalname).toLowerCase(); // 獲取原始副檔名
+    // 注意：fileToSave.mimetype 可能已被 Multer 修改，所以原始副檔名更可靠
 
-    if (['.png', '.jpg', '.jpeg'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
-        fileType = 'image'; // 明確標記為可處理的圖片
-        console.log(`檔案 ${fileToSave.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
+    // 判斷是否為圖片 (PNG, JPG, JPEG)
+    if (['.png', '.jpg', '.jpeg'].includes(originalFileExt)) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} (${originalFileExt}) 被識別為圖片，準備處理。`);
         try {
-            const metadata = await sharp(originalFilePath).metadata();
-            const originalWidth = metadata.width;
-            let targetWidth = originalWidth;
+            // 1. 讀取 Multer 儲存的檔案到 Buffer
+            const imageBuffer = await fs.promises.readFile(originalFilePath);
+
+            // 2. 使用 Sharp 載入 Buffer
+            let sharpInstance = sharp(imageBuffer);
+
+            // 3. 定義 JPEG 輸出選項 (您可以根據需求調整品質)
+            const jpegOutputOptions = {
+                quality: 80, // 例如，設定為 80
+                chromaSubsampling: '4:2:0' // 可選的進一步壓縮
+            };
+
+            // 4. 強制轉換/重新壓縮
+            // 無論原始是 PNG 還是 JPG，都統一處理成指定品質的 JPG
+            // 這樣可以確保 Multer 偽裝的 JPG (實為PNG數據) 被正確轉換
+            console.log(`[Admin Upload] 準備將 ${fileToSave.originalname} 轉換/重新壓縮為 JPG (品質: ${jpegOutputOptions.quality})。`);
+            sharpInstance = sharpInstance.jpeg(jpegOutputOptions);
+
+            // 5. 進行旋轉 (修正方向)
+            sharpInstance = sharpInstance.rotate();
+
+            // 6. 獲取處理後 (已是JPG格式並旋轉後) 的 Buffer，以便獲取正確的元數據
+            const processedBufferBeforeResize = await sharpInstance.toBuffer();
+
+            // 7. 從這個 Buffer 獲取元數據
+            const metadata = await sharp(processedBufferBeforeResize).metadata();
+            const currentWidth = metadata.width;
+            let targetWidth = currentWidth;
             let needsResize = false;
 
-            if (originalWidth > 1500) {
-                targetWidth = Math.round(originalWidth * 0.25);
+            // 決定是否需要縮放
+            if (currentWidth > 1500) {
+                targetWidth = Math.round(currentWidth * 0.25);
                 needsResize = true;
-            } else if (originalWidth > 800) {
-                targetWidth = Math.round(originalWidth * 0.50);
+            } else if (currentWidth > 800) {
+                targetWidth = Math.round(currentWidth * 0.50);
                 needsResize = true;
-            } else if (originalWidth > 500) {
-                targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
+            } else if (currentWidth > 500) {
+                targetWidth = Math.round(currentWidth * 0.75);
                 needsResize = true;
             }
 
+            let finalBuffer;
             if (needsResize) {
-                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                const tempResizedPath = originalFilePath + '_resized_temp' + lowerExt;
-                
-                await sharp(originalFilePath)
-                    .resize({ width: targetWidth })
-                    .toFile(tempResizedPath);
-                
-                console.log(`圖片已縮放至臨時路徑: ${tempResizedPath}`);
-
-                // 刪除 multer 最初上傳的原始檔案
-                if (fs.existsSync(originalFilePath)) {
-                    fs.unlinkSync(originalFilePath);
-                    console.log(`已刪除原始 multer 檔案: ${originalFilePath}`);
-                }
-
-                // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
-                fs.renameSync(tempResizedPath, originalFilePath);
-                fileToSave.path = originalFilePath; // 更新 fileToSave 中的路徑
-                
-                // 更新檔案大小
-                const newStats = fs.statSync(fileToSave.path);
-                fileToSave.size = newStats.size;
-                console.log(`圖片 ${fileToSave.originalname} 已成功縮放並覆蓋原檔案，新路徑: ${fileToSave.path}, 新大小: ${fileToSave.size} bytes`);
+                console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} (處理後寬度: ${currentWidth}px) 需要縮放至 ${targetWidth}px。`);
+                finalBuffer = await sharp(processedBufferBeforeResize) // 從已是JPG的Buffer開始縮放
+                    .resize({ width: targetWidth, withoutEnlargement: true })
+                    .toBuffer();
             } else {
-                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+                console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} (處理後寬度: ${currentWidth}px) 無需縮放。`);
+                finalBuffer = processedBufferBeforeResize; // 直接使用已轉換/壓縮/旋轉的 Buffer
             }
+
+            // 8. 將最終的 Buffer 寫回 Multer 指定的原始路徑
+            //    Multer 已經將 PNG 的副檔名改為 .jpg，所以 originalFilePath 副檔名是對的。
+            await fs.promises.writeFile(originalFilePath, finalBuffer);
+
+            // 更新 fileToSave 中的檔案大小資訊
+            const newStats = fs.statSync(originalFilePath);
+            fileToSave.size = newStats.size;
+            fileToSave.mimetype = 'image/jpeg'; // 確保 mimetype 也是正確的 JPG
+
+            console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} 已成功處理為 JPG 並儲存。新路徑: ${originalFilePath}, 新大小: ${fileToSave.size} bytes`);
+
         } catch (sharpError) {
-            console.error(`Sharp 處理圖片 ${fileToSave.originalname} 失敗:`, sharpError);
-            // 如果縮放失敗，刪除已上傳的原始檔案並回報錯誤
+            console.error(`[Admin Upload] Sharp 處理圖片 ${fileToSave.originalname} 失敗:`, sharpError);
             try {
                 if (fs.existsSync(originalFilePath)) {
                     fs.unlinkSync(originalFilePath);
-                    console.warn(`已刪除處理失敗的原始檔案: ${originalFilePath}`);
+                    console.warn(`[Admin Upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
                 }
             } catch (unlinkErr) {
-                console.error(`刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+                console.error(`[Admin Upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
             }
             return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
         }
-    } else if (lowerExt === '.gif' || lowerMimetype === 'image/gif') {
-        fileType = 'image'; // 仍然是圖片類型
-        console.log(`檔案 ${fileToSave.originalname} 是 GIF，不進行縮放。`);
-    } else if (lowerExt === '.pdf' || lowerMimetype === 'application/pdf') {
+    } else if (originalFileExt === '.gif' || (fileToSave.mimetype && fileToSave.mimetype.toLowerCase() === 'image/gif')) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 GIF，不進行轉換或縮放。`);
+        // GIF 通常不建議轉換為 JPG，除非有特殊需求，因為會失去動畫。
+        // 如果需要，也可以加入 Sharp 處理 GIF 的邏輯（例如優化或轉為靜態圖）。
+    } else if (originalFileExt === '.pdf' || (fileToSave.mimetype && fileToSave.mimetype.toLowerCase() === 'application/pdf')) {
         fileType = 'pdf';
-        console.log(`檔案 ${fileToSave.originalname} 是 PDF，不進行縮放。`);
-    } else if (['.webp', '.svg'].includes(lowerExt) || ['image/webp', 'image/svg+xml'].includes(lowerMimetype)) {
-        fileType = 'image'; // 其他可被視為圖片的類型
-        console.log(`檔案 ${fileToSave.originalname} 是 ${lowerExt}，不進行縮放。`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 PDF，不進行圖片處理。`);
+    } else if (['.webp', '.svg'].includes(originalFileExt) || (fileToSave.mimetype && (fileToSave.mimetype.toLowerCase() === 'image/webp' || fileToSave.mimetype.toLowerCase() === 'image/svg+xml'))) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 ${originalFileExt}，不進行特定轉換或縮放 (除非您添加針對性處理)。`);
+        // WebP 和 SVG 的處理可以根據需求添加。SVG通常不需要柵格化壓縮。WebP本身壓縮效率很高。
     } else {
         fileType = 'other';
-        console.log(`檔案 ${fileToSave.originalname} 是其他類型 (${fileToSave.mimetype})，不進行縮放。`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是其他類型 (${fileToSave.mimetype || originalFileExt})，不進行圖片處理。`);
     }
 
+    // --- 資料庫儲存邏輯 (保持不變) ---
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -3492,29 +3513,33 @@ app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'),
             [fileUrlPath, fileToSave.originalname, fileToSave.mimetype, fileToSave.size, fileType]
         );
         await client.query('COMMIT');
-        console.log(`檔案 ${fileToSave.originalname} (處理後) 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} (處理後) 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
         res.status(201).json({ success: true, file: insertResult.rows[0] });
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('[API POST /admin/files/upload] Error inserting file record (after potential resize):', err);
-        // 如果資料庫儲存失敗，此時檔案可能已經被縮放並覆蓋了原始檔案
-        // 由於我們策略是縮放失敗時就已刪除檔案並返回，這裡主要是處理資料庫錯誤
-        // 如果需要，可以考慮是否要刪除已處理的檔案，但通常資料庫錯誤更應關注
+        console.error('[Admin Upload] Error inserting file record:', err);
         const fullDiskPathToClean = path.join(uploadDir, fileToSave.filename);
-         try {
+        try {
             if (fs.existsSync(fullDiskPathToClean)) {
-                 fs.unlinkSync(fullDiskPathToClean); // 使用同步删除，因为在错误处理流程中
-                 console.warn(`因資料庫儲存失敗，已刪除磁碟上的檔案: ${fullDiskPathToClean}`);
+                fs.unlinkSync(fullDiskPathToClean);
+                console.warn(`[Admin Upload] 因資料庫儲存失敗，已刪除磁碟上的檔案: ${fullDiskPathToClean}`);
             }
         } catch (unlinkErr) {
-            console.error(`因資料庫儲存失敗後，嘗試刪除磁碟檔案 ${fullDiskPathToClean} 時再次出錯:`, unlinkErr);
+            console.error(`[Admin Upload] 因資料庫儲存失敗後，嘗試刪除磁碟檔案 ${fullDiskPathToClean} 時再次出錯:`, unlinkErr);
         }
         res.status(500).json({ success: false, error: '儲存檔案記錄到資料庫失敗', detail: err.message });
     } finally {
         client.release();
     }
 });
+
+
+
+
+
+
+
 // DELETE /api/admin/files/:id - 刪除檔案
 app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
     const fileId = parseInt(req.params.id);
