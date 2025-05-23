@@ -592,23 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                 }).filter(ds => ds.data.some(d => d > 0)); // Filter out pages with no data in range
             }
-             if (datasetsToDisplay.length === 0 && Object.keys(pageData).length > 0) { // Fallback if selected pages have no data or none selected
-                const allPagesSortedByTotal = Object.keys(pageData).sort((a, b) => {
-                    const totalA = Object.values(pageData[a]).reduce((sum, val) => sum + val, 0);
-                    const totalB = Object.values(pageData[b]).reduce((sum, val) => sum + val, 0);
-                    return totalB - totalA;
-                });
-                datasetsToDisplay = allPagesSortedByTotal.slice(0, 5).map((page, index) => {
-                     const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
-                     return {
-                         label: page,
-                         data: sortedDates.map(date => pageData[page]?.[date] || 0),
-                         borderColor: colors[index % colors.length],
-                         backgroundColor: 'transparent',
-                         tension: 0.2
-                     };
-                 });
-            }
             
             const ctx = pageComparisonChartCanvas.getContext('2d');
             pageComparisonChart = new Chart(ctx, {
