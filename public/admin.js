@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true, stacked: false }, x: { ticks: { maxRotation: 45, minRotation: 45 } } },
-                    plugins: { title: { display: true, text: '熱門頁面訪問量對比' }, tooltip: { mode: 'index', intersect: false } }
+                    plugins: { title: { display: true, text: '熱門頁面訪問量對比' }, tooltip: { mode: 'index', intersect: false }, legend: { onClick: null } }
                 }
             });
         } catch (error) {
