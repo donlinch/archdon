@@ -1994,6 +1994,36 @@ const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
 
 
 
+// --- 新增 publicSafeUpload 的定義 ---
+const publicSafeUpload = multer({
+    // 如果你想讓 /api/upload-safe-image 的檔案也儲存到磁碟，
+    // 並且使用與 /api/upload 相同的 storage 設定 (通常是這樣比較好管理)
+    storage: storage, // 重用相同的儲存設定 (假設 storage 已經為 /api/upload 定義好)
+  
+    // 如果你之前為 /api/upload-safe-image 設定的是 memoryStorage，可以這樣寫：
+    // storage: multer.memoryStorage(),
+  
+    fileFilter: (req, file, cb) => {
+      const allowedImageTypes = ['.png', '.jpg', '.jpeg', '.gif', '.webp']; // 允許的圖片副檔名
+      const allowedMimes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']; // 允許的圖片MIME類型
+      const ext = path.extname(file.originalname).toLowerCase();
+      const mime = file.mimetype.toLowerCase();
+  
+      if (allowedImageTypes.includes(ext) && allowedMimes.includes(mime)) {
+          cb(null, true); // 接受檔案
+      } else {
+          console.warn(`[Multer /api/upload-safe-image] 檔案類型被拒絕: ${file.originalname} (ext: ${ext}, mime: ${mime})`);
+          // 將錯誤傳遞給 multer，它會將其附加到 req.fileValidationError
+          req.fileValidationError = '只允許上傳圖片檔案 (png, jpg, jpeg, gif, webp)！'; // 你可以自訂這個錯誤訊息
+          cb(null, false); // 拒絕檔案，但不明確拋出錯誤給 multer，而是設置 req.fileValidationError
+                           // 或者 cb(new Error('只允許上傳圖片檔案 (png, jpg, jpeg, gif, webp)！'), false);
+      }
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 例如：限制 10MB (與 /api/upload 一致或根據需求調整)
+      // files: 1 // 如果這個端點只處理單張圖片
+    }
+  });
 
 
 
