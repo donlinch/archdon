@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             try {
-                const response = await fetch('/api/admin/products', { // 注意：這裡應該是 /api/admin/products
+                const response = await fetch('/api/products', { // 注意：這裡應該是 /api/admin/products
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newData)
