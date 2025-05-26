@@ -498,7 +498,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- Global State & DOM Elements (as previously defined) ---
+            // --- 全域狀態和 DOM 元素 (如先前定義) ---
             const currentUsernameSpan = document.getElementById('currentUsername');
             const currentUserAvatarImg = document.getElementById('currentUserAvatar');
             const logoutButton = document.getElementById('logoutButton');
@@ -550,269 +550,268 @@
             const searchResultsMessage = document.getElementById('search-results-message');
             const searchResultsArea = document.getElementById('search-results-area');
             const searchPagination = document.getElementById('search-pagination');
-            const profileImageFile = document.getElementById('profileImageFile'); // Added from HTML
-        
+            const profileImageFile = document.getElementById('profileImageFile'); // 從 HTML 新增
+    
             let currentUserId = null;
             let authToken = null;
             let currentSelectedWarehouseId = null;
             let currentSelectedWarehouseName = '';
             let currentBoxPage = 1;
             let currentSearchPage = 1;
-            let currentBoxViewItemsExpanded = {}; // { boxId: true/false }
-        
-             // --- Helper: HTML Escape (Simple version, use a library for more complex needs) ---
+            let currentBoxViewItemsExpanded = {}; // { boxId: true/false } 物品展開狀態
+    
+             // --- 輔助函數：HTML 轉義 (簡單版本，複雜需求請用函式庫) ---
              function escapeHtml(unsafe) {
                     if (typeof unsafe !== 'string') {
                         if (unsafe === null || unsafe === undefined) return '';
                         unsafe = String(unsafe);
                     }
                     return unsafe
-                        .replace(/&/g, "&")
+                        .replace(/&/g, "&") // 先替換 &
                         .replace(/</g, "<")
                         .replace(/>/g, ">")
                         .replace(/"/g, "&quot;")
                         .replace(/'/g, "&#039;");
+                
+            }
+
+        // --- 輔助函數：API 請求封裝 ---
+        async function apiFetch(url, options = {}) {
+            showLoadingOverlay(true);
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
                 }
-    
-            // --- Helper: API Fetch Wrapper ---
-         async function apiFetch(url, options = {}) {
-                        showLoadingOverlay(true);
-                        const defaultOptions = {
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`
-                            }
-                        };
-                        const mergedOptions = { ...defaultOptions, ...options };
-                        if (options.body && typeof options.body !== 'string') {
-                            mergedOptions.body = JSON.stringify(options.body);
-                        }
-                        try {
-                            const response = await fetch(url, mergedOptions);
-                            if (!response.ok) {
-                                let errorData;
-                                try {
-                                    errorData = await response.json();
-                                } catch (e) {
-                                    errorData = { error: `HTTP Error: ${response.status} ${response.statusText}`};
-                                }
-                                const error = new Error(errorData.error || `請求失敗 (${response.status})`);
-                                error.status = response.status;
-                                error.data = errorData;
-                                throw error;
-                            }
-                            if (response.status === 204) return null; // No content
-                            return await response.json();
-                        } catch (error) {
-                            console.error(`API Fetch Error (${url}):`, error);
-                            showApiError(error.data?.error || error.message || '發生未知錯誤');
-                            throw error; // Re-throw for specific catch blocks if needed
-                        } finally {
-                            showLoadingOverlay(false);
-                        }
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            if (options.body && typeof options.body !== 'string') {
+                mergedOptions.body = JSON.stringify(options.body);
+            }
+            try {
+                const response = await fetch(url, mergedOptions);
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { error: `HTTP 錯誤: ${response.status} ${response.statusText}`};
                     }
-                    
-                    
-                    function showLoadingOverlay(show) {
-                        loadingOverlay.style.display = show ? 'flex' : 'none';
-                    }
-                    
-                    
-                    function showApiError(message, elementId = null) {
-                        alert(`API 錯誤: ${message}`); // Simple alert for now
-                        if (elementId) {
-                            const el = document.getElementById(elementId);
-                            if (el) {
-                                el.textContent = `錯誤: ${message}`;
-                                el.style.color = '#c0392b';
-                            }
-                        }
-                    }
-        
-        
-                // --- Initialization (as provided before) ---
-          async function initializePage() {
-                        const params = new URLSearchParams(window.location.search);
-                        currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId'); // Prioritize localStorage
-                        authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
-        
-                        if (!currentUserId || !authToken) {
-                            alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
-                            window.location.href = 'box.html';
-                            return;
-                        }
-        
-                        // Verify token and get user info
-                        try {
-                            const userData = await apiFetch('/api/box/users/me'); // Uses token from defaultOptions
-                            currentUsernameSpan.textContent = userData.username;
-                            currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
-                            localStorage.setItem(`boxCurrentUsername`, userData.username); // Update local storage
-                            localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/default_avatar.png');
-                        } catch (error) {
-                            if (error.status === 401 || error.status === 403) {
-                                alert('登入憑證無效或已過期，請重新登入。');
-                                localStorage.removeItem(`boxUserToken_${currentUserId}`);
-                                localStorage.removeItem(`boxCurrentUserId`);
-                                localStorage.removeItem(`boxCurrentUsername`);
-                                localStorage.removeItem(`boxCurrentUserAvatar`);
-                                window.location.href = 'box.html';
-                            } else {
-                                showApiError('無法獲取用戶信息。');
-                            }
-                            return;
-                        }
-        
-                        setupEventListeners();
-                        switchTab('tab-warehouses'); // Default to warehouses tab
-                        loadWarehouses();
-                    }
-        
-        
-        
-                // --- Event Listeners Setup (as provided before, with new additions) ---
-                function setupEventListeners() {
-                    // ... (已有的監聽器) ...
-                    logoutButton.addEventListener('click', logout);
-                    tabLinks.forEach(link => {
-                        link.addEventListener('click', () => {
-                            if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
-                                alert('請先從「我的倉庫」分頁選擇一個倉庫。');
-                                return;
-                            }
-                            switchTab(link.dataset.tab);
-                        });
-                    });
-        
-                    addWarehouseForm.addEventListener('submit', handleAddWarehouse);
-                    refreshWarehousesBtn.addEventListener('click', loadWarehouses);
-        
-                    document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-                    document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
-                    profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
-        
-        
-                    // Box Modal Listeners
-                    document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
-                        btn.addEventListener('click', () => closeModal('boxModal'));
-                    });
-                    boxForm.addEventListener('submit', handleSaveBox);
-                    addBoxBtn.addEventListener('click', openAddBoxModal); // Opens modal for new box
-                    boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
-        
-        
-                    // Item Modal Listeners
-                    document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => {
-                        btn.addEventListener('click', () => closeModal('itemModal'));
-                    });
-                    itemForm.addEventListener('submit', handleSaveItem);
-                    itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
-        
-                    // Box Management Specific
-                    toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
-        
-                    // Search Tab
-                    searchButton.addEventListener('click', () => handleSearch(1)); // Search starts from page 1
-                    searchPagination.addEventListener('click', handleSearchPaginationClick);
-                    boxListPagination.addEventListener('click', handleBoxPaginationClick); // Listener for box pagination
+                    const error = new Error(errorData.error || `請求失敗 (${response.status})`);
+                    error.status = response.status;
+                    error.data = errorData;
+                    throw error;
                 }
-        
-                // --- Authentication (as provided before) ---
-          // --- Authentication ---
-                    function logout() {
-                        localStorage.removeItem(`boxUserToken_${currentUserId}`);
-                        localStorage.removeItem(`boxCurrentUserId`);
-                        localStorage.removeItem(`boxCurrentUsername`);
-                        localStorage.removeItem(`boxCurrentUserAvatar`);
-                        window.location.href = 'box.html';
-                    }
-        
-        
-                // --- Tab Navigation (as provided before) ---
-          // --- Tab Navigation ---
-                    function switchTab(tabId) {
-                        tabContents.forEach(content => content.classList.remove('active'));
-                        tabLinks.forEach(link => link.classList.remove('active'));
-        
-                        document.getElementById(tabId).classList.add('active');
-                        document.querySelector(`.tab-navigation button[data-tab="${tabId}"]`).classList.add('active');
-        
-                        // Specific actions when switching to a tab
-                        if (tabId === 'tab-warehouses') {
-                            loadWarehouses();
-                            boxManagementTabLink.style.display = 'none'; // Hide box management tab
-                        } else if (tabId === 'tab-box-management') {
-                            if (currentSelectedWarehouseId) {
-                               boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-                               loadBoxesForWarehouse(currentSelectedWarehouseId);
-                            } else {
-                                alert('錯誤：未選擇倉庫！');
-                                switchTab('tab-warehouses'); // Go back
-                            }
-                        } else if (tabId === 'tab-search') {
-                            document.getElementById('search-results-area').innerHTML = '';
-                            document.getElementById('search-results-message').textContent = '';
-                            document.getElementById('search-pagination').innerHTML = '';
-                        }
-                        // Reset forms or clear messages when switching tabs if needed
-                        resetFormStatuses();
-                    }
-                    
-                    
-                    function resetFormStatuses() {
-                        ['addWarehouseStatus', 'boxFormStatus', 'itemFormStatus', 'changePasswordStatus', 'changeProfileImageStatus'].forEach(id => {
-                            const el = document.getElementById(id);
-                            if (el) el.textContent = '';
-                        });
-                    }
-                // --- Modal Handling (modified previewModalImage) ---
-                function openModal(modalId) {
-                    const modal = document.getElementById(modalId);
-                    if (modal) modal.style.display = 'flex';
-                    else console.warn(`Modal with id "${modalId}" not found!`);
+                if (response.status === 204) return null; // 無內容
+                return await response.json();
+            } catch (error) {
+                console.error(`API 請求錯誤 (${url}):`, error);
+                showApiError(error.data?.error || error.message || '發生未知錯誤');
+                throw error; // 重新拋出錯誤，以便特定 catch 區塊處理
+            } finally {
+                showLoadingOverlay(false);
+            }
+        }
+
+
+        function showLoadingOverlay(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+
+        function showApiError(message, elementId = null) {
+            alert(`API 錯誤: ${message}`); // 目前使用簡單的 alert
+            if (elementId) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.textContent = `錯誤: ${message}`;
+                    el.style.color = '#c0392b';
                 }
-                function closeModal(modalId) {
-                    const modal = document.getElementById(modalId);
-                    if (modal) modal.style.display = 'none';
-                    else console.warn(`Modal with id "${modalId}" not found!`);
+            }
+        }
+
+
+        // --- 初始化 (如先前提供) ---
+        async function initializePage() {
+            const params = new URLSearchParams(window.location.search);
+            currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId'); // 優先使用 localStorage
+            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+
+            if (!currentUserId || !authToken) {
+                alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+                window.location.href = 'box.html';
+                return;
+            }
+
+            // 驗證 token 並獲取用戶信息
+            try {
+                const userData = await apiFetch('/api/box/users/me'); // 使用 defaultOptions 中的 token
+                currentUsernameSpan.textContent = userData.username;
+                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
+                localStorage.setItem(`boxCurrentUsername`, userData.username); // 更新 local storage
+                localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/default_avatar.png');
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    alert('登入憑證無效或已過期，請重新登入。');
+                    localStorage.removeItem(`boxUserToken_${currentUserId}`);
+                    localStorage.removeItem(`boxCurrentUserId`);
+                    localStorage.removeItem(`boxCurrentUsername`);
+                    localStorage.removeItem(`boxCurrentUserAvatar`);
+                    window.location.href = 'box.html';
+                } else {
+                    showApiError('無法獲取用戶信息。');
                 }
-                function previewModalImage(event, previewElementId, fileInputElement) { // Added fileInputElement
-                    const input = fileInputElement || event.target; // Use passed input or event target
-                    const previewContainer = document.getElementById(previewElementId);
-                    const imgElement = previewContainer.querySelector('img');
-                    if (input.files && input.files[0]) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            imgElement.src = e.target.result;
-                            previewContainer.style.display = 'block';
-                        }
-                        reader.readAsDataURL(input.files[0]);
-                    } else {
-                        imgElement.src = '#';
-                        previewContainer.style.display = 'none';
+                return;
+            }
+
+            setupEventListeners();
+            switchTab('tab-warehouses'); // 預設顯示倉庫分頁
+            loadWarehouses();
+        }
+
+
+
+        // --- 事件監聽器設置 (如先前提供，並加入新的) ---
+        function setupEventListeners() {
+            // ... (已有的監聽器) ...
+            logoutButton.addEventListener('click', logout);
+            tabLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
+                        alert('請先從「我的倉庫」分頁選擇一個倉庫。');
+                        return;
                     }
+                    switchTab(link.dataset.tab);
+                });
+            });
+
+            addWarehouseForm.addEventListener('submit', handleAddWarehouse);
+            refreshWarehousesBtn.addEventListener('click', loadWarehouses);
+
+            document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
+            profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
+
+
+            // 紙箱 Modal 監聽器
+            document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
+                btn.addEventListener('click', () => closeModal('boxModal'));
+            });
+            boxForm.addEventListener('submit', handleSaveBox);
+            addBoxBtn.addEventListener('click', openAddBoxModal); // 開啟新增紙箱 modal
+            boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
+
+
+            // 物品 Modal 監聽器
+            document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => {
+                btn.addEventListener('click', () => closeModal('itemModal'));
+            });
+            itemForm.addEventListener('submit', handleSaveItem);
+            itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
+
+            // 紙箱管理相關
+            toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
+
+            // 搜尋分頁
+            searchButton.addEventListener('click', () => handleSearch(1)); // 搜尋從第一頁開始
+            searchPagination.addEventListener('click', handleSearchPaginationClick);
+            boxListPagination.addEventListener('click', handleBoxPaginationClick); // 紙箱列表分頁監聽器
+        }
+
+        // --- 身份驗證 (如先前提供) ---
+        function logout() {
+            localStorage.removeItem(`boxUserToken_${currentUserId}`);
+            localStorage.removeItem(`boxCurrentUserId`);
+            localStorage.removeItem(`boxCurrentUsername`);
+            localStorage.removeItem(`boxCurrentUserAvatar`);
+            window.location.href = 'box.html';
+        }
+
+
+        // --- 分頁導覽 (如先前提供) ---
+        function switchTab(tabId) {
+            tabContents.forEach(content => content.classList.remove('active'));
+            tabLinks.forEach(link => link.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-navigation button[data-tab="${tabId}"]`).classList.add('active');
+
+            // 切換分頁時的特定操作
+            if (tabId === 'tab-warehouses') {
+                loadWarehouses();
+                boxManagementTabLink.style.display = 'none'; // 隱藏紙箱管理分頁
+            } else if (tabId === 'tab-box-management') {
+                if (currentSelectedWarehouseId) {
+                   boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
+                   loadBoxesForWarehouse(currentSelectedWarehouseId);
+                } else {
+                    alert('錯誤：未選擇倉庫！');
+                    switchTab('tab-warehouses'); // 返回倉庫列表
                 }
-        
-             
-        
-             // ===================================
-        // == Warehouse Management Functions ==
+            } else if (tabId === 'tab-search') {
+                document.getElementById('search-results-area').innerHTML = '';
+                document.getElementById('search-results-message').textContent = '';
+                document.getElementById('search-pagination').innerHTML = '';
+            }
+            // 如有需要，切換分頁時重置表單或清除訊息
+            resetFormStatuses();
+        }
+
+
+        function resetFormStatuses() {
+            ['addWarehouseStatus', 'boxFormStatus', 'itemFormStatus', 'changePasswordStatus', 'changeProfileImageStatus'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+        }
+        // --- Modal 處理 (修改後的 previewModalImage) ---
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'flex';
+            else console.warn(`找不到 ID 為 "${modalId}" 的 Modal！`);
+        }
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+            else console.warn(`找不到 ID 為 "${modalId}" 的 Modal！`);
+        }
+        function previewModalImage(event, previewElementId, fileInputElement) { // 新增 fileInputElement
+            const input = fileInputElement || event.target; // 使用傳入的 input 或 event target
+            const previewContainer = document.getElementById(previewElementId);
+            const imgElement = previewContainer.querySelector('img');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgElement.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                imgElement.src = '#';
+                previewContainer.style.display = 'none';
+            }
+        }
+
+
+
         // ===================================
-        
+        // == 倉庫管理函數 ==
+        // ===================================
+
         async function loadWarehouses() {
             if (!currentUserId || !authToken) return;
             warehouseListMessage.textContent = '正在載入倉庫列表...';
             warehouseListMessage.style.color = '#555';
             warehouseListDiv.innerHTML = '';
-        
+
             try {
                 const warehouses = await apiFetch('/api/box/my-warehouses');
                 if (warehouses.length === 0) {
                     warehouseListMessage.textContent = '您還沒有創建任何倉庫。可以從「新增倉庫」分頁開始！';
                     return;
                 }
-                warehouseListMessage.textContent = ''; // Clear loading message
-        
+                warehouseListMessage.textContent = ''; // 清除載入訊息
+
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
                     card.className = 'warehouse-card';
@@ -827,13 +826,13 @@
                     `;
                     warehouseListDiv.appendChild(card);
                 });
-        
-                // Add event listeners for new warehouse cards
+
+                // 為新的倉庫卡片新增事件監聽器
                 warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         currentSelectedWarehouseId = e.target.dataset.warehouseId;
                         currentSelectedWarehouseName = e.target.dataset.warehouseName;
-                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // Show the tab
+                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // 顯示分頁
                         switchTab('tab-box-management');
                     });
                 });
@@ -843,57 +842,62 @@
                 warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
                     btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
                 });
-        
+
             } catch (error) {
                 warehouseListMessage.textContent = `載入倉庫失敗: ${error.message || '未知錯誤'}`;
                 warehouseListMessage.style.color = '#c0392b';
             }
         }
-        
-        async function handleAddWarehouse(event) {
+
+        async function handleAddWarehouse(event) { // 明確命名為 handleAddWarehouse
             event.preventDefault();
             const name = newWarehouseNameInput.value.trim();
             const description = newWarehouseDescriptionInput.value.trim();
-        
+            const editingId = addWarehouseForm.dataset.editingId;
+
             if (!name) {
                 addWarehouseStatus.textContent = '倉庫名稱不能為空。';
                 addWarehouseStatus.style.color = '#e67e22';
                 return;
             }
-            addWarehouseStatus.textContent = '正在創建倉庫...';
+            addWarehouseStatus.textContent = editingId ? '正在更新倉庫...' : '正在創建倉庫...';
             addWarehouseStatus.style.color = '#3498db';
-        
+
+            const payload = { warehouse_name: name, warehouse_description: description };
+            const method = editingId ? 'PUT' : 'POST';
+            const url = editingId ? `/api/box/warehouses/${editingId}` : '/api/box/my-warehouses';
+
             try {
-                const newWarehouse = await apiFetch('/api/box/my-warehouses', {
-                    method: 'POST',
-                    body: { warehouse_name: name, warehouse_description: description }
-                });
-                addWarehouseStatus.textContent = `倉庫 "${newWarehouse.warehouse_name}" 創建成功！`;
+                const savedWarehouse = await apiFetch(url, { method, body: payload });
+                addWarehouseStatus.textContent = `倉庫 "${savedWarehouse.warehouse_name}" ${editingId ? '更新' : '創建'}成功！`;
                 addWarehouseStatus.style.color = '#2ecc71';
                 addWarehouseForm.reset();
-                loadWarehouses(); // Refresh list
-                setTimeout(() => { // Switch to warehouse list after a delay
-                    switchTab('tab-warehouses');
+                delete addWarehouseForm.dataset.editingId; // 清除編輯 ID
+                document.getElementById('tab-add-warehouse').querySelector('h2').textContent = '新增倉庫'; // 重置標題
+
+                loadWarehouses();
+                setTimeout(() => {
+                    switchTab('tab-warehouses'); // 延遲後切換回倉庫列表
                     addWarehouseStatus.textContent = '';
                 }, 1500);
             } catch (error) {
-                addWarehouseStatus.textContent = `創建失敗: ${error.data?.error || error.message || '未知錯誤'}`;
+                addWarehouseStatus.textContent = `${editingId ? '更新' : '創建'}失敗: ${error.data?.error || error.message}`;
                 addWarehouseStatus.style.color = '#c0392b';
             }
         }
-        
-        // For editing a warehouse - you'd typically open a modal pre-filled with data
+
+
         async function handleEditWarehouseModalOpen(warehouseId) {
-            addWarehouseForm.reset(); // Assuming reuse of add form for edit
+            addWarehouseForm.reset(); // 假設重用新增表單來編輯
             addWarehouseStatus.textContent = '正在載入倉庫資料...';
-            switchTab('tab-add-warehouse'); // 直接切換 tab，不呼叫 openModal
+            switchTab('tab-add-warehouse'); // 直接切換分頁，不呼叫 openModal
 
             try {
                 const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
                 document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
                 newWarehouseNameInput.value = warehouse.warehouse_name;
                 newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
-                addWarehouseForm.dataset.editingId = warehouseId; // Store ID for submit logic
+                addWarehouseForm.dataset.editingId = warehouseId; // 儲存 ID 以便提交邏輯使用
                 addWarehouseStatus.textContent = '';
             } catch (error) {
                 addWarehouseStatus.textContent = '載入倉庫資料失敗。';
@@ -901,7 +905,7 @@
                 setTimeout(() => switchTab('tab-warehouses'), 2000); // 失敗時切回倉庫列表
             }
         }
-        
+
         async function handleDeleteWarehouse(warehouseId, warehouseName) {
             if (!confirm(`確定要刪除倉庫 "${warehouseName}" 及其所有紙箱和物品嗎？此操作無法復原！`)) {
                 return;
@@ -909,94 +913,34 @@
             try {
                 await apiFetch(`/api/box/warehouses/${warehouseId}`, { method: 'DELETE' });
                 alert(`倉庫 "${warehouseName}" 已成功刪除。`);
-                loadWarehouses(); // Refresh the list
-                // If the deleted warehouse was the currently selected one, reset selection
+                loadWarehouses(); // 刷新列表
+                // 如果刪除的是當前選中的倉庫，則重置選擇
                 if (currentSelectedWarehouseId === warehouseId) {
                     currentSelectedWarehouseId = null;
                     currentSelectedWarehouseName = '';
                     if(boxManagementTabLink) boxManagementTabLink.style.display = 'none';
-                    // Optionally switch to a default tab if on box-management
+                    // 如果在紙箱管理分頁，可選擇切換回預設分頁
                     if (document.getElementById('tab-box-management').classList.contains('active')) {
                         switchTab('tab-warehouses');
                     }
                 }
             } catch (error) {
-                // Error already shown by apiFetch, but you can add specific handling here
+                // 錯誤已由 apiFetch 顯示，但可以在此處添加特定處理
             }
         }
-               
-    
-    
-    
-    
-    
-    
-            async function handleEditWarehouseModalOpen(warehouseId) {
-                addWarehouseForm.reset(); // Assuming reuse of add form for edit
-                addWarehouseStatus.textContent = '正在載入倉庫資料...';
-                openModal('addWarehouseModal'); // Or a specific edit modal if you create one
-        
-                try {
-                    const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
-                    document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
-                    newWarehouseNameInput.value = warehouse.warehouse_name;
-                    newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
-                    addWarehouseForm.dataset.editingId = warehouseId; // Store ID for submit logic
-                    addWarehouseStatus.textContent = '';
-                } catch (error) {
-                    addWarehouseStatus.textContent = '載入倉庫資料失敗。';
-                    addWarehouseStatus.style.color = '#c0392b';
-                    setTimeout(() => closeModal('addWarehouseModal'), 2000); // Close modal on error
-                }
-            }
-            // Modify handleAddWarehouse to also handle edit
-            async function handleAddWarehouse(event) { // Renamed from handleSaveWarehouse to be clear
-                event.preventDefault();
-                const name = newWarehouseNameInput.value.trim();
-                const description = newWarehouseDescriptionInput.value.trim();
-                const editingId = addWarehouseForm.dataset.editingId;
-        
-                if (!name) {
-                    addWarehouseStatus.textContent = '倉庫名稱不能為空。';
-                    addWarehouseStatus.style.color = '#e67e22';
-                    return;
-                }
-                addWarehouseStatus.textContent = editingId ? '正在更新倉庫...' : '正在創建倉庫...';
-                addWarehouseStatus.style.color = '#3498db';
-        
-                const payload = { warehouse_name: name, warehouse_description: description };
-                const method = editingId ? 'PUT' : 'POST';
-                const url = editingId ? `/api/box/warehouses/${editingId}` : '/api/box/my-warehouses';
-        
-                try {
-                    const savedWarehouse = await apiFetch(url, { method, body: payload });
-                    addWarehouseStatus.textContent = `倉庫 "${savedWarehouse.warehouse_name}" ${editingId ? '更新' : '創建'}成功！`;
-                    addWarehouseStatus.style.color = '#2ecc71';
-                    addWarehouseForm.reset();
-                    delete addWarehouseForm.dataset.editingId; // Clear editing ID
-                    document.getElementById('tab-add-warehouse').querySelector('h2').textContent = '新增倉庫'; // Reset title
-        
-                    loadWarehouses();
-                    setTimeout(() => {
-                        switchTab('tab-warehouses');
-                        addWarehouseStatus.textContent = '';
-                    }, 1500);
-                } catch (error) {
-                    addWarehouseStatus.textContent = `${editingId ? '更新' : '創建'}失敗: ${error.data?.error || error.message}`;
-                    addWarehouseStatus.style.color = '#c0392b';
-                }
-            }
-        
-        
-            // =======================================
-        // == Image Upload & Analysis Functions ==
+
+
+
+
         // =======================================
-        // This function will be called by Box and Item forms before saving data
+        // == 圖片上傳與分析函數 ==
+        // =======================================
+        // 此函數將被紙箱和物品表單在保存數據前調用
         async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
             if (!imageFile) {
                 return { success: false, error: '未選擇圖片文件。' };
             }
-            // Add client-side size/type checks if not already handled by multer on server (or for better UX)
+            // 如果 multer 在伺服器端未處理，或為了更好的用戶體驗，可加入客戶端的大小/類型檢查
             const MAX_SIZE = 15 * 1024 * 1024; // 15MB
             if (imageFile.size > MAX_SIZE) {
                 return { success: false, error: `圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制。`};
@@ -1005,40 +949,38 @@
             if (!allowedMimes.includes(imageFile.type)) {
                  return { success: false, error: '只允許上傳 jpeg, png, gif, webp 格式的圖片。'};
             }
-        
+
             const formData = new FormData();
             formData.append('image', imageFile);
-            formData.append('fileType', fileTypeString); // e.g., 'box_cover', 'item_image', 'profile_image'
-        
-            showLoadingOverlay(true); // Show global loading
+            formData.append('fileType', fileTypeString); // 例如：'box_cover', 'item_image', 'profile_image'
+
+            // 從此函數中移除 showLoadingOverlay(true) 和 showLoadingOverlay(false)
+            // 調用者 (handleSaveItem) 將管理全局的 loading overlay
             try {
-                // No need for 'Content-Type': 'multipart/form-data' here,
-                // fetch does it automatically for FormData
+                // 此處不需要 'Content-Type': 'multipart/form-data'，
+                // fetch 會自動為 FormData 處理
                 const response = await fetch('/api/box/upload-analyze-then-process-image', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }, // Token is crucial
+                    headers: { 'Authorization': `Bearer ${authToken}` }, // Token 至關重要
                     body: formData
                 });
-                showLoadingOverlay(false);
-        
+
                 const data = await response.json();
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || `圖片上傳與分析失敗 (${response.status})`);
                 }
                 return { success: true, imageUrl: data.image_url, aiKeywords: data.ai_keywords, uploadedFileId: data.uploaded_file_id };
             } catch (error) {
-                showLoadingOverlay(false);
                 console.error('圖片上傳與分析過程中發生錯誤:', error);
-                showApiError(error.message || '圖片處理時發生未知錯誤。');
+                // showApiError(error.message || '圖片處理時發生未知錯誤。'); // 由調用者處理錯誤顯示
                 return { success: false, error: error.message || '圖片處理時發生未知錯誤。' };
-            } finally {
-                showLoadingOverlay(false);
             }
+            // 從此處移除包含 showLoadingOverlay(false) 的 finally 區塊
         }
-        
-               
+
+
         // =================================
-        // == User Settings Functions     ==
+        // == 用戶設定函數     ==
         // =================================
         async function handleChangePassword(event) {
             event.preventDefault();
@@ -1046,7 +988,7 @@
             const newPassword = document.getElementById('newPassword').value;
             const confirmNewPassword = document.getElementById('confirmNewPassword').value;
             const statusEl = document.getElementById('changePasswordStatus');
-        
+
             if (newPassword !== confirmNewPassword) {
                 statusEl.textContent = '新密碼與確認密碼不符。';
                 statusEl.style.color = '#e67e22';
@@ -1059,7 +1001,7 @@
             }
             statusEl.textContent = '正在更新密碼...';
             statusEl.style.color = '#3498db';
-        
+
             try {
                 await apiFetch('/api/box/users/me/password', {
                     method: 'PUT',
@@ -1073,26 +1015,26 @@
                 statusEl.style.color = '#c0392b';
             }
         }
-        
+
         async function handleChangeProfileImage(event) {
             event.preventDefault();
             const profileImageFile = document.getElementById('profileImageFile').files[0];
             const statusEl = document.getElementById('changeProfileImageStatus');
             const uploadBtn = document.getElementById('uploadProfileImageBtn');
-        
+
             if (!profileImageFile) {
                 statusEl.textContent = '請先選擇一張圖片。';
                 statusEl.style.color = '#e67e22';
                 return;
             }
-        
+
             uploadBtn.disabled = true;
             uploadBtn.textContent = '上傳中...';
             statusEl.textContent = '正在上傳並分析圖片...';
             statusEl.style.color = '#3498db';
-        
+
             const uploadResult = await handleImageUploadAndAnalyze(profileImageFile, 'profile_image');
-        
+
             if (uploadResult.success) {
                 statusEl.textContent = '圖片上傳成功，正在更新頭像...';
                 try {
@@ -1102,8 +1044,8 @@
                     });
                     statusEl.textContent = '頭像更新成功！';
                     statusEl.style.color = '#2ecc71';
-                    currentUserAvatarImg.src = uploadResult.imageUrl; // Update avatar in header
-                    localStorage.setItem(`boxCurrentUserAvatar`, uploadResult.imageUrl); // Update local storage
+                    currentUserAvatarImg.src = uploadResult.imageUrl; // 更新頁首頭像
+                    localStorage.setItem(`boxCurrentUserAvatar`, uploadResult.imageUrl); // 更新 local storage
                     document.getElementById('changeProfileImageForm').reset();
                     document.getElementById('profileImagePreview').style.display = 'none';
                 } catch (error) {
@@ -1117,11 +1059,11 @@
             uploadBtn.disabled = false;
             uploadBtn.textContent = '上傳並更新頭像';
         }
-        
+
                 // ==============================
-                // == Box Management Functions ==
+                // == 紙箱管理函數 ==
                 // ==============================
-         
+
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
                     if (!warehouseId) {
                         boxListMessage.textContent = '請先選擇一個倉庫。';
@@ -1133,15 +1075,15 @@
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
-        
+
                     try {
-                        const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`); // Example limit
+                        const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`); // 每頁9個紙箱範例
                         if (data.boxes.length === 0) {
                             boxListMessage.textContent = '此倉庫中沒有紙箱。點擊上方按鈕新增一個吧！';
                             return;
                         }
                         boxListMessage.textContent = '';
-        
+
                         data.boxes.forEach(box => {
                             const card = document.createElement('div');
                             card.className = 'box-card';
@@ -1157,13 +1099,13 @@
                                     <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
                                 </div>
                                 <div class="item-list-container" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'};">
-                                    <!-- Items will be loaded here on expand -->
+                                    <!-- 物品將在此處展開時載入 -->
                                     <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
                                     <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
                                 </div>
                             `;
                             boxGridArea.appendChild(card);
-        
+
                             if (currentBoxViewItemsExpanded[box.box_id]) {
                                 loadItemsForBox(box.box_id, card.querySelector('.item-list-container'));
                             }
@@ -1175,7 +1117,7 @@
                         boxListMessage.style.color = '#c0392b';
                     }
                 }
-        
+
                 function addBoxActionListeners() {
                     boxGridArea.querySelectorAll('.toggle-items-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => toggleItemListView(e.target.dataset.boxId, e.target));
@@ -1190,19 +1132,19 @@
                         btn.addEventListener('click', (e) => openAddItemModal(e.target.dataset.boxId));
                     });
                 }
-        
+
                 function openAddBoxModal() {
                     boxForm.reset();
                     boxModalTitle.textContent = `新增紙箱到 "${currentSelectedWarehouseName}"`;
-                    boxFormBoxIdInput.value = ''; // Clear ID for new box
-                    boxFormCoverImageUrlInput.value = ''; // Clear previous image URL
+                    boxFormBoxIdInput.value = ''; // 新增紙箱時清除 ID
+                    boxFormCoverImageUrlInput.value = ''; // 清除之前的圖片 URL
                     boxCoverPreviewDiv.style.display = 'none';
                     boxCoverPreviewDiv.querySelector('img').src = '#';
                     boxFormAiKeywordsDiv.innerHTML = '<em>上傳圖片後將顯示AI建議關鍵字</em>';
                     boxFormStatusP.textContent = '';
                     openModal('boxModal');
                 }
-        
+
                 async function openEditBoxModal(boxId) {
                     boxForm.reset();
                     boxModalTitle.textContent = '編輯紙箱';
@@ -1230,7 +1172,7 @@
                         boxFormStatusP.style.color = '#c0392b';
                     }
                 }
-        
+
                 async function handleSaveBox(event) {
                     event.preventDefault();
                     const boxId = boxFormBoxIdInput.value;
@@ -1239,7 +1181,7 @@
                     const boxName = boxFormNameInput.value.trim();
                     const manualNotes = boxFormManualNotesTextarea.value.trim();
                     const imageFile = boxFormCoverImageFileInput.files[0];
-        
+
                     if (!boxNumber || !boxName) {
                         boxFormStatusP.textContent = '紙箱編號和名稱為必填。';
                         boxFormStatusP.style.color = '#e67e22';
@@ -1249,10 +1191,12 @@
                     boxFormStatusP.style.color = '#3498db';
                     const submitButton = boxForm.querySelector('button[type="submit"]');
                     submitButton.disabled = true;
-        
-                    let imageUrl = boxFormCoverImageUrlInput.value; // Use existing if not changing
-                    let aiKeywords = boxFormAiKeywordsDiv.textContent.includes("沒有AI關鍵字") ? [] : boxFormAiKeywordsDiv.textContent.split(', '); // Crude way, improve if needed
-        
+
+                    let imageUrl = boxFormCoverImageUrlInput.value; // 如果不更改，則使用現有的
+                    let aiKeywordsText = boxFormAiKeywordsDiv.textContent;
+                    let aiKeywords = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ').map(k => k.trim()).filter(k => k);
+
+
                     if (imageFile) {
                         const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'box_cover');
                         if (!uploadResult.success) {
@@ -1264,7 +1208,7 @@
                         imageUrl = uploadResult.imageUrl;
                         aiKeywords = uploadResult.aiKeywords;
                     }
-        
+
                     const boxData = {
                         box_number: boxNumber,
                         box_name: boxName,
@@ -1272,7 +1216,7 @@
                         ai_box_keywords: aiKeywords,
                         manual_notes: manualNotes
                     };
-        
+
                     try {
                         let savedBox;
                         if (isEditing) {
@@ -1290,7 +1234,7 @@
                         boxFormStatusP.style.color = '#2ecc71';
                         setTimeout(() => {
                             closeModal('boxModal');
-                            loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Refresh current page
+                            loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // 刷新當前頁
                         }, 1000);
                     } catch (error) {
                         boxFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`;
@@ -1299,37 +1243,37 @@
                         submitButton.disabled = false;
                     }
                 }
-        
+
                 async function handleDeleteBox(boxId, boxName) {
                     if (!confirm(`確定要刪除紙箱 "${boxName}" 及其所有物品嗎？`)) return;
                     try {
                         await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}`, { method: 'DELETE' });
                         alert(`紙箱 "${boxName}" 已刪除。`);
                         loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
-                    } catch (error) { /* Error shown by apiFetch */ }
+                    } catch (error) { /* 錯誤已由 apiFetch 顯示 */ }
                 }
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
             async function toggleItemListView(boxId, expandButtonElement) {
                 const container = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
                 if (!container) return;
-        
+
                 const isLoadingPlaceholder = container.querySelector('.items-loading-placeholder');
                 const shouldExpand = !currentBoxViewItemsExpanded[boxId];
-        
+
                 currentBoxViewItemsExpanded[boxId] = shouldExpand;
                 expandButtonElement.textContent = shouldExpand ? '折叠物品' : '展開物品';
                 container.style.display = shouldExpand ? 'block' : 'none';
-        
+
                 if (shouldExpand && !container.dataset.loadedItems) {
                     if (isLoadingPlaceholder) isLoadingPlaceholder.textContent = '正在載入物品...';
                     await loadItemsForBox(boxId, container);
                     if (isLoadingPlaceholder && container.querySelectorAll('.item-entry').length > 0) {
-                         isLoadingPlaceholder.style.display = 'none'; // Hide placeholder if items loaded
+                         isLoadingPlaceholder.style.display = 'none'; // 如果已載入物品，隱藏提示
                     } else if (isLoadingPlaceholder) {
                          isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
                     }
@@ -1337,29 +1281,29 @@
                      isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
                      isLoadingPlaceholder.style.display = 'block';
                 } else if (!shouldExpand && isLoadingPlaceholder) {
-                    isLoadingPlaceholder.textContent = '點擊展開查看物品'; // Reset placeholder text
+                    isLoadingPlaceholder.textContent = '點擊展開查看物品'; // 重置提示文字
                     isLoadingPlaceholder.style.display = 'block';
                 }
             }
-        
+
             async function loadItemsForBox(boxId, containerElement) {
-                if (!currentSelectedWarehouseId) return; // Should not happen if called correctly
-        
+                if (!currentSelectedWarehouseId) return; // 正常情況下不會發生
+
                 const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
                 const placeholder = containerElement.querySelector('.items-loading-placeholder');
-        
-                // Clear previous items, but keep the placeholder and add button structure
+
+                // 清除先前的物品，但保留提示和新增按鈕結構
                 const existingItems = containerElement.querySelectorAll('.item-entry');
                 existingItems.forEach(item => item.remove());
                 if(placeholder) placeholder.textContent = '正在載入物品...';
-        
-        
+
+
                 try {
                     const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
                     if (items.length === 0) {
                         if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
                     } else {
-                        if(placeholder) placeholder.style.display = 'none'; // Hide placeholder
+                        if(placeholder) placeholder.style.display = 'none'; // 隱藏提示
                         items.forEach(item => {
                             const itemDiv = document.createElement('div');
                             itemDiv.className = 'item-entry';
@@ -1376,7 +1320,7 @@
                                     <button class="delete-item-btn" data-item-id="${item.item_id}" data-item-name="${escapeHtml(item.item_name)}" data-box-id="${boxId}">刪除</button>
                                 </div>
                             `;
-                            // Insert before the "Add Item" button
+                            // 在「新增物品」按鈕前插入
                             if (addItemBtn) {
                                 containerElement.insertBefore(itemDiv, addItemBtn);
                             } else {
@@ -1385,7 +1329,7 @@
                         });
                     }
                     containerElement.dataset.loadedItems = 'true';
-                    addItemActionListeners(containerElement); // Re-bind listeners for new items
+                    addItemActionListeners(containerElement); // 為新物品重新綁定監聽器
                 } catch (error) {
                     if(placeholder) {
                         placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
@@ -1401,16 +1345,16 @@
                     btn.addEventListener('click', (e) => handleDeleteItem(e.target.dataset.itemId, e.target.dataset.itemName, e.target.dataset.boxId));
                 });
             }
-        
-        
+
+
             // ==============================
-            // == Item Management Functions ==
+            // == 物品管理函數 ==
             // ==============================
             function openAddItemModal(boxIdForNewItem) {
                 itemForm.reset();
                 itemModalTitle.textContent = `新增物品到紙箱 #${boxIdForNewItem}`;
                 itemFormItemIdInput.value = '';
-                itemFormBoxIdInput.value = boxIdForNewItem; // Set the target box ID
+                itemFormBoxIdInput.value = boxIdForNewItem; // 設定目標紙箱 ID
                 itemFormImageUrlInput.value = '';
                 itemImagePreviewDiv.style.display = 'none';
                 itemImagePreviewDiv.querySelector('img').src = '#';
@@ -1418,21 +1362,21 @@
                 itemFormStatusP.textContent = '';
                 openModal('itemModal');
             }
-        
+
             async function openEditItemModal(itemId, boxIdContext) {
                 itemForm.reset();
                 itemModalTitle.textContent = '編輯物品';
                 itemFormItemIdInput.value = itemId;
-                itemFormBoxIdInput.value = boxIdContext; // Current box context for permissions/refresh
+                itemFormBoxIdInput.value = boxIdContext; // 用於權限/刷新的當前紙箱上下文
                 itemFormStatusP.textContent = '正在載入物品資料...';
                 openModal('itemModal');
-        
+
                 try {
-                    // API to get single item detail needs warehouseId for permission, so we might need to fetch box first if not available
-                    // Or, if the item GET API can infer warehouseId or doesn't strictly need it for this specific GET
-                    // For now, assume we might need to construct the full path if your GET item API is nested
-                    const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`); // Placeholder, adjust if your API is different for single item
-        
+                    // 獲取單個物品詳情的 API 需要 warehouseId 以進行權限驗證，如果不可用，可能需要先獲取紙箱信息
+                    // 或者，如果物品 GET API 可以推斷 warehouseId 或此特定 GET 不需要它
+                    // 目前假設如果您的 GET 物品 API 是巢狀的，可能需要構建完整路徑
+                    const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`); // 佔位符，如果您的單個物品 API 不同，請調整
+
                     itemFormNameInput.value = item.item_name;
                     itemFormDescriptionTextarea.value = item.item_description || '';
                     itemFormQuantityInput.value = item.quantity;
@@ -1452,119 +1396,131 @@
                     itemFormStatusP.style.color = '#c0392b';
                 }
             }
-        
-        
-            async function handleSaveItem(event) {
-                event.preventDefault();
-                const itemId = itemFormItemIdInput.value;
-                const boxId = itemFormBoxIdInput.value; // This is the box it BELONGS TO or WILL BELONG TO
-                const isEditing = !!itemId;
-        
-                const itemName = itemFormNameInput.value.trim();
-                const description = itemFormDescriptionTextarea.value.trim();
-                const quantity = parseInt(itemFormQuantityInput.value);
-                const imageFile = itemFormImageFileInput.files[0];
-        
-                if (!itemName) {
-                    itemFormStatusP.textContent = '物品名稱為必填。'; itemFormStatusP.style.color = '#e67e22'; return;
-                }
-                if (isNaN(quantity) || quantity < 0) {
-                    itemFormStatusP.textContent = '數量必須是非負整數。'; itemFormStatusP.style.color = '#e67e22'; return;
-                }
-        
-                itemFormStatusP.textContent = '處理中...'; itemFormStatusP.style.color = '#3498db';
-                const submitButton = itemForm.querySelector('button[type="submit"]');
-                submitButton.disabled = true;
-                showLoadingOverlay(true); // 確保 loading 一定顯示
-        
-                let imageUrl = itemFormImageUrlInput.value; // Existing URL if not changed
-                let aiKeywordsText = itemFormAiKeywordsDiv.textContent; // Existing AI keywords text
-                let aiKeywordsArray = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ');
-        
-                try {
-                    if (imageFile) {
-                        const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
-                        if (!uploadResult.success) {
-                            itemFormStatusP.textContent = `圖片處理失敗: ${uploadResult.error}`; itemFormStatusP.style.color = '#c0392b';
-                            return;
-                        }
-                        imageUrl = uploadResult.imageUrl;
-                        aiKeywordsArray = uploadResult.aiKeywords;
-                    }
-        
-                    const itemData = {
-                        item_name: itemName,
-                        item_description: description,
-                        quantity: quantity,
-                        item_image_url: imageUrl,
-                        ai_item_keywords: aiKeywordsArray,
-                        box_id: boxId // Crucial for both add and edit (if allowing move via edit)
-                    };
-        
-                    let savedItem;
-                    if (isEditing) {
-                        savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { // warehouseId for permission context
-                            method: 'PUT',
-                            body: itemData
-                        });
-                    } else {
-                        savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`, {
-                            method: 'POST',
-                            body: itemData
-                        });
-                    }
-                    itemFormStatusP.textContent = `物品 "${savedItem.item_name}" 保存成功！`; itemFormStatusP.style.color = '#2ecc71';
-                    setTimeout(() => {
-                        closeModal('itemModal');
-                        // Refresh items for the specific box
-                        const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                        if (itemsContainer) {
-                            itemsContainer.dataset.loadedItems = 'false'; // Force reload
-                            toggleItemListView(boxId, boxGridArea.querySelector(`.toggle-items-btn[data-box-id="${boxId}"]`));
-                        }
-                        loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Also refresh box count
-                    }, 1000);
-                } catch (error) {
-                    itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
-                } finally {
-                    submitButton.disabled = false;
-                    showLoadingOverlay(false); // 確保 loading 一定會隱藏
-                }
+
+
+        async function handleSaveItem(event) {
+            event.preventDefault();
+            const itemId = itemFormItemIdInput.value;
+            const boxId = itemFormBoxIdInput.value; // 這是它屬於或將屬於的紙箱
+            const isEditing = !!itemId;
+
+            const itemName = itemFormNameInput.value.trim();
+            const description = itemFormDescriptionTextarea.value.trim();
+            const quantity = parseInt(itemFormQuantityInput.value);
+            const imageFile = itemFormImageFileInput.files[0];
+
+            if (!itemName) {
+                itemFormStatusP.textContent = '物品名稱為必填。'; itemFormStatusP.style.color = '#e67e22'; return;
             }
-        
+            if (isNaN(quantity) || quantity < 0) {
+                itemFormStatusP.textContent = '數量必須是非負整數。'; itemFormStatusP.style.color = '#e67e22'; return;
+            }
+
+            itemFormStatusP.textContent = '處理中...';
+            itemFormStatusP.style.color = '#3498db';
+            const submitButton = itemForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            showLoadingOverlay(true); // 確保 loading 一定顯示
+
+            let imageUrl = itemFormImageUrlInput.value; // 如果不更改，則使用現有的 URL
+            let aiKeywordsText = itemFormAiKeywordsDiv.textContent; // 現有的 AI 關鍵字文字
+            let aiKeywordsArray = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ').map(k => k.trim()).filter(k => k);
+
+            try {
+                if (imageFile) {
+                    itemFormStatusP.textContent = '正在上傳並分析圖片...';
+                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
+                    if (!uploadResult.success) {
+                        // 拋出錯誤，由外部 catch 區塊捕獲。
+                        // 這確保 handleSaveItem 的 finally 區塊總能執行。
+                        throw new Error(`圖片處理失敗: ${uploadResult.error}`);
+                    }
+                    itemFormStatusP.textContent = '圖片處理完成，正在保存物品...';
+                    imageUrl = uploadResult.imageUrl;
+                    aiKeywordsArray = uploadResult.aiKeywords; // 這應該是 API 返回的陣列
+                }
+
+                const itemData = {
+                    item_name: itemName,
+                    item_description: description,
+                    quantity: quantity,
+                    item_image_url: imageUrl,
+                    ai_item_keywords: aiKeywordsArray, // 作為陣列發送
+                    box_id: boxId // 對於新增和編輯 (如果允許透過編輯移動) 都很重要
+                };
+
+                let savedItem;
+                if (isEditing) {
+                    savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { // warehouseId 用於權限上下文
+                        method: 'PUT',
+                        body: itemData
+                    });
+                } else {
+                    savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`, {
+                        method: 'POST',
+                        body: itemData
+                    });
+                }
+                itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; itemFormStatusP.style.color = '#2ecc71';
+
+                setTimeout(() => {
+                    closeModal('itemModal');
+                    // 刷新特定紙箱的物品
+                    const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                    if (itemsContainer) {
+                        itemsContainer.dataset.loadedItems = 'false'; // 強制重新載入
+                        // 確保正確調用 toggleItemListView 以在展開時刷新
+                        const expandButton = boxGridArea.querySelector(`.toggle-items-btn[data-box-id="${boxId}"]`);
+                        if (expandButton && currentBoxViewItemsExpanded[boxId]) { // 僅當已展開時才重新載入
+                           loadItemsForBox(boxId, itemsContainer);
+                        } else if (expandButton) { // 如果是折疊的，則標記為下次展開時重新載入
+                           // 此處無需操作，toggleItemListView 會處理
+                        }
+                    }
+                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // 同時刷新紙箱數量
+                }, 1000);
+
+            } catch (error) {
+                itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
+            } finally {
+                submitButton.disabled = false;
+                showLoadingOverlay(false); // 確保 loading 一定會隱藏
+            }
+        }
+
             async function handleDeleteItem(itemId, itemName, boxId) {
                 if (!confirm(`確定要刪除物品 "${itemName}" 嗎？`)) return;
                 try {
                     await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { method: 'DELETE' });
                     alert(`物品 "${itemName}" 已刪除。`);
                     const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                    if (itemsContainer && currentBoxViewItemsExpanded[boxId]) { // If expanded, reload
+                    if (itemsContainer && currentBoxViewItemsExpanded[boxId]) { // 如果已展開，則重新載入
                         itemsContainer.dataset.loadedItems = 'false';
                         loadItemsForBox(boxId, itemsContainer);
                     }
-                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Refresh box count
-                } catch (error) { /* Error shown by apiFetch */ }
+                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // 刷新紙箱數量
+                } catch (error) { /* 錯誤已由 apiFetch 顯示 */ }
             }
-        
+
             // ===========================
-            // == Search Functions      ==
+            // == 搜尋函數      ==
             // ===========================
             async function handleSearch(page = 1) {
                 currentSearchPage = page;
                 const searchTerm = searchInput.value.trim();
                 const searchAll = searchAllWarehousesToggle.checked;
-        
+
                 if (!searchTerm) {
                     searchResultsArea.innerHTML = '';
                     searchResultsMessage.textContent = '請輸入搜尋關鍵字。';
                     searchPagination.innerHTML = '';
                     return;
                 }
-        
+
                 searchResultsMessage.textContent = '搜尋中...';
                 searchResultsArea.innerHTML = '';
                 searchPagination.innerHTML = '';
-        
+
                 let url;
                 if (searchAll) {
                     url = `/api/box/my-warehouses/search-all-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
@@ -1575,7 +1531,7 @@
                     }
                     url = `/api/box/warehouses/${currentSelectedWarehouseId}/search-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
                 }
-        
+
                 try {
                     const data = await apiFetch(url);
                     renderSearchResults(data.results);
@@ -1589,11 +1545,11 @@
                     searchResultsMessage.textContent = `搜尋失敗: ${error.message || '未知錯誤'}`;
                 }
             }
-        
+
             function renderSearchResults(results) {
                 searchResultsArea.innerHTML = '';
                 if (!results || results.length === 0) return;
-        
+
                 results.forEach(result => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'search-result-item';
@@ -1608,108 +1564,154 @@
                     } else { // box
                          detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
                     }
-                    // Add a button/link to navigate to the box or item view
+                    // 新增按鈕/連結以導覽至紙箱或物品檢視
                     detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
                     itemDiv.innerHTML = detailsHtml;
                     searchResultsArea.appendChild(itemDiv);
                 });
-        
-                // Add event listeners for view details buttons in search results
+
+                // 為搜尋結果中的查看詳情按鈕新增事件監聽器
                 searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const { type, warehouseId, boxId, itemId } = e.target.dataset;
-                        currentSelectedWarehouseId = warehouseId; // Set warehouse context
-                        currentSelectedWarehouseName = ""; // May need to fetch warehouse name if not already known
+                        currentSelectedWarehouseId = warehouseId; // 設定倉庫上下文
+                        currentSelectedWarehouseName = ""; // 如果未知，可能需要獲取倉庫名稱
                         const whCard = warehouseListDiv.querySelector(`.enter-warehouse[data-warehouse-id="${warehouseId}"]`);
                         if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName;
-        
+
                         boxManagementTabLink.style.display = 'inline-block';
                         switchTab('tab-box-management');
-                        // After tab switch, specifically expand the box and potentially highlight the item
-                        // This requires loadBoxesForWarehouse to complete and then to find and expand the specific box/item.
-                        // For now, it just takes to the box management tab of that warehouse.
-                        // You might need a more sophisticated way to "deep link" or highlight.
-                        setTimeout(() => { // Allow tab switch and box loading
+                        // 切換分頁後，特別展開紙箱並可能突顯物品
+                        // 這需要 loadBoxesForWarehouse 完成後才能找到並展開特定的紙箱/物品。
+                        // 目前僅導向該倉庫的紙箱管理分頁。
+                        // 可能需要更複雜的方式來實現「深層連結」或突顯。
+                        setTimeout(() => { // 允許分頁切換和紙箱載入
                             const boxCard = boxGridArea.querySelector(`.box-card[data-box-id="${boxId}"]`);
                             if(boxCard){
                                 const toggleBtn = boxCard.querySelector('.toggle-items-btn');
                                 if(toggleBtn && !currentBoxViewItemsExpanded[boxId]){
-                                    toggleItemListView(boxId, toggleBtn); // Expand items if not already
+                                    toggleItemListView(boxId, toggleBtn); // 如果未展開，則展開物品
                                 }
-                                // Highlight logic can be added here
+                                // 此處可加入突顯邏輯
                             }
-                        }, 500); // Delay to allow DOM updates
+                        }, 500); // 延遲以允許 DOM 更新
                     });
                 });
             }
-        
+
             function toggleAllItemsInCurrentBoxView() {
-            // 取得所有 box 的 .toggle-items-btn 按鈕
-            const toggleButtons = boxGridArea.querySelectorAll('.toggle-items-btn');
-            // 判斷目前大多數是展開還是收合
-            let expandedCount = 0;
-            toggleButtons.forEach(btn => {
-                const boxId = btn.dataset.boxId;
-                if (currentBoxViewItemsExpanded[boxId]) expandedCount++;
-            });
-            const shouldExpand = expandedCount < toggleButtons.length / 2; // 如果大多數是收合，就全部展開
+                // 取得所有紙箱的 .toggle-items-btn 按鈕
+                const toggleButtons = boxGridArea.querySelectorAll('.toggle-items-btn');
+                // 判斷目前大多數是展開還是收合
+                let expandedCount = 0;
+                toggleButtons.forEach(btn => {
+                    const boxId = btn.dataset.boxId;
+                    if (currentBoxViewItemsExpanded[boxId]) expandedCount++;
+                });
+                const shouldExpand = expandedCount < toggleButtons.length / 2; // 如果大多數是收合，就全部展開
 
-            toggleButtons.forEach(btn => {
-                const boxId = btn.dataset.boxId;
-                if (shouldExpand && !currentBoxViewItemsExpanded[boxId]) {
-                    toggleItemListView(boxId, btn);
-                } else if (!shouldExpand && currentBoxViewItemsExpanded[boxId]) {
-                    toggleItemListView(boxId, btn);
-                }
-            });
-        }
-        
-           
-            
-     // --- Pagination ---
-     function renderPagination(totalPages, currentPage, PaginatiodId, clickHandler) {
-                     const paginationElement = document.getElementById(PaginatiodId);
-                    if (!paginationElement) return;
-                    paginationElement.innerHTML = '';
-                    if (totalPages <= 1) return;
-        
-                    // ... (Your existing pagination rendering logic, adapted to use clickHandler)
-                     // Example:
-                    const prevButton = document.createElement('button');
-                    prevButton.textContent = '上一頁';
-                    prevButton.disabled = currentPage === 1;
-                    prevButton.addEventListener('click', () => clickHandler(currentPage - 1));
-                    paginationElement.appendChild(prevButton);
-        
-                    for (let i = 1; i <= totalPages; i++) {
-                        const pageButton = document.createElement('button');
-                        pageButton.textContent = i;
-                        pageButton.disabled = i === currentPage;
-                        if(i === currentPage) pageButton.classList.add('active');
-                        pageButton.addEventListener('click', () => clickHandler(i));
-                        paginationElement.appendChild(pageButton);
+                toggleButtons.forEach(btn => {
+                    const boxId = btn.dataset.boxId;
+                    if (shouldExpand && !currentBoxViewItemsExpanded[boxId]) {
+                        toggleItemListView(boxId, btn);
+                    } else if (!shouldExpand && currentBoxViewItemsExpanded[boxId]) {
+                        toggleItemListView(boxId, btn);
                     }
-                     const nextButton = document.createElement('button');
-                    nextButton.textContent = '下一頁';
-                    nextButton.disabled = currentPage === totalPages;
-                    nextButton.addEventListener('click', () => clickHandler(currentPage + 1));
-                    paginationElement.appendChild(nextButton);
-                }
-        
-                function handleBoxPaginationClick(page) {
-                    loadBoxesForWarehouse(currentSelectedWarehouseId, page);
-                }
-                function handleSearchPaginationClick(page) {
-                    handleSearch(page);
-                }
-        
-    
-    
-    
-            initializePage();
-        });
+                });
+            }
 
-        
-        </script>
+
+
+        // --- 分頁 ---
+        function renderPagination(totalPages, currentPage, paginationId, clickHandler) {
+            const paginationElement = document.getElementById(paginationId);
+            if (!paginationElement) return;
+            paginationElement.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            // ... (您現有的分頁渲染邏輯，調整為使用 clickHandler)
+            // 範例：
+            const prevButton = document.createElement('button');
+            prevButton.textContent = '上一頁';
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => clickHandler(currentPage - 1));
+            paginationElement.appendChild(prevButton);
+
+            // 計算頁碼範圍 (例如：顯示當前頁前後各2頁，以及第一頁和最後一頁)
+            const maxPagesToShow = 5; // 最多顯示的數字按鈕數 (不含省略號)
+            const sidePages = Math.floor((maxPagesToShow - 1) / 2);
+            let startPage = Math.max(1, currentPage - sidePages);
+            let endPage = Math.min(totalPages, currentPage + sidePages);
+
+            // 調整範圍以確保顯示足夠的頁碼 (如果總頁數少於 maxPagesToShow)
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                if (currentPage <= sidePages + 1) {
+                    endPage = Math.min(totalPages, maxPagesToShow);
+                } else if (currentPage >= totalPages - sidePages) {
+                    startPage = Math.max(1, totalPages - maxPagesToShow + 1);
+                }
+            }
+
+            if (startPage > 1) {
+                const firstPageButton = document.createElement('button');
+                firstPageButton.textContent = 1;
+                firstPageButton.addEventListener('click', () => clickHandler(1));
+                paginationElement.appendChild(firstPageButton);
+                if (startPage > 2) {
+                    const ellipsisSpan = document.createElement('span');
+                    ellipsisSpan.textContent = '...';
+                    ellipsisSpan.style.margin = '0 5px';
+                    paginationElement.appendChild(ellipsisSpan);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.disabled = i === currentPage;
+                if (i === currentPage) pageButton.classList.add('active');
+                pageButton.addEventListener('click', () => clickHandler(i));
+                paginationElement.appendChild(pageButton);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsisSpan = document.createElement('span');
+                    ellipsisSpan.textContent = '...';
+                    ellipsisSpan.style.margin = '0 5px';
+                    paginationElement.appendChild(ellipsisSpan);
+                }
+                const lastPageButton = document.createElement('button');
+                lastPageButton.textContent = totalPages;
+                lastPageButton.addEventListener('click', () => clickHandler(totalPages));
+                paginationElement.appendChild(lastPageButton);
+            }
+
+
+            const nextButton = document.createElement('button');
+            nextButton.textContent = '下一頁';
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.addEventListener('click', () => clickHandler(currentPage + 1));
+            paginationElement.appendChild(nextButton);
+        }
+
+        function handleBoxPaginationClick(page) {
+            loadBoxesForWarehouse(currentSelectedWarehouseId, page);
+        }
+        function handleSearchPaginationClick(page) {
+            handleSearch(page);
+        }
+
+
+
+
+        initializePage();
+    });
+
+
+</script>
+
+
+
 </body>
 </html>
