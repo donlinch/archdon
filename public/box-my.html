@@ -922,10 +922,12 @@
 
         // --- 事件監聽器設置 (如先前提供，並加入新的) ---
         function setupEventListeners() {
+            console.log('setupEventListeners called'); // Add this
             // ... (已有的監聽器) ...
             logoutButton.addEventListener('click', logout);
             tabLinks.forEach(link => {
                 link.addEventListener('click', () => {
+                    console.log(`Tab link clicked: ${link.dataset.tab}`); // Add this
                     if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
                         alert('請先從「我的倉庫」分頁選擇一個倉庫。');
                         return;
@@ -995,9 +997,9 @@
         // --- 分頁導覽 (如先前提供) ---
         function switchTab(tabId) {
             console.group('Switch Tab Debug');
-    
-    console.groupEnd();
-            
+            console.log(`Switching to tab: ${tabId}`);
+            console.trace('SwitchTab called from:'); // Add this for call stack
+            console.groupEnd();
 
             tabContents.forEach(content => content.classList.remove('active'));
             tabLinks.forEach(link => link.classList.remove('active'));
@@ -1012,7 +1014,8 @@
             } else  if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
                     boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-                    loadBoxesForWarehouse(currentSelectedWarehouseId);
+                    console.log('Calling loadBoxesForWarehouse from switchTab'); // Add this
+                    loadBoxesForWarehouse(currentSelectedWarehouseId); // This is one call
                     
                     // Reset view toggle to grid view by default
                     gridViewBtn.classList.add('active');
