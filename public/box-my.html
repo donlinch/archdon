@@ -524,6 +524,50 @@
             background-color: var(--hover-color);
             transform: translateY(-2px);
         }
+
+
+        .items-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.item-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.item-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.item-card .item-details {
+    margin-bottom: 10px;
+}
+
+.item-card .item-details h4 {
+    margin: 0 0 5px 0;
+    font-size: 0.9em;
+}
+
+.item-card .item-actions {
+    display: flex;
+    justify-content: space-between;
+}
+
+.item-card .item-actions button {
+    font-size: 0.8em;
+    padding: 5px 10px;
+}
+
     </style>
 </head>
 <body>
@@ -1653,7 +1697,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             }
 
             async function loadItemsForBox(boxId, containerElement) {
-                if (!currentSelectedWarehouseId) return; // 正常情況下不會發生
+                if (!currentSelectedWarehouseId) return;
 
                 const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
                 const placeholder = containerElement.querySelector('.items-loading-placeholder');
@@ -1663,39 +1707,53 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 existingItems.forEach(item => item.remove());
                 if(placeholder) placeholder.textContent = '正在載入物品...';
 
-
                 try {
                     const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
+                    
+                    // 創建 items-grid-container
+                    const itemsGridContainer = document.createElement('div');
+                    itemsGridContainer.className = 'items-grid-container';
+
                     if (items.length === 0) {
                         if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
                     } else {
-                        if(placeholder) placeholder.style.display = 'none'; // 隱藏提示
+                        if(placeholder) placeholder.style.display = 'none';
+                        
                         items.forEach(item => {
-                            const itemDiv = document.createElement('div');
-                            itemDiv.className = 'item-entry';
-                            itemDiv.dataset.itemId = item.item_id;
-                            itemDiv.innerHTML = `
-                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/box_item.png'">
-                                <div class="item-name">
-                                    <strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})<br>
-                                    <small style="color:#777;">${escapeHtml(item.item_description || '無描述')}</small>
-                                    
+                            const itemCard = document.createElement('div');
+                            itemCard.className = 'item-card';
+                            itemCard.innerHTML = `
+                                <img src="${item.item_image_url || '/images/default_item.png'}" 
+                                     alt="${escapeHtml(item.item_name)}" 
+                                     onerror="this.src='/images/box_item.png'">
+                                <div class="item-details">
+                                    <h4>${escapeHtml(item.item_name)}</h4>
+                                    <p>數量: ${item.quantity}</p>
                                 </div>
                                 <div class="item-actions">
-                                    <button class="edit-item-btn" data-item-id="${item.item_id}" data-box-id="${boxId}">編輯</button>
-                                    <button class="delete-item-btn" data-item-id="${item.item_id}" data-item-name="${escapeHtml(item.item_name)}" data-box-id="${boxId}">刪除</button>
+                                    <button class="edit-item-btn" 
+                                            data-item-id="${item.item_id}" 
+                                            data-box-id="${boxId}">編輯</button>
+                                    <button class="delete-item-btn" 
+                                            data-item-id="${item.item_id}" 
+                                            data-item-name="${escapeHtml(item.item_name)}" 
+                                            data-box-id="${boxId}">刪除</button>
                                 </div>
                             `;
-                            // 在「新增物品」按鈕前插入
-                            if (addItemBtn) {
-                                containerElement.insertBefore(itemDiv, addItemBtn);
-                            } else {
-                                containerElement.appendChild(itemDiv);
-                            }
+                            
+                            itemsGridContainer.appendChild(itemCard);
                         });
                     }
+
+                    // 在「新增物品」按鈕前插入
+                    if (addItemBtn) {
+                        containerElement.insertBefore(itemsGridContainer, addItemBtn);
+                    } else {
+                        containerElement.appendChild(itemsGridContainer);
+                    }
+
                     containerElement.dataset.loadedItems = 'true';
-                    addItemActionListeners(containerElement); // 為新物品重新綁定監聽器
+                    addItemActionListeners(containerElement);
                 } catch (error) {
                     if(placeholder) {
                         placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
