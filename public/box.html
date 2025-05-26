@@ -202,6 +202,48 @@
         </div>
     </div>
 
+<!-- 在 box.html 的 .container 內部，user-selection-area 之後 -->
+<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+    <p>還沒有帳號？</p>
+    <button id="showRegisterModalBtn" class="button-style-secondary">註冊新使用者</button>
+</div>
+
+<!-- Registration Modal -->
+<div id="registerModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" data-modal-id="registerModal">×</span>
+        <h2>註冊新使用者</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="registerUsername">用戶名 (至少3位):</label>
+                <input type="text" id="registerUsername" required minlength="3">
+            </div>
+            <div class="form-group">
+                <label for="registerPassword">密碼 (至少6位):</label>
+                <input type="password" id="registerPassword" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label for="registerConfirmPassword">確認密碼:</label>
+                <input type="password" id="registerConfirmPassword" required>
+            </div>
+            <!-- 可選的頭像上傳，初期可以先省略，讓用戶在登入後設置 -->
+            <!--
+            <div class="form-group">
+                <label for="registerProfileImageFile">頭像 (可選):</label>
+                <input type="file" id="registerProfileImageFile" accept="image/*">
+                <div class="image-upload-preview" id="registerImagePreview"><img></div>
+            </div>
+            -->
+            <p id="register-modal-error-message" style="color: #c0392b; font-size: 0.9em; margin-bottom: 10px; display:none;"></p>
+            <div class="modal-actions">
+                <button type="button" class="secondary close-modal-btn" data-modal-id="registerModal">取消</button>
+                <button type="submit" class="primary">註冊</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const userSelectionArea = document.getElementById('user-selection-area');

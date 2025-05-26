@@ -76,6 +76,82 @@ module.exports = function(dependencies) {
         }
     });
 
+
+
+
+
+
+
+// POST /api/box/users/register - 新用戶註冊
+router.post('/users/register', async (req, res) => {
+    const { username, password, confirmPassword, user_profile_image_url } = req.body;
+
+    // 1. 輸入驗證
+    if (!username || !password || !confirmPassword) {
+        return res.status(400).json({ error: '用戶名、密碼和確認密碼為必填項。' });
+    }
+    if (username.trim().length < 3) {
+        return res.status(400).json({ error: '用戶名長度至少需要3位。' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ error: '密碼長度至少需要6位。' });
+    }
+    if (password !== confirmPassword) {
+        return res.status(400).json({ error: '兩次輸入的密碼不一致。' });
+    }
+
+    try {
+        // 2. 檢查用戶名是否已存在 (不區分大小寫)
+        const userCheck = await pool.query('SELECT 1 FROM BOX_Users WHERE LOWER(username) = LOWER($1)', [username.trim()]);
+        if (userCheck.rows.length > 0) {
+            return res.status(409).json({ error: '此用戶名已被註冊，請選擇其他名稱。' }); // 409 Conflict
+        }
+
+        // 3. 哈希密碼
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 4. 插入新用戶到數據庫
+        const defaultProfileImage = user_profile_image_url || '/images/default_avatar.png'; // 可以設置一個預設頭像路徑
+        const newUserResult = await pool.query(
+            `INSERT INTO BOX_Users (username, password_hash, user_profile_image_url)
+             VALUES ($1, $2, $3)
+             RETURNING user_id, username, user_profile_image_url, created_at`,
+            [username.trim(), hashedPassword, defaultProfileImage]
+        );
+
+        const newUser = newUserResult.rows[0];
+
+        // 5. (可選) 註冊成功後自動為用戶登入並返回Token
+        const tokenPayload = { userId: newUser.user_id, username: newUser.username };
+        const token = jwt.sign(tokenPayload, BOX_JWT_SECRET, { expiresIn: '7d' });
+
+        res.status(201).json({
+            success: true,
+            message: '註冊成功！',
+            token: token, // 讓前端可以直接使用此token登入
+            user: {
+                userId: newUser.user_id,
+                username: newUser.username,
+                profileImageUrl: newUser.user_profile_image_url
+            }
+        });
+
+    } catch (err) {
+        console.error('[API POST /box/users/register] Error:', err);
+        // 避免暴露詳細的數據庫錯誤給前端
+        res.status(500).json({ error: '註冊過程中發生錯誤，請稍後再試。' });
+    }
+});
+
+
+
+
+
+
+
+
+
     router.post('/users/login', async (req, res) => {
         const { username, password } = req.body;
         if (!username || !password) {
