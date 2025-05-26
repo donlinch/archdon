@@ -961,45 +961,69 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
         // =======================================
         // 此函數將被紙箱和物品表單在保存數據前調用
         async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
-            if (!imageFile) {
-                return { success: false, error: '未選擇圖片文件。' };
-            }
-            // 如果 multer 在伺服器端未處理，或為了更好的用戶體驗，可加入客戶端的大小/類型檢查
-            const MAX_SIZE = 15 * 1024 * 1024; // 15MB
-            if (imageFile.size > MAX_SIZE) {
-                return { success: false, error: `圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制。`};
-            }
-            const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!allowedMimes.includes(imageFile.type)) {
-                 return { success: false, error: '只允許上傳 jpeg, png, gif, webp 格式的圖片。'};
-            }
+            console.group('圖片上傳與分析');
+            console.log('上傳圖片詳情:', {
+                fileName: imageFile.name,
+                fileSize: imageFile.size,
+                fileType: imageFile.type
+            });
 
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('fileType', fileTypeString); // 例如：'box_cover', 'item_image', 'profile_image'
-
-            // 從此函數中移除 showLoadingOverlay(true) 和 showLoadingOverlay(false)
-            // 調用者 (handleSaveItem) 將管理全局的 loading overlay
             try {
-                // 此處不需要 'Content-Type': 'multipart/form-data'，
-                // fetch 會自動為 FormData 處理
+                // 圖片驗證
+                const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+                if (imageFile.size > MAX_SIZE) {
+                    throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制`);
+                }
+
+                if (!allowedMimes.includes(imageFile.type)) {
+                    throw new Error('只允許上傳 jpeg, png, gif, webp 格式的圖片');
+                }
+
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('fileType', fileTypeString);
+
                 const response = await fetch('/api/box/upload-analyze-then-process-image', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }, // Token 至關重要
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}` 
+                    },
                     body: formData
                 });
 
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || `圖片上傳與分析失敗 (${response.status})`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`圖片上傳失敗: ${errorText}`);
                 }
-                return { success: true, imageUrl: data.image_url, aiKeywords: data.ai_keywords, uploadedFileId: data.uploaded_file_id };
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || '圖片處理失敗');
+                }
+
+                console.log('圖片上傳成功:', {
+                    imageUrl: data.image_url,
+                    aiKeywords: data.ai_keywords
+                });
+
+                return {
+                    success: true,
+                    imageUrl: data.image_url,
+                    aiKeywords: data.ai_keywords || []
+                };
+
             } catch (error) {
-                console.error('圖片上傳與分析過程中發生錯誤:', error);
-                // showApiError(error.message || '圖片處理時發生未知錯誤。'); // 由調用者處理錯誤顯示
-                return { success: false, error: error.message || '圖片處理時發生未知錯誤。' };
+                console.error('圖片上傳與分析錯誤:', error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            } finally {
+                console.groupEnd();
             }
-            // 從此處移除包含 showLoadingOverlay(false) 的 finally 區塊
         }
 
 
@@ -1387,24 +1411,34 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             // == 物品管理函數 ==
             // ==============================
             function openAddItemModal(boxIdForNewItem) {
+                console.group('開啟新增物品模態框');
+                console.log('當前上下文:', {
+                    boxIdForNewItem,
+                    currentSelectedWarehouseId,
+                    currentSelectedWarehouseName
+                });
 
-                console.log('Opening Add Item Modal', {
-        boxIdForNewItem,
-        currentSelectedWarehouseId,
-        currentSelectedWarehouseName
-    });
-
-
+                // 重置表單
                 itemForm.reset();
                 itemModalTitle.textContent = `新增物品到紙箱 #${boxIdForNewItem}`;
                 itemFormItemIdInput.value = '';
-                itemFormBoxIdInput.value = boxIdForNewItem; // 設定目標紙箱 ID
+                itemFormBoxIdInput.value = boxIdForNewItem;
+                
+                // 重置預覽
                 itemFormImageUrlInput.value = '';
                 itemImagePreviewDiv.style.display = 'none';
                 itemImagePreviewDiv.querySelector('img').src = '#';
+                
+                // 重置 AI 關鍵字
                 itemFormAiKeywordsDiv.innerHTML = '<em>上傳圖片後將顯示AI建議關鍵字</em>';
+                
+                // 清除狀態
                 itemFormStatusP.textContent = '';
+                
+                // 打開模態框
                 openModal('itemModal');
+                
+                console.groupEnd();
             }
 
             async function openEditItemModal(itemId, boxIdContext) {
@@ -1453,186 +1487,93 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
 
         async function handleSaveItem(event) {
-
-
-
-            console.group('handleSaveItem Debug');
-    console.log('全域變數狀態:', {
-        currentSelectedWarehouseId,
-        currentSelectedWarehouseName,
-        currentBoxPage
-    });
-
-    // 額外的安全檢查
-    if (typeof currentSelectedWarehouseId === 'undefined' || currentSelectedWarehouseId === null) {
-        console.error('currentSelectedWarehouseId is not defined');
-        itemFormStatusP.textContent = '請先選擇一個倉庫。';
-        itemFormStatusP.style.color = '#e67e22';
-        console.groupEnd();
-        return;
-    }
-
-
-
-
- // 額外的安全檢查
- if (typeof currentSelectedWarehouseId === 'undefined' || currentSelectedWarehouseId === null) {
-        console.error('currentSelectedWarehouseId is not defined');
-        itemFormStatusP.textContent = '請先選擇一個倉庫。';
-        itemFormStatusP.style.color = '#e67e22';
-        return;
-    }
-
-            event.preventDefault();
-            const itemId = itemFormItemIdInput.value;
-            const boxId = itemFormBoxIdInput.value; // 這是它屬於或將屬於的紙箱
-            const isEditing = !!itemId;
-
-            const itemName = itemFormNameInput.value.trim();
-            const description = itemFormDescriptionTextarea.value.trim();
-            const quantity = parseInt(itemFormQuantityInput.value);
-            const imageFile = itemFormImageFileInput.files[0];
-
-            // 詳細的驗證和日誌
-            console.group('handleSaveItem Detailed Validation');
-            console.log('Context:', {
-                isEditing,
-    currentWarehouseId: currentSelectedWarehouseId, // 修正這行
-    boxId
-            });
-
-            // 驗證 currentWarehouseId
-            if (!currentSelectedWarehouseId) {
-                console.error('Validation Failed: No warehouse selected');
-                itemFormStatusP.textContent = '請先選擇一個倉庫。'; 
-                itemFormStatusP.style.color = '#e67e22'; 
-                console.groupEnd();
-                return;
-            }
-
-            // 驗證 boxId
-            if (!boxId) {
-                console.error('Validation Failed: No box selected');
-                itemFormStatusP.textContent = '請選擇一個紙箱。'; 
-                itemFormStatusP.style.color = '#e67e22'; 
-                console.groupEnd();
-                return;
-            }
-
-            // 驗證 itemName
-            if (!itemName) {
-                console.error('Validation Failed: Item name is empty');
-                itemFormStatusP.textContent = '物品名稱為必填。'; 
-                itemFormStatusP.style.color = '#e67e22'; 
-                console.groupEnd();
-                return;
-            }
-
-            // 驗證 quantity
-            if (isNaN(quantity) || quantity < 0) {
-                console.error('Validation Failed: Invalid quantity', { quantity });
-                itemFormStatusP.textContent = '數量必須是非負整數。'; 
-                itemFormStatusP.style.color = '#e67e22'; 
-                console.groupEnd();
-                return;
-            }
-
-            console.log('Form Data:', {
-                itemName,
-                description,
-                quantity,
-                imageFilePresent: !!imageFile,
-                imageFileName: imageFile ? imageFile.name : 'No file',
-                imageFileSize: imageFile ? imageFile.size : 'N/A',
-                imageFileType: imageFile ? imageFile.type : 'N/A'
-            });
-            console.groupEnd();
-
-            itemFormStatusP.textContent = '處理中...';
-            itemFormStatusP.style.color = '#3498db';
-            const submitButton = itemForm.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            showLoadingOverlay(true);
-
-            let imageUrl = itemFormImageUrlInput.value;
-            let aiKeywordsText = itemFormAiKeywordsDiv.textContent;
-            let aiKeywordsArray = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ').map(k => k.trim()).filter(k => k);
-
+            console.group('handleSaveItem 詳細除錯');
+            
             try {
-                if (imageFile) {
-                    itemFormStatusP.textContent = '正在上傳並分析圖片...';
-                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
-                    if (!uploadResult.success) {
-                        console.error('Image upload and analysis failed:', uploadResult.error);
-                        throw new Error(`圖片處理失敗: ${uploadResult.error}`);
-                    }
-                    itemFormStatusP.textContent = '圖片處理完成，正在保存物品...';
-                    imageUrl = uploadResult.imageUrl;
-                    aiKeywordsArray = uploadResult.aiKeywords;
+                // 預防性檢查
+                if (!currentSelectedWarehouseId) {
+                    throw new Error('未選擇倉庫');
                 }
 
-                const itemData = {
-                    item_name: itemName,
-                    item_description: description,
-                    quantity: quantity,
-                    item_image_url: imageUrl,
-                    ai_item_keywords: aiKeywordsArray,
-                    box_id: boxId
+                event.preventDefault();
+                
+                // 收集所有表單數據
+                const formData = {
+                    itemId: itemFormItemIdInput.value,
+                    boxId: itemFormBoxIdInput.value,
+                    itemName: itemFormNameInput.value.trim(),
+                    description: itemFormDescriptionTextarea.value.trim(),
+                    quantity: parseInt(itemFormQuantityInput.value),
+                    imageFile: itemFormImageFileInput.files[0]
                 };
 
-                console.group('API Request Payload');
-                console.log('Sending item data:', itemData);
-                console.log('API Endpoint:', isEditing 
-                    ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}` 
-                    : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`
-                );
-                console.groupEnd();
+                console.log('表單數據:', formData);
 
-                let savedItem;
-                if (isEditing) {
-                    savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, {
-                        method: 'PUT',
-                        body: itemData
-                    });
-                } else {
-                    savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`, {
-                        method: 'POST',
-                        body: itemData
-                    });
+                // 驗證邏輯
+                if (!formData.itemName) {
+                    throw new Error('物品名稱不能為空');
                 }
 
-                console.log('Item saved successfully:', savedItem);
-                itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; 
+                if (isNaN(formData.quantity) || formData.quantity < 0) {
+                    throw new Error('數量必須是非負整數');
+                }
+
+                // 準備 API 請求數據
+                const apiPayload = {
+                    item_name: formData.itemName,
+                    item_description: formData.description,
+                    quantity: formData.quantity,
+                    box_id: formData.boxId
+                };
+
+                // 處理圖片上傳（如果有）
+                if (formData.imageFile) {
+                    const uploadResult = await handleImageUploadAndAnalyze(formData.imageFile, 'item_image');
+                    if (uploadResult.success) {
+                        apiPayload.item_image_url = uploadResult.imageUrl;
+                        apiPayload.ai_item_keywords = uploadResult.aiKeywords || [];
+                    }
+                }
+
+                console.log('API 請求數據:', apiPayload);
+
+                // 發送 API 請求
+                const apiEndpoint = formData.itemId 
+                    ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${formData.itemId}`
+                    : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${formData.boxId}/items`;
+
+                const method = formData.itemId ? 'PUT' : 'POST';
+
+                const savedItem = await apiFetch(apiEndpoint, {
+                    method,
+                    body: apiPayload
+                });
+
+                console.log('保存成功:', savedItem);
+
+                // 更新 UI
+                itemFormStatusP.textContent = `物品 "${savedItem.item_name}" 保存成功！`;
                 itemFormStatusP.style.color = '#2ecc71';
 
+                // 關閉模態框並刷新
                 setTimeout(() => {
                     closeModal('itemModal');
-                    const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                    if (itemsContainer) {
-                        itemsContainer.dataset.loadedItems = 'false';
-                        const expandButton = boxGridArea.querySelector(`.toggle-items-btn[data-box-id="${boxId}"]`);
-                        if (expandButton && currentBoxViewItemsExpanded[boxId]) {
-                           loadItemsForBox(boxId, itemsContainer);
-                        }
-                    }
                     loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
                 }, 1000);
 
             } catch (error) {
-                console.group('Item Save Error');
-                console.error('Full error object:', error);
-                console.error('Error details:', {
-                    message: error.message,
-                    status: error.status,
-                    data: error.data
-                });
-                console.groupEnd();
+                console.error('保存物品時發生錯誤:', error);
+                
+                // 詳細的錯誤處理
+                const errorMessage = error.data?.error 
+                    || error.message 
+                    || '保存物品時發生未知錯誤';
 
-                itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; 
+                itemFormStatusP.textContent = `保存失敗: ${errorMessage}`;
                 itemFormStatusP.style.color = '#c0392b';
+
             } finally {
-                submitButton.disabled = false;
-                showLoadingOverlay(false);
+                console.groupEnd();
             }
         }
 
