@@ -1409,22 +1409,50 @@
             const quantity = parseInt(itemFormQuantityInput.value);
             const imageFile = itemFormImageFileInput.files[0];
 
-            // 新增 log 方便 debug
-            console.log('handleSaveItem called', {
-                itemId,
-                boxId,
-                itemName,
-                description,
-                quantity,
-                imageFile,
-                isEditing
+            // 擴展 log 以包含更多詳細資訊
+            console.log('handleSaveItem called with detailed info:', {
+                context: {
+                    isEditing,
+                    currentWarehouseId: currentSelectedWarehouseId
+                },
+                formData: {
+                    itemId,
+                    boxId,
+                    itemName,
+                    description,
+                    quantity,
+                    imageFilePresent: !!imageFile,
+                    imageFileName: imageFile ? imageFile.name : 'No file',
+                    imageFileSize: imageFile ? imageFile.size : 'N/A',
+                    imageFileType: imageFile ? imageFile.type : 'N/A'
+                }
             });
 
             if (!itemName) {
-                itemFormStatusP.textContent = '物品名稱為必填。'; itemFormStatusP.style.color = '#e67e22'; return;
+                itemFormStatusP.textContent = '物品名稱為必填。'; 
+                itemFormStatusP.style.color = '#e67e22'; 
+                console.error('Save item failed: Item name is required');
+                return;
             }
             if (isNaN(quantity) || quantity < 0) {
-                itemFormStatusP.textContent = '數量必須是非負整數。'; itemFormStatusP.style.color = '#e67e22'; return;
+                itemFormStatusP.textContent = '數量必須是非負整數。'; 
+                itemFormStatusP.style.color = '#e67e22'; 
+                console.error('Save item failed: Invalid quantity');
+                return;
+            }
+
+            // 驗證 boxId 和 currentSelectedWarehouseId
+            if (!boxId) {
+                console.error('Save item failed: No box ID provided');
+                itemFormStatusP.textContent = '未選擇紙箱，請重新選擇。'; 
+                itemFormStatusP.style.color = '#e67e22'; 
+                return;
+            }
+            if (!currentSelectedWarehouseId) {
+                console.error('Save item failed: No warehouse ID available');
+                itemFormStatusP.textContent = '未選擇倉庫，請重新選擇。'; 
+                itemFormStatusP.style.color = '#e67e22'; 
+                return;
             }
 
             itemFormStatusP.textContent = '處理中...';
@@ -1440,10 +1468,10 @@
             try {
                 if (imageFile) {
                     itemFormStatusP.textContent = '正在上傳並分析圖片...';
+                    console.log('Attempting to upload and analyze image');
                     const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
                     if (!uploadResult.success) {
-                        // 拋出錯誤，由外部 catch 區塊捕獲。
-                        // 這確保 handleSaveItem 的 finally 區塊總能執行。
+                        console.error('Image upload and analysis failed:', uploadResult.error);
                         throw new Error(`圖片處理失敗: ${uploadResult.error}`);
                     }
                     itemFormStatusP.textContent = '圖片處理完成，正在保存物品...';
@@ -1460,19 +1488,25 @@
                     box_id: boxId // 對於新增和編輯 (如果允許透過編輯移動) 都很重要
                 };
 
+                console.log('Preparing to save item with data:', itemData);
+
                 let savedItem;
                 if (isEditing) {
+                    console.log('Attempting to update existing item');
                     savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { // warehouseId 用於權限上下文
                         method: 'PUT',
                         body: itemData
                     });
                 } else {
+                    console.log('Attempting to create new item');
                     savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`, {
                         method: 'POST',
                         body: itemData
                     });
                 }
-                itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; itemFormStatusP.style.color = '#2ecc71';
+                console.log('Item saved successfully:', savedItem);
+                itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; 
+                itemFormStatusP.style.color = '#2ecc71';
 
                 setTimeout(() => {
                     closeModal('itemModal');
@@ -1492,8 +1526,14 @@
                 }, 1000);
 
             } catch (error) {
-                console.error('保存物品時發生錯誤:', error); // 新增這行
-                itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
+                console.error('保存物品時發生錯誤 (FULL ERROR):', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    status: error.status,
+                    data: error.data
+                });
+                itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; 
+                itemFormStatusP.style.color = '#c0392b';
             } finally {
                 submitButton.disabled = false;
                 showLoadingOverlay(false); // 確保 loading 一定會隱藏
