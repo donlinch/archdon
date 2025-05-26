@@ -731,6 +731,11 @@
 
         // --- 分頁導覽 (如先前提供) ---
         function switchTab(tabId) {
+            console.group('Switch Tab Debug');
+    console.log('Switching to tab:', tabId);
+    console.log('Current Warehouse ID:', currentSelectedWarehouseId);
+    console.log('Current Warehouse Name:', currentSelectedWarehouseName);
+    console.groupEnd();
             console.log('Switching to tab:', tabId);
             console.log('Current Warehouse ID:', currentSelectedWarehouseId);
 
@@ -1084,12 +1089,24 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
-                    if (!warehouseId) {
-                        boxListMessage.textContent = '請先選擇一個倉庫。';
-                        boxGridArea.innerHTML = '';
-                        boxListPagination.innerHTML = '';
-                        return;
-                    }
+
+                    console.log('Loading Boxes for Warehouse', {
+        warehouseId,
+        page,
+        currentSelectedWarehouseId
+    });
+
+    if (!warehouseId) {
+        console.error('No warehouse ID provided');
+        boxListMessage.textContent = '請先選擇一個倉庫。';
+        boxGridArea.innerHTML = '';
+        boxListPagination.innerHTML = '';
+        return;
+    }
+
+    currentSelectedWarehouseId = warehouseId;
+
+
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
@@ -1370,6 +1387,14 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             // == 物品管理函數 ==
             // ==============================
             function openAddItemModal(boxIdForNewItem) {
+
+                console.log('Opening Add Item Modal', {
+        boxIdForNewItem,
+        currentSelectedWarehouseId,
+        currentSelectedWarehouseName
+    });
+
+
                 itemForm.reset();
                 itemModalTitle.textContent = `新增物品到紙箱 #${boxIdForNewItem}`;
                 itemFormItemIdInput.value = '';
@@ -1383,6 +1408,16 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             }
 
             async function openEditItemModal(itemId, boxIdContext) {
+
+
+                console.log('Opening Edit Item Modal', {
+        itemId,
+        boxIdContext,
+        currentSelectedWarehouseId,
+        currentSelectedWarehouseName
+    });
+
+
                 itemForm.reset();
                 itemModalTitle.textContent = '編輯物品';
                 itemFormItemIdInput.value = itemId;
@@ -1419,6 +1454,27 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
         async function handleSaveItem(event) {
 
+
+
+            console.group('handleSaveItem Debug');
+    console.log('全域變數狀態:', {
+        currentSelectedWarehouseId,
+        currentSelectedWarehouseName,
+        currentBoxPage
+    });
+
+    // 額外的安全檢查
+    if (typeof currentSelectedWarehouseId === 'undefined' || currentSelectedWarehouseId === null) {
+        console.error('currentSelectedWarehouseId is not defined');
+        itemFormStatusP.textContent = '請先選擇一個倉庫。';
+        itemFormStatusP.style.color = '#e67e22';
+        console.groupEnd();
+        return;
+    }
+
+
+
+
  // 額外的安全檢查
  if (typeof currentSelectedWarehouseId === 'undefined' || currentSelectedWarehouseId === null) {
         console.error('currentSelectedWarehouseId is not defined');
@@ -1441,8 +1497,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             console.group('handleSaveItem Detailed Validation');
             console.log('Context:', {
                 isEditing,
-                currentWarehouseId,
-                boxId
+    currentWarehouseId: currentSelectedWarehouseId, // 修正這行
+    boxId
             });
 
             // 驗證 currentWarehouseId
