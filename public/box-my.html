@@ -647,9 +647,9 @@
             try {
                 const userData = await apiFetch('/api/box/users/me'); // 使用 defaultOptions 中的 token
                 currentUsernameSpan.textContent = userData.username;
-                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
+                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/wormming.png';
                 localStorage.setItem(`boxCurrentUsername`, userData.username); // 更新 local storage
-                localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/default_avatar.png');
+                localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/wormming.png');
             } catch (error) {
                 if (error.status === 401 || error.status === 403) {
                     alert('登入憑證無效或已過期，請重新登入。');
@@ -1089,7 +1089,7 @@
                             card.className = 'box-card';
                             card.dataset.boxId = box.box_id;
                             card.innerHTML = `
-                                <img src="${box.cover_image_url || '/images/default_box.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/default_box_error.png'">
+                                <img src="${box.cover_image_url || '/images/wormming.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/wormming.png'">
                                 <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
                                 <div class="box-name">${escapeHtml(box.box_name)}</div>
                                 <div class="item-count">物品: ${box.item_count || 0} 件</div>
@@ -1309,7 +1309,7 @@
                             itemDiv.className = 'item-entry';
                             itemDiv.dataset.itemId = item.item_id;
                             itemDiv.innerHTML = `
-                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/default_item_error.png'">
+                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/wormming.png'">
                                 <div class="item-name">
                                     <strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})<br>
                                     <small style="color:#777;">${escapeHtml(item.item_description || '無描述')}</small>
@@ -1408,6 +1408,17 @@
             const description = itemFormDescriptionTextarea.value.trim();
             const quantity = parseInt(itemFormQuantityInput.value);
             const imageFile = itemFormImageFileInput.files[0];
+
+            // 新增 log 方便 debug
+            console.log('handleSaveItem called', {
+                itemId,
+                boxId,
+                itemName,
+                description,
+                quantity,
+                imageFile,
+                isEditing
+            });
 
             if (!itemName) {
                 itemFormStatusP.textContent = '物品名稱為必填。'; itemFormStatusP.style.color = '#e67e22'; return;
