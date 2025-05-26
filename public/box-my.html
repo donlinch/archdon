@@ -648,9 +648,9 @@
             try {
                 const userData = await apiFetch('/api/box/users/me'); // 使用 defaultOptions 中的 token
                 currentUsernameSpan.textContent = userData.username;
-                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/wormming.png';
+                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/box_item.png';
                 localStorage.setItem(`boxCurrentUsername`, userData.username); // 更新 local storage
-                localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/wormming.png');
+                localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/box_item.png');
             } catch (error) {
                 if (error.status === 401 || error.status === 403) {
                     alert('登入憑證無效或已過期，請重新登入。');
@@ -1148,7 +1148,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                             card.className = 'box-card';
                             card.dataset.boxId = box.box_id;
                             card.innerHTML = `
-                                <img src="${box.cover_image_url || '/images/wormming.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/wormming.png'">
+                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/box_item.png'">
                                 <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
                                 <div class="box-name">${escapeHtml(box.box_name)}</div>
                                 <div class="item-count">物品: ${box.item_count || 0} 件</div>
@@ -1368,7 +1368,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                             itemDiv.className = 'item-entry';
                             itemDiv.dataset.itemId = item.item_id;
                             itemDiv.innerHTML = `
-                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/wormming.png'">
+                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/box_item.png'">
                                 <div class="item-name">
                                     <strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})<br>
                                     <small style="color:#777;">${escapeHtml(item.item_description || '無描述')}</small>
