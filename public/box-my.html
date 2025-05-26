@@ -302,7 +302,7 @@
 <body>
     <header class="page-header">
         <div class="user-info">
-            <img id="currentUserAvatar" src="/images/default_avatar.png" alt="User Avatar">
+            <img id="currentUserAvatar" src="data:image/svg+xml;utf8,<svg ...>..." alt="User Avatar">
             <span id="currentUsername">用戶</span>
         </div>
         <div>
@@ -766,8 +766,16 @@
                         });
                     }
                 // --- Modal Handling (modified previewModalImage) ---
-                function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
-                function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+                function openModal(modalId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal) modal.style.display = 'flex';
+                    else console.warn(`Modal with id "${modalId}" not found!`);
+                }
+                function closeModal(modalId) {
+                    const modal = document.getElementById(modalId);
+                    if (modal) modal.style.display = 'none';
+                    else console.warn(`Modal with id "${modalId}" not found!`);
+                }
                 function previewModalImage(event, previewElementId, fileInputElement) { // Added fileInputElement
                     const input = fileInputElement || event.target; // Use passed input or event target
                     const previewContainer = document.getElementById(previewElementId);
@@ -876,14 +884,22 @@
         
         // For editing a warehouse - you'd typically open a modal pre-filled with data
         async function handleEditWarehouseModalOpen(warehouseId) {
-            // This would be similar to handleAddWarehouse but for editing.
-            // 1. Fetch warehouse details: GET /api/box/warehouses/:warehouseId
-            // 2. Populate a modal (you might reuse/adapt #addWarehouseForm or create a new one)
-            // 3. On submit, call PUT /api/box/warehouses/:warehouseId
-            alert(`編輯倉庫 ID: ${warehouseId} 的功能待實現。\n您需要創建一個編輯倉庫的表單/模態框。`);
-            // Example:
-            // const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
-            // openEditWarehouseModal(warehouse); // This function would populate and show the modal
+            addWarehouseForm.reset();
+            addWarehouseStatus.textContent = '正在載入倉庫資料...';
+            switchTab('tab-add-warehouse'); // 切換到新增/編輯 tab
+
+            try {
+                const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
+                document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
+                newWarehouseNameInput.value = warehouse.warehouse_name;
+                newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
+                addWarehouseForm.dataset.editingId = warehouseId;
+                addWarehouseStatus.textContent = '';
+            } catch (error) {
+                addWarehouseStatus.textContent = '載入倉庫資料失敗。';
+                addWarehouseStatus.style.color = '#c0392b';
+                setTimeout(() => switchTab('tab-warehouses'), 2000);
+            }
         }
         
         async function handleDeleteWarehouse(warehouseId, warehouseName) {
@@ -1624,6 +1640,26 @@
                 });
             }
         
+            function toggleAllItemsInCurrentBoxView() {
+            // 取得所有 box 的 .toggle-items-btn 按鈕
+            const toggleButtons = boxGridArea.querySelectorAll('.toggle-items-btn');
+            // 判斷目前大多數是展開還是收合
+            let expandedCount = 0;
+            toggleButtons.forEach(btn => {
+                const boxId = btn.dataset.boxId;
+                if (currentBoxViewItemsExpanded[boxId]) expandedCount++;
+            });
+            const shouldExpand = expandedCount < toggleButtons.length / 2; // 如果大多數是收合，就全部展開
+
+            toggleButtons.forEach(btn => {
+                const boxId = btn.dataset.boxId;
+                if (shouldExpand && !currentBoxViewItemsExpanded[boxId]) {
+                    toggleItemListView(boxId, btn);
+                } else if (!shouldExpand && currentBoxViewItemsExpanded[boxId]) {
+                    toggleItemListView(boxId, btn);
+                }
+            });
+        }
         
            
             
@@ -1669,6 +1705,8 @@
     
             initializePage();
         });
+
+        
         </script>
 </body>
 </html>
