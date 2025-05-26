@@ -553,8 +553,9 @@
             const profileImageFile = document.getElementById('profileImageFile'); // 從 HTML 新增
     
             let currentUserId = null;
-            let authToken = null;
             let currentSelectedWarehouseId = null;
+
+            let authToken = null;
             let currentSelectedWarehouseName = '';
             let currentBoxPage = 1;
             let currentSearchPage = 1;
@@ -730,6 +731,9 @@
 
         // --- 分頁導覽 (如先前提供) ---
         function switchTab(tabId) {
+            console.log('Switching to tab:', tabId);
+            console.log('Current Warehouse ID:', currentSelectedWarehouseId);
+
             tabContents.forEach(content => content.classList.remove('active'));
             tabLinks.forEach(link => link.classList.remove('active'));
 
@@ -740,14 +744,14 @@
             if (tabId === 'tab-warehouses') {
                 loadWarehouses();
                 boxManagementTabLink.style.display = 'none'; // 隱藏紙箱管理分頁
-            } else if (tabId === 'tab-box-management') {
-                if (currentSelectedWarehouseId) {
-                   boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-                   loadBoxesForWarehouse(currentSelectedWarehouseId);
-                } else {
-                    alert('錯誤：未選擇倉庫！');
-                    switchTab('tab-warehouses'); // 返回倉庫列表
-                }
+            } else  if (tabId === 'tab-box-management') {
+        if (currentSelectedWarehouseId) {
+            boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
+            loadBoxesForWarehouse(currentSelectedWarehouseId);
+        } else {
+            alert('錯誤：未選擇倉庫！');
+            switchTab('tab-warehouses');
+        }
             } else if (tabId === 'tab-search') {
                 document.getElementById('search-results-area').innerHTML = '';
                 document.getElementById('search-results-message').textContent = '';
@@ -814,18 +818,33 @@
 
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
-                    card.className = 'warehouse-card';
-                    card.innerHTML = `
-                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
-                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
-                        <div class="actions">
-                            <button class="enter-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">進入倉庫 (${warehouse.box_count || 0} 個紙箱)</button>
+    card.className = 'warehouse-card';
+    card.innerHTML = `
+        <div class="actions">
+            <button class="enter-warehouse" 
+                    data-warehouse-id="${warehouse.warehouse_id}" 
+                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
+                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
+            </button>
                             <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}">編輯</button>
                             <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
                         </div>
                     `;
                     warehouseListDiv.appendChild(card);
+                    
                 });
+
+// 為新的倉庫卡片新增事件監聽器
+warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        // 明確設置 currentSelectedWarehouseId
+        currentSelectedWarehouseId = e.target.dataset.warehouseId;
+        currentSelectedWarehouseName = e.target.dataset.warehouseName;
+        
+        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+        switchTab('tab-box-management');
+    });
+});
 
                 // 為新的倉庫卡片新增事件監聽器
                 warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
@@ -1399,6 +1418,15 @@
 
 
         async function handleSaveItem(event) {
+
+ // 額外的安全檢查
+ if (typeof currentSelectedWarehouseId === 'undefined' || currentSelectedWarehouseId === null) {
+        console.error('currentSelectedWarehouseId is not defined');
+        itemFormStatusP.textContent = '請先選擇一個倉庫。';
+        itemFormStatusP.style.color = '#e67e22';
+        return;
+    }
+
             event.preventDefault();
             const itemId = itemFormItemIdInput.value;
             const boxId = itemFormBoxIdInput.value; // 這是它屬於或將屬於的紙箱
