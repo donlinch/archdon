@@ -27,6 +27,106 @@ module.exports = function(dependencies) {
         }
     });
 
+
+
+
+    router.post('/users/register', boxImageUpload.single('profileImage'), async (req, res) => { // 使用 multer 中間件處理名為 'profileImage' 的文件字段
+        const { username, password, confirmPassword } = req.body;
+        // user_profile_image_url 不再從 req.body 直接獲取，而是通過上傳的文件處理
+
+        // ... (輸入驗證如前) ...
+        if (!username || !password || !confirmPassword) { /* ... */ }
+        // ...
+
+        let profileImageUrlToSave = '/images/default_avatar.png'; // 預設頭像
+
+        try {
+            // 步驟 0: 如果有上傳頭像文件，則處理它
+            if (req.file) {
+                const imageBuffer = req.file.buffer;
+                const originalFilename = req.file.originalname;
+                const tempUserIdForFilename = 'pending_user'; // 因為此時還沒有 user_id
+
+                console.log(`[Register] Processing profile image: ${originalFilename}`);
+                let sharpInstance = sharp(imageBuffer).rotate();
+                const processedImageBuffer = await sharpInstance
+                    .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true }) // 頭像通常較小
+                    .jpeg({ quality: 75 })
+                    .toBuffer();
+
+                // 文件名可以使用一個臨時標識或等待用戶創建後再更新文件名包含真實userID
+                // 這裡先用一個通用前綴，或者你可以在用戶記錄創建後再更新這個文件名
+                const filename = `profile-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+                const diskPath = path.join(uploadDir, filename);
+                const urlPath = `/uploads/${filename}`;
+
+                await fs.writeFile(diskPath, processedImageBuffer);
+                profileImageUrlToSave = urlPath; // 更新要保存到數據庫的URL
+                console.log(`[Register] Profile image saved to: ${diskPath}`);
+
+                // 注意：此時還沒有 user_id，所以 uploaded_files.owner_user_id 不能立即設置
+                // 可以在用戶記錄創建成功後，再更新 uploaded_files 表的 owner_user_id
+                // 或者，如果 uploaded_files 允許 owner_user_id 為 NULL，可以先插入，之後更新
+                const uploadedFileResult = await pool.query(
+                    `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type, owner_user_id)
+                     VALUES ($1, $2, 'image/jpeg', $3, $4, NULL) RETURNING id`, // owner_user_id 暫時為 NULL
+                    [urlPath, originalFilename, processedImageBuffer.length, 'profile_image_pending']
+                );
+                const tempUploadedFileId = uploadedFileResult.rows[0]?.id;
+                console.log(`[Register] Profile image metadata saved to uploaded_files (pending owner), ID: ${tempUploadedFileId}`);
+                // 你需要在下方用戶創建成功後，用真實的 newUser.user_id 回填這個 tempUploadedFileId 的 owner_user_id
+            }
+
+
+            // ... (檢查用戶名是否已存在，哈希密碼 - 如之前的代碼) ...
+            const userCheck = await pool.query('SELECT 1 FROM BOX_Users WHERE LOWER(username) = LOWER($1)', [username.trim()]);
+            if (userCheck.rows.length > 0) {
+                 // 如果之前上傳了圖片但用戶名衝突，需要考慮是否刪除已上傳的臨時圖片
+                if (req.file && profileImageUrlToSave !== '/images/default_avatar.png') {
+                    try { await fs.unlink(path.join(uploadDir, path.basename(profileImageUrlToSave))); } catch (e) { console.error("Error deleting temp profile image on user conflict:", e); }
+                }
+                return res.status(409).json({ error: '此用戶名已被註冊，請選擇其他名稱。' });
+            }
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+
+            // 插入新用戶到數據庫，使用 profileImageUrlToSave
+            const newUserResult = await pool.query(
+                `INSERT INTO BOX_Users (username, password_hash, user_profile_image_url)
+                 VALUES ($1, $2, $3)
+                 RETURNING user_id, username, user_profile_image_url, created_at`,
+                [username.trim(), hashedPassword, profileImageUrlToSave]
+            );
+            const newUser = newUserResult.rows[0];
+
+            // (重要) 如果之前上傳了圖片並記錄到 uploaded_files，現在用 newUser.user_id 更新 owner_user_id
+            if (req.file && typeof tempUploadedFileId !== 'undefined') {
+                await pool.query('UPDATE uploaded_files SET owner_user_id = $1, file_type = $2 WHERE id = $3', [newUser.user_id, 'profile_image', tempUploadedFileId]);
+                console.log(`[Register] Updated owner_user_id for uploaded_files ID: ${tempUploadedFileId} to user ${newUser.user_id}`);
+            }
+
+
+            const tokenPayload = { userId: newUser.user_id, username: newUser.username };
+            const token = jwt.sign(tokenPayload, BOX_JWT_SECRET, { expiresIn: '7d' });
+
+            res.status(201).json({
+                success: true, message: '註冊成功！', token: token,
+                user: { userId: newUser.user_id, username: newUser.username, profileImageUrl: newUser.user_profile_image_url }
+            });
+
+        } catch (err) {
+            console.error('[API POST /box/users/register] Error:', err);
+             // 如果出錯，且之前上傳了圖片，嘗試刪除它
+            if (req.file && profileImageUrlToSave !== '/images/default_avatar.png' && err.code !== '23505' /* 不是因為用戶名衝突 */) {
+                try { await fs.unlink(path.join(uploadDir, path.basename(profileImageUrlToSave))); } catch (e) { console.error("Error deleting profile image on registration error:", e); }
+            }
+            res.status(500).json({ error: '註冊過程中發生錯誤，請稍後再試。' });
+        }
+    });
+
+
+
     // ---- 輔助函數：檢查實體所有權 ----
     async function checkWarehouseOwnership(warehouseId, userId) {
         const result = await pool.query('SELECT user_id FROM BOX_Warehouses WHERE warehouse_id = $1', [warehouseId]);

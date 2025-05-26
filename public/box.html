@@ -257,8 +257,136 @@
             const modalTitle = document.getElementById('modalTitle');
             const modalErrorMessage = document.getElementById('modal-error-message');
 
+
+            const showRegisterModalBtn = document.getElementById('showRegisterModalBtn');
+
+const registerModal = document.getElementById('registerModal');
+const registerForm = document.getElementById('registerForm');
+const registerUsernameInput = document.getElementById('registerUsername');
+const registerPasswordInput = document.getElementById('registerPassword');
+const registerConfirmPasswordInput = document.getElementById('registerConfirmPassword');
+const registerProfileImageFileInput = document.getElementById('registerProfileImageFile');  
+const registerImagePreviewDiv = document.getElementById('registerImagePreview');  
+const registerModalErrorMessage = document.getElementById('register-modal-error-message');
+const closeRegisterModalBtns = document.querySelectorAll('.close-btn[data-modal-id="registerModal"], button.close-modal-btn[data-modal-id="registerModal"]');
+
             let selectedUserId = null;
             let selectedUsername = ''; // Store username for modal title
+
+
+
+
+            // --- 事件監聽器綁定 (在 setupEventListeners 函數中添加) ---
+if (showRegisterModalBtn) {
+    showRegisterModalBtn.addEventListener('click', () => {
+        registerForm.reset();
+        registerModalErrorMessage.style.display = 'none';
+         if (registerImagePreviewDiv) registerImagePreviewDiv.style.display = 'none';
+        if (registerImagePreviewDiv) registerImagePreviewDiv.querySelector('img').src = '#';
+        registerModal.style.display = 'flex';
+        registerUsernameInput.focus();
+    });
+}
+
+if (registerForm) {
+    registerForm.addEventListener('submit', handleUserRegister);
+}
+
+closeRegisterModalBtns.forEach(btn => {
+    btn.addEventListener('click', () => registerModal.style.display = 'none');
+});
+if (registerModal) {
+    registerModal.addEventListener('click', (e) => {
+        if (e.target === registerModal) {
+            registerModal.style.display = 'none';
+        }
+    });
+}
+
+
+// --- 新增用戶註冊處理函數 ---
+async function handleUserRegister(event) {
+    event.preventDefault();
+    const username = registerUsernameInput.value.trim();
+    const password = registerPasswordInput.value;
+    const confirmPassword = registerConfirmPasswordInput.value;
+  const profileImageFile = registerProfileImageFileInput ? registerProfileImageFileInput.files[0] : null;
+
+    registerModalErrorMessage.style.display = 'none';
+
+    if (!username || !password || !confirmPassword) {
+        registerModalErrorMessage.textContent = '所有必填項都不能為空。';
+        registerModalErrorMessage.style.display = 'block';
+        return;
+    }
+    if (username.length < 3) {
+         registerModalErrorMessage.textContent = '用戶名長度至少需要3位。';
+         registerModalErrorMessage.style.display = 'block';
+         return;
+    }
+    if (password.length < 6) {
+        registerModalErrorMessage.textContent = '密碼長度至少需要6位。';
+        registerModalErrorMessage.style.display = 'block';
+        return;
+    }
+    if (password !== confirmPassword) {
+        registerModalErrorMessage.textContent = '兩次輸入的密碼不一致。';
+        registerModalErrorMessage.style.display = 'block';
+        return;
+    }
+
+    const submitButton = registerForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = '註冊中...';
+
+    // 注意：如果註冊時允許上傳頭像，處理會更複雜
+    // 你需要先調用類似 /api/box/upload-analyze-then-process-image 的API上傳頭像 (可能不需要AI分析，僅上傳並返回URL)
+    // 然後將獲取的 image_url 和其他註冊信息一起發送到 /api/box/users/register
+    // 為了簡化，我們先假設註冊時不直接處理頭像上傳，用戶登入後再設置。
+
+    const registrationData = {
+        username: username,
+        password: password,
+        confirmPassword: confirmPassword,
+         user_profile_image_url: uploadedImageUrlIfAny // 如果有頭像上傳
+    };
+
+    try {
+        const response = await fetch('/api/box/users/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(registrationData)
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            alert('註冊成功！您現在可以使用新帳號登入。');
+            registerModal.style.display = 'none';
+            fetchAndRenderUsers(); // 刷新用戶列表以包含新用戶
+
+            // 如果後端返回了token並且希望註冊後自動登入:
+            if (data.token && data.user) {
+                localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
+                localStorage.setItem(`boxCurrentUserId`, data.user.userId);
+                localStorage.setItem(`boxCurrentUsername`, data.user.username);
+                localStorage.setItem(`boxCurrentUserAvatar`, data.user.profileImageUrl || '/images/default_avatar.png');
+                window.location.href = `box-my.html?userId=${data.user.userId}`;
+            }
+
+        } else {
+            registerModalErrorMessage.textContent = data.error || '註冊失敗，請重試。';
+            registerModalErrorMessage.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('註冊請求失敗:', error);
+        registerModalErrorMessage.textContent = `註冊請求錯誤: ${error.message}`;
+        registerModalErrorMessage.style.display = 'block';
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = '註冊';
+    }
+}
+
 
             // 1. 獲取並渲染用戶列表
             async function fetchAndRenderUsers() {
