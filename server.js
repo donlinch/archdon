@@ -73,26 +73,7 @@ app.use(session({
 }));
 
 
-  
-const dependenciesForBoxRoutes = {
-    pool,
-    visionClient, // 確保已初始化
-    BOX_JWT_SECRET,
-    uploadDir: '/data/uploads', // 直接使用我們討論的路徑
-    authenticateBoxUser, // 傳遞中間件本身
-    isAdminAuthenticated // 傳遞管理員認證中間件
-    // fs, path, sharp, uuidv4, multer 如果你決定把 multer 配置也放在 boxRoutes.js
-};
  
-app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
-
-
-const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
-if (!BOX_JWT_SECRET) {
-    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
-    // process.exit(1); // 或者其他錯誤處理
-}
-
 
 
 
@@ -338,6 +319,46 @@ if (GEMINI_API_KEY) {
 
 // --- START OF Cloud Vision AI Integration ---
 let visionClient;
+try {
+
+
+
+
+
+    visionClient = new ImageAnnotatorClient();
+
+    console.log("[Cloud Vision AI] Client initialized successfully.");
+} catch (error) {
+    console.error("[Cloud Vision AI] Failed to initialize ImageAnnotatorClient. Error:", error.message);
+    console.error("[Cloud Vision AI] Image analysis features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup in Render Environment and Secret Files.");
+    visionClient = null;
+}
+
+
+
+ 
+const dependenciesForBoxRoutes = {
+    pool,
+    visionClient, // 確保已初始化
+    BOX_JWT_SECRET,
+    uploadDir: '/data/uploads', // 直接使用我們討論的路徑
+    authenticateBoxUser, // 傳遞中間件本身
+    isAdminAuthenticated // 傳遞管理員認證中間件
+    // fs, path, sharp, uuidv4, multer 如果你決定把 multer 配置也放在 boxRoutes.js
+};
+ 
+app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
+
+
+const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
+if (!BOX_JWT_SECRET) {
+    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
+    // process.exit(1); // 或者其他錯誤處理
+}
+
+
+
+
 
 
 
@@ -363,20 +384,7 @@ if (credentialsPath) {
 }
 // --- 臨時調試程式碼 END ---
 
-try {
 
-
-
-
-
-    visionClient = new ImageAnnotatorClient();
-
-    console.log("[Cloud Vision AI] Client initialized successfully.");
-} catch (error) {
-    console.error("[Cloud Vision AI] Failed to initialize ImageAnnotatorClient. Error:", error.message);
-    console.error("[Cloud Vision AI] Image analysis features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup in Render Environment and Secret Files.");
-    visionClient = null;
-}
 // --- END OF Cloud Vision AI Integration ---
 
 
