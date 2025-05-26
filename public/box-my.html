@@ -1731,10 +1731,10 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             async function toggleItemListView(boxId, expandButtonElement, containerElement = null) {
                 // 如果没有传入容器，则尝试从网格或列表视图中查找
                 if (!containerElement) {
-                    containerElement = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`) || 
+                    containerElement = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`) ||
                                        boxListArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
                 }
-                
+
                 if (!containerElement) return;
 
                 const isLoadingPlaceholder = containerElement.querySelector('.items-loading-placeholder');
@@ -1744,98 +1744,125 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 expandButtonElement.textContent = shouldExpand ? '折疊物品' : '展開物品';
                 containerElement.style.display = shouldExpand ? 'block' : 'none';
 
-                if (shouldExpand && !containerElement.dataset.loadedItems) {
-                    if (isLoadingPlaceholder) isLoadingPlaceholder.textContent = '正在載入物品...';
-                    await loadItemsForBox(boxId, containerElement);
-                    
-                    if (isLoadingPlaceholder && containerElement.querySelectorAll('.item-entry').length > 0) {
-                        isLoadingPlaceholder.style.display = 'none';
-                    } else if (isLoadingPlaceholder) {
-                        isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                if (shouldExpand) { // Only attempt to load if expanding
+                     const itemsGridContainer = containerElement.querySelector('.items-grid-container');
+                     const hasItemsRendered = itemsGridContainer && itemsGridContainer.children.length > 0;
+
+                    if (!containerElement.dataset.loadedItems || !hasItemsRendered) { // Load if not loaded before or if no items were rendered from a previous load attempt
+                         if (isLoadingPlaceholder) {
+                             isLoadingPlaceholder.textContent = '正在載入物品...';
+                             isLoadingPlaceholder.style.display = 'block'; // Ensure placeholder is visible
+                         }
+                         await loadItemsForBox(boxId, containerElement);
+
+                         // After loading, check if items were loaded and manage placeholder
+                         const updatedItemsGridContainer = containerElement.querySelector('.items-grid-container');
+                         const hasItemsAfterLoad = updatedItemsGridContainer && updatedItemsGridContainer.children.length > 0;
+
+                         if (isLoadingPlaceholder) {
+                            if (hasItemsAfterLoad) {
+                                isLoadingPlaceholder.style.display = 'none';
+                            } else {
+                                isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                                isLoadingPlaceholder.style.display = 'block';
+                            }
+                         }
+                    } else if (isLoadingPlaceholder && hasItemsRendered) {
+                         // If expanding and items were already loaded and rendered
+                         isLoadingPlaceholder.style.display = 'none';
+                    } else if (isLoadingPlaceholder && !hasItemsRendered) {
+                         // If expanding and no items were rendered (e.g., empty box)
+                          isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                          isLoadingPlaceholder.style.display = 'block';
                     }
-                } else if (shouldExpand && isLoadingPlaceholder && containerElement.querySelectorAll('.item-entry').length === 0) {
-                    isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
-                    isLoadingPlaceholder.style.display = 'block';
-                } else if (!shouldExpand && isLoadingPlaceholder) {
-                    isLoadingPlaceholder.textContent = '點擊展開查看物品';
-                    isLoadingPlaceholder.style.display = 'block';
+
+
+                } else { // Collapsing - reset placeholder text and ensure it's visible for next expand
+                    if (isLoadingPlaceholder) {
+                         isLoadingPlaceholder.textContent = '點擊展開查看物品';
+                         isLoadingPlaceholder.style.display = 'block';
+                    }
                 }
             }
 
             async function loadItemsForBox(boxId, containerElement) {
-                if (!currentSelectedWarehouseId) return;
+                if (!currentSelectedWarehouseId) {
+                    console.error('loadItemsForBox called without currentSelectedWarehouseId');
+                    const placeholder = containerElement.querySelector('.items-loading-placeholder');
+                    if(placeholder) {
+                         placeholder.textContent = '錯誤：無法載入物品，未選定倉庫。';
+                         placeholder.style.color = '#c0392b';
+                    }
+                    containerElement.dataset.loadedItems = 'false';
+                    return;
+                }
 
                 const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
                 const placeholder = containerElement.querySelector('.items-loading-placeholder');
 
                 // 清除先前的物品，但保留提示和新增按鈕結構
-                const existingItems = containerElement.querySelectorAll('.item-entry, .item-card');
-                existingItems.forEach(item => item.remove());
-                if(placeholder) placeholder.textContent = '正在載入物品...';
+                 let itemsGridContainer = containerElement.querySelector('.items-grid-container');
+                 if (!itemsGridContainer) {
+                      itemsGridContainer = document.createElement('div');
+                      itemsGridContainer.className = 'items-grid-container';
+                       // Insert before the add item button if it exists, otherwise append
+                     const addItemBtnElement = containerElement.querySelector('.add-item-to-box-btn');
+                      if (addItemBtnElement) {
+                         containerElement.insertBefore(itemsGridContainer, addItemBtnElement);
+                      } else {
+                         containerElement.appendChild(itemsGridContainer);
+                      }
+                 } else {
+                      // Clear existing items if container already exists
+                      itemsGridContainer.innerHTML = '';
+                 }
+
 
                 try {
                     const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
-                    
-                    // 創建 items-grid-container
-                    const itemsGridContainer = document.createElement('div');
-                    itemsGridContainer.className = 'items-grid-container';
 
                     if (items.length === 0) {
                         if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
                     } else {
                         if(placeholder) placeholder.style.display = 'none';
-                        
+
                         items.forEach(item => {
                             const itemCard = document.createElement('div');
                             itemCard.className = 'item-card';
                             itemCard.innerHTML = `
-                                <img src="${item.item_image_url || '/images/default_item.png'}" 
-                                     alt="${escapeHtml(item.item_name)}" 
+                                <img src="${item.item_image_url || '/images/default_item.png'}"
+                                     alt="${escapeHtml(item.item_name)}"
                                      onerror="this.src='/images/box_item.png'">
                                 <div class="item-details">
                                     <h4>${escapeHtml(item.item_name)}</h4>
                                     <p>數量: ${item.quantity}</p>
                                 </div>
                                 <div class="item-actions">
-                                    <button class="edit-item-btn" 
-                                            data-item-id="${item.item_id}" 
+                                    <button class="edit-item-btn"
+                                            data-item-id="${item.item_id}"
                                             data-box-id="${boxId}">編輯</button>
-                                    <button class="delete-item-btn" 
-                                            data-item-id="${item.item_id}" 
-                                            data-item-name="${escapeHtml(item.item_name)}" 
+                                    <button class="delete-item-btn"
+                                            data-item-id="${item.item_id}"
+                                            data-item-name="${escapeHtml(item.item_name)}"
                                             data-box-id="${boxId}">刪除</button>
                                 </div>
                             `;
-                            
+
                             itemsGridContainer.appendChild(itemCard);
                         });
+                         addItemActionListeners(itemsGridContainer); // Add listeners to the new items
                     }
 
-                    // 在「新增物品」按鈕前插入
-                    if (addItemBtn) {
-                        containerElement.insertBefore(itemsGridContainer, addItemBtn);
-                    } else {
-                        containerElement.appendChild(itemsGridContainer);
-                    }
-
-                    containerElement.dataset.loadedItems = 'true';
-                    addItemActionListeners(containerElement);
+                    containerElement.dataset.loadedItems = 'true'; // Mark as loaded whether items were found or not
                 } catch (error) {
+                    console.error('載入物品失敗:', error);
                     if(placeholder) {
                         placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
                         placeholder.style.color = '#c0392b';
                     }
+                     containerElement.dataset.loadedItems = 'false'; // Mark as not loaded if fetch failed
                 }
             }
-            function addItemActionListeners(containerElement) {
-                containerElement.querySelectorAll('.edit-item-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => openEditItemModal(e.target.dataset.itemId, e.target.dataset.boxId));
-                });
-                containerElement.querySelectorAll('.delete-item-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleDeleteItem(e.target.dataset.itemId, e.target.dataset.itemName, e.target.dataset.boxId));
-                });
-            }
-
 
             // ==============================
             // == 物品管理函數 ==
