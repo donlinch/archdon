@@ -1369,6 +1369,11 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                     // 在開始渲染前，先清空現有內容
+    boxGridArea.innerHTML = '';
+    boxListArea.innerHTML = '';
+    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+
                     if (!warehouseId) {
                         console.error('No warehouse ID provided');
                         boxListMessage.textContent = '請先選擇一個倉庫。';
@@ -1387,29 +1392,14 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
                     try {
                         const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`);
-                        
-                        // --- 新增：過濾重複的紙箱 ID ---
-                        const seenBoxIds = new Set();
-                        const uniqueBoxes = data.boxes.filter(box => {
-                            if (seenBoxIds.has(box.box_id)) {
-                                console.warn(`發現重複的紙箱 ID：${box.box_id}，已過濾。`);
-                                return false; // 已經看過這個 ID，過濾掉
-                            } else {
-                                seenBoxIds.add(box.box_id); // 記錄這個 ID
-                                return true; // 保留這個紙箱
-                            }
-                        });
-                        // --- 過濾結束 ---
-
-
-                        if (uniqueBoxes.length === 0) { // 改為檢查 uniqueBoxes 的長度
+                        if (data.boxes.length === 0) {
                             boxListMessage.textContent = '此倉庫中沒有紙箱。點擊上方按鈕新增一個吧！';
                             return;
                         }
                         boxListMessage.textContent = '';
 
                         // Render Grid and List Views
-                        uniqueBoxes.forEach(box => { // 改為遍歷 uniqueBoxes
+                        data.boxes.forEach(box => {
                             // Grid View Card
                             const gridCard = document.createElement('div');
                             gridCard.className = 'box-card';
