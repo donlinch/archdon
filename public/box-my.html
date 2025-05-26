@@ -1387,14 +1387,29 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
                     try {
                         const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`);
-                        if (data.boxes.length === 0) {
+                        
+                        // --- 新增：過濾重複的紙箱 ID ---
+                        const seenBoxIds = new Set();
+                        const uniqueBoxes = data.boxes.filter(box => {
+                            if (seenBoxIds.has(box.box_id)) {
+                                console.warn(`發現重複的紙箱 ID：${box.box_id}，已過濾。`);
+                                return false; // 已經看過這個 ID，過濾掉
+                            } else {
+                                seenBoxIds.add(box.box_id); // 記錄這個 ID
+                                return true; // 保留這個紙箱
+                            }
+                        });
+                        // --- 過濾結束 ---
+
+
+                        if (uniqueBoxes.length === 0) { // 改為檢查 uniqueBoxes 的長度
                             boxListMessage.textContent = '此倉庫中沒有紙箱。點擊上方按鈕新增一個吧！';
                             return;
                         }
                         boxListMessage.textContent = '';
 
                         // Render Grid and List Views
-                        data.boxes.forEach(box => {
+                        uniqueBoxes.forEach(box => { // 改為遍歷 uniqueBoxes
                             // Grid View Card
                             const gridCard = document.createElement('div');
                             gridCard.className = 'box-card';
