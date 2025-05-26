@@ -540,44 +540,84 @@
 
         .items-grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* 增加最小寬度 */
+    gap: 15px; /* 增加間距 */
+    margin-top: 15px;
+    width: auto; /* 確保寬度 */
+    padding: 10px;
+    background-color: #f9f9f9; /* 輕微的背景色 */
+    border-radius: 8px; /* 圓角 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* 輕微陰影 */
 }
 
 .item-card {
+    background-color: white;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    background-color: #f9f9f9;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
 .item-card img {
     width: 100%;
-    height: 150px;
+    height: auto ; /* 固定高度 */
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-bottom: 10px;
 }
 
 .item-card .item-details {
+    flex-grow: 1;
     margin-bottom: 10px;
 }
 
 .item-card .item-details h4 {
     margin: 0 0 5px 0;
+    font-size: 1em;
+    color: #333;
+}
+
+.item-card .item-details p {
+    margin: 0;
+    color: #666;
     font-size: 0.9em;
 }
 
 .item-card .item-actions {
     display: flex;
     justify-content: space-between;
+    margin-top: auto; /* 將按鈕推到底部 */
 }
 
 .item-card .item-actions button {
+    flex-grow: 1;
+    margin: 0 5px;
+    padding: 8px 12px;
     font-size: 0.8em;
-    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.item-card .item-actions button:hover {
+    background-color: #e0e0e0;
+}
+
+.item-card .item-actions button.edit-item-btn {
+    color: #3498db;
+}
+
+.item-card .item-actions button.delete-item-btn {
+    color: #e74c3c;
 }
 
     </style>
@@ -1505,9 +1545,13 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                                     <p>編號: ${escapeHtml(box.box_number)} | 物品: ${box.item_count || 0} 件</p>
                                 </div>
                                 <div class="box-list-item-actions">
-                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折叠物品' : '展開物品'}</button>
+                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折疊物品' : '展開物品'}</button>
                                     <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
                                     <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
+                                </div>
+                                <div class="item-list-container list-view" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'}; width: 100%;">
+                                    <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
+                                    <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
                                 </div>
                             `;
                             boxListArea.appendChild(listItem);
@@ -1532,14 +1576,18 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 }
 
                 function addBoxActionListeners() {
-                    // Combine listeners for both grid and list views
+                    // 合并网格和列表视图的监听器
                     const toggleItemsBtns = document.querySelectorAll('.toggle-items-btn');
                     const editBoxBtns = document.querySelectorAll('.edit-box-btn');
                     const deleteBoxBtns = document.querySelectorAll('.delete-box-btn');
                     const addItemBtns = document.querySelectorAll('.add-item-to-box-btn');
 
                     toggleItemsBtns.forEach(btn => {
-                        btn.addEventListener('click', (e) => toggleItemListView(e.target.dataset.boxId, e.target));
+                        btn.addEventListener('click', (e) => {
+                            const boxId = e.target.dataset.boxId;
+                            const container = document.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                            toggleItemListView(boxId, e.target, container);
+                        });
                     });
 
                     editBoxBtns.forEach(btn => {
@@ -1680,30 +1728,36 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
 
 
-            async function toggleItemListView(boxId, expandButtonElement) {
-                const container = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                if (!container) return;
+            async function toggleItemListView(boxId, expandButtonElement, containerElement = null) {
+                // 如果没有传入容器，则尝试从网格或列表视图中查找
+                if (!containerElement) {
+                    containerElement = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`) || 
+                                       boxListArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                }
+                
+                if (!containerElement) return;
 
-                const isLoadingPlaceholder = container.querySelector('.items-loading-placeholder');
+                const isLoadingPlaceholder = containerElement.querySelector('.items-loading-placeholder');
                 const shouldExpand = !currentBoxViewItemsExpanded[boxId];
 
                 currentBoxViewItemsExpanded[boxId] = shouldExpand;
-                expandButtonElement.textContent = shouldExpand ? '折叠物品' : '展開物品';
-                container.style.display = shouldExpand ? 'block' : 'none';
+                expandButtonElement.textContent = shouldExpand ? '折疊物品' : '展開物品';
+                containerElement.style.display = shouldExpand ? 'block' : 'none';
 
-                if (shouldExpand && !container.dataset.loadedItems) {
+                if (shouldExpand && !containerElement.dataset.loadedItems) {
                     if (isLoadingPlaceholder) isLoadingPlaceholder.textContent = '正在載入物品...';
-                    await loadItemsForBox(boxId, container);
-                    if (isLoadingPlaceholder && container.querySelectorAll('.item-entry').length > 0) {
-                         isLoadingPlaceholder.style.display = 'none'; // 如果已載入物品，隱藏提示
+                    await loadItemsForBox(boxId, containerElement);
+                    
+                    if (isLoadingPlaceholder && containerElement.querySelectorAll('.item-entry').length > 0) {
+                        isLoadingPlaceholder.style.display = 'none';
                     } else if (isLoadingPlaceholder) {
-                         isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                        isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
                     }
-                } else if (shouldExpand && isLoadingPlaceholder && container.querySelectorAll('.item-entry').length === 0) {
-                     isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
-                     isLoadingPlaceholder.style.display = 'block';
+                } else if (shouldExpand && isLoadingPlaceholder && containerElement.querySelectorAll('.item-entry').length === 0) {
+                    isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                    isLoadingPlaceholder.style.display = 'block';
                 } else if (!shouldExpand && isLoadingPlaceholder) {
-                    isLoadingPlaceholder.textContent = '點擊展開查看物品'; // 重置提示文字
+                    isLoadingPlaceholder.textContent = '點擊展開查看物品';
                     isLoadingPlaceholder.style.display = 'block';
                 }
             }
@@ -1715,7 +1769,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 const placeholder = containerElement.querySelector('.items-loading-placeholder');
 
                 // 清除先前的物品，但保留提示和新增按鈕結構
-                const existingItems = containerElement.querySelectorAll('.item-entry');
+                const existingItems = containerElement.querySelectorAll('.item-entry, .item-card');
                 existingItems.forEach(item => item.remove());
                 if(placeholder) placeholder.textContent = '正在載入物品...';
 
