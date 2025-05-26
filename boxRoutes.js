@@ -725,7 +725,7 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
 
 
     // --- 物品管理 (Items) ---
-    router.post('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => { /* 已提供 */ });
+ 
 
     router.get('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
