@@ -345,11 +345,11 @@ async function handleUserRegister(event) {
     // 為了簡化，我們先假設註冊時不直接處理頭像上傳，用戶登入後再設置。
 
     const registrationData = {
-        username: username,
-        password: password,
-        confirmPassword: confirmPassword,
-         user_profile_image_url: uploadedImageUrlIfAny // 如果有頭像上傳
-    };
+    username: username,
+    password: password,
+    confirmPassword: confirmPassword,
+    user_profile_image_url: null // 或 undefined
+};
 
     try {
         const response = await fetch('/api/box/users/register', {
