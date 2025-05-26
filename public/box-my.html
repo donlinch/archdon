@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的儲藏空間 - 紙箱子管理</title>
+    <style>
+        /* box-my.html Specific Styles & Shared Styles from box-style.css (if not linking) */
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #e9eef2; /* Slightly different background */
+            margin: 0;
+            padding: 0; /* Body padding handled by header/main */
+        }
+
+        .page-header {
+            background-color: #2c3e50; /* Dark blue header */
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .page-header .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+            border: 2px solid #567086;
+        }
+        .page-header .user-info span {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .page-header button {
+            background-color: #e74c3c; /* Red for logout */
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .page-header button:hover {
+            background-color: #c0392b;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1300px; /* Wider container */
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .tab-navigation {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 25px;
+            overflow-x: auto; /* For many tabs on small screens */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+
+        }
+        .tab-navigation button {
+            background-color: transparent;
+            color: #555;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 1.05em;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            white-space: nowrap; /* Prevent tab text from wrapping */
+        }
+        .tab-navigation button:hover {
+            color: #3498db;
+        }
+        .tab-navigation button.active {
+            color: #3498db; /* Blue for active tab */
+            border-bottom-color: #3498db;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none; /* Hidden by default */
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Common for lists/grids within tabs */
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 0 20px 0; /* Less padding */
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        .controls-bar input[type="text"],
+        .controls-bar select {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+         .controls-bar button {
+            background-color: #27ae60; /* Green for add */
+            color: white;
+            padding: 8px 15px;
+            font-size: 0.95em;
+         }
+         .controls-bar button.secondary-action {
+            background-color: #7f8c8d; /* Gray for secondary actions */
+         }
+         .controls-bar button:hover {
+            opacity: 0.9;
+         }
+
+
+        /* Warehouse List Styles */
+        #warehouse-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .warehouse-card {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .warehouse-card h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+        .warehouse-card p {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+            min-height: 40px; /* Ensure consistent card height if description varies */
+        }
+        .warehouse-card .actions button {
+            margin-right: 8px;
+            font-size: 0.9em;
+            padding: 6px 12px;
+        }
+         .warehouse-card .actions button.enter-warehouse {
+            background-color: #3498db;
+        }
+        .warehouse-card .actions button.edit-warehouse {
+            background-color: #f39c12; /* Orange for edit */
+        }
+         .warehouse-card .actions button.delete-warehouse {
+            background-color: #e74c3c; /* Red for delete */
+        }
+
+
+        /* Box List/Grid Styles (similar to file-admin.html but adapted) */
+        #box-list-area table, #box-grid-area { margin-top: 15px; }
+        /* ... (Add specific styles for box list and grid view if needed, similar to file-admin.html) ... */
+        /* Example for box card in grid view */
+        #box-grid-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+        .box-card {
+            background-color: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .box-card img.box-cover-preview {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f0f0f0;
+        }
+        .box-card .box-number { font-size: 0.85em; color: #777; margin-bottom: 5px;}
+        .box-card .box-name { font-weight: 600; margin-bottom: 8px; font-size: 1.1em; }
+        .box-card .item-count { font-size: 0.9em; color: #555; margin-bottom: 10px; }
+        .box-card .box-actions button {
+            font-size: 0.85em;
+            padding: 5px 10px;
+            margin: 0 3px;
+        }
+        /* Styles for item list inside a box (when expanded) */
+        .item-list-container {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+            text-align: left;
+        }
+        .item-entry {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .item-entry:last-child { border-bottom: none; }
+        .item-entry img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
+        .item-entry .item-name { flex-grow: 1; font-size: 0.95em; }
+        .item-entry .item-actions button { font-size: 0.8em; padding: 3px 6px; }
+
+
+        /* Search Tab Styles */
+        #search-results-area .search-result-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background-color: #fcfcfc;
+        }
+        #search-results-area .search-result-item h4 { margin-top: 0; color: #3498db;}
+        #search-results-area .search-result-item p { margin-bottom: 5px; font-size: 0.9em; }
+        #search-results-area .result-type { font-style: italic; color: #7f8c8d; font-size: 0.8em;}
+
+
+        /* Modal (reusable for add/edit forms) */
+        .modal { /* Already styled in box.html, can be reused or enhanced */
+            display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff; padding: 25px 30px; border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 550px;
+            position: relative; /* For close button */
+        }
+        .modal-content .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #888;
+            cursor: pointer;
+        }
+        .modal-content .close-btn:hover { color: #333; }
+
+        .form-group { margin-bottom: 15px; }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+         /* Preview for image uploads in modals */
+        .image-upload-preview {
+            margin-top: 10px;
+            max-width: 200px;
+            max-height: 150px;
+            border: 1px solid #ddd;
+            padding: 5px;
+            display: none; /* Hidden by default */
+        }
+        .image-upload-preview img {
+            max-width: 100%;
+            max-height: 140px;
+            display: block;
+        }
+
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(255,255,255,0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            color: #333;
+        }
+        /* Simple spinner */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <div class="user-info">
+            <img id="currentUserAvatar" src="/images/default_avatar.png" alt="User Avatar">
+            <span id="currentUsername">用戶</span>
+        </div>
+        <div>
+            <a href="box.html" style="color: white; margin-right: 15px; text-decoration: none;">切換使用者</a>
+            <button id="logoutButton">登出</button>
+        </div>
+    </header>
+
+    <main class="main-container box-manager-container">
+        <nav class="tab-navigation">
+            <button class="tab-link active" data-tab="tab-warehouses">我的倉庫</button>
+            <button class="tab-link" data-tab="tab-add-warehouse">新增倉庫</button>
+            <button class="tab-link" data-tab="tab-box-management" style="display:none;">紙箱管理</button> <!-- Initially hidden -->
+            <button class="tab-link" data-tab="tab-search">找東西</button>
+            <button class="tab-link" data-tab="tab-user-settings">用戶設定</button>
+        </nav>
+
+        <!-- TAB Content: My Warehouses -->
+        <div id="tab-warehouses" class="tab-content active">
+            <h2>我的倉庫</h2>
+            <div class="controls-bar">
+                <button id="refreshWarehousesBtn">🔄 刷新倉庫列表</button>
+            </div>
+            <div id="warehouse-list-message"></div>
+            <div id="warehouse-list">
+                <!-- Warehouse cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- TAB Content: Add Warehouse -->
+        <div id="tab-add-warehouse" class="tab-content">
+            <h2>新增倉庫</h2>
+            <form id="addWarehouseForm">
+                <div class="form-group">
+                    <label for="newWarehouseName">倉庫名稱 (例如: 12F儲藏室, 娘家車庫):</label>
+                    <input type="text" id="newWarehouseName" required>
+                </div>
+                <div class="form-group">
+                    <label for="newWarehouseDescription">倉庫描述 (可選):</label>
+                    <textarea id="newWarehouseDescription"></textarea>
+                </div>
+                <button type="submit" class="primary">建立倉庫</button>
+                <p id="addWarehouseStatus" style="margin-top:10px;"></p>
+            </form>
+        </div>
+
+        <!-- TAB Content: Box Management (for a selected warehouse) -->
+        <div id="tab-box-management" class="tab-content">
+            <h2 id="boxManagementTitle">紙箱管理</h2>
+            <div class="controls-bar">
+                <button id="addBoxBtn">➕ 新增紙箱到此倉庫</button>
+                <button id="toggleAllItemsBtn" class="secondary-action">全部展開/折叠物品</button>
+                <!-- Add search/sort for boxes if needed -->
+            </div>
+            <div id="box-list-message"></div>
+            <div id="box-grid-area"> <!-- Or a table for list view -->
+                <!-- Box cards/rows will be inserted here -->
+            </div>
+            <div id="box-list-pagination"></div>
+        </div>
+
+        <!-- TAB Content: Search -->
+        <div id="tab-search" class="tab-content">
+            <h2>找東西</h2>
+            <div class="controls-bar">
+                <input type="text" id="searchInput" placeholder="輸入物品/紙箱關鍵字...">
+                <button id="searchButton">🔍 搜尋</button>
+                <label style="margin-left: 15px;">
+                    <input type="checkbox" id="searchAllWarehousesToggle"> 搜尋我的所有倉庫
+                </label>
+            </div>
+            <div id="search-results-message"></div>
+            <div id="search-results-area">
+                <!-- Search results will be displayed here -->
+            </div>
+            <div id="search-pagination"></div>
+        </div>
+
+        <!-- TAB Content: User Settings -->
+        <div id="tab-user-settings" class="tab-content">
+            <h2>用戶設定</h2>
+            <!-- Change Password Form -->
+            <form id="changePasswordForm" style="margin-bottom: 30px;">
+                <h3>更改密碼</h3>
+                <div class="form-group">
+                    <label for="currentPassword">當前密碼:</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">新密碼:</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">確認新密碼:</label>
+                    <input type="password" id="confirmNewPassword" required>
+                </div>
+                <button type="submit">更新密碼</button>
+                <p id="changePasswordStatus" style="margin-top:10px;"></p>
+            </form>
+            <hr>
+            <!-- Change Profile Image Form -->
+            <form id="changeProfileImageForm" style="margin-top: 30px;">
+                 <h3>更改頭像</h3>
+                 <div class="form-group">
+                     <label for="profileImageFile">選擇新頭像圖片:</label>
+                     <input type="file" id="profileImageFile" accept="image/*">
+                     <div class="image-upload-preview" id="profileImagePreview"><img></div>
+                 </div>
+                 <button type="submit" id="uploadProfileImageBtn">上傳並更新頭像</button>
+                 <p id="changeProfileImageStatus" style="margin-top:10px;"></p>
+            </form>
+        </div>
+    </main>
+
+    <!-- Reusable Modal for Add/Edit Box -->
+    <div id="boxModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-modal-id="boxModal">×</span>
+            <h3 id="boxModalTitle">新增/編輯紙箱</h3>
+            <form id="boxForm">
+                <input type="hidden" id="boxFormBoxId"> <!-- For editing -->
+                <div class="form-group">
+                    <label for="boxFormNumber">紙箱編號:</label>
+                    <input type="text" id="boxFormNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="boxFormName">紙箱名稱:</label>
+                    <input type="text" id="boxFormName" required>
+                </div>
+                <div class="form-group">
+                    <label for="boxFormCoverImageFile">封面照片:</label>
+                    <input type="file" id="boxFormCoverImageFile" accept="image/*">
+                    <div class="image-upload-preview" id="boxCoverPreview"><img></div>
+                    <input type="hidden" id="boxFormCoverImageUrl"> <!-- To store uploaded image URL -->
+                </div>
+                <div class="form-group">
+                    <label>AI 關鍵字 (參考用):</label>
+                    <div id="boxFormAiKeywords" style="padding: 8px; background-color:#f0f0f0; border-radius:4px; min-height: 30px; font-size:0.9em; color:#555;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="boxFormManualNotes">手動備註:</label>
+                    <textarea id="boxFormManualNotes"></textarea>
+                </div>
+                <div class="form-actions">
+                    <p id="boxFormStatus" style="flex-grow:1; text-align:left; margin:0;"></p>
+                    <button type="button" class="secondary close-modal-btn" data-modal-id="boxModal">取消</button>
+                    <button type="submit">保存紙箱</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reusable Modal for Add/Edit Item -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-modal-id="itemModal">×</span>
+            <h3 id="itemModalTitle">新增/編輯物品</h3>
+            <form id="itemForm">
+                <input type="hidden" id="itemFormItemId"> <!-- For editing -->
+                <input type="hidden" id="itemFormBoxId">  <!-- To associate with current box -->
+                <div class="form-group">
+                    <label for="itemFormName">物品名稱:</label>
+                    <input type="text" id="itemFormName" required>
+                </div>
+                <div class="form-group">
+                    <label for="itemFormImageFile">物品照片 (可選):</label>
+                    <input type="file" id="itemFormImageFile" accept="image/*">
+                    <div class="image-upload-preview" id="itemImagePreview"><img></div>
+                    <input type="hidden" id="itemFormImageUrl">
+                </div>
+                 <div class="form-group">
+                    <label>AI 關鍵字 (參考用):</label>
+                    <div id="itemFormAiKeywords" style="padding: 8px; background-color:#f0f0f0; border-radius:4px; min-height: 30px; font-size:0.9em; color:#555;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="itemFormDescription">物品描述:</label>
+                    <textarea id="itemFormDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="itemFormQuantity">數量:</label>
+                    <input type="number" id="itemFormQuantity" value="1" min="0">
+                </div>
+                <div class="form-actions">
+                     <p id="itemFormStatus" style="flex-grow:1; text-align:left; margin:0;"></p>
+                    <button type="button" class="secondary close-modal-btn" data-modal-id="itemModal">取消</button>
+                    <button type="submit">保存物品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="loading-overlay"><div class="spinner"></div> 正在載入...</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- Global State & DOM Elements (as previously defined) ---
+            const currentUsernameSpan = document.getElementById('currentUsername');
+            const currentUserAvatarImg = document.getElementById('currentUserAvatar');
+            const logoutButton = document.getElementById('logoutButton');
+            const tabLinks = document.querySelectorAll('.tab-navigation button.tab-link');
+            const tabContents = document.querySelectorAll('.main-container .tab-content');
+            const boxManagementTabLink = document.querySelector('button[data-tab="tab-box-management"]');
+            const boxManagementTitle = document.getElementById('boxManagementTitle');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const warehouseListDiv = document.getElementById('warehouse-list');
+            const warehouseListMessage = document.getElementById('warehouse-list-message');
+            const addWarehouseForm = document.getElementById('addWarehouseForm');
+            const newWarehouseNameInput = document.getElementById('newWarehouseName');
+            const newWarehouseDescriptionInput = document.getElementById('newWarehouseDescription');
+            const addWarehouseStatus = document.getElementById('addWarehouseStatus');
+            const refreshWarehousesBtn = document.getElementById('refreshWarehousesBtn');
+            const addBoxBtn = document.getElementById('addBoxBtn');
+            const toggleAllItemsBtn = document.getElementById('toggleAllItemsBtn');
+            const boxListMessage = document.getElementById('box-list-message');
+            const boxGridArea = document.getElementById('box-grid-area');
+            const boxListPagination = document.getElementById('box-list-pagination');
+            const boxModal = document.getElementById('boxModal');
+            const boxModalTitle = document.getElementById('boxModalTitle');
+            const boxForm = document.getElementById('boxForm');
+            const boxFormBoxIdInput = document.getElementById('boxFormBoxId');
+            const boxFormNumberInput = document.getElementById('boxFormNumber');
+            const boxFormNameInput = document.getElementById('boxFormName');
+            const boxFormCoverImageFileInput = document.getElementById('boxFormCoverImageFile');
+            const boxCoverPreviewDiv = document.getElementById('boxCoverPreview');
+            const boxFormCoverImageUrlInput = document.getElementById('boxFormCoverImageUrl');
+            const boxFormAiKeywordsDiv = document.getElementById('boxFormAiKeywords');
+            const boxFormManualNotesTextarea = document.getElementById('boxFormManualNotes');
+            const boxFormStatusP = document.getElementById('boxFormStatus');
+            const itemModal = document.getElementById('itemModal');
+            const itemModalTitle = document.getElementById('itemModalTitle');
+            const itemForm = document.getElementById('itemForm');
+            const itemFormItemIdInput = document.getElementById('itemFormItemId');
+            const itemFormBoxIdInput = document.getElementById('itemFormBoxId');
+            const itemFormNameInput = document.getElementById('itemFormName');
+            const itemFormImageFileInput = document.getElementById('itemFormImageFile');
+            const itemImagePreviewDiv = document.getElementById('itemImagePreview');
+            const itemFormImageUrlInput = document.getElementById('itemFormImageUrl');
+            const itemFormAiKeywordsDiv = document.getElementById('itemFormAiKeywords');
+            const itemFormDescriptionTextarea = document.getElementById('itemFormDescription');
+            const itemFormQuantityInput = document.getElementById('itemFormQuantity');
+            const itemFormStatusP = document.getElementById('itemFormStatus');
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const searchAllWarehousesToggle = document.getElementById('searchAllWarehousesToggle');
+            const searchResultsMessage = document.getElementById('search-results-message');
+            const searchResultsArea = document.getElementById('search-results-area');
+            const searchPagination = document.getElementById('search-pagination');
+            const profileImageFile = document.getElementById('profileImageFile'); // Added from HTML
+        
+            let currentUserId = null;
+            let authToken = null;
+            let currentSelectedWarehouseId = null;
+            let currentSelectedWarehouseName = '';
+            let currentBoxPage = 1;
+            let currentSearchPage = 1;
+            let currentBoxViewItemsExpanded = {}; // { boxId: true/false }
+        
+             // --- Helper: HTML Escape (Simple version, use a library for more complex needs) ---
+             function escapeHtml(unsafe) {
+                    if (typeof unsafe !== 'string') {
+                        if (unsafe === null || unsafe === undefined) return '';
+                        unsafe = String(unsafe);
+                    }
+                    return unsafe
+                        .replace(/&/g, "&")
+                        .replace(/</g, "<")
+                        .replace(/>/g, ">")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+    
+            // --- Helper: API Fetch Wrapper ---
+         async function apiFetch(url, options = {}) {
+                        showLoadingOverlay(true);
+                        const defaultOptions = {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
+                            }
+                        };
+                        const mergedOptions = { ...defaultOptions, ...options };
+                        if (options.body && typeof options.body !== 'string') {
+                            mergedOptions.body = JSON.stringify(options.body);
+                        }
+                        try {
+                            const response = await fetch(url, mergedOptions);
+                            if (!response.ok) {
+                                let errorData;
+                                try {
+                                    errorData = await response.json();
+                                } catch (e) {
+                                    errorData = { error: `HTTP Error: ${response.status} ${response.statusText}`};
+                                }
+                                const error = new Error(errorData.error || `請求失敗 (${response.status})`);
+                                error.status = response.status;
+                                error.data = errorData;
+                                throw error;
+                            }
+                            if (response.status === 204) return null; // No content
+                            return await response.json();
+                        } catch (error) {
+                            console.error(`API Fetch Error (${url}):`, error);
+                            showApiError(error.data?.error || error.message || '發生未知錯誤');
+                            throw error; // Re-throw for specific catch blocks if needed
+                        } finally {
+                            showLoadingOverlay(false);
+                        }
+                    }
+                    
+                    
+                    function showLoadingOverlay(show) {
+                        loadingOverlay.style.display = show ? 'flex' : 'none';
+                    }
+                    
+                    
+                    function showApiError(message, elementId = null) {
+                        alert(`API 錯誤: ${message}`); // Simple alert for now
+                        if (elementId) {
+                            const el = document.getElementById(elementId);
+                            if (el) {
+                                el.textContent = `錯誤: ${message}`;
+                                el.style.color = '#c0392b';
+                            }
+                        }
+                    }
+        
+        
+                // --- Initialization (as provided before) ---
+          async function initializePage() {
+                        const params = new URLSearchParams(window.location.search);
+                        currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId'); // Prioritize localStorage
+                        authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+        
+                        if (!currentUserId || !authToken) {
+                            alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+                            window.location.href = 'box.html';
+                            return;
+                        }
+        
+                        // Verify token and get user info
+                        try {
+                            const userData = await apiFetch('/api/box/users/me'); // Uses token from defaultOptions
+                            currentUsernameSpan.textContent = userData.username;
+                            currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
+                            localStorage.setItem(`boxCurrentUsername`, userData.username); // Update local storage
+                            localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/default_avatar.png');
+                        } catch (error) {
+                            if (error.status === 401 || error.status === 403) {
+                                alert('登入憑證無效或已過期，請重新登入。');
+                                localStorage.removeItem(`boxUserToken_${currentUserId}`);
+                                localStorage.removeItem(`boxCurrentUserId`);
+                                localStorage.removeItem(`boxCurrentUsername`);
+                                localStorage.removeItem(`boxCurrentUserAvatar`);
+                                window.location.href = 'box.html';
+                            } else {
+                                showApiError('無法獲取用戶信息。');
+                            }
+                            return;
+                        }
+        
+                        setupEventListeners();
+                        switchTab('tab-warehouses'); // Default to warehouses tab
+                        loadWarehouses();
+                    }
+        
+        
+        
+                // --- Event Listeners Setup (as provided before, with new additions) ---
+                function setupEventListeners() {
+                    // ... (已有的監聽器) ...
+                    logoutButton.addEventListener('click', logout);
+                    tabLinks.forEach(link => {
+                        link.addEventListener('click', () => {
+                            if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
+                                alert('請先從「我的倉庫」分頁選擇一個倉庫。');
+                                return;
+                            }
+                            switchTab(link.dataset.tab);
+                        });
+                    });
+        
+                    addWarehouseForm.addEventListener('submit', handleAddWarehouse);
+                    refreshWarehousesBtn.addEventListener('click', loadWarehouses);
+        
+                    document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+                    document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
+                    profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
+        
+        
+                    // Box Modal Listeners
+                    document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
+                        btn.addEventListener('click', () => closeModal('boxModal'));
+                    });
+                    boxForm.addEventListener('submit', handleSaveBox);
+                    addBoxBtn.addEventListener('click', openAddBoxModal); // Opens modal for new box
+                    boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
+        
+        
+                    // Item Modal Listeners
+                    document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => {
+                        btn.addEventListener('click', () => closeModal('itemModal'));
+                    });
+                    itemForm.addEventListener('submit', handleSaveItem);
+                    itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
+        
+                    // Box Management Specific
+                    toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
+        
+                    // Search Tab
+                    searchButton.addEventListener('click', () => handleSearch(1)); // Search starts from page 1
+                    searchPagination.addEventListener('click', handleSearchPaginationClick);
+                    boxListPagination.addEventListener('click', handleBoxPaginationClick); // Listener for box pagination
+                }
+        
+                // --- Authentication (as provided before) ---
+          // --- Authentication ---
+                    function logout() {
+                        localStorage.removeItem(`boxUserToken_${currentUserId}`);
+                        localStorage.removeItem(`boxCurrentUserId`);
+                        localStorage.removeItem(`boxCurrentUsername`);
+                        localStorage.removeItem(`boxCurrentUserAvatar`);
+                        window.location.href = 'box.html';
+                    }
+        
+        
+                // --- Tab Navigation (as provided before) ---
+          // --- Tab Navigation ---
+                    function switchTab(tabId) {
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        tabLinks.forEach(link => link.classList.remove('active'));
+        
+                        document.getElementById(tabId).classList.add('active');
+                        document.querySelector(`.tab-navigation button[data-tab="${tabId}"]`).classList.add('active');
+        
+                        // Specific actions when switching to a tab
+                        if (tabId === 'tab-warehouses') {
+                            loadWarehouses();
+                            boxManagementTabLink.style.display = 'none'; // Hide box management tab
+                        } else if (tabId === 'tab-box-management') {
+                            if (currentSelectedWarehouseId) {
+                               boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
+                               loadBoxesForWarehouse(currentSelectedWarehouseId);
+                            } else {
+                                alert('錯誤：未選擇倉庫！');
+                                switchTab('tab-warehouses'); // Go back
+                            }
+                        } else if (tabId === 'tab-search') {
+                            document.getElementById('search-results-area').innerHTML = '';
+                            document.getElementById('search-results-message').textContent = '';
+                            document.getElementById('search-pagination').innerHTML = '';
+                        }
+                        // Reset forms or clear messages when switching tabs if needed
+                        resetFormStatuses();
+                    }
+                    
+                    
+                    function resetFormStatuses() {
+                        ['addWarehouseStatus', 'boxFormStatus', 'itemFormStatus', 'changePasswordStatus', 'changeProfileImageStatus'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.textContent = '';
+                        });
+                    }
+                // --- Modal Handling (modified previewModalImage) ---
+                function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+                function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+                function previewModalImage(event, previewElementId, fileInputElement) { // Added fileInputElement
+                    const input = fileInputElement || event.target; // Use passed input or event target
+                    const previewContainer = document.getElementById(previewElementId);
+                    const imgElement = previewContainer.querySelector('img');
+                    if (input.files && input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            imgElement.src = e.target.result;
+                            previewContainer.style.display = 'block';
+                        }
+                        reader.readAsDataURL(input.files[0]);
+                    } else {
+                        imgElement.src = '#';
+                        previewContainer.style.display = 'none';
+                    }
+                }
+        
+             
+        
+             // ===================================
+        // == Warehouse Management Functions ==
+        // ===================================
+        
+        async function loadWarehouses() {
+            if (!currentUserId || !authToken) return;
+            warehouseListMessage.textContent = '正在載入倉庫列表...';
+            warehouseListMessage.style.color = '#555';
+            warehouseListDiv.innerHTML = '';
+        
+            try {
+                const warehouses = await apiFetch('/api/box/my-warehouses');
+                if (warehouses.length === 0) {
+                    warehouseListMessage.textContent = '您還沒有創建任何倉庫。可以從「新增倉庫」分頁開始！';
+                    return;
+                }
+                warehouseListMessage.textContent = ''; // Clear loading message
+        
+                warehouses.forEach(warehouse => {
+                    const card = document.createElement('div');
+                    card.className = 'warehouse-card';
+                    card.innerHTML = `
+                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
+                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
+                        <div class="actions">
+                            <button class="enter-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">進入倉庫 (${warehouse.box_count || 0} 個紙箱)</button>
+                            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}">編輯</button>
+                            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
+                        </div>
+                    `;
+                    warehouseListDiv.appendChild(card);
+                });
+        
+                // Add event listeners for new warehouse cards
+                warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        currentSelectedWarehouseId = e.target.dataset.warehouseId;
+                        currentSelectedWarehouseName = e.target.dataset.warehouseName;
+                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // Show the tab
+                        switchTab('tab-box-management');
+                    });
+                });
+                warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
+                    btn.addEventListener('click', (e) => handleEditWarehouseModalOpen(e.target.dataset.warehouseId));
+                });
+                warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
+                    btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
+                });
+        
+            } catch (error) {
+                warehouseListMessage.textContent = `載入倉庫失敗: ${error.message || '未知錯誤'}`;
+                warehouseListMessage.style.color = '#c0392b';
+            }
+        }
+        
+        async function handleAddWarehouse(event) {
+            event.preventDefault();
+            const name = newWarehouseNameInput.value.trim();
+            const description = newWarehouseDescriptionInput.value.trim();
+        
+            if (!name) {
+                addWarehouseStatus.textContent = '倉庫名稱不能為空。';
+                addWarehouseStatus.style.color = '#e67e22';
+                return;
+            }
+            addWarehouseStatus.textContent = '正在創建倉庫...';
+            addWarehouseStatus.style.color = '#3498db';
+        
+            try {
+                const newWarehouse = await apiFetch('/api/box/my-warehouses', {
+                    method: 'POST',
+                    body: { warehouse_name: name, warehouse_description: description }
+                });
+                addWarehouseStatus.textContent = `倉庫 "${newWarehouse.warehouse_name}" 創建成功！`;
+                addWarehouseStatus.style.color = '#2ecc71';
+                addWarehouseForm.reset();
+                loadWarehouses(); // Refresh list
+                setTimeout(() => { // Switch to warehouse list after a delay
+                    switchTab('tab-warehouses');
+                    addWarehouseStatus.textContent = '';
+                }, 1500);
+            } catch (error) {
+                addWarehouseStatus.textContent = `創建失敗: ${error.data?.error || error.message || '未知錯誤'}`;
+                addWarehouseStatus.style.color = '#c0392b';
+            }
+        }
+        
+        // For editing a warehouse - you'd typically open a modal pre-filled with data
+        async function handleEditWarehouseModalOpen(warehouseId) {
+            // This would be similar to handleAddWarehouse but for editing.
+            // 1. Fetch warehouse details: GET /api/box/warehouses/:warehouseId
+            // 2. Populate a modal (you might reuse/adapt #addWarehouseForm or create a new one)
+            // 3. On submit, call PUT /api/box/warehouses/:warehouseId
+            alert(`編輯倉庫 ID: ${warehouseId} 的功能待實現。\n您需要創建一個編輯倉庫的表單/模態框。`);
+            // Example:
+            // const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
+            // openEditWarehouseModal(warehouse); // This function would populate and show the modal
+        }
+        
+        async function handleDeleteWarehouse(warehouseId, warehouseName) {
+            if (!confirm(`確定要刪除倉庫 "${warehouseName}" 及其所有紙箱和物品嗎？此操作無法復原！`)) {
+                return;
+            }
+            try {
+                await apiFetch(`/api/box/warehouses/${warehouseId}`, { method: 'DELETE' });
+                alert(`倉庫 "${warehouseName}" 已成功刪除。`);
+                loadWarehouses(); // Refresh the list
+                // If the deleted warehouse was the currently selected one, reset selection
+                if (currentSelectedWarehouseId === warehouseId) {
+                    currentSelectedWarehouseId = null;
+                    currentSelectedWarehouseName = '';
+                    if(boxManagementTabLink) boxManagementTabLink.style.display = 'none';
+                    // Optionally switch to a default tab if on box-management
+                    if (document.getElementById('tab-box-management').classList.contains('active')) {
+                        switchTab('tab-warehouses');
+                    }
+                }
+            } catch (error) {
+                // Error already shown by apiFetch, but you can add specific handling here
+            }
+        }
+               
+    
+    
+    
+    
+    
+    
+            async function handleEditWarehouseModalOpen(warehouseId) {
+                addWarehouseForm.reset(); // Assuming reuse of add form for edit
+                addWarehouseStatus.textContent = '正在載入倉庫資料...';
+                openModal('addWarehouseModal'); // Or a specific edit modal if you create one
+        
+                try {
+                    const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
+                    document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
+                    newWarehouseNameInput.value = warehouse.warehouse_name;
+                    newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
+                    addWarehouseForm.dataset.editingId = warehouseId; // Store ID for submit logic
+                    addWarehouseStatus.textContent = '';
+                } catch (error) {
+                    addWarehouseStatus.textContent = '載入倉庫資料失敗。';
+                    addWarehouseStatus.style.color = '#c0392b';
+                    setTimeout(() => closeModal('addWarehouseModal'), 2000); // Close modal on error
+                }
+            }
+            // Modify handleAddWarehouse to also handle edit
+            async function handleAddWarehouse(event) { // Renamed from handleSaveWarehouse to be clear
+                event.preventDefault();
+                const name = newWarehouseNameInput.value.trim();
+                const description = newWarehouseDescriptionInput.value.trim();
+                const editingId = addWarehouseForm.dataset.editingId;
+        
+                if (!name) {
+                    addWarehouseStatus.textContent = '倉庫名稱不能為空。';
+                    addWarehouseStatus.style.color = '#e67e22';
+                    return;
+                }
+                addWarehouseStatus.textContent = editingId ? '正在更新倉庫...' : '正在創建倉庫...';
+                addWarehouseStatus.style.color = '#3498db';
+        
+                const payload = { warehouse_name: name, warehouse_description: description };
+                const method = editingId ? 'PUT' : 'POST';
+                const url = editingId ? `/api/box/warehouses/${editingId}` : '/api/box/my-warehouses';
+        
+                try {
+                    const savedWarehouse = await apiFetch(url, { method, body: payload });
+                    addWarehouseStatus.textContent = `倉庫 "${savedWarehouse.warehouse_name}" ${editingId ? '更新' : '創建'}成功！`;
+                    addWarehouseStatus.style.color = '#2ecc71';
+                    addWarehouseForm.reset();
+                    delete addWarehouseForm.dataset.editingId; // Clear editing ID
+                    document.getElementById('tab-add-warehouse').querySelector('h2').textContent = '新增倉庫'; // Reset title
+        
+                    loadWarehouses();
+                    setTimeout(() => {
+                        switchTab('tab-warehouses');
+                        addWarehouseStatus.textContent = '';
+                    }, 1500);
+                } catch (error) {
+                    addWarehouseStatus.textContent = `${editingId ? '更新' : '創建'}失敗: ${error.data?.error || error.message}`;
+                    addWarehouseStatus.style.color = '#c0392b';
+                }
+            }
+        
+        
+            // =======================================
+        // == Image Upload & Analysis Functions ==
+        // =======================================
+        // This function will be called by Box and Item forms before saving data
+        async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
+            if (!imageFile) {
+                return { success: false, error: '未選擇圖片文件。' };
+            }
+            // Add client-side size/type checks if not already handled by multer on server (or for better UX)
+            const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+            if (imageFile.size > MAX_SIZE) {
+                return { success: false, error: `圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制。`};
+            }
+            const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedMimes.includes(imageFile.type)) {
+                 return { success: false, error: '只允許上傳 jpeg, png, gif, webp 格式的圖片。'};
+            }
+        
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('fileType', fileTypeString); // e.g., 'box_cover', 'item_image', 'profile_image'
+        
+            showLoadingOverlay(true); // Show global loading
+            try {
+                // No need for 'Content-Type': 'multipart/form-data' here,
+                // fetch does it automatically for FormData
+                const response = await fetch('/api/box/upload-analyze-then-process-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }, // Token is crucial
+                    body: formData
+                });
+                showLoadingOverlay(false);
+        
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || `圖片上傳與分析失敗 (${response.status})`);
+                }
+                return { success: true, imageUrl: data.image_url, aiKeywords: data.ai_keywords, uploadedFileId: data.uploaded_file_id };
+            } catch (error) {
+                showLoadingOverlay(false);
+                console.error('圖片上傳與分析過程中發生錯誤:', error);
+                showApiError(error.message || '圖片處理時發生未知錯誤。');
+                return { success: false, error: error.message || '圖片處理時發生未知錯誤。' };
+            }
+        }
+        
+               
+        // =================================
+        // == User Settings Functions     ==
+        // =================================
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+            const statusEl = document.getElementById('changePasswordStatus');
+        
+            if (newPassword !== confirmNewPassword) {
+                statusEl.textContent = '新密碼與確認密碼不符。';
+                statusEl.style.color = '#e67e22';
+                return;
+            }
+            if (newPassword.length < 6) {
+                statusEl.textContent = '新密碼長度至少需要6位。';
+                statusEl.style.color = '#e67e22';
+                return;
+            }
+            statusEl.textContent = '正在更新密碼...';
+            statusEl.style.color = '#3498db';
+        
+            try {
+                await apiFetch('/api/box/users/me/password', {
+                    method: 'PUT',
+                    body: { currentPassword, newPassword }
+                });
+                statusEl.textContent = '密碼更新成功！';
+                statusEl.style.color = '#2ecc71';
+                document.getElementById('changePasswordForm').reset();
+            } catch (error) {
+                statusEl.textContent = `更新失敗: ${error.data?.error || error.message}`;
+                statusEl.style.color = '#c0392b';
+            }
+        }
+        
+        async function handleChangeProfileImage(event) {
+            event.preventDefault();
+            const profileImageFile = document.getElementById('profileImageFile').files[0];
+            const statusEl = document.getElementById('changeProfileImageStatus');
+            const uploadBtn = document.getElementById('uploadProfileImageBtn');
+        
+            if (!profileImageFile) {
+                statusEl.textContent = '請先選擇一張圖片。';
+                statusEl.style.color = '#e67e22';
+                return;
+            }
+        
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '上傳中...';
+            statusEl.textContent = '正在上傳並分析圖片...';
+            statusEl.style.color = '#3498db';
+        
+            const uploadResult = await handleImageUploadAndAnalyze(profileImageFile, 'profile_image');
+        
+            if (uploadResult.success) {
+                statusEl.textContent = '圖片上傳成功，正在更新頭像...';
+                try {
+                    const updateResult = await apiFetch('/api/box/users/me/profile-image', {
+                        method: 'PUT',
+                        body: { user_profile_image_url: uploadResult.imageUrl }
+                    });
+                    statusEl.textContent = '頭像更新成功！';
+                    statusEl.style.color = '#2ecc71';
+                    currentUserAvatarImg.src = uploadResult.imageUrl; // Update avatar in header
+                    localStorage.setItem(`boxCurrentUserAvatar`, uploadResult.imageUrl); // Update local storage
+                    document.getElementById('changeProfileImageForm').reset();
+                    document.getElementById('profileImagePreview').style.display = 'none';
+                } catch (error) {
+                    statusEl.textContent = `頭像更新失敗: ${error.data?.error || error.message}`;
+                    statusEl.style.color = '#c0392b';
+                }
+            } else {
+                statusEl.textContent = `圖片處理失敗: ${uploadResult.error}`;
+                statusEl.style.color = '#c0392b';
+            }
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '上傳並更新頭像';
+        }
+        
+                // ==============================
+                // == Box Management Functions ==
+                // ==============================
+         
+                async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                    if (!warehouseId) {
+                        boxListMessage.textContent = '請先選擇一個倉庫。';
+                        boxGridArea.innerHTML = '';
+                        boxListPagination.innerHTML = '';
+                        return;
+                    }
+                    currentBoxPage = page;
+                    boxListMessage.textContent = '正在載入紙箱列表...';
+                    boxGridArea.innerHTML = '';
+                    boxListPagination.innerHTML = '';
+        
+                    try {
+                        const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`); // Example limit
+                        if (data.boxes.length === 0) {
+                            boxListMessage.textContent = '此倉庫中沒有紙箱。點擊上方按鈕新增一個吧！';
+                            return;
+                        }
+                        boxListMessage.textContent = '';
+        
+                        data.boxes.forEach(box => {
+                            const card = document.createElement('div');
+                            card.className = 'box-card';
+                            card.dataset.boxId = box.box_id;
+                            card.innerHTML = `
+                                <img src="${box.cover_image_url || '/images/default_box.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/default_box_error.png'">
+                                <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
+                                <div class="box-name">${escapeHtml(box.box_name)}</div>
+                                <div class="item-count">物品: ${box.item_count || 0} 件</div>
+                                <div class="box-actions">
+                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折叠物品' : '展開物品'}</button>
+                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
+                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
+                                </div>
+                                <div class="item-list-container" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'};">
+                                    <!-- Items will be loaded here on expand -->
+                                    <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
+                                    <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
+                                </div>
+                            `;
+                            boxGridArea.appendChild(card);
+        
+                            if (currentBoxViewItemsExpanded[box.box_id]) {
+                                loadItemsForBox(box.box_id, card.querySelector('.item-list-container'));
+                            }
+                        });
+                        renderPagination(data.totalPages, data.currentPage, 'box-list-pagination', handleBoxPaginationClick);
+                        addBoxActionListeners();
+                    } catch (error) {
+                        boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
+                        boxListMessage.style.color = '#c0392b';
+                    }
+                }
+        
+                function addBoxActionListeners() {
+                    boxGridArea.querySelectorAll('.toggle-items-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => toggleItemListView(e.target.dataset.boxId, e.target));
+                    });
+                    boxGridArea.querySelectorAll('.edit-box-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => openEditBoxModal(e.target.dataset.boxId));
+                    });
+                    boxGridArea.querySelectorAll('.delete-box-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => handleDeleteBox(e.target.dataset.boxId, e.target.dataset.boxName));
+                    });
+                    boxGridArea.querySelectorAll('.add-item-to-box-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => openAddItemModal(e.target.dataset.boxId));
+                    });
+                }
+        
+                function openAddBoxModal() {
+                    boxForm.reset();
+                    boxModalTitle.textContent = `新增紙箱到 "${currentSelectedWarehouseName}"`;
+                    boxFormBoxIdInput.value = ''; // Clear ID for new box
+                    boxFormCoverImageUrlInput.value = ''; // Clear previous image URL
+                    boxCoverPreviewDiv.style.display = 'none';
+                    boxCoverPreviewDiv.querySelector('img').src = '#';
+                    boxFormAiKeywordsDiv.innerHTML = '<em>上傳圖片後將顯示AI建議關鍵字</em>';
+                    boxFormStatusP.textContent = '';
+                    openModal('boxModal');
+                }
+        
+                async function openEditBoxModal(boxId) {
+                    boxForm.reset();
+                    boxModalTitle.textContent = '編輯紙箱';
+                    boxFormBoxIdInput.value = boxId;
+                    boxFormStatusP.textContent = '正在載入紙箱資料...';
+                    openModal('boxModal');
+                    try {
+                        const box = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}`);
+                        boxFormNumberInput.value = box.box_number;
+                        boxFormNameInput.value = box.box_name;
+                        boxFormCoverImageUrlInput.value = box.cover_image_url || '';
+                        if (box.cover_image_url) {
+                            boxCoverPreviewDiv.querySelector('img').src = box.cover_image_url;
+                            boxCoverPreviewDiv.style.display = 'block';
+                        } else {
+                            boxCoverPreviewDiv.style.display = 'none';
+                        }
+                        boxFormAiKeywordsDiv.innerHTML = (box.ai_box_keywords && box.ai_box_keywords.length > 0)
+                            ? box.ai_box_keywords.map(k => `<span class="ai-keyword-tag">${escapeHtml(k)}</span>`).join(' ')
+                            : '<em>沒有AI關鍵字或未上傳圖片。</em>';
+                        boxFormManualNotesTextarea.value = box.manual_notes || '';
+                        boxFormStatusP.textContent = '';
+                    } catch (error) {
+                        boxFormStatusP.textContent = '載入紙箱資料失敗。';
+                        boxFormStatusP.style.color = '#c0392b';
+                    }
+                }
+        
+                async function handleSaveBox(event) {
+                    event.preventDefault();
+                    const boxId = boxFormBoxIdInput.value;
+                    const isEditing = !!boxId;
+                    const boxNumber = boxFormNumberInput.value.trim();
+                    const boxName = boxFormNameInput.value.trim();
+                    const manualNotes = boxFormManualNotesTextarea.value.trim();
+                    const imageFile = boxFormCoverImageFileInput.files[0];
+        
+                    if (!boxNumber || !boxName) {
+                        boxFormStatusP.textContent = '紙箱編號和名稱為必填。';
+                        boxFormStatusP.style.color = '#e67e22';
+                        return;
+                    }
+                    boxFormStatusP.textContent = '處理中...';
+                    boxFormStatusP.style.color = '#3498db';
+                    const submitButton = boxForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+        
+                    let imageUrl = boxFormCoverImageUrlInput.value; // Use existing if not changing
+                    let aiKeywords = boxFormAiKeywordsDiv.textContent.includes("沒有AI關鍵字") ? [] : boxFormAiKeywordsDiv.textContent.split(', '); // Crude way, improve if needed
+        
+                    if (imageFile) {
+                        const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'box_cover');
+                        if (!uploadResult.success) {
+                            boxFormStatusP.textContent = `圖片處理失敗: ${uploadResult.error}`;
+                            boxFormStatusP.style.color = '#c0392b';
+                            submitButton.disabled = false;
+                            return;
+                        }
+                        imageUrl = uploadResult.imageUrl;
+                        aiKeywords = uploadResult.aiKeywords;
+                    }
+        
+                    const boxData = {
+                        box_number: boxNumber,
+                        box_name: boxName,
+                        cover_image_url: imageUrl,
+                        ai_box_keywords: aiKeywords,
+                        manual_notes: manualNotes
+                    };
+        
+                    try {
+                        let savedBox;
+                        if (isEditing) {
+                            savedBox = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}`, {
+                                method: 'PUT',
+                                body: boxData
+                            });
+                        } else {
+                            savedBox = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes`, {
+                                method: 'POST',
+                                body: boxData
+                            });
+                        }
+                        boxFormStatusP.textContent = `紙箱 "${savedBox.box_name}" 保存成功！`;
+                        boxFormStatusP.style.color = '#2ecc71';
+                        setTimeout(() => {
+                            closeModal('boxModal');
+                            loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Refresh current page
+                        }, 1000);
+                    } catch (error) {
+                        boxFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`;
+                        boxFormStatusP.style.color = '#c0392b';
+                    } finally {
+                        submitButton.disabled = false;
+                    }
+                }
+        
+                async function handleDeleteBox(boxId, boxName) {
+                    if (!confirm(`確定要刪除紙箱 "${boxName}" 及其所有物品嗎？`)) return;
+                    try {
+                        await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}`, { method: 'DELETE' });
+                        alert(`紙箱 "${boxName}" 已刪除。`);
+                        loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
+                    } catch (error) { /* Error shown by apiFetch */ }
+                }
+    
+    
+    
+    
+    
+    
+            async function toggleItemListView(boxId, expandButtonElement) {
+                const container = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                if (!container) return;
+        
+                const isLoadingPlaceholder = container.querySelector('.items-loading-placeholder');
+                const shouldExpand = !currentBoxViewItemsExpanded[boxId];
+        
+                currentBoxViewItemsExpanded[boxId] = shouldExpand;
+                expandButtonElement.textContent = shouldExpand ? '折叠物品' : '展開物品';
+                container.style.display = shouldExpand ? 'block' : 'none';
+        
+                if (shouldExpand && !container.dataset.loadedItems) {
+                    if (isLoadingPlaceholder) isLoadingPlaceholder.textContent = '正在載入物品...';
+                    await loadItemsForBox(boxId, container);
+                    if (isLoadingPlaceholder && container.querySelectorAll('.item-entry').length > 0) {
+                         isLoadingPlaceholder.style.display = 'none'; // Hide placeholder if items loaded
+                    } else if (isLoadingPlaceholder) {
+                         isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                    }
+                } else if (shouldExpand && isLoadingPlaceholder && container.querySelectorAll('.item-entry').length === 0) {
+                     isLoadingPlaceholder.textContent = '此紙箱內沒有物品。';
+                     isLoadingPlaceholder.style.display = 'block';
+                } else if (!shouldExpand && isLoadingPlaceholder) {
+                    isLoadingPlaceholder.textContent = '點擊展開查看物品'; // Reset placeholder text
+                    isLoadingPlaceholder.style.display = 'block';
+                }
+            }
+        
+            async function loadItemsForBox(boxId, containerElement) {
+                if (!currentSelectedWarehouseId) return; // Should not happen if called correctly
+        
+                const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
+                const placeholder = containerElement.querySelector('.items-loading-placeholder');
+        
+                // Clear previous items, but keep the placeholder and add button structure
+                const existingItems = containerElement.querySelectorAll('.item-entry');
+                existingItems.forEach(item => item.remove());
+                if(placeholder) placeholder.textContent = '正在載入物品...';
+        
+        
+                try {
+                    const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
+                    if (items.length === 0) {
+                        if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
+                    } else {
+                        if(placeholder) placeholder.style.display = 'none'; // Hide placeholder
+                        items.forEach(item => {
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'item-entry';
+                            itemDiv.dataset.itemId = item.item_id;
+                            itemDiv.innerHTML = `
+                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}" onerror="this.src='/images/default_item_error.png'">
+                                <div class="item-name">
+                                    <strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})<br>
+                                    <small style="color:#777;">${escapeHtml(item.item_description || '無描述')}</small>
+                                    ${(item.ai_item_keywords && item.ai_item_keywords.length > 0) ? `<br><small style="color:#3498db; font-style:italic;">AI關鍵字: ${item.ai_item_keywords.map(k=>escapeHtml(k)).join(', ')}</small>` : ''}
+                                </div>
+                                <div class="item-actions">
+                                    <button class="edit-item-btn" data-item-id="${item.item_id}" data-box-id="${boxId}">編輯</button>
+                                    <button class="delete-item-btn" data-item-id="${item.item_id}" data-item-name="${escapeHtml(item.item_name)}" data-box-id="${boxId}">刪除</button>
+                                </div>
+                            `;
+                            // Insert before the "Add Item" button
+                            if (addItemBtn) {
+                                containerElement.insertBefore(itemDiv, addItemBtn);
+                            } else {
+                                containerElement.appendChild(itemDiv);
+                            }
+                        });
+                    }
+                    containerElement.dataset.loadedItems = 'true';
+                    addItemActionListeners(containerElement); // Re-bind listeners for new items
+                } catch (error) {
+                    if(placeholder) {
+                        placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
+                        placeholder.style.color = '#c0392b';
+                    }
+                }
+            }
+            function addItemActionListeners(containerElement) {
+                containerElement.querySelectorAll('.edit-item-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => openEditItemModal(e.target.dataset.itemId, e.target.dataset.boxId));
+                });
+                containerElement.querySelectorAll('.delete-item-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => handleDeleteItem(e.target.dataset.itemId, e.target.dataset.itemName, e.target.dataset.boxId));
+                });
+            }
+        
+        
+            // ==============================
+            // == Item Management Functions ==
+            // ==============================
+            function openAddItemModal(boxIdForNewItem) {
+                itemForm.reset();
+                itemModalTitle.textContent = `新增物品到紙箱 #${boxIdForNewItem}`;
+                itemFormItemIdInput.value = '';
+                itemFormBoxIdInput.value = boxIdForNewItem; // Set the target box ID
+                itemFormImageUrlInput.value = '';
+                itemImagePreviewDiv.style.display = 'none';
+                itemImagePreviewDiv.querySelector('img').src = '#';
+                itemFormAiKeywordsDiv.innerHTML = '<em>上傳圖片後將顯示AI建議關鍵字</em>';
+                itemFormStatusP.textContent = '';
+                openModal('itemModal');
+            }
+        
+            async function openEditItemModal(itemId, boxIdContext) {
+                itemForm.reset();
+                itemModalTitle.textContent = '編輯物品';
+                itemFormItemIdInput.value = itemId;
+                itemFormBoxIdInput.value = boxIdContext; // Current box context for permissions/refresh
+                itemFormStatusP.textContent = '正在載入物品資料...';
+                openModal('itemModal');
+        
+                try {
+                    // API to get single item detail needs warehouseId for permission, so we might need to fetch box first if not available
+                    // Or, if the item GET API can infer warehouseId or doesn't strictly need it for this specific GET
+                    // For now, assume we might need to construct the full path if your GET item API is nested
+                    const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`); // Placeholder, adjust if your API is different for single item
+        
+                    itemFormNameInput.value = item.item_name;
+                    itemFormDescriptionTextarea.value = item.item_description || '';
+                    itemFormQuantityInput.value = item.quantity;
+                    itemFormImageUrlInput.value = item.item_image_url || '';
+                    if (item.item_image_url) {
+                        itemImagePreviewDiv.querySelector('img').src = item.item_image_url;
+                        itemImagePreviewDiv.style.display = 'block';
+                    } else {
+                        itemImagePreviewDiv.style.display = 'none';
+                    }
+                    itemFormAiKeywordsDiv.innerHTML = (item.ai_item_keywords && item.ai_item_keywords.length > 0)
+                        ? item.ai_item_keywords.map(k => `<span class="ai-keyword-tag">${escapeHtml(k)}</span>`).join(' ')
+                        : '<em>沒有AI關鍵字或未上傳圖片。</em>';
+                    itemFormStatusP.textContent = '';
+                } catch (error) {
+                    itemFormStatusP.textContent = `載入物品資料失敗: ${error.message || '未知錯誤'}`;
+                    itemFormStatusP.style.color = '#c0392b';
+                }
+            }
+        
+        
+            async function handleSaveItem(event) {
+                event.preventDefault();
+                const itemId = itemFormItemIdInput.value;
+                const boxId = itemFormBoxIdInput.value; // This is the box it BELONGS TO or WILL BELONG TO
+                const isEditing = !!itemId;
+        
+                const itemName = itemFormNameInput.value.trim();
+                const description = itemFormDescriptionTextarea.value.trim();
+                const quantity = parseInt(itemFormQuantityInput.value);
+                const imageFile = itemFormImageFileInput.files[0];
+        
+                if (!itemName) {
+                    itemFormStatusP.textContent = '物品名稱為必填。'; itemFormStatusP.style.color = '#e67e22'; return;
+                }
+                if (isNaN(quantity) || quantity < 0) {
+                    itemFormStatusP.textContent = '數量必須是非負整數。'; itemFormStatusP.style.color = '#e67e22'; return;
+                }
+        
+                itemFormStatusP.textContent = '處理中...'; itemFormStatusP.style.color = '#3498db';
+                const submitButton = itemForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+        
+                let imageUrl = itemFormImageUrlInput.value; // Existing URL if not changed
+                let aiKeywordsText = itemFormAiKeywordsDiv.textContent; // Existing AI keywords text
+                let aiKeywordsArray = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ');
+        
+        
+                if (imageFile) {
+                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
+                    if (!uploadResult.success) {
+                        itemFormStatusP.textContent = `圖片處理失敗: ${uploadResult.error}`; itemFormStatusP.style.color = '#c0392b';
+                        submitButton.disabled = false; return;
+                    }
+                    imageUrl = uploadResult.imageUrl;
+                    aiKeywordsArray = uploadResult.aiKeywords;
+                }
+        
+                const itemData = {
+                    item_name: itemName,
+                    item_description: description,
+                    quantity: quantity,
+                    item_image_url: imageUrl,
+                    ai_item_keywords: aiKeywordsArray,
+                    box_id: boxId // Crucial for both add and edit (if allowing move via edit)
+                };
+        
+                try {
+                    let savedItem;
+                    if (isEditing) {
+                        savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { // warehouseId for permission context
+                            method: 'PUT',
+                            body: itemData
+                        });
+                    } else {
+                        savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`, {
+                            method: 'POST',
+                            body: itemData
+                        });
+                    }
+                    itemFormStatusP.textContent = `物品 "${savedItem.item_name}" 保存成功！`; itemFormStatusP.style.color = '#2ecc71';
+                    setTimeout(() => {
+                        closeModal('itemModal');
+                        // Refresh items for the specific box
+                        const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                        if (itemsContainer) {
+                            itemsContainer.dataset.loadedItems = 'false'; // Force reload
+                            toggleItemListView(boxId, boxGridArea.querySelector(`.toggle-items-btn[data-box-id="${boxId}"]`));
+                        }
+                        loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Also refresh box count
+                    }, 1000);
+                } catch (error) {
+                    itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
+                } finally {
+                    submitButton.disabled = false;
+                }
+            }
+        
+            async function handleDeleteItem(itemId, itemName, boxId) {
+                if (!confirm(`確定要刪除物品 "${itemName}" 嗎？`)) return;
+                try {
+                    await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { method: 'DELETE' });
+                    alert(`物品 "${itemName}" 已刪除。`);
+                    const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                    if (itemsContainer && currentBoxViewItemsExpanded[boxId]) { // If expanded, reload
+                        itemsContainer.dataset.loadedItems = 'false';
+                        loadItemsForBox(boxId, itemsContainer);
+                    }
+                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // Refresh box count
+                } catch (error) { /* Error shown by apiFetch */ }
+            }
+        
+            // ===========================
+            // == Search Functions      ==
+            // ===========================
+            async function handleSearch(page = 1) {
+                currentSearchPage = page;
+                const searchTerm = searchInput.value.trim();
+                const searchAll = searchAllWarehousesToggle.checked;
+        
+                if (!searchTerm) {
+                    searchResultsArea.innerHTML = '';
+                    searchResultsMessage.textContent = '請輸入搜尋關鍵字。';
+                    searchPagination.innerHTML = '';
+                    return;
+                }
+        
+                searchResultsMessage.textContent = '搜尋中...';
+                searchResultsArea.innerHTML = '';
+                searchPagination.innerHTML = '';
+        
+                let url;
+                if (searchAll) {
+                    url = `/api/box/my-warehouses/search-all-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
+                } else {
+                    if (!currentSelectedWarehouseId) {
+                        searchResultsMessage.textContent = '請先選擇一個倉庫進行搜尋，或勾選「搜尋我的所有倉庫」。';
+                        return;
+                    }
+                    url = `/api/box/warehouses/${currentSelectedWarehouseId}/search-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
+                }
+        
+                try {
+                    const data = await apiFetch(url);
+                    renderSearchResults(data.results);
+                    renderPagination(data.totalPages, data.currentPage, 'search-pagination', handleSearchPaginationClick);
+                    if (data.results.length === 0) {
+                        searchResultsMessage.textContent = `找不到包含 "${escapeHtml(searchTerm)}" 的結果。`;
+                    } else {
+                        searchResultsMessage.textContent = `找到 ${data.totalItems} 個結果。`;
+                    }
+                } catch (error) {
+                    searchResultsMessage.textContent = `搜尋失敗: ${error.message || '未知錯誤'}`;
+                }
+            }
+        
+            function renderSearchResults(results) {
+                searchResultsArea.innerHTML = '';
+                if (!results || results.length === 0) return;
+        
+                results.forEach(result => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'search-result-item';
+                    let detailsHtml = `
+                        <h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>
+                        <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>
+                        <p><strong>AI關鍵字:</strong> ${result.keywords && result.keywords.length > 0 ? result.keywords.map(k => escapeHtml(k)).join(', ') : '無'}</p>
+                        <p><strong>所在倉庫:</strong> ${escapeHtml(result.warehouse_name)} (ID: ${result.warehouse_id})</p>
+                    `;
+                    if (result.type === 'item') {
+                        detailsHtml += `<p><strong>所在紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)}, ID: ${result.box_id})</p>`;
+                    } else { // box
+                         detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
+                    }
+                    // Add a button/link to navigate to the box or item view
+                    detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
+                    itemDiv.innerHTML = detailsHtml;
+                    searchResultsArea.appendChild(itemDiv);
+                });
+        
+                // Add event listeners for view details buttons in search results
+                searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const { type, warehouseId, boxId, itemId } = e.target.dataset;
+                        currentSelectedWarehouseId = warehouseId; // Set warehouse context
+                        currentSelectedWarehouseName = ""; // May need to fetch warehouse name if not already known
+                        const whCard = warehouseListDiv.querySelector(`.enter-warehouse[data-warehouse-id="${warehouseId}"]`);
+                        if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName;
+        
+                        boxManagementTabLink.style.display = 'inline-block';
+                        switchTab('tab-box-management');
+                        // After tab switch, specifically expand the box and potentially highlight the item
+                        // This requires loadBoxesForWarehouse to complete and then to find and expand the specific box/item.
+                        // For now, it just takes to the box management tab of that warehouse.
+                        // You might need a more sophisticated way to "deep link" or highlight.
+                        setTimeout(() => { // Allow tab switch and box loading
+                            const boxCard = boxGridArea.querySelector(`.box-card[data-box-id="${boxId}"]`);
+                            if(boxCard){
+                                const toggleBtn = boxCard.querySelector('.toggle-items-btn');
+                                if(toggleBtn && !currentBoxViewItemsExpanded[boxId]){
+                                    toggleItemListView(boxId, toggleBtn); // Expand items if not already
+                                }
+                                // Highlight logic can be added here
+                            }
+                        }, 500); // Delay to allow DOM updates
+                    });
+                });
+            }
+        
+        
+           
+            
+     // --- Pagination ---
+     function renderPagination(totalPages, currentPage, PaginatiodId, clickHandler) {
+                     const paginationElement = document.getElementById(PaginatiodId);
+                    if (!paginationElement) return;
+                    paginationElement.innerHTML = '';
+                    if (totalPages <= 1) return;
+        
+                    // ... (Your existing pagination rendering logic, adapted to use clickHandler)
+                     // Example:
+                    const prevButton = document.createElement('button');
+                    prevButton.textContent = '上一頁';
+                    prevButton.disabled = currentPage === 1;
+                    prevButton.addEventListener('click', () => clickHandler(currentPage - 1));
+                    paginationElement.appendChild(prevButton);
+        
+                    for (let i = 1; i <= totalPages; i++) {
+                        const pageButton = document.createElement('button');
+                        pageButton.textContent = i;
+                        pageButton.disabled = i === currentPage;
+                        if(i === currentPage) pageButton.classList.add('active');
+                        pageButton.addEventListener('click', () => clickHandler(i));
+                        paginationElement.appendChild(pageButton);
+                    }
+                     const nextButton = document.createElement('button');
+                    nextButton.textContent = '下一頁';
+                    nextButton.disabled = currentPage === totalPages;
+                    nextButton.addEventListener('click', () => clickHandler(currentPage + 1));
+                    paginationElement.appendChild(nextButton);
+                }
+        
+                function handleBoxPaginationClick(page) {
+                    loadBoxesForWarehouse(currentSelectedWarehouseId, page);
+                }
+                function handleSearchPaginationClick(page) {
+                    handleSearch(page);
+                }
+        
+    
+    
+    
+            initializePage();
+        });
+        </script>
+</body>
+</html>
