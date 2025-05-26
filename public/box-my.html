@@ -666,7 +666,7 @@
 
             setupEventListeners();
             switchTab('tab-warehouses'); // 預設顯示倉庫分頁
-            loadWarehouses();
+            // loadWarehouses(); // <-- 移除此行，避免重複渲染
         }
 
 
@@ -1481,6 +1481,7 @@
                 }, 1000);
 
             } catch (error) {
+                console.error('保存物品時發生錯誤:', error); // 新增這行
                 itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
             } finally {
                 submitButton.disabled = false;
