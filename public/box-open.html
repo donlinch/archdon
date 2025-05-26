@@ -478,12 +478,16 @@
 
             console.log('openEditItemModal 被调用，当前 item:', item);
             console.log('currentWarehouseId:', currentWarehouseId);
+            console.log('currentBoxId:', currentBoxId);
 
             try {
                 // 如果傳入的 item 只有 item_id，則需要獲取完整的物品資訊
                 if (!item.item_name) {
-                    console.log(`正在获取物品详情：/api/box/warehouses/${currentWarehouseId}/items/${item.item_id}`);
-                    const fullItem = await apiFetch(`/api/box/warehouses/${currentWarehouseId}/items/${item.item_id}`);
+                    // 修改 API 请求 URL，添加 boxes 参数
+                    const apiUrl = `/api/box/warehouses/${currentWarehouseId}/boxes/${currentBoxId}/items/${item.item_id}`;
+                    console.log(`正在获取物品详情：${apiUrl}`);
+                    
+                    const fullItem = await apiFetch(apiUrl);
                     console.log('获取的完整物品信息:', fullItem);
                     item = fullItem;
                 }
