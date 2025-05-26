@@ -170,10 +170,22 @@
         /* ... (Add specific styles for box list and grid view if needed, similar to file-admin.html) ... */
         /* Example for box card in grid view */
         #box-grid-area {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 15px;
-        }
+    display: grid;
+    grid-template-columns: repeat(60px, 1fr); /* 小螢幕 2 列 */
+    gap: 15px;
+}
+
+@media (min-width: 768px) {
+    #box-grid-area {
+        grid-template-columns: repeat(80px, 1fr); /* 中等螢幕 3 列 */
+    }
+}
+
+@media (min-width: 1200px) {
+    #box-grid-area {
+        grid-template-columns: repeat(100px, 1fr); /* 大螢幕 4 列 */
+    }
+}
         .box-card {
             background-color: #fff;
             border: 1px solid #e7e7e7;
