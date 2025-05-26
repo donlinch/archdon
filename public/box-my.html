@@ -620,6 +620,29 @@
     color: #e74c3c;
 }
 
+        .item-card {
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .item-card:hover {
+            transform: scale(1.05);
+        }
+        .item-card img {
+            height: 100px;
+            width: auto;
+            object-fit: cover;
+        }
+        .item-card .item-name {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -831,6 +854,20 @@
                     <button type="submit">保存物品</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 在現有的模態框之後新增物品詳情模態框 -->
+    <div id="itemDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" data-modal-id="itemDetailsModal">×</span>
+            <div id="itemDetailsContainer">
+                <img id="itemDetailsImage" src="" alt="物品大圖" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                <div id="itemDetailsActions" style="display: flex; justify-content: center; margin-top: 15px;">
+                    <button id="editItemFromDetailsBtn" class="primary" style="margin-right: 10px;">編輯</button>
+                    <button id="deleteItemFromDetailsBtn" class="danger">刪除</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1077,6 +1114,11 @@
                 gridViewBtn.classList.remove('active');
                 boxGridArea.style.display = 'none';
                 boxListArea.style.display = 'block';
+            });
+
+            // 物品詳情模態框關閉按鈕
+            document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"]').forEach(btn => {
+                btn.addEventListener('click', () => closeModal('itemDetailsModal'));
             });
         }
 
@@ -1829,25 +1871,18 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         items.forEach(item => {
                             const itemCard = document.createElement('div');
                             itemCard.className = 'item-card';
+                            itemCard.dataset.itemId = item.item_id;
+                            itemCard.dataset.boxId = boxId;
                             itemCard.innerHTML = `
                                 <img src="${item.item_image_url || '/images/default_item.png'}"
                                      alt="${escapeHtml(item.item_name)}"
                                      onerror="this.src='/images/box_item.png'">
-                                <div class="item-details">
-                                    <h4>${escapeHtml(item.item_name)}</h4>
-                                    <p>數量: ${item.quantity}</p>
-                                </div>
-                                <div class="item-actions">
-                                    <button class="edit-item-btn"
-                                            data-item-id="${item.item_id}"
-                                            data-box-id="${boxId}">編輯</button>
-                                    <button class="delete-item-btn"
-                                            data-item-id="${item.item_id}"
-                                            data-item-name="${escapeHtml(item.item_name)}"
-                                            data-box-id="${boxId}">刪除</button>
-                                </div>
+                                <div class="item-name">${escapeHtml(item.item_name)}</div>
                             `;
-
+                            
+                            // 為每個物品卡片新增點擊事件
+                            itemCard.addEventListener('click', () => showItemDetails(item));
+                            
                             itemsGridContainer.appendChild(itemCard);
                         });
                          addItemActionListeners(itemsGridContainer); // Add listeners to the new items
@@ -2248,8 +2283,29 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             handleSearch(page);
         }
 
+        // 新增顯示物品詳情的函數
+        function showItemDetails(item) {
+            const modal = document.getElementById('itemDetailsModal');
+            const imageElement = document.getElementById('itemDetailsImage');
+            const editBtn = document.getElementById('editItemFromDetailsBtn');
+            const deleteBtn = document.getElementById('deleteItemFromDetailsBtn');
 
+            imageElement.src = item.item_image_url || '/images/default_item.png';
+            
+            // 編輯按鈕事件
+            editBtn.onclick = () => {
+                closeModal('itemDetailsModal');
+                openEditItemModal(item.item_id, item.box_id);
+            };
 
+            // 刪除按鈕事件
+            deleteBtn.onclick = () => {
+                closeModal('itemDetailsModal');
+                handleDeleteItem(item.item_id, item.item_name, item.box_id);
+            };
+
+            openModal('itemDetailsModal');
+        }
 
         initializePage();
     });
