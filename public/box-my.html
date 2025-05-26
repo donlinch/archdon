@@ -1014,9 +1014,14 @@
             } else  if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
                     boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-                    console.log('Calling loadBoxesForWarehouse from switchTab'); // Add this
-                    loadBoxesForWarehouse(currentSelectedWarehouseId); // This is one call
                     
+                    // 新增一個標記，確保只載入一次
+                    if (!this.boxManagementInitialized) {
+                        console.log('首次載入倉庫紙箱');
+                        loadBoxesForWarehouse(currentSelectedWarehouseId);
+                        this.boxManagementInitialized = true;
+                    }
+
                     // Reset view toggle to grid view by default
                     gridViewBtn.classList.add('active');
                     listViewBtn.classList.remove('active');
