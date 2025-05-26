@@ -185,17 +185,30 @@
         let currentBoxId = null;
         let currentItemId = null;
         let authToken = null;
+        let currentWarehouseId = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             // 從 URL 獲取紙箱 ID
             const urlParams = new URLSearchParams(window.location.search);
-            const currentWarehouseId = urlParams.get('warehouseId');
+            currentWarehouseId = urlParams.get('warehouseId');
             currentBoxId = urlParams.get('boxId');
             authToken = localStorage.getItem(`boxUserToken_${localStorage.getItem('boxCurrentUserId')}`);
 
-            if (!currentWarehouseId || !currentBoxId || !authToken) {
-                alert('缺少必要的紙箱或倉庫或用戶信息');
+            if (!currentWarehouseId) {
+                alert('缺少倉庫ID，將返回我的倉庫頁面');
                 window.location.href = 'box-my.html';
+                return;
+            }
+
+            if (!currentBoxId) {
+                alert('缺少紙箱ID，將返回我的倉庫頁面');
+                window.location.href = 'box-my.html';
+                return;
+            }
+
+            if (!authToken) {
+                alert('登入憑證已過期，請重新登入');
+                window.location.href = 'box.html';
                 return;
             }
 
@@ -204,7 +217,8 @@
                 await loadBoxItems();
             } catch (error) {
                 console.error('載入紙箱內容失敗:', error);
-                alert('無法載入紙箱內容');
+                alert(`無法載入紙箱內容：${error.message}`);
+                window.location.href = 'box-my.html';
             }
         });
 
