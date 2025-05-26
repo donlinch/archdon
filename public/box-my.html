@@ -297,6 +297,101 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 新增的美化 CSS 代碼 */
+        :root {
+            --primary-color: #3498db;     /* 柔和的藍色 */
+            --secondary-color: #2ecc71;   /* 清新的綠色 */
+            --accent-color: #e74c3c;      /* 活力的紅色 */
+            --background-color: #f4f6f7;  /* 淺灰背景 */
+            --text-color: #2c3e50;        /* 深藍灰文字 */
+        }
+
+        body {
+            background: linear-gradient(135deg, #f6f8f9 0%, #e5ebee 100%);
+            background-attachment: fixed;
+            color: var(--text-color);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .warehouse-card, 
+        .box-card, 
+        .search-result-item {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeIn 0.5s ease backwards;
+        }
+
+        .warehouse-card:hover, 
+        .box-card:hover, 
+        .search-result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        button {
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        input, textarea, select {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, 
+        textarea:focus, 
+        select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .spinner {
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+            
+            .tab-navigation {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .tab-navigation button {
+                margin: 5px;
+                padding: 10px 15px;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a2e;
+                color: #e0e0e0;
+            }
+            
+            .warehouse-card, 
+            .box-card {
+                background-color: #16213e;
+                border-color: #0f3460;
+            }
+        }
     </style>
 </head>
 <body>
