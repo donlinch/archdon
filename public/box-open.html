@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紙箱內容</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #2c3e50;
+        }
+
+        .box-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .box-header img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .box-header-info h1 {
+            margin: 0;
+            color: #4a6cf7;
+        }
+
+        .items-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
+
+        .item-card {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .item-card:hover {
+            transform: scale(1.05);
+        }
+
+        .item-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .item-card .item-name {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            max-width: calc(100% - 20px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Modal Styles */
+        #itemDetailsModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-image {
+            width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background-color: #f4f6f9;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        .modal-actions button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .modal-actions .edit-btn {
+            background-color: #4a6cf7;
+            color: white;
+        }
+
+        .modal-actions .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+        }
+
+        .close-modal-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        @media (max-width: 600px) {
+            .items-grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="box-header">
+        <img id="boxCoverImage" src="/images/box_item.png" alt="紙箱封面">
+        <div class="box-header-info">
+            <h1 id="boxName">紙箱名稱</h1>
+            <p id="boxDetails">編號: 未知 | 物品數量: 0</p>
+        </div>
+    </div>
+
+    <div id="itemsGridContainer" class="items-grid-container">
+        <!-- 物品將在此動態生成 -->
+    </div>
+
+    <!-- 物品詳情模態框 -->
+    <div id="itemDetailsModal">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="closeItemDetailsModal()">×</button>
+            <img id="modalItemImage" class="modal-image" src="" alt="物品大圖">
+            <div class="modal-actions">
+                <button class="edit-btn" onclick="editItem()">編輯</button>
+                <button class="delete-btn" onclick="deleteItem()">刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBoxId = null;
+        let currentItemId = null;
+        let authToken = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 從 URL 獲取紙箱 ID
+            const urlParams = new URLSearchParams(window.location.search);
+            currentBoxId = urlParams.get('boxId');
+            authToken = localStorage.getItem(`boxUserToken_${localStorage.getItem('boxCurrentUserId')}`);
+
+            if (!currentBoxId || !authToken) {
+                alert('缺少必要的紙箱或用戶信息');
+                window.location.href = 'box-my.html';
+                return;
+            }
+
+            try {
+                await loadBoxDetails();
+                await loadBoxItems();
+            } catch (error) {
+                console.error('載入紙箱內容失敗:', error);
+                alert('無法載入紙箱內容');
+            }
+        });
+
+        async function loadBoxDetails() {
+            const response = await fetch(`/api/box/boxes/${currentBoxId}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) throw new Error('無法獲取紙箱詳情');
+
+            const boxData = await response.json();
+            document.getElementById('boxCoverImage').src = boxData.cover_image_url || '/images/box_item.png';
+            document.getElementById('boxName').textContent = boxData.box_name;
+            document.getElementById('boxDetails').textContent = `編號: ${boxData.box_number} | 物品數量: ${boxData.item_count || 0}`;
+        }
+
+        async function loadBoxItems() {
+            const response = await fetch(`/api/box/boxes/${currentBoxId}/items`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) throw new Error('無法獲取物品列表');
+
+            const items = await response.json();
+            const gridContainer = document.getElementById('itemsGridContainer');
+            gridContainer.innerHTML = ''; // 清空現有內容
+
+            items.forEach(item => {
+                const itemCard = document.createElement('div');
+                itemCard.className = 'item-card';
+                itemCard.innerHTML = `
+                    <img src="${item.item_image_url || '/images/default_item.png'}" alt="${item.item_name}">
+                    <div class="item-name">${item.item_name}</div>
+                `;
+                itemCard.onclick = () => showItemDetails(item);
+                gridContainer.appendChild(itemCard);
+            });
+        }
+
+        function showItemDetails(item) {
+            currentItemId = item.item_id;
+            const modal = document.getElementById('itemDetailsModal');
+            const modalImage = document.getElementById('modalItemImage');
+            
+            modalImage.src = item.item_image_url || '/images/default_item.png';
+            modal.style.display = 'flex';
+        }
+
+        function closeItemDetailsModal() {
+            document.getElementById('itemDetailsModal').style.display = 'none';
+        }
+
+        function editItem() {
+            // 導向編輯頁面或打開編輯模態框
+            window.location.href = `box-item-edit.html?boxId=${currentBoxId}&itemId=${currentItemId}`;
+        }
+
+        function deleteItem() {
+            if (!confirm('確定要刪除這個物品嗎？')) return;
+
+            fetch(`/api/box/items/${currentItemId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('刪除失敗');
+                alert('物品已成功刪除');
+                loadBoxItems(); // 重新載入物品列表
+                closeItemDetailsModal();
+            })
+            .catch(error => {
+                console.error('刪除物品失敗:', error);
+                alert('刪除物品時發生錯誤');
+            });
+        }
+    </script>
+</body>
+</html>
