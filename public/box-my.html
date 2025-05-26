@@ -884,21 +884,21 @@
         
         // For editing a warehouse - you'd typically open a modal pre-filled with data
         async function handleEditWarehouseModalOpen(warehouseId) {
-            addWarehouseForm.reset();
+            addWarehouseForm.reset(); // Assuming reuse of add form for edit
             addWarehouseStatus.textContent = '正在載入倉庫資料...';
-            switchTab('tab-add-warehouse'); // 切換到新增/編輯 tab
+            switchTab('tab-add-warehouse'); // 直接切換 tab，不呼叫 openModal
 
             try {
                 const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
                 document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
                 newWarehouseNameInput.value = warehouse.warehouse_name;
                 newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
-                addWarehouseForm.dataset.editingId = warehouseId;
+                addWarehouseForm.dataset.editingId = warehouseId; // Store ID for submit logic
                 addWarehouseStatus.textContent = '';
             } catch (error) {
                 addWarehouseStatus.textContent = '載入倉庫資料失敗。';
                 addWarehouseStatus.style.color = '#c0392b';
-                setTimeout(() => switchTab('tab-warehouses'), 2000);
+                setTimeout(() => switchTab('tab-warehouses'), 2000); // 失敗時切回倉庫列表
             }
         }
         
@@ -1031,6 +1031,8 @@
                 console.error('圖片上傳與分析過程中發生錯誤:', error);
                 showApiError(error.message || '圖片處理時發生未知錯誤。');
                 return { success: false, error: error.message || '圖片處理時發生未知錯誤。' };
+            } finally {
+                showLoadingOverlay(false);
             }
         }
         
@@ -1473,32 +1475,32 @@
                 itemFormStatusP.textContent = '處理中...'; itemFormStatusP.style.color = '#3498db';
                 const submitButton = itemForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
+                showLoadingOverlay(true); // 確保 loading 一定顯示
         
                 let imageUrl = itemFormImageUrlInput.value; // Existing URL if not changed
                 let aiKeywordsText = itemFormAiKeywordsDiv.textContent; // Existing AI keywords text
                 let aiKeywordsArray = aiKeywordsText.includes("沒有AI關鍵字") || aiKeywordsText.includes("上傳圖片後") ? [] : aiKeywordsText.split(', ');
         
-        
-                if (imageFile) {
-                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
-                    if (!uploadResult.success) {
-                        itemFormStatusP.textContent = `圖片處理失敗: ${uploadResult.error}`; itemFormStatusP.style.color = '#c0392b';
-                        submitButton.disabled = false; return;
-                    }
-                    imageUrl = uploadResult.imageUrl;
-                    aiKeywordsArray = uploadResult.aiKeywords;
-                }
-        
-                const itemData = {
-                    item_name: itemName,
-                    item_description: description,
-                    quantity: quantity,
-                    item_image_url: imageUrl,
-                    ai_item_keywords: aiKeywordsArray,
-                    box_id: boxId // Crucial for both add and edit (if allowing move via edit)
-                };
-        
                 try {
+                    if (imageFile) {
+                        const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
+                        if (!uploadResult.success) {
+                            itemFormStatusP.textContent = `圖片處理失敗: ${uploadResult.error}`; itemFormStatusP.style.color = '#c0392b';
+                            return;
+                        }
+                        imageUrl = uploadResult.imageUrl;
+                        aiKeywordsArray = uploadResult.aiKeywords;
+                    }
+        
+                    const itemData = {
+                        item_name: itemName,
+                        item_description: description,
+                        quantity: quantity,
+                        item_image_url: imageUrl,
+                        ai_item_keywords: aiKeywordsArray,
+                        box_id: boxId // Crucial for both add and edit (if allowing move via edit)
+                    };
+        
                     let savedItem;
                     if (isEditing) {
                         savedItem = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { // warehouseId for permission context
@@ -1526,6 +1528,7 @@
                     itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = '#c0392b';
                 } finally {
                     submitButton.disabled = false;
+                    showLoadingOverlay(false); // 確保 loading 一定會隱藏
                 }
             }
         
