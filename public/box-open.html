@@ -467,6 +467,49 @@
             document.getElementById('itemModal').style.display = 'none';
         }
 
+        // 新增：編輯物品
+        async function openEditItemModal(item) {
+            const modal = document.getElementById('itemModal');
+            const modalTitle = document.getElementById('itemModalTitle');
+            const form = document.getElementById('itemForm');
+            const imagePreview = document.getElementById('itemImagePreview');
+            const statusP = document.getElementById('itemFormStatus');
+
+            try {
+                // 如果傳入的 item 只有 item_id，則需要獲取完整的物品資訊
+                if (!item.item_name) {
+                    const fullItem = await apiFetch(`/api/box/warehouses/${currentWarehouseId}/items/${item.item_id}`);
+                    item = fullItem;
+                }
+
+                // 重置表單
+                form.reset();
+                document.getElementById('itemFormItemId').value = item.item_id;
+                document.getElementById('itemFormName').value = item.item_name;
+                document.getElementById('itemFormDescription').value = item.item_description || '';
+                document.getElementById('itemFormQuantity').value = item.quantity || 1;
+                document.getElementById('itemFormImageUrl').value = item.item_image_url || '';
+
+                // 設置圖片預覽
+                if (item.item_image_url) {
+                    imagePreview.querySelector('img').src = item.item_image_url;
+                    imagePreview.style.display = 'block';
+                } else {
+                    imagePreview.style.display = 'none';
+                }
+
+                // 設置標題和狀態
+                modalTitle.textContent = '編輯物品';
+                statusP.textContent = '';
+
+                modal.style.display = 'flex';
+
+            } catch (error) {
+                console.error('載入物品詳情失敗:', error);
+                alert(`無法載入物品詳情：${error.message}`);
+            }
+        }
+
         // 新增：處理物品表單提交
         async function handleItemFormSubmit(event) {
             event.preventDefault();
@@ -477,7 +520,7 @@
             // 收集表單數據
             const formData = {
                 item_name: document.getElementById('itemFormName').value.trim(),
-                item_description: document.getElementById('itemFormDescription').value.trim(),
+                item_description: document.getElementById('itemFormDescription').value.trim() || null, // 允許空描述
                 quantity: parseInt(document.getElementById('itemFormQuantity').value),
                 box_id: currentBoxId
             };
@@ -533,37 +576,6 @@
                 statusP.textContent = `保存失敗: ${error.data?.error || error.message}`;
                 statusP.style.color = '#e74c3c';
             }
-        }
-
-        // 新增：編輯物品
-        async function openEditItemModal(item) {
-            const modal = document.getElementById('itemModal');
-            const modalTitle = document.getElementById('itemModalTitle');
-            const form = document.getElementById('itemForm');
-            const imagePreview = document.getElementById('itemImagePreview');
-            const statusP = document.getElementById('itemFormStatus');
-
-            // 重置表單
-            form.reset();
-            document.getElementById('itemFormItemId').value = item.item_id;
-            document.getElementById('itemFormName').value = item.item_name;
-            document.getElementById('itemFormDescription').value = item.item_description || '';
-            document.getElementById('itemFormQuantity').value = item.quantity || 1;
-            document.getElementById('itemFormImageUrl').value = item.item_image_url || '';
-
-            // 設置圖片預覽
-            if (item.item_image_url) {
-                imagePreview.querySelector('img').src = item.item_image_url;
-                imagePreview.style.display = 'block';
-            } else {
-                imagePreview.style.display = 'none';
-            }
-
-            // 設置標題和狀態
-            modalTitle.textContent = '編輯物品';
-            statusP.textContent = '';
-
-            modal.style.display = 'flex';
         }
 
         // 新增：圖片上傳分析函數（從 box-my.html 複製）
