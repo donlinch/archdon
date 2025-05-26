@@ -1369,10 +1369,26 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                     // 在開始渲染前，先清空現有內容
+    boxGridArea.innerHTML = '';
+    boxListArea.innerHTML = '';
+    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+
+                    if (!warehouseId) {
+                        console.error('No warehouse ID provided');
+                        boxListMessage.textContent = '請先選擇一個倉庫。';
+                        boxGridArea.innerHTML = '';
+                        boxListArea.innerHTML = '';
+                        boxListPagination.innerHTML = '';
+                        return;
+                    }
+
+                    currentSelectedWarehouseId = warehouseId;
+                    currentBoxPage = page;
+                    boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
                     boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
-                    boxListMessage.textContent = '正在載入紙箱列表...';
 
                     try {
                         const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`);
@@ -1382,107 +1398,61 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // 使用 boxListArea 作為唯一顯示區域
+                        // Render Grid and List Views
                         data.boxes.forEach(box => {
-                            const boxContainer = document.createElement('div');
-                            boxContainer.className = 'box-container';
-                            boxContainer.innerHTML = `
-                                <h3>${escapeHtml(box.box_name)} (編號: ${escapeHtml(box.box_number)})</h3>
-                                <div class="box-preview-items">
-                                    ${box.items && box.items.length > 0 
-                                        ? box.items.slice(0, 4).map(item => `
-                                            <div class="item-preview" data-item-id="${item.item_id}">
-                                                <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}">
-                                                <span>${escapeHtml(item.item_name)}</span>
-                                            </div>
-                                        `).join('') 
-                                        : '<p>此紙箱尚無物品</p>'
-                                    }
+                            // Grid View Card
+                            const gridCard = document.createElement('div');
+                            gridCard.className = 'box-card';
+                            gridCard.dataset.boxId = box.box_id;
+                            gridCard.innerHTML = `
+                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/box_item.png'">
+                                <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
+                                <div class="box-name">${escapeHtml(box.box_name)}</div>
+                                <div class="item-count">物品: ${box.item_count || 0} 件</div>
+                                <div class="box-actions">
+                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折叠物品' : '展開物品'}</button>
+                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
+                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
                                 </div>
-                                <button class="view-box-details" data-box-id="${box.box_id}">查看詳細資訊</button>
+                                <div class="item-list-container" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'};">
+                                    <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
+                                    <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
+                                </div>
                             `;
+                            boxGridArea.appendChild(gridCard);
 
-                            // 為查看詳細資訊按鈕添加事件監聽器
-                            const viewDetailsBtn = boxContainer.querySelector('.view-box-details');
-                            viewDetailsBtn.addEventListener('click', () => openBoxDetailsModal(box.box_id));
+                            // List View Item
+                            const listItem = document.createElement('div');
+                            listItem.className = 'box-list-item';
+                            listItem.dataset.boxId = box.box_id;
+                            listItem.innerHTML = `
+                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" onerror="this.src='/images/box_item.png'">
+                                <div class="box-list-item-details">
+                                    <h3>${escapeHtml(box.box_name)}</h3>
+                                    <p>編號: ${escapeHtml(box.box_number)} | 物品: ${box.item_count || 0} 件</p>
+                                </div>
+                                <div class="box-list-item-actions">
+                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折叠物品' : '展開物品'}</button>
+                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
+                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
+                                </div>
+                            `;
+                            boxListArea.appendChild(listItem);
 
-                            boxListArea.appendChild(boxContainer);
+                            if (currentBoxViewItemsExpanded[box.box_id]) {
+                                loadItemsForBox(box.box_id, gridCard.querySelector('.item-list-container'));
+                            }
                         });
 
-                        // 顯示分頁
+                        // Default to grid view
+                        boxGridArea.style.display = 'grid';
+                        boxListArea.style.display = 'none';
+
                         renderPagination(data.totalPages, data.currentPage, 'box-list-pagination', handleBoxPaginationClick);
+                        addBoxActionListeners();
                     } catch (error) {
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
-                    }
-                }
-
-                function openBoxDetailsModal(boxId) {
-                    // 創建一個新的模態框來顯示紙箱詳細資訊
-                    const modal = document.createElement('div');
-                    modal.className = 'box-details-modal';
-                    modal.innerHTML = `
-                        <div class="modal-content">
-                            <span class="close-btn">&times;</span>
-                            <h2>紙箱詳細資訊</h2>
-                            <div id="box-details-container">載入中...</div>
-                            <div class="modal-actions">
-                                <button id="edit-box-btn">編輯紙箱</button>
-                                <button id="delete-box-btn">刪除紙箱</button>
-                            </div>
-                        </div>
-                    `;
-
-                    // 載入紙箱詳細資訊
-                    loadBoxDetails(boxId, modal);
-
-                    // 關閉按鈕事件
-                    modal.querySelector('.close-btn').addEventListener('click', () => {
-                        document.body.removeChild(modal);
-                    });
-
-                    // 編輯和刪除按鈕事件
-                    modal.querySelector('#edit-box-btn').addEventListener('click', () => openEditBoxModal(boxId));
-                    modal.querySelector('#delete-box-btn').addEventListener('click', () => handleDeleteBox(boxId));
-
-                    document.body.appendChild(modal);
-                }
-
-                async function loadBoxDetails(boxId, modalElement) {
-                    try {
-                        const boxDetails = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}`);
-                        const detailsContainer = modalElement.querySelector('#box-details-container');
-                        
-                        detailsContainer.innerHTML = `
-                            <p><strong>紙箱名稱:</strong> ${escapeHtml(boxDetails.box_name)}</p>
-                            <p><strong>紙箱編號:</strong> ${escapeHtml(boxDetails.box_number)}</p>
-                            <p><strong>備註:</strong> ${escapeHtml(boxDetails.manual_notes || '無')}</p>
-                            
-                            <h3>物品列表</h3>
-                            <div class="box-items-list">
-                                ${boxDetails.items && boxDetails.items.length > 0 
-                                    ? boxDetails.items.map(item => `
-                                        <div class="box-item">
-                                            <img src="${item.item_image_url || '/images/default_item.png'}" alt="${escapeHtml(item.item_name)}">
-                                            <div class="item-info">
-                                                <p><strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})</p>
-                                                <p>${escapeHtml(item.item_description || '無描述')}</p>
-                                            </div>
-                                            <div class="item-actions">
-                                                <button onclick="openEditItemModal('${item.item_id}', '${boxId}')">編輯</button>
-                                                <button onclick="handleDeleteItem('${item.item_id}', '${escapeHtml(item.item_name)}', '${boxId}')">刪除</button>
-                                            </div>
-                                        </div>
-                                    `).join('') 
-                                    : '<p>此紙箱尚無物品</p>'
-                                }
-                            </div>
-                            <button id="add-item-to-box-btn">新增物品</button>
-                        `;
-
-                        // 新增物品按鈕事件
-                        detailsContainer.querySelector('#add-item-to-box-btn').addEventListener('click', () => openAddItemModal(boxId));
-                    } catch (error) {
-                        console.error('載入紙箱詳細資訊失敗:', error);
+                        boxListMessage.style.color = '#c0392b';
                     }
                 }
 
