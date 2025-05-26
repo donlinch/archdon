@@ -725,7 +725,54 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
 
 
     // --- 物品管理 (Items) ---
- 
+    // POST /api/box/warehouses/:warehouseId/boxes/:boxId/items
+    router.post('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
+        const { warehouseId, boxId } = req.params;
+        const userId = req.boxUser.userId;
+        const { item_name, item_image_url, ai_item_keywords, item_description, quantity } = req.body;
+
+        // 輸入驗證
+        if (!item_name || item_name.trim() === '') {
+            return res.status(400).json({ error: '物品名稱為必填項。' });
+        }
+        const itemQuantity = quantity !== undefined ? parseInt(quantity) : 1;
+        if (isNaN(itemQuantity) || itemQuantity < 0) {
+            return res.status(400).json({ error: '物品數量必須是非負整數。'});
+        }
+
+        try {
+            // 1. 驗證用戶對倉庫的所有權
+            const warehouseOwnership = await checkWarehouseOwnership(warehouseId, userId);
+            if (!warehouseOwnership.found || !warehouseOwnership.owned) return res.status(warehouseOwnership.found ? 403 : 404).json({ error: warehouseOwnership.message });
+
+            // 2. 驗證紙箱存在且屬於該倉庫 (通過 warehouseId)
+            const boxCheck = await pool.query('SELECT 1 FROM BOX_Boxes WHERE box_id = $1 AND warehouse_id = $2', [boxId, warehouseId]);
+            if (boxCheck.rows.length === 0) return res.status(404).json({ error: '找不到指定的紙箱或該紙箱不屬於此倉庫。'});
+
+            // 3. 插入新物品到數據庫
+            const insertQuery = `
+                INSERT INTO BOX_Items (box_id, item_name, item_image_url, ai_item_keywords, item_description, quantity)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *;`;
+            const result = await pool.query(insertQuery, [
+                boxId,
+                item_name.trim(),
+                item_image_url || null, // 如果沒有圖片 URL，存儲 NULL
+                Array.isArray(ai_item_keywords) ? ai_item_keywords : [], // 確保存儲為數組
+                item_description || null,
+                itemQuantity
+            ]);
+
+            // (可選) 更新相關紙箱的 updated_at 字段，以便前端知道內容有更新
+            await pool.query('UPDATE BOX_Boxes SET updated_at = NOW() WHERE box_id = $1', [boxId]);
+
+            res.status(201).json(result.rows[0]); // 返回新創建的物品數據
+
+        } catch (err) {
+            console.error(`[API POST /warehouses/:warehouseId/boxes/:boxId/items] User ${userId}, Warehouse ${warehouseId}, Box ${boxId} Error:`, err);
+            res.status(500).json({ error: '新增物品失敗。' });
+        }
+    });
 
     router.get('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
