@@ -386,6 +386,7 @@
                 quantity: 1,
                 item_image_url: ''
             };
+            console.log('editItem 被调用，当前 currentItemId:', currentItemId);
             closeItemDetailsModal();
             openEditItemModal(item);
         }
@@ -475,10 +476,15 @@
             const imagePreview = document.getElementById('itemImagePreview');
             const statusP = document.getElementById('itemFormStatus');
 
+            console.log('openEditItemModal 被调用，当前 item:', item);
+            console.log('currentWarehouseId:', currentWarehouseId);
+
             try {
                 // 如果傳入的 item 只有 item_id，則需要獲取完整的物品資訊
                 if (!item.item_name) {
+                    console.log(`正在获取物品详情：/api/box/warehouses/${currentWarehouseId}/items/${item.item_id}`);
                     const fullItem = await apiFetch(`/api/box/warehouses/${currentWarehouseId}/items/${item.item_id}`);
+                    console.log('获取的完整物品信息:', fullItem);
                     item = fullItem;
                 }
 
@@ -506,6 +512,9 @@
 
             } catch (error) {
                 console.error('載入物品詳情失敗:', error);
+                console.error('完整错误对象:', error);
+                console.error('错误状态码:', error.status);
+                console.error('错误详细信息:', error.data);
                 alert(`無法載入物品詳情：${error.message}`);
             }
         }
@@ -631,20 +640,32 @@
             if (options.body && typeof options.body !== 'string') {
                 mergedOptions.body = JSON.stringify(options.body);
             }
-            const response = await fetch(url, mergedOptions);
-            if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { error: `HTTP 錯誤: ${response.status} ${response.statusText}`};
+            
+            console.log('apiFetch 调用:', { url, options: mergedOptions });
+            
+            try {
+                const response = await fetch(url, mergedOptions);
+                console.log('API 响应状态:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                        console.error('API 错误响应:', errorData);
+                    } catch (e) {
+                        errorData = { error: `HTTP 错误: ${response.status} ${response.statusText}`};
+                    }
+                    const error = new Error(errorData.error || `请求失败 (${response.status})`);
+                    error.status = response.status;
+                    error.data = errorData;
+                    throw error;
                 }
-                const error = new Error(errorData.error || `請求失敗 (${response.status})`);
-                error.status = response.status;
-                error.data = errorData;
+                
+                return response.status === 204 ? null : await response.json();
+            } catch (error) {
+                console.error('apiFetch 捕获的错误:', error);
                 throw error;
             }
-            return response.status === 204 ? null : await response.json();
         }
 
         // 事件監聽器
