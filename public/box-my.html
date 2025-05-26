@@ -762,7 +762,10 @@
             const toggleAllItemsBtn = document.getElementById('toggleAllItemsBtn');
             const boxListMessage = document.getElementById('box-list-message');
             const boxGridArea = document.getElementById('box-grid-area');
+            const boxListArea = document.getElementById('box-list-area');
             const boxListPagination = document.getElementById('box-list-pagination');
+            const gridViewBtn = document.getElementById('gridViewBtn');
+            const listViewBtn = document.getElementById('listViewBtn');
             const boxModal = document.getElementById('boxModal');
             const boxModalTitle = document.getElementById('boxModalTitle');
             const boxForm = document.getElementById('boxForm');
@@ -1006,13 +1009,19 @@
                 loadWarehouses();
                 boxManagementTabLink.style.display = 'none'; // 隱藏紙箱管理分頁
             } else  if (tabId === 'tab-box-management') {
-        if (currentSelectedWarehouseId) {
-            boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-            loadBoxesForWarehouse(currentSelectedWarehouseId);
-        } else {
-            alert('錯誤：未選擇倉庫！');
-            switchTab('tab-warehouses');
-        }
+                if (currentSelectedWarehouseId) {
+                    boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
+                    loadBoxesForWarehouse(currentSelectedWarehouseId);
+                    
+                    // Reset view toggle to grid view by default
+                    gridViewBtn.classList.add('active');
+                    listViewBtn.classList.remove('active');
+                    boxGridArea.style.display = 'grid';
+                    boxListArea.style.display = 'none';
+                } else {
+                    alert('錯誤：未選擇倉庫！');
+                    switchTab('tab-warehouses');
+                }
             } else if (tabId === 'tab-search') {
                 document.getElementById('search-results-area').innerHTML = '';
                 document.getElementById('search-results-message').textContent = '';
@@ -1364,6 +1373,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         console.error('No warehouse ID provided');
                         boxListMessage.textContent = '請先選擇一個倉庫。';
                         boxGridArea.innerHTML = '';
+                        boxListArea.innerHTML = '';
                         boxListPagination.innerHTML = '';
                         return;
                     }
@@ -1372,6 +1382,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
+                    boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
@@ -1382,12 +1393,13 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // Render Grid View
+                        // Render Grid and List Views
                         data.boxes.forEach(box => {
-                            const card = document.createElement('div');
-                            card.className = 'box-card';
-                            card.dataset.boxId = box.box_id;
-                            card.innerHTML = `
+                            // Grid View Card
+                            const gridCard = document.createElement('div');
+                            gridCard.className = 'box-card';
+                            gridCard.dataset.boxId = box.box_id;
+                            gridCard.innerHTML = `
                                 <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onerror="this.src='/images/box_item.png'">
                                 <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
                                 <div class="box-name">${escapeHtml(box.box_name)}</div>
@@ -1402,9 +1414,9 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                                     <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
                                 </div>
                             `;
-                            boxGridArea.appendChild(card);
+                            boxGridArea.appendChild(gridCard);
 
-                            // Render List View
+                            // List View Item
                             const listItem = document.createElement('div');
                             listItem.className = 'box-list-item';
                             listItem.dataset.boxId = box.box_id;
@@ -1423,7 +1435,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                             boxListArea.appendChild(listItem);
 
                             if (currentBoxViewItemsExpanded[box.box_id]) {
-                                loadItemsForBox(box.box_id, card.querySelector('.item-list-container'));
+                                loadItemsForBox(box.box_id, gridCard.querySelector('.item-list-container'));
                             }
                         });
 
