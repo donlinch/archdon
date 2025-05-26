@@ -1369,10 +1369,10 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
-                     // 在開始渲染前，先清空現有內容
-    boxGridArea.innerHTML = '';
-    boxListArea.innerHTML = '';
-    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+                    // 在開始渲染前，先清空現有內容
+                    boxGridArea.innerHTML = '';
+                    boxListArea.innerHTML = '';
+                    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
 
                     if (!warehouseId) {
                         console.error('No warehouse ID provided');
@@ -1386,8 +1386,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     currentSelectedWarehouseId = warehouseId;
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
-                    boxGridArea.innerHTML = '';
-                    boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
@@ -1398,8 +1396,16 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // Render Grid and List Views
+                        // 確保只渲染一次每個紙箱
+                        const uniqueBoxes = new Map();
                         data.boxes.forEach(box => {
+                            if (!uniqueBoxes.has(box.box_id)) {
+                                uniqueBoxes.set(box.box_id, box);
+                            }
+                        });
+
+                        // Render Grid and List Views
+                        uniqueBoxes.forEach(box => {
                             // Grid View Card
                             const gridCard = document.createElement('div');
                             gridCard.className = 'box-card';
