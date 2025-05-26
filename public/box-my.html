@@ -732,12 +732,9 @@
         // --- 分頁導覽 (如先前提供) ---
         function switchTab(tabId) {
             console.group('Switch Tab Debug');
-    console.log('Switching to tab:', tabId);
-    console.log('Current Warehouse ID:', currentSelectedWarehouseId);
-    console.log('Current Warehouse Name:', currentSelectedWarehouseName);
+    
     console.groupEnd();
-            console.log('Switching to tab:', tabId);
-            console.log('Current Warehouse ID:', currentSelectedWarehouseId);
+            
 
             tabContents.forEach(content => content.classList.remove('active'));
             tabLinks.forEach(link => link.classList.remove('active'));
@@ -961,11 +958,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
         // =======================================
         async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
     console.group('圖片上傳與分析');
-    console.log('上傳圖片詳情:', {
-        fileName: imageFile.name,
-        fileSize: imageFile.size,
-        fileType: imageFile.type
-    });
+    
 
     try {
         // 圖片驗證
@@ -1003,11 +996,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             throw new Error(data.error || '圖片處理失敗');
         }
 
-        console.log('圖片上傳成功:', {
-            imageUrl: data.image_url,
-            aiKeywords: data.ai_keywords
-        });
-
+        
         return {
             success: true,
             imageUrl: data.image_url,
@@ -1113,11 +1102,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
 
-                    console.log('Loading Boxes for Warehouse', {
-        warehouseId,
-        page,
-        currentSelectedWarehouseId
-    });
+                    
 
     if (!warehouseId) {
         console.error('No warehouse ID provided');
@@ -1411,11 +1396,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             // ==============================
             function openAddItemModal(boxIdForNewItem) {
                 console.group('開啟新增物品模態框');
-                console.log('當前上下文:', {
-                    boxIdForNewItem,
-                    currentSelectedWarehouseId,
-                    currentSelectedWarehouseName
-                });
+               
 
                 // 重置表單
                 itemForm.reset();
@@ -1443,12 +1424,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             async function openEditItemModal(itemId, boxIdContext) {
 
 
-                console.log('Opening Edit Item Modal', {
-        itemId,
-        boxIdContext,
-        currentSelectedWarehouseId,
-        currentSelectedWarehouseName
-    });
+                
 
 
                 itemForm.reset();
@@ -1506,7 +1482,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     imageFile: itemFormImageFileInput.files[0]
                 };
 
-                console.log('表單數據:', formData);
+                
 
                 // 驗證邏輯
                 if (!formData.itemName) {
@@ -1529,7 +1505,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 if (formData.imageFile) {
                     const uploadResult = await handleImageUploadAndAnalyze(formData.imageFile, 'item_image');
                     
-                    console.log('圖片上傳結果:', uploadResult);
+                  
                     
                     if (uploadResult.success) {
                         apiPayload.item_image_url = uploadResult.imageUrl;
@@ -1543,7 +1519,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     }
                 }
 
-                console.log('最終 API 請求數據:', apiPayload);
+              
 
                 // 發送 API 請求
                 const apiEndpoint = formData.itemId 
