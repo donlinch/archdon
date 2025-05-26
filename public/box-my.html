@@ -959,72 +959,71 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
         // =======================================
         // == 圖片上傳與分析函數 ==
         // =======================================
-        // 此函數將被紙箱和物品表單在保存數據前調用
         async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
-            console.group('圖片上傳與分析');
-            console.log('上傳圖片詳情:', {
-                fileName: imageFile.name,
-                fileSize: imageFile.size,
-                fileType: imageFile.type
-            });
+    console.group('圖片上傳與分析');
+    console.log('上傳圖片詳情:', {
+        fileName: imageFile.name,
+        fileSize: imageFile.size,
+        fileType: imageFile.type
+    });
 
-            try {
-                // 圖片驗證
-                const MAX_SIZE = 15 * 1024 * 1024; // 15MB
-                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    try {
+        // 圖片驗證
+        const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-                if (imageFile.size > MAX_SIZE) {
-                    throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制`);
-                }
-
-                if (!allowedMimes.includes(imageFile.type)) {
-                    throw new Error('只允許上傳 jpeg, png, gif, webp 格式的圖片');
-                }
-
-                const formData = new FormData();
-                formData.append('image', imageFile);
-                formData.append('fileType', fileTypeString);
-
-                const response = await fetch('/api/box/upload-analyze-then-process-image', {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${authToken}` 
-                    },
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`圖片上傳失敗: ${errorText}`);
-                }
-
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || '圖片處理失敗');
-                }
-
-                console.log('圖片上傳成功:', {
-                    imageUrl: data.image_url,
-                    aiKeywords: data.ai_keywords
-                });
-
-                return {
-                    success: true,
-                    imageUrl: data.image_url,
-                    aiKeywords: data.ai_keywords || []
-                };
-
-            } catch (error) {
-                console.error('圖片上傳與分析錯誤:', error);
-                return {
-                    success: false,
-                    error: error.message
-                };
-            } finally {
-                console.groupEnd();
-            }
+        if (imageFile.size > MAX_SIZE) {
+            throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB 限制`);
         }
+
+        if (!allowedMimes.includes(imageFile.type)) {
+            throw new Error('只允許上傳 jpeg, png, gif, webp 格式的圖片');
+        }
+
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('fileType', fileTypeString);
+
+        const response = await fetch('/api/box/upload-analyze-then-process-image', {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${authToken}` 
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`圖片上傳失敗: ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || '圖片處理失敗');
+        }
+
+        console.log('圖片上傳成功:', {
+            imageUrl: data.image_url,
+            aiKeywords: data.ai_keywords
+        });
+
+        return {
+            success: true,
+            imageUrl: data.image_url,
+            aiKeywords: data.ai_keywords || []
+        };
+
+    } catch (error) {
+        console.error('圖片上傳與分析錯誤:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    } finally {
+        console.groupEnd();
+    }
+}
 
 
         // =================================
@@ -1487,7 +1486,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
 
         async function handleSaveItem(event) {
-            console.group('handleSaveItem 詳細除錯');
+            console.group('保存物品詳細日誌');
             
             try {
                 // 預防性檢查
@@ -1497,7 +1496,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
                 event.preventDefault();
                 
-                // 收集所有表單數據
+                // 收集表單數據
                 const formData = {
                     itemId: itemFormItemIdInput.value,
                     boxId: itemFormBoxIdInput.value,
@@ -1526,16 +1525,25 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     box_id: formData.boxId
                 };
 
-                // 處理圖片上傳（如果有）
+                // 處理圖片上傳
                 if (formData.imageFile) {
                     const uploadResult = await handleImageUploadAndAnalyze(formData.imageFile, 'item_image');
+                    
+                    console.log('圖片上傳結果:', uploadResult);
+                    
                     if (uploadResult.success) {
                         apiPayload.item_image_url = uploadResult.imageUrl;
                         apiPayload.ai_item_keywords = uploadResult.aiKeywords || [];
+                    } else {
+                        // 可選：詢問用戶是否繼續保存，即使圖片上傳失敗
+                        const continueWithoutImage = confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品？`);
+                        if (!continueWithoutImage) {
+                            return;
+                        }
                     }
                 }
 
-                console.log('API 請求數據:', apiPayload);
+                console.log('最終 API 請求數據:', apiPayload);
 
                 // 發送 API 請求
                 const apiEndpoint = formData.itemId 
