@@ -612,53 +612,6 @@
                 grid-template-columns: repeat(5, 1fr); /* 大螢幕 5 列 */
             }
         }
-
-        .full-width-items-grid {
-            width: 100vw;
-            position: relative;
-            left: 50%;
-            right: 50%;
-            margin-left: -50vw;
-            margin-right: -50vw;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-
-        .full-width-items-grid .item-card {
-            aspect-ratio: 1 / 1;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-
-        .full-width-items-grid .item-card:hover {
-            transform: scale(1.05);
-        }
-
-        .full-width-items-grid .item-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .full-width-items-grid .item-card .item-name {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: rgba(0,0,0,0.5);
-            color: white;
-            padding: 5px;
-            text-align: center;
-            font-size: 0.8em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
     </style>
 </head>
 <body>
@@ -1643,8 +1596,26 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     toggleItemsBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const boxId = e.target.dataset.boxId;
-                            const container = document.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                            toggleItemListView(boxId, e.target, container);
+                            let targetContainer;
+                            
+                            // Find the parent box-card (grid) or box-list-item (list)
+                            const parentBoxCard = e.target.closest('.box-card');
+                            const parentBoxListItem = e.target.closest('.box-list-item');
+
+                            if (parentBoxCard) {
+                                // Grid view: find the container within this card
+                                targetContainer = parentBoxCard.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+                            } else if (parentBoxListItem) {
+                                // List view: find the container within this list item
+                                // Make sure to get the one with .list-view class if it's specific
+                                targetContainer = parentBoxListItem.querySelector(`.item-list-container.list-view[data-box-id="${boxId}"]`);
+                            }
+
+                            if (targetContainer) {
+                                toggleItemListView(boxId, e.target, targetContainer);
+                            } else {
+                                console.error('Could not find item list container for button:', e.target, 'and box ID:', boxId);
+                            }
                         });
                     });
 
@@ -1846,71 +1817,72 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             async function loadItemsForBox(boxId, containerElement) {
                 if (!currentSelectedWarehouseId) {
                     console.error('loadItemsForBox called without currentSelectedWarehouseId');
+                    const placeholder = containerElement.querySelector('.items-loading-placeholder');
+                    if(placeholder) {
+                         placeholder.textContent = '錯誤：無法載入物品，未選定倉庫。';
+                         placeholder.style.color = '#c0392b';
+                    }
+                    containerElement.dataset.loadedItems = 'false';
                     return;
                 }
 
-                // 移除之前可能存在的全寬度網格
-                const existingFullWidthGrid = containerElement.querySelector('.full-width-items-grid');
-                if (existingFullWidthGrid) {
-                    existingFullWidthGrid.remove();
-                }
+                const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
+                const placeholder = containerElement.querySelector('.items-loading-placeholder');
+
+                // 清除先前的物品，但保留提示和新增按鈕結構
+                 let itemsGridContainer = containerElement.querySelector('.items-grid-container');
+                 if (!itemsGridContainer) {
+                      itemsGridContainer = document.createElement('div');
+                      itemsGridContainer.className = 'items-grid-container';
+                       // Insert before the add item button if it exists, otherwise append
+                     const addItemBtnElement = containerElement.querySelector('.add-item-to-box-btn');
+                      if (addItemBtnElement) {
+                         containerElement.insertBefore(itemsGridContainer, addItemBtnElement);
+                      } else {
+                         containerElement.appendChild(itemsGridContainer);
+                      }
+                 } else {
+                      // Clear existing items if container already exists
+                      itemsGridContainer.innerHTML = '';
+                 }
+
 
                 try {
                     const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
 
                     if (items.length === 0) {
-                        const placeholderText = document.createElement('p');
-                        placeholderText.textContent = '此紙箱內沒有物品。';
-                        placeholderText.style.textAlign = 'center';
-                        placeholderText.style.width = '100%';
-                        containerElement.appendChild(placeholderText);
-                        return;
-                    }
-
-                    // 創建全寬度網格
-                    const fullWidthGrid = document.createElement('div');
-                    fullWidthGrid.className = 'full-width-items-grid';
-
-                    items.forEach(item => {
-                        const itemCard = document.createElement('div');
-                        itemCard.className = 'item-card';
-                        itemCard.dataset.itemId = item.item_id;
-                        itemCard.dataset.boxId = boxId;
-
-                        const img = document.createElement('img');
-                        img.src = item.item_image_url || '/images/default_item.png';
-                        img.alt = item.item_name;
-                        img.onerror = () => { img.src = '/images/box_item.png'; };
-
-                        const itemName = document.createElement('div');
-                        itemName.className = 'item-name';
-                        itemName.textContent = item.item_name;
-
-                        itemCard.appendChild(img);
-                        itemCard.appendChild(itemName);
-
-                        // 點擊事件：顯示物品詳情
-                        itemCard.addEventListener('click', () => showItemDetails(item));
-
-                        fullWidthGrid.appendChild(itemCard);
-                    });
-
-                    // 在「新增物品」按鈕前插入全寬度網格
-                    const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
-                    if (addItemBtn) {
-                        containerElement.insertBefore(fullWidthGrid, addItemBtn);
+                        if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
                     } else {
-                        containerElement.appendChild(fullWidthGrid);
+                        if(placeholder) placeholder.style.display = 'none';
+
+                        items.forEach(item => {
+                            const itemCard = document.createElement('div');
+                            itemCard.className = 'item-card';
+                            itemCard.dataset.itemId = item.item_id;
+                            itemCard.dataset.boxId = boxId;
+                            itemCard.innerHTML = `
+                                <img src="${item.item_image_url || '/images/default_item.png'}"
+                                     alt="${escapeHtml(item.item_name)}"
+                                     onerror="this.src='/images/box_item.png'">
+                                <div class="item-name">${escapeHtml(item.item_name)}</div>
+                            `;
+                            
+                            // 為每個物品卡片新增點擊事件
+                            itemCard.addEventListener('click', () => showItemDetails(item));
+                            
+                            itemsGridContainer.appendChild(itemCard);
+                        });
+                         addItemActionListeners(itemsGridContainer); // Add listeners to the new items
                     }
 
-                    containerElement.dataset.loadedItems = 'true';
+                    containerElement.dataset.loadedItems = 'true'; // Mark as loaded whether items were found or not
                 } catch (error) {
                     console.error('載入物品失敗:', error);
-                    const errorText = document.createElement('p');
-                    errorText.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
-                    errorText.style.color = '#c0392b';
-                    errorText.style.textAlign = 'center';
-                    containerElement.appendChild(errorText);
+                    if(placeholder) {
+                        placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
+                        placeholder.style.color = '#c0392b';
+                    }
+                     containerElement.dataset.loadedItems = 'false'; // Mark as not loaded if fetch failed
                 }
             }
 
