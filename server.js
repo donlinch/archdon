@@ -8821,175 +8821,224 @@ app.delete('/api/admin/figures/:id', async (req, res) => {
     } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
 });
 
-// --- 銷售紀錄管理 API (受保護) ---
+
+
+
+
+// GET /api/admin/sales - 獲取銷售紀錄 (您已有的，確保它在 app 上，而不是 adminRouter，如果其他 API 也是這樣)
 app.get('/api/admin/sales', async (req, res) => {
     const { startDate, endDate, productName } = req.query;
-    let queryText = `SELECT id, product_name, quantity_sold, sale_timestamp FROM sales_log`;
+    // 確保您的查詢能正確處理 product_name，如果您的 sales_log 依賴 figure_variation_id，
+    // 則需要 JOIN figures 和 figure_variations 表來獲取正確的商品名稱。
+    // 這裡假設 product_name 直接存在於 sales_log 中，或可以通過 JOIN 獲得。
+    let queryText = `SELECT sl.id, sl.product_name, sl.quantity_sold, sl.sale_timestamp
+                     FROM sales_log sl`;
+    // 如果需要 JOIN:
+    // let queryText = `SELECT sl.id, COALESCE(f.name, fv.name, sl.product_name) as product_name,
+    //                         sl.quantity_sold, sl.sale_timestamp
+    //                  FROM sales_log sl
+    //                  LEFT JOIN figure_variations fv ON sl.figure_variation_id = fv.id
+    //                  LEFT JOIN figures f ON fv.figure_id = f.id`;
+
+
     const queryParams = [];
     const conditions = [];
     let paramIndex = 1;
-    if (startDate) { conditions.push(`sale_timestamp >= $${paramIndex++}`); queryParams.push(startDate); }
-    if (endDate) { const nextDay = new Date(endDate); nextDay.setDate(nextDay.getDate() + 1); conditions.push(`sale_timestamp < $${paramIndex++}`); queryParams.push(nextDay.toISOString().split('T')[0]); }
-    if (productName) { conditions.push(`product_name ILIKE $${paramIndex++}`); queryParams.push(`%${productName}%`); }
+    if (startDate) { conditions.push(`sl.sale_timestamp >= $${paramIndex++}`); queryParams.push(startDate); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        conditions.push(`sl.sale_timestamp < $${paramIndex++}`);
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    if (productName) { conditions.push(`sl.product_name ILIKE $${paramIndex++}`); queryParams.push(`%${productName}%`); }
+
     if (conditions.length > 0) { queryText += ' WHERE ' + conditions.join(' AND '); }
-    queryText += ' ORDER BY sale_timestamp DESC, id DESC';
+    queryText += ' ORDER BY sl.sale_timestamp DESC, sl.id DESC';
+
     try {
         const result = await pool.query(queryText, queryParams);
         res.status(200).json(result.rows);
-    } catch (err) { console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err); res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' }); }
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' });
+    }
 });
+
+// GET /api/admin/sales/summary - 獲取銷售彙總 (您已有的)
 app.get('/api/admin/sales/summary', async (req, res) => {
     const { startDate, endDate } = req.query;
     let whereClause = ''; const queryParams = []; let paramIndex = 1;
     if (startDate) { whereClause += `WHERE sale_timestamp >= $${paramIndex++} `; queryParams.push(startDate); }
-    if (endDate) { const nextDay = new Date(endDate); nextDay.setDate(nextDay.getDate() + 1); whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `; queryParams.push(nextDay.toISOString().split('T')[0]); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `;
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
     try {
         const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
         const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
         const totalItems = totalItemsResult.rows[0].total_items;
-        const topProductsQuery = `SELECT product_name, SUM(quantity_sold)::integer as total_sold FROM sales_log ${whereClause} GROUP BY product_name ORDER BY total_sold DESC LIMIT 5;`;
+
+        // 熱銷商品查詢 - 確保 product_name 來源正確
+        const topProductsQuery = `
+            SELECT product_name, SUM(quantity_sold)::integer as total_sold
+            FROM sales_log ${whereClause}
+            GROUP BY product_name
+            ORDER BY total_sold DESC
+            LIMIT 5;`;
         const topProductsResult = await pool.query(topProductsQuery, queryParams);
         const topProducts = topProductsResult.rows;
-        const salesTrendQuery = `SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total FROM sales_log ${whereClause} GROUP BY sale_date ORDER BY sale_date ASC;`;
+
+        const salesTrendQuery = `
+            SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total
+            FROM sales_log ${whereClause}
+            GROUP BY sale_date
+            ORDER BY sale_date ASC;`;
         const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
         const salesTrend = salesTrendResult.rows.map(row => ({ date: new Date(row.sale_date).toISOString().split('T')[0], quantity: row.daily_total }));
+
         res.status(200).json({ totalItems, topProducts, salesTrend });
-    } catch (err) { console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err); res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' }); }
-});
-adminRouter.put('/products/:id', productUpload.single('image'), async (req, res) => {
-    try {
-        const productId = parseInt(req.params.id);
-        if (isNaN(productId)) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
-            return res.status(400).json({ error: '無效的商品 ID' });
-        }
- 
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url, tags } = req.body; // Added tags
- 
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            // Directly fetch existing product using pool.query
-            const existingProductResult = await client.query( // Use client for transaction
-                `SELECT id, name, description, price, image_url, category, seven_eleven_url,
-                        click_count, expiration_type, start_date, end_date
-                 FROM products WHERE id = $1`,
-                [productId]
-            );
-    
-            if (existingProductResult.rows.length === 0) {
-                await client.query('ROLLBACK'); // Rollback before returning
-                if (req.file) {
-                    fs.unlinkSync(req.file.path);
-                }
-                return res.status(404).json({ error: '商品不存在' });
-            }
-            const existingProduct = existingProductResult.rows[0];
-            
-            let final_image_url = existingProduct.image_url;
-            if (req.file) {
-                if (existingProduct.image_url && existingProduct.image_url.startsWith('/uploads/storemarket/')) {
-                    const oldImagePath = path.join(__dirname, 'public', existingProduct.image_url);
-                     if (fs.existsSync(oldImagePath)) {
-                         try {
-                             fs.unlinkSync(oldImagePath);
-                         } catch (unlinkErr) {
-                             console.error('[Admin API Error] 刪除舊圖片失敗:', unlinkErr);
-                         }
-                     }
-                }
-                final_image_url = `/uploads/storemarket/${req.file.filename}`;
-            } else if (body_image_url !== undefined) {
-                final_image_url = body_image_url || null;
-            }
-    
-            const productData = {
-                name: name !== undefined ? name : existingProduct.name,
-                description: description !== undefined ? description : existingProduct.description,
-                price: price !== undefined ? parseFloat(price) : existingProduct.price,
-                image_url: final_image_url,
-                category: category !== undefined ? category : existingProduct.category,
-                seven_eleven_url: seven_eleven_url !== undefined ? seven_eleven_url : existingProduct.seven_eleven_url,
-                expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
-                start_date: start_date !== undefined ? start_date : existingProduct.start_date,
-                end_date: end_date !== undefined ? end_date : existingProduct.end_date
-            };
-    
-            if (productData.expiration_type === 0) {
-                productData.start_date = null;
-                productData.end_date = null;
-            }
-            
-            const updateQuery = `
-                UPDATE products
-                SET name = $1, description = $2, price = $3, image_url = $4, category = $5,
-                    expiration_type = $6, start_date = $7, end_date = $8, seven_eleven_url = $9, updated_at = NOW()
-                WHERE id = $10
-                RETURNING *`;
-            const values = [
-                productData.name,
-                productData.description,
-                productData.price,
-                productData.image_url,
-                productData.category,
-                productData.expiration_type,
-                productData.start_date,
-                productData.end_date,
-                productData.seven_eleven_url,
-                productId
-            ];
-    
-            const result = await client.query(updateQuery, values); // Use client
-    
-            if (result.rows.length === 0) {
-                 await client.query('ROLLBACK'); // Rollback
-                 if (req.file && final_image_url === `/uploads/storemarket/${req.file.filename}`) {
-                     fs.unlinkSync(req.file.path);
-                 }
-                 return res.status(500).json({ error: '更新商品失敗 (資料庫操作未返回更新後的記錄)' });
-            }
-            const updatedProduct = result.rows[0];
-
-            // Update tags
-            await client.query('DELETE FROM product_tags WHERE product_id = $1', [productId]);
-            if (tags && Array.isArray(tags) && tags.length > 0) {
-                const insertProductTagQuery = 'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2)';
-                for (const tagId of tags) {
-                    const parsedTagId = parseInt(tagId, 10);
-                    if (!isNaN(parsedTagId)) {
-                        await client.query(insertProductTagQuery, [productId, parsedTagId]);
-                    } else {
-                        console.warn(`[Admin API Put Product] Invalid tag_id skipped: ${tagId}`);
-                    }
-                }
-            }
-
-            await client.query('COMMIT');
-            // To return tags with the product, you might need another query or adjust frontend to refetch
-            res.json(updatedProduct);
-        } catch (commitErr) {
-            await client.query('ROLLBACK');
-            console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 時事務失敗:`, commitErr);
-            // req.file cleanup is handled by the outer catch block
-            throw commitErr; // Re-throw
-        } finally {
-            client.release();
-        }
     } catch (err) {
-        console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 失敗:`, err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (更新商品時):', unlinkErr);
-            }
-        }
-        res.status(500).json({ error: '更新商品失敗', details: err.message });
+        console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
     }
 });
+
+// 新增: GET /api/admin/sales/product-names - 用於商品名稱輸入建議
+app.get('/api/admin/sales/product-names', async (req, res) => {
+    try {
+        // 這個查詢假設商品名稱直接存儲在 sales_log 中。
+        // 更健壯的系統可能從您的實際商品表（例如 `figures` 或 `products`）查詢。
+        const result = await pool.query('SELECT DISTINCT product_name FROM sales_log WHERE product_name IS NOT NULL ORDER BY product_name ASC');
+        const productNames = result.rows.map(row => row.product_name);
+        res.json(productNames);
+    } catch (error) {
+        console.error('獲取商品名稱列表失敗:', error);
+        res.status(500).json({ error: '無法獲取商品名稱列表' });
+    }
+});
+
+
+// 新增: POST /api/admin/sales - 新增一筆銷售紀錄
+app.post('/api/admin/sales', async (req, res) => {
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+
+    // 基本驗證
+    if (!product_name || !quantity_sold || !sale_timestamp) {
+        return res.status(400).json({ error: '請填寫所有必填欄位 (商品名稱, 銷售數量, 銷售時間)。' });
+    }
+
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是有效的正整數。' });
+    }
+
+    let timestampToSave;
+    try {
+        // 確保時間戳有效並轉換為 ISO 字符串存入數據庫
+        timestampToSave = new Date(sale_timestamp).toISOString();
+    } catch (e) {
+        return res.status(400).json({ error: '銷售時間格式無效。' });
+    }
+
+    try {
+        // 假設 sales_log 表有 product_name, quantity_sold, sale_timestamp 和一個自動遞增的 id。
+        // 如果您的表結構不同（例如，需要 figure_variation_id），請調整此查詢。
+        const queryText = `
+            INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp)
+            VALUES ($1, $2, $3)
+            RETURNING *;  -- 返回新增的紀錄
+        `;
+        // 如果您的數據庫設計是通過 figure_variation_id 關聯的，
+        // 您需要修改表單讓用戶選擇公仔/規格，然後在這裡傳入 figure_variation_id。
+        // 目前根據表單，我們只有 product_name。
+        const result = await pool.query(queryText, [product_name.trim(), quantity, timestampToSave]);
+
+        console.log('[Admin API POST /sales] 新增銷售紀錄成功:', result.rows[0]);
+        res.status(201).json(result.rows[0]); // 201 Created
+
+    } catch (err) {
+        console.error('[Admin API POST /sales] 新增銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '新增銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+// 新增: PUT /api/admin/sales/:id - 更新現有的銷售紀錄
+app.put('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const saleId = parseInt(id);
+    if (isNaN(saleId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID。' });
+    }
+
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+
+    if (!product_name || !quantity_sold || !sale_timestamp) {
+        return res.status(400).json({ error: '請填寫所有必填欄位 (商品名稱, 銷售數量, 銷售時間)。' });
+    }
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是有效的正整數。' });
+    }
+    let timestampToSave;
+    try {
+        timestampToSave = new Date(sale_timestamp).toISOString();
+    } catch (e) {
+        return res.status(400).json({ error: '銷售時間格式無效。' });
+    }
+
+    try {
+        // 假設有一個 `updated_at` 欄位需要更新為 NOW()
+        const queryText = `
+            UPDATE sales_log
+            SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW()
+            WHERE id = $4
+            RETURNING *; -- 返回更新後的紀錄
+        `;
+        const result = await pool.query(queryText, [product_name.trim(), quantity, timestampToSave, saleId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的銷售紀錄。' });
+        }
+        console.log('[Admin API PUT /sales/:id] 更新銷售紀錄成功:', result.rows[0]);
+        res.status(200).json(result.rows[0]); // 200 OK
+
+    } catch (err) {
+        console.error(`[Admin API PUT /sales/${id}] 更新銷售紀錄時出錯:`, err.stack || err);
+        res.status(500).json({ error: '更新銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+// 新增: DELETE /api/admin/sales/:id - 刪除一筆銷售紀錄
+app.delete('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const saleId = parseInt(id);
+    if (isNaN(saleId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID。' });
+    }
+
+    try {
+        const queryText = `DELETE FROM sales_log WHERE id = $1 RETURNING id;`; // RETURNING id 可以確認確實刪除了
+        const result = await pool.query(queryText, [saleId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' });
+        }
+        console.log(`[Admin API DELETE /sales/:id] 刪除銷售紀錄 ID ${saleId} 成功。`);
+        res.status(204).send(); // 204 No Content，表示成功，無響應體
+
+    } catch (err) {
+        console.error(`[Admin API DELETE /sales/${id}] 刪除銷售紀錄時出錯:`, err.stack || err);
+        res.status(500).json({ error: '刪除銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+
+
+
+
 
 adminRouter.delete('/news-categories/:id', async (req, res) => {
     const { id } = req.params;
