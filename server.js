@@ -336,7 +336,12 @@ try {
 
 
 
- 
+const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
+if (!BOX_JWT_SECRET) {
+    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
+    // process.exit(1); // 或者其他錯誤處理
+}
+
 const dependenciesForBoxRoutes = {
     pool,
     visionClient, // 確保已初始化
@@ -344,20 +349,10 @@ const dependenciesForBoxRoutes = {
     uploadDir: '/data/uploads', // 直接使用我們討論的路徑
     authenticateBoxUser, // 傳遞中間件本身
     isAdminAuthenticated // 傳遞管理員認證中間件
-    // fs, path, sharp, uuidv4, multer 如果你決定把 multer 配置也放在 boxRoutes.js
+    // ...
 };
- 
+
 app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
-
-
-const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
-if (!BOX_JWT_SECRET) {
-    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
-    // process.exit(1); // 或者其他錯誤處理
-}
-
-
-
 
 
 
