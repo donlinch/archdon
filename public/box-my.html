@@ -1655,7 +1655,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                                 <div class="item-name">
                                     <strong>${escapeHtml(item.item_name)}</strong> (x${item.quantity})<br>
                                     <small style="color:#777;">${escapeHtml(item.item_description || '無描述')}</small>
-                                    ${(item.ai_item_keywords && item.ai_item_keywords.length > 0) ? `<br><small style="color:#3498db; font-style:italic;">AI關鍵字: ${item.ai_item_keywords.map(k=>escapeHtml(k)).join(', ')}</small>` : ''}
+                                    
                                 </div>
                                 <div class="item-actions">
                                     <button class="edit-item-btn" data-item-id="${item.item_id}" data-box-id="${boxId}">編輯</button>
