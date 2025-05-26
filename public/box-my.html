@@ -299,15 +299,17 @@
 
         /* 新增的美化 CSS 代碼 */
         :root {
-            --primary-color: #3498db;     /* 柔和的藍色 */
-            --secondary-color: #2ecc71;   /* 清新的綠色 */
-            --accent-color: #e74c3c;      /* 活力的紅色 */
-            --background-color: #f4f6f7;  /* 淺灰背景 */
-            --text-color: #2c3e50;        /* 深藍灰文字 */
+            --primary-color: #4a6cf7;     /* Vibrant blue */
+            --secondary-color: #6c757d;   /* Muted gray */
+            --accent-color: #28a745;      /* Green for positive actions */
+            --background-color: #f4f6f9;  /* Soft blue-gray background */
+            --text-color: #2c3e50;        /* Dark blue-gray text */
+            --card-background: #ffffff;   /* White card background */
+            --hover-color: #5a7bff;       /* Lighter blue for hover states */
         }
 
         body {
-            background: linear-gradient(135deg, #f6f8f9 0%, #e5ebee 100%);
+            background: linear-gradient(135deg, var(--background-color), #f8fafc);
             background-attachment: fixed;
             color: var(--text-color);
         }
@@ -392,6 +394,136 @@
                 border-color: #0f3460;
             }
         }
+
+        /* View Toggle Styles */
+        .view-toggle {
+            display: flex;
+            background-color: var(--background-color);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            align-self: flex-end;
+        }
+
+        .view-toggle button {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 2px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .view-toggle button.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.3);
+        }
+
+        .view-toggle button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* List View Styles */
+        #box-list-area {
+            display: none; /* Hidden by default */
+        }
+
+        #box-list-area.active {
+            display: block;
+        }
+
+        .box-list-item {
+            display: flex;
+            align-items: center;
+            background-color: var(--card-background);
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .box-list-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .box-list-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 15px;
+        }
+
+        .box-list-item-details {
+            flex-grow: 1;
+        }
+
+        .box-list-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Grid View Enhancements */
+        #box-grid-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .box-card {
+            background-color: var(--card-background);
+            border: 1px solid #e7e7e7;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .box-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Color Scheme Adjustments */
+        body {
+            background: linear-gradient(135deg, var(--background-color), #f8fafc);
+            color: var(--text-color);
+        }
+
+        .controls-bar {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .controls-bar button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .controls-bar button:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -450,11 +582,28 @@
             <div class="controls-bar">
                 <button id="addBoxBtn">➕ 新增紙箱到此倉庫</button>
                 <button id="toggleAllItemsBtn" class="secondary-action">全部展開/折叠物品</button>
-                <!-- Add search/sort for boxes if needed -->
+                
+                <div class="view-toggle">
+                    <button id="gridViewBtn" class="active">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        格狀
+                    </button>
+                    <button id="listViewBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        列表
+                    </button>
+                </div>
             </div>
             <div id="box-list-message"></div>
-            <div id="box-grid-area"> <!-- Or a table for list view -->
-                <!-- Box cards/rows will be inserted here -->
+            <div id="box-grid-area">
+                <!-- Box cards will be inserted here -->
+            </div>
+            <div id="box-list-area">
+                <!-- Box list items will be inserted here -->
             </div>
             <div id="box-list-pagination"></div>
         </div>
@@ -812,6 +961,21 @@
             searchButton.addEventListener('click', () => handleSearch(1)); // 搜尋從第一頁開始
             searchPagination.addEventListener('click', handleSearchPaginationClick);
             boxListPagination.addEventListener('click', handleBoxPaginationClick); // 紙箱列表分頁監聽器
+
+            // View toggle listeners
+            gridViewBtn.addEventListener('click', () => {
+                gridViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+                boxGridArea.style.display = 'grid';
+                boxListArea.style.display = 'none';
+            });
+
+            listViewBtn.addEventListener('click', () => {
+                listViewBtn.classList.add('active');
+                gridViewBtn.classList.remove('active');
+                boxGridArea.style.display = 'none';
+                boxListArea.style.display = 'block';
+            });
         }
 
         // --- 身份驗證 (如先前提供) ---
@@ -1196,33 +1360,29 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                    if (!warehouseId) {
+                        console.error('No warehouse ID provided');
+                        boxListMessage.textContent = '請先選擇一個倉庫。';
+                        boxGridArea.innerHTML = '';
+                        boxListPagination.innerHTML = '';
+                        return;
+                    }
 
-                    
-
-    if (!warehouseId) {
-        console.error('No warehouse ID provided');
-        boxListMessage.textContent = '請先選擇一個倉庫。';
-        boxGridArea.innerHTML = '';
-        boxListPagination.innerHTML = '';
-        return;
-    }
-
-    currentSelectedWarehouseId = warehouseId;
-
-
+                    currentSelectedWarehouseId = warehouseId;
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
-                        const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`); // 每頁9個紙箱範例
+                        const data = await apiFetch(`/api/box/warehouses/${warehouseId}/boxes?page=${currentBoxPage}&limit=9`);
                         if (data.boxes.length === 0) {
                             boxListMessage.textContent = '此倉庫中沒有紙箱。點擊上方按鈕新增一個吧！';
                             return;
                         }
                         boxListMessage.textContent = '';
 
+                        // Render Grid View
                         data.boxes.forEach(box => {
                             const card = document.createElement('div');
                             card.className = 'box-card';
@@ -1238,17 +1398,39 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                                     <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
                                 </div>
                                 <div class="item-list-container" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'};">
-                                    <!-- 物品將在此處展開時載入 -->
                                     <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
                                     <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
                                 </div>
                             `;
                             boxGridArea.appendChild(card);
 
+                            // Render List View
+                            const listItem = document.createElement('div');
+                            listItem.className = 'box-list-item';
+                            listItem.dataset.boxId = box.box_id;
+                            listItem.innerHTML = `
+                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" onerror="this.src='/images/box_item.png'">
+                                <div class="box-list-item-details">
+                                    <h3>${escapeHtml(box.box_name)}</h3>
+                                    <p>編號: ${escapeHtml(box.box_number)} | 物品: ${box.item_count || 0} 件</p>
+                                </div>
+                                <div class="box-list-item-actions">
+                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折叠物品' : '展開物品'}</button>
+                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
+                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
+                                </div>
+                            `;
+                            boxListArea.appendChild(listItem);
+
                             if (currentBoxViewItemsExpanded[box.box_id]) {
                                 loadItemsForBox(box.box_id, card.querySelector('.item-list-container'));
                             }
                         });
+
+                        // Default to grid view
+                        boxGridArea.style.display = 'grid';
+                        boxListArea.style.display = 'none';
+
                         renderPagination(data.totalPages, data.currentPage, 'box-list-pagination', handleBoxPaginationClick);
                         addBoxActionListeners();
                     } catch (error) {
@@ -1258,16 +1440,25 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 }
 
                 function addBoxActionListeners() {
-                    boxGridArea.querySelectorAll('.toggle-items-btn').forEach(btn => {
+                    // Combine listeners for both grid and list views
+                    const toggleItemsBtns = document.querySelectorAll('.toggle-items-btn');
+                    const editBoxBtns = document.querySelectorAll('.edit-box-btn');
+                    const deleteBoxBtns = document.querySelectorAll('.delete-box-btn');
+                    const addItemBtns = document.querySelectorAll('.add-item-to-box-btn');
+
+                    toggleItemsBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => toggleItemListView(e.target.dataset.boxId, e.target));
                     });
-                    boxGridArea.querySelectorAll('.edit-box-btn').forEach(btn => {
+
+                    editBoxBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => openEditBoxModal(e.target.dataset.boxId));
                     });
-                    boxGridArea.querySelectorAll('.delete-box-btn').forEach(btn => {
+
+                    deleteBoxBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => handleDeleteBox(e.target.dataset.boxId, e.target.dataset.boxName));
                     });
-                    boxGridArea.querySelectorAll('.add-item-to-box-btn').forEach(btn => {
+
+                    addItemBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => openAddItemModal(e.target.dataset.boxId));
                     });
                 }
