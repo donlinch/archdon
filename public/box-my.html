@@ -558,109 +558,106 @@
 
 
         .items-grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* 增加最小寬度 */
-    gap: 15px; /* 增加間距 */
-    margin-top: 15px;
-    width: auto; /* 確保寬度 */
-    padding: 10px;
-    background-color: #f9f9f9; /* 輕微的背景色 */
-    border-radius: 8px; /* 圓角 */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* 輕微陰影 */
-}
-
-.item-card {
-    background-color: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.item-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.item-card img {
-    width: 100%;
-    height: auto ; /* 固定高度 */
-    object-fit: cover;
-    border-radius: 6px;
-    margin-bottom: 10px;
-}
-
-.item-card .item-details {
-    flex-grow: 1;
-    margin-bottom: 10px;
-}
-
-.item-card .item-details h4 {
-    margin: 0 0 5px 0;
-    font-size: 1em;
-    color: #333;
-}
-
-.item-card .item-details p {
-    margin: 0;
-    color: #666;
-    font-size: 0.9em;
-}
-
-.item-card .item-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: auto; /* 將按鈕推到底部 */
-}
-
-.item-card .item-actions button {
-    flex-grow: 1;
-    margin: 0 5px;
-    padding: 8px 12px;
-    font-size: 0.8em;
-    background-color: #f0f0f0;
-    border: none;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-.item-card .item-actions button:hover {
-    background-color: #e0e0e0;
-}
-
-.item-card .item-actions button.edit-item-btn {
-    color: #3498db;
-}
-
-.item-card .item-actions button.delete-item-btn {
-    color: #e74c3c;
-}
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* 更小的最小寬度 */
+            gap: 5px; /* 更小的間距 */
+            width: 100%; /* 確保填滿寬度 */
+            padding: 5px; /* 輕微內邊距 */
+        }
 
         .item-card {
             position: relative;
+            aspect-ratio: 1 / 1; /* 正方形 */
+            overflow: hidden; /* 確保內容不會溢出 */
+            margin: 0;
+            padding: 0;
+        }
+
+        .item-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 確保圖片填滿整個卡片 */
+        }
+
+        .item-card .item-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px;
+            text-align: center;
+            font-size: 0.8em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 600px) {
+            .items-grid-container {
+                grid-template-columns: repeat(3, 1fr); /* 手機上 3 列 */
+            }
+        }
+
+        @media (min-width: 601px) and (max-width: 1200px) {
+            .items-grid-container {
+                grid-template-columns: repeat(4, 1fr); /* 平板上 4 列 */
+            }
+        }
+
+        @media (min-width: 1201px) {
+            .items-grid-container {
+                grid-template-columns: repeat(5, 1fr); /* 大螢幕 5 列 */
+            }
+        }
+
+        .full-width-items-grid {
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .full-width-items-grid .item-card {
+            aspect-ratio: 1 / 1;
+            position: relative;
+            overflow: hidden;
             cursor: pointer;
             transition: transform 0.3s ease;
         }
-        .item-card:hover {
+
+        .full-width-items-grid .item-card:hover {
             transform: scale(1.05);
         }
-        .item-card img {
-            height: 100px;
-            width: auto;
+
+        .full-width-items-grid .item-card img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
         }
-        .item-card .item-name {
+
+        .full-width-items-grid .item-card .item-name {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background-color: rgba(0,0,0,0.5);
             color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.9em;
+            padding: 5px;
+            text-align: center;
+            font-size: 0.8em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
@@ -1849,72 +1846,71 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             async function loadItemsForBox(boxId, containerElement) {
                 if (!currentSelectedWarehouseId) {
                     console.error('loadItemsForBox called without currentSelectedWarehouseId');
-                    const placeholder = containerElement.querySelector('.items-loading-placeholder');
-                    if(placeholder) {
-                         placeholder.textContent = '錯誤：無法載入物品，未選定倉庫。';
-                         placeholder.style.color = '#c0392b';
-                    }
-                    containerElement.dataset.loadedItems = 'false';
                     return;
                 }
 
-                const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
-                const placeholder = containerElement.querySelector('.items-loading-placeholder');
-
-                // 清除先前的物品，但保留提示和新增按鈕結構
-                 let itemsGridContainer = containerElement.querySelector('.items-grid-container');
-                 if (!itemsGridContainer) {
-                      itemsGridContainer = document.createElement('div');
-                      itemsGridContainer.className = 'items-grid-container';
-                       // Insert before the add item button if it exists, otherwise append
-                     const addItemBtnElement = containerElement.querySelector('.add-item-to-box-btn');
-                      if (addItemBtnElement) {
-                         containerElement.insertBefore(itemsGridContainer, addItemBtnElement);
-                      } else {
-                         containerElement.appendChild(itemsGridContainer);
-                      }
-                 } else {
-                      // Clear existing items if container already exists
-                      itemsGridContainer.innerHTML = '';
-                 }
-
+                // 移除之前可能存在的全寬度網格
+                const existingFullWidthGrid = containerElement.querySelector('.full-width-items-grid');
+                if (existingFullWidthGrid) {
+                    existingFullWidthGrid.remove();
+                }
 
                 try {
                     const items = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${boxId}/items`);
 
                     if (items.length === 0) {
-                        if(placeholder) placeholder.textContent = '此紙箱內沒有物品。';
-                    } else {
-                        if(placeholder) placeholder.style.display = 'none';
-
-                        items.forEach(item => {
-                            const itemCard = document.createElement('div');
-                            itemCard.className = 'item-card';
-                            itemCard.dataset.itemId = item.item_id;
-                            itemCard.dataset.boxId = boxId;
-                            itemCard.innerHTML = `
-                                <img src="${item.item_image_url || '/images/default_item.png'}"
-                                     alt="${escapeHtml(item.item_name)}"
-                                     onerror="this.src='/images/box_item.png'">
-                                <div class="item-name">${escapeHtml(item.item_name)}</div>
-                            `;
-                            
-                            // 為每個物品卡片新增點擊事件
-                            itemCard.addEventListener('click', () => showItemDetails(item));
-                            
-                            itemsGridContainer.appendChild(itemCard);
-                        });
-                         addItemActionListeners(itemsGridContainer); // Add listeners to the new items
+                        const placeholderText = document.createElement('p');
+                        placeholderText.textContent = '此紙箱內沒有物品。';
+                        placeholderText.style.textAlign = 'center';
+                        placeholderText.style.width = '100%';
+                        containerElement.appendChild(placeholderText);
+                        return;
                     }
 
-                    containerElement.dataset.loadedItems = 'true'; // Mark as loaded whether items were found or not
+                    // 創建全寬度網格
+                    const fullWidthGrid = document.createElement('div');
+                    fullWidthGrid.className = 'full-width-items-grid';
+
+                    items.forEach(item => {
+                        const itemCard = document.createElement('div');
+                        itemCard.className = 'item-card';
+                        itemCard.dataset.itemId = item.item_id;
+                        itemCard.dataset.boxId = boxId;
+
+                        const img = document.createElement('img');
+                        img.src = item.item_image_url || '/images/default_item.png';
+                        img.alt = item.item_name;
+                        img.onerror = () => { img.src = '/images/box_item.png'; };
+
+                        const itemName = document.createElement('div');
+                        itemName.className = 'item-name';
+                        itemName.textContent = item.item_name;
+
+                        itemCard.appendChild(img);
+                        itemCard.appendChild(itemName);
+
+                        // 點擊事件：顯示物品詳情
+                        itemCard.addEventListener('click', () => showItemDetails(item));
+
+                        fullWidthGrid.appendChild(itemCard);
+                    });
+
+                    // 在「新增物品」按鈕前插入全寬度網格
+                    const addItemBtn = containerElement.querySelector('.add-item-to-box-btn');
+                    if (addItemBtn) {
+                        containerElement.insertBefore(fullWidthGrid, addItemBtn);
+                    } else {
+                        containerElement.appendChild(fullWidthGrid);
+                    }
+
+                    containerElement.dataset.loadedItems = 'true';
                 } catch (error) {
                     console.error('載入物品失敗:', error);
-                    if(placeholder) {
-                        placeholder.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
-                        placeholder.style.color = '#c0392b';
-                    }
-                     containerElement.dataset.loadedItems = 'false'; // Mark as not loaded if fetch failed
+                    const errorText = document.createElement('p');
+                    errorText.textContent = `載入物品失敗: ${error.message || '未知錯誤'}`;
+                    errorText.style.color = '#c0392b';
+                    errorText.style.textAlign = 'center';
+                    containerElement.appendChild(errorText);
                 }
             }
 
