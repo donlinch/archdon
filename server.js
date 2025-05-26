@@ -18,10 +18,15 @@ const sharp = require('sharp')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const createReportRateLimiter = require('./report-ip-limiter');
+const bcrypt = require('bcryptjs'); // 用於密碼哈希
+const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
+
 const adminRouter = express.Router();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
+
+const boxRoutes = require('./boxRoutes');
 
 
 if (process.env.NODE_ENV === 'production') {
@@ -68,6 +73,29 @@ app.use(session({
 }));
 
 
+  
+const dependenciesForBoxRoutes = {
+    pool,
+    visionClient, // 確保已初始化
+    BOX_JWT_SECRET,
+    uploadDir: '/data/uploads', // 直接使用我們討論的路徑
+    authenticateBoxUser, // 傳遞中間件本身
+    isAdminAuthenticated // 傳遞管理員認證中間件
+    // fs, path, sharp, uuidv4, multer 如果你決定把 multer 配置也放在 boxRoutes.js
+};
+ 
+app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
+
+
+const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
+if (!BOX_JWT_SECRET) {
+    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
+    // process.exit(1); // 或者其他錯誤處理
+}
+
+
+
+
 
 // --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
 const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
@@ -81,6 +109,41 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
         return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
     }
 };
+
+
+
+
+
+
+// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+const authenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7, authHeader.length); // "Bearer " 後面的部分
+        jwt.verify(token, BOX_JWT_SECRET, (err, decoded) => {
+            if (err) {
+                console.warn('[Box Auth] Token 驗證失敗:', err.message);
+                return res.status(403).json({ error: '禁止訪問：Token 無效或已過期。' });
+            }
+            // 將解碼後的用戶信息附加到請求對象，方便後續路由使用
+            req.boxUser = decoded; // decoded 通常包含 user_id 和 username
+            console.log(`[Box Auth] 用戶 ${req.boxUser.username} (ID: ${req.boxUser.userId}) 已認證`);
+            next();
+        });
+    } else {
+        console.warn('[Box Auth] 未提供 Authorization 標頭或格式不正確。');
+        res.status(401).json({ error: '未授權：請提供有效的Token。' });
+    }
+};
+// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+
+
+
+
+
+
+
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     const adminUsername = process.env.ADMIN_LOGIN;

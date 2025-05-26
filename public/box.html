@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選擇您的儲藏空間 - 紙箱子管理</title>
+    <style>
+        /* box.html Specific Styles */
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50; /* Darker blue */
+            margin-bottom: 25px;
+            font-size: 2.2em;
+        }
+
+        #user-selection-area {
+            margin-top: 20px;
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            background-color: #f9f9f9;
+        }
+
+        .user-card:hover {
+            background-color: #eff7ff; /* Light blue hover */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .user-card img.profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 20px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+        }
+
+        .user-card span.username {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #34495e; /* Slightly lighter dark blue */
+        }
+
+        /* Password Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .modal h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+
+        .modal label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .modal input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .modal input[type="password"]:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .modal button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal button.primary {
+            background-color: #3498db; /* Blue */
+            color: white;
+        }
+        .modal button.primary:hover {
+            background-color: #2980b9;
+        }
+
+        .modal button.secondary {
+            background-color: #ecf0f1; /* Light gray */
+            color: #333;
+            border: 1px solid #bdc3c7;
+        }
+         .modal button.secondary:hover {
+            background-color: #dadedf;
+        }
+
+
+        #loading-message, #error-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        #loading-message { color: #2980b9; background-color: #e0f0ff; }
+        #error-message { color: #c0392b; background-color: #fbe N; } /* Typo, should be #fbeae5 or similar */
+        #error-message { color: #c0392b; background-color: #fdedec; }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>選擇使用者</h1>
+        <div id="user-selection-area">
+            <!-- User cards will be dynamically inserted here -->
+            <p id="initial-loading">正在載入用戶列表...</p>
+        </div>
+        <p id="error-message" style="display:none;"></p>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">輸入密碼</h2>
+            <form id="passwordForm">
+                <label for="passwordInput">密碼:</label>
+                <input type="password" id="passwordInput" required>
+                <p id="modal-error-message" style="color: #c0392b; font-size: 0.9em; margin-top: -10px; margin-bottom: 10px; display:none;"></p>
+                <div class="modal-actions">
+                    <button type="button" class="secondary" id="cancelPassword">取消</button>
+                    <button type="submit" class="primary">登入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userSelectionArea = document.getElementById('user-selection-area');
+            const initialLoadingMessage = document.getElementById('initial-loading');
+            const errorMessageDiv = document.getElementById('error-message');
+
+            const passwordModal = document.getElementById('passwordModal');
+            const passwordForm = document.getElementById('passwordForm');
+            const passwordInput = document.getElementById('passwordInput');
+            const cancelPasswordBtn = document.getElementById('cancelPassword');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalErrorMessage = document.getElementById('modal-error-message');
+
+            let selectedUserId = null;
+            let selectedUsername = ''; // Store username for modal title
+
+            // 1. 獲取並渲染用戶列表
+            async function fetchAndRenderUsers() {
+                try {
+                    initialLoadingMessage.textContent = '正在載入用戶列表...';
+                    errorMessageDiv.style.display = 'none';
+                    userSelectionArea.innerHTML = ''; // Clear previous users
+
+                    const response = await fetch('/api/box/users');
+                    if (!response.ok) {
+                        throw new Error(`無法獲取用戶列表: ${response.status}`);
+                    }
+                    const users = await response.json();
+
+                    if (users.length === 0) {
+                        userSelectionArea.innerHTML = '<p>目前沒有可用的用戶。</p>';
+                        initialLoadingMessage.style.display = 'none';
+                        return;
+                    }
+
+                    users.forEach(user => {
+                        const card = document.createElement('div');
+                        card.className = 'user-card';
+                        card.dataset.userId = user.user_id;
+                        card.dataset.username = user.username; // Store username
+
+                        const avatar = document.createElement('img');
+                        avatar.className = 'profile-avatar';
+                        avatar.src = user.user_profile_image_url || '/images/default_avatar.png'; // Fallback avatar
+                        avatar.alt = user.username;
+
+                        const usernameSpan = document.createElement('span');
+                        usernameSpan.className = 'username';
+                        usernameSpan.textContent = user.username;
+
+                        card.appendChild(avatar);
+                        card.appendChild(usernameSpan);
+                        card.addEventListener('click', () => handleUserSelection(user.user_id, user.username));
+                        userSelectionArea.appendChild(card);
+                    });
+                    initialLoadingMessage.style.display = 'none';
+
+                } catch (error) {
+                    console.error('獲取用戶失敗:', error);
+                    initialLoadingMessage.style.display = 'none';
+                    errorMessageDiv.textContent = `錯誤: ${error.message}`;
+                    errorMessageDiv.style.display = 'block';
+                    userSelectionArea.innerHTML = '<p style="color:red;">載入用戶列表失敗，請稍後再試。</p>';
+                }
+            }
+
+            // 2. 處理用戶選擇
+            async function handleUserSelection(userId, username) {
+                selectedUserId = userId;
+                selectedUsername = username; // For modal title
+
+                // 檢查 LocalStorage 是否有此用戶的有效Token
+                const token = localStorage.getItem(`boxUserToken_${userId}`);
+                if (token) {
+                    console.log(`找到用戶 ${username} 的本地Token，正在驗證...`);
+                    // (推薦) 後端驗證Token
+                    // 假設有一個 /api/box/auth/check-token 端點
+                    try {
+                        const verifyResponse = await fetch('/api/box/auth/check', { // 你需要創建這個後端API
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (verifyResponse.ok) {
+                            console.log('Token有效，直接跳轉。');
+                            window.location.href = `box-my.html?userId=${selectedUserId}`;
+                            return;
+                        } else {
+                            console.warn('本地Token無效或已過期，清除並要求輸入密碼。');
+                            localStorage.removeItem(`boxUserToken_${userId}`);
+                        }
+                    } catch (e) {
+                        console.error('驗證Token時出錯:', e);
+                        localStorage.removeItem(`boxUserToken_${userId}`);
+                    }
+                }
+                // 如果沒有Token或Token驗證失敗，則顯示密碼輸入框
+                modalTitle.textContent = `請輸入 ${selectedUsername} 的密碼`;
+                passwordInput.value = '';
+                modalErrorMessage.style.display = 'none';
+                passwordModal.style.display = 'flex';
+                passwordInput.focus();
+            }
+
+            // 3. 處理密碼提交
+            passwordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const password = passwordInput.value;
+                if (!password) {
+                    modalErrorMessage.textContent = '密碼不能為空。';
+                    modalErrorMessage.style.display = 'block';
+                    return;
+                }
+                modalErrorMessage.style.display = 'none';
+                const submitButton = passwordForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.textContent = '登入中...';
+
+                try {
+                    const response = await fetch('/api/box/users/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: selectedUsername, password: password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success && data.token) {
+                        localStorage.setItem(`boxUserToken_${selectedUserId}`, data.token);
+                        localStorage.setItem(`boxCurrentUserId`, selectedUserId); // 記錄當前登入的userId
+                        localStorage.setItem(`boxCurrentUsername`, selectedUsername);
+                        localStorage.setItem(`boxCurrentUserAvatar`, data.user?.profileImageUrl || '/images/default_avatar.png');
+
+                        passwordModal.style.display = 'none';
+                        window.location.href = `box-my.html?userId=${selectedUserId}`;
+                    } else {
+                        modalErrorMessage.textContent = data.error || '登入失敗，請檢查您的密碼。';
+                        modalErrorMessage.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('登入請求失敗:', error);
+                    modalErrorMessage.textContent = `登入請求錯誤: ${error.message}`;
+                    modalErrorMessage.style.display = 'block';
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = '登入';
+                }
+            });
+
+            // 4. 取消密碼輸入
+            cancelPasswordBtn.addEventListener('click', () => {
+                passwordModal.style.display = 'none';
+            });
+            // 點擊模態框外部關閉
+            passwordModal.addEventListener('click', (e) => {
+                if (e.target === passwordModal) {
+                    passwordModal.style.display = 'none';
+                }
+            });
+
+            // 初始化頁面
+            fetchAndRenderUsers();
+        });
+    </script>
+</body>
+</html>
