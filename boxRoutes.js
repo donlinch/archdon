@@ -1068,6 +1068,51 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         res.json({ message: `你好, ${req.boxUser.username} (ID: ${req.boxUser.userId})! 你的Token有效。` });
     });
 
+    // GET /api/box/warehouses/:warehouseId/items/:itemId - 獲取特定物品詳情
+    router.get('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
+        const { warehouseId, itemId } = req.params;
+        const userId = req.boxUser.userId;
+
+        const numWarehouseId = parseInt(warehouseId);
+        const numItemId = parseInt(itemId);
+
+        if (isNaN(numWarehouseId) || isNaN(numItemId)) {
+            return res.status(400).json({ error: '倉庫ID和物品ID必須是有效的數字。' });
+        }
+
+        try {
+            // 使用輔助函數檢查物品所有權 (會自動檢查倉庫權限)
+            const itemOwnership = await checkItemOwnership(numItemId, userId);
+
+            if (!itemOwnership.found) {
+                return res.status(404).json({ error: '找不到指定的物品。' });
+            }
+            if (!itemOwnership.owned) {
+                return res.status(403).json({ error: '無權訪問此物品。' });
+            }
+
+            // 獲取物品詳情
+            const itemQuery = `
+                SELECT item_id, box_id, item_name, item_image_url, ai_item_keywords, item_description, quantity, created_at, updated_at
+                FROM BOX_Items
+                WHERE item_id = $1;
+            `;
+            const result = await pool.query(itemQuery, [numItemId]);
+
+            if (result.rows.length === 0) {
+                 // 理論上不會發生，因為 checkItemOwnership 已經驗證存在性
+                 console.error(`[API GET /items/:itemId] User ${userId}: Item ${numItemId} owned, but DB query returned no rows.`);
+                 return res.status(500).json({ error: '獲取物品詳情失敗 (內部錯誤)。' });
+            }
+
+            res.json(result.rows[0]);
+
+        } catch (err) {
+            console.error(`[API GET /warehouses/:warehouseId/items/:itemId] User ${userId}, Warehouse ${warehouseId}, Item ${itemId} Error:`, err);
+            res.status(500).json({ error: '獲取物品詳情失敗。' });
+        }
+    });
+
 
 
 
