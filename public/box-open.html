@@ -208,7 +208,7 @@
         });
 
         async function loadBoxDetails() {
-            const response = await fetch(`/api/box/boxes/${currentBoxId}`, {
+            const response = await fetch(`/api/box/warehouses/boxes/${currentBoxId}`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
@@ -223,7 +223,7 @@
         }
 
         async function loadBoxItems() {
-            const response = await fetch(`/api/box/boxes/${currentBoxId}/items`, {
+            const response = await fetch(`/api/box/warehouses/boxes/${currentBoxId}/items`, {
                 headers: {
                     'Authorization': `Bearer ${authToken}`
                 }
