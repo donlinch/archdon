@@ -807,6 +807,7 @@
             let currentBoxPage = 1;
             let currentSearchPage = 1;
             let currentBoxViewItemsExpanded = {}; // { boxId: true/false } 物品展開狀態
+            let isBoxLoading = false; // Add this global flag near your other state variables
     
              // --- 輔助函數：HTML 轉義 (簡單版本，複雜需求請用函式庫) ---
              function escapeHtml(unsafe) {
@@ -1369,10 +1370,17 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
-                    // 在開始渲染前，先清空現有內容
-                    boxGridArea.innerHTML = '';
-                    boxListArea.innerHTML = '';
-                    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+                     // 在開始渲染前，先清空現有內容
+    boxGridArea.innerHTML = '';
+    boxListArea.innerHTML = '';
+    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+
+                    // Add this check
+                    if (isBoxLoading) {
+                        console.log('Box loading already in progress, skipping.');
+                        return;
+                    }
+                    isBoxLoading = true; // Set flag at the start
 
                     if (!warehouseId) {
                         console.error('No warehouse ID provided');
@@ -1380,12 +1388,15 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         boxGridArea.innerHTML = '';
                         boxListArea.innerHTML = '';
                         boxListPagination.innerHTML = '';
+                        isBoxLoading = false; // Reset flag on early exit
                         return;
                     }
 
                     currentSelectedWarehouseId = warehouseId;
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
+                    boxGridArea.innerHTML = '';
+                    boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
@@ -1396,16 +1407,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // 確保只渲染一次每個紙箱
-                        const uniqueBoxes = new Map();
-                        data.boxes.forEach(box => {
-                            if (!uniqueBoxes.has(box.box_id)) {
-                                uniqueBoxes.set(box.box_id, box);
-                            }
-                        });
-
                         // Render Grid and List Views
-                        uniqueBoxes.forEach(box => {
+                        data.boxes.forEach(box => {
                             // Grid View Card
                             const gridCard = document.createElement('div');
                             gridCard.className = 'box-card';
@@ -1459,6 +1462,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     } catch (error) {
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
                         boxListMessage.style.color = '#c0392b';
+                    } finally {
+                        isBoxLoading = false; // Reset flag after try/catch block
                     }
                 }
 
