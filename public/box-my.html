@@ -1112,6 +1112,16 @@
             box-shadow: 0 2px 4px var(--shadow-color);
         }
 
+        #search-results-area .search-result-item img {
+    max-width: 150px; /* 或您希望的大小 */
+    max-height: 150px;
+    object-fit: cover; /* 保持圖片比例並填充 */
+    margin-bottom: 10px; /* 與下方文字的間距 */
+    border-radius: 4px; /* 輕微圓角 */
+    border: 1px solid var(--border-color); /* 邊框 */
+    box-shadow: 0 2px 4px var(--shadow-color); /* 輕微陰影 */
+}
+
     </style>
 </head>
 <body>
@@ -2381,57 +2391,59 @@
 
 
             function renderSearchResults(results) {
-                searchResultsArea.innerHTML = '';
-                if (!results || results.length === 0) return;
-                results.forEach(result => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'search-result-item';
-                    
-                    // Add image display
-                    let imageHtml = result.item_image_url || result.cover_image_url 
-                        ? `<img src="${escapeHtml(result.item_image_url || result.cover_image_url)}" 
-                                 alt="${escapeHtml(result.name)}" 
-                                 style="max-width: 150px; max-height: 150px; object-fit: cover; margin-bottom: 10px; border-radius: 4px;"
-                                 onerror="this.src='/images/default_item.png'">`
-                        : '';
+            searchResultsArea.innerHTML = '';
+            if (!results || results.length === 0) return;
+            results.forEach(result => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'search-result-item';
+                
+                // 新增：檢查並構建圖片 HTML
+                let imageHtml = '';
+                const imageUrl = result.image_url || (result.type === 'box' ? result.cover_image_url : null); // 物品優先用 item_image_url，紙箱用 cover_image_url
+                
+                if (imageUrl) {
+                    imageHtml = `<img src="${escapeHtml(imageUrl)}" 
+                                     alt="${escapeHtml(result.name)}" 
+                                     onerror="this.style.display='none';">`; // 如果圖片載入失敗，則隱藏
+                } else {
+                    // (可選) 如果沒有圖片，可以顯示一個預設圖或不顯示
+                    imageHtml = `<img src="/images/default_item.png" alt="無圖片">`; 
+                }
 
-                    let detailsHtml = `
+                let detailsHtml = `
                         ${imageHtml}
                         <h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>`;
                     
-                    // 顯示倉庫名稱 (不顯示ID)
-                    detailsHtml += `<p><strong>倉庫:</strong> ${escapeHtml(result.warehouse_name || '未知倉庫')}</p>`;
-                    
-                    if (result.type === 'item') {
-                        // 顯示紙箱名稱和編號 (不顯示ID)
-                        detailsHtml += `<p><strong>紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)})</p>`;
-                    } else { // 如果是紙箱
-                         detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
-                    }
-                    
-                    // "查看詳情" 按鈕
-                    detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
-                    
-                    itemDiv.innerHTML = detailsHtml;
-                    searchResultsArea.appendChild(itemDiv);
-                });
+                    detailsHtml += `<p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>`;                    
+                detailsHtml += `<p><strong>倉庫:</strong> ${escapeHtml(result.warehouse_name || '未知倉庫')}</p>`;
                 
-                // 更新按鈕的點擊事件以實現跳轉
-                searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
-                    btn.onclick = (e) => {
-                        const { warehouseId, boxId } = e.target.dataset;
+                if (result.type === 'item') {
+                    detailsHtml += `<p><strong>紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)})</p>`;
+                } else { 
+                     detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
+                }
+                
+                detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
+                
+                itemDiv.innerHTML = detailsHtml;
+                searchResultsArea.appendChild(itemDiv);
+            });
+            
+            searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const { warehouseId, boxId } = e.target.dataset;
 
-                        if (warehouseId && boxId) {
-                            // 构建跳转的 URL
-                            const targetUrl = `box-open.html?warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
-                            window.location.href = targetUrl;
-                        } else {
-                            console.error("查看詳情按鈕缺少 warehouseId 或 boxId:", e.target.dataset);
-                            alert("無法跳轉，缺少必要的倉庫或紙箱信息。");
-                        }
-                    };
-                });
-            }
+                    if (warehouseId && boxId) {
+                        const targetUrl = `box-open.html?warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
+                        window.location.href = targetUrl;
+                    } else {
+                        console.error("查看詳情按鈕缺少 warehouseId 或 boxId:", e.target.dataset);
+                        alert("無法跳轉，缺少必要的倉庫或紙箱信息。");
+                    }
+                };
+            });
+        }
+
 
 
 
