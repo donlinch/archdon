@@ -1152,13 +1152,12 @@
                     <button id="gridViewBtn" class="active">
                         <i class="fas fa-th"></i> 格狀檢視
                     </button>
-                    <!-- 移除列表視圖按鈕 -->
                 </div>
-                <div id="box-grid-area" class="box-grid"></div>
-                <div id="box-list-message"></div>
-                <div id="box-pagination"></div>
-                <!-- 移除 box-list-area div -->
             </div>
+            <div id="box-grid-area" class="box-grid"></div>
+            <div id="box-list-message"></div>
+            <div id="box-pagination"></div>
+        </div>
 
         <!-- TAB Content: Search -->
         <div id="tab-search" class="tab-content">
@@ -1626,15 +1625,14 @@
                 if (currentSelectedWarehouseId) {
                     boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
                     
-                    if (!this.boxManagementInitialized) {
-                        console.log('首次載入倉庫紙箱');
-                        loadBoxesForWarehouse(currentSelectedWarehouseId);
-                        this.boxManagementInitialized = true;
-                    }
-
+                    console.log('Loading boxes for warehouse:', currentSelectedWarehouseId);
+                    loadBoxesForWarehouse(currentSelectedWarehouseId);
+                    
                     // 設定為格狀視圖
-                    gridViewBtn.classList.add('active');
-                    boxGridArea.style.display = 'grid';
+                    const gridViewBtn = document.getElementById('gridViewBtn');
+                    const boxGridArea = document.getElementById('box-grid-area');
+                    if (gridViewBtn) gridViewBtn.classList.add('active');
+                    if (boxGridArea) boxGridArea.style.display = 'grid';
                 } else {
                     alert('錯誤：未選擇倉庫！');
                     switchTab('tab-warehouses');
@@ -1987,6 +1985,15 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                    const boxGridArea = document.getElementById('box-grid-area');
+                    const boxListMessage = document.getElementById('box-list-message');
+                    const boxListPagination = document.getElementById('box-pagination');
+
+                    if (!boxGridArea) {
+                        console.error('找不到 box-grid-area 元素');
+                        return;
+                    }
+
                     // 在開始渲染前，先清空現有內容
                     boxGridArea.innerHTML = '';
                     console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
@@ -2055,6 +2062,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         renderPagination(data.totalPages, data.currentPage, 'box-pagination', handleBoxPaginationClick);
                         addBoxActionListeners();
                     } catch (error) {
+                        console.error('載入紙箱失敗:', error);
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
                         boxListMessage.style.color = '#c0392b';
                     } finally {
@@ -3076,6 +3084,15 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
+                    const boxGridArea = document.getElementById('box-grid-area');
+                    const boxListMessage = document.getElementById('box-list-message');
+                    const boxListPagination = document.getElementById('box-pagination');
+
+                    if (!boxGridArea) {
+                        console.error('找不到 box-grid-area 元素');
+                        return;
+                    }
+
                     // 在開始渲染前，先清空現有內容
                     boxGridArea.innerHTML = '';
                     console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
@@ -3144,6 +3161,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         renderPagination(data.totalPages, data.currentPage, 'box-pagination', handleBoxPaginationClick);
                         addBoxActionListeners();
                     } catch (error) {
+                        console.error('載入紙箱失敗:', error);
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
                         boxListMessage.style.color = '#c0392b';
                     } finally {
