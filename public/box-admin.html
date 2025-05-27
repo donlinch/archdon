@@ -249,39 +249,32 @@
         // 檢查管理員權限
         async function checkAdminAuth() {
             try {
-                const response = await fetch('/api/box/admin/auth/check', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
-                    }
-                });
-
+                const response = await fetch('/api/box/admin/auth/check');
                 if (!response.ok) {
-                    window.location.href = '/box-admin-login.html';
+                    // 如果未登入或權限不足，重定向到管理員登入頁面
+                    window.location.href = '/admin-login.html';
+                    return false;
                 }
+                return true;
             } catch (error) {
-                console.error('權限檢查失敗:', error);
-                window.location.href = '/box-admin-login.html';
+                console.error('檢查管理員權限時出錯:', error);
+                window.location.href = '/admin-login.html';
+                return false;
             }
         }
 
         // 獲取使用者列表
         async function fetchUsers() {
             try {
-                const response = await fetch('/api/box/admin/users', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
-                    }
-                });
-
+                const response = await fetch('/api/box/admin/users');
                 if (!response.ok) {
                     throw new Error('獲取使用者列表失敗');
                 }
-
                 const users = await response.json();
                 renderUsers(users);
             } catch (error) {
                 console.error('獲取使用者列表失敗:', error);
-                showStatusMessage('error', '獲取使用者列表失敗');
+                showStatusMessage('獲取使用者列表失敗', false);
             }
         }
 
@@ -295,14 +288,16 @@
                 tr.innerHTML = `
                     <td>
                         <div class="user-info">
-                            <img src="${user.profileImageUrl || '/images/default_avatar.png'}" alt="${user.username}" class="user-avatar">
+                            <img src="${user.user_profile_image_url || '/images/default_avatar.png'}" 
+                                 alt="${user.username}" 
+                                 class="user-avatar">
                             <span>${user.username}</span>
                         </div>
                     </td>
-                    <td>${new Date(user.createdAt).toLocaleString()}</td>
-                    <td>${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '從未登入'}</td>
+                    <td>${new Date(user.created_at).toLocaleString('zh-TW')}</td>
+                    <td>${user.last_login_at ? new Date(user.last_login_at).toLocaleString('zh-TW') : '從未登入'}</td>
                     <td>
-                        <button class="action-btn delete-btn" onclick="showDeleteConfirm('${user.userId}', '${user.username}')">
+                        <button class="action-btn delete-btn" onclick="showDeleteConfirm('${user.user_id}', '${user.username}')">
                             刪除
                         </button>
                     </td>
@@ -315,7 +310,7 @@
         function showDeleteConfirm(userId, username) {
             selectedUserId = userId;
             const dialog = document.getElementById('confirmDialog');
-            const message = dialog.querySelector('.dialog-message');
+            const message = document.querySelector('.dialog-message');
             message.textContent = `確定要刪除使用者 "${username}" 嗎？此操作無法復原。`;
             dialog.classList.add('show');
         }
@@ -333,43 +328,43 @@
 
             try {
                 const response = await fetch(`/api/box/admin/users/${selectedUserId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
-                    }
+                    method: 'DELETE'
                 });
 
                 if (!response.ok) {
                     throw new Error('刪除使用者失敗');
                 }
 
-                hideConfirmDialog();
-                showStatusMessage('success', '使用者已成功刪除');
+                showStatusMessage('使用者已成功刪除', true);
                 fetchUsers(); // 重新載入使用者列表
             } catch (error) {
                 console.error('刪除使用者失敗:', error);
-                showStatusMessage('error', '刪除使用者失敗');
+                showStatusMessage('刪除使用者失敗', false);
+            } finally {
+                hideConfirmDialog();
             }
         }
 
         // 顯示狀態訊息
-        function showStatusMessage(type, message) {
-            const statusMessage = document.getElementById('statusMessage');
-            statusMessage.textContent = message;
-            statusMessage.className = `status-message ${type}`;
-            statusMessage.style.display = 'block';
+        function showStatusMessage(message, isSuccess) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message ' + (isSuccess ? 'success' : 'error');
+            statusDiv.style.display = 'block';
 
             // 3秒後自動隱藏訊息
             setTimeout(() => {
-                statusMessage.style.display = 'none';
+                statusDiv.style.display = 'none';
             }, 3000);
         }
 
         // 頁面載入時檢查權限並獲取使用者列表
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAdminAuth();
-            fetchUsers();
-        });
+        window.onload = async () => {
+            const hasAuth = await checkAdminAuth();
+            if (hasAuth) {
+                fetchUsers();
+            }
+        };
     </script>
 </body>
 </html> 

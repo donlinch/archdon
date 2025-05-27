@@ -524,8 +524,7 @@ module.exports = function(dependencies) {
         const userId = req.boxUser.userId;
         try {
             const ownership = await checkWarehouseOwnership(warehouseId, userId);
-            if (!ownership.found) return res.status(404).json({ error: '找不到指定的倉庫。' });
-            if (!ownership.owned) return res.status(403).json({ error: '無權刪除此倉庫。' });
+            if (!ownership.found || !ownership.owned) return res.status(ownership.found ? 403 : 404).json({ error: ownership.message });
 
             // ON DELETE CASCADE 會處理關聯的 BOX_Boxes 和 BOX_Items
             const result = await pool.query('DELETE FROM BOX_Warehouses WHERE warehouse_id = $1', [warehouseId]);
@@ -1258,12 +1257,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                     user_id, 
                     username, 
                     user_profile_image_url,
-                    created_at,
-                    (
-                        SELECT MAX(login_time) 
-                        FROM user_login_history 
-                        WHERE user_id = u.user_id
-                    ) as last_login_at
+                    created_at
                 FROM BOX_Users u
                 ORDER BY username ASC`;
             
@@ -1293,10 +1287,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             // 2. 刪除使用者的所有倉庫（這會級聯刪除所有紙箱和物品）
             await client.query('DELETE FROM BOX_Warehouses WHERE user_id = $1', [userId]);
 
-            // 3. 刪除使用者的登入歷史
-            await client.query('DELETE FROM user_login_history WHERE user_id = $1', [userId]);
-
-            // 4. 刪除使用者本身
+            // 3. 刪除使用者本身
             await client.query('DELETE FROM BOX_Users WHERE user_id = $1', [userId]);
 
             await client.query('COMMIT');

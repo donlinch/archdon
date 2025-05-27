@@ -267,6 +267,7 @@ const sessionProtectedAdminPages = [
     '/advertisement.html',
     '/product-views.html',
     '/admin-identities.html',
+    '/box-admin.html',  // 添加倉庫管理員頁面
 
     // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
     // 例如: '/inventory-admin.html', (如果它需要 session 保護而不是 basic auth)
