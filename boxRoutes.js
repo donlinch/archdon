@@ -356,7 +356,7 @@ module.exports = function(dependencies) {
                         console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')} with project ID: ${googleProjectId}`);
                         const request = {
                             contents: aiKeywords,
-                            targetLanguageCode: 'zh',
+                            targetLanguageCode: 'zh-TW', // <--- 修改为繁体中文 (台湾)
                             parent: `projects/${googleProjectId}/locations/global`
                         };
 
