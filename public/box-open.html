@@ -42,8 +42,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 1em; /* 如果你把 H1 的字體改小 */
-        }
+         }
 
         .box-header-info small {
             color: #666;
@@ -285,7 +284,7 @@
 
         .box-header-info small {
     color: #666;
-    font-size: 0.8em; /* 這可以作為通用的 <small> 預設樣式 */
+    font-size: 0.4em; /* 這可以作為通用的 <small> 預設樣式 */
     font-weight: normal;
 }
 
@@ -431,8 +430,9 @@
             if (!response.ok) throw new Error('無法獲取紙箱詳情');
 
             const boxData = await response.json();
+            console.log('Box Details Response:', boxData);
             document.getElementById('boxCoverImage').src = boxData.cover_image_url || '/images/box_item.png';
-            document.getElementById('boxName').innerHTML = `${boxData.box_name} <small>-${boxData.box_number || '無編號'} (${boxData.warehouse_name || '未知倉庫'})</small>`;
+            document.getElementById('boxName').innerHTML = `${boxData.box_name} <small>編號：${boxData.box_number || '無編號'} (${boxData.warehouse_name || '未知倉庫'})</small>`;
         }
 
         async function loadBoxItems() {
