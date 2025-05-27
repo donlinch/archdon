@@ -1128,7 +1128,6 @@
         <div id="tab-warehouses" class="tab-content active">
             <h2>我的倉庫</h2>
             <div class="controls-bar">
-                <button id="refreshWarehousesBtn">🔄 刷新倉庫列表</button>
                 <button id="openAddWarehouseModalBtn" class="primary">➕ 新增倉庫</button>
             </div>
             <div id="warehouse-list-message"></div>
@@ -1334,7 +1333,6 @@
             // Warehouse Tab related (大部分會移到 Modal)
             const warehouseListDiv = document.getElementById('warehouse-list');
             const warehouseListMessage = document.getElementById('warehouse-list-message');
-            const refreshWarehousesBtn = document.getElementById('refreshWarehousesBtn');
             const openAddWarehouseModalBtn = document.getElementById('openAddWarehouseModalBtn'); // 新增倉庫按鈕（打開Modal）
 
             // New Warehouse Modal Elements
@@ -1525,7 +1523,6 @@
             });
 
             warehouseForm.addEventListener('submit', handleSaveWarehouse);
-            refreshWarehousesBtn.addEventListener('click', loadWarehouses);
 
             document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
             document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
@@ -1626,6 +1623,7 @@
                 document.getElementById('search-pagination').innerHTML = '';
             }
             resetFormStatuses();
+            loadWarehouses();
         }
 
 
