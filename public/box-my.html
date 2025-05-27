@@ -1540,13 +1540,13 @@
                 });
             });
 
-            addWarehouseForm.addEventListener('submit', handleAddWarehouse);
+            // 更新倉庫表單監聽器
+            warehouseForm.addEventListener('submit', handleSaveWarehouse);
             refreshWarehousesBtn.addEventListener('click', loadWarehouses);
 
             document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
             document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
             profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
-
 
             // 紙箱 Modal 監聽器
             document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
