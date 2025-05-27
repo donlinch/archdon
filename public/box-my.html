@@ -1518,10 +1518,10 @@
 
         // --- 事件監聽器設置 (如先前提供，並加入新的) ---
         function setupEventListeners() {
-            console.log('setupEventListeners called'); // Add this
+            console.log('setupEventListeners called');
             // ... (已有的監聽器) ...
-            logoutButton.addEventListener('click', logout);
-            tabLinks.forEach(link => {
+            if (logoutButton) logoutButton.addEventListener('click', logout);
+            if (tabLinks) tabLinks.forEach(link => {
                 link.addEventListener('click', () => {
                     console.log(`Tab link clicked: ${link.dataset.tab}`); // Add this
                     if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
@@ -1532,46 +1532,48 @@
                 });
             });
 
-            warehouseForm.addEventListener('submit', handleSaveWarehouse);
+            if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
 
-            document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-            document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
-            profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
+            if (document.getElementById('changePasswordForm')) document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            if (document.getElementById('changeProfileImageForm')) document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
+            if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
 
 
             // 紙箱 Modal 監聽器
             document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
                 btn.addEventListener('click', () => closeModal('boxModal'));
             });
-            boxForm.addEventListener('submit', handleSaveBox);
-            addBoxBtn.addEventListener('click', openAddBoxModal); // 開啟新增紙箱 modal
-            boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
+            if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
+            if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
+            if (boxFormCoverImageFileInput) boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
 
 
             // 物品 Modal 監聽器
             document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => {
                 btn.addEventListener('click', () => closeModal('itemModal'));
             });
-            itemForm.addEventListener('submit', handleSaveItem);
-            itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
+            if (itemForm) itemForm.addEventListener('submit', handleSaveItem);
+            if (itemFormImageFileInput) itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
 
             // 紙箱管理相關
-            toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
+            if (toggleAllItemsBtn) toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
 
             // 搜尋分頁
-            searchButton.addEventListener('click', () => handleSearch(1)); // 搜尋從第一頁開始
-            searchPagination.addEventListener('click', handleSearchPaginationClick);
-            boxListPagination.addEventListener('click', handleBoxPaginationClick); // 紙箱列表分頁監聽器
+            if (searchButton) searchButton.addEventListener('click', () => handleSearch(1)); // 搜尋從第一頁開始
+            if (searchPagination) searchPagination.addEventListener('click', handleSearchPaginationClick);
+            if (boxListPagination) boxListPagination.addEventListener('click', handleBoxPaginationClick); // 紙箱列表分頁監聽器
 
             // View toggle listeners
-            gridViewBtn.addEventListener('click', () => {
+            if (gridViewBtn) gridViewBtn.addEventListener('click', () => {
                 gridViewBtn.classList.add('active');
-                boxGridArea.style.display = 'grid';
+                if (boxGridArea) boxGridArea.style.display = 'grid';
+                if (boxListArea) boxListArea.style.display = 'none'; // Ensure list view is hidden
             });
 
-            listViewBtn.addEventListener('click', () => {
+            if (listViewBtn) listViewBtn.addEventListener('click', () => {
                 listViewBtn.classList.add('active');
-                boxGridArea.style.display = 'none';
+                if (boxGridArea) boxGridArea.style.display = 'none'; // Ensure grid view is hidden
+                if (boxListArea) boxListArea.style.display = 'block';
             });
 
             // 物品詳情模態框關閉按鈕
@@ -1586,7 +1588,7 @@
             document.querySelectorAll('.close-btn[data-modal-id="warehouseModal"], button.close-modal-btn[data-modal-id="warehouseModal"]').forEach(btn => {
                 btn.addEventListener('click', () => closeModal('warehouseModal'));
             });
-            warehouseForm.addEventListener('submit', handleSaveWarehouse);
+            if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
         }
 
         // --- 身份驗證 (如先前提供) ---
