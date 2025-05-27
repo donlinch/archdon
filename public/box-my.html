@@ -1764,9 +1764,9 @@
             }
 
             async function initializePage() {
-                const params = new URLSearchParams(window.location.search);
-                currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId');
-                authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+            const params = new URLSearchParams(window.location.search);
+            currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId');
+            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
 
                 // Check for localStorage flags to auto-open a specific warehouse and tab
                 const lastOpenedWarehouseId = localStorage.getItem('lastOpenedWarehouseId');
@@ -1800,6 +1800,9 @@
                     }
                 }
 
+
+        
+
                 if (!currentUserId || !authToken) {
                     alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
                     window.location.href = 'box.html';
@@ -1819,6 +1822,10 @@
                 }
                  setupEventListeners(); // Moved here to ensure it runs after potential tab switch
             }
+
+
+
+
 
             function setupEventListeners() {
                 if (logoutButton) logoutButton.addEventListener('click', logout);
