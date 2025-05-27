@@ -355,6 +355,34 @@ if (!BOX_JWT_SECRET) {
     // process.exit(1); // 或者其他錯誤處理
 }
 
+
+
+
+
+
+
+// --- Get Google Cloud Project ID from Credentials ---\nlet googleProjectId = null;
+const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+if (credentialsPath) {
+    try {
+        // 同步讀取文件，因為這是在服務啟動階段
+        const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8');
+        const parsedCredentials = JSON.parse(credentialsFileContent);
+        googleProjectId = parsedCredentials.project_id; // Store the project ID
+        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials.");
+    } catch (error) {
+        console.error("[Cloud AI] Failed to get Google Cloud Project ID from credentials file:", error.message);
+        console.warn("[Cloud AI] Translation API might fail if project ID is required and not inferred.");
+    }
+} else {
+    console.warn("[Cloud AI] GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. Cannot automatically get Project ID.");
+    console.warn("[Cloud AI] Translation API might fail if project ID is required and not inferred.");
+}
+
+
+
+
+
 const dependenciesForBoxRoutes = {
     pool,
     visionClient, // 確保已初始化

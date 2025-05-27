@@ -399,7 +399,54 @@ router.post('/users/register', async (req, res) => {
                     console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')}`);
                     // Google Cloud Translation API requires an array of strings
                     // The second argument 'zh' is the target language code for Chinese
-                    const [translations] = await dependencies.translationClient.translate(aiKeywords, 'zh');
+                    // Use the translateText method for the v3 client
+                    // The parent parameter is required, format: projects/PROJECT_ID
+                    // The client should be able to infer the project ID from GOOGLE_APPLICATION_CREDENTIALS
+                    // However, sometimes explicit parent is needed. Let's try to infer or use a placeholder if needed.
+                    // A common way to get the project ID if the client doesn't infer is from the credentials file itself
+                    // But since the client initialized, it likely knows the project ID implicitly.
+                    // Let's assume the client can use default project from credentials.
+                    
+                    const request = {
+                        contents: aiKeywords,
+                        targetLanguageCode: 'zh',
+                        // The parent format is `projects/{project-id}/locations/{location-id}` or `projects/{project-id}`.
+                        // 'global' is a common location for Translation API v3.
+                        // Let's try with just the project parent first.
+                        parent: `projects/${process.env.GOOGLE_CLOUD_PROJECT}` // Attempt to get project ID from environment variable
+                        // Or, if the client infers the project ID, you might need to explicitly specify location:
+                        // parent: `projects/${dependencies.translationClient.projectId}/locations/global`
+                        // Let's stick to inferring project ID via GOOGLE_APPLICATION_CREDENTIALS and just providing project parent.
+                    };
+                    
+                    // If process.env.GOOGLE_CLOUD_PROJECT is not set, the client might still infer it from credentials.
+                    // Let's refine the parent to include location 'global', which is common.
+                    // The format is projects/{project-number-or-id}/locations/global
+                    // The client initialized successfully, indicating it found credentials, which contain project_id.
+                    // The client instance itself might hold the project ID.
+                    // Let's try accessing the inferred project ID from the client instance if available.
+                    
+                    // If client.projectId is not available or reliable, we might need to fetch it from credentials during server startup
+                    // and pass it in dependencies.
+                    // For now, let's try the format projects/{project-id/number}/locations/global
+                    // We know the client initialized, implying it found credentials with project_id.
+                    // Let's assume the client instance *might* have a way to access the inferred project ID, or try the simple 'projects/project-id' format.
+                    // Based on docs, the parent format is projects/{project-number-or-id}/locations/{location-id}
+                    // Let's use 'global' as the location.
+                    // How to get the project ID here? The client instance itself doesn't easily expose the inferred ID.
+                    // The best approach is to get the project ID during server startup from the credentials file (if it's JSON) or environment,
+                    // and pass it in the dependencies.
+                    // Since we don't have the credentials file path directly here, let's make an assumption for the edit:
+                    // We will add the project ID to dependencies in server.js and use it here.
+                    
+                    // Temporarily, let's try a placeholder for parent and acknowledge we need the actual project ID.
+                    // Correct approach: get project ID in server.js and pass it.
+                    // Let's assume for this edit, the dependencies will *also* include `googleProjectId`.
+                    request.parent = `projects/${dependencies.googleProjectId}/locations/global`; // Assuming googleProjectId is added to dependencies
+                    
+                    const [response] = await dependencies.translationClient.translateText(request);
+                    // The translations are in response.translations array
+                    const translations = response.translations.map(t => t.translatedText);
                     if (translations && translations.length === aiKeywords.length) {
                          aiKeywords = translations; // Replace English keywords with Chinese translations
                          console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
