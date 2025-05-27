@@ -362,19 +362,14 @@ let googleProjectId = null;
 const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (credentialsPath) {
     try {
-        const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8');
+        const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8'); // 注意：这里是同步读取，对于 server.js 启动时通常可以接受
         const parsedCredentials = JSON.parse(credentialsFileContent);
-        googleProjectId = parsedCredentials.project_id; // Store the project ID
-        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials.");
+        googleProjectId = parsedCredentials.project_id;
+        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials:", googleProjectId); // 打印出来确认
     } catch (error) {
         console.error("[Cloud AI] Failed to get Google Cloud Project ID from credentials file:", error.message);
-        console.warn("[Cloud AI] Translation API might fail if project ID is required and not inferred.");
     }
-} else {
-    console.warn("[Cloud AI] GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. Cannot automatically get Project ID.");
-    console.warn("[Cloud AI] Translation API might fail if project ID is required and not inferred.");
 }
-
 
 const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
 if (!BOX_JWT_SECRET) {
@@ -385,13 +380,13 @@ if (!BOX_JWT_SECRET) {
 
 const dependenciesForBoxRoutes = {
     pool,
-    visionClient, // 確保已初始化
-    translationClient, // 添加 Translation Client
+    visionClient,
+    translationClient,
     BOX_JWT_SECRET,
-    uploadDir: '/data/uploads', // 直接使用我們討論的路徑
-    authenticateBoxUser, // 傳遞中間件本身
-    isAdminAuthenticated, // 傳遞管理員認證中間件
-    googleProjectId: process.env.GOOGLE_CLOUD_PROJECT // 添加 googleProjectId
+    uploadDir: '/data/uploads',
+    authenticateBoxUser,
+    isAdminAuthenticated,
+    googleProjectId // <--- 确保这里真的把获取到的值传进去了
 };
 
 app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));

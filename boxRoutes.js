@@ -340,15 +340,19 @@ module.exports = function(dependencies) {
                     // Google Cloud Translation API requires an array of strings
                     // The second argument 'zh' is the target language code for Chinese
                     const request = {
-                        parent: `projects/${dependencies.googleProjectId}/locations/global`,
                         contents: aiKeywords,
-                        mimeType: 'text/plain',
-                        sourceLanguageCode: 'en',
-                        targetLanguageCode: 'zh'
+                        targetLanguageCode: 'zh',
+                        parent: `projects/${googleProjectId}/locations/global` // <--- 确认这里用的是解构出来的 googleProjectId
                     };
+
+                    if (!googleProjectId) { // 添加一个检查
+                        console.error("[Box Upload API] CRITICAL: googleProjectId is undefined in dependencies for translation. Skipping translation.");
+                        // 决定是继续（用英文关键词）还是抛错
+                    } else {
+                    
                     const [response] = await dependencies.translationClient.translateText(request);
                     const translations = response.translations.map(t => t.translatedText);
-                    
+                }
                     if (translations && translations.length === aiKeywords.length) {
                          aiKeywords = translations; // Replace English keywords with Chinese translations
                          console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
