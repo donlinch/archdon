@@ -391,8 +391,33 @@ router.post('/users/register', async (req, res) => {
                 image: { content: imageBuffer },
                 features: [ { type: 'LABEL_DETECTION', maxResults: 10 }, { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
             });
-            const aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
-            
+            let aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
+
+            // --- 開始新增翻譯邏輯 ---
+            if (dependencies.translationClient && aiKeywords.length > 0) {
+                try {
+                    console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')}`);
+                    // Google Cloud Translation API requires an array of strings
+                    // The second argument 'zh' is the target language code for Chinese
+                    const [translations] = await dependencies.translationClient.translate(aiKeywords, 'zh');
+                    if (translations && translations.length === aiKeywords.length) {
+                         aiKeywords = translations; // Replace English keywords with Chinese translations
+                         console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
+                    } else {
+                        console.warn("[Box Upload API] Translation result length mismatch or empty, using original keywords.");
+                        // If translation fails or result is unexpected, keep original English keywords
+                    }
+                } catch (translateError) {
+                    console.error("[Box Upload API] Error during translation:", translateError);
+                    // If translation fails, keep original English keywords
+                }
+            } else if (aiKeywords.length === 0) {
+                 console.log("[Box Upload API] No keywords detected, skipping translation.");
+            } else {
+                 console.warn("[Box Upload API] translationClient dependency not available, skipping translation.");
+            }
+            // --- 結束新增翻譯邏輯 ---
+
             const processedImageBuffer = await sharp(imageBuffer).rotate()
                 .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
                 .jpeg({ quality: 80 })
