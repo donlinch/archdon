@@ -1097,6 +1097,113 @@
             .view-toggle button.active { background: var(--primary-color); }
         }
 
+        /* 倉庫卡片相關樣式 */
+        .warehouse-card {
+            position: relative;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .warehouse-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .warehouse-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.4em;
+            color: #2c3e50;
+            padding-right: 80px; /* 為右上角的箱子數量留出空間 */
+        }
+
+        .warehouse-card .box-count {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .warehouse-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .warehouse-card .action-buttons {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .warehouse-card:hover .action-buttons {
+            opacity: 1;
+        }
+
+        .warehouse-card .action-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .warehouse-card .edit-button {
+            color: #3498db;
+        }
+
+        .warehouse-card .edit-button:hover {
+            background: #3498db;
+            color: #fff;
+        }
+
+        .warehouse-card .delete-button {
+            color: #e74c3c;
+        }
+
+        .warehouse-card .delete-button:hover {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* 倉庫列表容器樣式 */
+        .warehouse-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .warehouse-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .warehouse-card .action-buttons {
+                opacity: 1; /* 在移動設備上始終顯示按鈕 */
+            }
+        }
     </style>
 </head>
 <body>
@@ -1719,50 +1826,41 @@
 
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
-    card.className = 'warehouse-card';
-    card.innerHTML = `
-        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
-        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
-        <div class="actions">
-            <button class="enter-warehouse" 
-                    data-warehouse-id="${warehouse.warehouse_id}" 
-                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
-                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
-            </button>
-            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
-            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
-        </div>
-    `;
-    warehouseListDiv.appendChild(card);
+                    card.className = 'warehouse-card';
+                    card.innerHTML = `
+                        <div class="box-count">
+                            <i class="fas fa-box"></i> ${warehouse.box_count || 0} 個紙箱
+                        </div>
+                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
+                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
+                        <div class="action-buttons">
+                            <button class="action-button edit-button edit-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}"
+                                    title="編輯倉庫">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-button delete-button delete-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}"
+                                    title="刪除倉庫">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
                     
-                });
-
-// 為新的倉庫卡片新增事件監聽器
-warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // 明確設置 currentSelectedWarehouseId
-        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-        
-        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-        switchTab('tab-box-management');
-    });
-});
-
-                // 為新的倉庫卡片新增事件監聽器
-                warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-                        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // 顯示分頁
-                        switchTab('tab-box-management');
+                    // 為整個卡片添加點擊事件（除了按鈕區域）
+                    card.addEventListener('click', (e) => {
+                        // 如果點擊的不是按鈕區域，則進入倉庫
+                        if (!e.target.closest('.action-buttons')) {
+                            currentSelectedWarehouseId = warehouse.warehouse_id;
+                            currentSelectedWarehouseName = warehouse.warehouse_name;
+                            if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                            switchTab('tab-box-management');
+                        }
                     });
-                });
-                warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleEditWarehouseModalOpen(e.target.dataset.warehouseId));
-                });
-                warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
+                    
+                    warehouseListDiv.appendChild(card);
                 });
 
             } catch (error) {
@@ -2837,52 +2935,41 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
-    card.className = 'warehouse-card';
-    card.innerHTML = `
-        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
-        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
-        <div class="actions">
-            <button class="enter-warehouse" 
-                    data-warehouse-id="${warehouse.warehouse_id}" 
-                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
-                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
-            </button>
-            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
-            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
-        </div>
-    `;
-    warehouseListDiv.appendChild(card);
+                    card.className = 'warehouse-card';
+                    card.innerHTML = `
+                        <div class="box-count">
+                            <i class="fas fa-box"></i> ${warehouse.box_count || 0} 個紙箱
+                        </div>
+                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
+                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
+                        <div class="action-buttons">
+                            <button class="action-button edit-button edit-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}"
+                                    title="編輯倉庫">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-button delete-button delete-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}"
+                                    title="刪除倉庫">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
                     
-                });
-
-// 為新的倉庫卡片新增事件監聽器
-warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // 明確設置 currentSelectedWarehouseId
-        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-        
-        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-        switchTab('tab-box-management');
-    });
-});
-
-                // 為新的倉庫卡片新增事件監聽器
-                warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-                        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // 顯示分頁
-                        // Reset box management initialization flag so boxes are loaded fresh
-                        this.boxManagementInitialized = false; 
-                        switchTab('tab-box-management');
+                    // 為整個卡片添加點擊事件（除了按鈕區域）
+                    card.addEventListener('click', (e) => {
+                        // 如果點擊的不是按鈕區域，則進入倉庫
+                        if (!e.target.closest('.action-buttons')) {
+                            currentSelectedWarehouseId = warehouse.warehouse_id;
+                            currentSelectedWarehouseName = warehouse.warehouse_name;
+                            if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                            switchTab('tab-box-management');
+                        }
                     });
-                });
-                warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => openEditWarehouseModal(e.target.dataset.warehouseId));
-                });
-                warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
+                    
+                    warehouseListDiv.appendChild(card);
                 });
 
             } catch (error) {
