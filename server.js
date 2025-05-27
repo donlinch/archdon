@@ -349,11 +349,7 @@ try {
 }
 // --- END OF Cloud Translation AI Integration ---
 
-const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
-if (!BOX_JWT_SECRET) {
-    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
-    // process.exit(1); // 或者其他錯誤處理
-}
+
 
 
 
@@ -362,10 +358,10 @@ if (!BOX_JWT_SECRET) {
 
 
 // --- Get Google Cloud Project ID from Credentials ---\nlet googleProjectId = null;
+let googleProjectId = null;
 const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (credentialsPath) {
     try {
-        // 同步讀取文件，因為這是在服務啟動階段
         const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8');
         const parsedCredentials = JSON.parse(credentialsFileContent);
         googleProjectId = parsedCredentials.project_id; // Store the project ID
@@ -380,7 +376,11 @@ if (credentialsPath) {
 }
 
 
-
+const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
+if (!BOX_JWT_SECRET) {
+    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
+    // process.exit(1); // 或者其他錯誤處理
+}
 
 
 const dependenciesForBoxRoutes = {
