@@ -765,23 +765,192 @@
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-            .page-header { padding: 15px; flex-direction: column; gap: 10px; }
-            .page-header .user-info { margin-bottom: 10px; }
+            .page-header {
+                padding: 10px 15px; /* Reduced padding */
+                flex-direction: row; /* Override column to row */
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px; /* Spacing between user-info and buttons div */
+            }
+            .page-header .user-info {
+                margin-bottom: 0; /* Remove bottom margin from column layout */
+                white-space: nowrap; /* Prevent username from wrapping too early */
+            }
+            .page-header > div:last-child { /* Container for home link and logout button */
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .page-header a,
+            .page-header button {
+                padding: 6px 10px; /* Smaller buttons on mobile */
+                font-size: 0.8em; /* Smaller text */
+                margin-left: 0; /* Reset margin, gap is handled by parent */
+            }
+
             .main-container { padding: 15px; margin: 15px auto; }
             .tab-navigation { padding: 5px 5px 0 5px; }
-            .tab-navigation button { padding: 12px 15px; font-size: 1em; }
+            .tab-navigation button { padding: 12px 15px; font-size: 0.95em; }
             .tab-content { padding: 15px; }
-            .controls-bar { flex-direction: column; align-items: stretch; }
-            .view-toggle { margin-left: 0; align-self: stretch; }
-            .view-toggle button { flex-grow: 1; justify-content: center; }
+
+            /* Specific adjustments for Box Management tab title and controls */
+            #tab-box-management h2#boxManagementTitle {
+                display: inline-block;
+                vertical-align: middle;
+                margin: 0 10px 0 0; /* Remove default bottom margin, add right margin */
+                font-size: 1.15em; /* Adjust title size for mobile */
+                flex-grow: 0; /* Don't let title grow excessively */
+                white-space: nowrap;
+            }
+            #tab-box-management .controls-bar {
+                display: flex; /* Changed from inline-flex to flex for better control */
+                flex-direction: row !important; /* Ensure it's a row */
+                align-items: center !important; /* Vertical alignment */
+                justify-content: flex-start; /* Align items to start */
+                gap: 8px;
+                padding: 0 !important; /* Remove original controls-bar padding */
+                margin-bottom: 15px !important; /* Space after this control row */
+                border-bottom: none !important;
+                background-color: transparent !important;
+                flex-wrap: nowrap; /* Prevent wrapping of these main controls */
+                width: auto; /* Allow it to not take full width if not needed by children */
+            }
+             /* Group title and first two icons together */
+            .box-management-title-group {
+                display: flex;
+                align-items: center;
+                flex-grow: 1; /* Takes available space, pushing view-toggle to the right */
+            }
+
+            #tab-box-management #addBoxBtn,
+            #tab-box-management #toggleAllItemsBtn {
+                font-size: 0; /* Hide original text */
+                padding: 0;
+                width: 32px; /* Icon button size */
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: var(--border-radius-base); /* Consistent radius */
+                border: 1px solid var(--border-color);
+                background-color: var(--background-light);
+                color: var(--text-primary); /* For icon color */
+                flex-shrink: 0; /* Prevent shrinking */
+            }
+            #tab-box-management #addBoxBtn::before {
+                content: "➕";
+                font-size: 16px;
+            }
+            #tab-box-management #toggleAllItemsBtn::before {
+                content: "↕️"; /* Using up-down arrow as placeholder for expand/collapse */
+                font-size: 16px;
+            }
+
+            #tab-box-management .view-toggle {
+                margin-left: auto; /* Pushes to the far right of the .controls-bar flex container */
+                background-color: transparent;
+                padding: 0;
+                box-shadow: none;
+                display: flex; /* ensure .view-toggle itself is flex for its buttons */
+                gap: 5px; /* gap between grid/list icons */
+                flex-shrink: 0; /* Prevent shrinking */
+            }
+            #tab-box-management .view-toggle button {
+                font-size: 0; /* Hide text like "格狀", "列表" */
+                width: 32px;
+                height: 32px;
+                padding: 0; /* Remove padding to keep it tight for icon */
+                margin: 0; /* Reset margin, gap is handled by parent .view-toggle */
+                border: 1px solid var(--border-color);
+                background-color: var(--background-light);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #tab-box-management .view-toggle button svg {
+                width: 18px;
+                height: 18px;
+                stroke: var(--text-primary);
+            }
+            #tab-box-management .view-toggle button.active {
+                background-color: var(--primary-color);
+            }
+            #tab-box-management .view-toggle button.active svg {
+                stroke: white;
+            }
+            /* End of Box Management tab specific adjustments */
+
+            /* General .controls-bar on mobile if not in box-management */
+            .controls-bar:not(#tab-box-management .controls-bar) {
+                 flex-direction: column;
+                 align-items: stretch;
+            }
+            .view-toggle:not(#tab-box-management .view-toggle) { 
+                margin-left: 0; 
+                align-self: stretch; 
+            }
+            .view-toggle:not(#tab-box-management .view-toggle) button { 
+                flex-grow: 1; 
+                justify-content: center; 
+            }
+
+
             #warehouse-list { grid-template-columns: 1fr; gap: 15px; }
-            #box-grid-area { grid-template-columns: 1fr; gap: 15px; } /* Single column for boxes on small screens */
-            .box-card img.box-cover-preview { height: 180px; } /* Taller image on single column */
-            .items-grid-container { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px;} /* Smaller items on mobile */
+            #box-grid-area { grid-template-columns: 1fr; gap: 15px; } 
+
+            /* Box Card adjustments for text overlay */
+            .box-card {
+                position: relative; /* For absolute positioning of text overlays */
+                overflow: hidden; /* To contain overlays if they have backgrounds */
+            }
+            .box-card img.box-cover-preview {
+                display: block; /* Remove any extra space below image */
+                width: 100%;
+                height: 180px; /* Maintain height from previous mobile styles or adjust */
+                object-fit: cover;
+                margin-bottom: 0; /* Text will overlay, so no margin needed for content below image within card */
+            }
+            .box-card .box-number,
+            .box-card .box-name,
+            .box-card .item-count {
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0.65); /* Slightly darker for better contrast */
+                color: white;
+                padding: 3px 7px;
+                border-radius: var(--border-radius-base);
+                font-size: 0.75em; /* Smaller text for overlay */
+                line-height: 1.4;
+                text-shadow: 1px 1px 1px rgba(0,0,0,0.5); /* Text shadow for readability */
+            }
+            .box-card .box-number {
+                top: 8px;
+                left: 8px;
+            }
+            .box-card .box-name {
+                top: 28px; /* Position below number, adjust as needed based on font size */
+                left: 8px;
+                max-width: calc(100% - 16px); /* Prevent overflow if name is long */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .box-card .item-count {
+                bottom: 8px;
+                right: 8px;
+            }
+             /* Adjust box actions to be below the image area clearly */
+            .box-card .box-actions {
+                margin-top: 10px; /* Add some space if content was removed from normal flow */
+                padding-top: 8px;
+                border-top: 1px solid var(--border-color);
+            }
+            /* End of Box Card adjustments */
+
+            .items-grid-container { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px;}
             .modal-content { width: 95%; padding: 20px; }
             .form-actions { flex-direction: column; }
             .form-actions button { width: 100%; }
-            #box-list-pagination, #search-pagination { flex-wrap: wrap; } /* Allow pagination buttons to wrap */
+            #box-list-pagination, #search-pagination { flex-wrap: wrap; }
         }
          @media (prefers-color-scheme: dark) {
             body {
