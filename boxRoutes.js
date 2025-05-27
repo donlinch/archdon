@@ -999,50 +999,60 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
             if (!ownership.found || !ownership.owned) return res.status(ownership.found ? 403 : 404).json({ error: ownership.message });
 
             // CTE for combined search and ranking
+
+
+
+
+
+
             const searchQuery = `
-                WITH search_base AS (
-                    -- Search Items
-                    SELECT
-                        i.item_id, i.item_name AS name, i.item_image_url AS image_url, i.ai_item_keywords AS keywords, i.item_description AS description,
-                        b.box_id, b.box_number, b.box_name,
-                        'item' AS type,
-                        (i.item_name ILIKE $2) AS name_match,
-                        ($3 = ANY(i.ai_item_keywords)) AS keyword_match,
-                        (i.item_description ILIKE $2) AS description_match
-                    FROM BOX_Items i
-                    JOIN BOX_Boxes b ON i.box_id = b.box_id
-                    WHERE b.warehouse_id = $1
-                    AND (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR $3 = ANY(i.ai_item_keywords))
+            WITH search_base AS (
+                -- Search Items
+                SELECT
+                    i.item_id, i.item_name AS name, i.item_image_url AS image_url, i.ai_item_keywords AS keywords, i.item_description AS description,
+                    b.box_id, b.box_number, b.box_name,
+                    w.warehouse_id, w.warehouse_name, -- <<< 新增這一行
+                    'item' AS type,
+                    (i.item_name ILIKE $2) AS name_match,
+                    ($3 = ANY(i.ai_item_keywords)) AS keyword_match,
+                    (i.item_description ILIKE $2) AS description_match
+                FROM BOX_Items i
+                JOIN BOX_Boxes b ON i.box_id = b.box_id
+                JOIN BOX_Warehouses w ON b.warehouse_id = w.warehouse_id -- <<< 新增 JOIN
+                WHERE b.warehouse_id = $1
+                AND (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR $3 = ANY(i.ai_item_keywords))
 
-                    UNION ALL
+                UNION ALL
 
-                    -- Search Boxes
-                    SELECT
-                        NULL AS item_id, b.box_name AS name, b.cover_image_url AS image_url, b.ai_box_keywords AS keywords, b.manual_notes AS description,
-                        b.box_id, b.box_number, b.box_name AS original_box_name,
-                        'box' AS type,
-                        (b.box_name ILIKE $2) AS name_match,
-                        ($3 = ANY(b.ai_box_keywords)) AS keyword_match,
-                        (b.manual_notes ILIKE $2) AS description_match
-                    FROM BOX_Boxes b
-                    WHERE b.warehouse_id = $1
-                    AND (b.box_name ILIKE $2 OR b.manual_notes ILIKE $2 OR $3 = ANY(b.ai_box_keywords) OR b.box_number ILIKE $2)
-                ),
-                ranked_search AS (
-                    SELECT *,
-                        (CASE WHEN name_match THEN 3 ELSE 0 END) +
-                        (CASE WHEN keyword_match THEN 2 ELSE 0 END) +
-                        (CASE WHEN description_match THEN 1 ELSE 0 END) as relevance_score
-                    FROM search_base
-                ),
-                total_count AS (
-                    SELECT COUNT(*) as total FROM ranked_search
-                )
-                SELECT rs.*, tc.total
-                FROM ranked_search rs, total_count tc
-                ORDER BY rs.relevance_score DESC, rs.name ASC
-                LIMIT $4 OFFSET $5;
-            `;
+                -- Search Boxes
+                SELECT
+                    NULL AS item_id, b.box_name AS name, b.cover_image_url AS image_url, b.ai_box_keywords AS keywords, b.manual_notes AS description,
+                    b.box_id, b.box_number, b.box_name AS original_box_name,
+                    w.warehouse_id, w.warehouse_name, -- <<< 新增這一行
+                    'box' AS type,
+                    (b.box_name ILIKE $2) AS name_match,
+                    ($3 = ANY(b.ai_box_keywords)) AS keyword_match,
+                    (b.manual_notes ILIKE $2) AS description_match
+                FROM BOX_Boxes b
+                JOIN BOX_Warehouses w ON b.warehouse_id = w.warehouse_id -- <<< 新增 JOIN
+                WHERE b.warehouse_id = $1
+                AND (b.box_name ILIKE $2 OR b.manual_notes ILIKE $2 OR $3 = ANY(b.ai_box_keywords) OR b.box_number ILIKE $2)
+            ),
+            ranked_search AS (
+                SELECT *,
+                    (CASE WHEN name_match THEN 3 ELSE 0 END) +
+                    (CASE WHEN keyword_match THEN 2 ELSE 0 END) +
+                    (CASE WHEN description_match THEN 1 ELSE 0 END) as relevance_score
+                FROM search_base
+            ),
+            total_count AS (
+                SELECT COUNT(*) as total FROM ranked_search
+            )
+            SELECT rs.*, tc.total
+            FROM ranked_search rs, total_count tc
+            ORDER BY rs.relevance_score DESC, rs.name ASC
+            LIMIT $4 OFFSET $5;
+        `;
 
             const result = await pool.query(searchQuery, [warehouseId, likePattern, arraySearchTerm, limit, offset]);
 
@@ -1096,55 +1106,63 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
 
         // 2. 構建搜尋查詢 (在用戶的所有倉庫中進行)
         //    使用 CTE 合併物品和紙箱的搜尋，並計算相關性，然後分頁
+
+
+
+
         const searchQuery = `
-            WITH user_warehouses AS (
-                SELECT warehouse_id FROM BOX_Warehouses WHERE user_id = $1
-            ),
-            search_base AS (
-                -- Search Items in user's warehouses
-                SELECT
-                    i.item_id, i.item_name AS name, i.item_image_url AS image_url, i.ai_item_keywords AS keywords, i.item_description AS description,
-                    b.box_id, b.box_number, b.box_name,
-                    w.warehouse_id, w.warehouse_name, -- 添加倉庫信息
-                    'item' AS type,
-                    (i.item_name ILIKE $2) AS name_match,
-                    ($3 = ANY(i.ai_item_keywords)) AS keyword_match,
-                    (i.item_description ILIKE $2) AS description_match
-                FROM BOX_Items i
-                JOIN BOX_Boxes b ON i.box_id = b.box_id
-                JOIN user_warehouses w ON b.warehouse_id = w.warehouse_id -- 只搜尋用戶的倉庫
-                WHERE (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR $3 = ANY(i.ai_item_keywords))
+        WITH user_warehouses AS (
+            SELECT warehouse_id, warehouse_name FROM BOX_Warehouses WHERE user_id = $1 -- <<< 在這裡添加 warehouse_name
+        ),
+        search_base AS (
+            -- Search Items in user's warehouses
+            SELECT
+                i.item_id, i.item_name AS name, i.item_image_url AS image_url, i.ai_item_keywords AS keywords, i.item_description AS description,
+                b.box_id, b.box_number, b.box_name,
+                w.warehouse_id, w.warehouse_name, -- 現在可以正確獲取
+                'item' AS type,
+                (i.item_name ILIKE $2) AS name_match,
+                ($3 = ANY(i.ai_item_keywords)) AS keyword_match,
+                (i.item_description ILIKE $2) AS description_match
+            FROM BOX_Items i
+            JOIN BOX_Boxes b ON i.box_id = b.box_id
+            JOIN user_warehouses w ON b.warehouse_id = w.warehouse_id 
+            WHERE (i.item_name ILIKE $2 OR i.item_description ILIKE $2 OR $3 = ANY(i.ai_item_keywords))
 
-                UNION ALL
+            UNION ALL
 
-                -- Search Boxes in user's warehouses
-                SELECT
-                    NULL AS item_id, b.box_name AS name, b.cover_image_url AS image_url, b.ai_box_keywords AS keywords, b.manual_notes AS description,
-                    b.box_id, b.box_number, b.box_name AS original_box_name,
-                    w.warehouse_id, w.warehouse_name, -- 添加倉庫信息
-                    'box' AS type,
-                    (b.box_name ILIKE $2) AS name_match,
-                    ($3 = ANY(b.ai_box_keywords)) AS keyword_match,
-                    (b.manual_notes ILIKE $2) AS description_match
-                FROM BOX_Boxes b
-                JOIN user_warehouses w ON b.warehouse_id = w.warehouse_id -- 只搜尋用戶的倉庫
-                WHERE (b.box_name ILIKE $2 OR b.manual_notes ILIKE $2 OR $3 = ANY(b.ai_box_keywords) OR b.box_number ILIKE $2)
-            ),
-            ranked_search AS (
-                SELECT *,
-                    (CASE WHEN name_match THEN 3 ELSE 0 END) +
-                    (CASE WHEN keyword_match THEN 2 ELSE 0 END) +
-                    (CASE WHEN description_match THEN 1 ELSE 0 END) as relevance_score
-                FROM search_base
-            ),
-            total_count AS (
-                SELECT COUNT(*) as total FROM ranked_search
-            )
-            SELECT rs.*, tc.total
-            FROM ranked_search rs, total_count tc
-            ORDER BY rs.relevance_score DESC, rs.warehouse_name ASC, rs.box_number ASC, rs.name ASC -- 添加倉庫和紙箱排序
-            LIMIT $4 OFFSET $5;
-        `;
+            -- Search Boxes in user's warehouses
+            SELECT
+                NULL AS item_id, b.box_name AS name, b.cover_image_url AS image_url, b.ai_box_keywords AS keywords, b.manual_notes AS description,
+                b.box_id, b.box_number, b.box_name AS original_box_name,
+                w.warehouse_id, w.warehouse_name, -- 現在可以正確獲取
+                'box' AS type,
+                (b.box_name ILIKE $2) AS name_match,
+                ($3 = ANY(b.ai_box_keywords)) AS keyword_match,
+                (b.manual_notes ILIKE $2) AS description_match
+            FROM BOX_Boxes b
+            JOIN user_warehouses w ON b.warehouse_id = w.warehouse_id 
+            WHERE (b.box_name ILIKE $2 OR b.manual_notes ILIKE $2 OR $3 = ANY(b.ai_box_keywords) OR b.box_number ILIKE $2)
+        ),
+        ranked_search AS (
+            SELECT *,
+                (CASE WHEN name_match THEN 3 ELSE 0 END) +
+                (CASE WHEN keyword_match THEN 2 ELSE 0 END) +
+                (CASE WHEN description_match THEN 1 ELSE 0 END) as relevance_score
+            FROM search_base
+        ),
+        total_count AS (
+            SELECT COUNT(*) as total FROM ranked_search
+        )
+        SELECT rs.*, tc.total
+        FROM ranked_search rs, total_count tc
+        ORDER BY rs.relevance_score DESC, rs.warehouse_name ASC, rs.box_number ASC, rs.name ASC 
+        LIMIT $4 OFFSET $5;
+    `;
+
+
+
+
 
         // 參數：$1 = userId, $2 = likePattern, $3 = arraySearchTerm, $4 = limit, $5 = offset
         const result = await pool.query(searchQuery, [userId, likePattern, arraySearchTerm, limit, offset]);
