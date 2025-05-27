@@ -29,11 +29,25 @@
             object-fit: cover;
             border-radius: 8px;
             margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .box-header-info {
+            flex-grow: 1;
         }
 
         .box-header-info h1 {
             margin: 0;
             color: #4a6cf7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .box-header-info small {
+            color: #666;
+            font-size: 0.8em;
+            font-weight: normal;
         }
 
         .items-grid-container {
@@ -156,17 +170,30 @@
         }
 
         .add-item-btn {
-            background-color: #4a6cf7;
-            color: white;
+            padding: 8px 15px;
             border: none;
             border-radius: 6px;
-            padding: 8px 15px;
-            margin-left: 15px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            margin-left: 10px;
         }
-        .add-item-btn:hover {
-            background-color: #3a5acf;
+
+        .btn-back {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-back:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-add:hover {
+            background-color: #218838;
         }
 
         .modal {
@@ -225,16 +252,45 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        /* 放大圖片模態框樣式 */
+        #boxImageModal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #boxImageModal img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        #boxImageModal .close-modal-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div class="box-header">
-        <img id="boxCoverImage" src="/images/box_item.png" alt="紙箱封面">
+        <img id="boxCoverImage" src="/images/box_item.png" alt="紙箱封面" onclick="showBoxImage()">
         <div class="box-header-info">
-            <h1 id="boxName">紙箱名稱</h1>
+            <h1 id="boxName">紙箱名稱 <small id="boxInfo"></small></h1>
         </div>
-        <button id="backButton" class="add-item-btn" style="margin-right: 10px;">返回</button>
-        <button id="addItemBtn" class="add-item-btn">➕ </button>
+        <button id="backButton" class="add-item-btn btn-back">返回</button>
+        <button id="addItemBtn" class="add-item-btn btn-add">新增物品</button>
     </div>
 
     <div id="itemsGridContainer" class="items-grid-container">
@@ -290,6 +346,12 @@
                 </div>
             </form>
         </div>
+    </div>
+
+    <!-- 紙箱圖片放大模態框 -->
+    <div id="boxImageModal">
+        <span class="close-modal-btn" onclick="closeBoxImage()">&times;</span>
+        <img id="boxImageLarge" src="" alt="紙箱大圖">
     </div>
 
     <script>
@@ -354,7 +416,7 @@
 
             const boxData = await response.json();
             document.getElementById('boxCoverImage').src = boxData.cover_image_url || '/images/box_item.png';
-            document.getElementById('boxName').textContent = boxData.box_name;
+            document.getElementById('boxName').innerHTML = `${boxData.box_name} <small>-${boxData.box_number || '無編號'} (${boxData.warehouse_name || '未知倉庫'})</small>`;
         }
 
         async function loadBoxItems() {
@@ -756,6 +818,20 @@
                 .replace(/>/g, ">")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        // 添加圖片放大相關函數
+        function showBoxImage() {
+            const modal = document.getElementById('boxImageModal');
+            const largeImg = document.getElementById('boxImageLarge');
+            const smallImg = document.getElementById('boxCoverImage');
+            
+            largeImg.src = smallImg.src;
+            modal.style.display = 'flex';
+        }
+
+        function closeBoxImage() {
+            document.getElementById('boxImageModal').style.display = 'none';
         }
     </script>
 </body>
