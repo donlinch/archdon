@@ -1620,6 +1620,29 @@
         // == 倉庫管理函數 ==
         // ===================================
 
+        // 為倉庫卡片添加事件監聽器
+        function addWarehouseButtonListeners() {
+            // 進入倉庫按鈕
+            warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentSelectedWarehouseId = e.target.dataset.warehouseId;
+                    currentSelectedWarehouseName = e.target.dataset.warehouseName;
+                    if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                    switchTab('tab-box-management');
+                });
+            });
+
+            // 編輯倉庫按鈕
+            warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => openEditWarehouseModal(e.target.dataset.warehouseId));
+            });
+
+            // 刪除倉庫按鈕
+            warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
+            });
+        }
+
         async function loadWarehouses() {
             if (!currentUserId || !authToken) return;
             
@@ -3756,6 +3779,29 @@
 
         initializePage();
         loadWarehouses(); // 在頁面載入時自動執行倉庫列表刷新
+
+        // 為倉庫卡片添加事件監聽器
+        function addWarehouseButtonListeners() {
+            // 進入倉庫按鈕
+            warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentSelectedWarehouseId = e.target.dataset.warehouseId;
+                    currentSelectedWarehouseName = e.target.dataset.warehouseName;
+                    if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                    switchTab('tab-box-management');
+                });
+            });
+
+            // 編輯倉庫按鈕
+            warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => openEditWarehouseModal(e.target.dataset.warehouseId));
+            });
+
+            // 刪除倉庫按鈕
+            warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
+                btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
+            });
+        }
     });
 
 
