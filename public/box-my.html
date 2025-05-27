@@ -465,8 +465,8 @@
         /* Search Tab Styles */
         #search-results-area {
             display: grid; /* Change to grid layout */
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsive grid */
-            gap: 20px; /* Space between grid items */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px; /* Space between grid items */
         }
 
         #search-results-area .search-result-item {
@@ -516,7 +516,7 @@
             top: 0;
             left: 0;
             right: auto;
-            max-width: 70%; /* Limit width to leave space for warehouse name */
+            max-width: 100%; /* Limit width to leave space for warehouse name */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -547,7 +547,7 @@
         }
         #search-results-area .search-result-item p {
             margin-bottom: 10px; /* Space before button */
-            font-size: 0.9em;
+            font-size: 0.7em;
             color: var(--text-secondary);
             flex-grow: 1; /* Push button to the bottom */
         }
@@ -555,7 +555,7 @@
         #search-results-area .search-result-item .result-type {
             font-style: normal; /* Remove italic */
             color: var(--primary-color); /* Use primary color for type */
-            font-size: 0.8em; /* Smaller font size */
+            font-size: 0.7em; /* Smaller font size */
             font-weight: 500;
             margin-left: 5px; /* Space from name */
         }
@@ -566,7 +566,7 @@
             background-color: var(--primary-color); /* Use primary color for button */
             color: white;
             padding: 8px 12px;
-            font-size: 0.9em;
+            font-size: 0.7em;
             border: none;
             border-radius: var(--border-radius-base);
             cursor: pointer;
