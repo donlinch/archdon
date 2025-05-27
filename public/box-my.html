@@ -1201,8 +1201,8 @@
         }
 
         #search-results-area .search-result-item img {
-    max-width: 400px; /* 或您希望的大小 */
-    max-height: 400px;
+    max-width: 150px; /* 或您希望的大小 */
+    max-height: 150px;
     object-fit: cover; /* 保持圖片比例並填充 */
     margin-bottom: 10px; /* 與下方文字的間距 */
     border-radius: 4px; /* 輕微圓角 */
@@ -2586,16 +2586,12 @@
                              onerror="this.onerror=null;this.src='${fallbackImageUrl}';">
                          
                         <div class="overlay-text warehouse-name">
-                             ${escapeHtml(result.warehouse_name || '未知倉庫')}
+                             ${escapeHtml(result.name)}  
                         </div>
                     </div>
                     <div class="item-details-container">
-                        <h4>
-                            ${escapeHtml(result.name)}
-                            <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span>
-                        </h4>
-                        <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || result.manual_notes || '無')}</p>
-                        <button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>
+                       
+                         <button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>
                     </div>`;
 
                 searchResultsArea.appendChild(itemDiv);
