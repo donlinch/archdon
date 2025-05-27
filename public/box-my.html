@@ -1987,10 +1987,9 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
-                     // 在開始渲染前，先清空現有內容
-    boxGridArea.innerHTML = '';
-    boxListArea.innerHTML = '';
-    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+                    // 在開始渲染前，先清空現有內容
+                    boxGridArea.innerHTML = '';
+                    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
 
                     // Add this check
                     if (isBoxLoading) {
@@ -2003,7 +2002,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         console.error('No warehouse ID provided');
                         boxListMessage.textContent = '請先選擇一個倉庫。';
                         boxGridArea.innerHTML = '';
-                        boxListArea.innerHTML = '';
                         boxListPagination.innerHTML = '';
                         isBoxLoading = false; // Reset flag on early exit
                         return;
@@ -2013,7 +2011,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
-                    boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
@@ -2024,7 +2021,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // Render Grid and List Views
+                        // 只渲染格狀視圖
                         data.boxes.forEach(box => {
                             // Grid View Card
                             const gridCard = document.createElement('div');
@@ -2047,38 +2044,15 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                             `;
                             boxGridArea.appendChild(gridCard);
 
-                            // List View Item
-                            const listItem = document.createElement('div');
-                            listItem.className = 'box-list-item';
-                            listItem.dataset.boxId = box.box_id;
-                            listItem.innerHTML = `
-                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
-                                <div class="box-list-item-details">
-                                    <h3>${escapeHtml(box.box_name)}</h3>
-                                    <p>編號: ${escapeHtml(box.box_number)} | 物品: ${box.item_count || 0} 件</p>
-                                </div>
-                                <div class="box-list-item-actions">
-                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折疊物品' : '展開物品'}</button>
-                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
-                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
-                                </div>
-                                <div class="item-list-container list-view" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'}; width: 100%;">
-                                    <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
-                                    <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
-                                </div>
-                            `;
-                            boxListArea.appendChild(listItem);
-
                             if (currentBoxViewItemsExpanded[box.box_id]) {
                                 loadItemsForBox(box.box_id, gridCard.querySelector('.item-list-container'));
                             }
                         });
 
-                        // Default to grid view
+                        // 設定格狀視圖顯示
                         boxGridArea.style.display = 'grid';
-                        boxListArea.style.display = 'none';
 
-                        renderPagination(data.totalPages, data.currentPage, 'box-list-pagination', handleBoxPaginationClick);
+                        renderPagination(data.totalPages, data.currentPage, 'box-pagination', handleBoxPaginationClick);
                         addBoxActionListeners();
                     } catch (error) {
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
@@ -2089,7 +2063,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 }
 
                 function addBoxActionListeners() {
-                    // 合并网格和列表视图的监听器
                     const toggleItemsBtns = document.querySelectorAll('.toggle-items-btn');
                     const editBoxBtns = document.querySelectorAll('.edit-box-btn');
                     const deleteBoxBtns = document.querySelectorAll('.delete-box-btn');
@@ -2098,20 +2071,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     toggleItemsBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const boxId = e.target.dataset.boxId;
-                            let targetContainer;
-                            
-                            // Find the parent box-card (grid) or box-list-item (list)
                             const parentBoxCard = e.target.closest('.box-card');
-                            const parentBoxListItem = e.target.closest('.box-list-item');
-
-                            if (parentBoxCard) {
-                                // Grid view: find the container within this card
-                                targetContainer = parentBoxCard.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                            } else if (parentBoxListItem) {
-                                // List view: find the container within this list item
-                                // Make sure to get the one with .list-view class if it's specific
-                                targetContainer = parentBoxListItem.querySelector(`.item-list-container.list-view[data-box-id="${boxId}"]`);
-                            }
+                            const targetContainer = parentBoxCard.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
 
                             if (targetContainer) {
                                 toggleItemListView(boxId, e.target, targetContainer);
@@ -3115,10 +3076,9 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 // ==============================
 
                 async function loadBoxesForWarehouse(warehouseId, page = 1) {
-                     // 在開始渲染前，先清空現有內容
-    boxGridArea.innerHTML = '';
-    boxListArea.innerHTML = '';
-    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+                    // 在開始渲染前，先清空現有內容
+                    boxGridArea.innerHTML = '';
+                    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
 
                     // Add this check
                     if (isBoxLoading) {
@@ -3131,7 +3091,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         console.error('No warehouse ID provided');
                         boxListMessage.textContent = '請先選擇一個倉庫。';
                         boxGridArea.innerHTML = '';
-                        boxListArea.innerHTML = '';
                         boxListPagination.innerHTML = '';
                         isBoxLoading = false; // Reset flag on early exit
                         return;
@@ -3141,7 +3100,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     currentBoxPage = page;
                     boxListMessage.textContent = '正在載入紙箱列表...';
                     boxGridArea.innerHTML = '';
-                    boxListArea.innerHTML = '';
                     boxListPagination.innerHTML = '';
 
                     try {
@@ -3152,7 +3110,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         }
                         boxListMessage.textContent = '';
 
-                        // Render Grid and List Views
+                        // 只渲染格狀視圖
                         data.boxes.forEach(box => {
                             // Grid View Card
                             const gridCard = document.createElement('div');
@@ -3175,38 +3133,15 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                             `;
                             boxGridArea.appendChild(gridCard);
 
-                            // List View Item
-                            const listItem = document.createElement('div');
-                            listItem.className = 'box-list-item';
-                            listItem.dataset.boxId = box.box_id;
-                            listItem.innerHTML = `
-                                <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
-                                <div class="box-list-item-details">
-                                    <h3>${escapeHtml(box.box_name)}</h3>
-                                    <p>編號: ${escapeHtml(box.box_number)} | 物品: ${box.item_count || 0} 件</p>
-                                </div>
-                                <div class="box-list-item-actions">
-                                    <button class="toggle-items-btn secondary-action" data-box-id="${box.box_id}">${currentBoxViewItemsExpanded[box.box_id] ? '折疊物品' : '展開物品'}</button>
-                                    <button class="edit-box-btn" data-box-id="${box.box_id}">編輯</button>
-                                    <button class="delete-box-btn" data-box-id="${box.box_id}" data-box-name="${escapeHtml(box.box_name)}">刪除</button>
-                                </div>
-                                <div class="item-list-container list-view" data-box-id="${box.box_id}" style="display: ${currentBoxViewItemsExpanded[box.box_id] ? 'block' : 'none'}; width: 100%;">
-                                    <p class="items-loading-placeholder" style="text-align:center; padding:10px; color:#888;">點擊展開查看物品</p>
-                                    <button class="add-item-to-box-btn primary" data-box-id="${box.box_id}" style="margin-top:10px; width:100%;">➕ 新增物品到此紙箱</button>
-                                </div>
-                            `;
-                            boxListArea.appendChild(listItem);
-
                             if (currentBoxViewItemsExpanded[box.box_id]) {
                                 loadItemsForBox(box.box_id, gridCard.querySelector('.item-list-container'));
                             }
                         });
 
-                        // Default to grid view
+                        // 設定格狀視圖顯示
                         boxGridArea.style.display = 'grid';
-                        boxListArea.style.display = 'none';
 
-                        renderPagination(data.totalPages, data.currentPage, 'box-list-pagination', handleBoxPaginationClick);
+                        renderPagination(data.totalPages, data.currentPage, 'box-pagination', handleBoxPaginationClick);
                         addBoxActionListeners();
                     } catch (error) {
                         boxListMessage.textContent = `載入紙箱失敗: ${error.message || '未知錯誤'}`;
@@ -3217,7 +3152,6 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                 }
 
                 function addBoxActionListeners() {
-                    // 合并网格和列表视图的监听器
                     const toggleItemsBtns = document.querySelectorAll('.toggle-items-btn');
                     const editBoxBtns = document.querySelectorAll('.edit-box-btn');
                     const deleteBoxBtns = document.querySelectorAll('.delete-box-btn');
@@ -3226,20 +3160,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     toggleItemsBtns.forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const boxId = e.target.dataset.boxId;
-                            let targetContainer;
-                            
-                            // Find the parent box-card (grid) or box-list-item (list)
                             const parentBoxCard = e.target.closest('.box-card');
-                            const parentBoxListItem = e.target.closest('.box-list-item');
-
-                            if (parentBoxCard) {
-                                // Grid view: find the container within this card
-                                targetContainer = parentBoxCard.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                            } else if (parentBoxListItem) {
-                                // List view: find the container within this list item
-                                // Make sure to get the one with .list-view class if it's specific
-                                targetContainer = parentBoxListItem.querySelector(`.item-list-container.list-view[data-box-id="${boxId}"]`);
-                            }
+                            const targetContainer = parentBoxCard.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
 
                             if (targetContainer) {
                                 toggleItemListView(boxId, e.target, targetContainer);
