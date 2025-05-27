@@ -463,29 +463,117 @@
 
 
         /* Search Tab Styles */
+        #search-results-area {
+            display: grid; /* Change to grid layout */
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsive grid */
+            gap: 20px; /* Space between grid items */
+        }
+
         #search-results-area .search-result-item {
-            padding: 18px;
+            padding: 0; /* Remove padding */
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-base);
-            margin-bottom: 12px;
+            margin-bottom: 0; /* Remove bottom margin as gap handles spacing */
             background-color: var(--background-content);
             box-shadow: 0 2px 4px var(--shadow-color);
+            display: flex; /* Use flex for main column layout */
+            flex-direction: column;
+            overflow: hidden; /* Ensure content respects border-radius */
         }
-        #search-results-area .search-result-item h4 { margin-top: 0; color: var(--primary-color); font-size: 1.15em; margin-bottom: 8px;}
-        #search-results-area .search-result-item p { margin-bottom: 6px; font-size: 0.95em; color: var(--text-secondary); }
-        #search-results-area .search-result-item p strong { color: var(--text-primary); }
-        #search-results-area .result-type { font-style: italic; color: var(--secondary-color); font-size: 0.85em;}
-        #search-results-area .view-details-btn {
-            background-color: var(--accent-color);
+
+        #search-results-area .search-result-item .image-container {
+            position: relative; /* For absolute positioning of text */
+            width: 100%;
+            height: 200px; /* Fixed height for image */
+            overflow: hidden;
+            cursor: pointer; /* Indicate clickable */
+        }
+
+        #search-results-area .search-result-item img {
+            display: block; /* Remove extra space below image */
+            width: 100%; /* Image fills container */
+            height: 100%; /* Image fills container */
+            object-fit: cover; /* Cover the container while maintaining aspect ratio */
+            margin-bottom: 0; /* Remove margin */
+            border-radius: 0; /* Remove border-radius from image itself */
+            border: none; /* Remove border from image */
+            box-shadow: none; /* Remove shadow from image */
+        }
+
+        #search-results-area .search-result-item .overlay-text {
+            position: absolute;
+            left: 0;
+            right: 0;
             color: white;
-            padding: 6px 12px;
+            padding: 5px 8px;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark background */
+            font-size: 0.9em;
+            pointer-events: none; /* Allow clicks to pass through to image-container */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Add text shadow for readability */
+        }
+
+        #search-results-area .search-result-item .item-name-box {
+            top: 0;
+            left: 0;
+            right: auto;
+            max-width: 70%; /* Limit width to leave space for warehouse name */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom-right-radius: var(--border-radius-base); /* Rounded corner */
+        }
+
+        #search-results-area .search-result-item .warehouse-name {
+            top: 0;
+            right: 0;
+            left: auto;
+            text-align: right;
+            border-bottom-left-radius: var(--border-radius-base); /* Rounded corner */
+        }
+        
+        #search-results-area .search-result-item .item-details-container {
+            padding: 12px; /* Padding for the text and button area */
+            flex-grow: 1; /* Take remaining space */
+            display: flex;
+            flex-direction: column;
+        }
+
+        #search-results-area .search-result-item h4 { /* Item/Box Name in text area */
+            margin-top: 0;
+            color: var(--text-primary); /* Use primary text color */
+            font-size: 1em; /* Slightly smaller font */
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        #search-results-area .search-result-item p {
+            margin-bottom: 10px; /* Space before button */
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            flex-grow: 1; /* Push button to the bottom */
+        }
+        #search-results-area .search-result-item p strong { color: var(--text-primary); }
+        #search-results-area .search-result-item .result-type {
+            font-style: normal; /* Remove italic */
+            color: var(--primary-color); /* Use primary color for type */
+            font-size: 0.8em; /* Smaller font size */
+            font-weight: 500;
+            margin-left: 5px; /* Space from name */
+        }
+
+        #search-results-area .view-details-btn {
+            display: block; /* Make button full width */
+            width: 100%;
+            background-color: var(--primary-color); /* Use primary color for button */
+            color: white;
+            padding: 8px 12px;
             font-size: 0.9em;
             border: none;
             border-radius: var(--border-radius-base);
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: auto; /* Push button to the bottom */
+            text-align: center;
         }
-        #search-results-area .view-details-btn:hover { background-color: var(--hover-accent-color); }
+        #search-results-area .view-details-btn:hover { background-color: var(--hover-primary-color); }
 
 
         /* Modal Styles */
@@ -2396,39 +2484,53 @@
             results.forEach(result => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'search-result-item';
-                
-                // 新增：檢查並構建圖片 HTML
-                let imageHtml = '';
-                const imageUrl = result.image_url || (result.type === 'box' ? result.cover_image_url : null); // 物品優先用 item_image_url，紙箱用 cover_image_url
-                
-                if (imageUrl) {
-                    imageHtml = `<img src="${escapeHtml(imageUrl)}" 
-                                     alt="${escapeHtml(result.name)}" 
-                                     onerror="this.style.display='none';">`; // 如果圖片載入失敗，則隱藏
-                } else {
-                    // (可選) 如果沒有圖片，可以顯示一個預設圖或不顯示
-                    imageHtml = `<img src="/images/default_item.png" alt="無圖片">`; 
-                }
 
-                let detailsHtml = `
-                        ${imageHtml}
-                        <h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>`;
-                    
-                    detailsHtml += `<p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>`;                    
-                detailsHtml += `<p><strong>倉庫:</strong> ${escapeHtml(result.warehouse_name || '未知倉庫')}</p>`;
-                
-                if (result.type === 'item') {
-                    detailsHtml += `<p><strong>紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)})</p>`;
-                } else { 
-                     detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
-                }
-                
-                detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
-                
-                itemDiv.innerHTML = detailsHtml;
+                const imageUrl = result.image_url || (result.type === 'box' ? result.cover_image_url : null); // 物品優先用 item_image_url，紙箱用 cover_image_url
+                const fallbackImageUrl = '/images/default_item.png'; // 預設圖片路徑
+
+                itemDiv.innerHTML = `
+                    <div class="image-container">
+                        <img src="${escapeHtml(imageUrl || fallbackImageUrl)}"
+                             alt="${escapeHtml(result.name)}"
+                             onerror="this.onerror=null;this.src='${fallbackImageUrl}';">
+                        <div class="overlay-text item-name-box">
+                            ${escapeHtml(result.name)} (${result.type === 'item' ? `紙箱: ${escapeHtml(result.box_name)} 編號: ${escapeHtml(result.box_number)}` : `編號: ${escapeHtml(result.box_number)}`})
+                        </div>
+                        <div class="overlay-text warehouse-name">
+                             ${escapeHtml(result.warehouse_name || '未知倉庫')}
+                        </div>
+                    </div>
+                    <div class="item-details-container">
+                        <h4>
+                            ${escapeHtml(result.name)}
+                            <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span>
+                        </h4>
+                        <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || result.manual_notes || '無')}</p>
+                        <button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>
+                    </div>`;
+
                 searchResultsArea.appendChild(itemDiv);
+
+                // Add click listener to the image container for magnifying
+                itemDiv.querySelector('.image-container').addEventListener('click', () => {
+                     // Use the existing itemDetailsModal but only show the image
+                     const modal = document.getElementById('itemDetailsModal');
+                     const imageElement = document.getElementById('itemDetailsImage');
+                     // Assuming the div below image in itemDetailsContainer has id 'itemFullDetails'
+                     const detailsContent = document.getElementById('itemDetailsContainer').querySelector('#itemFullDetails');
+                     const actions = document.getElementById('itemDetailsActions');
+
+                     if(imageElement) imageElement.src = imageUrl || fallbackImageUrl;
+
+                     // Hide other details and actions for this view
+                     if(detailsContent) detailsContent.style.display = 'none';
+                     if(actions) actions.style.display = 'none';
+
+                     openModal('itemDetailsModal');
+                });
             });
-            
+
+            // Re-add click listener for the "查看詳情" button for navigation
             searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     const { warehouseId, boxId } = e.target.dataset;
@@ -2514,13 +2616,37 @@
             }
 
             // --- 物品詳情 Modal ---
-            function showItemDetails(item) {
+            function showItemDetails(item) { // This function is called when clicking an item image within a box
                 const modal = document.getElementById('itemDetailsModal');
                 const imageElement = document.getElementById('itemDetailsImage');
+                 // Assuming the div below image in itemDetailsContainer has id 'itemFullDetails'
+                const detailsContent = document.getElementById('itemDetailsContainer').querySelector('#itemFullDetails');
                 const editBtn = document.getElementById('editItemFromDetailsBtn');
                 const deleteBtn = document.getElementById('deleteItemFromDetailsBtn');
+                const actions = document.getElementById('itemDetailsActions');
+
+                // Ensure all parts are visible initially when showing full details
+                if(detailsContent) detailsContent.style.display = 'block';
+                if(actions) actions.style.display = 'flex'; // Assuming actions flex display based on CSS
 
                 if(imageElement) imageElement.src = item.item_image_url || '/images/default_item.png';
+
+                // Populate other details (if any) in the detailsContent div (you might need to add this div and populate it)
+                // Example: if you have a div with id="itemFullDetails" inside itemDetailsContainer
+                // const itemFullDetailsDiv = document.getElementById('itemFullDetails');
+                // if(itemFullDetailsDiv) {
+                //     itemFullDetailsDiv.innerHTML = `
+                //         <p><strong>名稱:</strong> ${escapeHtml(item.item_name)}</p>
+                //         <p><strong>描述:</strong> ${escapeHtml(item.item_description || '無')}</p>
+                //         <p><strong>數量:</strong> ${item.quantity}</p>
+                //         <p><strong>紙箱:</strong> ${escapeHtml(item.box_name)} (${escapeHtml(item.box_number)})</p>
+                //         <p><strong>倉庫:</strong> ${escapeHtml(item.warehouse_name || '未知')}</p>
+                //     `;
+                // }
+                // Note: The current HTML structure for itemDetailsModal only has the image and actions.
+                // If you want to show more details, you need to add elements inside itemDetailsContainer
+                // For now, I will assume the details are not displayed in this modal based on current HTML.
+
                 if(editBtn) editBtn.onclick = () => { closeModal('itemDetailsModal'); openEditItemModal(item.item_id, item.box_id); };
                 if(deleteBtn) deleteBtn.onclick = () => { closeModal('itemDetailsModal'); handleDeleteItem(item.item_id, item.item_name, item.box_id); };
                 openModal('itemDetailsModal');
