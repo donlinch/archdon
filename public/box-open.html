@@ -300,21 +300,30 @@
         let itemFormAiKeywordsDiv;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // 從 URL 獲取紙箱 ID
+            // 從 URL 獲取必要參數
             const urlParams = new URLSearchParams(window.location.search);
             currentWarehouseId = urlParams.get('warehouseId');
             currentBoxId = urlParams.get('boxId');
-            authToken = localStorage.getItem(`boxUserToken_${localStorage.getItem('boxCurrentUserId')}`);
+            const userId = urlParams.get('userId');
+            
+            // 從 localStorage 只獲取 token
+            authToken = localStorage.getItem(`boxUserToken_${userId}`);
+
+            if (!userId) {
+                alert('缺少用戶ID，將返回登入頁面');
+                window.location.href = 'box.html';
+                return;
+            }
 
             if (!currentWarehouseId) {
                 alert('缺少倉庫ID，將返回我的倉庫頁面');
-                window.location.href = 'box-my.html';
+                window.location.href = `box-my.html?userId=${userId}`;
                 return;
             }
 
             if (!currentBoxId) {
                 alert('缺少紙箱ID，將返回我的倉庫頁面');
-                window.location.href = 'box-my.html';
+                window.location.href = `box-my.html?userId=${userId}`;
                 return;
             }
 
@@ -330,7 +339,7 @@
             } catch (error) {
                 console.error('載入紙箱內容失敗:', error);
                 alert(`無法載入紙箱內容：${error.message}`);
-                window.location.href = 'box-my.html';
+                window.location.href = `box-my.html?userId=${userId}`;
             }
         });
 
@@ -719,11 +728,13 @@
 
             // 返回按鈕
             document.getElementById('backButton').addEventListener('click', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const userId = urlParams.get('userId');
                 if (currentWarehouseId) {
                     localStorage.setItem('lastOpenedWarehouseId', currentWarehouseId);
                     localStorage.setItem('autoOpenBoxManagement', 'true');
                 }
-                window.location.href = 'box-my.html';
+                window.location.href = `box-my.html?userId=${userId}`;
             });
 
             // 圖片上傳預覽

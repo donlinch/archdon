@@ -2224,7 +2224,7 @@
                         gridCard.dataset.boxId = box.box_id;
                         // **重要**: 確保 onclick 中的 currentSelectedWarehouseId 是正確的（當前選中倉庫的ID）
                         gridCard.innerHTML = `
-                            <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
+                            <img src="${box.cover_image_url || '/images/box_item.png'}" alt="${escapeHtml(box.box_name)}" class="box-cover-preview" onclick="window.location.href = 'box-open.html?userId=${currentUserId}&warehouseId=${currentSelectedWarehouseId}&boxId=${box.box_id}'" onerror="this.src='/images/box_item.png'">
                             <div class="box-number">編號: ${escapeHtml(box.box_number)}</div>
                             <div class="box-name">${escapeHtml(box.box_name)}</div>
                             <div class="item-count">物品: ${box.item_count || 0} 件</div>
