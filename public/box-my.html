@@ -164,14 +164,10 @@
         /* Controls Bar */
         .controls-bar {
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            gap: 1rem;
+            margin-bottom: 1rem;
             align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 25px;
-            background-color: var(--background-light); /* Subtle background for controls */
-            border-radius: var(--border-radius-base);
+            flex-wrap: wrap;
         }
 
         .controls-bar input[type="text"],
@@ -1147,12 +1143,6 @@
             <div class="controls-bar">
                 <button id="addBoxBtn">➕ 新增紙箱到此倉庫</button>
                 <button id="toggleAllItemsBtn" class="secondary-action">全部展開/折叠物品</button>
-                
-                <div class="view-toggle-buttons">
-                    <button id="gridViewBtn" class="active">
-                        <i class="fas fa-th"></i> 格狀檢視
-                    </button>
-                </div>
             </div>
             <div id="box-grid-area" class="box-grid"></div>
             <div id="box-list-message"></div>
@@ -1624,15 +1614,8 @@
             } else if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
                     boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
-                    
                     console.log('Loading boxes for warehouse:', currentSelectedWarehouseId);
                     loadBoxesForWarehouse(currentSelectedWarehouseId);
-                    
-                    // 設定為格狀視圖
-                    const gridViewBtn = document.getElementById('gridViewBtn');
-                    const boxGridArea = document.getElementById('box-grid-area');
-                    if (gridViewBtn) gridViewBtn.classList.add('active');
-                    if (boxGridArea) boxGridArea.style.display = 'grid';
                 } else {
                     alert('錯誤：未選擇倉庫！');
                     switchTab('tab-warehouses');
