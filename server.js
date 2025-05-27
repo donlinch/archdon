@@ -398,28 +398,7 @@ app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
 
 
 
-
-
-// --- 臨時調試程式碼 START ---
-const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-console.log(`[Cloud Vision AI Debug] GOOGLE_APPLICATION_CREDENTIALS path from env: ${credentialsPath}`);
-if (credentialsPath) {
-    try {
-        const credentialsFileContent = fs.readFileSync(credentialsPath, 'utf8');
-        console.log("[Cloud Vision AI Debug] Successfully read credentials file content.");
-        try {
-            const parsedCredentials = JSON.parse(credentialsFileContent);
-            console.log("[Cloud Vision AI Debug] Successfully parsed JSON credentials. Project ID:", parsedCredentials.project_id);
-        } catch (parseError) {
-            console.error("[Cloud Vision AI Debug] Failed to parse JSON credentials file:", parseError.message);
-        }
-    } catch (readError) {
-        console.error(`[Cloud Vision AI Debug] Failed to read credentials file at ${credentialsPath}:`, readError.message);
-    }
-} else {
-    console.warn("[Cloud Vision AI Debug] GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.");
-}
-// --- 臨時調試程式碼 END ---
+ 
 
 
 // --- END OF Cloud Vision AI Integration ---
