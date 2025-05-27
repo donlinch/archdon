@@ -844,153 +844,99 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Warehouse Tab -->
-            <div id="tab-warehouses" class="tab-content active">
-                <div class="content-header">
-                    <h1>我的倉庫</h1>
-                    <button id="refreshWarehousesBtn" class="action-button">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                        </svg>
-                        刷新列表
+            <div class="content-header">
+                <h1>我的倉庫</h1>
+                <div class="header-actions">
+                    <button id="addBoxBtn" class="primary-button">
+                        <i class="fas fa-plus"></i> 新增紙箱
                     </button>
-                </div>
-                <div id="warehouse-list-message" class="message-area"></div>
-                <div id="warehouse-list" class="grid-container"></div>
-            </div>
-
-            <!-- Add Warehouse Tab -->
-            <div id="tab-add-warehouse" class="tab-content">
-                <div class="content-header">
-                    <h1>新增倉庫</h1>
-                </div>
-                <div class="form-container">
-                    <form id="addWarehouseForm" class="standard-form">
-                        <div class="form-group">
-                            <label for="newWarehouseName">倉庫名稱</label>
-                            <input type="text" id="newWarehouseName" placeholder="例如: 12F儲藏室, 娘家車庫" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newWarehouseDescription">倉庫描述 (選填)</label>
-                            <textarea id="newWarehouseDescription" placeholder="輸入倉庫的補充說明..."></textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="primary-button">建立倉庫</button>
-                        </div>
-                        <p id="addWarehouseStatus" class="form-status"></p>
-                    </form>
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" data-view="grid">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button class="view-toggle-btn" data-view="list">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Box Management Tab -->
-            <div id="tab-box-management" class="tab-content">
-                <div class="content-header">
-                    <h1 id="boxManagementTitle">紙箱管理</h1>
-                    <div class="header-actions">
-                        <button id="addBoxBtn" class="primary-button">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                            </svg>
-                            新增紙箱
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="搜尋紙箱或物品...">
+                </div>
+                <div class="search-controls">
+                    <select id="searchFilter">
+                        <option value="all">全部</option>
+                        <option value="boxes">只搜尋紙箱</option>
+                        <option value="items">只搜尋物品</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="searchResults" class="search-results" style="display: none">
+                <h2>搜尋結果</h2>
+                <div class="results-container"></div>
+            </div>
+
+            <div id="mainContent">
+                <div id="boxesContainer" class="grid-container">
+                    <!-- Boxes will be dynamically added here -->
+                </div>
+
+                <div id="boxDetails" style="display: none">
+                    <div class="box-header">
+                        <button class="back-button">
+                            <i class="fas fa-arrow-left"></i> 返回
                         </button>
-                        <button id="toggleAllItemsBtn" class="secondary-button">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/>
-                            </svg>
-                            全部展開/折疊
-                        </button>
-                        <div class="view-toggle">
-                            <button id="gridViewBtn" class="active">
-                                <svg class="icon" viewBox="0 0 24 24">
-                                    <path d="M3 3v8h8V3H3zm6 6H5V5h4v4zm-6 4v8h8v-8H3zm6 6H5v-4h4v4zm4-16v8h8V3h-8zm6 6h-4V5h4v4zm-6 4v8h8v-8h-8zm6 6h-4v-4h4v4z"/>
-                                </svg>
+                        <h2 id="boxTitle"></h2>
+                        <div class="box-actions">
+                            <button class="secondary-button edit-box-btn">
+                                <i class="fas fa-edit"></i> 編輯
                             </button>
-                            <button id="listViewBtn">
-                                <svg class="icon" viewBox="0 0 24 24">
-                                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                                </svg>
+                            <button class="secondary-button delete-box-btn">
+                                <i class="fas fa-trash"></i> 刪除
                             </button>
                         </div>
                     </div>
-                </div>
-                <div id="box-list-message" class="message-area"></div>
-                <div id="box-grid-area" class="grid-container"></div>
-                <div id="box-list-area" class="list-container"></div>
-                <div id="box-list-pagination" class="pagination"></div>
-            </div>
 
-            <!-- Search Tab -->
-            <div id="tab-search" class="tab-content">
-                <div class="content-header">
-                    <h1>找東西</h1>
-                </div>
-                <div class="search-container">
-                    <div class="search-controls">
-                        <div class="search-input-group">
-                            <input type="text" id="searchInput" placeholder="輸入物品/紙箱關鍵字...">
-                            <button id="searchButton" class="primary-button">
-                                <svg class="icon" viewBox="0 0 24 24">
-                                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                </svg>
-                                搜尋
+                    <div class="box-info">
+                        <div class="box-cover">
+                            <img id="boxCoverImage" alt="Box cover">
+                        </div>
+                        <div class="box-metadata">
+                            <p><strong>紙箱編號：</strong> <span id="boxNumber"></span></p>
+                            <p><strong>物品數量：</strong> <span id="itemCount"></span></p>
+                            <div class="box-keywords">
+                                <strong>AI 關鍵字：</strong>
+                                <div id="boxKeywords" class="keywords-container"></div>
+                            </div>
+                            <div class="box-notes">
+                                <strong>備註：</strong>
+                                <p id="boxNotes"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="items-section">
+                        <div class="section-header">
+                            <h3>物品清單</h3>
+                            <button id="addItemBtn" class="primary-button">
+                                <i class="fas fa-plus"></i> 新增物品
                             </button>
                         </div>
-                        <label class="search-option">
-                            <input type="checkbox" id="searchAllWarehousesToggle">
-                            <span>搜尋我的所有倉庫</span>
-                        </label>
+
+                        <div class="items-container grid-container">
+                            <!-- Items will be dynamically added here -->
+                        </div>
                     </div>
-                    <div id="search-results-message" class="message-area"></div>
-                    <div id="search-results-area" class="search-results"></div>
-                    <div id="search-pagination" class="pagination"></div>
                 </div>
             </div>
 
-            <!-- User Settings Tab -->
-            <div id="tab-user-settings" class="tab-content">
-                <div class="content-header">
-                    <h1>用戶設定</h1>
-                </div>
-                <div class="settings-container">
-                    <section class="settings-section">
-                        <h2>更改密碼</h2>
-                        <form id="changePasswordForm" class="standard-form">
-                            <div class="form-group">
-                                <label for="currentPassword">當前密碼</label>
-                                <input type="password" id="currentPassword" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="newPassword">新密碼</label>
-                                <input type="password" id="newPassword" required minlength="6">
-                            </div>
-                            <div class="form-group">
-                                <label for="confirmNewPassword">確認新密碼</label>
-                                <input type="password" id="confirmNewPassword" required>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="primary-button">更新密碼</button>
-                            </div>
-                            <p id="changePasswordStatus" class="form-status"></p>
-                        </form>
-                    </section>
-
-                    <section class="settings-section">
-                        <h2>更改頭像</h2>
-                        <form id="changeProfileImageForm" class="standard-form">
-                            <div class="form-group">
-                                <label for="profileImageFile">選擇新頭像圖片</label>
-                                <input type="file" id="profileImageFile" accept="image/*">
-                                <div class="image-upload-preview" id="profileImagePreview">
-                                    <img alt="Profile preview">
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" id="uploadProfileImageBtn" class="primary-button">上傳並更新頭像</button>
-                            </div>
-                            <p id="changeProfileImageStatus" class="form-status"></p>
-                        </form>
-                    </section>
-                </div>
+            <div id="loadingOverlay" class="loading-overlay" style="display: none">
+                <div class="loading-spinner"></div>
+                <p>載入中...</p>
             </div>
         </main>
     </div>
