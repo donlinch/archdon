@@ -1097,6 +1097,15 @@
             .view-toggle button.active { background: var(--primary-color); }
         }
 
+        .box-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        /* 移除列表視圖相關的 CSS */
+
     </style>
 </head>
 <body>
@@ -1139,30 +1148,17 @@
                 <button id="addBoxBtn">➕ 新增紙箱到此倉庫</button>
                 <button id="toggleAllItemsBtn" class="secondary-action">全部展開/折叠物品</button>
                 
-                <div class="view-toggle">
+                <div class="view-toggle-buttons">
                     <button id="gridViewBtn" class="active">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
-                        格狀
+                        <i class="fas fa-th"></i> 格狀檢視
                     </button>
-                    <button id="listViewBtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                        </svg>
-                        列表
-                    </button>
+                    <!-- 移除列表視圖按鈕 -->
                 </div>
+                <div id="box-grid-area" class="box-grid"></div>
+                <div id="box-list-message"></div>
+                <div id="box-pagination"></div>
+                <!-- 移除 box-list-area div -->
             </div>
-            <div id="box-list-message"></div>
-            <div id="box-grid-area">
-                <!-- Box cards will be inserted here -->
-            </div>
-            <div id="box-list-area">
-                <!-- Box list items will be inserted here -->
-            </div>
-            <div id="box-list-pagination"></div>
-        </div>
 
         <!-- TAB Content: Search -->
         <div id="tab-search" class="tab-content">
@@ -1574,16 +1570,12 @@
             // View toggle listeners
             gridViewBtn.addEventListener('click', () => {
                 gridViewBtn.classList.add('active');
-                listViewBtn.classList.remove('active');
                 boxGridArea.style.display = 'grid';
-                boxListArea.style.display = 'none';
             });
 
             listViewBtn.addEventListener('click', () => {
                 listViewBtn.classList.add('active');
-                gridViewBtn.classList.remove('active');
                 boxGridArea.style.display = 'none';
-                boxListArea.style.display = 'block';
             });
 
             // 物品詳情模態框關閉按鈕
@@ -1615,7 +1607,7 @@
         function switchTab(tabId) {
             console.group('Switch Tab Debug');
             console.log(`Switching to tab: ${tabId}`);
-            console.trace('SwitchTab called from:'); // Add this for call stack
+            console.trace('SwitchTab called from:');
             console.groupEnd();
 
             tabContents.forEach(content => content.classList.remove('active'));
@@ -1627,27 +1619,22 @@
             if(activeTabContent) activeTabContent.classList.add('active');
             if(activeTabLink) activeTabLink.classList.add('active');
 
-
-            // 切換分頁時的特定操作
             if (tabId === 'tab-warehouses') {
                 loadWarehouses();
-                if(boxManagementTabLink) boxManagementTabLink.style.display = 'none'; // 隱藏紙箱管理分頁
-            } else  if (tabId === 'tab-box-management') {
+                if(boxManagementTabLink) boxManagementTabLink.style.display = 'none';
+            } else if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
                     boxManagementTitle.textContent = `紙箱管理 (${currentSelectedWarehouseName || '未選定倉庫'})`;
                     
-                    // 新增一個標記，確保只載入一次
                     if (!this.boxManagementInitialized) {
                         console.log('首次載入倉庫紙箱');
                         loadBoxesForWarehouse(currentSelectedWarehouseId);
                         this.boxManagementInitialized = true;
                     }
 
-                    // Reset view toggle to grid view by default
+                    // 設定為格狀視圖
                     gridViewBtn.classList.add('active');
-                    listViewBtn.classList.remove('active');
                     boxGridArea.style.display = 'grid';
-                    boxListArea.style.display = 'none';
                 } else {
                     alert('錯誤：未選擇倉庫！');
                     switchTab('tab-warehouses');
@@ -1657,7 +1644,6 @@
                 document.getElementById('search-results-message').textContent = '';
                 document.getElementById('search-pagination').innerHTML = '';
             }
-            // 如有需要，切換分頁時重置表單或清除訊息
             resetFormStatuses();
         }
 
