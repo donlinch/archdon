@@ -678,42 +678,135 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
 
 
 
-    router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
-        const { warehouseId, boxId } = req.params;
-        const userId = req.boxUser.userId;
-        const { box_number, box_name, cover_image_url, ai_box_keywords, manual_notes } = req.body;
 
-        if (!box_number || box_number.trim() === '' || !box_name || box_name.trim() === '') {
-            return res.status(400).json({ error: '紙箱編號和紙箱名稱為必填項。' });
+
+
+
+
+router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
+    const { warehouseId: originalWarehouseIdParam, boxId } = req.params; // 原始倉庫ID來自URL參數
+    const userId = req.boxUser.userId;
+    const {
+        box_number,
+        box_name,
+        cover_image_url,
+        ai_box_keywords,
+        manual_notes,
+        warehouse_id: targetWarehouseIdBody // 目標倉庫ID來自請求body
+    } = req.body;
+
+    if (!box_number || box_number.trim() === '' || !box_name || box_name.trim() === '') {
+        return res.status(400).json({ error: '紙箱編號和紙箱名稱為必填項。' });
+    }
+    if (!targetWarehouseIdBody) {
+        return res.status(400).json({ error: '必須指定目標倉庫 (warehouse_id)。'});
+    }
+    
+    const originalWarehouseId = parseInt(originalWarehouseIdParam);
+    const targetWarehouseId = parseInt(targetWarehouseIdBody);
+    const numericBoxId = parseInt(boxId);
+
+    if (isNaN(originalWarehouseId) || isNaN(targetWarehouseId) || isNaN(numericBoxId)) {
+        return res.status(400).json({ error: '無效的倉庫或紙箱 ID 格式。' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. 檢查使用者對原始倉庫的操作權限
+        const originalWarehouseOwnership = await checkWarehouseOwnership(originalWarehouseId, userId);
+        if (!originalWarehouseOwnership.owned) {
+            await client.query('ROLLBACK');
+            return res.status(originalWarehouseOwnership.found ? 403 : 404).json({ error: originalWarehouseOwnership.message + " (原始倉庫)" });
         }
-        try {
-            const warehouseOwnership = await checkWarehouseOwnership(warehouseId, userId);
-            if (!warehouseOwnership.found || !warehouseOwnership.owned) return res.status(warehouseOwnership.found ? 403 : 404).json({ error: warehouseOwnership.message });
 
-            const boxCheck = await pool.query('SELECT 1 FROM BOX_Boxes WHERE box_id = $1 AND warehouse_id = $2', [boxId, warehouseId]);
-            if (boxCheck.rows.length === 0) return res.status(404).json({ error: '找不到要更新的紙箱或不屬於此倉庫。'});
+        // 2. 驗證紙箱確實存在，並且屬於聲稱的原始倉庫
+        const boxCheckResult = await client.query(
+            'SELECT warehouse_id FROM BOX_Boxes WHERE box_id = $1', 
+            [numericBoxId]
+        );
+        if (boxCheckResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到要更新的紙箱。'});
+        }
+        const currentDbWarehouseId = boxCheckResult.rows[0].warehouse_id;
+        if (currentDbWarehouseId !== originalWarehouseId) {
+             await client.query('ROLLBACK');
+             // 這通常意味著前端狀態和後端數據不一致，或者 API 被錯誤調用
+             return res.status(409).json({ error: '紙箱的原始倉庫資訊與請求不符，請刷新頁面後重試。'});
+        }
 
-            const boxNumCheck = await pool.query('SELECT 1 FROM BOX_Boxes WHERE warehouse_id = $1 AND LOWER(box_number) = LOWER($2) AND box_id != $3', [warehouseId, box_number.trim(), boxId]);
-            if (boxNumCheck.rows.length > 0) {
-                return res.status(409).json({ error: `倉庫 ${warehouseId} 下已存在編號為 ${box_number} 的紙箱。` });
+        // 3. 如果倉庫ID發生變更，檢查使用者對目標倉庫的操作權限
+        if (targetWarehouseId !== originalWarehouseId) {
+            const targetWarehouseOwnership = await checkWarehouseOwnership(targetWarehouseId, userId);
+            if (!targetWarehouseOwnership.owned) {
+                await client.query('ROLLBACK');
+                // 使用者可能嘗試移動到一個他沒有權限的倉庫
+                return res.status(targetWarehouseOwnership.found ? 403 : 404).json({ error: targetWarehouseOwnership.message + " (目標倉庫)" });
             }
-
-            const updateQuery = `
-                UPDATE BOX_Boxes
-                SET box_number = $1, box_name = $2, cover_image_url = $3, ai_box_keywords = $4, manual_notes = $5, updated_at = NOW()
-                WHERE box_id = $6 AND warehouse_id = $7
-                RETURNING *;`;
-            const result = await pool.query(updateQuery, [
-                box_number.trim(), box_name.trim(), cover_image_url || null,
-                Array.isArray(ai_box_keywords) ? ai_box_keywords : [], manual_notes || null,
-                boxId, warehouseId
-            ]);
-            res.json(result.rows[0]);
-        } catch (err) {
-            console.error(`[API PUT /boxes/:boxId] User ${userId} Error:`, err);
-            res.status(500).json({ error: '更新紙箱失敗。' });
         }
-    });
+        
+        // 4. 在目標倉庫中檢查紙箱編號的唯一性 (排除當前正在編輯的紙箱本身)
+        const boxNumCheckQuery = `
+            SELECT 1 FROM BOX_Boxes 
+            WHERE warehouse_id = $1 AND LOWER(box_number) = LOWER($2) AND box_id != $3`;
+        const boxNumCheckResult = await client.query(boxNumCheckQuery, [
+            targetWarehouseId,      // 在目標倉庫中檢查
+            box_number.trim(),
+            numericBoxId            // 排除自己
+        ]);
+
+        if (boxNumCheckResult.rows.length > 0) {
+            await client.query('ROLLBACK');
+            // 為了提供更友好的錯誤訊息，可以查詢目標倉庫的名稱
+            const targetWarehouseNameRes = await client.query('SELECT warehouse_name from BOX_Warehouses WHERE warehouse_id = $1', [targetWarehouseId]);
+            const targetWarehouseName = targetWarehouseNameRes.rows.length > 0 ? targetWarehouseNameRes.rows[0].warehouse_name : `ID ${targetWarehouseId}`;
+            return res.status(409).json({ error: `倉庫 "${targetWarehouseName}" 下已存在編號為 "${box_number.trim()}" 的紙箱。` });
+        }
+
+        // 5. 更新紙箱數據 (包括 warehouse_id)
+        const updateQuery = `
+            UPDATE BOX_Boxes
+            SET box_number = $1, 
+                box_name = $2, 
+                cover_image_url = $3, 
+                ai_box_keywords = $4, 
+                manual_notes = $5, 
+                warehouse_id = $6,  -- 更新為目標倉庫ID
+                updated_at = NOW()
+            WHERE box_id = $7 
+            RETURNING *;`; // box_id 是主鍵，用它來定位記錄
+        const result = await client.query(updateQuery, [
+            box_number.trim(),
+            box_name.trim(),
+            cover_image_url || null,
+            Array.isArray(ai_box_keywords) ? ai_box_keywords : [],
+            manual_notes || null,
+            targetWarehouseId, // 使用來自請求 body 的目標倉庫 ID
+            numericBoxId
+        ]);
+        
+        if (result.rowCount === 0) { 
+            // 理論上這不應該發生，因為前面已經檢查過 box 是否存在
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '更新紙箱時出錯，紙箱未找到。' });
+        }
+        
+        await client.query('COMMIT');
+        res.json(result.rows[0]);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`[API PUT /warehouses/:wId/boxes/:bId] User ${userId}, Box ${numericBoxId}, Error:`, err);
+         if (err.code === '23503' && err.constraint === 'box_boxes_warehouse_id_fkey') { // PostgreSQL特定錯誤碼
+             return res.status(400).json({ error: '指定的目標倉庫不存在。' });
+        }
+        res.status(500).json({ error: '更新紙箱失敗。', detail: err.message });
+    } finally {
+        client.release();
+    }
+});
 
     router.delete('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
