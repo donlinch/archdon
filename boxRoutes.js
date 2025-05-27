@@ -1238,8 +1238,77 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // =============================================
+    // ==       管理員 API                        ==
+    // =============================================
+    
+    // 檢查管理員權限
+    router.get('/admin/auth/check', isAdminAuthenticated, (req, res) => {
+        res.status(200).json({ 
+            success: true, 
+            message: 'Admin token is valid.'
+        });
+    });
 
+    // 獲取所有使用者列表（管理員用）
+    router.get('/admin/users', isAdminAuthenticated, async (req, res) => {
+        try {
+            const query = `
+                SELECT 
+                    user_id, 
+                    username, 
+                    user_profile_image_url,
+                    created_at,
+                    (
+                        SELECT MAX(login_time) 
+                        FROM user_login_history 
+                        WHERE user_id = u.user_id
+                    ) as last_login_at
+                FROM BOX_Users u
+                ORDER BY username ASC`;
+            
+            const result = await pool.query(query);
+            res.json(result.rows);
+        } catch (err) {
+            console.error('[API GET /box/admin/users] Error:', err);
+            res.status(500).json({ error: '無法獲取使用者列表' });
+        }
+    });
 
+    // 刪除使用者（管理員用）
+    router.delete('/admin/users/:userId', isAdminAuthenticated, async (req, res) => {
+        const { userId } = req.params;
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // 1. 檢查使用者是否存在
+            const userCheck = await client.query('SELECT username FROM BOX_Users WHERE user_id = $1', [userId]);
+            if (userCheck.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: '找不到指定的使用者' });
+            }
+
+            // 2. 刪除使用者的所有倉庫（這會級聯刪除所有紙箱和物品）
+            await client.query('DELETE FROM BOX_Warehouses WHERE user_id = $1', [userId]);
+
+            // 3. 刪除使用者的登入歷史
+            await client.query('DELETE FROM user_login_history WHERE user_id = $1', [userId]);
+
+            // 4. 刪除使用者本身
+            await client.query('DELETE FROM BOX_Users WHERE user_id = $1', [userId]);
+
+            await client.query('COMMIT');
+            res.status(204).send();
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error(`[API DELETE /box/admin/users/${userId}] Error:`, err);
+            res.status(500).json({ error: '刪除使用者失敗' });
+        } finally {
+            client.release();
+        }
+    });
 
     return router;
 };

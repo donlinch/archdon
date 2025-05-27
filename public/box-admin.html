@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倉庫人員管理 - 管理員介面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #FFB74D, #FFA726);
+            padding: 1.5rem;
+            text-align: center;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(255, 183, 77, 0.2);
+        }
+
+        .page-title {
+            color: white;
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .admin-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .users-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .users-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .delete-btn {
+            background-color: #ff5252;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff1744;
+            transform: translateY(-1px);
+        }
+
+        .confirm-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .confirm-dialog.show {
+            display: flex;
+        }
+
+        .dialog-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .dialog-title {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .dialog-message {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .dialog-btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .confirm-delete-btn {
+            background-color: #ff5252;
+            color: white;
+        }
+
+        .confirm-delete-btn:hover {
+            background-color: #ff1744;
+        }
+
+        .cancel-btn {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .cancel-btn:hover {
+            background-color: #bdbdbd;
+        }
+
+        .status-message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status-message.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .status-message.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+
+            .admin-panel {
+                padding: 1rem;
+            }
+
+            .users-table th,
+            .users-table td {
+                padding: 0.8rem;
+            }
+
+            .action-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <h1 class="page-title">倉庫人員管理</h1>
+    </header>
+
+    <div class="container">
+        <div class="admin-panel">
+            <div id="statusMessage" class="status-message"></div>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>使用者</th>
+                        <th>註冊時間</th>
+                        <th>最後登入</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- 使用者列表將由 JavaScript 動態填充 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 確認刪除對話框 -->
+    <div id="confirmDialog" class="confirm-dialog">
+        <div class="dialog-content">
+            <h3 class="dialog-title">確認刪除</h3>
+            <p class="dialog-message">確定要刪除此使用者嗎？此操作無法復原。</p>
+            <div class="dialog-buttons">
+                <button class="dialog-btn cancel-btn" onclick="hideConfirmDialog()">取消</button>
+                <button class="dialog-btn confirm-delete-btn" onclick="confirmDelete()">確認刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedUserId = null;
+
+        // 檢查管理員權限
+        async function checkAdminAuth() {
+            try {
+                const response = await fetch('/api/box/admin/auth/check', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    window.location.href = '/box-admin-login.html';
+                }
+            } catch (error) {
+                console.error('權限檢查失敗:', error);
+                window.location.href = '/box-admin-login.html';
+            }
+        }
+
+        // 獲取使用者列表
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/box/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('獲取使用者列表失敗');
+                }
+
+                const users = await response.json();
+                renderUsers(users);
+            } catch (error) {
+                console.error('獲取使用者列表失敗:', error);
+                showStatusMessage('error', '獲取使用者列表失敗');
+            }
+        }
+
+        // 渲染使用者列表
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div class="user-info">
+                            <img src="${user.profileImageUrl || '/images/default_avatar.png'}" alt="${user.username}" class="user-avatar">
+                            <span>${user.username}</span>
+                        </div>
+                    </td>
+                    <td>${new Date(user.createdAt).toLocaleString()}</td>
+                    <td>${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '從未登入'}</td>
+                    <td>
+                        <button class="action-btn delete-btn" onclick="showDeleteConfirm('${user.userId}', '${user.username}')">
+                            刪除
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 顯示刪除確認對話框
+        function showDeleteConfirm(userId, username) {
+            selectedUserId = userId;
+            const dialog = document.getElementById('confirmDialog');
+            const message = dialog.querySelector('.dialog-message');
+            message.textContent = `確定要刪除使用者 "${username}" 嗎？此操作無法復原。`;
+            dialog.classList.add('show');
+        }
+
+        // 隱藏刪除確認對話框
+        function hideConfirmDialog() {
+            const dialog = document.getElementById('confirmDialog');
+            dialog.classList.remove('show');
+            selectedUserId = null;
+        }
+
+        // 確認刪除使用者
+        async function confirmDelete() {
+            if (!selectedUserId) return;
+
+            try {
+                const response = await fetch(`/api/box/admin/users/${selectedUserId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('boxAdminToken')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('刪除使用者失敗');
+                }
+
+                hideConfirmDialog();
+                showStatusMessage('success', '使用者已成功刪除');
+                fetchUsers(); // 重新載入使用者列表
+            } catch (error) {
+                console.error('刪除使用者失敗:', error);
+                showStatusMessage('error', '刪除使用者失敗');
+            }
+        }
+
+        // 顯示狀態訊息
+        function showStatusMessage(type, message) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+
+            // 3秒後自動隱藏訊息
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        // 頁面載入時檢查權限並獲取使用者列表
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminAuth();
+            fetchUsers();
+        });
+    </script>
+</body>
+</html> 
