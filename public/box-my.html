@@ -28,7 +28,7 @@
             font-family: var(--font-family-sans-serif);
             line-height: 1.6;
             color: var(--text-primary);
-            background-color: var(--background-light);
+            background-color: #EDEEF0; /* 柔和的白色背景 */
             margin: 0;
             padding: 0;
             font-size: 16px;
@@ -92,8 +92,8 @@
             width: 100%;
             max-width: 1400px; /* Wider container */
             margin: 25px auto;
-            padding: 25px;
-            background-color: transparent; /* Let body background show through or set if needed */
+            padding: 20px;
+            background-color: #EDEEF0;
         }
 
         .tab-navigation {
@@ -210,68 +210,100 @@
         #warehouse-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
+            gap: 24px;
+            padding: 20px;
+            background-color: #EDEEF0;
         }
         .warehouse-card {
-            background-color: var(--background-content);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-large);
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            overflow: hidden;
+            border: 1px solid #EDE1E3; /* 柔和的粉色边框 */
         }
         .warehouse-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+            border-color: #D1DFE8; /* 悬停时变为柔和的蓝色 */
         }
-        .warehouse-card h3 { /* This style seems to be missing in the provided HTML, warehouse cards don't have h3 for name */
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: var(--primary-color);
-            font-size: 1.3em;
+        .warehouse-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.5em;
+            color: #333;
+            padding-right: 90px;
+            font-weight: 600;
         }
-        .warehouse-card p { /* This style also seems missing in the HTML structure */
-            font-size: 0.95em;
-            color: var(--text-secondary);
-            margin-bottom: 18px;
-            min-height: 30px;
-        }
-        .warehouse-card .actions {
-            display: flex;
-            flex-wrap: wrap; /* Allow buttons to wrap on smaller cards */
-            gap: 8px; /* Spacing between buttons */
-            margin-top: 15px; /* Spacing above action buttons */
-            border-top: 1px solid var(--border-color); /* Separator line */
-            padding-top: 15px; /* Spacing below separator */
-        }
-        .warehouse-card .actions button {
+        .warehouse-card .box-count {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: #D1DFE8; /* 柔和的蓝色背景 */
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 0.9em;
-            padding: 8px 12px;
-            border-radius: var(--border-radius-base);
-            color: white;
+            color: #456;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .warehouse-card .box-count i {
+            color: #909FA6;
+        }
+        .warehouse-card p {
+            margin: 0;
+            color: #666;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        .warehouse-card .action-buttons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .warehouse-card:hover .action-buttons {
+            opacity: 1;
+        }
+        .warehouse-card .action-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
             border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            flex-grow: 1; /* Make buttons fill available space if fewer than max */
-            text-align: center;
+            transition: all 0.2s ease;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            font-size: 1.1em;
         }
-        .warehouse-card .actions button.enter-warehouse {
-            background-color: var(--primary-color);
+        .warehouse-card .edit-button {
+            color: #909FA6;
+            border: 1px solid #D1DFE8;
         }
-        .warehouse-card .actions button.enter-warehouse:hover {
-            background-color: var(--hover-primary-color);
+        .warehouse-card .edit-button:hover {
+            background: #D1DFE8;
+            color: #456;
+            transform: translateY(-2px);
         }
-        .warehouse-card .actions button.edit-warehouse {
-            background-color: var(--warning-color);
+        .warehouse-card .delete-button {
+            color: #909FA6;
+            border: 1px solid #EDE1E3;
         }
-        .warehouse-card .actions button.edit-warehouse:hover {
-            background-color: #d68910; /* Darker orange */
-        }
-        .warehouse-card .actions button.delete-warehouse {
-            background-color: var(--danger-color);
-        }
-        .warehouse-card .actions button.delete-warehouse:hover {
-            background-color: #c0392b; /* Darker red */
+        .warehouse-card .delete-button:hover {
+            background: #EDE1E3;
+            color: #456;
+            transform: translateY(-2px);
         }
 
 
