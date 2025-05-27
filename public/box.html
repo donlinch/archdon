@@ -213,8 +213,13 @@
             font-size: 0.875rem;
         }
 
-        /* Keep the existing bottom navigation styles */
-        .bottom-nav {
+        
+
+
+
+
+ /* --- Bottom Navigation --- */
+ .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
@@ -225,6 +230,7 @@
             border-top-right-radius: 20px;
             z-index: 1000;
             padding: 5px 0;
+            box-sizing: border-box;
         }
 
         .bottom-nav ul {
@@ -255,13 +261,19 @@
             color: #FFB74D;
             background-color: rgba(255, 183, 77, 0.1);
             border-radius: 20px;
-            animation: pulse 2s infinite;
+            animation: pulseNav 2s infinite;
         }
 
         .bottom-nav .icon {
-            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
             margin-bottom: 3px;
         }
+
+
+
+
 
         /* Animation */
         @keyframes fadeIn {
