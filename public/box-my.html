@@ -1808,25 +1808,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
             }
         }
 
-
-        async function handleEditWarehouseModalOpen(warehouseId) {
-            addWarehouseForm.reset(); // 假設重用新增表單來編輯
-            addWarehouseStatus.textContent = '正在載入倉庫資料...';
-            switchTab('tab-add-warehouse'); // 直接切換分頁，不呼叫 openModal
-
-            try {
-                const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
-                document.getElementById('tab-add-warehouse').querySelector('h2').textContent = `編輯倉庫: ${escapeHtml(warehouse.warehouse_name)}`;
-                newWarehouseNameInput.value = warehouse.warehouse_name;
-                newWarehouseDescriptionInput.value = warehouse.warehouse_description || '';
-                addWarehouseForm.dataset.editingId = warehouseId; // 儲存 ID 以便提交邏輯使用
-                addWarehouseStatus.textContent = '';
-            } catch (error) {
-                addWarehouseStatus.textContent = '載入倉庫資料失敗。';
-                addWarehouseStatus.style.color = '#c0392b';
-                setTimeout(() => switchTab('tab-warehouses'), 2000); // 失敗時切回倉庫列表
-            }
-        }
+ 
 
         async function handleDeleteWarehouse(warehouseId, warehouseName) {
             if (!confirm(`確定要刪除倉庫 "${warehouseName}" 及其所有紙箱和物品嗎？此操作無法復原！`)) {
