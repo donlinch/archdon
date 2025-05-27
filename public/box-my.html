@@ -5,613 +5,391 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的儲藏空間 - 紙箱子管理</title>
     <style>
-        /* box-my.html Specific Styles & Shared Styles from box-style.css (if not linking) */
-        body {
-            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #e9eef2; /* Slightly different background */
-            margin: 0;
-            padding: 0; /* Body padding handled by header/main */
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --warning-color: #f9c74f;
+            --text-primary: #2b2d42;
+            --text-secondary: #8d99ae;
+            --background-light: #f8f9fa;
+            --background-dark: #212529;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition-speed: 0.3s;
         }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, #f6f8ff 0%, #f1f4ff 100%);
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
         .page-header {
-            background-color: #d7d7d7; /* Dark blue header */
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
             color: white;
-            padding: 15px 30px;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            box-shadow: var(--card-shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
         }
-        .page-header .user-info img {
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info img {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            margin-right: 10px;
-            vertical-align: middle;
-            border: 2px solid #567086;
-        }
-        .page-header .user-info span {
-            font-weight: 600;
-            font-size: 1.1em;
-        }
-        .page-header button {
-            background-color: #e74c3c; /* Red for logout */
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-        .page-header button:hover {
-            background-color: #c0392b;
+            border: 2px solid white;
+            transition: transform var(--transition-speed);
         }
 
+        .user-info img:hover {
+            transform: scale(1.1);
+        }
+
+        /* Main Container */
         .main-container {
-            width: 100%;
-            max-width: 1300px; /* Wider container */
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
         }
 
+        /* Tab Navigation */
         .tab-navigation {
             display: flex;
-            border-bottom: 2px solid #ddd;
-            margin-bottom: 25px;
-            overflow-x: auto; /* For many tabs on small screens */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-
-        }
-        .tab-navigation button {
-            background-color: transparent;
-            color: #555;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            font-size: 1.05em;
-            font-weight: 500;
-            border-bottom: 3px solid transparent;
-            transition: color 0.3s ease, border-bottom-color 0.3s ease;
-            white-space: nowrap; /* Prevent tab text from wrapping */
-        }
-        .tab-navigation button:hover {
-            color: #3498db;
-        }
-        .tab-navigation button.active {
-            color: #3498db; /* Blue for active tab */
-            border-bottom-color: #3498db;
-            font-weight: 600;
-        }
-
-        .tab-content {
-            display: none; /* Hidden by default */
-        }
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Common for lists/grids within tabs */
-        .controls-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            padding: 10px 0 20px 0; /* Less padding */
-            border-bottom: 1px solid #eee;
-            margin-bottom: 20px;
-        }
-        .controls-bar input[type="text"],
-        .controls-bar select {
-            padding: 8px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.95em;
-        }
-         .controls-bar button {
-            background-color: #27ae60; /* Green for add */
-            color: white;
-            padding: 8px 15px;
-            font-size: 0.95em;
-         }
-         .controls-bar button.secondary-action {
-            background-color: #7f8c8d; /* Gray for secondary actions */
-         }
-         .controls-bar button:hover {
-            opacity: 0.9;
-         }
-
-
-        /* Warehouse List Styles */
-        #warehouse-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        .warehouse-card {
-            background-color: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .warehouse-card h3 {
-            margin-top: 0;
-            color: #34495e;
-        }
-        .warehouse-card p {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 15px;
-            min-height: 40px; /* Ensure consistent card height if description varies */
-        }
-        .warehouse-card .actions button {
-            margin-right: 8px;
-            font-size: 0.9em;
-            padding: 6px 12px;
-        }
-         .warehouse-card .actions button.enter-warehouse {
-            background-color: #3498db;
-        }
-        .warehouse-card .actions button.edit-warehouse {
-            background-color: #f39c12; /* Orange for edit */
-        }
-         .warehouse-card .actions button.delete-warehouse {
-            background-color: #e74c3c; /* Red for delete */
-        }
-
-
-        /* Box List/Grid Styles (similar to file-admin.html but adapted) */
-        #box-list-area table, #box-grid-area { margin-top: 15px; }
-        /* ... (Add specific styles for box list and grid view if needed, similar to file-admin.html) ... */
-        /* Example for box card in grid view */
-        #box-grid-area {
-    display: grid;
-    grid-template-columns: repeat(60px, 1fr); /* 小螢幕 2 列 */
-    gap: 15px;
-}
-
-@media (min-width: 768px) {
-    #box-grid-area {
-        grid-template-columns: repeat(80px, 1fr); /* 中等螢幕 3 列 */
-    }
-}
-
-@media (min-width: 1200px) {
-    #box-grid-area {
-        grid-template-columns: repeat(100px, 1fr); /* 大螢幕 4 列 */
-    }
-}
-        .box-card {
-            background-color: #fff;
-            border: 1px solid #e7e7e7;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-        }
-        .box-card img.box-cover-preview {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            background-color: #f0f0f0;
-        }
-        .box-card .box-number { font-size: 0.85em; color: #777; margin-bottom: 5px;}
-        .box-card .box-name { font-weight: 600; margin-bottom: 8px; font-size: 1.1em; }
-        .box-card .item-count { font-size: 0.9em; color: #555; margin-bottom: 10px; }
-        .box-card .box-actions button {
-            font-size: 0.85em;
-            padding: 5px 10px;
-            margin: 0 3px;
-        }
-        /* Styles for item list inside a box (when expanded) */
-        .item-list-container {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px dashed #eee;
-            text-align: left;
-        }
-        .item-entry {
-            display: flex;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #f5f5f5;
-        }
-        .item-entry:last-child { border-bottom: none; }
-        .item-entry img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
-        .item-entry .item-name { flex-grow: 1; font-size: 0.95em; }
-        .item-entry .item-actions button { font-size: 0.8em; padding: 3px 6px; }
-
-
-        /* Search Tab Styles */
-        #search-results-area .search-result-item {
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            background-color: #fcfcfc;
-        }
-        #search-results-area .search-result-item h4 { margin-top: 0; color: #3498db;}
-        #search-results-area .search-result-item p { margin-bottom: 5px; font-size: 0.9em; }
-        #search-results-area .result-type { font-style: italic; color: #7f8c8d; font-size: 0.8em;}
-
-
-        /* Modal (reusable for add/edit forms) */
-        .modal { /* Already styled in box.html, can be reused or enhanced */
-            display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%;
-            overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background-color: #fff; padding: 25px 30px; border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 550px;
-            position: relative; /* For close button */
-        }
-        .modal-content .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #888;
-            cursor: pointer;
-        }
-        .modal-content .close-btn:hover { color: #333; }
-
-        .form-group { margin-bottom: 15px; }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-         /* Preview for image uploads in modals */
-        .image-upload-preview {
-            margin-top: 10px;
-            max-width: 200px;
-            max-height: 150px;
-            border: 1px solid #ddd;
-            padding: 5px;
-            display: none; /* Hidden by default */
-        }
-        .image-upload-preview img {
-            max-width: 100%;
-            max-height: 140px;
-            display: block;
-        }
-
-        #loading-overlay {
-            display: none;
-            position: fixed;
-            left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(255,255,255,0.7);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.2em;
-            color: #333;
-        }
-        /* Simple spinner */
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 新增的美化 CSS 代碼 */
-        :root {
-            --primary-color: #4a6cf7;     /* Vibrant blue */
-            --secondary-color: #6c757d;   /* Muted gray */
-            --accent-color: #28a745;      /* Green for positive actions */
-            --background-color: #f4f6f9;  /* Soft blue-gray background */
-            --text-color: #2c3e50;        /* Dark blue-gray text */
-            --card-background: #ffffff;   /* White card background */
-            --hover-color: #5a7bff;       /* Lighter blue for hover states */
-        }
-
-        body {
-            background: linear-gradient(135deg, var(--background-color), #f8fafc);
-            background-attachment: fixed;
-            color: var(--text-color);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .warehouse-card, 
-        .box-card, 
-        .search-result-item {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            animation: fadeIn 0.5s ease backwards;
-        }
-
-        .warehouse-card:hover, 
-        .box-card:hover, 
-        .search-result-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-
-        button {
-            border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        input, textarea, select {
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 10px;
-            transition: border-color 0.3s ease;
-        }
-
-        input:focus, 
-        textarea:focus, 
-        select:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
-        .spinner {
-            border-top-color: var(--primary-color);
-            animation: spin 1s linear infinite;
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 10px;
-                width: 100%;
-            }
-
-            .items-grid-container {
-                grid-template-columns: repeat(2, 1fr); /* 手機上顯示 2 列 */
-                gap: 10px;
-            }
-
-            .item-card {
-                width: 100%; /* 確保卡片填滿寬度 */
-            }
-
-            .item-card img {
-                width: 100%; /* 圖片填滿卡片寬度 */
-                height: auto; /* 保持原始比例 */
-            }
-        }
-
-        @media (min-width: 769px) and (max-width: 1200px) {
-            .items-grid-container {
-                grid-template-columns: repeat(3, 1fr); /* 平板上顯示 3 列 */
-                gap: 15px;
-            }
-        }
-
-        @media (min-width: 1201px) {
-            .items-grid-container {
-                grid-template-columns: repeat(4, 1fr); /* 大螢幕顯示 4 列 */
-                gap: 20px;
-            }
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #efefef;
-                color: #e0e0e0;
-            }
-            
-            .warehouse-card, 
-            .box-card {
-                background-color: #16213e;
-                border-color: #0f3460;
-            }
-        }
-
-        /* View Toggle Styles */
-        .view-toggle {
-            display: flex;
-            background-color: var(--background-color);
+            gap: 0.5rem;
+            background: white;
+            padding: 0.5rem;
             border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            align-self: flex-end;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
-        .view-toggle button {
-            background: transparent;
+        .tab-navigation::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-navigation button {
+            padding: 0.75rem 1.5rem;
             border: none;
-            padding: 8px 16px;
-            margin: 0 2px;
+            background: transparent;
+            color: var(--text-secondary);
             border-radius: 8px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all var(--transition-speed);
+            white-space: nowrap;
+            font-weight: 500;
         }
 
-        .view-toggle button.active {
+        .tab-navigation button.active {
             background: var(--primary-color);
             color: white;
-            box-shadow: 0 2px 6px rgba(74, 108, 247, 0.3);
-        }
-
-        .view-toggle button svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* List View Styles */
-        #box-list-area {
-            display: none; /* Hidden by default */
-        }
-
-        #box-list-area.active {
-            display: block;
-        }
-
-        .box-list-item {
-            display: flex;
-            align-items: center;
-            background-color: var(--card-background);
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .box-list-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .box-list-item img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 6px;
-            margin-right: 15px;
-        }
-
-        .box-list-item-details {
-            flex-grow: 1;
-        }
-
-        .box-list-item-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        /* Grid View Enhancements */
-        #box-grid-area {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-        }
-
-        .box-card {
-            background-color: var(--card-background);
-            border: 1px solid #e7e7e7;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .box-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
-        }
-
-        /* Color Scheme Adjustments */
-        body {
-            background: linear-gradient(135deg, var(--background-color), #f8fafc);
-            color: var(--text-color);
-        }
-
-        .controls-bar {
-            background-color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .controls-bar button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .controls-bar button:hover {
-            background-color: var(--hover-color);
             transform: translateY(-2px);
         }
 
+        .tab-navigation button:hover:not(.active) {
+            background: var(--background-light);
+            color: var(--primary-color);
+        }
 
+        /* Cards */
+        .warehouse-card, .box-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--card-shadow);
+            transition: all var(--transition-speed);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .warehouse-card:hover, .box-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Grid Layout */
+        #warehouse-list, #box-grid-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1rem 0;
+        }
+
+        /* Buttons */
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all var(--transition-speed);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button.secondary {
+            background: var(--secondary-color);
+        }
+
+        button.danger {
+            background: var(--danger-color);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all var(--transition-speed);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        /* Modal */
+        .modal {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Items Grid */
         .items-grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* 更小的最小寬度 */
-            gap: 5px; /* 更小的間距 */
-            width: 100%; /* 確保填滿寬度 */
-            padding: 5px; /* 輕微內邊距 */
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            padding: 1rem 0;
         }
 
         .item-card {
             position: relative;
-            aspect-ratio: 1 / 1; /* 正方形 */
-            overflow: hidden; /* 確保內容不會溢出 */
-            margin: 0;
-            padding: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: all var(--transition-speed);
+            cursor: pointer;
+        }
+
+        .item-card:hover {
+            transform: scale(1.05);
         }
 
         .item-card img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* 確保圖片填滿整個卡片 */
+            object-fit: cover;
         }
 
-        .item-card .item-name {
+        .item-name {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: rgba(0,0,0,0.5);
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 5px;
-            text-align: center;
-            font-size: 0.8em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.875rem;
         }
 
-        /* 響應式設計 */
-        @media (max-width: 600px) {
+        /* Loading Animation */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(67, 97, 238, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 1rem;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            #warehouse-list, #box-grid-area {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+
             .items-grid-container {
-                grid-template-columns: repeat(3, 1fr); /* 手機上 3 列 */
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             }
         }
 
-        @media (min-width: 601px) and (max-width: 1200px) {
-            .items-grid-container {
-                grid-template-columns: repeat(4, 1fr); /* 平板上 4 列 */
-            }
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        @media (min-width: 1201px) {
-            .items-grid-container {
-                grid-template-columns: repeat(5, 1fr); /* 大螢幕 5 列 */
-            }
+        .warehouse-card, .box-card {
+            animation: fadeIn 0.5s ease backwards;
         }
+
+        /* Search Results */
+        .search-result-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--card-shadow);
+            transition: all var(--transition-speed);
+        }
+
+        .search-result-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            min-width: 40px;
+            height: 40px;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            color: var(--text-primary);
+            border: 1px solid #e0e0e0;
+        }
+
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .status-message.success {
+            background: rgba(76, 201, 240, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-message.error {
+            background: rgba(247, 37, 133, 0.1);
+            color: var(--danger-color);
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            background: white;
+            border-radius: 8px;
+            padding: 0.25rem;
+            display: inline-flex;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .view-toggle button {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .view-toggle button.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Box Details */
+        .box-details {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .box-cover {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .box-info {
+            flex: 1;
+        }
+
+        /* AI Keywords */
+        .ai-keyword-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+            border-radius: 16px;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+        }
+
     </style>
 </head>
 <body>
@@ -621,7 +399,7 @@
             <span id="currentUsername">用戶</span>
         </div>
         <div>
-            <a href="box.html" style="color: white; margin-right: 15px; text-decoration: none;">切換使用者</a>
+            <a href="box.html" style="color: white; margin-right: 15px; text-decoration: none;"> 返回主頁 </a>
             <button id="logoutButton">登出</button>
         </div>
     </header>
