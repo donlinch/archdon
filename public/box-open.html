@@ -281,6 +281,21 @@
             font-size: 30px;
             cursor: pointer;
         }
+
+        .box-header-info small {
+    color: #666;
+    font-size: 0.8em; /* 這可以作為通用的 <small> 預設樣式 */
+    font-weight: normal;
+}
+
+/* 為 h1 標籤內部的 small 標籤添加/修改樣式 */
+.box-header-info h1 small {
+    font-size: 0.4em; /* 試試 H1 字體大小的 50%，或者 0.6em。根據你的喜好調整。*/
+    /* 你也可以使用固定的 px 值，例如：font-size: 12px; 或 font-size: 0.75rem; */
+    vertical-align: middle; /* 可選：有時有助於垂直對齊 */
+    /* margin-left: 5px; h1 上的 gap 應該已經處理了間距，如果需要微調可以考慮這個 */
+}
+
     </style>
 </head>
 <body>
