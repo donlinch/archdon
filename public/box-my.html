@@ -2605,7 +2605,7 @@ try {
             try {
                 // 獲取單個物品詳情的 API 需要 warehouseId 以進行權限驗證，如果不可用，可能需要先獲取紙箱信息
                 // 或者，如果物品 GET API 可以推斷 warehouseId 或此特定 GET 不需要它
-                // 目前假設如果您的 GET 物品 API 是巢狀的，可能需要構建完整路徑
+                // 目前假設如果您的 GET 物品 API 不同，請調整
                 const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`); // 佔位符，如果您的單個物品 API 不同，請調整
 
                 itemFormNameInput.value = item.item_name;
@@ -3521,7 +3521,7 @@ try {
                 try {
                     // 獲取單個物品詳情的 API 需要 warehouseId 以進行權限驗證，如果不可用，可能需要先獲取紙箱信息
                     // 或者，如果物品 GET API 可以推斷 warehouseId 或此特定 GET 不需要它
-                    // 目前假設如果您的 GET 物品 API 是巢狀的，可能需要構建完整路徑
+                    // 目前假設如果您的 GET 物品 API 不同，請調整
                     const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`); // 佔位符，如果您的單個物品 API 不同，請調整
 
                     itemFormNameInput.value = item.item_name;
@@ -3545,343 +3545,337 @@ try {
             }
 
 
-        async function handleSaveItem(event) {
-            console.group('保存物品詳細日誌');
+    async function handleSaveItem(event) {
+        console.group('保存物品詳細日誌');
+        
+        try {
+            // 預防性檢查
+            if (!currentSelectedWarehouseId) {
+                throw new Error('未選擇倉庫');
+            }
+
+            event.preventDefault();
             
-            try {
-                // 預防性檢查
-                if (!currentSelectedWarehouseId) {
-                    throw new Error('未選擇倉庫');
-                }
+            // 收集表單數據
+            const formData = {
+                itemId: itemFormItemIdInput.value,
+                boxId: itemFormBoxIdInput.value,
+                itemName: itemFormNameInput.value.trim(),
+                description: itemFormDescriptionTextarea.value.trim(),
+                quantity: parseInt(itemFormQuantityInput.value),
+                imageFile: itemFormImageFileInput.files[0]
+            };
 
-                event.preventDefault();
-                
-                // 收集表單數據
-                const formData = {
-                    itemId: itemFormItemIdInput.value,
-                    boxId: itemFormBoxIdInput.value,
-                    itemName: itemFormNameInput.value.trim(),
-                    description: itemFormDescriptionTextarea.value.trim(),
-                    quantity: parseInt(itemFormQuantityInput.value),
-                    imageFile: itemFormImageFileInput.files[0]
-                };
-
-                
-
-                // 驗證邏輯
-                if (!formData.itemName) {
-                    throw new Error('物品名稱不能為空');
-                }
-
-                if (isNaN(formData.quantity) || formData.quantity < 0) {
-                    throw new Error('數量必須是非負整數');
-                }
-
-                // 準備 API 請求數據
-                const apiPayload = {
-                    item_name: formData.itemName,
-                    item_description: formData.description,
-                    quantity: formData.quantity,
-                    box_id: formData.boxId
-                };
-
-                // 處理圖片上傳
-                if (formData.imageFile) {
-                    const uploadResult = await handleImageUploadAndAnalyze(formData.imageFile, 'item_image');
-                    
-                  
-                    
-                    if (uploadResult.success) {
-                        apiPayload.item_image_url = uploadResult.imageUrl;
-                        apiPayload.ai_item_keywords = uploadResult.aiKeywords || [];
-                    } else {
-                        // 可選：詢問用戶是否繼續保存，即使圖片上傳失敗
-                        const continueWithoutImage = confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品？`);
-                        if (!continueWithoutImage) {
-                            return;
-                        }
-                    }
-                }
-
-              
-
-                // 發送 API 請求
-                const apiEndpoint = formData.itemId 
-                    ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${formData.itemId}`
-                    : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${formData.boxId}/items`;
-
-                const method = formData.itemId ? 'PUT' : 'POST';
-
-                const savedItem = await apiFetch(apiEndpoint, {
-                    method,
-                    body: apiPayload
-                });
-
-                console.log('保存成功:', savedItem);
-
-                // 更新 UI
-                itemFormStatusP.textContent = `物品 "${savedItem.item_name}" 保存成功！`;
-                itemFormStatusP.style.color = '#2ecc71';
-
-                // 關閉模態框並刷新
-                setTimeout(() => {
-                    closeModal('itemModal');
-                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
-                }, 1000);
-
-            } catch (error) {
-                console.error('保存物品時發生錯誤:', error);
-                
-                // 詳細的錯誤處理
-                const errorMessage = error.data?.error 
-                    || error.message 
-                    || '保存物品時發生未知錯誤';
-
-                itemFormStatusP.textContent = `保存失敗: ${errorMessage}`;
-                itemFormStatusP.style.color = '#c0392b';
-
-            } finally {
-                console.groupEnd();
-            }
-        }
-
-            async function handleDeleteItem(itemId, itemName, boxId) {
-                if (!confirm(`確定要刪除物品 "${itemName}" 嗎？`)) return;
-                try {
-                    await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { method: 'DELETE' });
-                    alert(`物品 "${itemName}" 已刪除。`);
-                    const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
-                    if (itemsContainer && currentBoxViewItemsExpanded[boxId]) { // 如果已展開，則重新載入
-                        itemsContainer.dataset.loadedItems = 'false';
-                        loadItemsForBox(boxId, itemsContainer);
-                    }
-                    loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // 刷新紙箱數量
-                } catch (error) { /* 錯誤已由 apiFetch 顯示 */ }
+            // 驗證邏輯
+            if (!formData.itemName) {
+                throw new Error('物品名稱不能為空');
             }
 
-            // ===========================
-            // == 搜尋函數      ==
-            // ===========================
-            async function handleSearch(page = 1) {
-                currentSearchPage = page;
-                const searchTerm = searchInput.value.trim();
-                const searchAll = searchAllWarehousesToggle.checked;
+            if (isNaN(formData.quantity) || formData.quantity < 0) {
+                throw new Error('數量必須是非負整數');
+            }
 
-                if (!searchTerm) {
-                    searchResultsArea.innerHTML = '';
-                    searchResultsMessage.textContent = '請輸入搜尋關鍵字。';
-                    searchPagination.innerHTML = '';
-                    return;
-                }
+            // 準備 API 請求數據
+            const apiPayload = {
+                item_name: formData.itemName,
+                item_description: formData.description,
+                quantity: formData.quantity,
+                box_id: formData.boxId
+            };
 
-                searchResultsMessage.textContent = '搜尋中...';
-                searchResultsArea.innerHTML = '';
-                searchPagination.innerHTML = '';
-
-                let url;
-                if (searchAll) {
-                    url = `/api/box/my-warehouses/search-all-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
+            // 處理圖片上傳
+            if (formData.imageFile) {
+                const uploadResult = await handleImageUploadAndAnalyze(formData.imageFile, 'item_image');
+                
+                if (uploadResult.success) {
+                    apiPayload.item_image_url = uploadResult.imageUrl;
+                    apiPayload.ai_item_keywords = uploadResult.aiKeywords || [];
                 } else {
-                    if (!currentSelectedWarehouseId) {
-                        searchResultsMessage.textContent = '請先選擇一個倉庫進行搜尋，或勾選「搜尋我的所有倉庫」。';
+                    // 可選：詢問用戶是否繼續保存，即使圖片上傳失敗
+                    const continueWithoutImage = confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品？`);
+                    if (!continueWithoutImage) {
                         return;
                     }
-                    url = `/api/box/warehouses/${currentSelectedWarehouseId}/search-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
-                }
-
-                try {
-                    const data = await apiFetch(url);
-                    renderSearchResults(data.results);
-                    renderPagination(data.totalPages, data.currentPage, 'search-pagination', handleSearchPaginationClick);
-                    if (data.results.length === 0) {
-                        searchResultsMessage.textContent = `找不到包含 "${escapeHtml(searchTerm)}" 的結果。`;
-                    } else {
-                        searchResultsMessage.textContent = `找到 ${data.totalItems} 個結果。`;
-                    }
-                } catch (error) {
-                    searchResultsMessage.textContent = `搜尋失敗: ${error.message || '未知錯誤'}`;
                 }
             }
 
-            function renderSearchResults(results) {
-                searchResultsArea.innerHTML = '';
-                if (!results || results.length === 0) return;
+            // 發送 API 請求
+            const apiEndpoint = formData.itemId 
+                ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${formData.itemId}`
+                : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${formData.boxId}/items`;
 
-                results.forEach(result => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'search-result-item';
-                    let detailsHtml = `
-                        <h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>
-                        <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>
-                        <p><strong>AI關鍵字:</strong> ${result.keywords && result.keywords.length > 0 ? result.keywords.map(k => escapeHtml(k)).join(', ') : '無'}</p>
-                        <p><strong>所在倉庫:</strong> ${escapeHtml(result.warehouse_name)} (ID: ${result.warehouse_id})</p>
-                    `;
-                    if (result.type === 'item') {
-                        detailsHtml += `<p><strong>所在紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)}, ID: ${result.box_id})</p>`;
-                    } else { // box
-                         detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
-                    }
-                    // 新增按鈕/連結以導覽至紙箱或物品檢視
-                    detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
-                    itemDiv.innerHTML = detailsHtml;
-                    searchResultsArea.appendChild(itemDiv);
-                });
+            const method = formData.itemId ? 'PUT' : 'POST';
 
-                // 為搜尋結果中的查看詳情按鈕新增事件監聽器
-                searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const { type, warehouseId, boxId, itemId } = e.target.dataset;
-                        currentSelectedWarehouseId = warehouseId; // 設定倉庫上下文
-                        currentSelectedWarehouseName = ""; // 如果未知，可能需要獲取倉庫名稱
-                        const whCard = warehouseListDiv.querySelector(`.enter-warehouse[data-warehouse-id="${warehouseId}"]`);
-                        if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName;
+            const savedItem = await apiFetch(apiEndpoint, {
+                method,
+                body: apiPayload
+            });
 
-                        boxManagementTabLink.style.display = 'inline-block';
-                        switchTab('tab-box-management');
-                        // 切換分頁後，特別展開紙箱並可能突顯物品
-                        // 這需要 loadBoxesForWarehouse 完成後才能找到並展開特定的紙箱/物品。
-                        // 目前僅導向該倉庫的紙箱管理分頁。
-                        // 可能需要更複雜的方式來實現「深層連結」或突顯。
-                        setTimeout(() => { // 允許分頁切換和紙箱載入
-                            const boxCard = boxGridArea.querySelector(`.box-card[data-box-id="${boxId}"]`);
-                            if(boxCard){
-                                const toggleBtn = boxCard.querySelector('.toggle-items-btn');
-                                if(toggleBtn && !currentBoxViewItemsExpanded[boxId]){
-                                    toggleItemListView(boxId, toggleBtn); // 如果未展開，則展開物品
-                                }
-                                // 此處可加入突顯邏輯
-                            }
-                        }, 500); // 延遲以允許 DOM 更新
-                    });
-                });
-            }
+            console.log('保存成功:', savedItem);
 
-            function toggleAllItemsInCurrentBoxView() {
-                // 取得所有紙箱的 .toggle-items-btn 按鈕
-                const toggleButtons = boxGridArea.querySelectorAll('.toggle-items-btn');
-                // 判斷目前大多數是展開還是收合
-                let expandedCount = 0;
-                toggleButtons.forEach(btn => {
-                    const boxId = btn.dataset.boxId;
-                    if (currentBoxViewItemsExpanded[boxId]) expandedCount++;
-                });
-                const shouldExpand = expandedCount < toggleButtons.length / 2; // 如果大多數是收合，就全部展開
+            // 更新 UI
+            itemFormStatusP.textContent = `物品 "${savedItem.item_name}" 保存成功！`;
+            itemFormStatusP.style.color = '#2ecc71';
 
-                toggleButtons.forEach(btn => {
-                    const boxId = btn.dataset.boxId;
-                    if (shouldExpand && !currentBoxViewItemsExpanded[boxId]) {
-                        toggleItemListView(boxId, btn);
-                    } else if (!shouldExpand && currentBoxViewItemsExpanded[boxId]) {
-                        toggleItemListView(boxId, btn);
-                    }
-                });
-            }
+            // 關閉模態框並刷新
+            setTimeout(() => {
+                closeModal('itemModal');
+                loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
+            }, 1000);
 
-
-
-        // --- 分頁 ---
-        function renderPagination(totalPages, currentPage, paginationId, clickHandler) {
-            const paginationElement = document.getElementById(paginationId);
-            if (!paginationElement) return;
-            paginationElement.innerHTML = '';
-            if (totalPages <= 1) return;
-
-            // ... (您現有的分頁渲染邏輯，調整為使用 clickHandler)
-            // 範例：
-            const prevButton = document.createElement('button');
-            prevButton.textContent = '上一頁';
-            prevButton.disabled = currentPage === 1;
-            prevButton.addEventListener('click', () => clickHandler(currentPage - 1));
-            paginationElement.appendChild(prevButton);
-
-            // 計算頁碼範圍 (例如：顯示當前頁前後各2頁，以及第一頁和最後一頁)
-            const maxPagesToShow = 5; // 最多顯示的數字按鈕數 (不含省略號)
-            const sidePages = Math.floor((maxPagesToShow - 1) / 2);
-            let startPage = Math.max(1, currentPage - sidePages);
-            let endPage = Math.min(totalPages, currentPage + sidePages);
-
-            // 調整範圍以確保顯示足夠的頁碼 (如果總頁數少於 maxPagesToShow)
-            if (endPage - startPage + 1 < maxPagesToShow) {
-                if (currentPage <= sidePages + 1) {
-                    endPage = Math.min(totalPages, maxPagesToShow);
-                } else if (currentPage >= totalPages - sidePages) {
-                    startPage = Math.max(1, totalPages - maxPagesToShow + 1);
-                }
-            }
-
-            if (startPage > 1) {
-                const firstPageButton = document.createElement('button');
-                firstPageButton.textContent = 1;
-                firstPageButton.addEventListener('click', () => clickHandler(1));
-                paginationElement.appendChild(firstPageButton);
-                if (startPage > 2) {
-                    const ellipsisSpan = document.createElement('span');
-                    ellipsisSpan.textContent = '...';
-                    ellipsisSpan.style.margin = '0 5px';
-                    paginationElement.appendChild(ellipsisSpan);
-                }
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.textContent = i;
-                pageButton.disabled = i === currentPage;
-                if (i === currentPage) pageButton.classList.add('active');
-                pageButton.addEventListener('click', () => clickHandler(i));
-                paginationElement.appendChild(pageButton);
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    const ellipsisSpan = document.createElement('span');
-                    ellipsisSpan.textContent = '...';
-                    ellipsisSpan.style.margin = '0 5px';
-                    paginationElement.appendChild(ellipsisSpan);
-                }
-                const lastPageButton = document.createElement('button');
-                lastPageButton.textContent = totalPages;
-                lastPageButton.addEventListener('click', () => clickHandler(totalPages));
-                paginationElement.appendChild(lastPageButton);
-            }
-
-
-            const nextButton = document.createElement('button');
-            nextButton.textContent = '下一頁';
-            nextButton.disabled = currentPage === totalPages;
-            nextButton.addEventListener('click', () => clickHandler(currentPage + 1));
-            paginationElement.appendChild(nextButton);
-        }
-
-        function handleBoxPaginationClick(page) {
-            loadBoxesForWarehouse(currentSelectedWarehouseId, page);
-        }
-        function handleSearchPaginationClick(page) {
-            handleSearch(page);
-        }
-
-        // 新增顯示物品詳情的函數
-        function showItemDetails(item) {
-            const modal = document.getElementById('itemDetailsModal');
-            const imageElement = document.getElementById('itemDetailsImage');
-            const editBtn = document.getElementById('editItemFromDetailsBtn');
-            const deleteBtn = document.getElementById('deleteItemFromDetailsBtn');
-
-            imageElement.src = item.item_image_url || '/images/default_item.png';
+        } catch (error) {
+            console.error('保存物品時發生錯誤:', error);
             
-            // 編輯按鈕事件
-            editBtn.onclick = () => {
-                closeModal('itemDetailsModal');
-                openEditItemModal(item.item_id, item.box_id);
-            };
+            // 詳細的錯誤處理
+            const errorMessage = error.data?.error 
+                || error.message 
+                || '保存物品時發生未知錯誤';
 
-            // 刪除按鈕事件
-            deleteBtn.onclick = () => {
-                closeModal('itemDetailsModal');
-                handleDeleteItem(item.item_id, item.item_name, item.box_id);
-            };
+            itemFormStatusP.textContent = `保存失敗: ${errorMessage}`;
+            itemFormStatusP.style.color = '#c0392b';
 
-            openModal('itemDetailsModal');
+        } finally {
+            console.groupEnd();
         }
+    }
+
+    async function handleDeleteItem(itemId, itemName, boxId) {
+        if (!confirm(`確定要刪除物品 "${itemName}" 嗎？`)) return;
+        try {
+            await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`, { method: 'DELETE' });
+            alert(`物品 "${itemName}" 已刪除。`);
+            const itemsContainer = boxGridArea.querySelector(`.item-list-container[data-box-id="${boxId}"]`);
+            if (itemsContainer && currentBoxViewItemsExpanded[boxId]) { // 如果已展開，則重新載入
+                itemsContainer.dataset.loadedItems = 'false';
+                loadItemsForBox(boxId, itemsContainer);
+            }
+            loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); // 刷新紙箱數量
+        } catch (error) { /* 錯誤已由 apiFetch 顯示 */ }
+    }
+
+    // ===========================
+    // == 搜尋函數      ==
+    // ===========================
+    async function handleSearch(page = 1) {
+        currentSearchPage = page;
+        const searchTerm = searchInput.value.trim();
+        const searchAll = searchAllWarehousesToggle.checked;
+
+        if (!searchTerm) {
+            searchResultsArea.innerHTML = '';
+            searchResultsMessage.textContent = '請輸入搜尋關鍵字。';
+            searchPagination.innerHTML = '';
+            return;
+        }
+
+        searchResultsMessage.textContent = '搜尋中...';
+        searchResultsArea.innerHTML = '';
+        searchPagination.innerHTML = '';
+
+        let url;
+        if (searchAll) {
+            url = `/api/box/my-warehouses/search-all-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
+        } else {
+            if (!currentSelectedWarehouseId) {
+                searchResultsMessage.textContent = '請先選擇一個倉庫進行搜尋，或勾選「搜尋我的所有倉庫」。';
+                return;
+            }
+            url = `/api/box/warehouses/${currentSelectedWarehouseId}/search-items?q=${encodeURIComponent(searchTerm)}&page=${currentSearchPage}&limit=10`;
+        }
+
+        try {
+            const data = await apiFetch(url);
+            renderSearchResults(data.results);
+            renderPagination(data.totalPages, data.currentPage, 'search-pagination', handleSearchPaginationClick);
+            if (data.results.length === 0) {
+                searchResultsMessage.textContent = `找不到包含 "${escapeHtml(searchTerm)}" 的結果。`;
+            } else {
+                searchResultsMessage.textContent = `找到 ${data.totalItems} 個結果。`;
+            }
+        } catch (error) {
+            searchResultsMessage.textContent = `搜尋失敗: ${error.message || '未知錯誤'}`;
+        }
+    }
+
+    function renderSearchResults(results) {
+        searchResultsArea.innerHTML = '';
+        if (!results || results.length === 0) return;
+
+        results.forEach(result => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'search-result-item';
+            let detailsHtml = `
+                <h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>
+                <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>
+                <p><strong>AI關鍵字:</strong> ${result.keywords && result.keywords.length > 0 ? result.keywords.map(k => escapeHtml(k)).join(', ') : '無'}</p>
+                <p><strong>所在倉庫:</strong> ${escapeHtml(result.warehouse_name)} (ID: ${result.warehouse_id})</p>
+            `;
+            if (result.type === 'item') {
+                detailsHtml += `<p><strong>所在紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)}, ID: ${result.box_id})</p>`;
+            } else { // box
+                 detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
+            }
+            // 新增按鈕/連結以導覽至紙箱或物品檢視
+            detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
+            itemDiv.innerHTML = detailsHtml;
+            searchResultsArea.appendChild(itemDiv);
+        });
+
+        // 為搜尋結果中的查看詳情按鈕新增事件監聽器
+        searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const { type, warehouseId, boxId, itemId } = e.target.dataset;
+                currentSelectedWarehouseId = warehouseId; // 設定倉庫上下文
+                currentSelectedWarehouseName = ""; // 如果未知，可能需要獲取倉庫名稱
+                const whCard = warehouseListDiv.querySelector(`.enter-warehouse[data-warehouse-id="${warehouseId}"]`);
+                if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName;
+
+                boxManagementTabLink.style.display = 'inline-block';
+                switchTab('tab-box-management');
+                // 切換分頁後，特別展開紙箱並可能突顯物品
+                // 這需要 loadBoxesForWarehouse 完成後才能找到並展開特定的紙箱/物品。
+                // 目前僅導向該倉庫的紙箱管理分頁。
+                // 可能需要更複雜的方式來實現「深層連結」或突顯。
+                setTimeout(() => { // 允許分頁切換和紙箱載入
+                    const boxCard = boxGridArea.querySelector(`.box-card[data-box-id="${boxId}"]`);
+                    if(boxCard){
+                        const toggleBtn = boxCard.querySelector('.toggle-items-btn');
+                        if(toggleBtn && !currentBoxViewItemsExpanded[boxId]){
+                            toggleItemListView(boxId, toggleBtn); // 如果未展開，則展開物品
+                        }
+                        // 此處可加入突顯邏輯
+                    }
+                }, 500); // 延遲以允許 DOM 更新
+            });
+        });
+    }
+
+    function toggleAllItemsInCurrentBoxView() {
+        // 取得所有紙箱的 .toggle-items-btn 按鈕
+        const toggleButtons = boxGridArea.querySelectorAll('.toggle-items-btn');
+        // 判斷目前大多數是展開還是收合
+        let expandedCount = 0;
+        toggleButtons.forEach(btn => {
+            const boxId = btn.dataset.boxId;
+            if (currentBoxViewItemsExpanded[boxId]) expandedCount++;
+        });
+        const shouldExpand = expandedCount < toggleButtons.length / 2; // 如果大多數是收合，就全部展開
+
+        toggleButtons.forEach(btn => {
+            const boxId = btn.dataset.boxId;
+            if (shouldExpand && !currentBoxViewItemsExpanded[boxId]) {
+                toggleItemListView(boxId, btn);
+            } else if (!shouldExpand && currentBoxViewItemsExpanded[boxId]) {
+                toggleItemListView(boxId, btn);
+            }
+        });
+    }
+
+
+
+    // --- 分頁 ---
+    function renderPagination(totalPages, currentPage, paginationId, clickHandler) {
+        const paginationElement = document.getElementById(paginationId);
+        if (!paginationElement) return;
+        paginationElement.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        // ... (您現有的分頁渲染邏輯，調整為使用 clickHandler)
+        // 範例：
+        const prevButton = document.createElement('button');
+        prevButton.textContent = '上一頁';
+        prevButton.disabled = currentPage === 1;
+        prevButton.addEventListener('click', () => clickHandler(currentPage - 1));
+        paginationElement.appendChild(prevButton);
+
+        // 計算頁碼範圍 (例如：顯示當前頁前後各2頁，以及第一頁和最後一頁)
+        const maxPagesToShow = 5; // 最多顯示的數字按鈕數 (不含省略號)
+        const sidePages = Math.floor((maxPagesToShow - 1) / 2);
+        let startPage = Math.max(1, currentPage - sidePages);
+        let endPage = Math.min(totalPages, currentPage + sidePages);
+
+        // 調整範圍以確保顯示足夠的頁碼 (如果總頁數少於 maxPagesToShow)
+        if (endPage - startPage + 1 < maxPagesToShow) {
+            if (currentPage <= sidePages + 1) {
+                endPage = Math.min(totalPages, maxPagesToShow);
+            } else if (currentPage >= totalPages - sidePages) {
+                startPage = Math.max(1, totalPages - maxPagesToShow + 1);
+            }
+        }
+
+        if (startPage > 1) {
+            const firstPageButton = document.createElement('button');
+            firstPageButton.textContent = 1;
+            firstPageButton.addEventListener('click', () => clickHandler(1));
+            paginationElement.appendChild(firstPageButton);
+            if (startPage > 2) {
+                const ellipsisSpan = document.createElement('span');
+                ellipsisSpan.textContent = '...';
+                ellipsisSpan.style.margin = '0 5px';
+                paginationElement.appendChild(ellipsisSpan);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.textContent = i;
+            pageButton.disabled = i === currentPage;
+            if (i === currentPage) pageButton.classList.add('active');
+            pageButton.addEventListener('click', () => clickHandler(i));
+            paginationElement.appendChild(pageButton);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisSpan = document.createElement('span');
+                ellipsisSpan.textContent = '...';
+                ellipsisSpan.style.margin = '0 5px';
+                paginationElement.appendChild(ellipsisSpan);
+            }
+            const lastPageButton = document.createElement('button');
+            lastPageButton.textContent = totalPages;
+            lastPageButton.addEventListener('click', () => clickHandler(totalPages));
+            paginationElement.appendChild(lastPageButton);
+        }
+
+
+        const nextButton = document.createElement('button');
+        nextButton.textContent = '下一頁';
+        nextButton.disabled = currentPage === totalPages;
+        nextButton.addEventListener('click', () => clickHandler(currentPage + 1));
+        paginationElement.appendChild(nextButton);
+    }
+
+    function handleBoxPaginationClick(page) {
+        loadBoxesForWarehouse(currentSelectedWarehouseId, page);
+    }
+    function handleSearchPaginationClick(page) {
+        handleSearch(page);
+    }
+
+    // 新增顯示物品詳情的函數
+    function showItemDetails(item) {
+        const modal = document.getElementById('itemDetailsModal');
+        const imageElement = document.getElementById('itemDetailsImage');
+        const editBtn = document.getElementById('editItemFromDetailsBtn');
+        const deleteBtn = document.getElementById('deleteItemFromDetailsBtn');
+
+        imageElement.src = item.item_image_url || '/images/default_item.png';
+        
+        // 編輯按鈕事件
+        editBtn.onclick = () => {
+            closeModal('itemDetailsModal');
+            openEditItemModal(item.item_id, item.box_id);
+        };
+
+        // 刪除按鈕事件
+        deleteBtn.onclick = () => {
+            closeModal('itemDetailsModal');
+            handleDeleteItem(item.item_id, item.item_name, item.box_id);
+        };
+
+        openModal('itemDetailsModal');
+    }
  
      }   initializePage();
     
