@@ -464,52 +464,101 @@
 
         /* Search Tab Styles */
         #search-results-area {
-            display: grid; /* Change to grid layout */
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px; /* Space between grid items */
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* 調整最小寬度 */
+            gap: 15px; /* 格子之間的間距 */
+            padding: 15px;
+            width: 100%; /* 確保填滿可用寬度 */
         }
 
         #search-results-area .search-result-item {
-            padding: 0; /* Remove padding */
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius-base);
-            margin-bottom: 0; /* Remove bottom margin as gap handles spacing */
-            background-color: var(--background-content);
-            box-shadow: 0 2px 4px var(--shadow-color);
-            display: flex; /* Use flex for main column layout */
+            display: flex;
             flex-direction: column;
-            overflow: hidden; /* Ensure content respects border-radius */
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--border-color); /* 增加邊框 */
+            background-color: var(--background-content); /* 使用主題背景色 */
+        }
+
+        #search-results-area .search-result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
 
         #search-results-area .search-result-item .image-container {
-            position: relative; /* For absolute positioning of text */
+            position: relative;
             width: 100%;
-            height: auto; /* Fixed height for image */
+            padding-top: 100%; /* 正方形圖片 */
             overflow: hidden;
-            cursor: pointer; /* Indicate clickable */
         }
 
-        #search-results-area .search-result-item img {
-            display: block; /* Remove extra space below image */
-            width: 100%; /* Image fills container */
-            height: 100%; /* Image fills container */
-            object-fit: cover; /* Cover the container while maintaining aspect ratio */
-            margin-bottom: 0; /* Remove margin */
-            border-radius: 0; /* Remove border-radius from image itself */
-            border: none; /* Remove border from image */
-            box-shadow: none; /* Remove shadow from image */
-        }
-
-        #search-results-area .search-result-item .overlay-text {
+        #search-results-area .search-result-item .image-container img {
             position: absolute;
+            top: 0;
             left: 0;
-            right: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #search-results-area .search-result-item .warehouse-name {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0,0,0,0.5);
             color: white;
-            padding: 5px 8px;
-            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark background */
-            font-size: 0.9em;
-            pointer-events: none; /* Allow clicks to pass through to image-container */
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Add text shadow for readability */
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+
+        #search-results-area .search-result-item .item-details-container {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            background-color: var(--background-content);
+        }
+
+        #search-results-area .search-result-item .view-details-btn {
+            margin-top: auto;
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #search-results-area .search-result-item .view-details-btn:hover {
+            background-color: var(--hover-primary-color);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 1200px) {
+            #search-results-area {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* 較小螢幕時減少列數 */
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #search-results-area {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* 手機螢幕時更少列 */
+                gap: 8px;
+                padding: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #search-results-area {
+                grid-template-columns: repeat(2, 1fr); /* 最小螢幕時固定兩列 */
+                gap: 6px;
+                padding: 8px;
+            }
         }
 
         #search-results-area .search-result-item .item-name-box {
