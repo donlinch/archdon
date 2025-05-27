@@ -2726,7 +2726,7 @@
                     const { warehouseId, boxId } = e.target.dataset;
 
                     if (warehouseId && boxId) {
-                        const targetUrl = `box-open.html?warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
+                        const targetUrl = `box-open.html?userId=${encodeURIComponent(currentUserId)}&warehouseId=${encodeURIComponent(warehouseId)}&boxId=${encodeURIComponent(boxId)}`;
                         window.location.href = targetUrl;
                     } else {
                         console.error("查看詳情按鈕缺少 warehouseId 或 boxId:", e.target.dataset);
