@@ -1142,7 +1142,17 @@
             <div class="controls-bar">
                 <button id="addBoxBtn">➕ 新增紙箱到此倉庫</button>
                 <button id="toggleAllItemsBtn" class="secondary-action">全部展開/折叠物品</button>
+                <div class="view-toggle">
+                    <button id="gridViewBtn" class="active">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        格狀
+                    </button>
+                    <button id="listViewBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        列表
+                    </button>
                 </div>
+            </div>
             <div id="box-grid-area" class="box-grid"></div>
             <div id="box-list-message"></div>
             <div id="box-pagination"></div>
@@ -1565,7 +1575,7 @@
             });
 
             // 物品詳情模態框關閉按鈕
-            document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"]').forEach(btn => {
+            document.querySelectorAll('.close-modal-btn[data-modal-id="itemDetailsModal"]').forEach(btn => {
                 btn.addEventListener('click', () => closeModal('itemDetailsModal'));
             });
 
@@ -1607,10 +1617,7 @@
 
             if (tabId === 'tab-warehouses') {
                 loadWarehouses();
-                setTimeout(() => {
-                    switchTab('tab-warehouses'); // 延遲後切換回倉庫列表
-                    addWarehouseStatus.textContent = '';
-                }, 100);
+               
                 if(boxManagementTabLink) boxManagementTabLink.style.display = 'none';
             } else if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
@@ -3083,8 +3090,8 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     }
 
                      // 在開始渲染前，先清空現有內容
-                    boxGridArea.innerHTML = '';
-                    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
+    boxGridArea.innerHTML = '';
+    console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
 
                     // Add this check
                     if (isBoxLoading) {
