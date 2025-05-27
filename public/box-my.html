@@ -258,10 +258,10 @@
             background-color: var(--hover-primary-color);
         }
         .warehouse-card .actions button.edit-warehouse {
-            background-color: var(--warning-color);
+            background-color: var(--primary-color);
         }
         .warehouse-card .actions button.edit-warehouse:hover {
-            background-color: #d68910; /* Darker orange */
+            background-color: var(--hover-primary-color);
         }
         .warehouse-card .actions button.delete-warehouse {
             background-color: var(--danger-color);
@@ -3076,7 +3076,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                         return;
                     }
 
-                    // 在開始渲染前，先清空現有內容
+                     // 在開始渲染前，先清空現有內容
                     boxGridArea.innerHTML = '';
                     console.log(`載入倉庫 ${warehouseId} 的第 ${page} 頁紙箱`);
 
