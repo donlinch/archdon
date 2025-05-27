@@ -308,6 +308,12 @@ module.exports = function(dependencies) {
         });
     });
 
+
+
+
+
+
+
     // ====================================================================
     // ==       統一圖片上傳與分析 API                             ==
     // ====================================================================
@@ -331,45 +337,57 @@ module.exports = function(dependencies) {
                 image: { content: imageBuffer },
                 features: [ { type: 'LABEL_DETECTION', maxResults: 10 }, { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
             });
+
+
+
+
+
+
+
+
             let aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
 
-            // --- 開始新增翻譯邏輯 ---
             if (dependencies.translationClient && aiKeywords.length > 0) {
-                try {
-                    console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')}`);
-                    // Google Cloud Translation API requires an array of strings
-                    // The second argument 'zh' is the target language code for Chinese
-                    const request = {
-                        contents: aiKeywords,
-                        targetLanguageCode: 'zh',
-                        parent: `projects/${googleProjectId}/locations/global` // <--- 确认这里用的是解构出来的 googleProjectId
-                    };
+                if (!googleProjectId) { // 检查 googleProjectId 是否有效
+                    console.error("[Box Upload API] CRITICAL: googleProjectId is undefined. Skipping translation.");
+                    // 在这种情况下，aiKeywords 将保持为英文
+                } else {
+                    try {
+                        console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')} with project ID: ${googleProjectId}`);
+                        const request = {
+                            contents: aiKeywords,
+                            targetLanguageCode: 'zh',
+                            parent: `projects/${googleProjectId}/locations/global`
+                        };
 
-                    if (!googleProjectId) { // 添加一个检查
-                        console.error("[Box Upload API] CRITICAL: googleProjectId is undefined in dependencies for translation. Skipping translation.");
-                        // 决定是继续（用英文关键词）还是抛错
-                    } else {
-                    
-                    const [response] = await dependencies.translationClient.translateText(request);
-                    const translations = response.translations.map(t => t.translatedText);
-                }
-                    if (translations && translations.length === aiKeywords.length) {
-                         aiKeywords = translations; // Replace English keywords with Chinese translations
-                         console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
-                    } else {
-                        console.warn("[Box Upload API] Translation result length mismatch or empty, using original keywords.");
-                        // If translation fails or result is unexpected, keep original English keywords
+                        const [response] = await dependencies.translationClient.translateText(request);
+                        const translatedTexts = response.translations; // 使用一个新的变量名，或者直接用 response.translations
+
+                        if (translatedTexts && translatedTexts.length === aiKeywords.length) {
+                            aiKeywords = translatedTexts.map(t => t.translatedText); // 从每个翻译对象中提取文本
+                            console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
+                        } else {
+                            console.warn("[Box Upload API] Translation result length mismatch or empty. Using original (English) keywords.");
+                            // 你可能想在这里打印 response 来调试
+                            // console.log("[Box Upload API] Raw translation response:", JSON.stringify(response, null, 2));
+                        }
+                    } catch (translateError) {
+                        console.error("[Box Upload API] Error during translation call:", translateError);
+                        // 翻译出错，aiKeywords 保持为英文
                     }
-                } catch (translateError) {
-                    console.error("[Box Upload API] Error during translation:", translateError);
-                    // If translation fails, keep original English keywords
                 }
             } else if (aiKeywords.length === 0) {
                  console.log("[Box Upload API] No keywords detected, skipping translation.");
-            } else {
+            } else if (!dependencies.translationClient) { // 单独检查 translationClient
                  console.warn("[Box Upload API] translationClient dependency not available, skipping translation.");
             }
-            // --- 結束新增翻譯邏輯 ---
+            // --- 结束新增翻譯邏輯 ---
+
+
+
+
+
+
 
             const processedImageBuffer = await sharp(imageBuffer).rotate()
                 .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
