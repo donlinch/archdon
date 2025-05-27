@@ -643,11 +643,14 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
             return res.status(403).json({ error: '無權訪問此倉庫。' });
         }
 
-        // 2. 獲取紙箱基本信息，並確認它屬於指定的倉庫
+        // 2. 獲取紙箱基本信息，並確認它屬於指定的倉庫，同時獲取倉庫名稱
         const boxQuery = `
-            SELECT box_id, warehouse_id, box_number, box_name, cover_image_url, ai_box_keywords, manual_notes, created_at, updated_at
-            FROM BOX_Boxes
-            WHERE box_id = $1 AND warehouse_id = $2;
+            SELECT b.box_id, b.warehouse_id, b.box_number, b.box_name, b.cover_image_url, 
+                   b.ai_box_keywords, b.manual_notes, b.created_at, b.updated_at,
+                   w.warehouse_name
+            FROM BOX_Boxes b
+            JOIN BOX_Warehouses w ON b.warehouse_id = w.warehouse_id
+            WHERE b.box_id = $1 AND b.warehouse_id = $2;
         `;
         const boxResult = await pool.query(boxQuery, [numBoxId, numWarehouseId]);
 
