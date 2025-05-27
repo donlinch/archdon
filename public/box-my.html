@@ -1321,85 +1321,43 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- 全域狀態和 DOM 元素 (如先前定義) ---
-            const currentUsernameSpan = document.getElementById('currentUsername');
-            const currentUserAvatarImg = document.getElementById('currentUserAvatar');
-            const logoutButton = document.getElementById('logoutButton');
-            const tabLinks = document.querySelectorAll('.tab-navigation button.tab-link');
-            const tabContents = document.querySelectorAll('.main-container .tab-content');
+            // --- 全域變數
+            let currentUserId = localStorage.getItem('boxCurrentUserId');
+            let currentUsername = localStorage.getItem('boxCurrentUsername');
+            let currentUserAvatar = localStorage.getItem('boxCurrentUserAvatar');
+            let authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+            let currentSelectedWarehouseId = null;
+            let currentSelectedWarehouseName = null;
+            let currentBoxPage = 1;
+            let isBoxLoading = false;
+            let currentBoxViewItemsExpanded = {};
+
+            // DOM 元素
+            const tabContents = document.querySelectorAll('.tab-content');
+            const tabLinks = document.querySelectorAll('.tab-navigation button');
             const boxManagementTabLink = document.querySelector('button[data-tab="tab-box-management"]');
-            const boxManagementTitle = document.getElementById('boxManagementTitle');
-            const loadingOverlay = document.getElementById('loading-overlay');
-            
-            // Warehouse Tab related (大部分會移到 Modal)
+            const boxManagementTitle = document.getElementById('box-management-title');
             const warehouseListDiv = document.getElementById('warehouse-list');
             const warehouseListMessage = document.getElementById('warehouse-list-message');
-            const refreshWarehousesBtn = document.getElementById('refreshWarehousesBtn');
-            const openAddWarehouseModalBtn = document.getElementById('openAddWarehouseModalBtn'); // 新增倉庫按鈕（打開Modal）
-
-            // New Warehouse Modal Elements
-            const warehouseModal = document.getElementById('warehouseModal');
-            const warehouseModalTitle = document.getElementById('warehouseModalTitle');
+            const boxGridArea = document.getElementById('box-grid-area');
+            const boxListMessage = document.getElementById('box-list-message');
+            const boxListPagination = document.getElementById('box-pagination');
+            const searchButton = document.getElementById('searchButton');
+            const searchPagination = document.getElementById('search-pagination');
+            const logoutButton = document.getElementById('logoutButton');
             const warehouseForm = document.getElementById('warehouseForm');
-            const warehouseFormWarehouseIdInput = document.getElementById('warehouseFormWarehouseId');
-            const warehouseFormNameInput = document.getElementById('warehouseFormName');
-            const warehouseFormDescriptionTextarea = document.getElementById('warehouseFormDescription');
-            const warehouseFormStatusP = document.getElementById('warehouseFormStatus');
-
-            // Box Management related
+            const boxForm = document.getElementById('boxForm');
+            const itemForm = document.getElementById('itemForm');
+            const refreshWarehousesBtn = document.getElementById('refreshWarehousesBtn');
             const addBoxBtn = document.getElementById('addBoxBtn');
             const toggleAllItemsBtn = document.getElementById('toggleAllItemsBtn');
-            const boxListMessage = document.getElementById('box-list-message');
-            const boxGridArea = document.getElementById('box-grid-area');
-            const boxListArea = document.getElementById('box-list-area');
-            const boxListPagination = document.getElementById('box-list-pagination');
-            const gridViewBtn = document.getElementById('gridViewBtn');
-            const listViewBtn = document.getElementById('listViewBtn');
-            const boxModal = document.getElementById('boxModal');
-            const boxModalTitle = document.getElementById('boxModalTitle');
-            const boxForm = document.getElementById('boxForm');
-            const boxFormBoxIdInput = document.getElementById('boxFormBoxId');
-            const boxFormNumberInput = document.getElementById('boxFormNumber');
-            const boxFormNameInput = document.getElementById('boxFormName');
+            const openAddWarehouseModalBtn = document.getElementById('openAddWarehouseModalBtn');
             const boxFormCoverImageFileInput = document.getElementById('boxFormCoverImageFile');
-            const boxCoverPreviewDiv = document.getElementById('boxCoverPreview');
-            const boxFormCoverImageUrlInput = document.getElementById('boxFormCoverImageUrl');
-            const boxFormAiKeywordsDiv = document.getElementById('boxFormAiKeywords');
-            const boxFormManualNotesTextarea = document.getElementById('boxFormManualNotes');
-            const boxFormStatusP = document.getElementById('boxFormStatus');
-            const itemModal = document.getElementById('itemModal');
-            const itemModalTitle = document.getElementById('itemModalTitle');
-            const itemForm = document.getElementById('itemForm');
-            const itemFormItemIdInput = document.getElementById('itemFormItemId');
-            const itemFormBoxIdInput = document.getElementById('itemFormBoxId');
-            const itemFormNameInput = document.getElementById('itemFormName');
             const itemFormImageFileInput = document.getElementById('itemFormImageFile');
-            const itemImagePreviewDiv = document.getElementById('itemImagePreview');
-            const itemFormImageUrlInput = document.getElementById('itemFormImageUrl');
-            const itemFormAiKeywordsDiv = document.getElementById('itemFormAiKeywords');
-            const itemFormDescriptionTextarea = document.getElementById('itemFormDescription');
-            const itemFormQuantityInput = document.getElementById('itemFormQuantity');
-            const itemFormStatusP = document.getElementById('itemFormStatus');
-            const searchInput = document.getElementById('searchInput');
-            const searchButton = document.getElementById('searchButton');
-            const searchAllWarehousesToggle = document.getElementById('searchAllWarehousesToggle');
-            const searchResultsMessage = document.getElementById('search-results-message');
-            const searchResultsArea = document.getElementById('search-results-area');
-            const searchPagination = document.getElementById('search-pagination');
-            const profileImageFile = document.getElementById('profileImageFile'); // 從 HTML 新增
-    
-            let currentUserId = null;
-            let currentSelectedWarehouseId = null;
+            const profileImageFile = document.getElementById('profileImageFile');
 
-            let authToken = null;
-            let currentSelectedWarehouseName = '';
-            let currentBoxPage = 1;
-            let currentSearchPage = 1;
-            let currentBoxViewItemsExpanded = {}; // { boxId: true/false } 物品展開狀態
-            let isBoxLoading = false; // Add this global flag near your other state variables
-    
-             // --- 輔助函數：HTML 轉義 (簡單版本，複雜需求請用函式庫) ---
-             function escapeHtml(unsafe) {
+            // --- 輔助函數：HTML 轉義 (簡單版本，複雜需求請用函式庫) ---
+            function escapeHtml(unsafe) {
                     if (typeof unsafe !== 'string') {
                         if (unsafe === null || unsafe === undefined) return '';
                         unsafe = String(unsafe);
@@ -1484,8 +1442,8 @@
             // 驗證 token 並獲取用戶信息
             try {
                 const userData = await apiFetch('/api/box/users/me'); // 使用 defaultOptions 中的 token
-                currentUsernameSpan.textContent = userData.username;
-                currentUserAvatarImg.src = userData.user_profile_image_url || '/images/box_item.png';
+                currentUsername = userData.username;
+                currentUserAvatar = userData.user_profile_image_url || '/images/box_item.png';
                 localStorage.setItem(`boxCurrentUsername`, userData.username); // 更新 local storage
                 localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/box_item.png');
             } catch (error) {
@@ -1947,7 +1905,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     });
                     statusEl.textContent = '頭像更新成功！';
                     statusEl.style.color = '#2ecc71';
-                    currentUserAvatarImg.src = uploadResult.imageUrl; // 更新頁首頭像
+                    currentUserAvatar = uploadResult.imageUrl; // 更新頁首頭像
                     localStorage.setItem(`boxCurrentUserAvatar`, uploadResult.imageUrl); // 更新 local storage
                     document.getElementById('changeProfileImageForm').reset();
                     document.getElementById('profileImagePreview').style.display = 'none';
@@ -3046,7 +3004,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     });
                     statusEl.textContent = '頭像更新成功！';
                     statusEl.style.color = '#2ecc71';
-                    currentUserAvatarImg.src = uploadResult.imageUrl; // 更新頁首頭像
+                    currentUserAvatar = uploadResult.imageUrl; // 更新頁首頭像
                     localStorage.setItem(`boxCurrentUserAvatar`, uploadResult.imageUrl); // 更新 local storage
                     document.getElementById('changeProfileImageForm').reset();
                     document.getElementById('profileImagePreview').style.display = 'none';
@@ -3848,6 +3806,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
         }
 
         initializePage();
+        loadWarehouses(); // 在頁面載入時自動執行倉庫列表刷新
     });
 
 

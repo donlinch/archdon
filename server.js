@@ -109,10 +109,10 @@ const authenticateBoxUser = (req, res, next) => {
             }
             // 將解碼後的用戶信息附加到請求對象，方便後續路由使用
             req.boxUser = decoded; // decoded 通常包含 user_id 和 username
-            console.log(`[Box Auth] 用戶 ${req.boxUser.username} (ID: ${req.boxUser.userId}) 已認證`);
-            next();
+             next();
         });
     } else {
+     
         console.warn('[Box Auth] 未提供 Authorization 標頭或格式不正確。');
         res.status(401).json({ error: '未授權：請提供有效的Token。' });
     }
