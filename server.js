@@ -357,7 +357,7 @@ try {
 
 
 
-// --- Get Google Cloud Project ID from Credentials ---\nlet googleProjectId = null;
+// --- Get Google Cloud Project ID from Credentials --- 
 let googleProjectId = null;
 const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (credentialsPath) {
