@@ -1201,13 +1201,104 @@
         }
 
         #search-results-area .search-result-item img {
-    max-width: 100px; /* 或您希望的大小 */
-    max-height: 100px;
+    max-width: 400px; /* 或您希望的大小 */
+    max-height: 400px;
     object-fit: cover; /* 保持圖片比例並填充 */
     margin-bottom: 10px; /* 與下方文字的間距 */
     border-radius: 4px; /* 輕微圓角 */
     border: 1px solid var(--border-color); /* 邊框 */
     box-shadow: 0 2px 4px var(--shadow-color); /* 輕微陰影 */
+}
+
+
+
+
+#search-results-area {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); /* 在不同螢幕上自動調整列數 */
+    gap: 15px; /* 格子之間的間距 */
+    padding: 15px;
+}
+
+#search-results-area .search-result-item {
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px; /* 圓角 */
+    overflow: hidden; /* 確保圖片和內容不會超出邊界 */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* 輕微陰影 */
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* 平滑過渡效果 */
+}
+
+#search-results-area .search-result-item:hover {
+    transform: translateY(-5px); /* 懸停時輕微上移 */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+#search-results-area .search-result-item .image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 正方形圖片 */
+    overflow: hidden;
+}
+
+#search-results-area .search-result-item .image-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 確保圖片填滿並保持比例 */
+}
+
+#search-results-area .search-result-item .warehouse-name {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 15px;
+    font-size: 0.8em;
+}
+
+#search-results-area .search-result-item .item-details-container {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    background-color: white;
+}
+
+#search-results-area .search-result-item .view-details-btn {
+    margin-top: auto; /* 將按鈕推到底部 */
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+#search-results-area .search-result-item .view-details-btn:hover {
+    background-color: var(--hover-primary-color);
+}
+
+/* 響應式設計 */
+@media (max-width: 600px) {
+    #search-results-area {
+        grid-template-columns: repeat(3, 1fr); /* 手機上固定三列 */
+        gap: 10px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    #search-results-area {
+        grid-template-columns: repeat(3, 1fr); /* 更小的螢幕上兩列 */
+        gap: 8px;
+        padding: 8px;
+    }
 }
 
     </style>
