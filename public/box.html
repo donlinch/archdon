@@ -22,12 +22,12 @@
 
         .page-header {
             background: linear-gradient(135deg, #FFB74D, #FFA726);
-            padding: 2rem;
+            padding: 1.5rem;
             text-align: center;
             width: 100%;
             border-radius: 0;
             box-shadow: 0 4px 15px rgba(255, 183, 77, 0.2);
-            margin-bottom: 2rem;
+            margin: 0;
             position: relative;
             overflow: hidden;
         }
@@ -59,11 +59,12 @@
 
         .container {
             background-color: transparent;
-            padding: 0;
+            padding: 20px;
             border-radius: 12px;
             width: 100%;
             max-width: 600px;
             text-align: center;
+            margin: 0 auto;
         }
 
         h1 {
@@ -1092,6 +1093,88 @@
     opacity: 0.7;
     cursor: not-allowed;
 }
+
+        /* 註冊表單樣式 */
+        .register-form-container {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+        }
+
+        .register-form-container.show {
+            display: block;
+        }
+
+        .register-form-container h2 {
+            color: #424242;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .register-form-container .form-group {
+            margin-bottom: 15px;
+        }
+
+        .register-form-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            text-align: left;
+        }
+
+        .register-form-container input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .register-form-container input:focus {
+            border-color: #FFB74D;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.2);
+        }
+
+        .register-form-container .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .register-form-container button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .register-form-container button.primary {
+            background-color: #FFB74D;
+            color: white;
+            border: none;
+        }
+
+        .register-form-container button.primary:hover {
+            background-color: #FFA726;
+            transform: translateY(-2px);
+        }
+
+        .register-form-container button.secondary {
+            background-color: #f5f5f5;
+            color: #666;
+            border: none;
+        }
+
+        .register-form-container button.secondary:hover {
+            background-color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -1106,51 +1189,34 @@
         </div>
         <p id="error-message" style="display:none;"></p>
 
-        <!-- 新增：密碼輸入區域的模板 -->
-        <template id="password-input-template">
-            <div class="password-input-area">
-                <form class="password-form">
-                    <input type="password" placeholder="請輸入密碼" required>
-                    <p class="error-message"></p>
-                    <div class="button-group">
-                        <button type="button" class="secondary cancel-btn">取消</button>
-                        <button type="submit" class="primary login-btn">登入</button>
-                    </div>
-                </form>
-            </div>
-        </template>
+        <!-- 修改註冊表單結構 -->
+        <div class="register-form-container" id="registerFormContainer">
+            <h2>註冊新使用者</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">用戶名稱 (至少3位)</label>
+                    <input type="text" id="registerUsername" required minlength="3" placeholder="請輸入用戶名稱">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密碼 (至少6位)</label>
+                    <input type="password" id="registerPassword" required minlength="6" placeholder="請輸入密碼">
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">確認密碼</label>
+                    <input type="password" id="registerConfirmPassword" required placeholder="請再次輸入密碼">
+                </div>
+                <p id="register-form-error-message" style="color: #e74c3c; font-size: 0.9em; margin: 10px 0; display: none;"></p>
+                <div class="button-group">
+                    <button type="button" class="secondary" id="cancelRegister">取消</button>
+                    <button type="submit" class="primary">註冊</button>
+                </div>
+            </form>
+        </div>
 
         <!-- 註冊按鈕區域 -->
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
             <p>還沒有帳號？</p>
             <button id="showRegisterModalBtn" class="button-style-secondary">註冊新使用者</button>
-        </div>
-
-        <!-- Registration Modal -->
-        <div id="registerModal" class="modal">
-            <div class="modal-content">
-                <span class="close-btn" data-modal-id="registerModal">&times;</span>
-                <h2 style="margin-bottom: 1.5rem; color: #424242;">註冊新使用者</h2>
-                <form id="registerForm">
-                    <div class="form-group">
-                        <label for="registerUsername">用戶名稱 (至少3位)</label>
-                        <input type="text" id="registerUsername" required minlength="3" placeholder="請輸入用戶名稱">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerPassword">密碼 (至少6位)</label>
-                        <input type="password" id="registerPassword" required minlength="6" placeholder="請輸入密碼">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerConfirmPassword">確認密碼</label>
-                        <input type="password" id="registerConfirmPassword" required placeholder="請再次輸入密碼">
-                    </div>
-                    <p id="register-modal-error-message" style="color: #e74c3c; font-size: 0.9em; margin-bottom: 1rem; display: none;"></p>
-                    <div class="modal-actions">
-                        <button type="button" class="secondary close-modal-btn" data-modal-id="registerModal">取消</button>
-                        <button type="submit" class="primary">註冊</button>
-                    </div>
-                </form>
-            </div>
         </div>
     </div>
 
@@ -1191,22 +1257,21 @@
             const userSelectionArea = document.getElementById('user-selection-area');
             const initialLoadingMessage = document.getElementById('initial-loading');
             const errorMessageDiv = document.getElementById('error-message');
-            const passwordInputTemplate = document.getElementById('password-input-template');
 
             let selectedUserId = null;
             let selectedUsername = '';
             let currentPasswordArea = null;
 
             const showRegisterModalBtn = document.getElementById('showRegisterModalBtn');
-            const registerModal = document.getElementById('registerModal');
+            const registerFormContainer = document.getElementById('registerFormContainer');
             const registerForm = document.getElementById('registerForm');
             const registerUsernameInput = document.getElementById('registerUsername');
             const registerPasswordInput = document.getElementById('registerPassword');
             const registerConfirmPasswordInput = document.getElementById('registerConfirmPassword');
             const registerProfileImageFileInput = document.getElementById('registerProfileImageFile');  
             const registerImagePreviewDiv = document.getElementById('registerImagePreview');  
-            const registerModalErrorMessage = document.getElementById('register-modal-error-message');
-            const closeRegisterModalBtns = document.querySelectorAll('.close-btn[data-modal-id="registerModal"], button.close-modal-btn[data-modal-id="registerModal"]');
+            const registerFormErrorMessage = document.getElementById('register-form-error-message');
+            const cancelRegisterBtn = document.getElementById('cancelRegister');
 
             const passwordModal = document.getElementById('passwordModal');
             const passwordForm = document.getElementById('passwordForm');
@@ -1215,115 +1280,100 @@
             const modalTitle = document.getElementById('modalTitle');
             const modalErrorMessage = document.getElementById('modal-error-message');
 
-            // --- 事件監聽器綁定 (在 setupEventListeners 函數中添加) ---
+            // 顯示註冊表單
             if (showRegisterModalBtn) {
                 showRegisterModalBtn.addEventListener('click', () => {
                     registerForm.reset();
-                    registerModalErrorMessage.style.display = 'none';
-                    if (registerImagePreviewDiv) registerImagePreviewDiv.style.display = 'none';
-                    if (registerImagePreviewDiv) registerImagePreviewDiv.querySelector('img').src = '#';
-                    registerModal.classList.add('show');
+                    registerFormErrorMessage.style.display = 'none';
+                    registerFormContainer.classList.add('show');
                     registerUsernameInput.focus();
                 });
             }
 
-            if (registerForm) {
-                registerForm.addEventListener('submit', handleUserRegister);
-            }
-
-            closeRegisterModalBtns.forEach(btn => {
-                btn.addEventListener('click', () => registerModal.classList.remove('show'));
-            });
-
-            if (registerModal) {
-                registerModal.addEventListener('click', (e) => {
-                    if (e.target === registerModal) {
-                        registerModal.classList.remove('show');
-                    }
+            // 取消註冊
+            if (cancelRegisterBtn) {
+                cancelRegisterBtn.addEventListener('click', () => {
+                    registerFormContainer.classList.remove('show');
                 });
             }
 
-            // --- 新增用戶註冊處理函數 ---
-            async function handleUserRegister(event) {
-                event.preventDefault();
-                const username = registerUsernameInput.value.trim();
-                const password = registerPasswordInput.value;
-                const confirmPassword = registerConfirmPasswordInput.value;
-                const profileImageFile = registerProfileImageFileInput ? registerProfileImageInput.files[0] : null;
+            // 處理註冊表單提交
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const username = registerUsernameInput.value.trim();
+                    const password = registerPasswordInput.value;
+                    const confirmPassword = registerConfirmPasswordInput.value;
 
-                registerModalErrorMessage.style.display = 'none';
+                    registerFormErrorMessage.style.display = 'none';
 
-                if (!username || !password || !confirmPassword) {
-                    registerModalErrorMessage.textContent = '所有必填項都不能為空。';
-                    registerModalErrorMessage.style.display = 'block';
-                    return;
-                }
-                if (username.length < 3) {
-                    registerModalErrorMessage.textContent = '用戶名長度至少需要3位。';
-                    registerModalErrorMessage.style.display = 'block';
-                    return;
-                }
-                if (password.length < 6) {
-                    registerModalErrorMessage.textContent = '密碼長度至少需要6位。';
-                    registerModalErrorMessage.style.display = 'block';
-                    return;
-                }
-                if (password !== confirmPassword) {
-                    registerModalErrorMessage.textContent = '兩次輸入的密碼不一致。';
-                    registerModalErrorMessage.style.display = 'block';
-                    return;
-                }
-
-                const submitButton = registerForm.querySelector('button[type="submit"]');
-                submitButton.disabled = true;
-                submitButton.textContent = '註冊中...';
-
-                // 注意：如果註冊時允許上傳頭像，處理會更複雜
-                // 你需要先調用類似 /api/box/upload-analyze-then-process-image 的API上傳頭像 (可能不需要AI分析，僅上傳並返回URL)
-                // 然後將獲取的 image_url 和其他註冊信息一起發送到 /api/box/users/register
-                // 為了簡化，我們先假設註冊時不直接處理頭像上傳，用戶登入後再設置。
-
-                const registrationData = {
-                    username: username,
-                    password: password,
-                    confirmPassword: confirmPassword,
-                    user_profile_image_url: null // 或 undefined
-                };
-
-                try {
-                    const response = await fetch('/api/box/users/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(registrationData)
-                    });
-                    const data = await response.json();
-
-                    if (response.ok && data.success) {
-                        alert('註冊成功！您現在可以使用新帳號登入。');
-                        registerModal.classList.remove('show');
-                        fetchAndRenderUsers(); // 刷新用戶列表以包含新用戶
-
-                        // 如果後端返回了token並且希望註冊後自動登入:
-                        if (data.token && data.user) {
-                            localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
-                            localStorage.setItem(`boxCurrentUserId`, data.user.userId);
-                            localStorage.setItem(`boxCurrentUsername`, data.user.username);
-                            localStorage.setItem(`boxCurrentUserAvatar`, data.user.profileImageUrl || '/images/default_avatar.png');
-                            window.location.href = `box-my.html?userId=${data.user.userId}`;
-                        }
-
-                    } else {
-                        registerModalErrorMessage.textContent = data.error || '註冊失敗，請重試。';
-                        registerModalErrorMessage.style.display = 'block';
+                    // 表單驗證
+                    if (!username || !password || !confirmPassword) {
+                        registerFormErrorMessage.textContent = '所有欄位都必須填寫';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
                     }
-                } catch (error) {
-                    console.error('註冊請求失敗:', error);
-                    registerModalErrorMessage.textContent = `註冊請求錯誤: ${error.message}`;
-                    registerModalErrorMessage.style.display = 'block';
-                } finally {
-                    submitButton.disabled = false;
-                    submitButton.textContent = '註冊';
-                }
+
+                    if (username.length < 3) {
+                        registerFormErrorMessage.textContent = '用戶名稱至少需要3個字元';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        registerFormErrorMessage.textContent = '密碼至少需要6個字元';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    if (password !== confirmPassword) {
+                        registerFormErrorMessage.textContent = '兩次輸入的密碼不一致';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    const submitButton = registerForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = '註冊中...';
+
+                    try {
+                        const response = await fetch('/api/box/users/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                username: username,
+                                password: password,
+                                confirmPassword: confirmPassword
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            alert('註冊成功！您現在可以使用新帳號登入。');
+                            registerFormContainer.classList.remove('show');
+                            fetchAndRenderUsers();
+
+                            if (data.token && data.user) {
+                                localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
+                                localStorage.setItem('boxCurrentUserId', data.user.userId);
+                                localStorage.setItem('boxCurrentUsername', data.user.username);
+                                localStorage.setItem('boxCurrentUserAvatar', data.user.profileImageUrl || '/images/default_avatar.png');
+                                window.location.href = `box-my.html?userId=${data.user.userId}`;
+                            }
+                        } else {
+                            registerFormErrorMessage.textContent = data.error || '註冊失敗，請重試';
+                            registerFormErrorMessage.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('註冊請求失敗:', error);
+                        registerFormErrorMessage.textContent = `註冊失敗: ${error.message}`;
+                        registerFormErrorMessage.style.display = 'block';
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = '註冊';
+                    }
+                });
             }
 
             // 2. 處理用戶選擇
