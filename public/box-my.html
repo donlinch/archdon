@@ -484,7 +484,7 @@
         #search-results-area .search-result-item .image-container {
             position: relative; /* For absolute positioning of text */
             width: 100%;
-            height: 200px; /* Fixed height for image */
+            height: auto; /* Fixed height for image */
             overflow: hidden;
             cursor: pointer; /* Indicate clickable */
         }
@@ -2493,9 +2493,7 @@
                         <img src="${escapeHtml(imageUrl || fallbackImageUrl)}"
                              alt="${escapeHtml(result.name)}"
                              onerror="this.onerror=null;this.src='${fallbackImageUrl}';">
-                        <div class="overlay-text item-name-box">
-                            ${escapeHtml(result.name)} (${result.type === 'item' ? `紙箱: ${escapeHtml(result.box_name)} 編號: ${escapeHtml(result.box_number)}` : `編號: ${escapeHtml(result.box_number)}`})
-                        </div>
+                         
                         <div class="overlay-text warehouse-name">
                              ${escapeHtml(result.warehouse_name || '未知倉庫')}
                         </div>
