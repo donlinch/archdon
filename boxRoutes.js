@@ -339,7 +339,16 @@ module.exports = function(dependencies) {
                     console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')}`);
                     // Google Cloud Translation API requires an array of strings
                     // The second argument 'zh' is the target language code for Chinese
-                    const [translations] = await dependencies.translationClient.translate(aiKeywords, 'zh');
+                    const request = {
+                        parent: `projects/${dependencies.googleProjectId}/locations/global`,
+                        contents: aiKeywords,
+                        mimeType: 'text/plain',
+                        sourceLanguageCode: 'en',
+                        targetLanguageCode: 'zh'
+                    };
+                    const [response] = await dependencies.translationClient.translateText(request);
+                    const translations = response.translations.map(t => t.translatedText);
+                    
                     if (translations && translations.length === aiKeywords.length) {
                          aiKeywords = translations; // Replace English keywords with Chinese translations
                          console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
