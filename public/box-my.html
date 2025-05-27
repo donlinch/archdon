@@ -1768,34 +1768,56 @@
                 currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId');
                 authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
 
+                // Check for localStorage flags to auto-open a specific warehouse and tab
+                const lastOpenedWarehouseId = localStorage.getItem('lastOpenedWarehouseId');
+                const autoOpenBoxManagement = localStorage.getItem('autoOpenBoxManagement');
+
+                if (lastOpenedWarehouseId && autoOpenBoxManagement === 'true') {
+                    try {
+                        // Validate if the warehouse exists. First, fetch all warehouses.
+                        const warehouses = await apiFetch('/api/box/my-warehouses');
+                        const warehouseExists = warehouses.some(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
+
+                        if (warehouseExists) {
+                            currentSelectedWarehouseId = lastOpenedWarehouseId;
+                            // Find the warehouse name
+                            const warehouse = warehouses.find(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
+                            currentSelectedWarehouseName = warehouse ? warehouse.warehouse_name : ''; // Set name if found
+
+                            if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                            switchTab('tab-box-management');
+                        } else {
+                            // If warehouse doesn't exist, just clear flags and proceed normally
+                            console.warn(`Warehouse with ID ${lastOpenedWarehouseId} not found.`);
+                        }
+                    } catch (error) {
+                        console.error('Error processing auto-open from localStorage:', error);
+                        // Proceed with normal initialization if there's an error
+                    } finally {
+                        // Always clear the flags after attempting to use them
+                        localStorage.removeItem('lastOpenedWarehouseId');
+                        localStorage.removeItem('autoOpenBoxManagement');
+                    }
+                }
+
                 if (!currentUserId || !authToken) {
                     alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
                     window.location.href = 'box.html';
                     return;
                 }
 
-                try {
-                    const userData = await apiFetch('/api/box/users/me');
-                    currentUsernameSpan.textContent = userData.username;
-                    currentUserAvatarImg.src = userData.user_profile_image_url || '/images/box_item.png';
-                    localStorage.setItem(`boxCurrentUsername`, userData.username);
-                    localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/box_item.png');
-                } catch (error) {
-                    if (error.status === 401 || error.status === 403) {
-                        alert('登入憑證無效或已過期，請重新登入。');
-                        localStorage.removeItem(`boxUserToken_${currentUserId}`);
-                        localStorage.removeItem(`boxCurrentUserId`);
-                        localStorage.removeItem(`boxCurrentUsername`);
-                        localStorage.removeItem(`boxCurrentUserAvatar`);
-                        window.location.href = 'box.html';
-                    } else {
-                        showApiError('無法獲取用戶信息。');
-                    }
-                    return;
+                // If not auto-opening or if auto-open failed, and not already on box-management, load default tab (warehouses)
+                // This logic might need adjustment based on whether switchTab already handles default loading.
+                if (!(lastOpenedWarehouseId && autoOpenBoxManagement === 'true' && document.getElementById('tab-box-management')?.classList.contains('active'))) {
+                    const activeTab = document.querySelector('.tab-navigation button.tab-link.active');
+                    if (!activeTab || activeTab.dataset.tab !== 'tab-box-management') {
+                         // Only switch to warehouses if no other tab is explicitly active or set by auto-open
+                        if(!document.querySelector('.tab-navigation button.tab-link.active')){
+                            switchTab('tab-warehouses'); 
+                        }
+                    } // else, if box-management was successfully activated, this block is skipped.
                 }
-
-                setupEventListeners();
-                switchTab('tab-warehouses');
+                 setupEventListeners(); // Moved here to ensure it runs after potential tab switch
             }
 
             function setupEventListeners() {

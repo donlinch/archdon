@@ -719,7 +719,11 @@
 
             // 返回按鈕
             document.getElementById('backButton').addEventListener('click', () => {
-                window.location.href = `box-my.html?warehouseId=${currentWarehouseId}`;
+                if (currentWarehouseId) {
+                    localStorage.setItem('lastOpenedWarehouseId', currentWarehouseId);
+                    localStorage.setItem('autoOpenBoxManagement', 'true');
+                }
+                window.location.href = 'box-my.html';
             });
 
             // 圖片上傳預覽
