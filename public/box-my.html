@@ -1355,6 +1355,9 @@
             const boxFormCoverImageFileInput = document.getElementById('boxFormCoverImageFile');
             const itemFormImageFileInput = document.getElementById('itemFormImageFile');
             const profileImageFile = document.getElementById('profileImageFile');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const currentUsernameSpan = document.getElementById('currentUsername');
+            const currentUserAvatarImg = document.getElementById('currentUserAvatar');
 
             // --- 輔助函數：HTML 轉義 (簡單版本，複雜需求請用函式庫) ---
             function escapeHtml(unsafe) {
@@ -1429,39 +1432,29 @@
 
         // --- 初始化 (如先前提供) ---
         async function initializePage() {
-            const params = new URLSearchParams(window.location.search);
-            currentUserId = localStorage.getItem('boxCurrentUserId') || params.get('userId'); // 優先使用 localStorage
-            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
-
             if (!currentUserId || !authToken) {
-                alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
                 window.location.href = 'box.html';
                 return;
             }
 
-            // 驗證 token 並獲取用戶信息
             try {
-                const userData = await apiFetch('/api/box/users/me'); // 使用 defaultOptions 中的 token
+                const userData = await apiFetch('/api/box/users/me');
                 currentUsername = userData.username;
                 currentUserAvatar = userData.user_profile_image_url || '/images/box_item.png';
-                localStorage.setItem(`boxCurrentUsername`, userData.username); // 更新 local storage
+                localStorage.setItem(`boxCurrentUsername`, userData.username);
                 localStorage.setItem(`boxCurrentUserAvatar`, userData.user_profile_image_url || '/images/box_item.png');
+                
+                // 更新頁面顯示
+                if (currentUsernameSpan) currentUsernameSpan.textContent = userData.username;
+                if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/box_item.png';
             } catch (error) {
-                if (error.status === 401 || error.status === 403) {
-                    alert('登入憑證無效或已過期，請重新登入。');
-                    localStorage.removeItem(`boxUserToken_${currentUserId}`);
-                    localStorage.removeItem(`boxCurrentUserId`);
-                    localStorage.removeItem(`boxCurrentUsername`);
-                    localStorage.removeItem(`boxCurrentUserAvatar`);
-                    window.location.href = 'box.html';
-                } else {
-                    showApiError('無法獲取用戶信息。');
-                }
+                console.error('無法獲取用戶信息：', error);
+                showApiError('無法獲取用戶信息。');
                 return;
             }
 
             setupEventListeners();
-            switchTab('tab-warehouses'); // 預設顯示倉庫分頁
+            loadWarehouses(); // 自動載入倉庫列表
         }
 
 
@@ -1629,9 +1622,12 @@
 
         async function loadWarehouses() {
             if (!currentUserId || !authToken) return;
+            
             warehouseListMessage.textContent = '正在載入倉庫列表...';
             warehouseListMessage.style.color = '#555';
             warehouseListDiv.innerHTML = '';
+            
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
             try {
                 const warehouses = await apiFetch('/api/box/my-warehouses');
@@ -1639,59 +1635,35 @@
                     warehouseListMessage.textContent = '您還沒有創建任何倉庫。可以從「新增倉庫」分頁開始！';
                     return;
                 }
-                warehouseListMessage.textContent = ''; // 清除載入訊息
+                warehouseListMessage.textContent = '';
 
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
-    card.className = 'warehouse-card';
-    card.innerHTML = `
-        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
-        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
-        <div class="actions">
-            <button class="enter-warehouse" 
-                    data-warehouse-id="${warehouse.warehouse_id}" 
-                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
-                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
-            </button>
-            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
-            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
-        </div>
-    `;
-    warehouseListDiv.appendChild(card);
-                    
+                    card.className = 'warehouse-card';
+                    card.innerHTML = `
+                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
+                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
+                        <div class="actions">
+                            <button class="enter-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
+                                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
+                            </button>
+                            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
+                            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
+                        </div>
+                    `;
+                    warehouseListDiv.appendChild(card);
                 });
 
-// 為新的倉庫卡片新增事件監聽器
-warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // 明確設置 currentSelectedWarehouseId
-        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-        
-        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-        switchTab('tab-box-management');
-    });
-});
-
-                // 為新的倉庫卡片新增事件監聽器
-                warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-                        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // 顯示分頁
-                        switchTab('tab-box-management');
-                    });
-                });
-                warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleEditWarehouseModalOpen(e.target.dataset.warehouseId));
-                });
-                warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
-                });
-
+                // 為新加入的按鈕添加事件監聽器
+                addWarehouseButtonListeners();
             } catch (error) {
+                console.error('載入倉庫失敗:', error);
                 warehouseListMessage.textContent = `載入倉庫失敗: ${error.message || '未知錯誤'}`;
                 warehouseListMessage.style.color = '#c0392b';
+            } finally {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
             }
         }
 
@@ -2736,9 +2708,12 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
         async function loadWarehouses() {
             if (!currentUserId || !authToken) return;
+            
             warehouseListMessage.textContent = '正在載入倉庫列表...';
             warehouseListMessage.style.color = '#555';
             warehouseListDiv.innerHTML = '';
+            
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
             try {
                 const warehouses = await apiFetch('/api/box/my-warehouses');
@@ -2746,61 +2721,35 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
                     warehouseListMessage.textContent = '您還沒有創建任何倉庫。可以從「新增倉庫」分頁開始！';
                     return;
                 }
-                warehouseListMessage.textContent = ''; // 清除載入訊息
+                warehouseListMessage.textContent = '';
 
                 warehouses.forEach(warehouse => {
                     const card = document.createElement('div');
-    card.className = 'warehouse-card';
-    card.innerHTML = `
-        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
-        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
-        <div class="actions">
-            <button class="enter-warehouse" 
-                    data-warehouse-id="${warehouse.warehouse_id}" 
-                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
-                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
-            </button>
-            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
-            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
-        </div>
-    `;
-    warehouseListDiv.appendChild(card);
-                    
+                    card.className = 'warehouse-card';
+                    card.innerHTML = `
+                        <h3>${escapeHtml(warehouse.warehouse_name)}</h3>
+                        <p>${escapeHtml(warehouse.warehouse_description || '沒有描述')}</p>
+                        <div class="actions">
+                            <button class="enter-warehouse" 
+                                    data-warehouse-id="${warehouse.warehouse_id}" 
+                                    data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">
+                                進入倉庫 (${warehouse.box_count || 0} 個紙箱)
+                            </button>
+                            <button class="edit-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">編輯</button>
+                            <button class="delete-warehouse" data-warehouse-id="${warehouse.warehouse_id}" data-warehouse-name="${escapeHtml(warehouse.warehouse_name)}">刪除</button>
+                        </div>
+                    `;
+                    warehouseListDiv.appendChild(card);
                 });
 
-// 為新的倉庫卡片新增事件監聽器
-warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // 明確設置 currentSelectedWarehouseId
-        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-        
-        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-        switchTab('tab-box-management');
-    });
-});
-
-                // 為新的倉庫卡片新增事件監聽器
-                warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        currentSelectedWarehouseId = e.target.dataset.warehouseId;
-                        currentSelectedWarehouseName = e.target.dataset.warehouseName;
-                        if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block'; // 顯示分頁
-                        // Reset box management initialization flag so boxes are loaded fresh
-                        this.boxManagementInitialized = false; 
-                        switchTab('tab-box-management');
-                    });
-                });
-                warehouseListDiv.querySelectorAll('.edit-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => openEditWarehouseModal(e.target.dataset.warehouseId));
-                });
-                warehouseListDiv.querySelectorAll('.delete-warehouse').forEach(btn => {
-                    btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
-                });
-
+                // 為新加入的按鈕添加事件監聽器
+                addWarehouseButtonListeners();
             } catch (error) {
+                console.error('載入倉庫失敗:', error);
                 warehouseListMessage.textContent = `載入倉庫失敗: ${error.message || '未知錯誤'}`;
                 warehouseListMessage.style.color = '#c0392b';
+            } finally {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
             }
         }
 
