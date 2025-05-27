@@ -10,9 +10,9 @@
             font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
             line-height: 1.6;
             color: #333;
-            background-color: #f0f4f8; /* Light blue-gray background */
+            background-color: #f5f7fa;
             margin: 0;
-            padding: 0 20px 20px 20px; /* Light blue-gray background */
+            padding: 0 20px 20px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -20,6 +20,208 @@
             justify-content: center;
         }
 
+        .page-header {
+            background: linear-gradient(135deg, #FFB74D, #FFA726);
+            padding: 2rem;
+            text-align: center;
+            width: 100%;
+            border-radius: 0;
+            box-shadow: 0 4px 15px rgba(255, 183, 77, 0.2);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%,
+                                              transparent 50%, rgba(255,255,255,0.1) 50%,
+                                              rgba(255,255,255,0.1) 75%, transparent 75%,
+                                              transparent);
+            background-size: 30px 30px;
+            opacity: 0.3;
+        }
+
+        .page-title {
+            color: #fff;
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        #user-selection-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            margin: 0;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .user-card.selected {
+            background-color: #fff;
+            border: 2px solid #FFB74D;
+            box-shadow: 0 8px 20px rgba(255, 183, 77, 0.2);
+        }
+
+        .user-card img.profile-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin-right: 1.5rem;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .user-card:hover img.profile-avatar {
+            transform: scale(1.05);
+        }
+
+        .user-card span.username {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .password-input-area {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 183, 77, 0.2);
+        }
+
+        .password-input-area input[type="password"] {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-input-area input[type="password"]:focus {
+            border-color: #FFB74D;
+            box-shadow: 0 0 0 4px rgba(255, 183, 77, 0.1);
+            outline: none;
+        }
+
+        .password-input-area .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .password-input-area button {
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .password-input-area button.primary {
+            background-color: #FFB74D;
+            color: white;
+            border: none;
+        }
+
+        .password-input-area button.primary:hover {
+            background-color: #FFA726;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.3);
+        }
+
+        .password-input-area button.secondary {
+            background-color: #fff;
+            color: #666;
+            border: 2px solid #e0e0e0;
+        }
+
+        .password-input-area button.secondary:hover {
+            background-color: #f5f5f5;
+            border-color: #ccc;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+            padding: 0.5rem 1rem;
+            background-color: #fdf0ed;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #showRegisterModalBtn {
+            background-color: #fff;
+            color: #FFB74D;
+            border: 2px solid #FFB74D;
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #showRegisterModalBtn:hover {
+            background-color: #FFB74D;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.2);
+        }
+
+        .register-text {
+            color: #666;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
 
         /* --- 頁面標題樣式 --- */
 .page-title-header {
@@ -28,13 +230,6 @@
     text-align: center;
     width: 100%;
     box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-}
-
-.page-title {
-    color: #424242;
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 700;
 }
 
 .page-container {
@@ -791,232 +986,6 @@
     align-items: center;
     padding: 15px;
 }
-
-        .container {
-            background-color: #fff;
-            padding: 30px 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-        }
-
-        h1 {
-            color: #2c3e50; /* Darker blue */
-            margin-bottom: 25px;
-            font-size: 2.2em;
-        }
-
-        #user-selection-area {
-            margin-top: 20px;
-        }
-
-        .user-card {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            background-color: #f9f9f9;
-        }
-
-        .user-card.selected {
-            background-color: #eff7ff;
-            border: 2px solid #3498db;
-        }
-
-        .user-card img.profile-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin-right: 20px;
-            object-fit: cover;
-            border: 2px solid #ddd;
-        }
-
-        .user-card span.username {
-            font-size: 1.4em;
-            font-weight: 600;
-            color: #34495e; /* Slightly lighter dark blue */
-        }
-
-        /* Password Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background-color: #fff;
-            padding: 25px 30px;
-            border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            width: 90%;
-            max-width: 400px;
-            text-align: left;
-        }
-
-        .modal h2 {
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            color: #2c3e50;
-        }
-
-        .modal label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        .modal input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 1em;
-        }
-        .modal input[type="password"]:focus {
-            border-color: #3498db;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .modal button {
-            padding: 10px 18px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-
-        .modal button.primary {
-            background-color: #3498db; /* Blue */
-            color: white;
-        }
-        .modal button.primary:hover {
-            background-color: #2980b9;
-        }
-
-        .modal button.secondary {
-            background-color: #ecf0f1; /* Light gray */
-            color: #333;
-            border: 1px solid #bdc3c7;
-        }
-         .modal button.secondary:hover {
-            background-color: #dadedf;
-        }
-
-
-        #loading-message, #error-message {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        #loading-message { color: #2980b9; background-color: #e0f0ff; }
-        #error-message { color: #c0392b; background-color: #fbe N; } /* Typo, should be #fbeae5 or similar */
-        #error-message { color: #c0392b; background-color: #fdedec; }
-
-        .password-input-area {
-            display: none;
-            margin-top: -10px;
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .password-input-area.visible {
-            display: block;
-        }
-
-        .password-input-area input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 1em;
-        }
-
-        .password-input-area input[type="password"]:focus {
-            border-color: #3498db;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
-        .password-input-area .button-group {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .password-input-area button {
-            padding: 10px 18px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .password-input-area button.primary {
-            background-color: #3498db;
-            color: white;
-        }
-
-        .password-input-area button.primary:hover {
-            background-color: #2980b9;
-        }
-
-        .password-input-area button.secondary {
-            background-color: #ecf0f1;
-            color: #333;
-            border: 1px solid #bdc3c7;
-        }
-
-        .password-input-area button.secondary:hover {
-            background-color: #dadedf;
-        }
-
-        .password-input-area .error-message {
-            color: #c0392b;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            display: none;
-        }
 
     </style>
 </head>
