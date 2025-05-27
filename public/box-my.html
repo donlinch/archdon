@@ -1607,6 +1607,10 @@
 
             if (tabId === 'tab-warehouses') {
                 loadWarehouses();
+                setTimeout(() => {
+                    switchTab('tab-warehouses'); // 延遲後切換回倉庫列表
+                    addWarehouseStatus.textContent = '';
+                }, 100);
                 if(boxManagementTabLink) boxManagementTabLink.style.display = 'none';
             } else if (tabId === 'tab-box-management') {
                 if (currentSelectedWarehouseId) {
@@ -1622,7 +1626,7 @@
                 document.getElementById('search-results-message').textContent = '';
                 document.getElementById('search-pagination').innerHTML = '';
             }
-            resetFormStatuses();
+            resetFormStatuses(); 
              
         }
 
@@ -2810,7 +2814,7 @@ warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
 
 
 
-                
+
 
 // 為新的倉庫卡片新增事件監聽器
 warehouseListDiv.querySelectorAll('.enter-warehouse').forEach(btn => {
