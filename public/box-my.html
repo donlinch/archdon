@@ -2368,7 +2368,12 @@
                 }
             }
 
-            function renderSearchResults(results) {
+
+
+
+
+
+           function renderSearchResults(results) {
                 searchResultsArea.innerHTML = '';
                 if (!results || results.length === 0) return;
                 results.forEach(result => {
@@ -2376,32 +2381,45 @@
                     itemDiv.className = 'search-result-item';
                     let detailsHtml = `<h4>${escapeHtml(result.name)} <span class="result-type">(${result.type === 'item' ? '物品' : '紙箱'})</span></h4>
                                        <p><strong>${result.type === 'item' ? '物品描述' : '紙箱備註'}:</strong> ${escapeHtml(result.description || '無')}</p>
-                                       <p><strong>AI關鍵字:</strong> ${result.keywords && result.keywords.length > 0 ? result.keywords.map(k => escapeHtml(k)).join(', ') : '無'}</p>
+                                       
                                        <p><strong>所在倉庫:</strong> ${escapeHtml(result.warehouse_name || '未知倉庫')} ${result.warehouse_id ? `(ID: ${result.warehouse_id})` : ''}</p>`;
                     if (result.type === 'item') {
                         detailsHtml += `<p><strong>所在紙箱:</strong> ${escapeHtml(result.box_name)} (編號: ${escapeHtml(result.box_number)}, ID: ${result.box_id})</p>`;
-                    } else {
+                    } else { // 如果是紙箱
                          detailsHtml += `<p><strong>紙箱編號:</strong> ${escapeHtml(result.box_number)}</p>`;
                     }
+                    // 保留 "查看詳情" 按鈕
                     detailsHtml += `<button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>`;
                     itemDiv.innerHTML = detailsHtml;
                     searchResultsArea.appendChild(itemDiv);
                 });
+                // 確保事件監聽器重新綁定，如果之前是直接綁定到按鈕上的話
+                // （您目前的寫法是每次重新渲染後綁定，這是OK的）
                 searchResultsArea.querySelectorAll('.view-details-btn').forEach(btn => btn.onclick = (e) => {
                     const { type, warehouseId, boxId, itemId } = e.target.dataset;
-                    currentSelectedWarehouseId = warehouseId;
+                    currentSelectedWarehouseId = warehouseId; // 更新當前選中的倉庫ID
+                    
+                    // 嘗試獲取倉庫名稱，如果倉庫列表已加載
                     const whCard = warehouseListDiv.querySelector(`.enter-warehouse[data-warehouse-id="${warehouseId}"]`);
-                    if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName; else currentSelectedWarehouseName = "未知倉庫";
+                    if(whCard) currentSelectedWarehouseName = whCard.dataset.warehouseName; 
+                    else currentSelectedWarehouseName = "未知倉庫"; // 如果找不到，設為未知
 
                     if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-                    switchTab('tab-box-management');
+                    switchTab('tab-box-management'); // 切換到紙箱管理分頁
+
+                    // 延遲執行，確保紙箱管理分頁內容已加載
                     setTimeout(() => {
                         const boxCard = boxGridArea.querySelector(`.box-card[data-box-id="${boxId}"]`);
-                        if(boxCard){
+                        if(boxCard){ // 如果紙箱卡片存在於當前視圖
                             const toggleBtn = boxCard.querySelector('.toggle-items-btn');
-                            if(toggleBtn && !currentBoxViewItemsExpanded[boxId]) toggleItemListView(boxId, toggleBtn);
+                            // 如果物品列表未展開，則展開它
+                            if(toggleBtn && !currentBoxViewItemsExpanded[boxId]) {
+                                toggleItemListView(boxId, toggleBtn);
+                            }
+                            // (可選) 將該卡片滾動到視圖中
+                            boxCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
-                    }, 500);
+                    }, 500); // 500ms 延遲，根據需要調整
                 });
             }
 
