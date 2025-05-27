@@ -353,6 +353,21 @@ router.post('/users/register', async (req, res) => {
         }
     });
 
+    // GET /api/box/auth/check - 驗證當前用戶的 Token 是否有效
+    router.get('/auth/check', authenticateBoxUser, (req, res) => {
+        // 如果 authenticateBoxUser 中間件成功執行 (即 Token 有效),
+        // 就代表用戶已通過驗證。直接回應成功。
+        // req.boxUser 中會包含已驗證的用戶信息。
+        res.status(200).json({ 
+            success: true, 
+            message: 'Token is valid.', 
+            user: { // 可以選擇性地返回一些用戶信息
+                userId: req.boxUser.userId,
+                username: req.boxUser.username 
+            }
+        });
+    });
+
     // ====================================================================
     // ==       統一圖片上傳與分析 API                             ==
     // ====================================================================

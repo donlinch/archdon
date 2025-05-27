@@ -943,6 +943,41 @@
                 margin-top: 10px; /* Add some space if content was removed from normal flow */
                 padding-top: 8px;
                 border-top: 1px solid var(--border-color);
+                display: grid; /* Ensure grid for button sizing */
+                grid-template-columns: repeat(3, 1fr); /* 3 equal columns for the 3 icon buttons */
+                gap: 5px; /* Reduced gap for tighter icon buttons */
+            }
+            .box-card .box-actions button {
+                font-size: 0; /* Hide text for icon buttons */
+                padding: 8px; /* Adjust padding for icon buttons */
+                width: auto; /* Let grid control width */
+                height: 32px; /* Fixed height for icon buttons */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .box-card .box-actions .toggle-items-btn::before {
+                content: "👁️"; /* Eye icon for toggle items */
+                font-size: 16px;
+            }
+            .box-card .box-actions .edit-box-btn::before {
+                content: "✏️"; /* Pencil icon for edit */
+                font-size: 16px;
+            }
+            .box-card .box-actions .delete-box-btn::before {
+                content: "🗑️"; /* Trash icon for delete */
+                font-size: 16px;
+            }
+
+            /* Reposition Item Count to top right */
+            .box-card .item-count {
+                top: 8px; /* Align with box-number's top */
+                right: 8px;
+                bottom: auto; /* Remove bottom positioning */
+            }
+            /* Adjust box name to not overlap with item count potentially */
+            .box-card .box-name {
+                max-width: calc(100% - 60px); /* Adjust max-width if item-count is wide */
             }
             /* End of Box Card adjustments */
 
