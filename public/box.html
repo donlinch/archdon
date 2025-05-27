@@ -987,6 +987,111 @@
     padding: 15px;
 }
 
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.close-btn {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #424242;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    border-color: #FFB74D;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.2);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.modal-actions button {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.modal-actions button.primary {
+    background-color: #FFB74D;
+    color: white;
+    border: none;
+}
+
+.modal-actions button.primary:hover {
+    background-color: #FFA726;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 183, 77, 0.3);
+}
+
+.modal-actions button.secondary {
+    background-color: #f5f5f5;
+    color: #666;
+    border: none;
+}
+
+.modal-actions button.secondary:hover {
+    background-color: #e0e0e0;
+}
+
+.modal-actions button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
     </style>
 </head>
 <body>
@@ -1024,30 +1129,22 @@
         <!-- Registration Modal -->
         <div id="registerModal" class="modal">
             <div class="modal-content">
-                <span class="close-btn" data-modal-id="registerModal">×</span>
-                <h2>註冊新使用者</h2>
+                <span class="close-btn" data-modal-id="registerModal">&times;</span>
+                <h2 style="margin-bottom: 1.5rem; color: #424242;">註冊新使用者</h2>
                 <form id="registerForm">
                     <div class="form-group">
-                        <label for="registerUsername">用戶名 (至少3位):</label>
-                        <input type="text" id="registerUsername" required minlength="3">
+                        <label for="registerUsername">用戶名稱 (至少3位)</label>
+                        <input type="text" id="registerUsername" required minlength="3" placeholder="請輸入用戶名稱">
                     </div>
                     <div class="form-group">
-                        <label for="registerPassword">密碼 (至少6位):</label>
-                        <input type="password" id="registerPassword" required minlength="6">
+                        <label for="registerPassword">密碼 (至少6位)</label>
+                        <input type="password" id="registerPassword" required minlength="6" placeholder="請輸入密碼">
                     </div>
                     <div class="form-group">
-                        <label for="registerConfirmPassword">確認密碼:</label>
-                        <input type="password" id="registerConfirmPassword" required>
+                        <label for="registerConfirmPassword">確認密碼</label>
+                        <input type="password" id="registerConfirmPassword" required placeholder="請再次輸入密碼">
                     </div>
-                    <!-- 可選的頭像上傳，初期可以先省略，讓用戶在登入後設置 -->
-                    <!--
-                    <div class="form-group">
-                        <label for="registerProfileImageFile">頭像 (可選):</label>
-                        <input type="file" id="registerProfileImageFile" accept="image/*">
-                        <div class="image-upload-preview" id="registerImagePreview"><img></div>
-                    </div>
-                    -->
-                    <p id="register-modal-error-message" style="color: #c0392b; font-size: 0.9em; margin-bottom: 10px; display:none;"></p>
+                    <p id="register-modal-error-message" style="color: #e74c3c; font-size: 0.9em; margin-bottom: 1rem; display: none;"></p>
                     <div class="modal-actions">
                         <button type="button" class="secondary close-modal-btn" data-modal-id="registerModal">取消</button>
                         <button type="submit" class="primary">註冊</button>
@@ -1125,7 +1222,7 @@
                     registerModalErrorMessage.style.display = 'none';
                     if (registerImagePreviewDiv) registerImagePreviewDiv.style.display = 'none';
                     if (registerImagePreviewDiv) registerImagePreviewDiv.querySelector('img').src = '#';
-                    registerModal.style.display = 'flex';
+                    registerModal.classList.add('show');
                     registerUsernameInput.focus();
                 });
             }
@@ -1135,12 +1232,13 @@
             }
 
             closeRegisterModalBtns.forEach(btn => {
-                btn.addEventListener('click', () => registerModal.style.display = 'none');
+                btn.addEventListener('click', () => registerModal.classList.remove('show'));
             });
+
             if (registerModal) {
                 registerModal.addEventListener('click', (e) => {
                     if (e.target === registerModal) {
-                        registerModal.style.display = 'none';
+                        registerModal.classList.remove('show');
                     }
                 });
             }
@@ -1202,7 +1300,7 @@
 
                     if (response.ok && data.success) {
                         alert('註冊成功！您現在可以使用新帳號登入。');
-                        registerModal.style.display = 'none';
+                        registerModal.classList.remove('show');
                         fetchAndRenderUsers(); // 刷新用戶列表以包含新用戶
 
                         // 如果後端返回了token並且希望註冊後自動登入:
