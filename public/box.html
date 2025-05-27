@@ -513,43 +513,15 @@
 
             // 快速登入按鈕點擊事件
             if (quickLoginBtn) {
-                quickLoginBtn.addEventListener('click', async () => {
-                    quickLoginBtn.disabled = true;
-                    quickLoginBtn.textContent = '登入中...';
-
-                    try {
-                        // 驗證保存的 token 是否有效
-                        const response = await fetch('/api/box/users/verify-token', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${savedUserToken}`
-                            }
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok && data.success) {
-                            // Token 有效，直接跳轉到用戶頁面
-                            window.location.href = `box-my.html?userId=${savedUserId}`;
-                        } else {
-                            // Token 無效，清除保存的信息並顯示登入表單
-                            localStorage.removeItem(`boxUserToken_${savedUserId}`);
-                            localStorage.removeItem('boxCurrentUserId');
-                            localStorage.removeItem('boxCurrentUsername');
-                            localStorage.removeItem('boxCurrentUserAvatar');
-                            quickLoginContainer.style.display = 'none';
-                            loginFormContainer.style.display = 'block';
-                            alert('登入信息已過期，請重新登入');
-                        }
-                    } catch (error) {
-                        console.error('快速登入失敗:', error);
-                        alert('快速登入失敗，請重新登入');
+                quickLoginBtn.addEventListener('click', () => {
+                    if (savedUserId && savedUserToken) {
+                        // 直接使用保存的登入信息跳轉
+                        window.location.href = `box-my.html?userId=${savedUserId}`;
+                    } else {
+                        // 登入信息不完整，顯示登入表單
                         quickLoginContainer.style.display = 'none';
                         loginFormContainer.style.display = 'block';
-                    } finally {
-                        quickLoginBtn.disabled = false;
-                        quickLoginBtn.textContent = '快速登入';
+                        alert('登入信息已失效，請重新登入');
                     }
                 });
             }
