@@ -862,22 +862,45 @@
         
         /* Item Details Modal */
         #itemDetailsModal .modal-content {
-            max-width: 700px; /* Can be wider for image display */
+            max-width: 95%; /* 在手機畫面下佔據大部分寬度 */
+            width: 95%;
+            max-height: 90vh; /* 限制最大高度 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            box-sizing: border-box;
         }
         #itemDetailsContainer img {
-            display: block;
-            max-width: 100%;
-            max-height: 70vh; /* Limit height */
-            object-fit: contain;
-            margin: 0 auto 20px auto; /* Center image and add bottom margin */
+            max-width: 100%; /* 確保圖片不會超出容器 */
+            max-height: 70vh; /* 限制圖片高度 */
+            object-fit: contain; /* 保持圖片比例 */
+            margin-bottom: 15px; /* 與下方文字間距 */
+        }
+        #itemDetailsContainer .item-details {
+            text-align: center;
+            width: 100%;
+            padding: 10px;
+            background-color: var(--background-light);
             border-radius: var(--border-radius-base);
-            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+        #itemDetailsContainer .item-details h3 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.2em;
+        }
+        #itemDetailsContainer .item-details p {
+            margin: 5px 0;
+            color: var(--text-secondary);
+            font-size: 0.9em;
         }
         #itemDetailsActions {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-top: 15px;
+            width: 100%;
         }
         #itemDetailsActions button {
             padding: 10px 25px; /* Larger buttons */
@@ -1554,7 +1577,11 @@
             <span class="close-btn" data-modal-id="itemDetailsModal">×</span>
             <div id="itemDetailsContainer">
                 <img id="itemDetailsImage" src="" alt="物品大圖" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
-                <div id="itemDetailsActions" style="display: flex; justify-content: center; margin-top: 15px;">
+                <div class="item-details">
+                    <h3 id="itemDetailsName"></h3>
+                    <p id="itemDetailsLocation"></p>
+                </div>
+                <div id="itemDetailsActions" style="display: flex; justify-content: center; gap: 15px;">
                     <button id="editItemFromDetailsBtn" class="primary" style="margin-right: 10px;">編輯</button>
                     <button id="deleteItemFromDetailsBtn" class="danger">刪除</button>
                 </div>
@@ -2750,39 +2777,34 @@
             }
 
             // --- 物品詳情 Modal ---
-            function showItemDetails(item) { // This function is called when clicking an item image within a box
-                const modal = document.getElementById('itemDetailsModal');
+            function showItemDetails(item) {
                 const imageElement = document.getElementById('itemDetailsImage');
-                 // Assuming the div below image in itemDetailsContainer has id 'itemFullDetails'
-                const detailsContent = document.getElementById('itemDetailsContainer').querySelector('#itemFullDetails');
+                const nameElement = document.getElementById('itemDetailsName');
+                const locationElement = document.getElementById('itemDetailsLocation');
                 const editBtn = document.getElementById('editItemFromDetailsBtn');
                 const deleteBtn = document.getElementById('deleteItemFromDetailsBtn');
-                const actions = document.getElementById('itemDetailsActions');
-
-                // Ensure all parts are visible initially when showing full details
-                if(detailsContent) detailsContent.style.display = 'block';
-                if(actions) actions.style.display = 'flex'; // Assuming actions flex display based on CSS
 
                 if(imageElement) imageElement.src = item.item_image_url || '/images/default_item.png';
+                
+                if(nameElement) nameElement.textContent = escapeHtml(item.item_name);
+                
+                if(locationElement) {
+                    locationElement.innerHTML = `
+                        倉庫：${escapeHtml(item.warehouse_name || '未知')} - 
+                        紙箱：${escapeHtml(item.box_name || '未知')} (${escapeHtml(item.box_number || '無編號')})
+                    `;
+                }
 
-                // Populate other details (if any) in the detailsContent div (you might need to add this div and populate it)
-                // Example: if you have a div with id="itemFullDetails" inside itemDetailsContainer
-                // const itemFullDetailsDiv = document.getElementById('itemFullDetails');
-                // if(itemFullDetailsDiv) {
-                //     itemFullDetailsDiv.innerHTML = `
-                //         <p><strong>名稱:</strong> ${escapeHtml(item.item_name)}</p>
-                //         <p><strong>描述:</strong> ${escapeHtml(item.item_description || '無')}</p>
-                //         <p><strong>數量:</strong> ${item.quantity}</p>
-                //         <p><strong>紙箱:</strong> ${escapeHtml(item.box_name)} (${escapeHtml(item.box_number)})</p>
-                //         <p><strong>倉庫:</strong> ${escapeHtml(item.warehouse_name || '未知')}</p>
-                //     `;
-                // }
-                // Note: The current HTML structure for itemDetailsModal only has the image and actions.
-                // If you want to show more details, you need to add elements inside itemDetailsContainer
-                // For now, I will assume the details are not displayed in this modal based on current HTML.
-
-                if(editBtn) editBtn.onclick = () => { closeModal('itemDetailsModal'); openEditItemModal(item.item_id, item.box_id); };
-                if(deleteBtn) deleteBtn.onclick = () => { closeModal('itemDetailsModal'); handleDeleteItem(item.item_id, item.item_name, item.box_id); };
+                if(editBtn) editBtn.onclick = () => { 
+                    closeModal('itemDetailsModal'); 
+                    openEditItemModal(item.item_id, item.box_id); 
+                };
+                
+                if(deleteBtn) deleteBtn.onclick = () => { 
+                    closeModal('itemDetailsModal'); 
+                    handleDeleteItem(item.item_id, item.item_name, item.box_id); 
+                };
+                
                 openModal('itemDetailsModal');
             }
 
