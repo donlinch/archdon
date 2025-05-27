@@ -2420,6 +2420,101 @@
             btn.addEventListener('click', (e) => handleDeleteWarehouse(e.target.dataset.warehouseId, e.target.dataset.warehouseName));
         });
     }
+
+    // 打開新增倉庫對話框
+    function openCreateWarehouseModal() {
+        const warehouseForm = document.getElementById('warehouseForm');
+        const warehouseModalTitle = document.getElementById('warehouseModalTitle');
+        const warehouseFormWarehouseIdInput = document.getElementById('warehouseFormWarehouseId');
+        const warehouseFormNameInput = document.getElementById('warehouseFormName');
+        const warehouseFormDescriptionInput = document.getElementById('warehouseFormDescription');
+        const warehouseFormStatusP = document.getElementById('warehouseFormStatus');
+
+        warehouseForm.reset();
+        warehouseModalTitle.textContent = '新增倉庫';
+        warehouseFormWarehouseIdInput.value = ''; // 清除ID，表示是新增
+        warehouseFormNameInput.value = '';
+        warehouseFormDescriptionInput.value = '';
+        warehouseFormStatusP.textContent = '';
+        openModal('warehouseModal');
+    }
+
+    // 打開編輯倉庫對話框
+    async function openEditWarehouseModal(warehouseId) {
+        const warehouseForm = document.getElementById('warehouseForm');
+        const warehouseModalTitle = document.getElementById('warehouseModalTitle');
+        const warehouseFormWarehouseIdInput = document.getElementById('warehouseFormWarehouseId');
+        const warehouseFormNameInput = document.getElementById('warehouseFormName');
+        const warehouseFormDescriptionInput = document.getElementById('warehouseFormDescription');
+        const warehouseFormStatusP = document.getElementById('warehouseFormStatus');
+
+        try {
+            const warehouse = await apiFetch(`/api/box/warehouses/${warehouseId}`);
+            warehouseModalTitle.textContent = '編輯倉庫';
+            warehouseFormWarehouseIdInput.value = warehouseId;
+            warehouseFormNameInput.value = warehouse.warehouse_name;
+            warehouseFormDescriptionInput.value = warehouse.warehouse_description || '';
+            warehouseFormStatusP.textContent = '';
+            openModal('warehouseModal');
+        } catch (error) {
+            console.error('載入倉庫資料失敗:', error);
+            alert(`無法載入倉庫資料：${error.message}`);
+        }
+    }
+
+    // 處理倉庫表單提交
+    async function handleWarehouseFormSubmit(event) {
+        event.preventDefault();
+        
+        const warehouseForm = document.getElementById('warehouseForm');
+        const warehouseFormStatusP = document.getElementById('warehouseFormStatus');
+        const warehouseFormWarehouseIdInput = document.getElementById('warehouseFormWarehouseId');
+        const warehouseFormNameInput = document.getElementById('warehouseFormName');
+        const warehouseFormDescriptionInput = document.getElementById('warehouseFormDescription');
+        const submitButton = warehouseForm.querySelector('button[type="submit"]');
+
+        const warehouseId = warehouseFormWarehouseIdInput.value;
+        const warehouseName = warehouseFormNameInput.value;
+        const warehouseDescription = warehouseFormDescriptionInput.value;
+
+        if (!warehouseName.trim()) {
+            warehouseFormStatusP.textContent = '請輸入倉庫名稱';
+            warehouseFormStatusP.style.color = '#c0392b';
+            return;
+        }
+
+        submitButton.disabled = true;
+        warehouseFormStatusP.textContent = '處理中...';
+        warehouseFormStatusP.style.color = '#555';
+
+        try {
+            const endpoint = warehouseId 
+                ? `/api/box/warehouses/${warehouseId}`
+                : '/api/box/warehouses';
+            
+            const method = warehouseId ? 'PUT' : 'POST';
+            
+            await apiFetch(endpoint, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    warehouse_name: warehouseName,
+                    warehouse_description: warehouseDescription
+                })
+            });
+
+            closeModal('warehouseModal');
+            loadWarehouses(); // 重新載入倉庫列表
+        } catch (error) {
+            console.error('儲存倉庫失敗:', error);
+            warehouseFormStatusP.textContent = `儲存失敗：${error.message}`;
+            warehouseFormStatusP.style.color = '#c0392b';
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
 });
 
 
