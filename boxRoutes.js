@@ -335,7 +335,8 @@ module.exports = function(dependencies) {
         try {
             const [visionAnalysisResult] = await visionClient.annotateImage({
                 image: { content: imageBuffer },
-                features: [ { type: 'LABEL_DETECTION', maxResults: 10 }, { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
+                features: [ { type: 'LABEL_DETECTION', maxResults: 10 },         { type: 'TEXT_DETECTION' }, // <--- 再次確認這一行！
+                    { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
             });
 
             console.log("[Box Upload API - DEBUG] Full Vision API Response:", JSON.stringify(visionAnalysisResult, null, 2));
@@ -433,13 +434,12 @@ console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotation
 
 
 
-           // const processedImageBuffer = await sharp(imageBuffer).rotate()
-            //    .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
-            //    .jpeg({ quality: 80 })
-            //    .toBuffer();
+            const processedImageBuffer = await sharp(imageBuffer).rotate()
+               .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+              .jpeg({ quality: 80 })
+               .toBuffer();
 
-            const processedImageBuffer = imageBuffer;
-
+ 
             const filename = `${userId}-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
             const diskPath = path.join(uploadDir, filename);
             diskPathForCleanup = diskPath;
