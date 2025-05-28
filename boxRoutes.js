@@ -358,13 +358,22 @@ module.exports = function(dependencies) {
            // 2. 專門處理文字偵測結果 (textAnnotations)
            let detectedTextsFromImage = [];
            if (visionResult.textAnnotations && visionResult.textAnnotations.length > 0) {
+
+            console.log("[Box Upload API - DEBUG] Raw textAnnotations:", JSON.stringify(visionResult.textAnnotations, null, 2)); // <--- 新增日誌
+
+
                const fullText = visionResult.textAnnotations[0].description.replace(/\n/g, ' ').trim();
+               console.log("[Box Upload API - DEBUG] Full text from image:", fullText); // <--- 新增日誌
+
                const wordsFromText = fullText.split(' ')
-                                       .map(word => word.trim())
-                                       .filter(word => word.length > 1 && !/^\W+$/.test(word));
-               detectedTextsFromImage = wordsFromText.slice(0, 5); // 取前5個處理過的詞
-               console.log(`[Box Upload API] Detected texts from image: ${detectedTextsFromImage.join(', ')}`);
-           }
+               .map(word => word.trim())
+               .filter(word => word.length > 1 && !/^\W+$/.test(word));
+detectedTextsFromImage = wordsFromText.slice(0, 10); // <--- 暫時增加提取數量，看看是否有更多內容
+
+console.log(`[Box Upload API] Detected texts from image (after processing): ${detectedTextsFromImage.join(', ')}`);
+} else {
+console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotations array is empty."); // <--- 新增日誌
+}
            
            // 3. 將所有類型的結果（包括處理過的文字）合併到 aiKeywords 中
            let aiKeywords = [...new Set([
