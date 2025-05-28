@@ -344,8 +344,42 @@ module.exports = function(dependencies) {
 
 
 
+         //這裡只收集了 labelAnnotations（標籤）和 localizedObjectAnnotations（物件）的描述
+           // let aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
 
-            let aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
+
+           //增加 textAnnotations（文字識別）
+           const visionResult = visionAnalysisResult; // 假設 visionAnalysisResult 是 annotateImage 返回的結果對象
+
+           // 1. 分別提取各種類型的偵測結果
+           const labels = visionResult.labelAnnotations ? visionResult.labelAnnotations.map(label => label.description) : [];
+           const objects = visionResult.localizedObjectAnnotations ? visionResult.localizedObjectAnnotations.map(obj => obj.name) : [];
+           
+           // 2. 專門處理文字偵測結果 (textAnnotations)
+           let detectedTextsFromImage = [];
+           if (visionResult.textAnnotations && visionResult.textAnnotations.length > 0) {
+               const fullText = visionResult.textAnnotations[0].description.replace(/\n/g, ' ').trim();
+               const wordsFromText = fullText.split(' ')
+                                       .map(word => word.trim())
+                                       .filter(word => word.length > 1 && !/^\W+$/.test(word));
+               detectedTextsFromImage = wordsFromText.slice(0, 5); // 取前5個處理過的詞
+               console.log(`[Box Upload API] Detected texts from image: ${detectedTextsFromImage.join(', ')}`);
+           }
+           
+           // 3. 將所有類型的結果（包括處理過的文字）合併到 aiKeywords 中
+           let aiKeywords = [...new Set([
+               ...labels,
+               ...objects,
+               ...detectedTextsFromImage // <--- 這裡加入了圖片中識別出的文字
+           ])].filter(keyword => keyword && keyword.trim() !== ''); // 過濾空關鍵字
+           
+           console.log(`[Box Upload API] Combined keywords before translation: ${aiKeywords.join(', ')}`);
+
+
+
+
+
+
 
             if (dependencies.translationClient && aiKeywords.length > 0) {
                 if (!googleProjectId) { // 检查 googleProjectId 是否有效
