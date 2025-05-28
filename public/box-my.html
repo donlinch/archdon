@@ -1686,11 +1686,11 @@
             const boxManagementTabLink = document.querySelector('button[data-tab="tab-box-management"]');
             const boxManagementTitle = document.getElementById('boxManagementTitle');
             const loadingOverlay = document.getElementById('loading-overlay');
-
+    
             const warehouseListDiv = document.getElementById('warehouse-list');
             const warehouseListMessage = document.getElementById('warehouse-list-message');
             const openAddWarehouseModalBtn = document.getElementById('openAddWarehouseModalBtn');
-
+    
             const warehouseModal = document.getElementById('warehouseModal');
             const warehouseModalTitle = document.getElementById('warehouseModalTitle');
             const warehouseForm = document.getElementById('warehouseForm');
@@ -1698,16 +1698,16 @@
             const warehouseFormNameInput = document.getElementById('warehouseFormName');
             const warehouseFormDescriptionTextarea = document.getElementById('warehouseFormDescription');
             const warehouseFormStatusP = document.getElementById('warehouseFormStatus');
-
+    
             const addBoxBtn = document.getElementById('addBoxBtn');
             const toggleAllItemsBtn = document.getElementById('toggleAllItemsBtn');
             const boxListMessage = document.getElementById('box-list-message');
             const boxGridArea = document.getElementById('box-grid-area');
-            const boxListArea = document.getElementById('box-list-area'); // 雖然CSS中移除了，但JS中可能仍有引用
-            const boxListPagination = document.getElementById('box-pagination'); // HTML中是 box-pagination
+            const boxListArea = document.getElementById('box-list-area');
+            const boxListPagination = document.getElementById('box-pagination');
             const gridViewBtn = document.getElementById('gridViewBtn');
             const listViewBtn = document.getElementById('listViewBtn');
-
+    
             const boxModal = document.getElementById('boxModal');
             const boxModalTitle = document.getElementById('boxModalTitle');
             const boxForm = document.getElementById('boxForm');
@@ -1721,8 +1721,8 @@
             const boxFormManualNotesTextarea = document.getElementById('boxFormManualNotes');
             const boxFormStatusP = document.getElementById('boxFormStatus');
             const boxFormWarehouseSelect = document.getElementById('boxFormWarehouse');
-
-
+    
+    
             const itemModal = document.getElementById('itemModal');
             const itemModalTitle = document.getElementById('itemModalTitle');
             const itemForm = document.getElementById('itemForm');
@@ -1736,16 +1736,16 @@
             const itemFormDescriptionTextarea = document.getElementById('itemFormDescription');
             const itemFormQuantityInput = document.getElementById('itemFormQuantity');
             const itemFormStatusP = document.getElementById('itemFormStatus');
-
+    
             const searchInput = document.getElementById('searchInput');
             const searchButton = document.getElementById('searchButton');
             const searchAllWarehousesToggle = document.getElementById('searchAllWarehousesToggle');
             const searchResultsMessage = document.getElementById('search-results-message');
             const searchResultsArea = document.getElementById('search-results-area');
             const searchPagination = document.getElementById('search-pagination');
-
+    
             const profileImageFile = document.getElementById('profileImageFile');
-
+    
             let currentUserId = null;
             let currentSelectedWarehouseId = null;
             let authToken = null;
@@ -1754,200 +1754,196 @@
             let currentSearchPage = 1;
             let currentBoxViewItemsExpanded = {};
             let isBoxLoading = false;
-            // 用於記錄編輯紙箱時，紙箱的原始倉庫ID，方便API調用
             let originalBoxWarehouseIdForEdit = null;
 
 
             function escapeHtml(unsafe) {
-                if (typeof unsafe !== 'string') {
-                    if (unsafe === null || unsafe === undefined) return '';
-                    unsafe = String(unsafe);
-                }
-                return unsafe
-                    .replace(/&/g, "&")
-                    .replace(/</g, "<")
-                    .replace(/>/g, ">")
+            if (typeof unsafe !== 'string') {
+                if (unsafe === null || unsafe === undefined) return '';
+                unsafe = String(unsafe);
+            }
+            return unsafe
+                .replace(/&/g, "&") // Corrected: & to &
+                .replace(/</g, "<")  // Corrected: < to <
+                .replace(/>/g, ">")  // Corrected: > to >
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
             }
 
             async function apiFetch(url, options = {}) {
-                showLoadingOverlay(true);
-                const defaultOptions = {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                };
-                const mergedOptions = { ...defaultOptions, ...options };
-                if (options.body && typeof options.body !== 'string') {
-                    mergedOptions.body = JSON.stringify(options.body);
+            showLoadingOverlay(true);
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
                 }
-                try {
-                    const response = await fetch(url, mergedOptions);
-                    if (!response.ok) {
-                        let errorData;
-                        try {
-                            errorData = await response.json();
-                        } catch (e) {
-                            errorData = { error: `HTTP 錯誤: ${response.status} ${response.statusText}`};
-                        }
-                        const error = new Error(errorData.error || `請求失敗 (${response.status})`);
-                        error.status = response.status;
-                        error.data = errorData;
-                        throw error;
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            if (options.body && typeof options.body !== 'string') {
+                mergedOptions.body = JSON.stringify(options.body);
+            }
+            try {
+                const response = await fetch(url, mergedOptions);
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { error: `HTTP 錯誤: ${response.status} ${response.statusText}`};
                     }
-                    if (response.status === 204) return null;
-                    return await response.json();
-                } catch (error) {
-                    console.error(`API 請求錯誤 (${url}):`, error);
-                    showApiError(error.data?.error || error.message || '發生未知錯誤');
+                    const error = new Error(errorData.error || `請求失敗 (${response.status})`);
+                    error.status = response.status;
+                    error.data = errorData;
                     throw error;
-                } finally {
-                    showLoadingOverlay(false);
+                }
+                if (response.status === 204) return null;
+                return await response.json();
+            } catch (error) {
+                console.error(`API 請求錯誤 (${url}):`, error);
+                showApiError(error.data?.error || error.message || '發生未知錯誤');
+                throw error;
+            } finally {
+                showLoadingOverlay(false);
+            }
+        }
+
+        function showLoadingOverlay(show) {
+            if (loadingOverlay) loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function showApiError(message, elementId = null) {
+            alert(`API 錯誤: ${message}`);
+            if (elementId) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.textContent = `錯誤: ${message}`;
+                    el.style.color = 'var(--danger-color)';
                 }
             }
+        }
 
-            function showLoadingOverlay(show) {
-                if (loadingOverlay) loadingOverlay.style.display = show ? 'flex' : 'none';
-            }
+        // +++++ 新增的輔助函數：顯示 AI 關鍵字 +++++
+        function displayAiKeywords(keywordsArray, containerElementId) {
+            let displayKeywordsHtml = '';
+            const aiKeywordsContainer = document.getElementById(containerElementId);
 
-            function showApiError(message, elementId = null) {
-                alert(`API 錯誤: ${message}`);
-                if (elementId) {
-                    const el = document.getElementById(elementId);
-                    if (el) {
-                        el.textContent = `錯誤: ${message}`;
-                        el.style.color = 'var(--danger-color)';
-                    }
-                }
-            }
+            if (aiKeywordsContainer) {
+                if (keywordsArray && keywordsArray.length > 0) {
+                    const primaryDisplayKeywords = [];
+                    const allOriginalKeywords = [];
 
-            async function initializePage() {
-                const params = new URLSearchParams(window.location.search);
-                currentUserId = params.get('userId');
-                
-                // 只從 localStorage 獲取 token
-                authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+                    // 判斷傳入的是否是對象陣列（方案一的結果）
+                    const isObjectArray = keywordsArray.every(kw => typeof kw === 'object' && kw.original !== undefined && kw.translated !== undefined);
 
-                if (!currentUserId || !authToken) {
-                    alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
-                    window.location.href = 'box.html';
-                    return;
-                }
+                    if (isObjectArray) {
+                        keywordsArray.forEach(kwObj => {
+                            const original = escapeHtml(kwObj.original);
+                            const translated = escapeHtml(kwObj.translated);
 
-                try {
-                    // 直接從API獲取用戶資訊
-                    const userData = await apiFetch('/api/box/users/me');
-                    if (currentUsernameSpan) {
-                        currentUsernameSpan.textContent = escapeHtml(userData.username);
-                    }
-                    if (currentUserAvatarImg) {
-                        currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
-                    }
-
-                    let tabToOpenInitially = 'tab-warehouses';
-
-                    // 檢查是否有來自 localStorage 的自動打開指令
-                    const lastOpenedWarehouseId = localStorage.getItem('lastOpenedWarehouseId');
-                    const autoOpenBoxManagement = localStorage.getItem('autoOpenBoxManagement');
-
-                    if (lastOpenedWarehouseId && autoOpenBoxManagement === 'true') {
-                        try {
-                            const warehouses = await apiFetch('/api/box/my-warehouses');
-                            const warehouseExists = warehouses.some(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
-
-                            if (warehouseExists) {
-                                currentSelectedWarehouseId = lastOpenedWarehouseId;
-                                const warehouse = warehouses.find(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
-                                currentSelectedWarehouseName = warehouse ? warehouse.warehouse_name : '';
-
-                                if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
-                                tabToOpenInitially = 'tab-box-management';
+                            if (translated && translated.trim() !== '' && translated.toLowerCase() !== original.toLowerCase()) {
+                                primaryDisplayKeywords.push(translated);
+                            } else {
+                                primaryDisplayKeywords.push(original);
                             }
-                        } catch (error) {
-                            console.error('處理 localStorage 自動打開時出錯:', error);
-                        } finally {
-                            // 清除 localStorage 標記，避免下次重複觸發
-                            localStorage.removeItem('lastOpenedWarehouseId');
-                            localStorage.removeItem('autoOpenBoxManagement');
-                        }
-                    }
+                            allOriginalKeywords.push(original);
+                        });
 
-                    setupEventListeners();
-                    switchTab(tabToOpenInitially);
-                } catch (error) {
-                    if (error.status === 401 || error.status === 403) {
-                        alert('登入憑證無效或已過期，請重新登入。');
-                        window.location.href = 'box.html';
+                        let primaryHtml = primaryDisplayKeywords.map(kw => `<span class="ai-keyword-tag">${kw}</span>`).join(' ');
+                        const uniqueOriginalKeywords = [...new Set(allOriginalKeywords)];
+                        let originalHtml = '';
+                        if (uniqueOriginalKeywords.length > 0) {
+                            originalHtml = `<div class="original-keywords-section">` +
+                                        `<span class="original-keywords-label">原文參考:</span> ` +
+                                        uniqueOriginalKeywords.map(kw => `<span class="ai-keyword-tag-original">${kw}</span>`).join(' ') +
+                                    `</div>`;
+                        }
+                        displayKeywordsHtml = primaryHtml + originalHtml;
                     } else {
-                        showApiError('無法獲取用戶信息。');
+                        // 如果是扁平字符串數組（兼容舊數據或方案二）
+                        console.warn("[displayAiKeywords] Received flat keyword array, displaying as is:", keywordsArray);
+                        displayKeywordsHtml = keywordsArray.map(kw => `<span class="ai-keyword-tag">${escapeHtml(String(kw))}</span>`).join(' ');
+                    }
+                } else {
+                    displayKeywordsHtml = '<em>沒有偵測到或生成AI關鍵字。</em>';
+                }
+                aiKeywordsContainer.innerHTML = displayKeywordsHtml;
+            } else {
+                console.warn(`AI Keywords container with ID "${containerElementId}" not found.`);
+            }
+        }
+        // +++++ 結束新增的輔助函數 +++++
+
+        async function initializePage() {
+            // ... (initializePage 函數內容不變) ...
+             const params = new URLSearchParams(window.location.search);
+            currentUserId = params.get('userId');
+            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+            if (!currentUserId || !authToken) {
+                alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+                window.location.href = 'box.html';
+                return;
+            }
+            try {
+                const userData = await apiFetch('/api/box/users/me');
+                if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
+                if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
+
+                let tabToOpenInitially = 'tab-warehouses';
+                const lastOpenedWarehouseId = localStorage.getItem('lastOpenedWarehouseId');
+                const autoOpenBoxManagement = localStorage.getItem('autoOpenBoxManagement');
+                if (lastOpenedWarehouseId && autoOpenBoxManagement === 'true') {
+                    try {
+                        const warehouses = await apiFetch('/api/box/my-warehouses');
+                        const warehouseExists = warehouses.some(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
+                        if (warehouseExists) {
+                            currentSelectedWarehouseId = lastOpenedWarehouseId;
+                            const warehouse = warehouses.find(w => w.warehouse_id.toString() === lastOpenedWarehouseId);
+                            currentSelectedWarehouseName = warehouse ? warehouse.warehouse_name : '';
+                            if(boxManagementTabLink) boxManagementTabLink.style.display = 'inline-block';
+                            tabToOpenInitially = 'tab-box-management';
+                        }
+                    } catch (error) { console.error('處理 localStorage 自動打開時出錯:', error);
+                    } finally {
+                        localStorage.removeItem('lastOpenedWarehouseId');
+                        localStorage.removeItem('autoOpenBoxManagement');
                     }
                 }
+                setupEventListeners();
+                switchTab(tabToOpenInitially);
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    alert('登入憑證無效或已過期，請重新登入。');
+                    window.location.href = 'box.html';
+                } else { showApiError('無法獲取用戶信息。'); }
             }
-
-
-
+        }
 
 
             function setupEventListeners() {
                 if (logoutButton) logoutButton.addEventListener('click', logout);
-                if (tabLinks) tabLinks.forEach(link => {
-                    link.addEventListener('click', () => {
-                        if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) {
-                            alert('請先從「我的倉庫」分頁選擇一個倉庫。');
-                            return;
-                        }
-                        switchTab(link.dataset.tab);
-                    });
-                });
+            if (tabLinks) tabLinks.forEach(link => { link.addEventListener('click', () => { if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) { alert('請先從「我的倉庫」分頁選擇一個倉庫。'); return; } switchTab(link.dataset.tab); }); });
+            if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
+            if (document.getElementById('changePasswordForm')) document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
+            if (document.getElementById('changeProfileImageForm')) document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
+            if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
+            document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('boxModal')); });
+            if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
+            if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
+            if (boxFormCoverImageFileInput) boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
+            document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemModal')); });
+            if (itemForm) itemForm.addEventListener('submit', handleSaveItem);
+            if (itemFormImageFileInput) itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
+            document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"], button.close-modal-btn[data-modal-id="itemDetailsModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemDetailsModal')); });
+            if (toggleAllItemsBtn) toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
+            if (searchButton) searchButton.addEventListener('click', () => handleSearch(1));
+            if (searchPagination) searchPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleSearchPaginationClick(parseInt(e.target.dataset.page))});
+            if (boxListPagination) boxListPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleBoxPaginationClick(parseInt(e.target.dataset.page))});
+            if (gridViewBtn) gridViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'grid'; if (boxListArea) boxListArea.style.display = 'none'; gridViewBtn.classList.add('active'); listViewBtn.classList.remove('active'); });
+            if (listViewBtn) listViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'none'; if (boxListArea) boxListArea.style.display = 'block'; listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active'); });
+            if (openAddWarehouseModalBtn) openAddWarehouseModalBtn.addEventListener('click', openCreateWarehouseModal);
+            document.querySelectorAll('.close-btn[data-modal-id="warehouseModal"], button.close-modal-btn[data-modal-id="warehouseModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('warehouseModal')); });
+        }
 
-                if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
-                if (document.getElementById('changePasswordForm')) document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-                if (document.getElementById('changeProfileImageForm')) document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
-                if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
-
-                document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => {
-                    btn.addEventListener('click', () => closeModal('boxModal'));
-                });
-                if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
-                if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
-                if (boxFormCoverImageFileInput) boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
-
-                document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => {
-                    btn.addEventListener('click', () => closeModal('itemModal'));
-                });
-                if (itemForm) itemForm.addEventListener('submit', handleSaveItem);
-                if (itemFormImageFileInput) itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
-                
-                document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"], button.close-modal-btn[data-modal-id="itemDetailsModal"]').forEach(btn => {
-                     btn.addEventListener('click', () => closeModal('itemDetailsModal'));
-                });
-
-
-                if (toggleAllItemsBtn) toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
-                if (searchButton) searchButton.addEventListener('click', () => handleSearch(1));
-                if (searchPagination) searchPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleSearchPaginationClick(parseInt(e.target.dataset.page))});
-                if (boxListPagination) boxListPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleBoxPaginationClick(parseInt(e.target.dataset.page))});
-                
-                if (gridViewBtn) gridViewBtn.addEventListener('click', () => {
-                    if (boxGridArea) boxGridArea.style.display = 'grid';
-                    if (boxListArea) boxListArea.style.display = 'none';
-                    gridViewBtn.classList.add('active');
-                    listViewBtn.classList.remove('active');
-                });
-                if (listViewBtn) listViewBtn.addEventListener('click', () => {
-                    if (boxGridArea) boxGridArea.style.display = 'none';
-                    if (boxListArea) boxListArea.style.display = 'block';
-                    listViewBtn.classList.add('active');
-                    gridViewBtn.classList.remove('active');
-                });
-
-                if (openAddWarehouseModalBtn) openAddWarehouseModalBtn.addEventListener('click', openCreateWarehouseModal);
-                document.querySelectorAll('.close-btn[data-modal-id="warehouseModal"], button.close-modal-btn[data-modal-id="warehouseModal"]').forEach(btn => {
-                    btn.addEventListener('click', () => closeModal('warehouseModal'));
-                });
-            }
 
             function logout() {
                 localStorage.removeItem(`boxUserToken_${currentUserId}`);
@@ -2163,97 +2159,66 @@
                 } catch (error) { /* Handled by apiFetch */ }
             }
 
-            // --- 圖片上傳與分析 ---
-            async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image') {
-                const MAX_SIZE = 15 * 1024 * 1024;
-                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (imageFile.size > MAX_SIZE) throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB`);
-                if (!allowedMimes.includes(imageFile.type)) throw new Error('只允許上傳 jpeg, png, gif, webp 格式');
+           // --- 圖片上傳與分析 ---
+        async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'box_organizer_image', targetKeywordsDivId) { // <<<< MODIFIED
+            const MAX_SIZE = 15 * 1024 * 1024;
+            const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (imageFile.size > MAX_SIZE) throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB`);
+            if (!allowedMimes.includes(imageFile.type)) throw new Error('只允許上傳 jpeg, png, gif, webp 格式');
 
-                const formData = new FormData();
-                formData.append('image', imageFile);
-                formData.append('fileType', fileTypeString);
-                
-                // Temporarily remove showLoadingOverlay(true) as apiFetch will handle it.
-                // showLoadingOverlay(true); 
-                try {
-                    const response = await fetch('/api/box/upload-analyze-then-process-image', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${authToken}` },
-                        body: formData
-                    });
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`圖片上傳失敗: ${errorText}`);
-                    }
-                    const data = await response.json();
-                    if (!data.success) throw new Error(data.error || '圖片處理失敗');
-                    return { success: true, imageUrl: data.image_url, aiKeywords: data.ai_keywords || [] };
-                } catch (error) {
-                    console.error('圖片上傳與分析錯誤:', error);
-                    return { success: false, error: error.message };
-                } finally {
-                   // showLoadingOverlay(false); // apiFetch will handle this
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('fileType', fileTypeString);
+            
+            try {
+                const response = await fetch('/api/box/upload-analyze-then-process-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+                if (!response.ok) {
+                    let errorText = '伺服器錯誤';
+                    try { errorText = await response.text(); } catch(_) {}
+                    throw new Error(`圖片上傳失敗: ${errorText}`);
                 }
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error || '圖片處理失敗');
+
+                // +++++ 調用 displayAiKeywords 來更新對應的 div +++++
+                if (targetKeywordsDivId && data.ai_keywords) {
+                    displayAiKeywords(data.ai_keywords, targetKeywordsDivId);
+                }
+                // +++++++++++++++++++++++++++++++++++++++++++++++++++
+                return { success: true, imageUrl: data.image_url, aiKeywords: data.ai_keywords || [] };
+            } catch (error) {
+                console.error('圖片上傳與分析錯誤:', error);
+                // 在實際的表單狀態中顯示錯誤，而不是這裡 alert
+                // showApiError(`圖片處理出錯: ${error.message}`, targetKeywordsDivId ? targetKeywordsDivId.replace('AiKeywords', 'Status') : null);
+                return { success: false, error: error.message };
             }
-
-
-
-
-
-
-// 假設 data.ai_keywords 是後端返回的 finalAiKeywordsOutput (對象陣列)
-let displayKeywordsHtml = '';
-const aiKeywordsContainer = document.getElementById('itemFormAiKeywords') || document.getElementById('boxFormAiKeywords'); // 獲取顯示區域
-
-if (aiKeywordsContainer) { // 確保容器存在
-    if (data.ai_keywords && data.ai_keywords.length > 0) {
-        const primaryDisplayKeywords = []; // 用於第一行顯示 (主要是中文)
-        const allOriginalKeywords = [];    // 用於第二行顯示所有原文
-
-        data.ai_keywords.forEach(kwObj => {
-            const original = escapeHtml(kwObj.original);
-            const translated = escapeHtml(kwObj.translated);
-
-            // 決定第一行顯示什麼：
-            // 1. 如果有有效翻譯且與原文不同，顯示翻譯。
-            // 2. 否則（翻譯為空、與原文相同，或就是原文），顯示原文。
-            if (translated && translated.trim() !== '' && translated.toLowerCase() !== original.toLowerCase()) {
-                primaryDisplayKeywords.push(translated);
-            } else {
-                primaryDisplayKeywords.push(original);
-            }
-
-            // 第二行始終收集原文
-            allOriginalKeywords.push(original);
-        });
-
-        // 構建第一行HTML (主要是中文關鍵字)
-        let primaryHtml = primaryDisplayKeywords.map(kw => `<span class="ai-keyword-tag">${kw}</span>`).join(' ');
-
-        // 構建第二行HTML (所有英文原文)
-        // 為了避免與第一行完全重複（當所有詞都未被翻譯時），可以選擇性地只顯示那些在第一行中以翻譯形式出現的詞的原文。
-        // 或者，更簡單的方式是總是顯示所有原文，讓用戶自己對照。
-        // 這裡採用總是顯示所有原文的方式，但用不同的樣式標記。
-
-        // 我們可以先去重 allOriginalKeywords，如果有些原文因為不同翻譯指向同一個原文的情況
-        const uniqueOriginalKeywords = [...new Set(allOriginalKeywords)];
-
-        let originalHtml = '';
-        if (uniqueOriginalKeywords.length > 0) {
-            originalHtml = `<div class="original-keywords-section">` +
-                               `<span class="original-keywords-label">原文參考:</span> ` +
-                               uniqueOriginalKeywords.map(kw => `<span class="ai-keyword-tag-original">${kw}</span>`).join(' ') +
-                           `</div>`;
         }
 
-        displayKeywordsHtml = primaryHtml + originalHtml;
 
-    } else {
-        displayKeywordsHtml = '<em>沒有偵測到或生成AI關鍵字。</em>';
-    }
-    aiKeywordsContainer.innerHTML = displayKeywordsHtml;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
 
 
 
