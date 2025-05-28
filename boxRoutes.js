@@ -318,7 +318,6 @@ module.exports = function(dependencies) {
     // ==       統一圖片上傳與分析 API                             ==
     // ====================================================================
     router.post('/upload-analyze-then-process-image', authenticateBoxUser, boxImageUpload.single('image'), async (req, res) => {
-        // ... (已提供較完整的實現) ...
         if (!visionClient) {
             console.error('[Box Upload API] Vision AI client is not available.');
             return res.status(503).json({ error: "圖片分析服務目前不可用。" });
@@ -335,111 +334,113 @@ module.exports = function(dependencies) {
         try {
             const [visionAnalysisResult] = await visionClient.annotateImage({
                 image: { content: imageBuffer },
-                features: [ { type: 'LABEL_DETECTION', maxResults: 10 },         { type: 'TEXT_DETECTION' }, // <--- 再次確認這一行！
-                    { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
+                features: [
+                    { type: 'LABEL_DETECTION', maxResults: 10 },
+                    { type: 'TEXT_DETECTION' },
+                    { type: 'OBJECT_LOCALIZATION', maxResults: 5 }
+                ],
             });
 
             console.log("[Box Upload API - DEBUG] Full Vision API Response:", JSON.stringify(visionAnalysisResult, null, 2));
 
+            const visionResult = visionAnalysisResult;
 
-
-
-
-
-         //這裡只收集了 labelAnnotations（標籤）和 localizedObjectAnnotations（物件）的描述
-           // let aiKeywords = [...new Set([...(visionAnalysisResult.labelAnnotations || []).map(l => l.description), ...(visionAnalysisResult.localizedObjectAnnotations || []).map(o => o.name)])];
-
-
-           //增加 textAnnotations（文字識別）
-           const visionResult = visionAnalysisResult; // 假設 visionAnalysisResult 是 annotateImage 返回的結果對象
-
-           // 1. 分別提取各種類型的偵測結果
-           const labels = visionResult.labelAnnotations ? visionResult.labelAnnotations.map(label => label.description) : [];
-           const objects = visionResult.localizedObjectAnnotations ? visionResult.localizedObjectAnnotations.map(obj => obj.name) : [];
+            const labels = visionResult.labelAnnotations ? visionResult.labelAnnotations.map(label => label.description) : [];
+            const objects = visionResult.localizedObjectAnnotations ? visionResult.localizedObjectAnnotations.map(obj => obj.name) : [];
+            
+            let detectedTextsFromImage = [];
+            if (visionResult.textAnnotations && visionResult.textAnnotations.length > 0) {
+                const fullText = visionResult.textAnnotations[0].description.replace(/\n/g, ' ').trim();
+                const wordsFromText = fullText.split(' ')
+                                           .map(word => word.trim())
+                                           .filter(word => word.length > 1 && !/^\W+$/.test(word));
+                detectedTextsFromImage = wordsFromText.slice(0, 10);
+                console.log(`[Box Upload API] Detected texts from image (after processing): ${detectedTextsFromImage.join(', ')}`);
+            } else {
+                console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotations array is empty.");
+            }
            
-           // 2. 專門處理文字偵測結果 (textAnnotations)
-           let detectedTextsFromImage = [];
-           if (visionResult.textAnnotations && visionResult.textAnnotations.length > 0) {
-
-            console.log("[Box Upload API - DEBUG] Raw textAnnotations:", JSON.stringify(visionResult.textAnnotations, null, 2)); // <--- 新增日誌
-
-
-               const fullText = visionResult.textAnnotations[0].description.replace(/\n/g, ' ').trim();
-               console.log("[Box Upload API - DEBUG] Full text from image:", fullText); // <--- 新增日誌
-
-               const wordsFromText = fullText.split(' ')
-               .map(word => word.trim())
-               .filter(word => word.length > 1 && !/^\W+$/.test(word));
-detectedTextsFromImage = wordsFromText.slice(0, 10); // <--- 暫時增加提取數量，看看是否有更多內容
-
-console.log(`[Box Upload API] Detected texts from image (after processing): ${detectedTextsFromImage.join(', ')}`);
-} else {
-console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotations array is empty."); // <--- 新增日誌
-}
+            let initialAiKeywords = [...new Set([
+                ...labels,
+                ...objects,
+                ...detectedTextsFromImage
+            ])].filter(keyword => keyword && keyword.trim() !== '');
            
-           // 3. 將所有類型的結果（包括處理過的文字）合併到 aiKeywords 中
-           let aiKeywords = [...new Set([
-               ...labels,
-               ...objects,
-               ...detectedTextsFromImage // <--- 這裡加入了圖片中識別出的文字
-           ])].filter(keyword => keyword && keyword.trim() !== ''); // 過濾空關鍵字
-           
-           console.log(`[Box Upload API] Combined keywords before translation: ${aiKeywords.join(', ')}`);
+            // *** 修正日誌中的變數名 ***
+            console.log(`[Box Upload API] Combined keywords before char limit: ${initialAiKeywords.join(', ')} (Count: ${initialAiKeywords.length})`);  
 
+            const MAX_CHARACTERS_TO_TRANSLATE = 300;
+            let currentCharacterCount = 0;
+            let aiKeywordsForTranslation = []; // 這是送去翻譯的英文關鍵字列表 (經過字元限制)
 
+            for (const keyword of initialAiKeywords) {
+                if (currentCharacterCount + keyword.length <= MAX_CHARACTERS_TO_TRANSLATE) {
+                    aiKeywordsForTranslation.push(keyword);
+                    currentCharacterCount += keyword.length;
+                } else {
+                    console.log(`[Box Upload API] Character limit (${MAX_CHARACTERS_TO_TRANSLATE}) reached. Keyword "${keyword}" (length ${keyword.length}) and subsequent keywords not included for translation.`);
+                    break;
+                }
+            }
+            console.log(`[Box Upload API] Total characters for translation: ${currentCharacterCount} (Limit: ${MAX_CHARACTERS_TO_TRANSLATE})`);
+            console.log(`[Box Upload API] Keywords selected for translation (pre-call): ${aiKeywordsForTranslation.join(', ')} (Count: ${aiKeywordsForTranslation.length})`);
 
+            // -------- 方案二：構建扁平化的中英文混合列表 --------
+            let finalKeywordsForResponse = []; // 最終返回給前端的列表
 
-
-
-
-            if (dependencies.translationClient && aiKeywords.length > 0) {
-                if (!googleProjectId) { // 检查 googleProjectId 是否有效
+            if (dependencies.translationClient && aiKeywordsForTranslation.length > 0) {
+                if (!googleProjectId) {
                     console.error("[Box Upload API] CRITICAL: googleProjectId is undefined. Skipping translation.");
-                    // 在这种情况下，aiKeywords 将保持为英文
+                    finalKeywordsForResponse = [...new Set(aiKeywordsForTranslation)]; // 去重後的英文關鍵字
                 } else {
                     try {
-                        console.log(`[Box Upload API] Translating keywords: ${aiKeywords.join(', ')} with project ID: ${googleProjectId}`);
+                        console.log(`[Box Upload API] Translating for mixed list: ${aiKeywordsForTranslation.join(', ')}`);
                         const request = {
-                            contents: aiKeywords,
-                            targetLanguageCode: 'zh-TW', // <--- 修改为繁体中文 (台湾)
+                            contents: aiKeywordsForTranslation,
+                            targetLanguageCode: 'zh-TW',
                             parent: `projects/${googleProjectId}/locations/global`
                         };
 
                         const [response] = await dependencies.translationClient.translateText(request);
-                        const translatedTexts = response.translations; // 使用一个新的变量名，或者直接用 response.translations
+                        const translatedItems = response.translations;
 
-                        if (translatedTexts && translatedTexts.length === aiKeywords.length) {
-                            aiKeywords = translatedTexts.map(t => t.translatedText); // 从每个翻译对象中提取文本
-                            console.log(`[Box Upload API] Translated keywords: ${aiKeywords.join(', ')}`);
+                        if (translatedItems && translatedItems.length === aiKeywordsForTranslation.length) {
+                            console.log(`[Box Upload API] Translation successful for mixed list.`);
+                            let mixedKeywordsTemp = [];
+                            for (let i = 0; i < aiKeywordsForTranslation.length; i++) {
+                                mixedKeywordsTemp.push(aiKeywordsForTranslation[i]); // 1. 添加原始英文
+                                const translatedText = translatedItems[i].translatedText;
+                                // 2. 如果譯文與原文不同（忽略大小寫），則添加譯文
+                                if (translatedText.toLowerCase() !== aiKeywordsForTranslation[i].toLowerCase()) {
+                                    mixedKeywordsTemp.push(translatedText);
+                                }
+                            }
+                            finalKeywordsForResponse = [...new Set(mixedKeywordsTemp)]; // 對混合列表去重
                         } else {
-                            console.warn("[Box Upload API] Translation result length mismatch or empty. Using original (English) keywords.");
-                            // 你可能想在这里打印 response 来调试
-                            // console.log("[Box Upload API] Raw translation response:", JSON.stringify(response, null, 2));
+                            console.warn("[Box Upload API] Translation result mismatch. Using original English (char-limited) keywords.");
+                            finalKeywordsForResponse = [...new Set(aiKeywordsForTranslation)];
                         }
                     } catch (translateError) {
-                        console.error("[Box Upload API] Error during translation call:", translateError);
-                        // 翻译出错，aiKeywords 保持为英文
+                        console.error("[Box Upload API] Error during translation call for mixed list:", translateError);
+                        finalKeywordsForResponse = [...new Set(aiKeywordsForTranslation)];
                     }
                 }
-            } else if (aiKeywords.length === 0) {
-                 console.log("[Box Upload API] No keywords detected, skipping translation.");
-            } else if (!dependencies.translationClient) { // 单独检查 translationClient
-                 console.warn("[Box Upload API] translationClient dependency not available, skipping translation.");
+            } else if (aiKeywordsForTranslation.length === 0) {
+                 console.log("[Box Upload API] No keywords for translation after char limit (for mixed list).");
+                 finalKeywordsForResponse = [];
+            } else if (!dependencies.translationClient) {
+                 console.warn("[Box Upload API] translationClient dependency not available, skipping translation (for mixed list).");
+                 finalKeywordsForResponse = [...new Set(aiKeywordsForTranslation)];
             }
-            // --- 结束新增翻譯邏輯 ---
+            console.log(`[Box Upload API] Final keywords for response/storage (mixed): ${finalKeywordsForResponse.join(', ')}`);
+            // -------- 結束方案二的處理邏輯 --------
 
-
-
-
-
-
-
+            // Sharp 圖片處理 (保持不變)
             const processedImageBuffer = await sharp(imageBuffer).rotate()
                .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
               .jpeg({ quality: 80 })
                .toBuffer();
-
- 
+            
             const filename = `${userId}-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
             const diskPath = path.join(uploadDir, filename);
             diskPathForCleanup = diskPath;
@@ -453,7 +454,9 @@ console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotation
             );
             const uploadedFileId = uploadedFileResult.rows[0]?.id;
 
-            res.json({ success: true, ai_keywords: aiKeywords, image_url: urlPath, uploaded_file_id: uploadedFileId });
+            // *** 修正：返回 finalKeywordsForResponse ***
+            res.json({ success: true, ai_keywords: finalKeywordsForResponse, image_url: urlPath, uploaded_file_id: uploadedFileId });
+        
         } catch (error) {
             console.error(`[Box Upload API] Error for user ${userId}, file ${originalFilename}:`, error);
             if (diskPathForCleanup) {
@@ -466,7 +469,6 @@ console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotation
             res.status(500).json({ error: '圖片上傳與分析失敗。' });
         }
     });
-
     // ====================================================================
     // ==              倉庫、紙箱、物品、搜尋 API                     ==
     // ====================================================================
