@@ -880,23 +880,56 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
         }
     });
 
+
+
     router.get('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
         const userId = req.boxUser.userId;
+    
+        const numWarehouseId = parseInt(warehouseId);
+        const numBoxId = parseInt(boxId);
+    
+        if (isNaN(numWarehouseId) || isNaN(numBoxId)) {
+            return res.status(400).json({ error: '倉庫ID和紙箱ID必須是有效的數字。' });
+        }
+    
         try {
-            const warehouseOwnership = await checkWarehouseOwnership(warehouseId, userId);
-            if (!warehouseOwnership.found || !warehouseOwnership.owned) return res.status(warehouseOwnership.found ? 403 : 404).json({ error: warehouseOwnership.message });
-
-            const boxCheck = await pool.query('SELECT 1 FROM BOX_Boxes WHERE box_id = $1 AND warehouse_id = $2', [boxId, warehouseId]);
-            if (boxCheck.rows.length === 0) return res.status(404).json({ error: '找不到指定的紙箱或該紙箱不屬於此倉庫。'});
-
-            const result = await pool.query('SELECT * FROM BOX_Items WHERE box_id = $1 ORDER BY item_name ASC', [boxId]);
+            const queryText = `
+                SELECT
+                    i.item_id,
+                    i.box_id,
+                    i.item_name,
+                    i.item_image_url,
+                    i.ai_item_keywords,
+                    i.item_description,
+                    i.quantity,
+                    i.created_at AS item_created_at,
+                    i.updated_at AS item_updated_at,
+                    b.box_name,
+                    b.box_number,
+                    w.warehouse_id,
+                    w.warehouse_name
+                FROM BOX_Items i
+                JOIN BOX_Boxes b ON i.box_id = b.box_id
+                JOIN BOX_Warehouses w ON b.warehouse_id = w.warehouse_id
+                WHERE
+                    i.box_id = $1
+                    AND b.warehouse_id = $2
+                    AND w.user_id = $3
+                ORDER BY i.item_name ASC;
+            `;
+    
+            const result = await pool.query(queryText, [numBoxId, numWarehouseId, userId]);
+            // 這裡不需要額外檢查結果是否為空，如果沒有符合條件的物品，result.rows 會是空陣列，
+            // 前端應該能處理這種情況（例如顯示 "此紙箱內沒有物品"）。
             res.json(result.rows);
+    
         } catch (err) {
-            console.error(`[API GET /items] User ${userId}, Box ${boxId} Error:`, err);
+            console.error(`[API GET /warehouses/:warehouseId/boxes/:boxId/items] User ${userId}, Warehouse ${numWarehouseId}, Box ${numBoxId} Error:`, err);
             res.status(500).json({ error: '獲取物品列表失敗。' });
         }
     });
+
 
     router.put('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
         const { warehouseId, itemId } = req.params;
