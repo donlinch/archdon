@@ -2841,6 +2841,13 @@
             }
 
             initializePage();
+
+            document.getElementById('itemDetailsModal').addEventListener('click', function(event) {
+                    // Check if the click is on the modal background or the image itself
+                    if (event.target === this || event.target.id === 'itemDetailsImage') {
+                        closeModal('itemDetailsModal');
+                    }
+                });
         });
     </script>
 
