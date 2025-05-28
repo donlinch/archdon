@@ -1376,6 +1376,63 @@
     }
 }
 
+
+/* 在您的 <style> 標籤或外部 CSS 文件中 */
+
+    .ai-keyword-tag {
+    display: inline-block;
+    background-color: #e0e0e0; /* 淺灰色背景 */
+    color: #333;               /* 深色文字 */
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin: 2px;
+    font-size: 0.9em;
+}
+
+/* 用於第二行原文的樣式 */
+.original-keywords-section {
+    margin-top: 8px; /* 與第一行有點間距 */
+    padding-top: 5px;
+    border-top: 1px dashed #ccc; /* 可選的分隔線 */
+}
+
+.original-keywords-label {
+    font-size: 0.8em;
+    color: #777; /* 標籤文字顏色淺一點 */
+    margin-right: 5px;
+}
+
+.ai-keyword-tag-original {
+    display: inline-block;
+    background-color: #f0f0f0; /* 更淺的灰色背景 */
+    color: #555;               /* 中等灰色文字 */
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin: 2px;
+    font-size: 0.85em;
+    border: 1px solid #ddd; /* 可選的邊框 */
+}
+
+/* 如果是在暗色模式下，顏色需要反轉 */
+@media (prefers-color-scheme: dark) {
+    .ai-keyword-tag {
+        background-color: #4f4f4f;
+        color: #f0f0f0;
+    }
+    .original-keywords-section {
+        border-top-color: #555;
+    }
+    .original-keywords-label {
+        color: #aaa;
+    }
+    .ai-keyword-tag-original {
+        background-color: #3e3e3e;
+        color: #ccc;
+        border-color: #555;
+    }
+}
+
+
     </style>
 </head>
 <body>
@@ -2139,6 +2196,69 @@
                    // showLoadingOverlay(false); // apiFetch will handle this
                 }
             }
+
+
+
+
+
+
+// 假設 data.ai_keywords 是後端返回的 finalAiKeywordsOutput (對象陣列)
+let displayKeywordsHtml = '';
+const aiKeywordsContainer = document.getElementById('itemFormAiKeywords') || document.getElementById('boxFormAiKeywords'); // 獲取顯示區域
+
+if (aiKeywordsContainer) { // 確保容器存在
+    if (data.ai_keywords && data.ai_keywords.length > 0) {
+        const primaryDisplayKeywords = []; // 用於第一行顯示 (主要是中文)
+        const allOriginalKeywords = [];    // 用於第二行顯示所有原文
+
+        data.ai_keywords.forEach(kwObj => {
+            const original = escapeHtml(kwObj.original);
+            const translated = escapeHtml(kwObj.translated);
+
+            // 決定第一行顯示什麼：
+            // 1. 如果有有效翻譯且與原文不同，顯示翻譯。
+            // 2. 否則（翻譯為空、與原文相同，或就是原文），顯示原文。
+            if (translated && translated.trim() !== '' && translated.toLowerCase() !== original.toLowerCase()) {
+                primaryDisplayKeywords.push(translated);
+            } else {
+                primaryDisplayKeywords.push(original);
+            }
+
+            // 第二行始終收集原文
+            allOriginalKeywords.push(original);
+        });
+
+        // 構建第一行HTML (主要是中文關鍵字)
+        let primaryHtml = primaryDisplayKeywords.map(kw => `<span class="ai-keyword-tag">${kw}</span>`).join(' ');
+
+        // 構建第二行HTML (所有英文原文)
+        // 為了避免與第一行完全重複（當所有詞都未被翻譯時），可以選擇性地只顯示那些在第一行中以翻譯形式出現的詞的原文。
+        // 或者，更簡單的方式是總是顯示所有原文，讓用戶自己對照。
+        // 這裡採用總是顯示所有原文的方式，但用不同的樣式標記。
+
+        // 我們可以先去重 allOriginalKeywords，如果有些原文因為不同翻譯指向同一個原文的情況
+        const uniqueOriginalKeywords = [...new Set(allOriginalKeywords)];
+
+        let originalHtml = '';
+        if (uniqueOriginalKeywords.length > 0) {
+            originalHtml = `<div class="original-keywords-section">` +
+                               `<span class="original-keywords-label">原文參考:</span> ` +
+                               uniqueOriginalKeywords.map(kw => `<span class="ai-keyword-tag-original">${kw}</span>`).join(' ') +
+                           `</div>`;
+        }
+
+        displayKeywordsHtml = primaryHtml + originalHtml;
+
+    } else {
+        displayKeywordsHtml = '<em>沒有偵測到或生成AI關鍵字。</em>';
+    }
+    aiKeywordsContainer.innerHTML = displayKeywordsHtml;
+}
+
+
+
+
+
 
             // --- 用戶設定函數 ---
             async function handleChangePassword(event) {
