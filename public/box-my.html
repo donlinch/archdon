@@ -546,6 +546,98 @@
         }
 
         @media (max-width: 768px) {
+    /* Image Upload Group Styles */
+    .form-group.image-upload-group .image-upload-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        border: 2px dashed var(--border-color);
+        border-radius: var(--border-radius-base);
+        padding: 15px;
+        text-align: center;
+        transition: border-color 0.3s ease;
+    }
+    .form-group.image-upload-group .file-input {
+        display: none;
+    }
+    .form-group.image-upload-group .file-input-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background-color: var(--background-light);
+        color: var(--text-primary);
+        padding: 10px 15px;
+        border-radius: var(--border-radius-base);
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .form-group.image-upload-group .file-input-label:hover {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    .form-group.image-upload-group .file-input-label .upload-icon {
+        font-size: 1.5em;
+    }
+    .form-group.image-upload-group .image-upload-preview {
+        position: relative;
+        max-width: 250px;
+        max-height: 250px;
+        margin-top: 15px;
+        display: none;
+    }
+    .form-group.image-upload-group .image-upload-preview img {
+        max-width: 100%;
+        max-height: 250px;
+        object-fit: contain;
+        border-radius: var(--border-radius-base);
+    }
+    .form-group.image-upload-group .remove-image-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background-color: rgba(255,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .form-group.image-upload-group .remove-image-btn:hover {
+        background-color: red;
+    }
+
+    /* AI Keywords Container */
+    .ai-keywords-container {
+        background-color: var(--background-light);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-base);
+        padding: 10px;
+        min-height: 50px;
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+    }
+    .ai-keywords-container em {
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    .ai-keywords-container .ai-keyword-tag {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        margin: 2px;
+    }
             #search-results-area {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* 手機螢幕時更少列 */
                 gap: 8px;
@@ -1551,37 +1643,42 @@
                 <input type="hidden" id="boxFormBoxId"> <!-- For editing -->
                 <div class="form-group">
                     <label for="boxFormNumber">紙箱編號:</label>
-                    <input type="text" id="boxFormNumber" required>
+                    <input type="text" id="boxFormNumber" required placeholder="例如: 001, A1, 客廳收納">
                 </div>
                 <div class="form-group">
                     <label for="boxFormName">紙箱名稱:</label>
-                    <input type="text" id="boxFormName" required>
+                    <input type="text" id="boxFormName" required placeholder="例如: 冬季衣物, 電子產品">
                 </div>
-                <div class="form-group">
-                    <label for="boxFormCoverImageFile">封面照片:</label>
-                    <input type="file" id="boxFormCoverImageFile" accept="image/*">
-                    <div class="image-upload-preview" id="boxCoverPreview"><img></div>
-                    <input type="hidden" id="boxFormCoverImageUrl"> <!-- To store uploaded image URL -->
+                <div class="form-group image-upload-group">
+                    <label>封面照片:</label>
+                    <div class="image-upload-container">
+                        <input type="file" id="boxFormCoverImageFile" accept="image/*" class="file-input">
+                        <label for="boxFormCoverImageFile" class="file-input-label">
+                            <span class="upload-icon">📸</span>
+                            <span class="upload-text">選擇圖片</span>
+                        </label>
+                        <div class="image-upload-preview" id="boxCoverPreview">
+                            <img src="#" alt="預覽圖片">
+                            <button type="button" class="remove-image-btn">✖</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>AI 關鍵字 (參考用):</label>
-                    <div id="boxFormAiKeywords" style="padding: 8px; background-color:#f0f0f0; border-radius:4px; min-height: 30px; font-size:0.9em; color:#555;"></div>
+                    <div id="boxFormAiKeywords" class="ai-keywords-container">
+                        <em>上傳圖片後將顯示AI建議關鍵字</em>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="boxFormManualNotes">手動備註:</label>
-                    <textarea id="boxFormManualNotes"></textarea>
+                    <textarea id="boxFormManualNotes" placeholder="輸入關於此紙箱的額外說明"></textarea>
                 </div>
-
-
- <!-- ****** 新增的倉庫選擇 ****** -->
- <div class="form-group">
-    <label for="boxFormWarehouse">所屬倉庫:</label>
-    <select id="boxFormWarehouse" required class="form-control">
-        <!-- JavaScript 會在這裡填充倉庫選項 -->
-        <option value="">正在載入倉庫...</option>
-    </select>
-</div>
-<!-- ****** 結束新增 ****** -->
+                <div class="form-group">
+                    <label for="boxFormWarehouse">所屬倉庫:</label>
+                    <select id="boxFormWarehouse" required class="form-control">
+                        <option value="">選擇倉庫</option>
+                    </select>
+                </div>
 
                 <div class="form-actions">
                     <p id="boxFormStatus" style="flex-grow:1; text-align:left; margin:0;"></p>
