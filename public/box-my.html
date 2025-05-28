@@ -873,10 +873,13 @@
             box-sizing: border-box;
         }
         #itemDetailsContainer img {
-            max-width: 100%; /* 確保圖片不會超出容器 */
-            max-height: 70vh; /* 限制圖片高度 */
-            object-fit: contain; /* 保持圖片比例 */
-            margin-bottom: 15px; /* 與下方文字間距 */
+            max-width: 80%; /* Limit width to 80% of container */
+            max-height: 70vh; /* Existing height limit */
+            object-fit: contain; /* Preserve image aspect ratio */
+            margin-bottom: 15px; /* Existing margin */
+            display: block; /* Center the image */
+            margin-left: auto;
+            margin-right: auto;
         }
         #itemDetailsContainer .item-details {
             text-align: center;
