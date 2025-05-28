@@ -341,8 +341,7 @@ module.exports = function(dependencies) {
                 ],
             });
 
-            console.log("[Box Upload API - DEBUG] Full Vision API Response:", JSON.stringify(visionAnalysisResult, null, 2));
-
+ 
             const visionResult = visionAnalysisResult;
 
             const labels = visionResult.labelAnnotations ? visionResult.labelAnnotations.map(label => label.description) : [];
@@ -355,10 +354,8 @@ module.exports = function(dependencies) {
                                            .map(word => word.trim())
                                            .filter(word => word.length > 1 && !/^\W+$/.test(word));
                 detectedTextsFromImage = wordsFromText.slice(0, 10);
-                console.log(`[Box Upload API] Detected texts from image (after processing): ${detectedTextsFromImage.join(', ')}`);
-            } else {
-                console.log("[Box Upload API - DEBUG] No textAnnotations found or textAnnotations array is empty.");
-            }
+             } else {
+             }
            
             let initialAiKeywords = [...new Set([
                 ...labels,
@@ -367,8 +364,7 @@ module.exports = function(dependencies) {
             ])].filter(keyword => keyword && keyword.trim() !== '');
            
             // *** 修正日誌中的變數名 ***
-            console.log(`[Box Upload API] Combined keywords before char limit: ${initialAiKeywords.join(', ')} (Count: ${initialAiKeywords.length})`);  
-
+ 
             const MAX_CHARACTERS_TO_TRANSLATE = 300;
             let currentCharacterCount = 0;
             let aiKeywordsForTranslation = []; // 這是送去翻譯的英文關鍵字列表 (經過字元限制)
@@ -382,9 +378,7 @@ module.exports = function(dependencies) {
                     break;
                 }
             }
-            console.log(`[Box Upload API] Total characters for translation: ${currentCharacterCount} (Limit: ${MAX_CHARACTERS_TO_TRANSLATE})`);
-            console.log(`[Box Upload API] Keywords selected for translation (pre-call): ${aiKeywordsForTranslation.join(', ')} (Count: ${aiKeywordsForTranslation.length})`);
-
+ 
             // -------- 方案二：構建扁平化的中英文混合列表 --------
             let finalKeywordsForResponse = []; // 最終返回給前端的列表
 
