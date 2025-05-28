@@ -415,12 +415,10 @@
             <form id="itemForm">
                 <input type="hidden" id="itemFormItemId">
                 <div class="form-group">
-                    <label for="itemFormName">物品名稱</label>
-                    <input type="text" id="itemFormName" placeholder="輸入物品名稱" required>
+                     <input type="text" id="itemFormName" placeholder="輸入物品名稱" required>
                 </div>
                 <div class="form-group">
-                    <label for="itemFormImageFile">物品照片</label>
-                    <input type="file" id="itemFormImageFile" accept="image/*">
+                     <input type="file" id="itemFormImageFile" accept="image/*">
                     <div class="image-upload-preview" id="itemImagePreview">
                         <img src="" alt="預覽圖片">
                     </div>
@@ -428,15 +426,14 @@
                 </div>
                 <div class="form-group">
                     <label for="itemFormDescription">物品描述</label>
-                    <textarea id="itemFormDescription" placeholder="輸入物品描述 (選填)"></textarea>
+                    <textarea id="itemFormDescription" placeholder="輸入物品描述 (選填)" rows="1"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="itemFormQuantity">數量</label>
                     <input type="number" id="itemFormQuantity" value="1" min="0">
                 </div>
                 <div class="form-group">
-                    <label>AI 關鍵字</label>
-                    <div id="itemFormAiKeywords" style="padding: 8px; background-color:#f0f0f0; border-radius:4px; min-height: 30px; font-size:0.9em; color:#555;">
+                     <div id="itemFormAiKeywords" style="padding: 8px; background-color:#f0f0f0; border-radius:4px; min-height: 30px; font-size:0.9em; color:#555;">
                         點擊上傳圖片或輸入名稱以產生關鍵字
                     </div>
                 </div>
