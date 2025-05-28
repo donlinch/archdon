@@ -338,6 +338,7 @@ module.exports = function(dependencies) {
                 features: [ { type: 'LABEL_DETECTION', maxResults: 10 }, { type: 'OBJECT_LOCALIZATION', maxResults: 5 }],
             });
 
+            console.log("[Box Upload API - DEBUG] Full Vision API Response:", JSON.stringify(visionAnalysisResult, null, 2));
 
 
 
