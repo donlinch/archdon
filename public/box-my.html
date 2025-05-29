@@ -3026,6 +3026,110 @@
                         closeModal('itemDetailsModal');
                     }
                 });
+
+            // 新增紙箱表單提交處理
+             const boxFormNumber = document.getElementById('boxFormNumber');
+            const boxFormName = document.getElementById('boxFormName');
+            const boxFormWarehouse = document.getElementById('boxFormWarehouse');
+            const boxFormStatus = document.getElementById('boxFormStatus');
+
+            async function submitBoxForm(event) {
+                event.preventDefault();
+                
+                // 重置狀態
+                boxFormStatus.textContent = '';
+                boxFormStatus.style.color = '';
+
+                // 驗證表單
+                if (!boxFormNumber.value.trim()) {
+                    boxFormStatus.style.color = 'red';
+                    boxFormStatus.textContent = '請輸入紙箱編號';
+                    return;
+                }
+
+                if (!boxFormName.value.trim()) {
+                    boxFormStatus.style.color = 'red';
+                    boxFormStatus.textContent = '請輸入紙箱名稱';
+                    return;
+                }
+
+                if (!boxFormWarehouse.value) {
+                    boxFormStatus.style.color = 'red';
+                    boxFormStatus.textContent = '請選擇倉庫';
+                    return;
+                }
+
+                try {
+                    // 顯示載入狀態
+                    boxFormStatus.textContent = '處理中...';
+                    
+                    // 準備表單數據
+                    const formData = new FormData();
+                    formData.append('box_number', boxFormNumber.value.trim());
+                    formData.append('box_name', boxFormName.value.trim());
+                    formData.append('warehouse_id', boxFormWarehouse.value);
+
+                    // 如果有手動備註
+                    const manualNotes = document.getElementById('boxFormManualNotes').value.trim();
+                    if (manualNotes) {
+                        formData.append('manual_notes', manualNotes);
+                    }
+
+                    // 如果有封面圖片
+                    const coverImageFile = document.getElementById('boxFormCoverImageFile').files[0];
+                    if (coverImageFile) {
+                        formData.append('cover_image', coverImageFile);
+                    }
+
+                    // 如果有 AI 關鍵字
+                    const aiKeywordsElement = document.getElementById('boxFormAiKeywords');
+                    const aiKeywords = Array.from(aiKeywordsElement.querySelectorAll('span'))
+                        .map(span => span.textContent.trim())
+                        .filter(keyword => keyword);
+                    if (aiKeywords.length > 0) {
+                        formData.append('ai_box_keywords', JSON.stringify(aiKeywords));
+                    }
+
+                    // 發送 API 請求
+                    const response = await fetch(`/api/box/warehouses/${boxFormWarehouse.value}/boxes`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}` // 假設使用 JWT 驗證
+                        },
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        boxFormStatus.style.color = 'green';
+                        boxFormStatus.textContent = '紙箱新增成功！';
+                        
+                        // 重置表單
+                        boxForm.reset();
+                        
+                        // 關閉模態框
+                        const boxModal = document.getElementById('boxModal');
+                        boxModal.style.display = 'none';
+
+                        // 可以在這裡觸發重新載入紙箱列表
+                        loadBoxes(); // 假設有這個函數
+                    } else {
+                        boxFormStatus.style.color = 'red';
+                        boxFormStatus.textContent = result.error || '新增紙箱失敗';
+                    }
+                } catch (error) {
+                    console.error('新增紙箱錯誤:', error);
+                    boxFormStatus.style.color = 'red';
+                    boxFormStatus.textContent = '網路錯誤，請稍後再試';
+                }
+            }
+
+            // 確保表單事件監聽器只綁定一次
+            if (boxForm) {
+                boxForm.removeEventListener('submit', submitBoxForm);
+                boxForm.addEventListener('submit', submitBoxForm);
+            }
         });
     </script>
 
