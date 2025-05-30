@@ -1476,16 +1476,16 @@
 /* 響應式設計 */
 @media (max-width: 600px) {
     #search-results-area {
-        grid-template-columns: repeat(4, 1fr); /* 手機上固定三列 */
-        gap: 10px;
+        grid-template-columns: repeat(3, 1fr); /* 手機上固定三列 */
+        gap: 3px;
         padding: 10px;
     }
 }
 
 @media (max-width: 400px) {
     #search-results-area {
-        grid-template-columns: repeat(4, 1fr); /* 更小的螢幕上兩列 */
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr); /* 更小的螢幕上兩列 */
+        gap: 3px;
         padding: 8px;
     }
 }
@@ -2906,7 +2906,7 @@
                     </div>
                     <div class="item-details-container">
                        
-                         <button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看詳情</button>
+                         <button class="view-details-btn" data-type="${result.type}" data-warehouse-id="${result.warehouse_id}" data-box-id="${result.box_id}" data-item-id="${result.item_id || ''}">查看</button>
                     </div>`;
 
                 searchResultsArea.appendChild(itemDiv);
