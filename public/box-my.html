@@ -2766,30 +2766,41 @@
                 openModal('itemModal');
 
                 const itemFormOriginalAiKeywordsInput = document.getElementById('itemFormOriginalAiKeywords');
+                console.log(`[openEditItemModal] Editing item ID: ${itemId}, Box ID: ${boxIdContext}`);
 
                 try {
                     const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`);
+                    console.log('[openEditItemModal] Fetched item data:', JSON.parse(JSON.stringify(item))); // Deep copy for logging
+
                     if(itemFormNameInput) itemFormNameInput.value = item.item_name;
                     if(itemFormDescriptionTextarea) itemFormDescriptionTextarea.value = item.item_description || '';
                     if(itemFormQuantityInput) itemFormQuantityInput.value = item.quantity;
-                    if(itemFormImageUrlInput) itemFormImageUrlInput.value = item.item_image_url || '';
+                    
+                    const imageUrlToSet = item.item_image_url || '';
+                    if(itemFormImageUrlInput) itemFormImageUrlInput.value = imageUrlToSet;
+                    console.log(`[openEditItemModal] Set itemFormImageUrlInput.value to: "${imageUrlToSet}"`);
+
                     if (item.item_image_url) {
                         if(itemImagePreviewDiv) {itemImagePreviewDiv.querySelector('img').src = item.item_image_url; itemImagePreviewDiv.style.display = 'block';}
                     } else {
                         if(itemImagePreviewDiv) { itemImagePreviewDiv.style.display = 'none'; itemImagePreviewDiv.querySelector('img').src = '#';}
                     }
-
+ 
                     // Store original AI keywords
-                    if (itemFormOriginalAiKeywordsInput && item.ai_item_keywords) {
-                        itemFormOriginalAiKeywordsInput.value = JSON.stringify(item.ai_item_keywords);
+                    const originalKeywordsToStore = item.ai_item_keywords || [];
+                    if (itemFormOriginalAiKeywordsInput) {
+                        itemFormOriginalAiKeywordsInput.value = JSON.stringify(originalKeywordsToStore);
+                        console.log(`[openEditItemModal] Set itemFormOriginalAiKeywordsInput.value to: "${JSON.stringify(originalKeywordsToStore)}"`);
                     } else if (itemFormOriginalAiKeywordsInput) {
                         itemFormOriginalAiKeywordsInput.value = '[]'; // Default to empty array string
+                        console.log(`[openEditItemModal] itemFormOriginalAiKeywordsInput not found, but tried to set to '[]'. This shouldn't happen if HTML is correct.`);
                     }
                     // Display AI Keywords
-                    displayAiKeywords(item.ai_item_keywords || [], 'itemFormAiKeywords');
-
+                    displayAiKeywords(originalKeywordsToStore, 'itemFormAiKeywords');
+ 
                     if(itemFormStatusP) itemFormStatusP.textContent = '';
                 } catch (error) {
+                    console.error('[openEditItemModal] Error fetching item details:', error);
                     if(itemFormStatusP) {
                         itemFormStatusP.textContent = `載入物品資料失敗: ${error.message || '未知錯誤'}`;
                         itemFormStatusP.style.color = 'var(--danger-color)';
@@ -2800,6 +2811,8 @@
             async function handleSaveItem(event) {
                 event.preventDefault();
                 const submitButton = itemForm.querySelector('button[type="submit"]'); // Get submit button
+
+                console.log('[handleSaveItem] Form submitted.');
 
                 if (!currentSelectedWarehouseId) {
                     itemFormStatusP.textContent = '錯誤：未選擇倉庫'; itemFormStatusP.style.color = 'var(--danger-color)'; return;
@@ -2821,12 +2834,16 @@
                 let currentAiKeywordsValue = [];
                 const itemFormOriginalAiKeywordsInput = document.getElementById('itemFormOriginalAiKeywords');
 
+                console.log(`[handleSaveItem] Initial itemFormImageUrlInput.value: "${itemFormImageUrlInput.value}"`);
+                console.log(`[handleSaveItem] Initial itemFormOriginalAiKeywordsInput.value: "${itemFormOriginalAiKeywordsInput ? itemFormOriginalAiKeywordsInput.value : 'Not Found'}"`);
+
                 try {
                     const originalKeywordsStr = itemFormOriginalAiKeywordsInput ? itemFormOriginalAiKeywordsInput.value : '[]';
                     if (originalKeywordsStr) {
                         currentAiKeywordsValue = JSON.parse(originalKeywordsStr);
                         if (!Array.isArray(currentAiKeywordsValue)) currentAiKeywordsValue = [];
                     }
+                    console.log('[handleSaveItem] Parsed currentAiKeywordsValue:', JSON.parse(JSON.stringify(currentAiKeywordsValue)));
                 } catch (e) {
                     console.warn("無法解析原始AI關鍵字字串:", e);
                     currentAiKeywordsValue = [];
@@ -2836,9 +2853,11 @@
                 let finalAiKeywords = currentAiKeywordsValue;
 
                 if (imageFile) {
+                    console.log('[handleSaveItem] New imageFile selected:', imageFile.name);
                     itemFormStatusP.textContent = '正在上傳圖片並分析...';
                     // Pass targetKeywordsDivId so displayAiKeywords is called within
                     const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image', 'itemFormAiKeywords'); 
+                    console.log('[handleSaveItem] uploadResult:', JSON.parse(JSON.stringify(uploadResult)));
                     if (uploadResult.success) {
                         finalImageUrl = uploadResult.imageUrl;
                         finalAiKeywords = uploadResult.aiKeywords || [];
@@ -2847,12 +2866,16 @@
                         // Image upload failed
                         if (!confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品（此操作將保留原始圖片和關鍵字）？`)) {
                             itemFormStatusP.textContent = '已取消保存。';
+                            console.log('[handleSaveItem] User cancelled save after image upload failure.');
                             if(submitButton) submitButton.disabled = false;
                             return;
                         }
                         itemFormStatusP.textContent = '圖片上傳失敗，將嘗試保存其他資訊並保留原始圖片/關鍵字。';
+                        console.log('[handleSaveItem] User continued save after image upload failure. Using original image/keywords.');
                         // displayAiKeywords(currentAiKeywordsValue, 'itemFormAiKeywords'); // Optionally re-display original keywords
                     }
+                } else {
+                    console.log('[handleSaveItem] No new imageFile selected. Using existing values.');
                 }
                 // No else needed for imageFile, as finalImageUrl and finalAiKeywords are already set to originals
 
@@ -2865,33 +2888,41 @@
                     ai_item_keywords: finalAiKeywords
                 };
 
+                console.log('[handleSaveItem] finalImageUrl to be submitted:', finalImageUrl);
+                console.log('[handleSaveItem] finalAiKeywords to be submitted:', JSON.parse(JSON.stringify(finalAiKeywords)));
+
                 // Parse box_id to integer
                 if (apiPayload.box_id && typeof apiPayload.box_id === 'string') {
                     const parsedBoxId = parseInt(apiPayload.box_id, 10);
                     if (!isNaN(parsedBoxId)) {
                         apiPayload.box_id = parsedBoxId;
                     } else {
+                        console.error('[handleSaveItem] Invalid box_id string:', apiPayload.box_id);
                         itemFormStatusP.textContent = '錯誤：紙箱ID無效。';
                         itemFormStatusP.style.color = 'var(--danger-color)';
                         if(submitButton) submitButton.disabled = false;
                         return;
                     }
                 } else if (!apiPayload.box_id) { // Handle case where box_id might be empty or null
-                     itemFormStatusP.textContent = '錯誤：未指定紙箱ID。';
-                     itemFormStatusP.style.color = 'var(--danger-color)';
-                     if(submitButton) submitButton.disabled = false;
-                     return;
+                    console.error('[handleSaveItem] box_id is missing or null.');
+                    itemFormStatusP.textContent = '錯誤：未指定紙箱ID。';
+                    itemFormStatusP.style.color = 'var(--danger-color)';
+                    if(submitButton) submitButton.disabled = false;
+                    return;
                 }
 
+                console.log('[handleSaveItem] API Payload to be sent:', JSON.parse(JSON.stringify(apiPayload)));
 
                 const itemId = itemFormItemIdInput.value;
                 const apiEndpoint = itemId 
                     ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}` 
                     : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${apiPayload.box_id}/items`;
                 const method = itemId ? 'PUT' : 'POST';
+                console.log(`[handleSaveItem] API endpoint: ${method} ${apiEndpoint}`);
 
                 try {
                     const savedItem = await apiFetch(apiEndpoint, { method, body: apiPayload });
+                    console.log('[handleSaveItem] API save successful. Response:', JSON.parse(JSON.stringify(savedItem)));
                     itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; 
                     itemFormStatusP.style.color = 'var(--accent-color)';
                     // Clear file input after successful save
@@ -2904,6 +2935,7 @@
                         loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); 
                     }, 1000);
                 } catch (error) {
+                    console.error('[handleSaveItem] API save error:', error);
                     itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; 
                     itemFormStatusP.style.color = 'var(--danger-color)';
                 } finally {
