@@ -974,20 +974,27 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
 
     router.put('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
+        // 日誌點 1: 請求入口
+        console.log(`[API PUT /items/:itemId] Request received for warehouseId: ${req.params.warehouseId}, itemId: ${req.params.itemId}, UserID: ${req.boxUser.userId}`);
+        console.log('[API PUT /items/:itemId] Request body:', JSON.stringify(req.body, null, 2));
+
         const { warehouseId, itemId } = req.params;
         const userId = req.boxUser.userId;
         const { item_name, item_image_url, ai_item_keywords, item_description, quantity, box_id } = req.body; // box_id for moving item
 
         if (!item_name || item_name.trim() === '') {
+            console.log('[API PUT /items/:itemId] Validation Error: item_name is required.');
             return res.status(400).json({ error: '物品名稱為必填項。' });
         }
         const itemQuantity = quantity !== undefined ? parseInt(quantity) : 1;
         if (isNaN(itemQuantity) || itemQuantity < 0) {
+            console.log('[API PUT /items/:itemId] Validation Error: quantity must be a non-negative integer.');
             return res.status(400).json({ error: '物品數量必須是非負整數。'});
         }
 
         try {
             const itemOwnership = await checkItemOwnership(itemId, userId); // Verifies item belongs to user via warehouse
+            console.log('[API PUT /items/:itemId] checkItemOwnership result:', itemOwnership);
             if (!itemOwnership.found || !itemOwnership.owned) return res.status(itemOwnership.found ? 403 : 404).json({ error: itemOwnership.message });
 
             let targetBoxId = box_id ? parseInt(box_id) : null;
@@ -995,31 +1002,51 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
             // Get current box_id of the item
             const currentItemBoxResult = await pool.query('SELECT box_id FROM BOX_Items WHERE item_id = $1', [itemId]);
-            if (currentItemBoxResult.rows.length === 0) return res.status(404).json({ error: '找不到要更新的物品。' }); // Should not happen if checkItemOwnership passed
+            if (currentItemBoxResult.rows.length === 0) {
+                console.log(`[API PUT /items/:itemId] Error: Item with ID ${itemId} not found in BOX_Items.`);
+                return res.status(404).json({ error: '找不到要更新的物品。' }); // Should not happen if checkItemOwnership passed
+            }
             originalBoxId = currentItemBoxResult.rows[0].box_id;
+            console.log(`[API PUT /items/:itemId] Original box_id: ${originalBoxId}, Target box_id from body: ${box_id} (parsed as ${targetBoxId})`);
 
             if (targetBoxId && targetBoxId !== originalBoxId) { // If moving to a new box
                 const targetBoxOwnership = await checkBoxOwnership(targetBoxId, userId);
+                console.log('[API PUT /items/:itemId] checkBoxOwnership result for targetBoxId:', targetBoxOwnership);
                 if (!targetBoxOwnership.found || !targetBoxOwnership.owned) {
                     return res.status(targetBoxOwnership.found ? 403 : 404).json({ error: '目標紙箱無效或無權訪問。' });
                 }
             } else {
                 targetBoxId = originalBoxId; // Not moving or moving to the same box
+                console.log(`[API PUT /items/:itemId] Item not moving or moving to the same box. Target box_id set to original: ${targetBoxId}`);
             }
+
+            const valuesToUpdate = [
+                item_name.trim(),
+                item_image_url || null, // 確保傳遞 null 而不是 undefined
+                Array.isArray(ai_item_keywords) ? ai_item_keywords : [],
+                item_description || null,
+                itemQuantity,
+                targetBoxId,
+                itemId
+            ];
+            console.log('[API PUT /items/:itemId] Values for DB update query:', JSON.stringify(valuesToUpdate, null, 2));
 
             const updateQuery = `
                 UPDATE BOX_Items
                 SET item_name = $1, item_image_url = $2, ai_item_keywords = $3, item_description = $4, quantity = $5, box_id = $6, updated_at = NOW()
                 WHERE item_id = $7
                 RETURNING *;`;
-            const result = await pool.query(updateQuery, [
-                item_name.trim(), item_image_url || null, Array.isArray(ai_item_keywords) ? ai_item_keywords : [],
-                item_description || null, itemQuantity, targetBoxId, itemId
-            ]);
+            const result = await pool.query(updateQuery, valuesToUpdate);
+            console.log(`[API PUT /items/:itemId] DB update result rowCount: ${result.rowCount}`);
+            if (result.rowCount > 0) {
+                console.log('[API PUT /items/:itemId] Updated item data:', JSON.stringify(result.rows[0], null, 2));
+            }
 
             // Update updated_at for original and target boxes if item moved
+            console.log(`[API PUT /items/:itemId] Updating timestamp for originalBoxId: ${originalBoxId}`);
             await pool.query('UPDATE BOX_Boxes SET updated_at = NOW() WHERE box_id = $1', [originalBoxId]);
             if (targetBoxId !== originalBoxId) {
+                console.log(`[API PUT /items/:itemId] Item moved. Updating timestamp for targetBoxId: ${targetBoxId}`);
                 await pool.query('UPDATE BOX_Boxes SET updated_at = NOW() WHERE box_id = $1', [targetBoxId]);
             }
 
