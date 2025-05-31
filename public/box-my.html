@@ -702,8 +702,7 @@
             text-align: right;
             border-bottom-left-radius: var(--border-radius-base); /* Rounded corner */
         }
-        
-        #search-results-area .search-result-item .item-details-container {
+         #search-results-area .search-result-item .item-details-container {
             padding: 12px; /* Padding for the text and button area */
             flex-grow: 1; /* Take remaining space */
             display: flex;
@@ -1731,6 +1730,7 @@
                     <input type="file" id="itemFormImageFile" accept="image/*">
                     <div class="image-upload-preview" id="itemImagePreview"><img></div>
                     <input type="hidden" id="itemFormImageUrl">
+                    <input type="hidden" id="itemFormOriginalAiKeywords">
                 </div>
                  <div class="form-group">
                     <label>AI 關鍵字 (參考用):</label>
@@ -2765,6 +2765,8 @@
                 if(itemFormStatusP) itemFormStatusP.textContent = '正在載入物品資料...';
                 openModal('itemModal');
 
+                const itemFormOriginalAiKeywordsInput = document.getElementById('itemFormOriginalAiKeywords');
+
                 try {
                     const item = await apiFetch(`/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}`);
                     if(itemFormNameInput) itemFormNameInput.value = item.item_name;
@@ -2774,11 +2776,18 @@
                     if (item.item_image_url) {
                         if(itemImagePreviewDiv) {itemImagePreviewDiv.querySelector('img').src = item.item_image_url; itemImagePreviewDiv.style.display = 'block';}
                     } else {
-                        if(itemImagePreviewDiv) itemImagePreviewDiv.style.display = 'none';
+                        if(itemImagePreviewDiv) { itemImagePreviewDiv.style.display = 'none'; itemImagePreviewDiv.querySelector('img').src = '#';}
                     }
-                    if(itemFormAiKeywordsDiv) itemFormAiKeywordsDiv.innerHTML = (item.ai_item_keywords && item.ai_item_keywords.length > 0)
-                        ? item.ai_item_keywords.map(k => `<span class="ai-keyword-tag">${escapeHtml(k)}</span>`).join(' ')
-                        : '<em>沒有AI關鍵字或未上傳圖片。</em>';
+
+                    // Store original AI keywords
+                    if (itemFormOriginalAiKeywordsInput && item.ai_item_keywords) {
+                        itemFormOriginalAiKeywordsInput.value = JSON.stringify(item.ai_item_keywords);
+                    } else if (itemFormOriginalAiKeywordsInput) {
+                        itemFormOriginalAiKeywordsInput.value = '[]'; // Default to empty array string
+                    }
+                    // Display AI Keywords
+                    displayAiKeywords(item.ai_item_keywords || [], 'itemFormAiKeywords');
+
                     if(itemFormStatusP) itemFormStatusP.textContent = '';
                 } catch (error) {
                     if(itemFormStatusP) {
@@ -2790,6 +2799,8 @@
 
             async function handleSaveItem(event) {
                 event.preventDefault();
+                const submitButton = itemForm.querySelector('button[type="submit"]'); // Get submit button
+
                 if (!currentSelectedWarehouseId) {
                     itemFormStatusP.textContent = '錯誤：未選擇倉庫'; itemFormStatusP.style.color = 'var(--danger-color)'; return;
                 }
@@ -2802,36 +2813,101 @@
                     itemFormStatusP.textContent = '數量必須是非負整數'; itemFormStatusP.style.color = 'var(--warning-color)'; return;
                 }
 
+                if(submitButton) submitButton.disabled = true;
+                itemFormStatusP.textContent = '處理中...'; itemFormStatusP.style.color = 'var(--primary-color)';
+
+                const imageFile = itemFormImageFileInput.files[0];
+                let currentImageUrlValue = itemFormImageUrlInput.value || null; 
+                let currentAiKeywordsValue = [];
+                const itemFormOriginalAiKeywordsInput = document.getElementById('itemFormOriginalAiKeywords');
+
+                try {
+                    const originalKeywordsStr = itemFormOriginalAiKeywordsInput ? itemFormOriginalAiKeywordsInput.value : '[]';
+                    if (originalKeywordsStr) {
+                        currentAiKeywordsValue = JSON.parse(originalKeywordsStr);
+                        if (!Array.isArray(currentAiKeywordsValue)) currentAiKeywordsValue = [];
+                    }
+                } catch (e) {
+                    console.warn("無法解析原始AI關鍵字字串:", e);
+                    currentAiKeywordsValue = [];
+                }
+
+                let finalImageUrl = currentImageUrlValue;
+                let finalAiKeywords = currentAiKeywordsValue;
+
+                if (imageFile) {
+                    itemFormStatusP.textContent = '正在上傳圖片並分析...';
+                    // Pass targetKeywordsDivId so displayAiKeywords is called within
+                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image', 'itemFormAiKeywords'); 
+                    if (uploadResult.success) {
+                        finalImageUrl = uploadResult.imageUrl;
+                        finalAiKeywords = uploadResult.aiKeywords || [];
+                        // itemFormAiKeywordsDiv is updated by displayAiKeywords inside handleImageUploadAndAnalyze
+                    } else {
+                        // Image upload failed
+                        if (!confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品（此操作將保留原始圖片和關鍵字）？`)) {
+                            itemFormStatusP.textContent = '已取消保存。';
+                            if(submitButton) submitButton.disabled = false;
+                            return;
+                        }
+                        itemFormStatusP.textContent = '圖片上傳失敗，將嘗試保存其他資訊並保留原始圖片/關鍵字。';
+                        // displayAiKeywords(currentAiKeywordsValue, 'itemFormAiKeywords'); // Optionally re-display original keywords
+                    }
+                }
+                // No else needed for imageFile, as finalImageUrl and finalAiKeywords are already set to originals
+
                 const apiPayload = {
                     item_name: itemName,
                     item_description: itemFormDescriptionTextarea.value.trim(),
                     quantity: quantity,
-                    box_id: itemFormBoxIdInput.value
+                    box_id: itemFormBoxIdInput.value, // Will be parsed next
+                    item_image_url: finalImageUrl,
+                    ai_item_keywords: finalAiKeywords
                 };
-                const imageFile = itemFormImageFileInput.files[0];
-                if (imageFile) {
-                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'item_image');
-                    if (uploadResult.success) {
-                        apiPayload.item_image_url = uploadResult.imageUrl;
-                        apiPayload.ai_item_keywords = uploadResult.aiKeywords || [];
+
+                // Parse box_id to integer
+                if (apiPayload.box_id && typeof apiPayload.box_id === 'string') {
+                    const parsedBoxId = parseInt(apiPayload.box_id, 10);
+                    if (!isNaN(parsedBoxId)) {
+                        apiPayload.box_id = parsedBoxId;
                     } else {
-                        if (!confirm(`圖片上傳失敗：${uploadResult.error}。是否仍要保存物品？`)) return;
+                        itemFormStatusP.textContent = '錯誤：紙箱ID無效。';
+                        itemFormStatusP.style.color = 'var(--danger-color)';
+                        if(submitButton) submitButton.disabled = false;
+                        return;
                     }
+                } else if (!apiPayload.box_id) { // Handle case where box_id might be empty or null
+                     itemFormStatusP.textContent = '錯誤：未指定紙箱ID。';
+                     itemFormStatusP.style.color = 'var(--danger-color)';
+                     if(submitButton) submitButton.disabled = false;
+                     return;
                 }
 
+
                 const itemId = itemFormItemIdInput.value;
-                const apiEndpoint = itemId ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}` : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${apiPayload.box_id}/items`;
+                const apiEndpoint = itemId 
+                    ? `/api/box/warehouses/${currentSelectedWarehouseId}/items/${itemId}` 
+                    : `/api/box/warehouses/${currentSelectedWarehouseId}/boxes/${apiPayload.box_id}/items`;
                 const method = itemId ? 'PUT' : 'POST';
 
                 try {
                     const savedItem = await apiFetch(apiEndpoint, { method, body: apiPayload });
-                    itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; itemFormStatusP.style.color = 'var(--accent-color)';
+                    itemFormStatusP.textContent = `物品 "${escapeHtml(savedItem.item_name)}" 保存成功！`; 
+                    itemFormStatusP.style.color = 'var(--accent-color)';
+                    // Clear file input after successful save
+                    if(itemFormImageFileInput) itemFormImageFileInput.value = '';
+
                     setTimeout(() => {
                         closeModal('itemModal');
-                        loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage);
+                        // Always reload boxes, as item count or other details might change.
+                        // If item was moved to a different box (not supported by current UI for items), this would need more logic.
+                        loadBoxesForWarehouse(currentSelectedWarehouseId, currentBoxPage); 
                     }, 1000);
                 } catch (error) {
-                    itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; itemFormStatusP.style.color = 'var(--danger-color)';
+                    itemFormStatusP.textContent = `保存失敗: ${error.data?.error || error.message}`; 
+                    itemFormStatusP.style.color = 'var(--danger-color)';
+                } finally {
+                    if(submitButton) submitButton.disabled = false;
                 }
             }
 
