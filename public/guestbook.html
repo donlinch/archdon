@@ -854,6 +854,56 @@
     white-space: nowrap;
     border: 0;
 }
+/* 在你現有的 @media (max-width: 767px) 區塊中加入或修改 */
+@media (max-width: 388px) {
+    .guestbook-container {
+        padding: 10px 8px;
+    }
+    
+    .messages-grid {
+        gap: 8px;
+    }
+    
+    .message-card {
+        padding: 10px;
+        width: 100%;
+        max-width: calc(100vw - 20px);
+        margin: 0 auto;
+        overflow: hidden;
+        word-break: break-word;
+    }
+    
+    .message-card img,
+    .message-list-item img,
+    .content-preview img {
+        display: block !important;
+        width: 100% !important;
+        max-width: calc(100vw - 40px) !important;
+        height: auto !important;
+        object-fit: contain !important;
+        border-radius: 6px;
+        margin: 8px 0;
+        max-height: 200px;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 320px) {
+    .message-card {
+        padding: 8px;
+        max-width: calc(100vw - 16px);
+    }
+    
+    .message-card img,
+    .message-list-item img,
+    .content-preview img {
+        max-width: calc(100vw - 32px) !important;
+        max-height: 150px;
+        margin: 6px 0;
+    }
+}
+
+
 
     </style>
 </head>
