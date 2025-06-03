@@ -759,11 +759,12 @@
                 width: 100% !important; /* Explicit width */
                 max-width: 100% !important;
                 height: auto !important;
+                min-height: 100px !important; /* NEW: Force minimum height to reserve space */
                 visibility: visible !important;
                 opacity: 1 !important;
                 margin-top: 10px; /* 可選：如果圖片上方需要一些間距 */
                 margin-bottom: 10px; /* 可選：如果圖片下方需要一些間距 */
-                object-fit: contain !important; /* Ensure whole image is visible, scaled down */
+                object-fit: cover !important; /* CHANGED: Use cover to fill the forced min-height */
             }
         }
 
