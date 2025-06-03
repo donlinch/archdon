@@ -266,12 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const imagePreview = document.createElement('img');
                 imagePreview.src = msg.image_url;
                 imagePreview.alt = '留言圖片';
-                imagePreview.style.maxWidth = '100%';
-                imagePreview.style.maxHeight = '200px'; // 限制預覽高度
-                imagePreview.style.borderRadius = '8px';
-                imagePreview.style.marginTop = '10px';
-                imagePreview.style.objectFit = 'cover';
-                contentDiv.appendChild(imagePreview); // 將圖片放在內容預覽下方
+                imagePreview.style.maxWidth = '100%'; // It's good to keep max-width for safety.
+                // CSS will handle height, object-fit, border-radius, and margins.
+                contentDiv.appendChild(imagePreview);
             }
             
             const metaContainer = document.createElement('div');
@@ -507,11 +504,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const imagePreview = document.createElement('img');
                 imagePreview.src = msg.image_url;
                 imagePreview.alt = '留言圖片';
-                imagePreview.style.maxWidth = '100%';
-                imagePreview.style.maxHeight = '150px'; // 列表視圖中圖片可以小一點
-                imagePreview.style.borderRadius = '8px';
-                imagePreview.style.marginTop = '8px';
-                imagePreview.style.objectFit = 'cover';
+                imagePreview.style.maxWidth = '100%'; // It's good to keep max-width for safety.
+                // CSS will handle height, object-fit, border-radius, and margins.
                 contentDiv.appendChild(imagePreview);
             }
             
