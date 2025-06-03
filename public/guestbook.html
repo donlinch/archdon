@@ -363,7 +363,7 @@
         }
 
         .admin-author {
-            color: #C07000 !important;
+            color: #C07000  ;
         }
 
         .message-card .timestamp {
@@ -408,7 +408,7 @@
 
         /* --- 隱藏檢舉按鈕 --- */
         .report-button, .report-btn, .report-icon, .action-report, [data-type="report"], .report-meta-item {
-            display: none !important;
+            display: none   ;
         }
 
         /* --- 留言列表視圖 --- */
@@ -745,26 +745,26 @@
 
             /* Ensure parent containers don't hide the image via overflow */
             .message-card, .message-list-item {
-                overflow: visible !important; /* Allow children to overflow if necessary */
+                overflow: visible   /* Allow children to overflow if necessary */
             }
             .message-card .content-preview,
             .message-list-item .content-preview {
-                overflow: visible !important; /* Specifically for the direct parent of the image */
+                overflow: visible   /* Specifically for the direct parent of the image */
             }
 
             /* Modified:確保留言圖片在手機上顯示 */
             .message-card img,
             .message-list-item img {
-                display: block !important;
-                width: 100% !important; /* Explicit width */
-                max-width: 100% !important;
-                height: auto !important;
-                min-height: 100px !important; /* NEW: Force minimum height to reserve space */
-                visibility: visible !important;
-                opacity: 1 !important;
+                display: block   ;
+                width: 100%  ; /* Explicit width */
+                max-width: 100%  ;
+                height: auto  ;
+                min-height: 100px  ; /* NEW: Force minimum height to reserve space */
+                visibility: visible  ;
+                opacity: 1  ;
                 margin-top: 10px; /* 可選：如果圖片上方需要一些間距 */
                 margin-bottom: 10px; /* 可選：如果圖片下方需要一些間距 */
-                object-fit: cover !important; /* CHANGED: Use cover to fill the forced min-height */
+                object-fit: cover  ; /* CHANGED: Use cover to fill the forced min-height */
             }
         }
 
@@ -876,11 +876,11 @@
     .message-card img,
     .message-list-item img,
     .content-preview img {
-        display: block !important;
-        width: 100% !important;
-        max-width: calc(100vw - 40px) !important;
-        height: auto !important;
-        object-fit: contain !important;
+        display: block  ;
+        width: 100%  ;
+        max-width: calc(100vw - 40px)  ;
+        height: auto  ;
+        object-fit: contain  ;
         border-radius: 6px;
         margin: 8px 0;
         max-height: 200px;
@@ -897,7 +897,7 @@
     .message-card img,
     .message-list-item img,
     .content-preview img {
-        max-width: calc(100vw - 32px) !important;
+        max-width: calc(100vw - 32px)  ;
         max-height: 150px;
         margin: 6px 0;
     }
