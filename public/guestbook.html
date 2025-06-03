@@ -743,16 +743,27 @@
                 padding: 20px;
             }
 
-            /* 新增：確保留言圖片在手機上顯示 */
+            /* Ensure parent containers don't hide the image via overflow */
+            .message-card, .message-list-item {
+                overflow: visible !important; /* Allow children to overflow if necessary */
+            }
+            .message-card .content-preview,
+            .message-list-item .content-preview {
+                overflow: visible !important; /* Specifically for the direct parent of the image */
+            }
+
+            /* Modified:確保留言圖片在手機上顯示 */
             .message-card img,
             .message-list-item img {
                 display: block !important;
+                width: 100% !important; /* Explicit width */
                 max-width: 100% !important;
                 height: auto !important;
                 visibility: visible !important;
                 opacity: 1 !important;
                 margin-top: 10px; /* 可選：如果圖片上方需要一些間距 */
                 margin-bottom: 10px; /* 可選：如果圖片下方需要一些間距 */
+                object-fit: contain !important; /* Ensure whole image is visible, scaled down */
             }
         }
 
