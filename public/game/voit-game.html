@@ -699,7 +699,8 @@
 /* 新增或替換現有的結果樣式 */
 .results {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); /* Explicitly two columns, equally spaced */
+    grid-template-columns: 45% 45%; /* Two columns, each 45% of parent */
+    justify-content: center; /* Center the block of columns */
     gap: 25px;
     width: 100%;
     margin-top: 30px;
