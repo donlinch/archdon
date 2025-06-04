@@ -678,7 +678,7 @@
     box-sizing: border-box;
 }
 
-.option-name {
+.option-name { /* This style applies to the option name in the overlay */
     display: block;
     font-weight: 600;
     font-size: 1.1em;
@@ -688,7 +688,7 @@
     text-overflow: ellipsis;
 }
 
-.option-percentage-votes {
+.option-percentage-votes { /* This style applies to the percentage and votes in the overlay */
     display: block;
     font-size: 0.9em;
     opacity: 0.9;
@@ -1023,8 +1023,7 @@
                     if (!currentCampaignData || !currentCampaignData.options) return;
 
                     currentCampaignData.options.forEach(opt => {
-                        // Default placeholder image if actual one is missing
-                        const imageUrl = opt.image_url && opt.image_url.trim() !== '' ? escapeHtml(opt.image_url) : '/images/placeholder.png'; // Ensure placeholder if empty
+                        const imageUrl = opt.image_url && opt.image_url.trim() !== '' ? escapeHtml(opt.image_url) : '/images/placeholder.png';
                         const optionName = escapeHtml(opt.name);
 
                         const resultItemHTML = `
@@ -1036,11 +1035,7 @@
                                         <span class="option-percentage-votes">0% (0票)</span>
                                     </div>
                                 </div>
-                                <div class="result-progress-bar-container">
-                                    <div class="progress-bar">
-                                        <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}" style="width: 0%;">0%</div>
-                                    </div>
-                                </div>
+                                <!-- Progress bar container removed -->
                             </div>
                         `;
                         resultsDiv.insertAdjacentHTML('beforeend', resultItemHTML);
@@ -1117,7 +1112,6 @@
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const resultsData = await response.json(); 
 
-        // 清空並重新初始化結果結構
         resultsDiv.innerHTML = '<h2>投票結果</h2>';
         
         let totalVotes = 0;
@@ -1130,19 +1124,16 @@
             }
         });
 
-        // 更新結果標題
         const resultsTitleH2 = resultsDiv.querySelector('h2');
         if (resultsTitleH2) {
             resultsTitleH2.textContent = `投票結果 (總票數: ${totalVotes})`;
         }
     
-        // 為每個選項創建結果卡片
         currentCampaignData.options.forEach((opt, index) => {
             const votesForOption = resultsData[opt.option_id] || 0;
             const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
             const isWinner = votesForOption === maxVotes && maxVotes > 0;
             
-            // 使用預設圖片如果沒有提供圖片
             const imageUrl = opt.image_url && opt.image_url.trim() !== '' ? 
                 escapeHtml(opt.image_url) : 
                 '/images/placeholder.png';
@@ -1157,17 +1148,12 @@
                         </div>
                         ${isWinner ? '<span class="winner-badge">🏆 目前領先</span>' : ''}
                     </div>
-                    <div class="result-progress-bar-container">
-                        <div class="progress-bar">
-                            <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}" style="width: ${percentage.toFixed(1)}%;">${percentage.toFixed(1)}%</div>
-                        </div>
-                    </div>
+                    <!-- Progress bar container removed -->
                 </div>
             `;
             resultsDiv.insertAdjacentHTML('beforeend', resultCardHTML);
         });
 
-        // 顯示分享連結
         if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
             const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
             shareLinkInput.value = shareUrl;
@@ -1215,11 +1201,11 @@
                 function escapeHtml(unsafe) {
                     if (typeof unsafe !== 'string') return unsafe; // Return non-strings as is
                     return unsafe
-                          .replace(/&/g, '&amp;') // Must be first
-                          .replace(/</g, '&lt;')
-                          .replace(/>/g, '&gt;')
-                          .replace(/"/g, '&quot;')
-                          .replace(/'/g, '&#039;');
+                          .replace(/&/g, '&') // Must be first
+                          .replace(/</g, '<')
+                          .replace(/>/g, '>')
+                          .replace(/"/g, "&quot;")
+                          .replace(/'/g, "&#039;");
                 }
 
                 if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
@@ -1730,4 +1716,3 @@
     </nav>
 </body>
 </html>
- 
