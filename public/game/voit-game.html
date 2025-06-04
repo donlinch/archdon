@@ -657,35 +657,37 @@
         .result-main-image {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Crop image to fit container */
+            object-fit: contain; /* Changed from cover to contain */
             display: block;
         }
 
         .result-info-overlay {
             position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background-color: rgba(0, 0, 0, 0.65); /* Slightly darker for better contrast */
+            top: 10px; /* Changed from bottom: 0 */
+            left: 10px; /* Changed from left: 0, right: 0 */
+            right: auto; /* Added */
+            bottom: auto; /* Added */
+            background-color: rgba(0, 0, 0, 0.65); /* Changed from linear-gradient */
             color: white;
-            padding: 8px 12px; /* More padding */
-            border-radius: 6px; /* Softer radius */
-            font-size: 0.9em;
-            max-width: calc(100% - 20px); /* Ensure it doesn't overflow */
+            padding: 6px 10px; /* Adjusted padding */
+            border-radius: 6px;
+            font-size: 0.9em; /* Base font size for the overlay */
+            /* max-width: calc(100% - 20px); Removed, will be constrained by content or image edges */
             box-sizing: border-box;
+            z-index: 5; /* Ensure it's above the image */
         }
 
-        .result-info-overlay .option-name {
+        .option-name {
             display: block;
-            font-weight: 600; /* Bolder name */
-            margin-bottom: 4px; /* Space between name and votes */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: 600;
+            font-size: 1em; /* Relative to overlay font-size */
+            margin-bottom: 3px; /* Adjusted space */
         }
 
-        .result-info-overlay .option-percentage-votes {
+        .option-percentage-votes {
             display: block;
-            font-size: 0.9em; /* Slightly smaller for votes */
+            font-size: 0.85em; /* Relative to overlay font-size, slightly smaller */
+            opacity: 0.9;
         }
         
         .result-progress-bar-container {
