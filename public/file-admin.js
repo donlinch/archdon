@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Fetching DB files: page ${currentPage}, filter: ${currentFileType}, sort: ${currentSortBy}, search: ${currentSearch}`);
         const params = new URLSearchParams({
             page: currentPage,
-            limit: 15,
+            limit: 50,
             sortBy: currentSortBy,
             fileType: currentFileType,
             search: currentSearch
