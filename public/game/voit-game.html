@@ -200,7 +200,9 @@
         }
 
         .results {
-            display: none; 
+            display: grid; /* Changed from display:none; to grid */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive 2-column */
+            gap: 20px; /* Space between cards */
             width: 100%;
             margin-top: 30px;
         }
@@ -631,6 +633,67 @@
             /* This might be removed if .page-title is sufficient */
         }
 
+        /* New styles for card-based results */
+        .result-card {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden; /* Important for border-radius on image */
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease-in-out;
+        }
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .result-image-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3; /* Maintain image aspect ratio */
+            background-color: #f0f0f0; /* Placeholder bg for missing images */
+        }
+
+        .result-main-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Crop image to fit container */
+            display: block;
+        }
+
+        .result-info-overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.65); /* Slightly darker for better contrast */
+            color: white;
+            padding: 8px 12px; /* More padding */
+            border-radius: 6px; /* Softer radius */
+            font-size: 0.9em;
+            max-width: calc(100% - 20px); /* Ensure it doesn't overflow */
+            box-sizing: border-box;
+        }
+
+        .result-info-overlay .option-name {
+            display: block;
+            font-weight: 600; /* Bolder name */
+            margin-bottom: 4px; /* Space between name and votes */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .result-info-overlay .option-percentage-votes {
+            display: block;
+            font-size: 0.9em; /* Slightly smaller for votes */
+        }
+        
+        .result-progress-bar-container {
+            padding: 10px 15px 15px 15px; /* Padding around progress bar */
+            /* Ensure progress bar styles are still applied correctly */
+        }
+        /* End of new styles for card-based results */
+
     </style>
 </head>
 <body>
@@ -900,17 +963,23 @@
                     if (!currentCampaignData || !currentCampaignData.options) return;
 
                     currentCampaignData.options.forEach(opt => {
+                        // Default placeholder image if actual one is missing
+                        const imageUrl = opt.image_url && opt.image_url.trim() !== '' ? escapeHtml(opt.image_url) : '/images/placeholder.png'; // Ensure placeholder if empty
+                        const optionName = escapeHtml(opt.name);
+
                         const resultItemHTML = `
-                            <div class="result-item" data-result-id="${opt.option_id}">
-                                <div class="result-label">
-                                    <div>
-                                        ${opt.image_url && opt.image_url.trim() !== '' ? `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">` : '<span class="result-item-no-image"></span>'}
-                                        <span>${opt.name}</span>
+                            <div class="result-card" data-result-id="${opt.option_id}">
+                                <div class="result-image-container">
+                                    <img src="${imageUrl}" alt="${optionName}" class="result-main-image" onerror="this.onerror=null;this.src='/images/placeholder.png';">
+                                    <div class="result-info-overlay">
+                                        <span class="option-name">${optionName}</span>
+                                        <span class="option-percentage-votes">0% (0票)</span>
                                     </div>
-                                    <span class="percentage">0% (0票)</span>
                                 </div>
-                                <div class="progress-bar">
-                                    <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}">0%</div>
+                                <div class="result-progress-bar-container">
+                                    <div class="progress-bar">
+                                        <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}" style="width: 0%;">0%</div>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -985,23 +1054,37 @@
                         initializeResultsStructureForCampaign(); 
 
                         let totalVotes = 0;
+                        let maxVotes = 0;
                         currentCampaignData.options.forEach(opt => {
-                            totalVotes += (resultsData[opt.option_id] || 0);
+                            const votesForOption = resultsData[opt.option_id] || 0;
+                            totalVotes += votesForOption;
+                            if (votesForOption > maxVotes) {
+                                maxVotes = votesForOption;
+                            }
                         });
+
+                        const resultsTitleH2 = resultsDiv.querySelector('h2');
+                        if (resultsTitleH2) {
+                            resultsTitleH2.textContent = `投票結果 (${maxVotes}票 目前最高)`;
+                        }
                     
                         currentCampaignData.options.forEach((opt, index) => {
                             const votesForOption = resultsData[opt.option_id] || 0;
                             const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
                             
-                            const resultItem = resultsDiv.querySelector(`.result-item[data-result-id="${opt.option_id}"]`);
-                            if (resultItem) {
-                                const progressBar = resultItem.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
-                                const percentageSpan = resultItem.querySelector('.percentage');
+                            const resultCard = resultsDiv.querySelector(`.result-card[data-result-id="${opt.option_id}"]`);
+                            if (resultCard) {
+                                const progressBar = resultCard.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
+                                const percentageVotesSpan = resultCard.querySelector('.option-percentage-votes');
                                 
                                 setTimeout(() => {
-                                    progressBar.style.width = `${percentage.toFixed(1)}%`;
-                                    progressBar.textContent = `${percentage.toFixed(1)}%`;
-                                    percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
+                                    if (progressBar) {
+                                      progressBar.style.width = `${percentage.toFixed(1)}%`;
+                                      progressBar.textContent = `${percentage.toFixed(1)}%`;
+                                    }
+                                    if (percentageVotesSpan) {
+                                      percentageVotesSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
+                                    }
                                 }, 50 * (index + 1)); 
                             }
                         });
@@ -1047,21 +1130,13 @@
                 }
 
                 function escapeHtml(unsafe) {
-                    if (typeof unsafe !== 'string') return '';
+                    if (typeof unsafe !== 'string') return unsafe; // Return non-strings as is
                     return unsafe
-                          .replace(/&/g, '&')
-              
-                    // < 轉成 & l t ;
-                    .replace(/</g, '<')
-              
-                    // > 轉成 & g t ;
-                    .replace(/>/g, '>')
-              
-                    // " 轉成 & q u o t ;
-                    .replace(/"/g, '&quot;')
-              
-                    // ' 轉成 & # 3 9 ;  (數字實體)
-                    .replace(/'/g, '&#39;');
+                          .replace(/&/g, '&amp;') // Must be first
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                          .replace(/'/g, '&#039;');
                 }
 
                 if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
@@ -1452,8 +1527,8 @@
                                     // --- START OF MODIFICATION ---
                                     // Assuming /api/upload endpoint returns { success: true, url: '...' }
                                     if (response.ok && result.success && result.url) { // Check for result.url
-                                        hiddenImageUrlInput.value = result.url; // Use result.url
-                                        imagePreview.src = result.url;    // Use result.url for preview
+                                        hiddenImageUrlInput.value = escapeHtml(result.url); // Use result.url and escape
+                                        imagePreview.src = escapeHtml(result.url);    // Use result.url for preview and escape
                                         imagePreview.style.display = 'block';
                                         uploadStatusDiv.textContent = '上傳成功！';
                                         uploadStatusDiv.style.color = 'green';
