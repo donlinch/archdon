@@ -74,9 +74,7 @@
         #vote-title {
             font-size: 1.6em; /* Specific size for vote title */
         }
-        .results h2 {
-            font-size: 1.4em;
-        }
+        
         .options {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -616,14 +614,14 @@
             font-size: 0.85em; /* Relative to overlay font-size, slightly smaller */
             opacity: 0.9;
         }
-         End of new styles for card-based results */
+        
 
 
 
 /* 新增或替換現有的結果樣式 */
 .results {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); /* Explicitly two columns, equally spaced */
+    grid-template-columns: repeat(2,1fr); /* Explicitly two columns, equally spaced */
     justify-content: center; /* Center the block of columns */
     gap: 25px;
     width: 100%;
@@ -663,8 +661,8 @@
 }
 
 .result-main-image {
-    width: 100%;
-    height: 100%;
+    width: 45%;
+    height: auto;
     object-fit: cover;
     display: block;
 }
