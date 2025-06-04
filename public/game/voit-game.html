@@ -694,6 +694,143 @@
         }
         /* End of new styles for card-based results */
 
+
+
+/* 新增或替換現有的結果樣式 */
+.results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    width: 100%;
+    margin-top: 30px;
+}
+
+.results h2 {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #424242;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #FFB74D;
+}
+
+.result-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: transform 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.result-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.result-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: #f5f5f5;
+}
+
+.result-main-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.result-info-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    color: white;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.option-name {
+    display: block;
+    font-weight: 600;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.option-percentage-votes {
+    display: block;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.result-progress-bar-container {
+    padding: 15px;
+    background-color: #f9f9f9;
+}
+
+.progress-bar {
+    height: 24px;
+    border-radius: 12px;
+    background-color: #e0e0e0;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    margin-top: 10px;
+}
+
+.progress {
+    height: 100%;
+    background: linear-gradient(90deg, #FFB74D, #FF9800);
+    width: 0;
+    transition: width 1s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    color: white;
+    font-weight: 500;
+    font-size: 0.85em;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+.winner-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #FFC107;
+    color: #333;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: none;
+}
+
+.is-winner .winner-badge {
+    display: block;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .results {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-image-container {
+        aspect-ratio: 16 / 9;
+    }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -1037,83 +1174,106 @@
                     }
                 });
 
+
+
+
+
+                
+
                 async function showResultsForCampaign() {
-                    if (!currentCampaignData) return;
-                    resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>';
-                    const shareLinkArea = document.getElementById('share-link-area');
-                    const shareLinkInput = document.getElementById('shareable-link-input');
-                    const copyShareLinkButton = document.getElementById('copy-share-link-button');
+    if (!currentCampaignData) return;
+    resultsDiv.innerHTML = '<h2>投票結果</h2><p>載入結果中...</p>';
+    const shareLinkArea = document.getElementById('share-link-area');
+    const shareLinkInput = document.getElementById('shareable-link-input');
+    const copyShareLinkButton = document.getElementById('copy-share-link-button');
 
-                    if (shareLinkArea) shareLinkArea.style.display = 'none'; // Hide initially
+    if (shareLinkArea) shareLinkArea.style.display = 'none';
 
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        const resultsData = await response.json(); 
+    try {
+        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const resultsData = await response.json(); 
 
-                        initializeResultsStructureForCampaign(); 
+        // 清空並重新初始化結果結構
+        resultsDiv.innerHTML = '<h2>投票結果</h2>';
+        
+        let totalVotes = 0;
+        let maxVotes = 0;
+        currentCampaignData.options.forEach(opt => {
+            const votesForOption = resultsData[opt.option_id] || 0;
+            totalVotes += votesForOption;
+            if (votesForOption > maxVotes) {
+                maxVotes = votesForOption;
+            }
+        });
 
-                        let totalVotes = 0;
-                        let maxVotes = 0;
-                        currentCampaignData.options.forEach(opt => {
-                            const votesForOption = resultsData[opt.option_id] || 0;
-                            totalVotes += votesForOption;
-                            if (votesForOption > maxVotes) {
-                                maxVotes = votesForOption;
-                            }
-                        });
+        // 更新結果標題
+        const resultsTitleH2 = resultsDiv.querySelector('h2');
+        if (resultsTitleH2) {
+            resultsTitleH2.textContent = `投票結果 (總票數: ${totalVotes})`;
+        }
+    
+        // 為每個選項創建結果卡片
+        currentCampaignData.options.forEach((opt, index) => {
+            const votesForOption = resultsData[opt.option_id] || 0;
+            const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
+            const isWinner = votesForOption === maxVotes && maxVotes > 0;
+            
+            // 使用預設圖片如果沒有提供圖片
+            const imageUrl = opt.image_url && opt.image_url.trim() !== '' ? 
+                escapeHtml(opt.image_url) : 
+                '/images/placeholder.png';
+            
+            const resultCardHTML = `
+                <div class="result-card ${isWinner ? 'is-winner' : ''}" data-result-id="${opt.option_id}">
+                    <div class="result-image-container">
+                        <img src="${imageUrl}" alt="${escapeHtml(opt.name)}" class="result-main-image" onerror="this.onerror=null;this.src='/images/placeholder.png';">
+                        <div class="result-info-overlay">
+                            <span class="option-name">${escapeHtml(opt.name)}</span>
+                            <span class="option-percentage-votes">${percentage.toFixed(1)}% (${votesForOption}票)</span>
+                        </div>
+                        ${isWinner ? '<span class="winner-badge">🏆 目前領先</span>' : ''}
+                    </div>
+                    <div class="result-progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress" id="progress-${currentCampaignData.campaign_id}-${opt.option_id}" style="width: ${percentage.toFixed(1)}%;">${percentage.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultsDiv.insertAdjacentHTML('beforeend', resultCardHTML);
+        });
 
-                        const resultsTitleH2 = resultsDiv.querySelector('h2');
-                        if (resultsTitleH2) {
-                            resultsTitleH2.textContent = `投票結果 (${maxVotes}票 目前最高)`;
-                        }
-                    
-                        currentCampaignData.options.forEach((opt, index) => {
-                            const votesForOption = resultsData[opt.option_id] || 0;
-                            const percentage = totalVotes > 0 ? ((votesForOption / totalVotes) * 100) : 0;
-                            
-                            const resultCard = resultsDiv.querySelector(`.result-card[data-result-id="${opt.option_id}"]`);
-                            if (resultCard) {
-                                const progressBar = resultCard.querySelector(`#progress-${currentCampaignData.campaign_id}-${opt.option_id}`);
-                                const percentageVotesSpan = resultCard.querySelector('.option-percentage-votes');
-                                
-                                setTimeout(() => {
-                                    if (progressBar) {
-                                      progressBar.style.width = `${percentage.toFixed(1)}%`;
-                                      progressBar.textContent = `${percentage.toFixed(1)}%`;
-                                    }
-                                    if (percentageVotesSpan) {
-                                      percentageVotesSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
-                                    }
-                                }, 50 * (index + 1)); 
-                            }
-                        });
+        // 顯示分享連結
+        if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
+            shareLinkInput.value = shareUrl;
+            shareLinkArea.style.display = 'block';
 
-                        // Display share link
-                        if (currentCampaignData && currentCampaignData.campaign_id && shareLinkArea && shareLinkInput && copyShareLinkButton) {
-                            const shareUrl = `${window.location.origin}${window.location.pathname}?campaign_id=${currentCampaignData.campaign_id}`;
-                            shareLinkInput.value = shareUrl;
-                            shareLinkArea.style.display = 'block';
-
-                            copyShareLinkButton.onclick = () => {
-                                shareLinkInput.select();
-                                shareLinkInput.setSelectionRange(0, 99999); // For mobile devices
-                                try {
-                                    document.execCommand('copy');
-                                    copyShareLinkButton.textContent = '已複製!';
-                                    setTimeout(() => { copyShareLinkButton.textContent = '複製'; }, 2000);
-                                } catch (err) {
-                                    console.error('無法複製連結: ', err);
-                                    alert('無法自動複製連結，請手動複製。');
-                                }
-                            };
-                        }
-
-                    } catch (error) {
-                         console.error("無法獲取投票結果:", error);
-                         resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
-                    }
+            copyShareLinkButton.onclick = () => {
+                shareLinkInput.select();
+                shareLinkInput.setSelectionRange(0, 99999);
+                try {
+                    document.execCommand('copy');
+                    copyShareLinkButton.textContent = '已複製!';
+                    setTimeout(() => { copyShareLinkButton.textContent = '複製'; }, 2000);
+                } catch (err) {
+                    console.error('無法複製連結: ', err);
+                    alert('無法自動複製連結，請手動複製。');
                 }
+            };
+        }
+
+    } catch (error) {
+        console.error("無法獲取投票結果:", error);
+        resultsDiv.innerHTML = '<h2>投票結果</h2><p>無法載入結果，請稍後再試。</p>';
+    }
+}
+
+
+
+
+
                 
                 restartButton.addEventListener('click', function() {
                     if (!currentCampaignData) return;
