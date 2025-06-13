@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelBtn = modal.querySelector('.cancel-btn');
 
     let allFiguresData = []; // 用於編輯時查找數據
-    let currentViewMode = 'table'; // 'table' or 'grid'
+    let currentViewMode = 'grid'; // 'table' or 'grid'
 
     // --- CRUD 函數 ---
 
