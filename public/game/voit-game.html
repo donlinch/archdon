@@ -1068,10 +1068,11 @@
                         if (!drawerContent) return; 
                         
                         drawerContent.innerHTML = `
+                        <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
                             <ul id="drawer-item-list" class="drawer-item-list">
                                 <li>載入活動列表中...</li>
                             </ul>
-                            <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
+                            
                         `;
                         const newDrawerButton = document.getElementById('drawer-add-new-button');
                         if (newDrawerButton) {
