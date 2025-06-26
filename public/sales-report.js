@@ -38,6 +38,7 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
     const openDrawerBtn = document.getElementById('open-drawer-btn');
     const closeDrawerBtn = document.getElementById('close-drawer-btn');
     const drawerOverlay = document.getElementById('drawer-overlay');
+    const exportExcelBtn = document.getElementById('export-excel-btn'); // 新增：匯出按鈕的 DOM 引用
     const slideOutDrawer = document.getElementById('slide-out-drawer');
     const drawerTabButtons = document.querySelectorAll('.drawer-tab-button');
     const drawerTabContents = document.querySelectorAll('.drawer-tab-content');
@@ -743,6 +744,10 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
         });
     });
 
+    // 將匯出按鈕的事件監聽器放在 DOMContentLoaded 內部，確保頁面載入時綁定
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', exportDataToExcel);
+    }
     setDefaultSaleTimestamp(); // 頁面載入時設定預設時間
     refreshData(); // 初始載入數據 (預設無篩選)
 
@@ -760,3 +765,86 @@ const productSuggestionsDatalist = document.getElementById('product-suggestions'
         }
     }
 });
+
+
+
+ 
+function exportDataToExcel() {
+    // --- 1. 收集數據 ---
+
+    // a) 從表格中獲取詳細銷售紀錄
+    const salesTableBody = document.getElementById('sales-table-body');
+    const tableRows = salesTableBody.querySelectorAll('tr');
+    const salesRecords = [];
+    const salesHeaders = ['銷售時間', '商品名稱', '銷售數量'];
+    salesRecords.push(salesHeaders); // 加入標題列
+
+    tableRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        // 確保這是數據列，而不是「載入中」或「無數據」的提示訊息
+        if (cells.length === salesHeaders.length + 1) { // +1 是因為有「操作」欄
+            const record = [
+                cells[0].innerText, // 銷售時間
+                cells[1].innerText, // 商品名稱
+                parseInt(cells[2].innerText, 10) || 0 // 銷售數量 (轉換為數字)
+            ];
+            salesRecords.push(record);
+        }
+    });
+
+    // 檢查是否有數據可匯出
+    if (salesRecords.length <= 1) { // 如果只有標題列
+        alert('沒有可匯出的詳細銷售紀錄！');
+        return;
+    }
+
+    // b) 從資訊卡中獲取總覽數據
+    const summaryData = [
+        ['報表項目', '數值'], // 總覽的標題列
+        ['篩選期間總銷售件數', parseInt(document.getElementById('summary-total-items').innerText, 10) || 0],
+        [], // 加入一個空行作為分隔
+        ['熱銷商品排行', '銷售件數'],
+        [
+            `Top 1: ${document.getElementById('summary-top-product-name').innerText}`,
+            document.getElementById('summary-top-product-qty').innerText
+        ],
+        [
+            `Top 2: ${document.getElementById('summary-top-product-name-2').innerText}`,
+            document.getElementById('summary-top-product-qty-2').innerText
+        ],
+        [
+            `Top 3: ${document.getElementById('summary-top-product-name-3').innerText}`,
+            document.getElementById('summary-top-product-qty-3').innerText
+        ]
+
+
+
+        
+    ];
+    // --- 2. 使用 SheetJS 建立 Excel 檔案 ---
+
+    // 建立一個新的工作簿 (Workbook)
+    const wb = XLSX.utils.book_new();
+
+    // 從收集到的數據建立工作表 (Worksheet)
+    const wsSales = XLSX.utils.aoa_to_sheet(salesRecords);
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+
+    // 設定欄寬以提高可讀性 (可選，但建議)
+    // 單位約為字元寬度
+    wsSales['!cols'] = [ { wch: 20 }, { wch: 40 }, { wch: 15 } ]; // 時間, 商品名稱, 數量
+    wsSummary['!cols'] = [ { wch: 30 }, { wch: 20 } ]; // 項目, 數值
+
+    // 將工作表加入到工作簿中，並命名
+    XLSX.utils.book_append_sheet(wb, wsSales, '詳細銷售紀錄');
+    XLSX.utils.book_append_sheet(wb, wsSummary, '銷售總覽');
+
+    // --- 3. 觸發下載 ---
+
+    // 使用當前日期生成檔名
+    const today = new Date().toISOString().slice(0, 10); // 格式: YYYY-MM-DD
+    const fileName = `SunnyYummy-銷售報告-${today}.xlsx`;
+
+    // 寫入工作簿並觸發瀏覽器下載
+    XLSX.writeFile(wb, fileName);
+}

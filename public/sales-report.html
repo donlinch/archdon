@@ -6,6 +6,8 @@
     <title>銷售報告 - SunnyYummy 管理後台</title>
     <link rel="stylesheet" href="style.css">
     <!-- Chart.js for graphs -->
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> <!-- 日期適配器 -->
     <style>
@@ -418,7 +420,10 @@
 
         <!-- 銷售紀錄表格 -->
         <section class="table-section">
-            <h2>詳細銷售紀錄</h2>
+            <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0; padding: 0; border: none; font-weight: 500; font-size: 1.75rem;">詳細銷售紀錄</h2>
+                <button id="export-excel-btn" class="btn btn-success">匯出 Excel</button>
+            </div>
             <div id="loading-indicator">正在載入資料...</div>
             <table>
                 <thead>
