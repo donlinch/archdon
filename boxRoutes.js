@@ -49,7 +49,7 @@ module.exports = function(dependencies) {
             return res.status(400).json({ error: '兩次輸入的密碼不一致。' });
         }
 
-        let profileImageUrlToSave = '/images/default_avatar.png'; // 預設頭像
+        let profileImageUrlToSave = '/images/a01girlmove.gif'; // 預設頭像
 
         try {
             // 步驟 0: 如果有上傳頭像文件，則處理它
@@ -97,7 +97,7 @@ module.exports = function(dependencies) {
 
             if (userCheck.rows.length > 0) {
                  // 如果之前上傳了圖片但用戶名或Email衝突，需要考慮是否刪除已上傳的臨時圖片
-                if (req.file && profileImageUrlToSave !== '/images/default_avatar.png') {
+                if (req.file && profileImageUrlToSave !== '/images/a01girlmove.gif') {
                     try { await fs.unlink(path.join(uploadDir, path.basename(profileImageUrlToSave))); } catch (e) { console.error("Error deleting temp profile image on user conflict:", e); }
                 }
                 return res.status(409).json({ error: '此用戶名或Email已被註冊，請選擇其他名稱或Email。' });
@@ -133,7 +133,7 @@ module.exports = function(dependencies) {
         } catch (err) {
             console.error('[API POST /box/users/register] Error:', err);
              // 如果出錯，且之前上傳了圖片，嘗試刪除它
-            if (req.file && profileImageUrlToSave !== '/images/default_avatar.png' && err.code !== '23505' /* 不是因為用戶名衝突 */) {
+            if (req.file && profileImageUrlToSave !== '/images/a01girlmove.gif' && err.code !== '23505' /* 不是因為用戶名衝突 */) {
                 try { await fs.unlink(path.join(uploadDir, path.basename(profileImageUrlToSave))); } catch (e) { console.error("Error deleting profile image on registration error:", e); }
             }
             res.status(500).json({ error: '註冊過程中發生錯誤，請稍後再試。' });
