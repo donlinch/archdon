@@ -253,7 +253,7 @@ module.exports = function(dependencies) {
     router.get('/users/me', authenticateBoxUser, async (req, res) => {
         const userId = req.boxUser.userId;
         try {
-            const result = await pool.query('SELECT user_id, username, user_profile_image_url, created_at FROM BOX_Users WHERE user_id = $1', [userId]);
+            const result = await pool.query('SELECT user_id, username, email, user_profile_image_url, created_at FROM BOX_Users WHERE user_id = $1', [userId]);
             if (result.rows.length === 0) { return res.status(404).json({ error: '找不到用戶信息。' });}
             res.json(result.rows[0]);
         } catch (err) {
@@ -279,6 +279,43 @@ module.exports = function(dependencies) {
         } catch (err) {
             console.error(`[API PUT /users/me/password] User ${userId} Error:`, err);
             res.status(500).json({ error: '密碼更新失敗。' });
+        }
+    });
+
+    router.put('/users/me/email', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.userId;
+        const { email } = req.body;
+
+        if (!email || email.trim() === '') {
+            return res.status(400).json({ error: 'Email不能為空。' });
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: '請輸入有效的Email格式。' });
+        }
+
+        try {
+            // 檢查 email 是否已被其他用戶使用
+            const emailCheck = await pool.query(
+                'SELECT user_id FROM BOX_Users WHERE LOWER(email) = LOWER($1) AND user_id != $2',
+                [email.trim(), userId]
+            );
+
+            if (emailCheck.rows.length > 0) {
+                return res.status(409).json({ error: '此Email已被其他用戶註冊。' });
+            }
+
+            // 更新用戶的 email
+            await pool.query(
+                'UPDATE BOX_Users SET email = $1 WHERE user_id = $2',
+                [email.trim(), userId]
+            );
+
+            res.json({ success: true, message: 'Email更新成功。' });
+        } catch (err) {
+            console.error(`[API PUT /users/me/email] User ${userId} Error:`, err);
+            res.status(500).json({ error: 'Email更新失敗。' });
         }
     });
 

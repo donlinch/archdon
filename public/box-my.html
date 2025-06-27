@@ -878,7 +878,7 @@
             transform: translateY(-2px);
         }
          /* Status messages in forms */
-        #addWarehouseStatus, #boxFormStatus, #itemFormStatus, #changePasswordStatus, #changeProfileImageStatus {
+        #addWarehouseStatus, #boxFormStatus, #itemFormStatus, #changePasswordStatus, #changeEmailStatus, #changeProfileImageStatus {
             margin-top:15px;
             font-size: 0.9em;
             font-weight: 500;
@@ -1641,6 +1641,17 @@
                 <p id="changePasswordStatus" style="margin-top:10px;"></p>
             </form>
             <hr>
+            <!-- Change Email Form -->
+            <form id="changeEmailForm" style="margin-top: 30px; margin-bottom: 30px;">
+                <h3>更改Email</h3>
+                <div class="form-group">
+                    <label for="newEmail">電子郵件 (用於密碼找回):</label>
+                    <input type="email" id="newEmail" required placeholder="請輸入您的電子郵件">
+                </div>
+                <button type="submit">更新Email</button>
+                <p id="changeEmailStatus" style="margin-top:10px;"></p>
+            </form>
+            <hr>
             <!-- Change Profile Image Form -->
             <form id="changeProfileImageForm" style="margin-top: 30px;">
                  <h3>更改頭像</h3>
@@ -1872,6 +1883,9 @@
             const searchResultsArea = document.getElementById('search-results-area');
             const searchPagination = document.getElementById('search-pagination');
     
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const changeEmailForm = document.getElementById('changeEmailForm');
+            const changeProfileImageForm = document.getElementById('changeProfileImageForm');
             const profileImageFile = document.getElementById('profileImageFile');
     
             let currentUserId = null;
@@ -2016,6 +2030,12 @@
                 if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
                 if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
 
+                // Populate email form
+                const newEmailInput = document.getElementById('newEmail');
+                if (newEmailInput) {
+                    newEmailInput.value = userData.email || '';
+                }
+
                 let tabToOpenInitially = 'tab-warehouses';
                 const lastOpenedWarehouseId = localStorage.getItem('lastOpenedWarehouseId');
                 const autoOpenBoxManagement = localStorage.getItem('autoOpenBoxManagement');
@@ -2055,8 +2075,9 @@
                 }
             if (tabLinks) tabLinks.forEach(link => { link.addEventListener('click', () => { if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) { alert('請先從「我的倉庫」分頁選擇一個倉庫。'); return; } switchTab(link.dataset.tab); }); });
             if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
-            if (document.getElementById('changePasswordForm')) document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
-            if (document.getElementById('changeProfileImageForm')) document.getElementById('changeProfileImageForm').addEventListener('submit', handleChangeProfileImage);
+            if (changePasswordForm) changePasswordForm.addEventListener('submit', handleChangePassword);
+            if (changeEmailForm) changeEmailForm.addEventListener('submit', handleChangeEmail);
+            if (changeProfileImageForm) changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
             if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
             document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('boxModal')); });
             if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
@@ -2110,7 +2131,7 @@
             }
 
             function resetFormStatuses() {
-                ['warehouseFormStatus', 'boxFormStatus', 'itemFormStatus', 'changePasswordStatus', 'changeProfileImageStatus'].forEach(id => {
+                ['warehouseFormStatus', 'boxFormStatus', 'itemFormStatus', 'changePasswordStatus', 'changeEmailStatus', 'changeProfileImageStatus'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.textContent = '';
                 });
@@ -2379,6 +2400,35 @@
                     document.getElementById('changePasswordForm').reset();
                 } catch (error) {
                     statusEl.textContent = `更新失敗: ${error.data?.error || error.message}`; statusEl.style.color = 'var(--danger-color)';
+                }
+            }
+
+            async function handleChangeEmail(event) {
+                event.preventDefault();
+                const newEmailInput = document.getElementById('newEmail');
+                const statusEl = document.getElementById('changeEmailStatus');
+                const email = newEmailInput.value.trim();
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    statusEl.textContent = '請輸入有效的Email格式。';
+                    statusEl.style.color = 'var(--warning-color)';
+                    return;
+                }
+
+                statusEl.textContent = '正在更新Email...';
+                statusEl.style.color = 'var(--primary-color)';
+
+                try {
+                    await apiFetch('/api/box/users/me/email', {
+                        method: 'PUT',
+                        body: { email: email }
+                    });
+                    statusEl.textContent = 'Email 更新成功！';
+                    statusEl.style.color = 'var(--accent-color)';
+                } catch (error) {
+                    statusEl.textContent = `更新失敗: ${error.data?.error || error.message}`;
+                    statusEl.style.color = 'var(--danger-color)';
                 }
             }
 
