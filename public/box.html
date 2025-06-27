@@ -451,11 +451,15 @@
         </div>
 
         <div class="register-form-container" id="registerFormContainer">
-            <h2>註冊新使用者</h2>  <small>請務必記住名稱與密碼才能登入！</small>
+            <h2>註冊新使用者</h2>  <small>請務必記住名稱、Email與密碼才能登入！</small>
             <form id="registerForm">
                 <div class="form-group">
                     <label for="registerUsername">用戶名稱 </label>
                     <input type="text" id="registerUsername" required minlength="3" placeholder="請輸入用戶名稱">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">電子郵件 (用於未來找回密碼)</label>
+                    <input type="email" id="registerEmail" required placeholder="請輸入您的電子郵件">
                 </div>
                 <div class="form-group">
                     <label for="registerPassword">密碼 (至少6個字)</label>
@@ -475,19 +479,18 @@
     </div>
 
 
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
-    crossorigin="anonymous"></script>
-<!-- 底部廣告 -->
-<ins class="adsbygoogle"
-    style="display:block"
-    data-ad-client="ca-pub-8966114892131293"
-    data-ad-slot="9887756394"
-    data-ad-format="auto"
-    data-full-width-responsive="true"></ins>
-<script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-
+    <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+    <!-- 底部廣告 -->
+    <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-8966114892131293"
+        data-ad-slot="9887756394"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    </div>
 
 
     <footer class="footer">
@@ -561,6 +564,7 @@
             const registerFormContainer = document.getElementById('registerFormContainer');
             const registerForm = document.getElementById('registerForm');
             const registerUsernameInput = document.getElementById('registerUsername');
+            const registerEmailInput = document.getElementById('registerEmail');
             const registerPasswordInput = document.getElementById('registerPassword');
             const registerConfirmPasswordInput = document.getElementById('registerConfirmPassword');
             const registerFormErrorMessage = document.getElementById('register-form-error-message');
@@ -637,13 +641,14 @@
                 registerForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const username = registerUsernameInput.value.trim();
+                    const email = registerEmailInput.value.trim();
                     const password = registerPasswordInput.value;
                     const confirmPassword = registerConfirmPasswordInput.value;
 
                     registerFormErrorMessage.style.display = 'none';
 
                     // 表單驗證
-                    if (!username || !password || !confirmPassword) {
+                    if (!username || !email || !password || !confirmPassword) {
                         registerFormErrorMessage.textContent = '所有欄位都必須填寫';
                         registerFormErrorMessage.style.display = 'block';
                         return;
@@ -677,6 +682,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 username: username,
+                                email: email,
                                 password: password,
                                 confirmPassword: confirmPassword
                             })
