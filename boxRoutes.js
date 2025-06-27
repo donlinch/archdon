@@ -1551,42 +1551,5 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
-    // 獲取待處理的密碼重設請求（管理員用）
-    router.get('/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
-        try {
-            const query = `
-                SELECT 
-                    prr.id, 
-                    prr.user_id, 
-                    u.username, 
-                    u.email, 
-                    prr.reset_token, 
-                    prr.token_expires_at, 
-                    prr.created_at
-                FROM password_reset_requests prr
-                JOIN BOX_Users u ON prr.user_id = u.user_id
-                WHERE prr.status = 'pending'
-                ORDER BY prr.created_at ASC;
-            `;
-            const result = await pool.query(query);
-            res.json(result.rows);
-        } catch (err) {
-            console.error('[API GET /admin/password-reset-requests/pending] Error:', err);
-            res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
-        }
-    });
-
-    // 獲取待處理的密碼重設請求數量（管理員用）
-    router.get('/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
-        try {
-            const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
-            const count = parseInt(result.rows[0].count, 10);
-            res.json({ count });
-        } catch (err) {
-            console.error('[API GET /admin/password-reset-requests/pending-count] Error:', err);
-            res.status(500).json({ error: '無法獲取請求數量' });
-        }
-    });
-
     return router;
 };

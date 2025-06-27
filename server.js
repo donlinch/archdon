@@ -179,6 +179,42 @@ app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/
         res.json({ success: true, message: '已登出 (無活動 session)。' });
     }
 });
+
+
+// GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
+app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                prr.id, prr.user_id, u.username, u.email, 
+                prr.reset_token, prr.token_expires_at, prr.created_at
+            FROM password_reset_requests prr
+            JOIN BOX_Users u ON prr.user_id = u.user_id
+            WHERE prr.status = 'pending'
+            ORDER BY prr.created_at ASC;
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending] Error:', err);
+        res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
+    }
+});
+
+// GET /api/admin/password-reset-requests/pending-count - 獲取待處理請求數量
+app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
+        const count = parseInt(result.rows[0].count, 10);
+        res.json({ count });
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending-count] Error:', err);
+        res.status(500).json({ error: '無法獲取請求數量' });
+    }
+});
+
+
+
 // Example of a protected admin route
 app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
     res.send(`
