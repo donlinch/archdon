@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>選擇您的儲藏空間 - 紙箱子管理</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
+    crossorigin="anonymous"></script>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0 0 80px 0; /* Bottom padding for nav */
+            min-height: 100vh;
+        }
+
+        /* User Status Indicator */
+        .user-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Header Styles */
+        .page-header {
+            background: linear-gradient(135deg, #FFB74D, #FF9800);
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%,
+                                              transparent 50%, rgba(255,255,255,0.1) 50%,
+                                              rgba(255,255,255,0.1) 75%, transparent 75%,
+                                              transparent);
+            background-size: 30px 30px;
+            opacity: 0.3;
+        }
+
+        .page-title {
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+            margin: 0;
+        }
+
+        /* Container Styles */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* User Selection Area */
+        #user-selection-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .user-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 2px solid transparent;
+        }
+
+        .user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .user-card.selected {
+            border-color: #FF9800;
+            box-shadow: 0 4px 12px rgba(255,152,0,0.2);
+        }
+
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .username {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            flex: 1;
+        }
+
+        /* Register Form Styles */
+        .register-form-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            max-width: 400px;
+            display: none;
+        }
+
+        .register-form-container.show {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: #FF9800;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,152,0,0.1);
+        }
+
+        /* Button Styles */
+        .button-style-primary {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-style-primary:hover {
+            background: #F57C00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,152,0,0.3);
+        }
+
+        .button-style-secondary {
+            background: white;
+            color: #FF9800;
+            border: 2px solid #FF9800;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button-style-secondary:hover {
+            background: #FFF3E0;
+            transform: translateY(-2px);
+        }
+
+        /* Error Messages */
+        .error-message {
+            color: #e53e3e;
+            background: #fff5f5;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        /* Loading State */
+        #initial-loading {
+            text-align: center;
+            color: #718096;
+            padding: 2rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #718096;
+            font-size: 0.875rem;
+        }
+
+        
+
+
+
+
+ /* --- Bottom Navigation --- */
+ .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            z-index: 1000;
+            padding: 5px 0;
+            box-sizing: border-box;
+        }
+
+        .bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .bottom-nav li {
+            text-align: center;
+        }
+
+        .bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px;
+            text-decoration: none;
+            color: #777;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .bottom-nav a.active {
+            color: #FFB74D;
+            background-color: rgba(255, 183, 77, 0.1);
+            border-radius: 20px;
+            animation: pulseNav 2s infinite;
+        }
+
+        .bottom-nav .icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            margin-bottom: 3px;
+        }
+
+
+
+
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-card {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 0 0.75rem;
+            }
+
+            .user-card {
+                padding: 1rem;
+            }
+
+            .profile-avatar {
+                width: 50px;
+                height: 50px;
+            }
+
+            .username {
+                font-size: 1rem;
+            }
+
+            .register-form-container {
+                padding: 1.5rem;
+            }
+
+            .form-group input {
+                padding: 0.75rem;
+            }
+
+            .button-style-primary,
+            .button-style-secondary {
+                padding: 0.75rem 1.25rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Form Container Styles */
+        .form-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            max-width: 400px;
+        }
+
+        .form-container h2 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* Quick Login Styles */
+        .quick-login-container {
+            margin: 2rem auto;
+            max-width: 400px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .quick-login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .quick-login-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #FFB74D;
+        }
+
+        .quick-login-info {
+            flex: 1;
+        }
+
+        .quick-login-username {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-login-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .quick-login-switch {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            color: #718096;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .quick-login-switch:hover {
+            color: #FF9800;
+        }
+    </style>
+</head>
+<body>
+    <!-- Add the user status indicator -->
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
+
+    <header class="page-header">
+        <h1 class="page-title">倉庫紙箱管理器</h1>
+    </header>
+
+    <div class="container">
+        <div id="quick-login-container" class="quick-login-container" style="display: none;">
+            <div class="quick-login-card">
+                <img id="savedUserAvatar" class="quick-login-avatar" src="" alt="用戶頭像">
+                <div class="quick-login-info">
+                    <p class="quick-login-username" id="savedUsername"></p>
+                    <button class="button-style-primary quick-login-button" id="quickLoginBtn">快速登入</button>
+                </div>
+                <button class="quick-login-switch" id="switchUserBtn">切換帳號</button>
+            </div>
+        </div>
+
+        <div id="login-form-container" class="form-container">
+            <h2>登入</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">用戶名稱</label>
+                    <input type="text" id="loginUsername" required placeholder="請輸入用戶名稱">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密碼</label>
+                    <input type="password" id="loginPassword" required placeholder="請輸入密碼">
+                </div>
+                <p id="login-form-error-message" class="error-message"></p>
+                <div class="button-group">
+                    <a href="#" id="forgotPasswordBtn" style="font-size: 0.9em; margin-right: auto; color: #718096; align-self: center;">忘記密碼？</a>
+                    <button type="submit" class="button-style-primary">登入</button>
+                </div>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <p style="margin-bottom: 1rem; color: #4a5568;">還沒有帳號？</p>
+            <button id="showRegisterModalBtn" class="button-style-secondary">註冊新使用者</button>
+        </div>
+
+        <div class="register-form-container" id="registerFormContainer">
+            <h2>註冊新使用者</h2>  <small>請務必記住名稱、Email與密碼才能登入！</small>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">用戶名稱 </label>
+                    <input type="text" id="registerUsername" required minlength="3" placeholder="請輸入用戶名稱">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">電子郵件 (用於未來找回密碼)</label>
+                    <input type="email" id="registerEmail" required placeholder="請輸入您的電子郵件">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密碼 (至少6個字)</label>
+                    <input type="password" id="registerPassword" required minlength="6" placeholder="請輸入密碼">
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">確認密碼</label>
+                    <input type="password" id="registerConfirmPassword" required placeholder="請再次輸入密碼">
+                </div>
+                <div class="form-group">
+                    <label for="profileImage">頭像圖片 (可選)</label>
+                    <input type="file" id="profileImage" name="profileImage" accept="image/*">
+                    <div id="profileImagePreview" style="margin-top: 10px; width: 100px; height: 100px; border-radius: 50%; overflow: hidden; display: none;">
+                        <img style="width: 100%; height: 100%; object-fit: cover;" alt="頭像預覽">
+                    </div>
+                </div>
+                <p id="register-form-error-message" class="error-message"></p>
+                <div class="button-group">
+                    <button type="button" class="button-style-secondary" id="cancelRegister">取消</button>
+                    <button type="submit" class="button-style-primary">註冊</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+        <div class="form-container" style="max-width: 400px; margin: auto;">
+            <span id="closeForgotPasswordModal" style="float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2>找回密碼</h2>
+            <p style="color: #4a5568; margin-bottom: 1.5rem; font-size: 0.9em;">請輸入您註冊時使用的電子郵件。我們會手動處理您的請求，並將密碼重設連結在24小時內寄送給您。</p>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="forgotEmail">電子郵件</label>
+                    <input type="email" id="forgotEmail" required placeholder="請輸入您的註冊信箱">
+                </div>
+                <p id="forgot-password-form-message" class="error-message" style="background-color: #f0f8ff; color: #31708f;"></p>
+                <div class="button-group">
+                    <button type="submit" class="button-style-primary">送出請求</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+    <!-- 底部廣告 -->
+    <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-8966114892131293"
+        data-ad-slot="9887756394"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    </div>
+
+
+    <footer class="footer">
+        <p>© 2025 SunnyYummy. All rights reserved.</p>
+    </footer>
+
+    <!-- Keep the existing bottom navigation -->
+    <nav class="bottom-nav" role="navigation" aria-label="主要導航">
+        <ul>
+            <li><a href="/" aria-label="商品頁面"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+            <li><a href="/music.html" aria-label="音樂頁面"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+            <li><a href="/news.html" aria-label="消息頁面"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+            <li><a href="/scores.html" aria-label="樂譜頁面"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active" aria-label="遊戲頁面"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html" aria-label="留言頁面"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
+        </ul>
+    </nav>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const quickLoginContainer = document.getElementById('quick-login-container');
+            const loginFormContainer = document.getElementById('login-form-container');
+            const savedUserAvatar = document.getElementById('savedUserAvatar');
+            const savedUsername = document.getElementById('savedUsername');
+            const quickLoginBtn = document.getElementById('quickLoginBtn');
+            const switchUserBtn = document.getElementById('switchUserBtn');
+
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+
+            // Update the user status indicator
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedUserName;
+                
+                // Add click event to navigate to user editor page
+                document.getElementById('userStatus').addEventListener('click', () => {
+                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+            }
+
+            // 如果有保存的登入信息，顯示快速登入區域
+            if (savedUserId && savedUserToken && savedUserName) {
+                savedUserAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                savedUsername.textContent = savedUserName;
+                quickLoginContainer.style.display = 'block';
+                loginFormContainer.style.display = 'none';
+            }
+
+            // 快速登入按鈕點擊事件
+            if (quickLoginBtn) {
+                quickLoginBtn.addEventListener('click', () => {
+                    if (savedUserId && savedUserToken) {
+                        // 直接使用保存的登入信息跳轉
+                        window.location.href = `box-my.html?userId=${savedUserId}`;
+                    } else {
+                        // 登入信息不完整，顯示登入表單
+                        quickLoginContainer.style.display = 'none';
+                        loginFormContainer.style.display = 'block';
+                        alert('登入信息已失效，請重新登入');
+                    }
+                });
+            }
+
+            // 切換帳號按鈕點擊事件
+            if (switchUserBtn) {
+                switchUserBtn.addEventListener('click', () => {
+                    quickLoginContainer.style.display = 'none';
+                    loginFormContainer.style.display = 'block';
+                });
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const loginUsernameInput = document.getElementById('loginUsername');
+            const loginPasswordInput = document.getElementById('loginPassword');
+            const loginFormErrorMessage = document.getElementById('login-form-error-message');
+
+            const showRegisterModalBtn = document.getElementById('showRegisterModalBtn');
+            const registerFormContainer = document.getElementById('registerFormContainer');
+            const registerForm = document.getElementById('registerForm');
+            const registerUsernameInput = document.getElementById('registerUsername');
+            const registerEmailInput = document.getElementById('registerEmail');
+            const registerPasswordInput = document.getElementById('registerPassword');
+            const registerConfirmPasswordInput = document.getElementById('registerConfirmPassword');
+            const registerFormErrorMessage = document.getElementById('register-form-error-message');
+            const cancelRegisterBtn = document.getElementById('cancelRegister');
+
+            const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+            const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+            const closeForgotPasswordModal = document.getElementById('closeForgotPasswordModal');
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            const forgotEmailInput = document.getElementById('forgotEmail');
+            const forgotPasswordMessage = document.getElementById('forgot-password-form-message');
+
+            // 處理登入表單提交
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const username = loginUsernameInput.value.trim();
+                    const password = loginPasswordInput.value;
+
+                    loginFormErrorMessage.style.display = 'none';
+
+                    if (!username || !password) {
+                        loginFormErrorMessage.textContent = '請輸入用戶名稱和密碼';
+                        loginFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    const submitButton = loginForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = '登入中...';
+
+                    try {
+                        const response = await fetch('/api/box/users/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success && data.token) {
+                            localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
+                            localStorage.setItem('boxCurrentUserId', data.user.userId);
+                            localStorage.setItem('boxCurrentUsername', data.user.username);
+                            localStorage.setItem('boxCurrentUserAvatar', data.user?.profileImageUrl || '/images/a01girlmove.gif');
+                            window.location.href = `box-my.html?userId=${data.user.userId}`;
+                        } else {
+                            loginFormErrorMessage.textContent = data.error || '登入失敗，請檢查用戶名稱和密碼';
+                            loginFormErrorMessage.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('登入請求失敗:', error);
+                        loginFormErrorMessage.textContent = `登入失敗: ${error.message}`;
+                        loginFormErrorMessage.style.display = 'block';
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = '登入';
+                    }
+                });
+            }
+
+            // 顯示註冊表單
+            if (showRegisterModalBtn) {
+                showRegisterModalBtn.addEventListener('click', () => {
+                    registerForm.reset();
+                    registerFormErrorMessage.style.display = 'none';
+                    registerFormContainer.classList.add('show');
+                    registerUsernameInput.focus();
+                });
+            }
+
+            // 取消註冊
+            if (cancelRegisterBtn) {
+                cancelRegisterBtn.addEventListener('click', () => {
+                    registerFormContainer.classList.remove('show');
+                });
+            }
+
+            // 顯示/隱藏 忘記密碼 Modal
+            if (forgotPasswordBtn) {
+                forgotPasswordBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    forgotPasswordModal.style.display = 'flex';
+                });
+            }
+            if (closeForgotPasswordModal) {
+                closeForgotPasswordModal.addEventListener('click', () => {
+                    forgotPasswordModal.style.display = 'none';
+                    forgotPasswordMessage.style.display = 'none';
+                    forgotPasswordForm.reset();
+                });
+            }
+
+            // 處理忘記密碼表單提交
+            if (forgotPasswordForm) {
+                forgotPasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = forgotEmailInput.value.trim();
+                    const submitButton = forgotPasswordForm.querySelector('button[type="submit"]');
+
+                    forgotPasswordMessage.style.display = 'none';
+
+                    if (!email) {
+                        forgotPasswordMessage.textContent = '請輸入電子郵件。';
+                        forgotPasswordMessage.className = 'error-message';
+                        forgotPasswordMessage.style.display = 'block';
+                        return;
+                    }
+
+                    submitButton.disabled = true;
+                    submitButton.textContent = '處理中...';
+
+                    try {
+                        const response = await fetch('/api/box/users/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            forgotPasswordMessage.textContent = data.message;
+                            // 使用一個不同的 class 來顯示成功訊息
+                            forgotPasswordMessage.className = 'success-message'; 
+                            forgotPasswordMessage.style.backgroundColor = '#d4edda';
+                            forgotPasswordMessage.style.color = '#155724';
+                            forgotPasswordMessage.style.padding = '0.75rem 1rem';
+                            forgotPasswordMessage.style.borderRadius = '8px';
+                            forgotPasswordMessage.style.display = 'block';
+                            forgotEmailInput.disabled = true;
+                            submitButton.textContent = '請求已送出';
+
+                        } else {
+                            forgotPasswordMessage.textContent = data.error || '請求失敗，請重試。';
+                            forgotPasswordMessage.className = 'error-message';
+                            forgotPasswordMessage.style.display = 'block';
+                            submitButton.disabled = false;
+                            submitButton.textContent = '送出請求';
+                        }
+                    } catch (error) {
+                        console.error('忘記密碼請求失敗:', error);
+                        forgotPasswordMessage.textContent = `請求失敗: ${error.message}`;
+                        forgotPasswordMessage.className = 'error-message';
+                        forgotPasswordMessage.style.display = 'block';
+                        submitButton.disabled = false;
+                        submitButton.textContent = '送出請求';
+                    }
+                });
+            }
+
+            // 處理註冊表單提交
+            if (registerForm) {
+                // 添加頭像預覽功能
+                const profileImageInput = document.getElementById('profileImage');
+                const profileImagePreview = document.getElementById('profileImagePreview');
+
+                if (profileImageInput) {
+                    profileImageInput.addEventListener('change', function(e) {
+                        if (e.target.files && e.target.files[0]) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                profileImagePreview.style.display = 'block';
+                                profileImagePreview.querySelector('img').src = e.target.result;
+                            }
+                            reader.readAsDataURL(e.target.files[0]);
+                        } else {
+                            profileImagePreview.style.display = 'none';
+                        }
+                    });
+                }
+
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const username = registerUsernameInput.value.trim();
+                    const email = registerEmailInput.value.trim();
+                    const password = registerPasswordInput.value;
+                    const confirmPassword = registerConfirmPasswordInput.value;
+                    const profileImage = document.getElementById('profileImage').files[0];
+
+                    registerFormErrorMessage.style.display = 'none';
+
+                    // 表單驗證
+                    if (!username || !email || !password || !confirmPassword) {
+                        registerFormErrorMessage.textContent = '所有欄位都必須填寫';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    if (username.length < 3) {
+                        registerFormErrorMessage.textContent = '用戶名稱至少需要3個字元';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    if (password.length < 6) {
+                        registerFormErrorMessage.textContent = '密碼至少需要6個字元';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    if (password !== confirmPassword) {
+                        registerFormErrorMessage.textContent = '兩次輸入的密碼不一致';
+                        registerFormErrorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    const submitButton = registerForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = '註冊中...';
+
+                    try {
+                        // 使用 FormData 來處理包含文件的表單數據
+                        const formData = new FormData();
+                        formData.append('username', username);
+                        formData.append('email', email);
+                        formData.append('password', password);
+                        formData.append('confirmPassword', confirmPassword);
+                        if (profileImage) {
+                            formData.append('profileImage', profileImage);
+                        }
+
+                        const response = await fetch('/api/box/users/register', {
+                            method: 'POST',
+                            body: formData // 不要設置 Content-Type，讓瀏覽器自動設置正確的 multipart/form-data
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            alert('註冊成功！您現在可以使用新帳號登入。');
+                            registerFormContainer.classList.remove('show');
+                            loginUsernameInput.value = username;
+                            loginPasswordInput.focus();
+
+                        } else {
+                            registerFormErrorMessage.textContent = data.error || '註冊失敗，請重試';
+                            registerFormErrorMessage.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('註冊請求失敗:', error);
+                        registerFormErrorMessage.textContent = `註冊失敗: ${error.message}`;
+                        registerFormErrorMessage.style.display = 'block';
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = '註冊';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

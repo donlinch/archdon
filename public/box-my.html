@@ -53,6 +53,10 @@
             border: 2px solid var(--background-content);
         }
 
+        .page-header .user-info { /* Add this new rule */
+            cursor: pointer;
+        }
+
         .page-header .user-info span {
             font-weight: 600;
             font-size: 1.1em;
@@ -2028,7 +2032,15 @@
             try {
                 const userData = await apiFetch('/api/box/users/me');
                 if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
-                if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
+                if (currentUserAvatarImg) {
+                    currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
+                }
+                const userInfoDiv = document.querySelector('.user-info');
+                if (userInfoDiv) {
+                    userInfoDiv.addEventListener('click', () => {
+                        window.location.href = `member-editor.html?userId=${currentUserId}`;
+                    });
+                }
 
                 // Populate email form
                 const newEmailInput = document.getElementById('newEmail');
@@ -2069,33 +2081,30 @@
 
             function setupEventListeners() {
                 if (logoutButton) logoutButton.addEventListener('click', logout);
-                // 設置返回主頁按鈕的正確鏈接
-                if (returnToHomeBtn && currentUserId) {
-                    returnToHomeBtn.href = `box.html?userId=${currentUserId}`;
-                }
-            if (tabLinks) tabLinks.forEach(link => { link.addEventListener('click', () => { if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) { alert('請先從「我的倉庫」分頁選擇一個倉庫。'); return; } switchTab(link.dataset.tab); }); });
-            if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
-            if (changePasswordForm) changePasswordForm.addEventListener('submit', handleChangePassword);
-            if (changeEmailForm) changeEmailForm.addEventListener('submit', handleChangeEmail);
-            if (changeProfileImageForm) changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
-            if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
-            document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('boxModal')); });
-            if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
-            if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
-            if (boxFormCoverImageFileInput) boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
-            document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemModal')); });
-            if (itemForm) itemForm.addEventListener('submit', handleSaveItem);
-            if (itemFormImageFileInput) itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
-            document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"], button.close-modal-btn[data-modal-id="itemDetailsModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemDetailsModal')); });
-            if (toggleAllItemsBtn) toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
-            if (searchButton) searchButton.addEventListener('click', () => handleSearch(1));
-            if (searchPagination) searchPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleSearchPaginationClick(parseInt(e.target.dataset.page))});
-            if (boxListPagination) boxListPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleBoxPaginationClick(parseInt(e.target.dataset.page))});
-            if (gridViewBtn) gridViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'grid'; if (boxListArea) boxListArea.style.display = 'none'; gridViewBtn.classList.add('active'); listViewBtn.classList.remove('active'); });
-            if (listViewBtn) listViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'none'; if (boxListArea) boxListArea.style.display = 'block'; listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active'); });
-            if (openAddWarehouseModalBtn) openAddWarehouseModalBtn.addEventListener('click', openCreateWarehouseModal);
-            document.querySelectorAll('.close-btn[data-modal-id="warehouseModal"], button.close-modal-btn[data-modal-id="warehouseModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('warehouseModal')); });
-        }
+                
+                if (tabLinks) tabLinks.forEach(link => { link.addEventListener('click', () => { if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) { alert('請先從「我的倉庫」分頁選擇一個倉庫。'); return; } switchTab(link.dataset.tab); }); });
+                if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
+                if (changePasswordForm) changePasswordForm.addEventListener('submit', handleChangePassword);
+                if (changeEmailForm) changeEmailForm.addEventListener('submit', handleChangeEmail);
+                if (changeProfileImageForm) changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
+                if (profileImageFile) profileImageFile.addEventListener('change', (e) => previewModalImage(e, 'profileImagePreview', profileImageFile));
+                document.querySelectorAll('.close-btn[data-modal-id="boxModal"], button.close-modal-btn[data-modal-id="boxModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('boxModal')); });
+                if (boxForm) boxForm.addEventListener('submit', handleSaveBox);
+                if (addBoxBtn) addBoxBtn.addEventListener('click', openAddBoxModal);
+                if (boxFormCoverImageFileInput) boxFormCoverImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'boxCoverPreview', boxFormCoverImageFileInput));
+                document.querySelectorAll('.close-btn[data-modal-id="itemModal"], button.close-modal-btn[data-modal-id="itemModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemModal')); });
+                if (itemForm) itemForm.addEventListener('submit', handleSaveItem);
+                if (itemFormImageFileInput) itemFormImageFileInput.addEventListener('change', (e) => previewModalImage(e, 'itemImagePreview', itemFormImageFileInput));
+                document.querySelectorAll('.close-btn[data-modal-id="itemDetailsModal"], button.close-modal-btn[data-modal-id="itemDetailsModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('itemDetailsModal')); });
+                if (toggleAllItemsBtn) toggleAllItemsBtn.addEventListener('click', toggleAllItemsInCurrentBoxView);
+                if (searchButton) searchButton.addEventListener('click', () => handleSearch(1));
+                if (searchPagination) searchPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleSearchPaginationClick(parseInt(e.target.dataset.page))});
+                if (boxListPagination) boxListPagination.addEventListener('click', (e) => { if (e.target.dataset.page) handleBoxPaginationClick(parseInt(e.target.dataset.page))});
+                if (gridViewBtn) gridViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'grid'; if (boxListArea) boxListArea.style.display = 'none'; gridViewBtn.classList.add('active'); listViewBtn.classList.remove('active'); });
+                if (listViewBtn) listViewBtn.addEventListener('click', () => { if (boxGridArea) boxGridArea.style.display = 'none'; if (boxListArea) boxListArea.style.display = 'block'; listViewBtn.classList.add('active'); gridViewBtn.classList.remove('active'); });
+                if (openAddWarehouseModalBtn) openAddWarehouseModalBtn.addEventListener('click', openCreateWarehouseModal);
+                document.querySelectorAll('.close-btn[data-modal-id="warehouseModal"], button.close-modal-btn[data-modal-id="warehouseModal"]').forEach(btn => { btn.addEventListener('click', () => closeModal('warehouseModal')); });
+            }
 
 
             function logout() {

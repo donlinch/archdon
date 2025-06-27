@@ -237,7 +237,7 @@
             <span id="currentUsername">用戶</span>
         </div>
         <div class="header-actions">
-            <a id="returnToDashboardBtn" href="/">返回首頁</a>
+            <a id="returnToDashboardBtn" href="index.html">返回首頁</a>
             <button id="logoutButton">登出</button>
         </div>
     </header>
@@ -425,7 +425,7 @@
                     return;
                 }
 
-                returnToDashboardBtn.href = `box-my.html?userId=${currentUserId}`;
+                // returnToDashboardBtn.href = `box-my.html?userId=${currentUserId}`;
                 
                 try {
                     const userData = await apiFetch('/api/box/users/me');
