@@ -690,7 +690,7 @@
                             localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
                             localStorage.setItem('boxCurrentUserId', data.user.userId);
                             localStorage.setItem('boxCurrentUsername', data.user.username);
-                            localStorage.setItem('boxCurrentUserAvatar', data.user?.profileImageUrl || '/images/default_avatar.png');
+                            localStorage.setItem('boxCurrentUserAvatar', data.user?.profileImageUrl || '/images/a01girlmove.gif');
                             window.location.href = `box-my.html?userId=${data.user.userId}`;
                         } else {
                             loginFormErrorMessage.textContent = data.error || '登入失敗，請檢查用戶名稱和密碼';
