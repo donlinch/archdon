@@ -593,7 +593,7 @@
 
             // Update the user status indicator
             if (savedUserId && savedUserToken && savedUserName) {
-                userStatusAvatar.src = savedUserAvatarUrl || '/images/default_avatar.png';
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 userStatusName.textContent = savedUserName;
                 
                 // Add click event to navigate to user dashboard
@@ -607,7 +607,7 @@
 
             // 如果有保存的登入信息，顯示快速登入區域
             if (savedUserId && savedUserToken && savedUserName) {
-                savedUserAvatar.src = savedUserAvatarUrl || '/images/default_avatar.png';
+                savedUserAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 savedUsername.textContent = savedUserName;
                 quickLoginContainer.style.display = 'block';
                 loginFormContainer.style.display = 'none';

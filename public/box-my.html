@@ -2028,7 +2028,7 @@
             try {
                 const userData = await apiFetch('/api/box/users/me');
                 if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
-                if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/default_avatar.png';
+                if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
 
                 // Populate email form
                 const newEmailInput = document.getElementById('newEmail');
