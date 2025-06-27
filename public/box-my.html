@@ -1555,7 +1555,7 @@
             <span id="currentUsername">用戶</span>
         </div>
         <div>
-            <a href="box.html" style="color: white; margin-right: 15px; text-decoration: none;"> 返回主頁 </a>
+            <a id="returnToHomeBtn" href="box.html" style="color: white; margin-right: 15px; text-decoration: none;"> 返回主頁 </a>
             <button id="logoutButton">登出</button>
         </div>
     </header>
@@ -1808,6 +1808,7 @@
             const currentUsernameSpan = document.getElementById('currentUsername');
             const currentUserAvatarImg = document.getElementById('currentUserAvatar');
             const logoutButton = document.getElementById('logoutButton');
+            const returnToHomeBtn = document.getElementById('returnToHomeBtn'); // 添加對返回主頁按鈕的引用
             const tabLinks = document.querySelectorAll('.tab-navigation button.tab-link');
             const tabContents = document.querySelectorAll('.main-container .tab-content');
             const boxManagementTabLink = document.querySelector('button[data-tab="tab-box-management"]');
@@ -2048,6 +2049,10 @@
 
             function setupEventListeners() {
                 if (logoutButton) logoutButton.addEventListener('click', logout);
+                // 設置返回主頁按鈕的正確鏈接
+                if (returnToHomeBtn && currentUserId) {
+                    returnToHomeBtn.href = `box.html?userId=${currentUserId}`;
+                }
             if (tabLinks) tabLinks.forEach(link => { link.addEventListener('click', () => { if (link.dataset.tab === 'tab-box-management' && !currentSelectedWarehouseId) { alert('請先從「我的倉庫」分頁選擇一個倉庫。'); return; } switchTab(link.dataset.tab); }); });
             if (warehouseForm) warehouseForm.addEventListener('submit', handleSaveWarehouse);
             if (document.getElementById('changePasswordForm')) document.getElementById('changePasswordForm').addEventListener('submit', handleChangePassword);
