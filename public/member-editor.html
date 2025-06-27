@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編輯會員資料 - 紙箱子管理</title>
+    <style>
+        /* All CSS from box-my.html, but with modified header */
+        :root {
+            --primary-color: #FF9800; /* Sunny Orange */
+            --secondary-color: #95a5a6; /* Muted Gray */
+            --accent-color: #2ecc71; /* Green for positive actions */
+            --danger-color: #e74c3c; /* Red for danger/delete */
+            --warning-color: #f39c12; /* Orange for warning/edit */
+            --background-light: #f8f9fa; /* Lighter background */
+            --background-content: #ffffff; /* White for content areas, cards */
+            --text-primary: #2c3e50; /* Dark grayish blue for primary text */
+            --text-secondary: #7f8c8d; /* Lighter gray for secondary text */
+            --border-color: #e0e6ed; /* Light gray for borders */
+            --hover-primary-color: #F57C00; /* Darker orange for hover */
+            --hover-accent-color: #27ae60;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --font-family-sans-serif: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            --border-radius-base: 6px;
+            --border-radius-large: 8px;
+        }
+
+        body {
+            font-family: var(--font-family-sans-serif);
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-light);
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #FFB74D, #FF9800);
+            color: white;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .page-header .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .page-header .user-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            vertical-align: middle;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .page-header .user-info span {
+            font-weight: 600;
+            font-size: 1.2em;
+        }
+
+        .page-header .header-actions a,
+        .page-header .header-actions button {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 15px;
+            border: 1px solid white;
+            border-radius: var(--border-radius-base);
+            cursor: pointer;
+            font-size: 0.95em;
+            text-decoration: none;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            margin-left: 10px;
+        }
+        .page-header .header-actions a:hover,
+        .page-header .header-actions button:hover {
+            background-color: white;
+            color: var(--primary-color);
+        }
+        .page-header .header-actions #logoutButton {
+            background-color: transparent;
+            border-color: white;
+        }
+         .page-header .header-actions #logoutButton:hover {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 25px auto;
+            padding: 0 25px; /* Removed top/bottom padding to use spacing from elements */
+        }
+        
+        .settings-container {
+            background-color: var(--background-content);
+            padding: 30px;
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 3px 10px var(--shadow-color);
+        }
+
+        .settings-container h2 {
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        /* Form Styles (General for modals and tabs) */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="email"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-base);
+            font-size: 1em;
+            box-sizing: border-box; /* Important for width 100% */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus,
+        .form-group input[type="email"]:focus,
+        .form-group input[type="file"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.25); /* Focus ring */
+        }
+        .image-upload-preview {
+            margin-top: 12px;
+            max-width: 150px;
+            max-height: 150px;
+            border: 1px dashed var(--border-color);
+            padding: 8px;
+            display: none;
+            border-radius: var(--border-radius-base);
+        }
+        .image-upload-preview img {
+            max-width: 100%;
+            max-height: 132px;
+            display: block;
+            border-radius: var(--border-radius-base);
+        }
+        
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .form-actions button, button.primary-action {
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: 500;
+            border-radius: var(--border-radius-base);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .form-actions button:hover, button.primary-action:hover {
+            background-color: var(--hover-primary-color);
+            transform: translateY(-2px);
+        }
+
+        .form-status-message {
+            margin: 0;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 30px 0;
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(255,255,255,0.8);
+            z-index: 2000;
+            display: flex;
+            justify-content: center; align-items: center;
+            font-size: 1.2em; color: var(--text-primary);
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            .main-container { padding: 0 15px; }
+            .settings-container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <div class="user-info">
+            <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
+            <span id="currentUsername">用戶</span>
+        </div>
+        <div class="header-actions">
+            <a id="returnToDashboardBtn" href="#">返回儀表板</a>
+            <button id="logoutButton">登出</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="settings-container">
+            <h2>用戶設定</h2>
+            
+            <!-- Change Password Form -->
+            <form id="changePasswordForm">
+                <h3>更改密碼</h3>
+                <div class="form-group">
+                    <label for="currentPassword">當前密碼:</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">新密碼 (至少6個字):</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">確認新密碼:</label>
+                    <input type="password" id="confirmNewPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">更新密碼</button>
+                    <p id="changePasswordStatus" class="form-status-message"></p>
+                </div>
+            </form>
+            
+            <hr>
+            
+            <!-- Change Email Form -->
+            <form id="changeEmailForm">
+                <h3>更改Email</h3>
+                <div class="form-group">
+                    <label for="newEmail">電子郵件 (用於密碼找回):</label>
+                    <input type="email" id="newEmail" required placeholder="請輸入您的電子郵件">
+                </div>
+                <div class="form-actions">
+                    <button type="submit">更新Email</button>
+                    <p id="changeEmailStatus" class="form-status-message"></p>
+                </div>
+            </form>
+            
+            <hr>
+
+            <!-- Change Profile Image Form -->
+            <form id="changeProfileImageForm">
+                 <h3>更改頭像</h3>
+                 <div class="form-group">
+                     <label for="profileImageFile">選擇新頭像圖片:</label>
+                     <input type="file" id="profileImageFile" accept="image/*">
+                     <div class="image-upload-preview" id="profileImagePreview">
+                         <img src="#" alt="頭像預覽">
+                     </div>
+                 </div>
+                 <div class="form-actions">
+                    <button type="submit" id="uploadProfileImageBtn">上傳並更新頭像</button>
+                    <p id="changeProfileImageStatus" class="form-status-message"></p>
+                 </div>
+            </form>
+        </div>
+    </main>
+
+    <div id="loading-overlay" style="display: none;"><div class="spinner"></div> 正在載入...</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- DOM Elements ---
+            const currentUsernameSpan = document.getElementById('currentUsername');
+            const currentUserAvatarImg = document.getElementById('currentUserAvatar');
+            const logoutButton = document.getElementById('logoutButton');
+            const returnToDashboardBtn = document.getElementById('returnToDashboardBtn');
+            const loadingOverlay = document.getElementById('loading-overlay');
+
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const changeEmailForm = document.getElementById('changeEmailForm');
+            const changeProfileImageForm = document.getElementById('changeProfileImageForm');
+            const profileImageFile = document.getElementById('profileImageFile');
+            const profileImagePreviewContainer = document.getElementById('profileImagePreview');
+
+            // --- State ---
+            let currentUserId = null;
+            let authToken = null;
+
+            // --- Utility Functions ---
+            function escapeHtml(unsafe) {
+                if (typeof unsafe !== 'string') {
+                    if (unsafe === null || unsafe === undefined) return '';
+                    unsafe = String(unsafe);
+                }
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+            
+            function showLoadingOverlay(show) {
+                if (loadingOverlay) loadingOverlay.style.display = show ? 'flex' : 'none';
+            }
+
+            async function apiFetch(url, options = {}) {
+                showLoadingOverlay(true);
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                };
+                const mergedOptions = { ...defaultOptions, ...options };
+                if (options.body && typeof options.body !== 'string') {
+                    mergedOptions.body = JSON.stringify(options.body);
+                }
+                try {
+                    const response = await fetch(url, mergedOptions);
+                    if (!response.ok) {
+                        let errorData;
+                        try {
+                            errorData = await response.json();
+                        } catch (e) {
+                            errorData = { error: `HTTP 錯誤: ${response.status} ${response.statusText}`};
+                        }
+                        const error = new Error(errorData.error || `請求失敗 (${response.status})`);
+                        error.status = response.status;
+                        error.data = errorData;
+                        throw error;
+                    }
+                    if (response.status === 204) return null;
+                    return await response.json();
+                } catch (error) {
+                    console.error(`API 請求錯誤 (${url}):`, error);
+                    // Let the calling function handle UI updates
+                    throw error;
+                } finally {
+                    showLoadingOverlay(false);
+                }
+            }
+            
+            async function handleImageUploadAndAnalyze(imageFile, fileTypeString = 'profile_image') {
+                const MAX_SIZE = 15 * 1024 * 1024;
+                const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (imageFile.size > MAX_SIZE) throw new Error(`圖片大小超過 ${MAX_SIZE / (1024*1024)}MB`);
+                if (!allowedMimes.includes(imageFile.type)) throw new Error('只允許上傳 jpeg, png, gif, webp 格式');
+
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('fileType', fileTypeString);
+                
+                showLoadingOverlay(true);
+                try {
+                    const response = await fetch('/api/box/upload-analyze-then-process-image', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}` },
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        let errorText = '伺服器錯誤';
+                        try { errorText = await response.text(); } catch(_) {}
+                        throw new Error(`圖片上傳失敗: ${errorText}`);
+                    }
+                    const data = await response.json();
+                    if (!data.success) throw new Error(data.error || '圖片處理失敗');
+                    
+                    return { success: true, imageUrl: data.image_url };
+                } catch (error) {
+                    console.error('圖片上傳與分析錯誤:', error);
+                    throw error; // Re-throw for the caller to handle
+                } finally {
+                    showLoadingOverlay(false);
+                }
+            }
+
+
+            // --- Page Initialization ---
+            async function initializePage() {
+                const params = new URLSearchParams(window.location.search);
+                currentUserId = params.get('userId');
+                authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+                
+                if (!currentUserId || !authToken) {
+                    alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+                    window.location.href = 'box.html';
+                    return;
+                }
+
+                returnToDashboardBtn.href = `box-my.html?userId=${currentUserId}`;
+                
+                try {
+                    const userData = await apiFetch('/api/box/users/me');
+                    if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
+                    if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
+                    
+                    const newEmailInput = document.getElementById('newEmail');
+                    if (newEmailInput) newEmailInput.value = userData.email || '';
+                    
+                    setupEventListeners();
+                } catch (error) {
+                    if (error.status === 401 || error.status === 403) {
+                        alert('登入憑證無效或已過期，請重新登入。');
+                        window.location.href = 'box.html';
+                    } else {
+                        alert(`無法獲取用戶信息: ${error.message}`);
+                    }
+                }
+            }
+            
+            function setupEventListeners() {
+                logoutButton.addEventListener('click', logout);
+                changePasswordForm.addEventListener('submit', handleChangePassword);
+                changeEmailForm.addEventListener('submit', handleChangeEmail);
+                changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
+                profileImageFile.addEventListener('change', previewImage);
+            }
+
+            function logout() {
+                localStorage.removeItem(`boxUserToken_${currentUserId}`);
+                localStorage.removeItem('boxCurrentUserId');
+                localStorage.removeItem('boxCurrentUsername');
+                localStorage.removeItem('boxCurrentUserAvatar');
+                window.location.href = 'box.html';
+            }
+
+            function previewImage(event) {
+                const input = event.target;
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        profileImagePreviewContainer.querySelector('img').src = e.target.result;
+                        profileImagePreviewContainer.style.display = 'block';
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                } else {
+                    profileImagePreviewContainer.style.display = 'none';
+                }
+            }
+            
+            function setStatusMessage(element, message, isError = false) {
+                element.textContent = message;
+                element.style.color = isError ? 'var(--danger-color)' : 'var(--accent-color)';
+                setTimeout(() => { element.textContent = ''; }, 4000);
+            }
+
+            // --- Form Handlers ---
+            async function handleChangePassword(event) {
+                event.preventDefault();
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+                const statusEl = document.getElementById('changePasswordStatus');
+
+                if (newPassword !== confirmNewPassword) {
+                    setStatusMessage(statusEl, '新密碼與確認密碼不符。', true); return;
+                }
+                if (newPassword.length < 6) {
+                    setStatusMessage(statusEl, '新密碼長度至少需要6位。', true); return;
+                }
+
+                try {
+                    await apiFetch('/api/box/users/me/password', { method: 'PUT', body: { currentPassword, newPassword } });
+                    setStatusMessage(statusEl, '密碼更新成功！');
+                    changePasswordForm.reset();
+                } catch (error) {
+                    setStatusMessage(statusEl, `更新失敗: ${error.data?.error || error.message}`, true);
+                }
+            }
+
+            async function handleChangeEmail(event) {
+                event.preventDefault();
+                const email = document.getElementById('newEmail').value.trim();
+                const statusEl = document.getElementById('changeEmailStatus');
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    setStatusMessage(statusEl, '請輸入有效的Email格式。', true); return;
+                }
+
+                try {
+                    await apiFetch('/api/box/users/me/email', { method: 'PUT', body: { email: email } });
+                    setStatusMessage(statusEl, 'Email 更新成功！');
+                } catch (error) {
+                    setStatusMessage(statusEl, `更新失敗: ${error.data?.error || error.message}`, true);
+                }
+            }
+
+            async function handleChangeProfileImage(event) {
+                event.preventDefault();
+                const imageFile = document.getElementById('profileImageFile').files[0];
+                const statusEl = document.getElementById('changeProfileImageStatus');
+                const uploadBtn = document.getElementById('uploadProfileImageBtn');
+
+                if (!imageFile) {
+                    setStatusMessage(statusEl, '請先選擇一張圖片。', true); return;
+                }
+                
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = '上傳中...';
+                
+                try {
+                    const uploadResult = await handleImageUploadAndAnalyze(imageFile, 'profile_image');
+                    await apiFetch('/api/box/users/me/profile-image', { method: 'PUT', body: { user_profile_image_url: uploadResult.imageUrl } });
+                    
+                    setStatusMessage(statusEl, '頭像更新成功！');
+                    currentUserAvatarImg.src = uploadResult.imageUrl;
+                    localStorage.setItem('boxCurrentUserAvatar', uploadResult.imageUrl);
+                    changeProfileImageForm.reset();
+                    profileImagePreviewContainer.style.display = 'none';
+
+                } catch (error) {
+                    setStatusMessage(statusEl, `處理失敗: ${error.data?.error || error.message}`, true);
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '上傳並更新頭像';
+                }
+            }
+
+            // --- Run ---
+            initializePage();
+        });
+    </script>
+</body>
+</html>
