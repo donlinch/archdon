@@ -87,6 +87,23 @@
             background-color: #d90464;
         }
 
+        /* 警示按鈕樣式 */
+        .navbar .tasks-link {
+            position: relative;
+            margin-right: 15px; /* 與登出按鈕的間距 */
+        }
+        .navbar .tasks-link .notification-badge {
+            position: absolute;
+            top: 12px;
+            right: 8px;
+            width: 10px;
+            height: 10px;
+            background-color: #f72585; /* 醒目的顏色 */
+            border-radius: 50%;
+            border: 2px solid #3f37c9; /* 與導覽列背景色匹配的邊框 */
+            display: none; /* 預設隱藏 */
+        }
+
         /* 隱藏不活躍的層級 */
         .nav-level {
             display: none;
@@ -105,7 +122,7 @@
 
         <!-- 認證相關操作 (例如登出按鈕) 放在這裡，這樣 showLevel 不會影響它 -->
         <ul id="auth-actions" style="margin-left: auto; "> 
-            <!-- 登出按鈕會由 JavaScript 動態添加到這裡 -->
+            <!-- 警示按鈕和登出按鈕會由 JavaScript 動態添加到這裡 -->
         </ul>
     </nav>
     <script>
@@ -118,6 +135,27 @@
             let linkMap = {};          // 扁平化的連結映射，方便查找
             let tree = [];             // 樹狀結構的頂層節點
             let isLoggedIn = false;    // 標記登入狀態
+        
+            // 檢查是否有待辦事項並更新 UI
+            async function checkPendingTasks() {
+                const badge = document.getElementById('notification-badge');
+                if (!badge) return;
+
+                try {
+                    const response = await fetch('/api/admin/password-reset-requests/pending-count');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.count > 0) {
+                            badge.style.display = 'block'; // 有待辦事項，顯示紅點
+                            badge.textContent = ''; // 如果想顯示數字可以用 data.count
+                        } else {
+                            badge.style.display = 'none'; // 沒有待辦事項，隱藏紅點
+                        }
+                    }
+                } catch (error) {
+                    console.error('無法獲取待辦事項數量:', error);
+                }
+            }
         
             // 綁定登出按鈕事件的函數 (因為按鈕是動態添加的)
             function bindLogoutButtonEvent() {
@@ -146,8 +184,20 @@
             function updateAuthUI(loggedIn) {
                 if (!authActionsList) return;
                 if (loggedIn) {
-                    authActionsList.innerHTML = `<li><a href="#" id="logout-button" style="background-color: #dc3545; color: white !important; font-weight: bold;">登出</a></li>`;
+                    // 同時加入警示按鈕和登出按鈕
+                    authActionsList.innerHTML = `
+                        <li>
+                            <a href="admin-password-resets.html" target="contentFrame" class="tasks-link" title="待處理的密碼重設請求">
+                                <span>&#x1F514;</span> <!-- Bell icon -->
+                                <span class="notification-badge" id="notification-badge"></span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" id="logout-button" style="background-color: #dc3545; color: white !important; font-weight: bold;">登出</a>
+                        </li>
+                    `;
                     bindLogoutButtonEvent(); // 按鈕添加到 DOM 後再綁定事件
+                    checkPendingTasks(); // 頁面載入時檢查一次
                 } else {
                     authActionsList.innerHTML = ''; // 未登入則清空（或顯示登入按鈕，但通常由父框架處理）
                 }

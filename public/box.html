@@ -440,6 +440,7 @@
                 </div>
                 <p id="login-form-error-message" class="error-message"></p>
                 <div class="button-group">
+                    <a href="#" id="forgotPasswordBtn" style="font-size: 0.9em; margin-right: auto; color: #718096; align-self: center;">忘記密碼？</a>
                     <button type="submit" class="button-style-primary">登入</button>
                 </div>
             </form>
@@ -478,6 +479,24 @@
         </div>
     </div>
 
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+        <div class="form-container" style="max-width: 400px; margin: auto;">
+            <span id="closeForgotPasswordModal" style="float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2>找回密碼</h2>
+            <p style="color: #4a5568; margin-bottom: 1.5rem; font-size: 0.9em;">請輸入您註冊時使用的電子郵件。我們會手動處理您的請求，並將密碼重設連結在24小時內寄送給您。</p>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label for="forgotEmail">電子郵件</label>
+                    <input type="email" id="forgotEmail" required placeholder="請輸入您的註冊信箱">
+                </div>
+                <p id="forgot-password-form-message" class="error-message" style="background-color: #f0f8ff; color: #31708f;"></p>
+                <div class="button-group">
+                    <button type="submit" class="button-style-primary">送出請求</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
     <!-- 底部廣告 -->
@@ -570,6 +589,13 @@
             const registerFormErrorMessage = document.getElementById('register-form-error-message');
             const cancelRegisterBtn = document.getElementById('cancelRegister');
 
+            const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+            const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+            const closeForgotPasswordModal = document.getElementById('closeForgotPasswordModal');
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            const forgotEmailInput = document.getElementById('forgotEmail');
+            const forgotPasswordMessage = document.getElementById('forgot-password-form-message');
+
             // 處理登入表單提交
             if (loginForm) {
                 loginForm.addEventListener('submit', async (e) => {
@@ -633,6 +659,79 @@
             if (cancelRegisterBtn) {
                 cancelRegisterBtn.addEventListener('click', () => {
                     registerFormContainer.classList.remove('show');
+                });
+            }
+
+            // 顯示/隱藏 忘記密碼 Modal
+            if (forgotPasswordBtn) {
+                forgotPasswordBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    forgotPasswordModal.style.display = 'flex';
+                });
+            }
+            if (closeForgotPasswordModal) {
+                closeForgotPasswordModal.addEventListener('click', () => {
+                    forgotPasswordModal.style.display = 'none';
+                    forgotPasswordMessage.style.display = 'none';
+                    forgotPasswordForm.reset();
+                });
+            }
+
+            // 處理忘記密碼表單提交
+            if (forgotPasswordForm) {
+                forgotPasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = forgotEmailInput.value.trim();
+                    const submitButton = forgotPasswordForm.querySelector('button[type="submit"]');
+
+                    forgotPasswordMessage.style.display = 'none';
+
+                    if (!email) {
+                        forgotPasswordMessage.textContent = '請輸入電子郵件。';
+                        forgotPasswordMessage.className = 'error-message';
+                        forgotPasswordMessage.style.display = 'block';
+                        return;
+                    }
+
+                    submitButton.disabled = true;
+                    submitButton.textContent = '處理中...';
+
+                    try {
+                        const response = await fetch('/api/box/users/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            forgotPasswordMessage.textContent = data.message;
+                            // 使用一個不同的 class 來顯示成功訊息
+                            forgotPasswordMessage.className = 'success-message'; 
+                            forgotPasswordMessage.style.backgroundColor = '#d4edda';
+                            forgotPasswordMessage.style.color = '#155724';
+                            forgotPasswordMessage.style.padding = '0.75rem 1rem';
+                            forgotPasswordMessage.style.borderRadius = '8px';
+                            forgotPasswordMessage.style.display = 'block';
+                            forgotEmailInput.disabled = true;
+                            submitButton.textContent = '請求已送出';
+
+                        } else {
+                            forgotPasswordMessage.textContent = data.error || '請求失敗，請重試。';
+                            forgotPasswordMessage.className = 'error-message';
+                            forgotPasswordMessage.style.display = 'block';
+                            submitButton.disabled = false;
+                            submitButton.textContent = '送出請求';
+                        }
+                    } catch (error) {
+                        console.error('忘記密碼請求失敗:', error);
+                        forgotPasswordMessage.textContent = `請求失敗: ${error.message}`;
+                        forgotPasswordMessage.className = 'error-message';
+                        forgotPasswordMessage.style.display = 'block';
+                        submitButton.disabled = false;
+                        submitButton.textContent = '送出請求';
+                    }
                 });
             }
 

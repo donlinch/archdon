@@ -7,6 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const sharp = require('sharp');
+const crypto = require('crypto');
 
 module.exports = function(dependencies) {
     const { pool, visionClient, translationClient, BOX_JWT_SECRET, uploadDir, authenticateBoxUser, isAdminAuthenticated, googleProjectId } = dependencies;
@@ -331,6 +332,112 @@ module.exports = function(dependencies) {
         } catch (err) {
             console.error(`[API PUT /users/me/profile-image] User ${userId} Error:`, err);
             res.status(500).json({ error: '頭像更新失敗。' });
+        }
+    });
+
+    router.post('/users/forgot-password', async (req, res) => {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: '請提供電子郵件地址。' });
+        }
+
+        try {
+            const userResult = await pool.query('SELECT user_id FROM BOX_Users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
+
+            if (userResult.rows.length > 0) {
+                const userId = userResult.rows[0].user_id;
+
+                // 1. Generate a secure, random token
+                const resetToken = crypto.randomBytes(32).toString('hex');
+
+                // 2. Set an expiration date (e.g., 1 hour from now)
+                const expires = new Date(Date.now() + 3600000); // 1 hour
+
+                // 3. Store the token and expiration in the new table
+                await pool.query(
+                    'INSERT INTO password_reset_requests (user_id, reset_token, token_expires_at, status) VALUES ($1, $2, $3, $4)',
+                    [userId, resetToken, expires, 'pending']
+                );
+                
+                // Note: The actual email sending is manual per user's plan.
+                // The token is now in the DB for the admin to use.
+            }
+            
+            // 4. ALWAYS return a generic success message to prevent user enumeration
+            res.json({
+                success: true,
+                message: '您的請求已成功送出。我們會手動處理，並在24小時內將密碼重設連結寄至您的信箱，請耐心等候。'
+            });
+
+        } catch (err) {
+            console.error('[API POST /users/forgot-password] Error:', err);
+            // Don't reveal internal errors to the user in this flow
+            res.status(500).json({ error: '處理請求時發生錯誤，請稍後再試。' });
+        }
+    });
+
+    router.post('/users/reset-password', async (req, res) => {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: '缺少重設權杖或新密碼。' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: '新密碼長度至少需要6位。' });
+        }
+
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // 1. Find the request by token, ensuring it's pending and not expired
+            const requestQuery = `
+                SELECT user_id, token_expires_at 
+                FROM password_reset_requests 
+                WHERE reset_token = $1 AND status = 'pending' FOR UPDATE`;
+            const requestResult = await client.query(requestQuery, [token]);
+
+            if (requestResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: '此重設連結無效或已被使用。' });
+            }
+
+            const request = requestResult.rows[0];
+            const now = new Date();
+
+            if (now > new Date(request.token_expires_at)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: '此重設連結已過期，請重新申請。' });
+            }
+
+            // 2. Hash the new password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+            // 3. Update the user's password
+            await client.query(
+                'UPDATE BOX_Users SET password_hash = $1 WHERE user_id = $2',
+                [hashedPassword, request.user_id]
+            );
+
+            // 4. Mark the reset request as 'used'
+            await client.query(
+                "UPDATE password_reset_requests SET status = 'used' WHERE reset_token = $1",
+                [token]
+            );
+
+            await client.query('COMMIT');
+
+            res.json({ success: true, message: '密碼已成功更新。' });
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('[API POST /users/reset-password] Error:', err);
+            res.status(500).json({ error: '更新密碼時發生錯誤。' });
+        } finally {
+            client.release();
         }
     });
 
@@ -1441,6 +1548,43 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             res.status(500).json({ error: '刪除使用者失敗' });
         } finally {
             client.release();
+        }
+    });
+
+    // 獲取待處理的密碼重設請求（管理員用）
+    router.get('/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
+        try {
+            const query = `
+                SELECT 
+                    prr.id, 
+                    prr.user_id, 
+                    u.username, 
+                    u.email, 
+                    prr.reset_token, 
+                    prr.token_expires_at, 
+                    prr.created_at
+                FROM password_reset_requests prr
+                JOIN BOX_Users u ON prr.user_id = u.user_id
+                WHERE prr.status = 'pending'
+                ORDER BY prr.created_at ASC;
+            `;
+            const result = await pool.query(query);
+            res.json(result.rows);
+        } catch (err) {
+            console.error('[API GET /admin/password-reset-requests/pending] Error:', err);
+            res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
+        }
+    });
+
+    // 獲取待處理的密碼重設請求數量（管理員用）
+    router.get('/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
+            const count = parseInt(result.rows[0].count, 10);
+            res.json({ count });
+        } catch (err) {
+            console.error('[API GET /admin/password-reset-requests/pending-count] Error:', err);
+            res.status(500).json({ error: '無法獲取請求數量' });
         }
     });
 
