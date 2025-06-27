@@ -514,6 +514,13 @@
                     <label for="registerConfirmPassword">確認密碼</label>
                     <input type="password" id="registerConfirmPassword" required placeholder="請再次輸入密碼">
                 </div>
+                <div class="form-group">
+                    <label for="profileImage">頭像圖片 (可選)</label>
+                    <input type="file" id="profileImage" name="profileImage" accept="image/*">
+                    <div id="profileImagePreview" style="margin-top: 10px; width: 100px; height: 100px; border-radius: 50%; overflow: hidden; display: none;">
+                        <img style="width: 100%; height: 100%; object-fit: cover;" alt="頭像預覽">
+                    </div>
+                </div>
                 <p id="register-form-error-message" class="error-message"></p>
                 <div class="button-group">
                     <button type="button" class="button-style-secondary" id="cancelRegister">取消</button>
@@ -799,12 +806,32 @@
 
             // 處理註冊表單提交
             if (registerForm) {
+                // 添加頭像預覽功能
+                const profileImageInput = document.getElementById('profileImage');
+                const profileImagePreview = document.getElementById('profileImagePreview');
+
+                if (profileImageInput) {
+                    profileImageInput.addEventListener('change', function(e) {
+                        if (e.target.files && e.target.files[0]) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                profileImagePreview.style.display = 'block';
+                                profileImagePreview.querySelector('img').src = e.target.result;
+                            }
+                            reader.readAsDataURL(e.target.files[0]);
+                        } else {
+                            profileImagePreview.style.display = 'none';
+                        }
+                    });
+                }
+
                 registerForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const username = registerUsernameInput.value.trim();
                     const email = registerEmailInput.value.trim();
                     const password = registerPasswordInput.value;
                     const confirmPassword = registerConfirmPasswordInput.value;
+                    const profileImage = document.getElementById('profileImage').files[0];
 
                     registerFormErrorMessage.style.display = 'none';
 
@@ -838,15 +865,19 @@
                     submitButton.textContent = '註冊中...';
 
                     try {
+                        // 使用 FormData 來處理包含文件的表單數據
+                        const formData = new FormData();
+                        formData.append('username', username);
+                        formData.append('email', email);
+                        formData.append('password', password);
+                        formData.append('confirmPassword', confirmPassword);
+                        if (profileImage) {
+                            formData.append('profileImage', profileImage);
+                        }
+
                         const response = await fetch('/api/box/users/register', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                username: username,
-                                email: email,
-                                password: password,
-                                confirmPassword: confirmPassword
-                            })
+                            body: formData // 不要設置 Content-Type，讓瀏覽器自動設置正確的 multipart/form-data
                         });
 
                         const data = await response.json();
