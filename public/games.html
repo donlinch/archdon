@@ -37,6 +37,45 @@
     crossorigin="anonymous"></script>
      
     <style>
+        /* --- User Status Indicator --- */
+        .user-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* --- 基本樣式 --- */
         * {
             margin: 0;
@@ -524,6 +563,12 @@
     </style>
 </head>
 <body>
+    <!-- User Status Indicator -->
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
+
     <header class="page-title-header" role="banner">
         <h1 class="page-title">
             <img src="/images/gameH1.jpg" alt="SunnyYummy 互動音樂遊戲集" loading="lazy">
@@ -542,8 +587,6 @@
         </div>
     </main>
 
-
-
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
     crossorigin="anonymous"></script>
 <!-- 底部廣告 -->
@@ -556,10 +599,6 @@
 <script>
     (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
-
-
-
-
 
     <!-- 返回頂部按鈕 -->
     <button id="back-to-top" class="back-to-top" aria-label="回到頂部">
@@ -590,6 +629,40 @@
         </div>
     </div>
 </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+
+            // Update the user status indicator
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedUserName;
+                
+                // Add click event to navigate to user editor page
+                userStatus.addEventListener('click', () => {
+                    // It's better to redirect to box.html to login first, then to the editor
+                    // But for now, let's redirect to member-editor.html directly as box.html
+                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `box.html`;
+                });
+            }
+        });
+    </script>
     
     <!-- 引入外部 JavaScript 文件 -->
     <script src="games.js" defer></script>
