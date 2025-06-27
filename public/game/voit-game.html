@@ -40,8 +40,19 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/images/favicon.ico">
     
-     
-    
+    <!-- 底部廣告 -->
+<div class="ad-container">
+<ins class="adsbygoogle"
+style="display:block"
+data-ad-client="ca-pub-8966114892131293"
+data-ad-slot="9887756394"
+data-ad-format="auto"
+data-full-width-responsive="true"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</div>
+      
     <style>
         body {
             font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
@@ -56,6 +67,16 @@
             padding-bottom: 70px; /* Space for bottom nav */
             overflow-x: hidden;
         }
+        
+        /* Add styles for centered ad container */
+        .ad-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            text-align: center;
+            overflow: hidden;
+        }
+        
         .container {
             max-width: 800px;
             width: 100%;
@@ -631,6 +652,33 @@
             /* This might be removed if .page-title is sufficient */
         }
 
+        .sort-controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        
+        .sort-option {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .sort-option:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .sort-option.active {
+            background-color: #FFB74D;
+            color: white;
+            border-color: #FFB74D;
+        }
+
     </style>
 </head>
 <body>
@@ -658,6 +706,10 @@
     <section class="container">
         <section id="campaign-selection-area" aria-labelledby="campaign-selection-heading">
             <h2 id="campaign-selection-heading">選擇一個投票活動</h2>
+            <div class="sort-controls">
+                <button id="sort-newest" class="sort-option active" aria-pressed="true">最新</button>
+                <button id="sort-most-votes" class="sort-option" aria-pressed="false">最多票數</button>
+            </div>
             <ul id="campaign-list" aria-live="polite">
             </ul>
         </section>
@@ -706,6 +758,8 @@
                 const API_BASE_URL = '/api/voit'; 
 
                 let currentCampaignData = null; 
+                let campaignsCache = [];
+                let currentSortOption = 'newest'; // Default sort
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const campaignIdFromUrl = urlParams.get('campaign_id');
@@ -733,21 +787,110 @@
                 
                 let selectedOptionId = null;
 
+                const sortNewestBtn = document.getElementById('sort-newest');
+                const sortMostVotesBtn = document.getElementById('sort-most-votes');
+                
+                // Add event listeners for sort buttons
+                if (sortNewestBtn) {
+                    sortNewestBtn.addEventListener('click', function() {
+                        if (currentSortOption !== 'newest') {
+                            currentSortOption = 'newest';
+                            updateSortButtonsUI();
+                            renderCampaignList();
+                        }
+                    });
+                }
+                
+                if (sortMostVotesBtn) {
+                    sortMostVotesBtn.addEventListener('click', function() {
+                        if (currentSortOption !== 'most-votes') {
+                            currentSortOption = 'most-votes';
+                            updateSortButtonsUI();
+                            renderCampaignList();
+                        }
+                    });
+                }
+                
+                function updateSortButtonsUI() {
+                    if (sortNewestBtn && sortMostVotesBtn) {
+                        sortNewestBtn.classList.toggle('active', currentSortOption === 'newest');
+                        sortNewestBtn.setAttribute('aria-pressed', currentSortOption === 'newest');
+                        
+                        sortMostVotesBtn.classList.toggle('active', currentSortOption === 'most-votes');
+                        sortMostVotesBtn.setAttribute('aria-pressed', currentSortOption === 'most-votes');
+                    }
+                }
+
                 async function renderCampaignList() {
                     campaignListUl.innerHTML = '<li>載入中...</li>';
                     try {
                         const response = await fetch(`${API_BASE_URL}/campaigns`);
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        const campaigns = await response.json();
+                        campaignsCache = await response.json();
+                        
+                        // Always fetch vote counts for all campaigns
+                        const votePromises = campaignsCache.map(campaign => 
+                            fetch(`${API_BASE_URL}/campaigns/${campaign.campaign_id}/results`)
+                                .then(resp => resp.ok ? resp.json() : {})
+                                .then(resultsData => {
+                                    let totalVotes = 0;
+                                    // Sum votes for all options in this campaign
+                                    if (resultsData) {
+                                        Object.values(resultsData).forEach(voteCount => {
+                                            totalVotes += (voteCount || 0);
+                                        });
+                                    }
+                                    return { 
+                                        ...campaign,
+                                        totalVotes: totalVotes 
+                                    };
+                                })
+                                .catch(() => ({ ...campaign, totalVotes: 0 }))
+                        );
+                        
+                        campaignsCache = await Promise.all(votePromises);
+                        
+                        // Sort based on user selection
+                        if (currentSortOption === 'most-votes') {
+                            // Sort by votes (high to low)
+                            campaignsCache.sort((a, b) => b.totalVotes - a.totalVotes);
+                        } else {
+                            // Sort by creation date (newest first)
+                            // Assuming campaigns have a created_at field, otherwise keep default order
+                            if (campaignsCache[0] && campaignsCache[0].created_at) {
+                                campaignsCache.sort((a, b) => {
+                                    const dateA = new Date(a.created_at);
+                                    const dateB = new Date(b.created_at);
+                                    return dateB - dateA;
+                                });
+                            }
+                        }
                         
                         campaignListUl.innerHTML = ''; 
-                        if (campaigns && campaigns.length > 0) {
-                            campaigns.forEach(campaign => {
+                        if (campaignsCache && campaignsCache.length > 0) {
+                            campaignsCache.forEach(campaign => {
                                 const listItem = document.createElement('li');
-                                listItem.textContent = campaign.title;
+                                const campaignTitle = document.createElement('span');
+                                campaignTitle.textContent = campaign.title;
+                                
+                                listItem.appendChild(campaignTitle);
+                                
+                                // Always show vote count badge
+                                const votesBadge = document.createElement('span');
+                                votesBadge.textContent = `目前 ${campaign.totalVotes} 票`;
+                                votesBadge.style.marginLeft = '10px';
+                                votesBadge.style.padding = '3px 8px';
+                                votesBadge.style.backgroundColor = '#f0f0f0';
+                                votesBadge.style.borderRadius = '10px';
+                                votesBadge.style.fontSize = '0.8em';
+                                listItem.appendChild(votesBadge);
+                                
                                 listItem.style.cursor = 'pointer';
                                 listItem.style.padding = '10px';
                                 listItem.style.borderBottom = '1px solid #eee';
+                                listItem.style.display = 'flex';
+                                listItem.style.justifyContent = 'space-between';
+                                listItem.style.alignItems = 'center';
                                 listItem.addEventListener('click', () => loadCampaign(campaign.campaign_id));
                                 campaignListUl.appendChild(listItem);
                             });

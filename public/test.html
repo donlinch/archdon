@@ -1,1150 +1,1060 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>寵物養成遊戲</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#6366F1',
-                        secondary: '#EC4899',
-                        neutral: '#1F2937',
-                        light: '#F3F4F6',
-                        success: '#10B981',
-                        warning: '#F59E0B',
-                        danger: '#EF4444',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>自定义洞洞乐</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+            <script>
+                tailwind.config = {
+                    theme: {
+                        extend: {
+                            colors: {
+                                primary: '#3B82F6',
+                                secondary: '#10B981',
+                                accent: '#F59E0B',
+                                danger: '#EF4444',
+                                dark: '#1E293B',
+                                light: '#F8FAFC'
+                            },
+                            fontFamily: {
+                                sans: ['Inter', 'system-ui', 'sans-serif'],
+                            },
+                        }
+                    }
                 }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .pet-container {
-                height: 40vh;
-            }
-            .stat-bar {
-                height: 0.75rem;
-                transition: width 0.5s ease;
-            }
-            .btn-action {
-                @apply bg-primary hover:bg-primary/80 text-white font-bold py-3 px-4 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300;
-            }
-            .btn-item {
-                @apply bg-light hover:bg-light/80 text-neutral font-bold py-2 px-3 rounded-lg shadow-md transform hover:scale-105 transition-all duration-300;
-            }
-            .modal {
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.3s ease, visibility 0.3s ease;
-            }
-            .modal.active {
-                opacity: 1;
-                visibility: visible;
-            }
-            .achievement-card {
-                transition: all 0.3s ease;
-            }
-            .achievement-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            }
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-b from-indigo-50 to-purple-100 min-h-screen font-sans">
-    <!-- 頂部狀態欄 -->
-    <header class="bg-white/80 backdrop-blur-sm shadow-md sticky top-0 z-50">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fa fa-paw text-primary text-xl"></i>
-                <h1 class="text-xl font-bold text-neutral">寵物養成</h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center">
-                    <i class="fa fa-diamond text-secondary"></i>
-                    <span id="diamond-count" class="ml-1 font-bold">25</span>
-                </div>
-                <div class="flex items-center">
-                    <i class="fa fa-clock-o text-warning"></i>
-                    <span id="level-count" class="ml-1 font-bold">Lv.1</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 狀態條 -->
-        <div class="container mx-auto px-4 py-2 space-y-2">
-            <div class="flex justify-between text-sm">
-                <span>生命值</span>
-                <span id="health-value">85%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full overflow-hidden">
-                <div id="health-bar" class="stat-bar bg-success" style="width: 85%"></div>
-            </div>
-            
-            <div class="flex justify-between text-sm">
-                <span>飽食度</span>
-                <span id="hunger-value">60%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full overflow-hidden">
-                <div id="hunger-bar" class="stat-bar bg-warning" style="width: 60%"></div>
-            </div>
-            
-            <div class="flex justify-between text-sm">
-                <span>心情值</span>
-                <span id="mood-value">90%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full overflow-hidden">
-                <div id="mood-bar" class="stat-bar bg-primary" style="width: 90%"></div>
-            </div>
-        </div>
-    </header>
-
-    <main class="container mx-auto px-4 py-6">
-        <!-- 寵物顯示區域 -->
-        <section class="pet-container bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg flex items-center justify-center mb-6 relative overflow-hidden">
-            <div id="pet-status" class="absolute top-2 right-2 bg-primary/80 text-white text-xs px-2 py-1 rounded-full">
-                快樂
-            </div>
-            <div class="pet-character relative">
-                <img src="https://picsum.photos/seed/pet/200/200" alt="可愛寵物形象" class="w-48 h-48 object-contain transform hover:scale-110 transition-all duration-300">
-                <div class="pet-bubble absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-3 py-1 shadow-md opacity-0 transition-opacity duration-300" id="pet-message">
-                    你好呀！
-                </div>
-            </div>
-        </section>
-        
-        <!-- 成長進度 -->
-        <section class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-4 mb-6">
-            <h2 class="text-lg font-bold text-neutral mb-2 flex items-center">
-                <i class="fa fa-line-chart text-primary mr-2"></i>成長進度
-            </h2>
-            <div class="flex justify-between items-center">
-                <div class="flex-1 mr-2">
-                    <div class="w-full bg-gray-200 rounded-full overflow-hidden">
-                        <div id="growth-bar" class="stat-bar bg-secondary" style="width: 45%"></div>
-                    </div>
-                </div>
-                <span class="font-bold text-neutral">45%</span>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
-                <span>嬰兒期</span>
-                <span>少年期</span>
-                <span>成年期</span>
-            </div>
-        </section>
-        
-        <!-- 主要操作按鈕 -->
-        <section class="grid grid-cols-2 gap-4 mb-6">
-            <button id="feed-btn" class="btn-action flex flex-col items-center">
-                <i class="fa fa-cutlery text-2xl mb-1"></i>
-                <span>餵食</span>
-            </button>
-            <button id="play-btn" class="btn-action flex flex-col items-center">
-                <i class="fa fa-gamepad text-2xl mb-1"></i>
-                <span>玩耍</span>
-            </button>
-            <button id="clean-btn" class="btn-action flex flex-col items-center">
-                <i class="fa fa-shower text-2xl mb-1"></i>
-                <span>清潔</span>
-            </button>
-            <button id="sleep-btn" class="btn-action flex flex-col items-center">
-                <i class="fa fa-moon-o text-2xl mb-1"></i>
-                <span>睡覺</span>
-            </button>
-        </section>
-        
-        <!-- 物品商店 -->
-        <section class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-4 mb-6">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-lg font-bold text-neutral flex items-center">
-                    <i class="fa fa-shopping-bag text-primary mr-2"></i>物品商店
-                </h2>
-                <button id="shop-toggle" class="text-primary hover:text-primary/80 text-sm font-medium">
-                    查看全部 <i class="fa fa-angle-right ml-1"></i>
-                </button>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-white rounded-xl shadow p-2 flex flex-col items-center btn-item" data-item="food">
-                    <img src="https://picsum.photos/seed/food1/50/50" alt="高級食物" class="w-12 h-12 object-contain mb-1">
-                    <span class="text-xs font-medium">高級食物</span>
-                    <div class="flex items-center text-xs text-secondary mt-1">
-                        <i class="fa fa-diamond mr-1"></i> 5
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow p-2 flex flex-col items-center btn-item" data-item="toy">
-                    <img src="https://picsum.photos/seed/toy1/50/50" alt="玩具球" class="w-12 h-12 object-contain mb-1">
-                    <span class="text-xs font-medium">玩具球</span>
-                    <div class="flex items-center text-xs text-secondary mt-1">
-                        <i class="fa fa-diamond mr-1"></i> 3
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow p-2 flex flex-col items-center btn-item" data-item="shampoo">
-                    <img src="https://picsum.photos/seed/bath1/50/50" alt="香波" class="w-12 h-12 object-contain mb-1">
-                    <span class="text-xs font-medium">香波</span>
-                    <div class="flex items-center text-xs text-secondary mt-1">
-                        <i class="fa fa-diamond mr-1"></i> 4
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- 任務系統 -->
-        <section id="tasks-section" class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-4 mb-6">
-            <h2 class="text-lg font-bold text-neutral mb-3 flex items-center">
-                <i class="fa fa-tasks text-primary mr-2"></i>每日任務
-            </h2>
-            <div class="space-y-2" id="task-list">
-                <!-- 任務將由JavaScript動態生成 -->
-            </div>
-        </section>
-        
-        <!-- 成就系統 -->
-        <section id="achievements-section" class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-4 mb-6">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-lg font-bold text-neutral flex items-center">
-                    <i class="fa fa-trophy text-yellow-500 mr-2"></i>成就系統
-                </h2>
-                <span class="text-sm text-gray-500" id="achievements-stats">0/0 已解鎖</span>
-            </div>
-            <div class="grid grid-cols-2 gap-3" id="achievements-grid">
-                <!-- 成就將由JavaScript動態生成 -->
-            </div>
-        </section>
-    </main>
-
-    <!-- 底部導航 -->
-    <footer class="bg-white/80 backdrop-blur-sm shadow-lg fixed bottom-0 left-0 right-0">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-around py-3">
-                <a href="#" class="flex flex-col items-center text-primary" data-page="home">
-                    <i class="fa fa-home text-xl"></i>
-                    <span class="text-xs mt-1">主頁</span>
-                </a>
-                <a href="#" class="flex flex-col items-center text-gray-500 hover:text-primary transition-colors" data-page="tasks">
-                    <i class="fa fa-tasks text-xl"></i>
-                    <span class="text-xs mt-1">任務</span>
-                </a>
-                <a href="#" class="flex flex-col items-center text-gray-500 hover:text-primary transition-colors" data-page="achievements">
-                    <i class="fa fa-trophy text-xl"></i>
-                    <span class="text-xs mt-1">成就</span>
-                </a>
-                <a href="#" class="flex flex-col items-center text-gray-500 hover:text-primary transition-colors" data-page="settings">
-                    <i class="fa fa-cog text-xl"></i>
-                    <span class="text-xs mt-1">設置</span>
-                </a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- 模態對話框 -->
-    <div id="action-modal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-neutral" id="modal-title">餵食</h3>
-                    <button id="close-modal" class="text-gray-400 hover:text-gray-500">
-                        <i class="fa fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="text-center mb-6">
-                    <img id="modal-image" src="https://picsum.photos/seed/food1/100/100" alt="高級食物" class="w-24 h-24 object-contain mx-auto mb-2">
-                    <p class="text-lg font-medium text-neutral" id="modal-description">使用高級食物可以提高飽食度30點</p>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="cancel-action" class="bg-gray-200 hover:bg-gray-300 text-neutral font-bold py-3 px-4 rounded-full shadow-md">
-                        取消
-                    </button>
-                    <button id="confirm-action" class="bg-primary hover:bg-primary/80 text-white font-bold py-3 px-4 rounded-full shadow-lg">
-                        確認使用
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 成就解鎖通知 -->
-    <div id="achievement-notification" class="fixed bottom-20 right-4 bg-white rounded-xl shadow-lg p-3 transform translate-x-full transition-transform duration-500 z-50 flex items-center">
-        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-            <i class="fa fa-trophy text-yellow-500"></i>
-        </div>
-        <div>
-            <p class="font-bold text-sm" id="achievement-name">成就解鎖!</p>
-            <p class="text-xs text-gray-500" id="achievement-desc">獲得新成就</p>
-        </div>
-    </div>
-
-    <script>
-        // 狀態變量
-        let stats = {
-            health: 85,
-            hunger: 60,
-            mood: 90,
-            growth: 45,
-            diamonds: 25
-        };
-        
-        // 玩家等級和經驗
-        let playerLevel = 1;
-        let playerExperience = 0;
-        const experienceToNextLevel = 100;
-        
-        // 任務定義
-        const tasks = [
-            {
-                id: 1,
-                name: "餵食3次",
-                description: "給寵物餵食3次",
-                type: "counter",
-                targetValue: 3,
-                currentValue: 0,
-                reward: { diamonds: 5 },
-                status: "inProgress",
-                completed: false
-            },
-            {
-                id: 2,
-                name: "玩耍2次",
-                description: "和寵物玩耍2次",
-                type: "counter",
-                targetValue: 2,
-                currentValue: 0,
-                reward: { diamonds: 3 },
-                status: "inProgress",
-                completed: false
-            },
-            {
-                id: 3,
-                name: "保持滿心情值1小時",
-                description: "保持寵物心情值100%持續1小時",
-                type: "timed",
-                targetTime: 3600,
-                currentTime: 0,
-                reward: { diamonds: 10 },
-                status: "inProgress",
-                completed: false,
-                isActive: false
-            },
-            {
-                id: 4,
-                name: "健康值滿100",
-                description: "讓寵物健康值達到100",
-                type: "condition",
-                reward: { diamonds: 8 },
-                status: "notStarted",
-                completed: false
-            }
-        ];
-        
-        // 成就定義
-        const achievements = [
-            {
-                id: 1,
-                name: "初級飼養員",
-                description: "成功餵食寵物10次",
-                type: "counter",
-                target: 10,
-                current: 0,
-                condition: "feedCount >= 10",
-                reward: { diamonds: 10, title: "初級飼養員" },
-                unlocked: false,
-                secret: false
-            },
-            {
-                id: 2,
-                name: "親密好友",
-                description: "保持寵物心情值滿狀態累計10分鐘",
-                type: "timed",
-                target: 600,
-                current: 0,
-                condition: "maxMoodTime >= 600",
-                reward: { diamonds: 20, item: "友誼項圈" },
-                unlocked: false,
-                secret: false
-            },
-            {
-                id: 3,
-                name: "健康專家",
-                description: "讓寵物健康值達到100三次",
-                type: "counter",
-                target: 3,
-                current: 0,
-                condition: "maxHealthCount >= 3",
-                reward: { ability: "healthRegen" },
-                unlocked: false,
-                secret: false
-            },
-            {
-                id: 4,
-                name: "隱藏成就",
-                description: "在不被發現的情況下完成特殊操作",
-                type: "secret",
-                condition: "specialActionCount >= 5 && !discovered",
-                reward: { diamonds: 50, title: "潛行大師" },
-                unlocked: false,
-                secret: true,
-                hidden: true
-            },
-            {
-                id: 5,
-                name: "收藏家",
-                description: "收集所有物品",
-                type: "collection",
-                target: 3,
-                current: 0,
-                condition: "collectedItems >= 3",
-                reward: { diamonds: 30, specialItem: "彩虹項圈" },
-                unlocked: false,
-                secret: false
-            }
-        ];
-        
-        // 遊戲統計數據
-        const gameStats = {
-            feedCount: 0,
-            playCount: 0,
-            cleanCount: 0,
-            sleepCount: 0,
-            maxHealthCount: 0,
-            maxMoodTime: 0,
-            specialActionCount: 0,
-            discovered: false,
-            collectedItems: 0
-        };
-        
-        // 物品數據庫
-        const items = {
-            "food": { id: "food", name: "高級食物", description: "提高飽食度30點", type: "consumable", price: 5, effect: 30, image: "https://picsum.photos/seed/food1/50/50" },
-            "toy": { id: "toy", name: "玩具球", description: "提高心情值20點", type: "consumable", price: 3, effect: 20, image: "https://picsum.photos/seed/toy1/50/50" },
-            "shampoo": { id: "shampoo", name: "香波", description: "提高健康值25點", type: "consumable", price: 4, effect: 25, image: "https://picsum.photos/seed/bath1/50/50" }
-        };
-        
-        // 玩家物品清單
-        let playerInventory = [];
-        
-        // 玩家能力列表
-        let playerAbilities = [];
-        
-        // DOM 元素
-        const healthBar = document.getElementById('health-bar');
-        const healthValue = document.getElementById('health-value');
-        const hungerBar = document.getElementById('hunger-bar');
-        const hungerValue = document.getElementById('hunger-value');
-        const moodBar = document.getElementById('mood-bar');
-        const moodValue = document.getElementById('mood-value');
-        const growthBar = document.getElementById('growth-bar');
-        const diamondCount = document.getElementById('diamond-count');
-        const levelCount = document.getElementById('level-count');
-        
-        const feedBtn = document.getElementById('feed-btn');
-        const playBtn = document.getElementById('play-btn');
-        const cleanBtn = document.getElementById('clean-btn');
-        const sleepBtn = document.getElementById('sleep-btn');
-        
-        const modal = document.getElementById('action-modal');
-        const modalContent = document.getElementById('modal-content');
-        const modalTitle = document.getElementById('modal-title');
-        const modalDescription = document.getElementById('modal-description');
-        const modalImage = document.getElementById('modal-image');
-        const closeModal = document.getElementById('close-modal');
-        const cancelAction = document.getElementById('cancel-action');
-        const confirmAction = document.getElementById('confirm-action');
-        
-        const petMessage = document.getElementById('pet-message');
-        const petStatus = document.getElementById('pet-status');
-        
-        const taskList = document.getElementById('task-list');
-        const achievementsGrid = document.getElementById('achievements-grid');
-        const achievementsStats = document.getElementById('achievements-stats');
-        
-        const achievementNotification = document.getElementById('achievement-notification');
-        const achievementName = document.getElementById('achievement-name');
-        const achievementDesc = document.getElementById('achievement-desc');
-        
-        // 頁面導航
-        const navLinks = document.querySelectorAll('footer a');
-        const mainContent = document.querySelector('main');
-        
-        // 更新狀態條顯示
-        function updateStats() {
-            // 確保狀態值在0-100之間
-            for (const stat in stats) {
-                if (stats[stat] > 100) stats[stat] = 100;
-                if (stats[stat] < 0) stats[stat] = 0;
-            }
-            
-            // 更新健康狀態顏色
-            let healthColor = 'bg-success';
-            if (stats.health < 40) healthColor = 'bg-danger';
-            else if (stats.health < 70) healthColor = 'bg-warning';
-            
-            // 更新DOM
-            healthBar.className = `stat-bar ${healthColor}`;
-            healthBar.style.width = `${stats.health}%`;
-            healthValue.textContent = `${stats.health}%`;
-            
-            let hungerColor = 'bg-success';
-            if (stats.hunger < 40) hungerColor = 'bg-danger';
-            else if (stats.hunger < 70) hungerColor = 'bg-warning';
-            
-            hungerBar.className = `stat-bar ${hungerColor}`;
-            hungerBar.style.width = `${stats.hunger}%`;
-            hungerValue.textContent = `${stats.hunger}%`;
-            
-            let moodColor = 'bg-success';
-            if (stats.mood < 40) moodColor = 'bg-danger';
-            else if (stats.mood < 70) moodColor = 'bg-warning';
-            
-            moodBar.className = `stat-bar ${moodColor}`;
-            moodBar.style.width = `${stats.mood}%`;
-            moodValue.textContent = `${stats.mood}%`;
-            
-            growthBar.style.width = `${stats.growth}%`;
-            diamondCount.textContent = stats.diamonds;
-            levelCount.textContent = `Lv.${playerLevel}`;
-            
-            // 更新寵物狀態
-            updatePetStatus();
-            
-            // 檢查條件任務
-            checkConditionTasks();
-            
-            // 處理計時任務（心情值滿時）
-            const timedTask = tasks.find(t => t.id === 3 && !t.completed);
-            if (timedTask) {
-                if (stats.mood >= 100) {
-                    updateTask(3, true); // 開始計時
-                } else {
-                    updateTask(3, false); // 停止計時
+            </script>
+            <style type="text/tailwindcss">
+                @layer utilities {
+                    .content-auto {
+                        content-visibility: auto;
+                    }
+                    .card-flip {
+                        perspective: 1000px;
+                        transform-style: preserve-3d;
+                    }
+                    .card-inner {
+                        transition: transform 0.6s;
+                        transform-style: preserve-3d;
+                    }
+                    .card-flipped .card-inner {
+                        transform: rotateY(180deg);
+                    }
+                    .card-front, .card-back {
+                        backface-visibility: hidden;
+                    }
+                    .card-back {
+                        transform: rotateY(180deg);
+                    }
+                    .result-popup {
+                        transform: translate(-50%, -50%) scale(0.5);
+                        opacity: 0;
+                        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    }
+                    .result-popup.active {
+                        transform: translate(-50%, -50%) scale(1);
+                        opacity: 1;
+                    }
+                    .card-glow {
+                        box-shadow: 0 0 20px rgba(59, 130, 246, 0.7);
+                    }
+                    .card-flip.edit-mode-active {
+                        perspective: none; /* 編輯模式下禁用3D透視 */
+                        transform-style: flat; /* 編輯模式下禁用3D變換 */
+                    }
+                    .btn-hover {
+                        transition: all 0.3s ease;
+                    }
+                    .btn-hover:hover {
+                        transform: translateY(-2px);
+                    }
                 }
-            }
-            
-            // 檢查成就
-            checkAchievements();
-        }
-        
-        // 更新寵物狀態顯示
-        function updatePetStatus() {
-            let status = "快樂";
-            let statusColor = "bg-primary/80";
-            
-            if (stats.health < 40) {
-                status = "生病";
-                statusColor = "bg-danger/80";
-            } else if (stats.health < 70) {
-                status = "不舒服";
-                statusColor = "bg-warning/80";
-            } else if (stats.hunger < 40) {
-                status = "飢餓";
-                statusColor = "bg-danger/80";
-            } else if (stats.hunger < 70) {
-                status = "有點餓";
-                statusColor = "bg-warning/80";
-            } else if (stats.mood < 40) {
-                status = "鬱悶";
-                statusColor = "bg-danger/80";
-            } else if (stats.mood < 70) {
-                status = "不開心";
-                statusColor = "bg-warning/80";
-            }
-            
-            petStatus.textContent = status;
-            petStatus.className = `absolute top-2 right-2 ${statusColor} text-white text-xs px-2 py-1 rounded-full`;
-        }
-        
-        // 顯示寵物消息
-        function showPetMessage(message) {
-            petMessage.textContent = message;
-            petMessage.style.opacity = '1';
-            
-            setTimeout(() => {
-                petMessage.style.opacity = '0';
-            }, 2000);
-        }
-        
-        // 顯示模態框
-        function showModal(title, description, image, actionCallback) {
-            modalTitle.textContent = title;
-            modalDescription.textContent = description;
-            modalImage.src = image;
-            modalImage.alt = title;
-            
-            // 保存回調函數
-            confirmAction.onclick = () => {
-                actionCallback();
-                hideModal();
-            };
-            
-            // 顯示模態框並添加動畫
-            modal.classList.add('active');
-            setTimeout(() => {
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-        
-        // 隱藏模態框
-        function hideModal() {
-            modalContent.classList.remove('scale-100', 'opacity-100');
-            modalContent.classList.add('scale-95', 'opacity-0');
-            
-            setTimeout(() => {
-                modal.classList.remove('active');
-            }, 300);
-        }
-        
-        // 更新任務進度
-        function updateTask(taskId, value) {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task || task.completed) return;
-            
-            if (task.type === 'counter') {
-                task.currentValue += value;
-                if (task.currentValue >= task.targetValue) {
-                    completeTask(task);
-                }
-            } else if (task.type === 'timed') {
-                if (value) { // 開始計時
-                    task.isActive = true;
-                    task.currentTime += 1;
+            </style>
+        </head>
+        <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans">
+            <div class="container mx-auto px-4 py-8 max-w-6xl">
+                <!-- 顶部导航 -->
+                <header class="flex flex-wrap items-center justify-between mb-8">
+                    <div class="flex items-center mb-4 sm:mb-0">
+                        <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-dark tracking-tight">
+                            <span class="text-primary" id="gameTitle">自定义洞洞乐</span>
+                        </h1>
+                    </div>
                     
-                    // 更新成就計時
-                    const moodAchievement = achievements.find(a => a.id === 2 && !a.unlocked);
-                    if (moodAchievement) {
-                        moodAchievement.current += 1;
-                        saveAchievementsToStorage();
-                    }
-                } else { // 停止計時
-                    task.isActive = false;
-                }
-                
-                if (task.currentTime >= task.targetTime) {
-                    completeTask(task);
-                }
-            } else if (task.type === 'condition') {
-                // 條件類型任務需要在其他地方檢查條件
-                task.status = 'inProgress';
-            }
-            
-            saveTasksToStorage();
-            renderTasks();
-        }
-        
-        // 檢查條件任務
-        function checkConditionTasks() {
-            const healthTask = tasks.find(t => t.id === 4 && !t.completed);
-            if (healthTask && stats.health >= 100) {
-                completeTask(healthTask);
-                
-                // 更新成就
-                const healthAchievement = achievements.find(a => a.id === 3 && !a.unlocked);
-                if (healthAchievement) {
-                    healthAchievement.current += 1;
-                    if (healthAchievement.current >= healthAchievement.target) {
-                        unlockAchievement(healthAchievement);
-                    }
-                    saveAchievementsToStorage();
-                }
-                
-                gameStats.maxHealthCount += 1;
-                saveGameStatsToStorage();
-            }
-        }
-        
-        // 完成任務
-        function completeTask(task) {
-            task.completed = true;
-            task.status = 'completed';
-            
-            // 觸發任務完成事件
-            const event = new CustomEvent('taskCompleted', {
-                detail: { task }
-            });
-            document.dispatchEvent(event);
-            
-            saveTasksToStorage();
-            renderTasks();
-        }
-        
-        // 領取任務獎勵
-        function claimTaskReward(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task || !task.completed || task.status === 'claimed') return;
-            
-            // 發放獎勵
-            if (task.reward.diamonds) {
-                stats.diamonds += task.reward.diamonds;
-                updateStats();
-                animateDiamondReward(task.reward.diamonds);
-            }
-            
-            task.status = 'claimed';
-            saveTasksToStorage();
-            renderTasks();
-            
-            // 顯示獎勵通知
-            showPetMessage(`恭喜！你獲得了 ${task.reward.diamonds} 鑽石獎勵！`);
-        }
-        
-        // 鑽石獎勵動畫
-        function animateDiamondReward(amount) {
-            const diamondIcon = document.createElement('div');
-            diamondIcon.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl text-secondary animate-bounce';
-            diamondIcon.innerHTML = `<i class="fa fa-diamond"></i> +${amount}`;
-            document.body.appendChild(diamondIcon);
-            
-            // 動畫效果
-            setTimeout(() => {
-                diamondIcon.style.transition = 'all 1s ease-out';
-                diamondIcon.style.opacity = '0';
-                diamondIcon.style.transform = 'translate(-50%, -150%) scale(0.5)';
-                
-                setTimeout(() => {
-                    document.body.removeChild(diamondIcon);
-                }, 1000);
-            }, 500);
-        }
-        
-        // 渲染任務列表
-        function renderTasks() {
-            if (!taskList) return;
-            
-            // 清空現有任務
-            taskList.innerHTML = '';
-            
-            // 添加所有任務
-            tasks.forEach(task => {
-                const taskElement = document.createElement('div');
-                taskElement.className = `flex items-center p-2 bg-white/80 rounded-lg ${task.completed ? 'border-l-4 border-yellow-400' : ''}`;
-                
-                let statusClass = 'text-blue-600 bg-blue-100';
-                let statusText = '進行中';
-                let checkboxState = false;
-                
-                if (task.completed) {
-                    if (task.status === 'claimed') {
-                        statusClass = 'text-green-600 bg-green-100';
-                        statusText = '已完成';
-                        checkboxState = true;
-                    } else {
-                        statusClass = 'text-yellow-600 bg-yellow-100';
-                        statusText = '待領取';
-                    }
-                }
-                
-                taskElement.innerHTML = `
-                    <input type="checkbox" ${checkboxState ? 'checked' : ''} disabled class="mr-3 h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium">${task.name}</p>
-                        <p class="text-xs text-gray-500">${task.description}${task.type === 'counter' ? ` (${task.currentValue}/${task.targetValue})` : task.type === 'timed' ? ` (${Math.floor(task.currentTime/60)}分${task.currentTime%60}秒/${Math.floor(task.targetTime/60)}分${task.targetTime%60}秒)` : ''}</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button id="editTitleBtn" class="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
+                            <i class="fa fa-pencil mr-2"></i> 编辑标题
+                        </button>
+                        <button id="saveGameBtn" class="bg-secondary hover:bg-secondary/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
+                            <i class="fa fa-save mr-2"></i> 保存配置
+                        </button>
+                        <button id="loadGameBtn" class="bg-accent hover:bg-accent/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
+                            <i class="fa fa-folder-open mr-2"></i> 加载配置
+                        </button>
+                        <button id="resetBtn" class="bg-danger hover:bg-danger/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
+                            <i class="fa fa-refresh mr-2"></i> 重置游戏
+                        </button>
+                        <button id="toggleEditModeBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
+                            <i class="fa fa-edit mr-2"></i> 编辑模式
+                        </button>
                     </div>
-                    <span class="text-xs ${statusClass} px-2 py-1 rounded-full">${statusText}</span>
-                `;
+                </header>
                 
-                // 如果任務已完成但未領取獎勵，添加領取按鈕
-                if (task.completed && task.status !== 'claimed') {
-                    const claimButton = document.createElement('button');
-                    claimButton.className = 'ml-2 text-xs bg-primary text-white px-2 py-1 rounded-full hover:bg-primary/80 transition-colors';
-                    claimButton.textContent = '領取';
-                    claimButton.onclick = () => claimTaskReward(task.id);
-                    taskElement.querySelector('.flex-1').appendChild(claimButton);
-                }
+                <!-- 游戏格子板 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
+                    <h2 class="text-xl font-bold text-dark mb-4">选择一个格子</h2>
+                    <div id="gameBoard" class="grid grid-cols-5 gap-3">
+                        <!-- 动态生成20个格子 -->
+                    </div>
+                </div>
                 
-                taskList.appendChild(taskElement);
-            });
-        }
-        
-        // 檢查成就解鎖條件
-        function checkAchievements() {
-            achievements.forEach(achievement => {
-                if (!achievement.unlocked) {
-                    // 根據成就類型檢查解鎖條件
-                    let unlocked = false;
+                <!-- 编辑卡片内容区域 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
+                    <h2 class="text-xl font-bold text-dark mb-4">编辑卡片内容</h2>
                     
-                    switch(achievement.type) {
-                        case "counter":
-                            unlocked = gameStats[achievement.condition.split(' ')[0]] >= achievement.target;
-                            break;
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="mb-4">
+                                <label for="cardType" class="block text-gray-700 font-medium mb-2">卡片类型</label>
+                                <select id="cardType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="custom">自定义内容</option>
+                                    <option value="score">分数卡</option>
+                                    <option value="coin">金币卡</option>
+                                    <option value="item">道具卡</option>
+                                    <option value="trap">陷阱卡</option>
+                                    <option value="empty">空卡</option>
+                                </select>
+                            </div>
                             
-                        case "timed":
-                            unlocked = gameStats[achievement.condition.split(' ')[0]] >= achievement.target;
-                            break;
+                            <div id="customContentContainer" class="mb-4">
+                                <label for="customContent" class="block text-gray-700 font-medium mb-2">自定义内容</label>
+                                <textarea id="customContent" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入卡片显示的内容..."></textarea>
+                            </div>
                             
-                        case "collection":
-                            unlocked = playerInventory.length >= achievement.target;
-                            if (unlocked) {
-                                gameStats.collectedItems = playerInventory.length;
-                                saveGameStatsToStorage();
-                            }
-                            break;
+                            <div id="cardValueContainer" class="mb-4 hidden">
+                                <label for="cardValue" class="block text-gray-700 font-medium mb-2">数值</label>
+                                <input type="number" id="cardValue" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入数值...">
+                            </div>
                             
-                        case "secret":
-                            // 秘密成就使用自定義條件
-                            unlocked = eval(achievement.condition);
-                            break;
+                            <div id="cardTextContainer" class="mb-4 hidden">
+                                <label for="cardText" class="block text-gray-700 font-medium mb-2">描述文字</label>
+                                <input type="text" id="cardText" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入描述文字...">
+                            </div>
                             
-                        default:
-                            // 默認使用條件表達式
-                            unlocked = eval(achievement.condition);
-                    }
-                    
-                    if (unlocked) {
-                        unlockAchievement(achievement);
-                    }
+                            <div class="mb-4">
+                                <label for="cardColor" class="block text-gray-700 font-medium mb-2">卡片颜色</label>
+                                <div class="grid grid-cols-5 gap-2">
+                                    <button class="card-color-btn w-full h-10 rounded-lg bg-blue-500" data-color="bg-blue-500"></button>
+                                    <button class="card-color-btn w-full h-10 rounded-lg bg-amber-500" data-color="bg-amber-500"></button>
+                                    <button class="card-color-btn w-full h-10 rounded-lg bg-green-500" data-color="bg-green-500"></button>
+                                    <button class="card-color-btn w-full h-10 rounded-lg bg-red-500" data-color="bg-red-500"></button>
+                                    <button class="card-color-btn w-full h-10 rounded-lg bg-gray-400" data-color="bg-gray-400"></button>
+                                </div>
+                                <input type="hidden" id="selectedColor" value="bg-blue-500">
+                            </div>
+                            
+                            <button id="applyToSelectedBtn" class="w-full bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-lg shadow transition-all duration-300 font-medium btn-hover">
+                                应用到选中卡片
+                            </button>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-dark mb-3">卡片预览</h3>
+                            <div class="card-flip w-32 h-32 mx-auto">
+                                <div class="card-inner relative w-full h-full">
+                                    <div class="card-front absolute inset-0 bg-gradient-to-br from-primary to-indigo-600 rounded-lg shadow-md flex items-center justify-center text-white font-bold text-xl">
+                                        <i class="fa fa-question-circle"></i>
+                                    </div>
+                                    <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 bg-blue-500">
+                                        <i class="fa fa-star text-2xl mb-1"></i>
+                                        <span>自定义内容</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <h3 class="text-lg font-semibold text-dark mb-3">使用说明</h3>
+                                <ul class="space-y-2 text-gray-600">
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span>点击格子可选择要编辑的卡片</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span>选择卡片类型并设置相应内容</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span>点击"应用到选中卡片"按钮更新卡片内容</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                        <span>保存配置后可随时加载使用</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 游戏说明 -->
+                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-dark mb-4">游戏说明</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                    <i class="fa fa-paint-brush text-blue-500"></i>
+                                </div>
+                                <h3 class="font-semibold text-dark">自定义内容</h3>
+                            </div>
+                            <p class="text-gray-600 text-sm">可以自定义洞洞乐的标题和每个格子的内容，打造属于你的游戏！</p>
+                        </div>
+                        
+                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+                                    <i class="fa fa-save text-amber-500"></i>
+                                </div>
+                                <h3 class="font-semibold text-dark">保存与加载</h3>
+                            </div>
+                            <p class="text-gray-600 text-sm">保存你的洞洞乐配置，随时可以加载使用，方便重复游玩！</p>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                            <div class="flex items-center mb-2">
+                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                    <i class="fa fa-share-alt text-green-500"></i>
+                                </div>
+                                <h3 class="font-semibold text-dark">分享乐趣</h3>
+                            </div>
+                            <p class="text-gray-600 text-sm">和朋友一起分享你的创意洞洞乐，一起体验惊喜和乐趣！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 编辑标题弹窗 -->
+            <div id="editTitleModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-dark mb-4">编辑洞洞乐标题</h2>
+                        <input type="text" id="newGameTitle" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4" placeholder="输入新的标题...">
+                        <div class="flex gap-3">
+                            <button id="saveTitleBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
+                                保存
+                            </button>
+                            <button id="cancelTitleBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 卡片结果弹窗 -->
+            <div id="cardResultModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden cursor-pointer">
+                <div class="result-popup absolute top-1/2 left-1/2 w-64 h-64 rounded-xl overflow-hidden">
+                    <div id="resultContent" class="w-full h-full flex flex-col items-center justify-center text-white font-bold">
+                        <!-- 结果内容将在这里动态生成 -->
+                    </div>
+                </div>
+                <div class="absolute bottom-8 text-white text-center">
+                    <p class="text-lg">点击任意位置关闭</p>
+                    <p class="text-sm mt-2">剩余时间: <span id="popupTimer">20</span>秒</p>
+                </div>
+            </div>
+            
+            <!-- 保存配置弹窗 -->
+            <div id="saveGameModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold text-dark mb-4">保存洞洞乐配置</h2>
+                        <input type="text" id="saveGameName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4" placeholder="输入配置名称...">
+                        <div class="flex gap-3">
+                            <button id="confirmSaveBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
+                                保存
+                            </button>
+                            <button id="cancelSaveBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 加载配置弹窗 -->
+            <div id="loadGameModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full max-h-[80vh] overflow-y-auto">
+                    <div class="text-center mb-4">
+                        <h2 class="text-2xl font-bold text-dark">加载洞洞乐配置</h2>
+                    </div>
+                    <div id="savedGamesList" class="space-y-3">
+                        <!-- 动态生成已保存的配置列表 -->
+                        <div class="text-gray-500 text-center py-6">
+                            暂无保存的配置
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button id="closeLoadModalBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                // 游戏数据
+                function createInitialCards() {
+                    const initialCards = [
+                        { type: 'score', value: 10, color: 'bg-amber-500' },
+                        { type: 'custom', content: '再来一次！', color: 'bg-green-500' },
+                        { type: 'trap', text: '暂停一回合', color: 'bg-gray-400' },
+                        { type: 'coin', value: 5, color: 'bg-amber-500' },
+                        { type: 'item', text: '获得“免罪”卡', color: 'bg-blue-500' },
+                        { type: 'empty', color: 'bg-gray-400' },
+                        { type: 'score', value: 20, color: 'bg-amber-500' },
+                        { type: 'custom', content: '指定下一位玩家', color: 'bg-green-500' },
+                        { type: 'coin', value: 10, color: 'bg-amber-500' },
+                        { type: 'trap', text: '回答一个问题', color: 'bg-red-500' },
+                        { type: 'item', text: '获得“双倍”卡', color: 'bg-blue-500' },
+                        { type: 'score', value: 5, color: 'bg-amber-500' },
+                        { type: 'custom', content: '真心话大冒险', color: 'bg-red-500' },
+                        { type: 'empty', color: 'bg-gray-400' },
+                        { type: 'coin', value: 2, color: 'bg-amber-500' },
+                        { type: 'trap', text: '学猫叫三声', color: 'bg-red-500' },
+                        { type: 'score', value: 15, color: 'bg-amber-500' },
+                        { type: 'item', text: '获得“偷看”卡', color: 'bg-blue-500' },
+                        { type: 'custom', content: '恭喜！免做家务一天', color: 'bg-green-500' },
+                        { type: 'coin', value: 20, color: 'bg-amber-500' }
+                    ];
+                    return initialCards.sort(() => Math.random() - 0.5);
                 }
-            });
-        }
-        
-        // 解鎖成就
-        function unlockAchievement(achievement) {
-            achievement.unlocked = true;
-            saveAchievementsToStorage();
-            
-            // 發放成就獎勵
-            grantAchievementReward(achievement);
-            
-            // 顯示成就解鎖通知
-            showAchievementNotification(achievement);
-            
-            // 更新成就列表
-            renderAchievements();
-        }
-        
-        // 顯示成就通知
-        function showAchievementNotification(achievement) {
-            achievementName.textContent = achievement.name;
-            achievementDesc.textContent = achievement.description;
-            
-            achievementNotification.classList.remove('translate-x-full');
-            
-            setTimeout(() => {
-                achievementNotification.classList.add('translate-x-full');
-            }, 5000);
-        }
-        
-        // 發放成就獎勵
-        function grantAchievementReward(achievement) {
-            const reward = achievement.reward;
-            let rewardMessage = "獲得成就獎勵: ";
-            
-            if (reward.diamonds) {
-                stats.diamonds += reward.diamonds;
-                rewardMessage += `${reward.diamonds} 鑽石`;
-                animateDiamondReward(reward.diamonds);
-            }
-            
-            if (reward.title) {
-                // 這裡可以實現稱號系統
-                rewardMessage += `, 稱號: ${reward.title}`;
-            }
-            
-            if (reward.item) {
-                // 添加特殊物品到庫存
-                const specialItem = {
-                    id: `special_${reward.item}`,
-                    name: reward.item === "friendshipCollar" ? "友誼項圈" : "彩虹項圈",
-                    description: "特殊成就獎勵物品",
-                    type: "special"
+
+                const gameData = {
+                    title: "自定义洞洞乐",
+                    cards: createInitialCards(),
+                    isEditMode: false, // 新增编辑模式状态
+                    selectedCardIndex: null,
+                    savedGames: []
                 };
                 
-                addItemToInventory(specialItem);
-                rewardMessage += `, ${specialItem.name}`;
-                animateItemReward(specialItem);
-            }
-            
-            if (reward.ability) {
-                unlockAbility(reward.ability);
-                        // 解锁能力
-
-                    }
-                }                 
-        function unlockAbility(abilityId) {
-            if (!playerAbilities.includes(abilityId)) {
-                playerAbilities.push(abilityId);
-                showPetMessage(`恭喜！你解锁了新能力: ${abilityId === 'healthRegen' ? '健康恢复' : '特殊能力'}`);
-                savePlayerAbilitiesToStorage();
-            }
-        }
-        
-        // 添加物品到库存
-        function addItemToInventory(item) {
-            playerInventory.push(item);
-            saveInventoryToStorage();
-            renderInventory();
-        }
-        
-        // 渲染库存
-        function renderInventory() {
-            // 实现库存渲染逻辑
-        }
-        
-        // 渲染成就列表
-        function renderAchievements() {
-            if (!achievementsGrid) return;
-            
-            // 清空现有成就
-            achievementsGrid.innerHTML = '';
-            
-            // 过滤掉隐藏的成就
-            const visibleAchievements = achievements.filter(a => !a.hidden || a.unlocked);
-            
-            // 更新成就统计
-            const unlockedCount = visibleAchievements.filter(a => a.unlocked).length;
-            achievementsStats.textContent = `${unlockedCount}/${visibleAchievements.length} 已解锁`;
-            
-            // 添加所有成就
-            visibleAchievements.forEach(achievement => {
-                const achievementElement = document.createElement('div');
-                achievementElement.className = `achievement-card ${achievement.unlocked ? 'bg-white/80' : 'bg-gray-100/80'} rounded-xl shadow p-3 flex flex-col items-center`;
+                // 弹窗计时器
+                let popupTimer = null;
+                let remainingTime = 20;
                 
-                let iconClass = achievement.unlocked ? 'fa-trophy text-yellow-500' : 'fa-lock text-gray-400';
-                let iconBg = achievement.unlocked ? 'bg-yellow-100' : 'bg-gray-200';
-                
-                achievementElement.innerHTML = `
-                    <div class="w-12 h-12 ${iconBg} rounded-full flex items-center justify-center mb-2">
-                        <i class="fa ${iconClass} text-xl"></i>
-                    </div>
-                    <h4 class="text-xs font-medium text-center ${achievement.unlocked ? 'text-neutral' : 'text-gray-500'}">
-                        ${achievement.name}
-                    </h4>
-                    <p class="text-xs text-center text-gray-500 mt-1">
-                        ${achievement.unlocked ? achievement.description : '未解锁'}
-                    </p>
-                    ${achievement.unlocked ? `<div class="text-xs text-green-600 mt-1">已完成</div>` : ''}
-                `;
-                
-                achievementsGrid.appendChild(achievementElement);
-            });
-        }
-        
-        // 页面导航
-        function navigateTo(page) {
-            // 移除所有导航链接的活动状态
-            navLinks.forEach(link => {
-                link.classList.remove('text-primary');
-                link.classList.add('text-gray-500');
-            });
-            
-            // 添加当前导航链接的活动状态
-            const activeLink = document.querySelector(`footer a[data-page="${page}"]`);
-            if (activeLink) {
-                activeLink.classList.remove('text-gray-500');
-                activeLink.classList.add('text-primary');
-            }
-            
-            // 实现页面切换逻辑
-            // 这里可以根据需要显示/隐藏不同的内容区域
-        }
-        
-        // 绑定导航事件
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = link.getAttribute('data-page');
-                navigateTo(page);
-            });
-        });
-        
-        // 初始化页面
-        navigateTo('home');
-        
-        // 保存数据到本地存储
-        function saveGameState() {
-            localStorage.setItem('petGameStats', JSON.stringify(stats));
-            localStorage.setItem('petGameLevel', JSON.stringify(playerLevel));
-            localStorage.setItem('petGameExperience', JSON.stringify(playerExperience));
-            saveTasksToStorage();
-            saveAchievementsToStorage();
-            saveGameStatsToStorage();
-            saveInventoryToStorage();
-            savePlayerAbilitiesToStorage();
-        }
-        
-        // 从本地存储加载数据
-        function loadGameState() {
-            const savedStats = localStorage.getItem('petGameStats');
-            const savedLevel = localStorage.getItem('petGameLevel');
-            const savedExperience = localStorage.getItem('petGameExperience');
-            
-            if (savedStats) {
-                stats = JSON.parse(savedStats);
-            }
-            
-            if (savedLevel) {
-                playerLevel = JSON.parse(savedLevel);
-            }
-            
-            if (savedExperience) {
-                playerExperience = JSON.parse(savedExperience);
-            }
-            
-            loadTasksFromStorage();
-            loadAchievementsFromStorage();
-            loadGameStatsFromStorage();
-            loadInventoryFromStorage();
-            loadPlayerAbilitiesFromStorage();
-            
-            updateStats();
-            renderTasks();
-            renderAchievements();
-        }
-        
-        // 保存任务到本地存储
-        function saveTasksToStorage() {
-            localStorage.setItem('petGameTasks', JSON.stringify(tasks));
-        }
-        
-        // 从本地存储加载任务
-        function loadTasksFromStorage() {
-            const savedTasks = localStorage.getItem('petGameTasks');
-            if (savedTasks) {
-                const parsedTasks = JSON.parse(savedTasks);
-                // 合并已保存的任务数据到当前任务数组
-                parsedTasks.forEach(savedTask => {
-                    const taskIndex = tasks.findIndex(t => t.id === savedTask.id);
-                    if (taskIndex !== -1) {
-                        tasks[taskIndex] = { ...tasks[taskIndex], ...savedTask };
-                    }
-                });
-            }
-        }
-        
-        // 保存成就到本地存储
-        function saveAchievementsToStorage() {
-            localStorage.setItem('petGameAchievements', JSON.stringify(achievements));
-        }
-        
-        // 从本地存储加载成就
-        function loadAchievementsFromStorage() {
-            const savedAchievements = localStorage.getItem('petGameAchievements');
-            if (savedAchievements) {
-                const parsedAchievements = JSON.parse(savedAchievements);
-                // 合并已保存的成就数据到当前成就数组
-                parsedAchievements.forEach(savedAchievement => {
-                    const achievementIndex = achievements.findIndex(a => a.id === savedAchievement.id);
-                    if (achievementIndex !== -1) {
-                        achievements[achievementIndex] = { ...achievements[achievementIndex], ...savedAchievement };
-                    }
-                });
-            }
-        }
-        
-        // 保存游戏统计数据到本地存储
-        function saveGameStatsToStorage() {
-            localStorage.setItem('petGameStatsData', JSON.stringify(gameStats));
-        }
-        
-        // 从本地存储加载游戏统计数据
-        function loadGameStatsFromStorage() {
-            const savedGameStats = localStorage.getItem('petGameStatsData');
-            if (savedGameStats) {
-                Object.assign(gameStats, JSON.parse(savedGameStats));
-            }
-        }
-        
-        // 保存库存到本地存储
-        function saveInventoryToStorage() {
-            localStorage.setItem('petGameInventory', JSON.stringify(playerInventory));
-        }
-        
-        // 从本地存储加载库存
-        function loadInventoryFromStorage() {
-            const savedInventory = localStorage.getItem('petGameInventory');
-            if (savedInventory) {
-                playerInventory = JSON.parse(savedInventory);
-            }
-        }
-        
-        // 保存能力到本地存储
-        function savePlayerAbilitiesToStorage() {
-            localStorage.setItem('petGameAbilities', JSON.stringify(playerAbilities));
-        }
-        
-        // 从本地存储加载能力
-        function loadPlayerAbilitiesFromStorage() {
-            const savedAbilities = localStorage.getItem('petGameAbilities');
-            if (savedAbilities) {
-                playerAbilities = JSON.parse(savedAbilities);
-            }
-        }
-        
-        // 游戏启动时加载保存的游戏状态
-        window.addEventListener('DOMContentLoaded', () => {
-            loadGameState();
-            
-            // 定期保存游戏状态
-            setInterval(saveGameState, 30000); // 每30秒保存一次
-            
-            // 绑定商店物品点击事件
-            document.querySelectorAll('.btn-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const itemId = item.getAttribute('data-item');
-                    const itemData = items[itemId];
+                // 初始化游戏
+                function initGame() {
+                    // 更新标题
+                    document.getElementById('gameTitle').textContent = gameData.title;
                     
-                    if (itemData) {
-                        showModal(
-                            itemData.name, 
-                            `${itemData.description}，消耗 ${itemData.price} 钻石`, 
-                            () => {
-                                if (stats.diamonds >= itemData.price) {
-                                    // 购买成功
-                                    stats.diamonds -= itemData.price;
-                                    
-                                    // 根据物品类型应用效果
-                                    if (itemData.type === 'consumable') {
-                                        switch(itemId) {
-                                            case 'food':
-                                                stats.hunger += itemData.effect;
-                                                showPetMessage('谢谢喂食，真好吃！');
-                                                gameStats.feedCount += 1;
-                                                updateTask(1, 1);
-                                                break;
-                                            case 'toy':
-                                                stats.mood += itemData.effect;
-                                                showPetMessage('玩得真开心！');
-                                                gameStats.playCount += 1;
-                                                updateTask(2, 1);
-                                                break;
-                                            case 'shampoo':
-                                                stats.health += itemData.effect;
-                                                showPetMessage('好舒服，谢谢你！');
-                                                gameStats.cleanCount += 1;
-                                                break;
-                                        }
-                                    } else {
-                                        // 非消耗品添加到库存
-                                        addItemToInventory(itemData);
-                                        showPetMessage(`你获得了新物品: ${itemData.name}`);
-                                    }
-                                    
-                                    updateStats();
-                                    saveGameState();
-                                } else {
-                                    showModal('钻石不足', '你的钻石不够购买此物品', () => {});
-                                }
-                            }
-                        );
+                    // 生成卡片
+                    generateCards();
+                    
+                    // 新增编辑模式切换按钮的事件监听器
+                    document.getElementById('toggleEditModeBtn').addEventListener('click', toggleEditMode);
+                    
+                    // 加载已保存的游戏配置
+                    loadSavedGames();
+                    
+                    // 更新卡片类型选择器
+                    document.getElementById('cardType').addEventListener('change', updateCardForm);
+                    
+                    // 更新卡片颜色选择器
+                    document.querySelectorAll('.card-color-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            document.querySelectorAll('.card-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2'));
+                            this.classList.add('ring-2', 'ring-white', 'ring-offset-2');
+                            document.getElementById('selectedColor').value = this.dataset.color;
+                            updateCardPreview();
+                        });
+                    });
+                    
+                    // 应用到选中卡片按钮
+                    document.getElementById('applyToSelectedBtn').addEventListener('click', applyToSelectedCard);
+                    
+                    // 编辑标题按钮
+                    document.getElementById('editTitleBtn').addEventListener('click', () => {
+                        document.getElementById('newGameTitle').value = gameData.title;
+                        document.getElementById('editTitleModal').classList.remove('hidden');
+                    });
+                    
+                    // 保存标题按钮
+                    document.getElementById('saveTitleBtn').addEventListener('click', saveGameTitle);
+                    
+                    // 取消编辑标题按钮
+                    document.getElementById('cancelTitleBtn').addEventListener('click', () => {
+                        document.getElementById('editTitleModal').classList.add('hidden');
+                    });
+                    
+                    // 保存游戏配置按钮
+                    document.getElementById('saveGameBtn').addEventListener('click', () => {
+                        document.getElementById('saveGameName').value = gameData.title;
+                        document.getElementById('saveGameModal').classList.remove('hidden');
+                    });
+                    
+                    // 确认保存按钮
+                    document.getElementById('confirmSaveBtn').addEventListener('click', saveGameConfig);
+                    
+                    // 取消保存按钮
+                    document.getElementById('cancelSaveBtn').addEventListener('click', () => {
+                        document.getElementById('saveGameModal').classList.add('hidden');
+                    });
+                    
+                    // 加载游戏配置按钮
+                    document.getElementById('loadGameBtn').addEventListener('click', () => {
+                        loadSavedGames();
+                        document.getElementById('loadGameModal').classList.remove('hidden');
+                    });
+                    
+                    // 关闭加载弹窗按钮
+                    document.getElementById('closeLoadModalBtn').addEventListener('click', () => {
+                        document.getElementById('loadGameModal').classList.add('hidden');
+                    });
+                    
+                    // 重置游戏按钮
+                    document.getElementById('resetBtn').addEventListener('click', resetGame);
+                    
+                    // 更新卡片表单
+                    updateCardForm();
+                }
+                
+                // 生成卡片
+                function generateCards() {
+                    const gameBoard = document.getElementById('gameBoard');
+                    gameBoard.innerHTML = '';
+                    const isEditMode = gameData.isEditMode;
+                    
+                    gameData.cards.forEach((card, index) => {
+                        const cardElement = document.createElement('div');
+                        // 在编辑模式下，卡片不应有翻转效果，且光标应为文本编辑
+                        cardElement.className = `card-flip ${isEditMode ? 'edit-mode-active cursor-text' : 'cursor-pointer'} ${index === gameData.selectedCardIndex ? 'ring-4 ring-primary' : ''}`;
+                        cardElement.dataset.index = index;
+                        
+                        if (isEditMode) {
+                            // 编辑模式下直接显示背面，并使其可编辑
+                            cardElement.innerHTML = `
+                                <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 transition-all duration-300 ${card.color}">
+                                    ${getEditableCardContentHtml(card, index)}
+                                </div>
+                            `;
+                        } else {
+                            // 正常游戏模式，可翻转
+                            cardElement.innerHTML = `
+                                <div class="card-inner relative w-full aspect-square">
+                                    <div class="card-front absolute inset-0 bg-gradient-to-br from-primary to-indigo-600 rounded-lg shadow-md flex items-center justify-center text-white font-bold text-xl transition-all duration-300 hover:shadow-lg">
+                                        <i class="fa fa-question-circle"></i>
+                                    </div>
+                                    <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 transition-all duration-300 ${card.color}">
+                                        ${getCardContent(card)}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // 添加点击事件
+                        cardElement.addEventListener('click', () => selectCard(index));
+                        
+                        gameBoard.appendChild(cardElement);
+                    });
+                }
+                
+                // 新增：切换编辑模式
+                function toggleEditMode() {
+                    gameData.isEditMode = !gameData.isEditMode;
+                    const btn = document.getElementById('toggleEditModeBtn');
+                    
+                    if (gameData.isEditMode) {
+                        btn.innerHTML = '<i class="fa fa-gamepad mr-2"></i> 游戏模式';
+                        btn.classList.replace('bg-indigo-500', 'bg-indigo-700');
+                        showNotification('已进入编辑模式', 'bg-blue-500');
+                    } else {
+                        btn.innerHTML = '<i class="fa fa-edit mr-2"></i> 编辑模式';
+                        btn.classList.replace('bg-indigo-700', 'bg-indigo-500');
+                        showNotification('已退出编辑模式', 'bg-gray-500');
                     }
-                });
-            });
-            
-            // 绑定商店切换按钮事件
-            document.getElementById('shop-toggle').addEventListener('click', () => {
-                // 这里可以实现商店展开/收起功能
-                showModal('物品商店', '所有可用物品将在这里显示', () => {});
-            });
-        });
-    </script>
-</body>
-</html>
+                    generateCards();
+                }
+
+                // 新增：获取可编辑卡片内容的HTML
+                function getEditableCardContentHtml(card, index) {
+                    const commonStyles = `background:transparent; border:none; color:white; text-align:center; width:100%; resize:none; font-weight:bold; padding: 4px; outline: none;`;
+                    const onBlurAction = `onblur="updateCardContent(${index}, this)"`;
+                    
+                    switch (card.type) {
+                        case 'score':
+                            return `<div class="flex items-center justify-center h-full"><i class="fa fa-star text-2xl mr-2"></i>+<input type="number" value="${card.value || 0}" data-field="value" data-card-index="${index}" ${onBlurAction} style="${commonStyles}" class="w-16 inline-block"> 分</div>`;
+                        case 'coin':
+                            return `<div class="flex items-center justify-center h-full"><i class="fa fa-coins text-2xl mr-2"></i>+<input type="number" value="${card.value || 0}" data-field="value" data-card-index="${index}" ${onBlurAction} style="${commonStyles}" class="w-16 inline-block"> 金幣</div>`;
+                        case 'item':
+                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-gift text-2xl mb-1"></i><input type="text" value="${card.text || ''}" placeholder="道具描述" data-field="text" data-card-index="${index}" ${onBlurAction} style="${commonStyles}"></div>`;
+                        case 'trap':
+                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-bomb text-2xl mb-1"></i><input type="text" value="${card.text || ''}" placeholder="陷阱描述" data-field="text" data-card-index="${index}" ${onBlurAction} style="${commonStyles}"></div>`;
+                        case 'empty':
+                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-ban text-2xl mb-1"></i><span>空的</span></div>`;
+                        case 'custom':
+                        default:
+                            return `<textarea data-field="content" data-card-index="${index}" ${onBlurAction} oninput="autoExpandTextarea(this)" style="${commonStyles}" placeholder="自定义内容">${card.content || ''}</textarea>`;
+                    }
+                }
+
+                // 新增：更新卡片数据模型
+                function updateCardContent(index, element) {
+                    const field = element.dataset.field;
+                    if (!field) return;
+                    
+                    const value = (element.type === 'number') ? parseInt(element.value, 10) || 0 : element.value;
+                    
+                    if (gameData.cards[index] && typeof gameData.cards[index][field] !== 'undefined') {
+                        gameData.cards[index][field] = value;
+                    }
+                }
+
+                // 新增：自动调整textarea高度
+                function autoExpandTextarea(element) {
+                    element.style.height = 'auto';
+                    element.style.height = (element.scrollHeight) + 'px';
+                }
+
+                // 获取卡片内容
+                function getCardContent(card) {
+                    let content = '';
+                    
+                    switch (card.type) {
+                        case 'score':
+                            content = `
+                                <i class="fa fa-star text-2xl mb-1"></i>
+                                <span>+${card.value} 分</span>
+                            `;
+                            break;
+                        case 'coin':
+                            content = `
+                                <i class="fa fa-coins text-2xl mb-1"></i>
+                                <span>+${card.value} 金幣</span>
+                            `;
+                            break;
+                        case 'item':
+                            content = `
+                                <i class="fa fa-gift text-2xl mb-1"></i>
+                                <span class="text-sm">${card.text}</span>
+                            `;
+                            break;
+                        case 'trap':
+                            content = `
+                                <i class="fa fa-bomb text-2xl mb-1"></i>
+                                <span class="text-sm">${card.text}</span>
+                            `;
+                            break;
+                        case 'empty':
+                            content = `
+                                <i class="fa fa-ban text-2xl mb-1"></i>
+                                <span>空的</span>
+                            `;
+                            break;
+                        case 'custom':
+                        default:
+                            content = `
+                                <span class="text-center">${card.content}</span>
+                            `;
+                            break;
+                    }
+                    
+                    return content;
+                }
+                
+                // 选择卡片
+                function selectCard(index) {
+                    const cardElement = document.querySelector(`[data-index="${index}"]`);
+                    if (!cardElement) return;
+
+                    if (gameData.isEditMode) {
+                        // 编辑模式下，选中卡片进行编辑
+                        gameData.selectedCardIndex = index;
+                        updateFormForSelectedCard();
+                        generateCards(); // 重绘以显示选中高亮和更新内容
+                        focusOnEditableCard(index);
+                    } else {
+                        // 游戏模式下，翻转卡片
+                        const cardInner = cardElement.querySelector('.card-inner');
+                        if (!cardInner) return;
+
+                        if (cardInner.classList.contains('card-flipped')) {
+                            showCardResult(index); // 如果已翻开，直接显示结果
+                        } else {
+                            cardInner.classList.add('card-flipped'); // 翻转卡片
+                            setTimeout(() => showCardResult(index), 600); // 动画后显示结果
+                        }
+                    }
+                }
+                
+                // 更新卡片表单
+                function updateCardForm() {
+                    const cardType = document.getElementById('cardType').value;
+                    const customContentContainer = document.getElementById('customContentContainer');
+                    const cardValueContainer = document.getElementById('cardValueContainer');
+                    const cardTextContainer = document.getElementById('cardTextContainer');
+                    
+                    // 隐藏所有容器
+                    customContentContainer.classList.add('hidden');
+                    cardValueContainer.classList.add('hidden');
+                    cardTextContainer.classList.add('hidden');
+                    
+                    // 根据选择的类型显示相应的容器
+                    if (cardType === 'custom') {
+                        customContentContainer.classList.remove('hidden');
+                    } else if (['score', 'coin'].includes(cardType)) {
+                        cardValueContainer.classList.remove('hidden');
+                    } else if (['item', 'trap'].includes(cardType)) {
+                        cardTextContainer.classList.remove('hidden');
+                    }
+                    
+                    // 更新卡片预览
+                    updateCardPreview();
+                }
+                
+                // 更新卡片预览
+                function updateCardPreview() {
+                    const cardType = document.getElementById('cardType').value;
+                    const color = document.getElementById('selectedColor').value;
+                    const previewCard = document.querySelector('.card-flip');
+                    const cardBack = previewCard.querySelector('.card-back');
+                    
+                    // 更新颜色
+                    cardBack.className = `card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 ${color}`;
+                    
+                    // 更新内容
+                    let content = '';
+                    
+                    switch (cardType) {
+                        case 'score':
+                            const scoreValue = document.getElementById('cardValue').value || '10';
+                            content = `
+                                <i class="fa fa-star text-2xl mb-1"></i>
+                                <span>+${scoreValue} 分</span>
+                            `;
+                            break;
+                        case 'coin':
+                            const coinValue = document.getElementById('cardValue').value || '1';
+                            content = `
+                                <i class="fa fa-coins text-2xl mb-1"></i>
+                                <span>+${coinValue} 金幣</span>
+                            `;
+                            break;
+                        case 'item':
+                            const itemText = document.getElementById('cardText').value || '道具';
+                            content = `
+                                <i class="fa fa-gift text-2xl mb-1"></i>
+                                <span class="text-sm">${itemText}</span>
+                            `;
+                            break;
+                        case 'trap':
+                            const trapText = document.getElementById('cardText').value || '陷阱';
+                            content = `
+                                <i class="fa fa-bomb text-2xl mb-1"></i>
+                                <span class="text-sm">${trapText}</span>
+                            `;
+                            break;
+                        case 'empty':
+                            content = `
+                                <i class="fa fa-ban text-2xl mb-1"></i>
+                                <span>空的</span>
+                            `;
+                            break;
+                        case 'custom':
+                        default:
+                            const customContent = document.getElementById('customContent').value || '自定义内容';
+                            content = `
+                                <span class="text-center">${customContent}</span>
+                            `;
+                            break;
+                    }
+                    
+                    cardBack.innerHTML = content;
+                }
+                
+                // 应用到选中卡片
+                function applyToSelectedCard() {
+                    if (gameData.selectedCardIndex === null) {
+                        alert('请先选择一个卡片');
+                        return;
+                    }
+                    
+                    const cardType = document.getElementById('cardType').value;
+                    const color = document.getElementById('selectedColor').value;
+                    const card = gameData.cards[gameData.selectedCardIndex];
+                    
+                    card.type = cardType;
+                    card.color = color;
+                    
+                    if (cardType === 'custom') {
+                        card.content = document.getElementById('customContent').value || '自定义内容';
+                    } else if (['score', 'coin'].includes(cardType)) {
+                        card.value = parseInt(document.getElementById('cardValue').value) || 0;
+                    } else if (['item', 'trap'].includes(cardType)) {
+                        card.text = document.getElementById('cardText').value || '';
+                    }
+                    
+                    // 更新卡片
+                    generateCards();
+                    
+                    // 显示成功通知
+                    showNotification('卡片内容已更新！', 'bg-green-500');
+                }
+                
+                // 保存游戏标题
+                function saveGameTitle() {
+                    const newTitle = document.getElementById('newGameTitle').value.trim();
+                    
+                    if (newTitle) {
+                        gameData.title = newTitle;
+                        document.getElementById('gameTitle').textContent = newTitle;
+                        document.getElementById('editTitleModal').classList.add('hidden');
+                        generateCards(); // 重新渲染卡片，以防标题内容被使用
+                        showNotification('标题已更新！', 'bg-green-500');
+                    } else {
+                        alert('请输入有效的标题');
+                    }
+                }
+                
+                // 保存游戏配置
+                function saveGameConfig() {
+                    const configName = document.getElementById('saveGameName').value.trim();
+                    
+                    if (configName) {
+                        // 创建配置对象
+                        const config = {
+                            name: configName,
+                            title: gameData.title,
+                            cards: [...gameData.cards]
+                        };
+                        
+                        // 保存到localStorage
+                        const savedGames = JSON.parse(localStorage.getItem('savedHoleGames')) || [];
+                        
+                        // 检查是否已存在同名配置
+                        const existingIndex = savedGames.findIndex(g => g.name === configName);
+                        if (existingIndex !== -1) {
+                            savedGames[existingIndex] = config;
+                        } else {
+                            savedGames.push(config);
+                        }
+                        
+                        localStorage.setItem('savedHoleGames', JSON.stringify(savedGames));
+                        
+                        // 关闭弹窗
+                        document.getElementById('saveGameModal').classList.add('hidden');
+                        
+                        // 更新游戏数据
+                        gameData.savedGames = savedGames;
+                        
+                        // 显示成功通知
+                        showNotification(`配置"${configName}"已保存！`, 'bg-green-500');
+                    } else {
+                        alert('请输入有效的配置名称');
+                    }
+                }
+                
+                // 加载已保存的游戏配置
+                function loadSavedGames() {
+                    const savedGames = JSON.parse(localStorage.getItem('savedHoleGames')) || [];
+                    gameData.savedGames = savedGames;
+                    
+                    const savedGamesList = document.getElementById('savedGamesList');
+                    savedGamesList.innerHTML = '';
+                    
+                    if (savedGames.length === 0) {
+                        savedGamesList.innerHTML = `
+                            <div class="text-gray-500 text-center py-6">
+                                暂无保存的配置
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    savedGames.forEach((game, index) => {
+                        const gameItem = document.createElement('div');
+                        gameItem.className = 'bg-gray-50 rounded-lg p-4 flex justify-between items-center hover:bg-gray-100 transition-colors';
+                        
+                        gameItem.innerHTML = `
+                            <div>
+                                <h3 class="font-medium text-dark">${game.name}</h3>
+                                <p class="text-sm text-gray-500">${game.title}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="load-game-btn px-3 py-1 bg-primary text-white rounded hover:bg-primary/90 transition-colors" data-index="${index}">
+                                    加载
+                                </button>
+                                <button class="delete-game-btn px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors" data-index="${index}">
+                                    删除
+                                </button>
+                            </div>
+                        `;
+                        
+                        savedGamesList.appendChild(gameItem);
+                    });
+                    
+                    // 添加加载按钮事件
+                    document.querySelectorAll('.load-game-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const index = parseInt(this.dataset.index);
+                            loadGameConfig(index);
+                        });
+                    });
+                    
+                    // 添加删除按钮事件
+                    document.querySelectorAll('.delete-game-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const index = parseInt(this.dataset.index);
+                            deleteGameConfig(index);
+                        });
+                    });
+                }
+                
+                // 加载游戏配置
+                function loadGameConfig(index) {
+                    const config = gameData.savedGames[index];
+                    
+                    if (config) {
+                        gameData.title = config.title;
+                        gameData.cards = [...config.cards];
+                        gameData.selectedCardIndex = null;
+                        gameData.isEditMode = false; // 加载配置后总是进入游戏模式
+                        
+                        // 更新UI
+                        document.getElementById('gameTitle').textContent = gameData.title;
+                        generateCards();
+                        
+                        // 关闭弹窗
+                        document.getElementById('loadGameModal').classList.add('hidden');
+                        
+                        // 显示成功通知
+                        showNotification(`已加载配置"${config.name}"！`, 'bg-green-500');
+                    }
+                }
+                
+                // 删除游戏配置
+                function deleteGameConfig(index) {
+                    if (confirm('确定要删除这个配置吗？')) {
+                        gameData.savedGames.splice(index, 1);
+                        localStorage.setItem('savedHoleGames', JSON.stringify(gameData.savedGames));
+                        loadSavedGames();
+                        showNotification('配置已删除！', 'bg-red-500');
+                    }
+                }
+                
+                // 重置游戏
+                function resetGame() {
+                    if (confirm('确定要重置游戏吗？所有自定义内容将被清除。')) {
+                            // 重置游戏数据
+                            gameData.title = "自定义洞洞乐";
+                            gameData.cards = createInitialCards();
+                            gameData.isEditMode = false; // 重置游戏后默认进入游戏模式
+                            gameData.selectedCardIndex = null;
+                            
+                            // 更新UI
+                            document.getElementById('gameTitle').textContent = gameData.title;
+                            generateCards();
+                            
+                            // 显示成功通知
+                            showNotification('游戏已重置！', 'bg-green-500');
+                        }
+                    }
+
+                    // 辅助函数：更新表单以匹配选定的卡片
+                    function updateFormForSelectedCard() {
+                        if (gameData.selectedCardIndex === null) return;
+                        const card = gameData.cards[gameData.selectedCardIndex];
+                        
+                        document.getElementById('cardType').value = card.type;
+                        document.getElementById('customContent').value = card.content || '';
+                        document.getElementById('cardValue').value = card.value || '';
+                        document.getElementById('cardText').value = card.text || '';
+                        document.getElementById('selectedColor').value = card.color;
+                        
+                        document.querySelectorAll('.card-color-btn').forEach(btn => {
+                            const isSelected = btn.dataset.color === card.color;
+                            btn.classList.toggle('ring-2', isSelected);
+                            btn.classList.toggle('ring-white', isSelected);
+                            btn.classList.toggle('ring-offset-2', isSelected);
+                        });
+                        
+                        updateCardForm();
+                        updateCardPreview();
+                    }
+
+                    // 辅助函数：在编辑模式下聚焦到卡片输入框
+                    function focusOnEditableCard(index) {
+                        setTimeout(() => {
+                            const editableElement = document.querySelector(`[data-card-index="${index}"]`);
+                            if (editableElement) {
+                                editableElement.focus();
+                                if (editableElement.select) editableElement.select();
+                                if (editableElement.type === 'textarea') autoExpandTextarea(editableElement);
+                            }
+                        }, 50);
+                    }
+                    
+                    // 显示卡片结果
+                    function showCardResult(index) {
+                        const card = gameData.cards[index];
+                        const resultContent = document.getElementById('resultContent');
+                        
+                        // 清空结果内容
+                        resultContent.innerHTML = '';
+                        
+                        // 设置结果内容
+                        resultContent.className = `w-full h-full flex flex-col items-center justify-center text-white font-bold ${card.color}`;
+                        
+                        // 添加卡片内容
+                        const cardContent = document.createElement('div');
+                        cardContent.className = 'text-center p-6';
+                        cardContent.innerHTML = `
+                            <div class="text-5xl mb-4">
+                                ${getCardIcon(card.type)}
+                            </div>
+                            <div class="text-2xl mb-2">
+                                ${getCardTitle(card)}
+                            </div>
+                            <div class="text-xl">
+                                ${getCardDescription(card)}
+                            </div>
+                        `;
+                        
+                        resultContent.appendChild(cardContent);
+                        
+                        // 显示弹窗
+                        document.getElementById('cardResultModal').classList.remove('hidden');
+                        setTimeout(() => {
+                            document.querySelector('.result-popup').classList.add('active');
+                        }, 10);
+                        
+                        // 启动计时器
+                        startPopupTimer();
+                    }
+                    
+                    // 获取卡片图标
+                    function getCardIcon(type) {
+                        switch (type) {
+                            case 'score':
+                                return '<i class="fa fa-star"></i>';
+                            case 'coin':
+                                return '<i class="fa fa-coins"></i>';
+                            case 'item':
+                                return '<i class="fa fa-gift"></i>';
+                            case 'trap':
+                                return '<i class="fa fa-bomb"></i>';
+                            case 'empty':
+                                return '<i class="fa fa-ban"></i>';
+                            case 'custom':
+                            default:
+                                return '<i class="fa fa-info-circle"></i>';
+                        }
+                    }
+                    
+                    // 获取卡片标题
+                    function getCardTitle(card) {
+                        switch (card.type) {
+                            case 'score':
+                                return `+${card.value} 分`;
+                            case 'coin':
+                                return `+${card.value} 金幣`;
+                            case 'item':
+                                return card.text;
+                            case 'trap':
+                                return card.text;
+                            case 'empty':
+                                return '空的';
+                            case 'custom':
+                            default:
+                                return card.content;
+                        }
+                    }
+                    
+                    // 获取卡片描述
+                    function getCardDescription(card) {
+                        switch (card.type) {
+                            case 'score':
+                                return '获得分数奖励！';
+                            case 'coin':
+                                return '获得金币奖励！';
+                            case 'item':
+                                return '获得道具！';
+                            case 'trap':
+                                return '遇到陷阱！';
+                            case 'empty':
+                                return '什么也没有...';
+                            case 'custom':
+                            default:
+                                return '';
+                        }
+                    }
+                    
+                    // 开始弹窗计时器
+                    function startPopupTimer() {
+                        remainingTime = 20;
+                        document.getElementById('popupTimer').textContent = remainingTime;
+                        
+                        // 清除之前的计时器
+                        if (popupTimer) {
+                            clearInterval(popupTimer);
+                        }
+                        
+                        // 设置新的计时器
+                        popupTimer = setInterval(() => {
+                            remainingTime--;
+                            document.getElementById('popupTimer').textContent = remainingTime;
+                            
+                            if (remainingTime <= 0) {
+                                closeCardResultModal();
+                            }
+                        }, 1000);
+                    }
+                    
+                    // 关闭卡片结果弹窗
+                    function closeCardResultModal() {
+                        clearInterval(popupTimer);
+                        document.querySelector('.result-popup').classList.remove('active');
+                        
+                        setTimeout(() => {
+                            document.getElementById('cardResultModal').classList.add('hidden');
+                        }, 500);
+                    }
+                    
+                    // 显示通知
+                    function showNotification(message, bgColor) {
+                        // 创建通知元素
+                        const notification = document.createElement('div');
+                        notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${bgColor} transform translate-x-full transition-transform duration-500 ease-in-out z-50`;
+                        notification.textContent = message;
+                        
+                        // 添加到页面
+                        document.body.appendChild(notification);
+                        
+                        // 显示通知
+                        setTimeout(() => {
+                            notification.classList.remove('translate-x-full');
+                        }, 10);
+                        
+                        // 自动关闭
+                        setTimeout(() => {
+                            notification.classList.add('translate-x-full');
+                            
+                            setTimeout(() => {
+                                document.body.removeChild(notification);
+                            }, 500);
+                        }, 3000);
+                    }
+                    
+                    // 点击卡片结果弹窗关闭
+                    document.getElementById('cardResultModal').addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            closeCardResultModal();
+                        }
+                    });
+                    
+                    // 初始化游戏
+                    document.addEventListener('DOMContentLoaded', initGame);
+                </script>
+            </body>
+            </html>
