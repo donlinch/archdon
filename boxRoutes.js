@@ -351,8 +351,8 @@ module.exports = function(dependencies) {
                 // 1. Generate a secure, random token
                 const resetToken = crypto.randomBytes(32).toString('hex');
 
-                // 2. Set an expiration date (e.g., 1 hour from now)
-                const expires = new Date(Date.now() + 3600000); // 1 hour
+                // 2. Set an expiration date (e.g., 3 days from now)
+                const expires = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days
 
                 // 3. Store the token and expiration in the new table
                 await pool.query(

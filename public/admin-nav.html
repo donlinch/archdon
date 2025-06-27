@@ -94,14 +94,68 @@
         }
         .navbar .tasks-link .notification-badge {
             position: absolute;
-            top: 12px;
-            right: 8px;
-            width: 10px;
-            height: 10px;
-            background-color: #f72585; /* 醒目的顏色 */
-            border-radius: 50%;
-            border: 2px solid #3f37c9; /* 與導覽列背景色匹配的邊框 */
-            display: none; /* 預設隱藏 */
+            top: 5px;
+            right: -8px;
+            min-width: 20px;
+            height: 20px;
+            background-color: #f72585;
+            color: white;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            box-sizing: border-box;
+            border: 2px solid #3f37c9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        /* 零待辦樣式 */
+        .navbar .tasks-link .notification-badge.empty {
+            background-color: #38b000;
+        }
+        
+        /* 時鐘/等待圖示樣式 */
+        .navbar .tasks-link .task-icon {
+            margin-right: 5px;
+        }
+        
+        /* 工具提示 */
+        .navbar .tasks-link {
+            position: relative;
+        }
+        .navbar .tasks-link .tooltip {
+            visibility: hidden;
+            width: 160px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -80px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .navbar .tasks-link .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+        .navbar .tasks-link:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
         }
 
         /* 隱藏不活躍的層級 */
@@ -146,10 +200,29 @@
                     if (response.ok) {
                         const data = await response.json();
                         if (data.count > 0) {
-                            badge.style.display = 'block'; // 有待辦事項，顯示紅點
-                            badge.textContent = ''; // 如果想顯示數字可以用 data.count
+                            // 有待處理事項時
+                            badge.textContent = data.count;
+                            badge.classList.remove('empty');
+                            badge.classList.add('active');
+                            badge.style.display = 'flex';
+                            
+                            // 更新提示文字
+                            const tooltip = document.getElementById('tasks-tooltip');
+                            if (tooltip) {
+                                tooltip.textContent = `${data.count} 個密碼重設請求待處理`;
+                            }
                         } else {
-                            badge.style.display = 'none'; // 沒有待辦事項，隱藏紅點
+                            // 沒有待處理事項時
+                            badge.textContent = '0';
+                            badge.classList.add('empty');
+                            badge.classList.remove('active');
+                            badge.style.display = 'flex';
+                            
+                            // 更新提示文字
+                            const tooltip = document.getElementById('tasks-tooltip');
+                            if (tooltip) {
+                                tooltip.textContent = '目前沒有待處理事項';
+                            }
                         }
                     }
                 } catch (error) {
@@ -187,9 +260,10 @@
                     // 同時加入警示按鈕和登出按鈕
                     authActionsList.innerHTML = `
                         <li>
-                            <a href="admin-password-resets.html" target="contentFrame" class="tasks-link" title="待處理的密碼重設請求">
-                                <span>&#x1F514;</span> <!-- Bell icon -->
-                                <span class="notification-badge" id="notification-badge"></span>
+                            <a href="admin-password-resets.html" target="contentFrame" class="tasks-link" title="密碼重設請求">
+                                <span class="task-icon">🔔</span>
+                                <span class="notification-badge" id="notification-badge">0</span>
+                                <span class="tooltip" id="tasks-tooltip">正在檢查待處理事項...</span>
                             </a>
                         </li>
                         <li>
