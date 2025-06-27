@@ -411,8 +411,19 @@
     </style>
 </head>
 <body>
-    <header class="page-header">
+    <header id="header-default" class="page-header">
         <h1 class="page-title">倉庫紙箱管理器</h1>
+    </header>
+
+    <header id="header-loggedin" class="page-header" style="display: none; justify-content: space-between; align-items: center;">
+        <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
+            <img id="loggedInUserAvatar" src="" alt="User Avatar" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid white;">
+            <span id="loggedInUsername" style="font-weight: 600; font-size: 1.1em; color: white;"></span>
+        </div>
+        <div>
+            <a id="enterWarehouseBtn" href="#" class="button-style-primary" style="text-decoration: none; border: 1px solid white; background-color: transparent; padding: 8px 15px;">進入我的倉庫</a>
+            <button id="logoutBtn" class="button-style-secondary" style="margin-left: 10px; border: 1px solid white; background-color: transparent; color: white; padding: 8px 15px;">登出</button>
+        </div>
     </header>
 
     <div class="container">
@@ -514,9 +525,14 @@
             const savedUsername = document.getElementById('savedUsername');
             const quickLoginBtn = document.getElementById('quickLoginBtn');
             const switchUserBtn = document.getElementById('switchUserBtn');
+            const headerDefault = document.getElementById('header-default');
+            const headerLoggedIn = document.getElementById('header-loggedin');
 
-            // 檢查是否有已保存的登入信息
-            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const params = new URLSearchParams(window.location.search);
+            const userIdFromUrl = params.get('userId');
+
+            // 檢查是否有已保存的登入信息 (優先使用 URL 的 userId)
+            const savedUserId = userIdFromUrl || localStorage.getItem('boxCurrentUserId');
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
             const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
             const savedUserName = localStorage.getItem('boxCurrentUsername');
@@ -536,11 +552,8 @@
                         const data = await response.json();
                         
                         if (response.ok && data.valid) {
-                            // 令牌有效，顯示快速登入
-                            savedUserAvatar.src = savedUserAvatarUrl || '/images/default_avatar.png';
-                            savedUsername.textContent = savedUserName;
-                            quickLoginContainer.style.display = 'block';
-                            loginFormContainer.style.display = 'none';
+                            // 令牌有效，更新UI為登入狀態
+                            showLoggedInState(savedUserName, savedUserAvatarUrl, savedUserId);
                         } else {
                             // 令牌無效，清除保存的令牌並顯示登入表單
                             handleInvalidToken("登入狀態已過期，請重新登入");
@@ -551,9 +564,39 @@
                     }
                 } else {
                     // 沒有保存的令牌
-                    quickLoginContainer.style.display = 'none';
-                    loginFormContainer.style.display = 'block';
+                    showLoggedOutState();
                 }
+            }
+            
+            function showLoggedInState(username, avatarUrl, userId) {
+                // 1. 顯示已登入的 header
+                if (headerDefault) headerDefault.style.display = 'none';
+                if (headerLoggedIn) {
+                    headerLoggedIn.style.display = 'flex';
+                    document.getElementById('loggedInUsername').textContent = username;
+                    document.getElementById('loggedInUserAvatar').src = avatarUrl || '/images/default_avatar.png';
+                    document.getElementById('enterWarehouseBtn').href = `box-my.html?userId=${userId}`;
+                    document.getElementById('logoutBtn').onclick = () => {
+                        localStorage.removeItem(`boxUserToken_${userId}`);
+                        localStorage.removeItem('boxCurrentUserId');
+                        localStorage.removeItem('boxCurrentUsername');
+                        localStorage.removeItem('boxCurrentUserAvatar');
+                        window.location.href = 'box.html';
+                    };
+                }
+
+                // 2. 顯示快速登入選項
+                if (savedUserAvatar) savedUserAvatar.src = avatarUrl || '/images/default_avatar.png';
+                if (savedUsername) savedUsername.textContent = username;
+                if (quickLoginContainer) quickLoginContainer.style.display = 'block';
+                if (loginFormContainer) loginFormContainer.style.display = 'none';
+            }
+
+            function showLoggedOutState() {
+                if (headerDefault) headerDefault.style.display = 'block';
+                if (headerLoggedIn) headerLoggedIn.style.display = 'none';
+                if (quickLoginContainer) quickLoginContainer.style.display = 'none';
+                if (loginFormContainer) loginFormContainer.style.display = 'block';
             }
 
             function handleInvalidToken(message) {
@@ -563,14 +606,15 @@
                 localStorage.removeItem('boxCurrentUsername');
                 localStorage.removeItem('boxCurrentUserAvatar');
                 
-                // 顯示登入表單
-                quickLoginContainer.style.display = 'none';
-                loginFormContainer.style.display = 'block';
+                // 顯示登出狀態的UI
+                showLoggedOutState();
                 
                 // 顯示提示信息
                 const loginFormErrorMessage = document.getElementById('login-form-error-message');
-                loginFormErrorMessage.textContent = message;
-                loginFormErrorMessage.style.display = 'block';
+                if (loginFormErrorMessage) {
+                    loginFormErrorMessage.textContent = message;
+                    loginFormErrorMessage.style.display = 'block';
+                }
             }
 
             // 頁面載入時驗證令牌
