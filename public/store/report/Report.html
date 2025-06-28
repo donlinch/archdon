@@ -771,7 +771,7 @@
                 document.querySelectorAll('.view-report-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const reportId = btn.dataset.id;
-                        window.open(`/store/report/view/${reportId}`, '_blank');
+                        window.open(`/store/report/report-view.html?id=${reportId}`, '_blank');
                     });
                 });
                 

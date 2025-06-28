@@ -3132,7 +3132,7 @@ const optionalAuthenticateBoxUser = (req, res, next) => {
 };
 
 // 引入IP限制器
-const reportRateLimiter = createReportRateLimiter(3);
+const reportRateLimiter = createReportRateLimiter(10);
 
 // POST /api/reports - 新增報告模板
 reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, async (req, res) => {
@@ -3150,7 +3150,8 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
         return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
     }
 
-    const MAX_CONTENT_BYTES = 50000;
+    // 根據用戶登入狀態決定內容大小限制
+    const MAX_CONTENT_BYTES = creator_id !== 'guest' ? 100000 : 50000;
     const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
     if (contentSizeBytes > MAX_CONTENT_BYTES) {
         return res.status(413).json({ 
@@ -3234,7 +3235,9 @@ reportTemplatesRouter.put('/report/:id', authenticateBoxUser, async (req, res) =
     if (typeof html_content !== 'string') {
         return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
     }
-    const MAX_CONTENT_BYTES = 50000;
+    
+    // 登入用戶的內容大小限制為 100KB
+    const MAX_CONTENT_BYTES = 100000;
     const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
     if (contentSizeBytes > MAX_CONTENT_BYTES) {
         return res.status(413).json({ 
