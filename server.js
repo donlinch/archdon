@@ -3118,9 +3118,9 @@ const reportRateLimiter = createReportRateLimiter(3);
 reportTemplatesRouter.post('/', reportRateLimiter, async (req, res) => {
     const { title, html_content } = req.body;
     const creatorIp = req.ip || 'unknown'; // 獲取 IP
-    const reportUUID = uuidv4(); // 生成 UUID
+        const reportUUID = uuidv4(); // 生成 UUID
 
-    // 基本驗證
+        // 基本驗證
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: '報告標題為必填項。' });
     }
@@ -3209,11 +3209,11 @@ reportTemplatesRouter.post('/', async (req, res) => {
     }
     // 檢查 html_content 是否存在 (允許空字串)
     if (typeof html_content !== 'string') {
-        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
-    }
+            return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+        }
 
-    // 計算內容大小（字節數）
-    const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+        // 計算內容大小（字節數）
+        const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
 
     try {
         // 使用修改後的 SQL 查詢，加入 size_bytes 欄位

@@ -382,6 +382,88 @@
             overflow: hidden;
         }
 
+        /* 報告列表樣式 */
+        .reports-list {
+            margin-top: 20px;
+        }
+        
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        .report-item:hover {
+            background-color: #e3f2fd;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .report-title {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .report-date {
+            font-size: 0.85em;
+            color: #888;
+        }
+        
+        .report-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .report-actions button {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .report-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .view-report-btn {
+            color: #1E88E5;
+        }
+        
+        .edit-report-btn {
+            color: #FB8C00;
+        }
+        
+        .delete-report-btn {
+            color: #E53935;
+        }
+        
+        .login-prompt {
+            background-color: #fff8e1;
+            border-left: 4px solid #FFB74D;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .login-prompt a {
+            color: #F57C00;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .login-prompt a:hover {
+            text-decoration: underline;
+        }
+
 </style>
 </head>
 <body>
@@ -419,6 +501,11 @@
         <a href="/" class="back-link">返回首頁</a>
         <hr>
 
+        <!-- 未登入提示 (初始隱藏) -->
+        <div id="login-prompt" class="login-prompt" style="display: none;">
+            <p>👋 您目前是以訪客身份使用此功能。<a href="/box.html">登入會員</a>後可以管理您的所有報告！</p>
+        </div>
+
         <form id="report-form">
             <!-- 隱藏的標題欄位，預設值為guest -->
             <div class="form-group hidden-field">
@@ -441,6 +528,16 @@
             <input type="text" id="generated-link" readonly>
             <button id="copy-link-button" type="button">複製連結</button>
         </div>
+
+        <!-- 會員報告列表區域 -->
+        <div id="member-reports-area" style="display: none;">
+            <hr>
+            <h3>我的報告列表</h3>
+            <div id="reports-list" class="reports-list">
+                <!-- 報告列表將由 JavaScript 動態生成 -->
+                <p id="loading-reports">正在載入您的報告...</p>
+            </div>
+        </div>
     </main>
 
     <!-- 引入 JavaScript 檔案，使用絕對路徑 -->
@@ -452,6 +549,12 @@
             const userStatusAvatar = document.getElementById('userStatusAvatar');
             const userStatusName = document.getElementById('userStatusName');
             const userStatus = document.getElementById('userStatus');
+            
+            // 報告列表相關元素
+            const memberReportsArea = document.getElementById('member-reports-area');
+            const reportsList = document.getElementById('reports-list');
+            const loginPrompt = document.getElementById('login-prompt');
+            const reportTitleInput = document.getElementById('report-title');
 
             // 檢查是否有已保存的登入信息
             const savedUserId = localStorage.getItem('boxCurrentUserId');
@@ -465,6 +568,16 @@
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 userStatusName.textContent = savedDisplayName;
                 
+                // 用戶已登入，顯示報告列表區域，隱藏登入提示
+                memberReportsArea.style.display = 'block';
+                loginPrompt.style.display = 'none';
+                
+                // 將報告標題設置為用戶ID，用於後續API調用
+                reportTitleInput.value = savedUserId;
+                
+                // 載入用戶的報告列表
+                loadUserReports(savedUserId, savedUserToken);
+                
                 // Add click event to navigate to user editor page
                 userStatus.addEventListener('click', () => {
                     window.location.href = `member-editor.html?userId=${savedUserId}`;
@@ -472,8 +585,149 @@
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
                 userStatusName.textContent = '未登入';
+                
+                // 用戶未登入，隱藏報告列表區域，顯示登入提示
+                memberReportsArea.style.display = 'none';
+                loginPrompt.style.display = 'block';
+                
+                // 保持報告標題為guest，用於後續API調用
+                reportTitleInput.value = 'guest';
+                
                 userStatus.addEventListener('click', () => {
                     window.location.href = `box.html`;
+                });
+            }
+            
+            // 載入用戶報告列表函數
+            async function loadUserReports(userId, token) {
+                try {
+                    const response = await fetch(`/api/report/user/${userId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('無法載入報告列表');
+                    }
+                    
+                    const reports = await response.json();
+                    
+                    // 清空載入訊息
+                    reportsList.innerHTML = '';
+                    
+                    if (reports.length === 0) {
+                        reportsList.innerHTML = '<p>您還沒有建立任何報告</p>';
+                        return;
+                    }
+                    
+                    // 渲染報告列表
+                    reports.forEach(report => {
+                        const reportItem = document.createElement('div');
+                        reportItem.className = 'report-item';
+                        reportItem.dataset.id = report.id;
+                        
+                        const createdDate = new Date(report.created_at);
+                        const formattedDate = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}-${String(createdDate.getDate()).padStart(2, '0')}`;
+                        
+                        reportItem.innerHTML = `
+                            <div class="report-info">
+                                <div class="report-title">${report.title || '未命名報告'}</div>
+                                <div class="report-date">建立於: ${formattedDate}</div>
+                            </div>
+                            <div class="report-actions">
+                                <button class="view-report-btn" data-id="${report.id}">查看</button>
+                                <button class="edit-report-btn" data-id="${report.id}">編輯</button>
+                                <button class="delete-report-btn" data-id="${report.id}">刪除</button>
+                            </div>
+                        `;
+                        
+                        reportsList.appendChild(reportItem);
+                    });
+                    
+                    // 添加事件監聽器
+                    setupReportActions();
+                    
+                } catch (error) {
+                    console.error('載入報告列表失敗:', error);
+                    reportsList.innerHTML = `<p>載入報告失敗: ${error.message}</p><button id="retry-load-btn">重試</button>`;
+                    
+                    document.getElementById('retry-load-btn').addEventListener('click', () => {
+                        loadUserReports(userId, token);
+                    });
+                }
+            }
+            
+            // 設置報告操作按鈕的事件監聽器
+            function setupReportActions() {
+                // 查看報告按鈕
+                document.querySelectorAll('.view-report-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const reportId = btn.dataset.id;
+                        window.open(`/store/report/view/${reportId}`, '_blank');
+                    });
+                });
+                
+                // 編輯報告按鈕
+                document.querySelectorAll('.edit-report-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const reportId = btn.dataset.id;
+                        try {
+                            // 獲取報告內容
+                            const response = await fetch(`/api/report/${reportId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
+                            });
+                            
+                            if (!response.ok) throw new Error('無法獲取報告內容');
+                            
+                            const reportData = await response.json();
+                            
+                            // 填充編輯區域
+                            document.getElementById('html-content').value = reportData.html_content;
+                            
+                            // 滾動到編輯區域
+                            document.getElementById('html-content').scrollIntoView({ behavior: 'smooth' });
+                            
+                        } catch (error) {
+                            alert(`編輯失敗: ${error.message}`);
+                        }
+                    });
+                });
+                
+                // 刪除報告按鈕
+                document.querySelectorAll('.delete-report-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('確定要刪除這份報告嗎？此操作無法撤銷。')) return;
+                        
+                        const reportId = btn.dataset.id;
+                        try {
+                            const response = await fetch(`/api/report/${reportId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
+                            });
+                            
+                            if (!response.ok) throw new Error('刪除失敗');
+                            
+                            // 從UI中移除該報告項
+                            const reportItem = document.querySelector(`.report-item[data-id="${reportId}"]`);
+                            reportItem.style.opacity = '0';
+                            setTimeout(() => {
+                                reportItem.remove();
+                                
+                                // 如果沒有報告了，顯示提示
+                                if (document.querySelectorAll('.report-item').length === 0) {
+                                    reportsList.innerHTML = '<p>您還沒有建立任何報告</p>';
+                                }
+                            }, 300);
+                            
+                        } catch (error) {
+                            alert(`刪除失敗: ${error.message}`);
+                        }
+                    });
                 });
             }
         });
