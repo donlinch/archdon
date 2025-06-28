@@ -43,92 +43,8 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .page-header .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        #menu-toggle {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            display: none; /* Hidden on desktop by default */
-        }
-        #menu-toggle svg {
-            stroke: white;
-            width: 30px;
-            height: 30px;
-        }
-
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            z-index: 1400;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        #side-nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100%;
-            background-color: var(--background-content);
-            box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            z-index: 1500;
-            display: flex;
-            flex-direction: column;
-        }
-        #side-nav.open {
-            transform: translateX(0);
-        }
-        #side-nav .nav-header {
-            padding: 1.5rem 1.5rem;
-            background: linear-gradient(135deg, #FFB74D, #FF9800);
-            color: white;
-            font-size: 1.25em;
-            font-weight: 600;
-        }
-        #side-nav ul {
-            list-style: none;
-            padding: 1rem 0;
-            margin: 0;
-            flex-grow: 1;
-        }
-        #side-nav ul li a {
-            display: block;
-            padding: 1rem 1.5rem;
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 1.05em;
-            transition: background-color 0.2s ease, color 0.2s ease;
-            border-left: 4px solid transparent;
-        }
-        #side-nav ul li a:hover {
-            background-color: var(--background-light);
-            color: var(--primary-color);
-        }
-        #side-nav ul li a.active {
-            background-color: #fff8e1;
-            border-left-color: var(--primary-color);
-            font-weight: 600;
         }
 
         .page-header .user-info {
@@ -182,13 +98,13 @@
         .main-container {
             width: 100%;
             max-width: 800px;
-            margin: 25px auto;
-            padding: 0 25px; /* Removed top/bottom padding to use spacing from elements */
+            margin: 15px auto;
+            padding: 0 15px;
         }
         
         .settings-container {
             background-color: var(--background-content);
-            padding: 30px;
+            padding: 20px;
             border-radius: var(--border-radius-large);
             box-shadow: 0 3px 10px var(--shadow-color);
         }
@@ -196,25 +112,11 @@
         .settings-container h2 {
             color: var(--text-primary);
             margin-top: 0;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             font-weight: 600;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
         }
-
-        /* --- NEW: Settings Section --- */
-        .settings-section {
-            display: none; /* Hide all sections by default */
-            animation: fadeIn 0.5s;
-        }
-        .settings-section.active {
-            display: block; /* Show the active one */
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* --- END NEW --- */
 
         /* Form Styles (General for modals and tabs) */
         .form-group { margin-bottom: 20px; }
@@ -228,7 +130,7 @@
         .form-group input[type="text"],
         .form-group input[type="password"],
         .form-group input[type="email"],
-        .form-group input[type="file"] { 
+        .form-group input[type="file"] {
             width: 100%;
             padding: 12px;
             border: 1px solid var(--border-color);
@@ -289,13 +191,6 @@
             font-weight: 500;
         }
 
-        hr {
-            border: 0;
-            height: 1px;
-            background-color: var(--border-color);
-            margin: 30px 0;
-        }
-
         /* Loading Overlay */
         #loading-overlay {
             display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%;
@@ -317,32 +212,77 @@
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 頁籤式界面樣式 */
+        .tabs-container {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--background-content);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            margin: 0 -20px 20px;
+            padding: 0 20px;
+        }
+        
+        .tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab-button {
+            padding: 12px 15px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
         @media (max-width: 768px) {
             .page-header {
-                flex-direction: row; /* Keep as row */
-                justify-content: space-between;
-                align-items: center;
+                flex-direction: column;
+                align-items: flex-start;
                 gap: 1rem;
             }
-            .page-header .user-info { display: none; } /* Hide user info to save space */
-            #menu-toggle { display: block; } /* Show menu toggle on mobile */
-
             .main-container { padding: 0 15px; }
-            .settings-container { padding: 20px; }
-            .settings-container h2 { font-size: 1.5em; }
+            .settings-container { padding: 15px; }
+            .tab-button {
+                padding: 10px 12px;
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
 <body>
     <header class="page-header">
-        <div class="header-left">
-            <button id="menu-toggle" aria-label="開啟選單">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-            <div class="user-info">
-                <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
-                <span id="currentUsername">用戶</span>
-            </div>
+        <div class="user-info">
+            <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
+            <span id="currentUsername">用戶</span>
         </div>
         <div class="header-actions">
             <a id="returnToDashboardBtn" href="index.html">返回首頁</a>
@@ -350,23 +290,20 @@
         </div>
     </header>
 
-    <div id="overlay"></div>
-    <nav id="side-nav">
-        <div class="nav-header">設定選單</div>
-        <ul>
-            <li><a href="#password" class="nav-link" data-section="password-section">更改密碼</a></li>
-            <li><a href="#email" class="nav-link" data-section="email-section">更改Email</a></li>
-            <li><a href="#displayName" class="nav-link" data-section="displayName-section">更改顯示名稱</a></li>
-            <li><a href="#profileImage" class="nav-link" data-section="profileImage-section">更改頭像</a></li>
-        </ul>
-    </nav>
-
     <main class="main-container">
         <div class="settings-container">
-            <h2 id="settings-title">用戶設定</h2>
+            <h2>用戶設定</h2>
             
-            <div id="password-section" class="settings-section">
-                <!-- Change Password Form -->
+            <!-- 頁籤導航 -->
+            <div class="tabs-container">
+                <button class="tab-button active" data-tab="password">密碼</button>
+                <button class="tab-button" data-tab="email">Email</button>
+                <button class="tab-button" data-tab="displayname">顯示名稱</button>
+                <button class="tab-button" data-tab="avatar">頭像</button>
+            </div>
+            
+            <!-- 密碼頁籤內容 -->
+            <div id="password-tab" class="tab-content active">
                 <form id="changePasswordForm">
                     <h3>更改密碼</h3>
                     <div class="form-group">
@@ -388,8 +325,8 @@
                 </form>
             </div>
             
-            <div id="email-section" class="settings-section">
-                <!-- Change Email Form -->
+            <!-- Email頁籤內容 -->
+            <div id="email-tab" class="tab-content">
                 <form id="changeEmailForm">
                     <h3>更改Email</h3>
                     <div class="form-group">
@@ -402,9 +339,9 @@
                     </div>
                 </form>
             </div>
-            
-            <div id="displayName-section" class="settings-section">
-                <!-- Change Display Name Form -->
+
+            <!-- 顯示名稱頁籤內容 -->
+            <div id="displayname-tab" class="tab-content">
                 <form id="changeDisplayNameForm">
                     <h3>更改顯示名稱</h3>
                     <div class="form-group">
@@ -418,8 +355,8 @@
                 </form>
             </div>
 
-            <div id="profileImage-section" class="settings-section">
-                <!-- Change Profile Image Form -->
+            <!-- 頭像頁籤內容 -->
+            <div id="avatar-tab" class="tab-content">
                 <form id="changeProfileImageForm">
                      <h3>更改頭像</h3>
                      <div class="form-group">
@@ -448,14 +385,6 @@
             const logoutButton = document.getElementById('logoutButton');
             const returnToDashboardBtn = document.getElementById('returnToDashboardBtn');
             const loadingOverlay = document.getElementById('loading-overlay');
-            const settingsTitle = document.getElementById('settings-title');
-
-            // --- NEW Nav Elements ---
-            const menuToggle = document.getElementById('menu-toggle');
-            const sideNav = document.getElementById('side-nav');
-            const overlay = document.getElementById('overlay');
-            const navLinks = document.querySelectorAll('.nav-link');
-            const settingsSections = document.querySelectorAll('.settings-section');
 
             const changePasswordForm = document.getElementById('changePasswordForm');
             const changeEmailForm = document.getElementById('changeEmailForm');
@@ -463,6 +392,10 @@
             const changeProfileImageForm = document.getElementById('changeProfileImageForm');
             const profileImageFile = document.getElementById('profileImageFile');
             const profileImagePreviewContainer = document.getElementById('profileImagePreview');
+            
+            // 頁籤相關元素
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
 
             // --- State ---
             let currentUserId = null;
@@ -557,6 +490,22 @@
                 }
             }
 
+            // --- 頁籤切換功能 ---
+            function setupTabs() {
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const tabId = button.getAttribute('data-tab');
+                        
+                        // 移除所有頁籤的活動狀態
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        
+                        // 設置當前頁籤為活動狀態
+                        button.classList.add('active');
+                        document.getElementById(`${tabId}-tab`).classList.add('active');
+                    });
+                });
+            }
 
             // --- Page Initialization ---
             async function initializePage() {
@@ -587,13 +536,7 @@
                     localStorage.setItem('boxCurrentDisplayName', userData.display_name || userData.username);
                     
                     setupEventListeners();
-
-                    // --- NEW: Activate first section ---
-                    if (navLinks.length > 0) {
-                        navLinks[0].click(); // Simulate a click on the first link
-                    }
-                    // --- END NEW ---
-
+                    setupTabs(); // 初始化頁籤功能
                 } catch (error) {
                     if (error.status === 401 || error.status === 403) {
                         alert('登入憑證無效或已過期，請重新登入。');
@@ -611,45 +554,7 @@
                 changeDisplayNameForm.addEventListener('submit', handleChangeDisplayName);
                 changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
                 profileImageFile.addEventListener('change', previewImage);
-
-                // --- NEW: Nav event listeners ---
-                menuToggle.addEventListener('click', toggleNav);
-                overlay.addEventListener('click', toggleNav);
-
-                navLinks.forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const sectionId = link.getAttribute('data-section');
-                        const targetSection = document.getElementById(sectionId);
-                        
-                        // Update active state for links
-                        navLinks.forEach(l => l.classList.remove('active'));
-                        link.classList.add('active');
-                        
-                        // Show/hide sections
-                        settingsSections.forEach(s => s.classList.remove('active'));
-                        if (targetSection) {
-                            targetSection.classList.add('active');
-                            // Update the main title
-                            const sectionTitle = targetSection.querySelector('h3').textContent;
-                            settingsTitle.textContent = sectionTitle;
-                        }
-
-                        // Close nav on mobile after selection
-                        if (window.innerWidth <= 768) {
-                            toggleNav();
-                        }
-                    });
-                });
-                // --- END NEW ---
             }
-
-            // --- NEW: Nav toggle function ---
-            function toggleNav() {
-                sideNav.classList.toggle('open');
-                overlay.classList.toggle('active');
-            }
-            // --- END NEW ---
 
             function logout() {
                 localStorage.removeItem(`boxUserToken_${currentUserId}`);
