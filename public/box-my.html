@@ -2031,7 +2031,7 @@
             }
             try {
                 const userData = await apiFetch('/api/box/users/me');
-                if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
+                if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.display_name || userData.username);
                 if (currentUserAvatarImg) {
                     currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
                 }
@@ -2041,6 +2041,9 @@
                         window.location.href = `member-editor.html?userId=${currentUserId}`;
                     });
                 }
+
+                // 保存到本地存儲，以便其他頁面使用
+                localStorage.setItem('boxCurrentDisplayName', userData.display_name || userData.username);
 
                 // Populate email form
                 const newEmailInput = document.getElementById('newEmail');

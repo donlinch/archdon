@@ -47,6 +47,90 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
+        .page-header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        #menu-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            display: none; /* Hidden on desktop by default */
+        }
+        #menu-toggle svg {
+            stroke: white;
+            width: 30px;
+            height: 30px;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 1400;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #side-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100%;
+            background-color: var(--background-content);
+            box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1500;
+            display: flex;
+            flex-direction: column;
+        }
+        #side-nav.open {
+            transform: translateX(0);
+        }
+        #side-nav .nav-header {
+            padding: 1.5rem 1.5rem;
+            background: linear-gradient(135deg, #FFB74D, #FF9800);
+            color: white;
+            font-size: 1.25em;
+            font-weight: 600;
+        }
+        #side-nav ul {
+            list-style: none;
+            padding: 1rem 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+        #side-nav ul li a {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 1.05em;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        #side-nav ul li a:hover {
+            background-color: var(--background-light);
+            color: var(--primary-color);
+        }
+        #side-nav ul li a.active {
+            background-color: #fff8e1;
+            border-left-color: var(--primary-color);
+            font-weight: 600;
+        }
+
         .page-header .user-info {
             display: flex;
             align-items: center;
@@ -117,6 +201,20 @@
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
         }
+
+        /* --- NEW: Settings Section --- */
+        .settings-section {
+            display: none; /* Hide all sections by default */
+            animation: fadeIn 0.5s;
+        }
+        .settings-section.active {
+            display: block; /* Show the active one */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* --- END NEW --- */
 
         /* Form Styles (General for modals and tabs) */
         .form-group { margin-bottom: 20px; }
@@ -221,20 +319,30 @@
 
         @media (max-width: 768px) {
             .page-header {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-direction: row; /* Keep as row */
+                justify-content: space-between;
+                align-items: center;
                 gap: 1rem;
             }
+            .page-header .user-info { display: none; } /* Hide user info to save space */
+            #menu-toggle { display: block; } /* Show menu toggle on mobile */
+
             .main-container { padding: 0 15px; }
             .settings-container { padding: 20px; }
+            .settings-container h2 { font-size: 1.5em; }
         }
     </style>
 </head>
 <body>
     <header class="page-header">
-        <div class="user-info">
-            <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
-            <span id="currentUsername">用戶</span>
+        <div class="header-left">
+            <button id="menu-toggle" aria-label="開啟選單">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div class="user-info">
+                <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
+                <span id="currentUsername">用戶</span>
+            </div>
         </div>
         <div class="header-actions">
             <a id="returnToDashboardBtn" href="index.html">返回首頁</a>
@@ -242,78 +350,91 @@
         </div>
     </header>
 
+    <div id="overlay"></div>
+    <nav id="side-nav">
+        <div class="nav-header">設定選單</div>
+        <ul>
+            <li><a href="#password" class="nav-link" data-section="password-section">更改密碼</a></li>
+            <li><a href="#email" class="nav-link" data-section="email-section">更改Email</a></li>
+            <li><a href="#displayName" class="nav-link" data-section="displayName-section">更改顯示名稱</a></li>
+            <li><a href="#profileImage" class="nav-link" data-section="profileImage-section">更改頭像</a></li>
+        </ul>
+    </nav>
+
     <main class="main-container">
         <div class="settings-container">
-            <h2>用戶設定</h2>
+            <h2 id="settings-title">用戶設定</h2>
             
-            <!-- Change Password Form -->
-            <form id="changePasswordForm">
-                <h3>更改密碼</h3>
-                <div class="form-group">
-                    <label for="currentPassword">當前密碼:</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                <div class="form-group">
-                    <label for="newPassword">新密碼 (至少6個字):</label>
-                    <input type="password" id="newPassword" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="confirmNewPassword">確認新密碼:</label>
-                    <input type="password" id="confirmNewPassword" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit">更新密碼</button>
-                    <p id="changePasswordStatus" class="form-status-message"></p>
-                </div>
-            </form>
+            <div id="password-section" class="settings-section">
+                <!-- Change Password Form -->
+                <form id="changePasswordForm">
+                    <h3>更改密碼</h3>
+                    <div class="form-group">
+                        <label for="currentPassword">當前密碼:</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">新密碼 (至少6個字):</label>
+                        <input type="password" id="newPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">確認新密碼:</label>
+                        <input type="password" id="confirmNewPassword" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">更新密碼</button>
+                        <p id="changePasswordStatus" class="form-status-message"></p>
+                    </div>
+                </form>
+            </div>
             
-            <hr>
+            <div id="email-section" class="settings-section">
+                <!-- Change Email Form -->
+                <form id="changeEmailForm">
+                    <h3>更改Email</h3>
+                    <div class="form-group">
+                        <label for="newEmail">電子郵件 (用於密碼找回):</label>
+                        <input type="email" id="newEmail" required placeholder="請輸入您的電子郵件">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">更新Email</button>
+                        <p id="changeEmailStatus" class="form-status-message"></p>
+                    </div>
+                </form>
+            </div>
             
-            <!-- Change Email Form -->
-            <form id="changeEmailForm">
-                <h3>更改Email</h3>
-                <div class="form-group">
-                    <label for="newEmail">電子郵件 (用於密碼找回):</label>
-                    <input type="email" id="newEmail" required placeholder="請輸入您的電子郵件">
-                </div>
-                <div class="form-actions">
-                    <button type="submit">更新Email</button>
-                    <p id="changeEmailStatus" class="form-status-message"></p>
-                </div>
-            </form>
-            
-            <hr>
+            <div id="displayName-section" class="settings-section">
+                <!-- Change Display Name Form -->
+                <form id="changeDisplayNameForm">
+                    <h3>更改顯示名稱</h3>
+                    <div class="form-group">
+                        <label for="displayName">顯示名稱 (可與登入帳號不同):</label>
+                        <input type="text" id="displayName" required placeholder="請輸入您想顯示的名稱">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">更新顯示名稱</button>
+                        <p id="changeDisplayNameStatus" class="form-status-message"></p>
+                    </div>
+                </form>
+            </div>
 
-            <!-- Change Display Name Form -->
-            <form id="changeDisplayNameForm">
-                <h3>更改顯示名稱</h3>
-                <div class="form-group">
-                    <label for="displayName">顯示名稱 (可與登入帳號不同):</label>
-                    <input type="text" id="displayName" required placeholder="請輸入您想顯示的名稱">
-                </div>
-                <div class="form-actions">
-                    <button type="submit">更新顯示名稱</button>
-                    <p id="changeDisplayNameStatus" class="form-status-message"></p>
-                </div>
-            </form>
-            
-            <hr>
-
-            <!-- Change Profile Image Form -->
-            <form id="changeProfileImageForm">
-                 <h3>更改頭像</h3>
-                 <div class="form-group">
-                     <label for="profileImageFile">選擇新頭像圖片:</label>
-                     <input type="file" id="profileImageFile" accept="image/*">
-                     <div class="image-upload-preview" id="profileImagePreview">
-                         <img src="#" alt="頭像預覽">
+            <div id="profileImage-section" class="settings-section">
+                <!-- Change Profile Image Form -->
+                <form id="changeProfileImageForm">
+                     <h3>更改頭像</h3>
+                     <div class="form-group">
+                         <label for="profileImageFile">選擇新頭像圖片:</label>
+                         <input type="file" id="profileImageFile" accept="image/*">
+                         <div class="image-upload-preview" id="profileImagePreview">
+                             <img src="#" alt="頭像預覽">
+                         </div>
                      </div>
-                 </div>
-                 <div class="form-actions">
-                    <button type="submit" id="uploadProfileImageBtn">上傳並更新頭像</button>
-                    <p id="changeProfileImageStatus" class="form-status-message"></p>
-                 </div>
-            </form>
+                     <div class="form-actions">
+                        <button type="submit" id="uploadProfileImageBtn">上傳並更新頭像</button>
+                        <p id="changeProfileImageStatus" class="form-status-message"></p>
+                     </div>
+                </form>
+            </div>
         </div>
     </main>
 
@@ -327,6 +448,14 @@
             const logoutButton = document.getElementById('logoutButton');
             const returnToDashboardBtn = document.getElementById('returnToDashboardBtn');
             const loadingOverlay = document.getElementById('loading-overlay');
+            const settingsTitle = document.getElementById('settings-title');
+
+            // --- NEW Nav Elements ---
+            const menuToggle = document.getElementById('menu-toggle');
+            const sideNav = document.getElementById('side-nav');
+            const overlay = document.getElementById('overlay');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const settingsSections = document.querySelectorAll('.settings-section');
 
             const changePasswordForm = document.getElementById('changePasswordForm');
             const changeEmailForm = document.getElementById('changeEmailForm');
@@ -458,6 +587,13 @@
                     localStorage.setItem('boxCurrentDisplayName', userData.display_name || userData.username);
                     
                     setupEventListeners();
+
+                    // --- NEW: Activate first section ---
+                    if (navLinks.length > 0) {
+                        navLinks[0].click(); // Simulate a click on the first link
+                    }
+                    // --- END NEW ---
+
                 } catch (error) {
                     if (error.status === 401 || error.status === 403) {
                         alert('登入憑證無效或已過期，請重新登入。');
@@ -475,7 +611,45 @@
                 changeDisplayNameForm.addEventListener('submit', handleChangeDisplayName);
                 changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
                 profileImageFile.addEventListener('change', previewImage);
+
+                // --- NEW: Nav event listeners ---
+                menuToggle.addEventListener('click', toggleNav);
+                overlay.addEventListener('click', toggleNav);
+
+                navLinks.forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const sectionId = link.getAttribute('data-section');
+                        const targetSection = document.getElementById(sectionId);
+                        
+                        // Update active state for links
+                        navLinks.forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
+                        
+                        // Show/hide sections
+                        settingsSections.forEach(s => s.classList.remove('active'));
+                        if (targetSection) {
+                            targetSection.classList.add('active');
+                            // Update the main title
+                            const sectionTitle = targetSection.querySelector('h3').textContent;
+                            settingsTitle.textContent = sectionTitle;
+                        }
+
+                        // Close nav on mobile after selection
+                        if (window.innerWidth <= 768) {
+                            toggleNav();
+                        }
+                    });
+                });
+                // --- END NEW ---
             }
+
+            // --- NEW: Nav toggle function ---
+            function toggleNav() {
+                sideNav.classList.toggle('open');
+                overlay.classList.toggle('active');
+            }
+            // --- END NEW ---
 
             function logout() {
                 localStorage.removeItem(`boxUserToken_${currentUserId}`);

@@ -642,11 +642,12 @@
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
             const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
             const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
 
             // Update the user status indicator
             if (savedUserId && savedUserToken && savedUserName) {
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-                userStatusName.textContent = savedUserName;
+                userStatusName.textContent = savedDisplayName;
                 
                 // Add click event to navigate to user editor page
                 userStatus.addEventListener('click', () => {
