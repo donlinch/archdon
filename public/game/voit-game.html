@@ -1755,7 +1755,7 @@
                 userStatusAvatar.src = '/images/a01girlmove.gif';
                 userStatusName.textContent = '未登入';
                 userStatus.addEventListener('click', () => {
-                    window.location.href = `box.html`;
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
                 });
             }
         });
