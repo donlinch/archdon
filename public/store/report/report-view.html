@@ -50,19 +50,19 @@
             text-decoration: none;
             font-weight: 500;
             font-size: 0.9rem;
-            margin-right: 20px;
+            margin-left: 20px;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
         }
         
         .back-link:hover {
-            transform: translateX(-3px);
+            transform: translateX(3px);
         }
         
-        .back-link:before {
-            content: "←";
-            margin-right: 5px;
+        .back-link:after {
+            content: "→";
+            margin-left: 5px;
             font-size: 1.1rem;
         }
 
@@ -77,6 +77,7 @@
             font-weight: bold;
             transition: all 0.3s;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-left: 10px;
         }
 
         #controls button:hover:not(:disabled) {
@@ -200,6 +201,42 @@
             animation: float 6s ease-in-out infinite 0.5s;
         }
 
+        /* --- User Status Indicator --- */
+        .user-status {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .user-status img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid white;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: white;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* --- 動畫 --- */
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -234,13 +271,16 @@
             
             .back-link {
                 font-size: 0.8rem;
-                margin-right: 10px;
+                margin-left: 10px;
             }
 
             .decoration {
                 display: none; /* 在小屏幕上隱藏裝飾 */
             }
-      
+            
+            .user-status .username {
+                max-width: 80px;
+            }
         }
     </style>
 </head>
@@ -254,10 +294,16 @@
     <!-- 控制列 -->
     <div id="controls" style="display: none;"> <!-- 預設隱藏，內容載入成功再顯示 -->
         <div class="controls-left">
-            <a href="https://sunnyyummy.onrender.com/store/report/Report.html" class="back-link">返回</a>
-          
+            <!-- 用戶狀態指示器 -->
+            <div id="userStatus" class="user-status">
+                <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+                <span id="userStatusName" class="username">未登入</span>
+            </div>
         </div>
-        <button id="print-report-btn" disabled>列印此報告 🖨️</button>
+        <div class="controls-right">
+            <button id="print-report-btn" disabled>列印此報告 🖨️</button>
+            <a href="https://sunnyyummy.onrender.com/store/report/Report.html" class="back-link">返回</a>
+        </div>
     </div>
 
     <!-- iframe 的容器 -->
@@ -275,6 +321,36 @@
     <script>
         // 額外的 JavaScript 來增強視覺效果
         document.addEventListener('DOMContentLoaded', function() {
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+            
+            // 更新用戶狀態指示器
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+            
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                
+                // 添加點擊事件以導航到用戶編輯頁面
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '訪客模式';
+                
+                // 添加點擊事件以導航到登入頁面
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `box.html`;
+                });
+            }
+            
             // 在 iframe 載入完成後添加 CSS 類以淡入顯示
             const iframe = document.getElementById('report-iframe');
             if (iframe) {
@@ -292,7 +368,37 @@
                 const idPrefix = reportId.substring(0, 8);
                 reportTitle.textContent = `報告檢視 (#${idPrefix}...)`;
             }
+            
+            // 檢查報告所有權（僅對已登入用戶）
+            if (savedUserId && savedUserToken && reportId) {
+                checkReportOwnership(reportId, savedUserToken);
+            }
         });
+        
+        // 檢查報告所有權的函數
+        async function checkReportOwnership(reportId, token) {
+            try {
+                const response = await fetch(`/api/reports/report/${reportId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                // 如果成功獲取報告，表示用戶是報告的所有者
+                if (response.ok) {
+                    // 可以在這裡添加額外的功能，例如編輯按鈕
+                    const controlsRight = document.querySelector('.controls-right');
+                    const editButton = document.createElement('button');
+                    editButton.textContent = '編輯此報告 ✏️';
+                    editButton.addEventListener('click', () => {
+                        window.location.href = `Report.html?edit=${reportId}`;
+                    });
+                    controlsRight.insertBefore(editButton, controlsRight.firstChild);
+                }
+            } catch (error) {
+                console.error('檢查報告所有權時出錯:', error);
+            }
+        }
     </script>
 </body>
 </html>
