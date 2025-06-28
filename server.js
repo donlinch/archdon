@@ -3110,29 +3110,22 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 
 // --- Report Templates API ---
 
-const reportTemplatesRouter = express.Router();
 
 // 中介軟體，用於可選地驗證用戶。
-// 如果提供了有效的Token，它會解碼並將用戶信息附加到 req.boxUser。
-// 如果沒有Token或Token無效，它不會報錯，只會繼續下一步，讓後續的邏輯來判斷如何處理。
 const optionalAuthenticateBoxUser = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            // If no error AND token has user_id or userId, attach user info
             if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
-                // Normalize to user_id for consistency
                 if (decoded.userId && !decoded.user_id) {
                     decoded.user_id = decoded.userId;
                 }
                 req.boxUser = decoded;
             }
-            // Always continue, as authentication is optional.
             next();
         });
     } else {
-        // No token provided, just continue.
         next();
     }
 };
@@ -3140,30 +3133,22 @@ const optionalAuthenticateBoxUser = (req, res, next) => {
 // 引入IP限制器
 const reportRateLimiter = createReportRateLimiter(3);
 
-// POST /api/reports - 新增報告模板 (安全版本)
-// 使用 optionalAuthenticateBoxUser 來處理會員和訪客
+// POST /api/reports - 新增報告模板
 reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, async (req, res) => {
     const { title, html_content } = req.body;
-    
-    // 根據驗證結果安全地確定 creator_id
-    // 如果 req.boxUser 存在且包含 user_id，我們使用來自Token的 user_id
-    // 否則，就是訪客 'guest'
     const creator_id = (req.boxUser && req.boxUser.user_id) ? req.boxUser.user_id.toString() : 'guest';
     const creatorIp = req.ip || 'unknown';
     const reportUUID = uuidv4();
 
-    // 驗證：會員的標題是必填的
     if (creator_id !== 'guest' && (!title || title.trim() === '')) {
         return res.status(400).json({ error: '報告標題為必填項。' });
     }
-    // 為訪客生成一個默認標題
     const finalTitle = creator_id === 'guest' ? `訪客報告 - ${new Date().toISOString()}` : title.trim();
 
     if (typeof html_content !== 'string') {
         return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
     }
 
-    // 內容大小限制
     const MAX_CONTENT_BYTES = 50000;
     const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
     if (contentSizeBytes > MAX_CONTENT_BYTES) {
@@ -3180,17 +3165,10 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
             RETURNING id, title, created_at, size_bytes;
         `;
         const result = await pool.query(query, [
-            reportUUID, 
-            finalTitle, 
-            html_content,
-            contentSizeBytes,
-            creatorIp,
-            creator_id
+            reportUUID, finalTitle, html_content, contentSizeBytes, creatorIp, creator_id
         ]);
-
         console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}，創建者ID: ${creator_id}`);
         res.status(201).json({ success: true, ...result.rows[0] });
-
     } catch (err) {
         console.error('[API POST /api/reports] 新增報告時發生錯誤:', err);
         res.status(500).json({ error: '伺服器內部錯誤，無法儲存報告。' });
@@ -3200,8 +3178,6 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
 // GET /api/reports/user/:userId - 獲取特定用戶的報告列表
 reportTemplatesRouter.get('/user/:userId', authenticateBoxUser, async (req, res) => {
     const { userId } = req.params;
-    // 安全性檢查：確保請求的userId與token中的user_id匹配
-    // 此處的 req.boxUser 由 authenticateBoxUser 保證是有效且包含 user_id 的
     if (req.boxUser.user_id.toString() !== userId) {
         return res.status(403).json({ error: '權限不足，無法訪問此資源。' });
     }
@@ -3234,7 +3210,6 @@ reportTemplatesRouter.get('/report/:id', authenticateBoxUser, async (req, res) =
             return res.status(404).json({ error: '找不到指定的報告。' });
         }
         const report = result.rows[0];
-        // 安全性檢查：報告的創建者必須是當前登入用戶
         if (report.creator_id !== req.boxUser.user_id.toString()) {
             return res.status(403).json({ error: '權限不足，無法編輯此報告。' });
         }
@@ -3245,6 +3220,59 @@ reportTemplatesRouter.get('/report/:id', authenticateBoxUser, async (req, res) =
     }
 });
 
+// PUT /api/reports/report/:id - 更新報告 (*** 新增的路由 ***)
+reportTemplatesRouter.put('/report/:id', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params;
+    const { title, html_content } = req.body;
+    const userId = req.boxUser.user_id.toString();
+
+    // 驗證
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: '報告標題為必填項。' });
+    }
+    if (typeof html_content !== 'string') {
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
+    const MAX_CONTENT_BYTES = 50000;
+    const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+    if (contentSizeBytes > MAX_CONTENT_BYTES) {
+        return res.status(413).json({ 
+            error: '報告內容超過大小限制',
+            detail: `最大允許 ${MAX_CONTENT_BYTES.toLocaleString()} 字節，當前 ${contentSizeBytes.toLocaleString()} 字節`,
+        });
+    }
+
+    try {
+        // 1. 檢查報告是否存在以及所有權
+        const checkQuery = `SELECT creator_id FROM report_templates WHERE id = $1;`;
+        const checkResult = await pool.query(checkQuery, [id]);
+
+        if (checkResult.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的報告。' });
+        }
+        if (checkResult.rows[0].creator_id !== userId) {
+            return res.status(403).json({ error: '權限不足，無法更新此報告。' });
+        }
+
+        // 2. 更新報告
+        const updateQuery = `
+            UPDATE report_templates
+            SET title = $1, html_content = $2, size_bytes = $3, updated_at = NOW()
+            WHERE id = $4
+            RETURNING id, title, updated_at, size_bytes;
+        `;
+        const result = await pool.query(updateQuery, [title.trim(), html_content, contentSizeBytes, id]);
+
+        console.log(`[API PUT /api/reports/report/${id}] 報告已成功更新。`);
+        res.status(200).json({ success: true, ...result.rows[0] });
+
+    } catch (err) {
+        console.error(`[API PUT /api/reports/report/${id}] 更新報告時出錯:`, err);
+        res.status(500).json({ error: '伺服器錯誤，無法更新報告。' });
+    }
+});
+
+
 // DELETE /api/reports/report/:id - 刪除報告
 reportTemplatesRouter.delete('/report/:id', authenticateBoxUser, async (req, res) => {
     const { id } = req.params;
@@ -3254,7 +3282,6 @@ reportTemplatesRouter.delete('/report/:id', authenticateBoxUser, async (req, res
         if (checkResult.rowCount === 0) {
             return res.status(404).json({ error: '找不到要刪除的報告。' });
         }
-        // 安全性檢查：報告的創建者必須是當前登入用戶
         if (checkResult.rows[0].creator_id !== req.boxUser.user_id.toString()) {
             return res.status(403).json({ error: '權限不足，無法刪除此報告。' });
         }
@@ -3294,6 +3321,8 @@ reportTemplatesRouter.get('/:id', async (req, res) => {
 
 // 將定義好的 Router 掛載到 Express App 上
 app.use('/api/reports', reportTemplatesRouter);
+
+// --- 結束 Report Templates API ---
  
 
 

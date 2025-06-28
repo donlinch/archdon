@@ -561,6 +561,8 @@
             const statusError = document.getElementById('status-error');
             const linkDisplayArea = document.getElementById('link-display-area');
             const generatedLinkInput = document.getElementById('generated-link');
+            
+            let currentEditingReportId = null; // *** 新增：用於追蹤正在編輯的報告ID ***
 
             // 檢查是否有已保存的登入信息
             const savedUserId = localStorage.getItem('boxCurrentUserId');
@@ -604,66 +606,103 @@
             reportForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 saveButton.disabled = true;
-                saveButton.textContent = '儲存中...';
+                saveButton.textContent = currentEditingReportId ? '更新中...' : '儲存中...';
                 statusError.textContent = '';
                 linkDisplayArea.style.display = 'none';
 
                 const title = reportTitleInput.value.trim();
                 const htmlContent = htmlContentInput.value;
-                const creatorId = savedUserId || 'guest';
-                const isGuest = !savedUserId;
 
-                if (isGuest && !htmlContent) {
+                // 基本驗證 (對新增和更新都適用)
+                if (!savedUserId && !htmlContent) {
                     statusError.textContent = 'HTML 內容不能為空。';
                     saveButton.disabled = false;
-                    saveButton.textContent = '儲存並產生分享連結';
+                    saveButton.textContent = currentEditingReportId ? '更新報告' : '儲存並產生分享連結';
                     return;
                 }
-                
-                if (!isGuest && !title) {
+                if (savedUserId && !title) {
                     statusError.textContent = '報告標題為必填項。';
                     saveButton.disabled = false;
-                    saveButton.textContent = '儲存並產生分享連結';
+                    saveButton.textContent = currentEditingReportId ? '更新報告' : '儲存並產生分享連結';
                     return;
                 }
 
                 try {
-                    const response = await fetch('/api/reports', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': savedUserToken ? `Bearer ${savedUserToken}` : ''
-                        },
-                        body: JSON.stringify({
-                            title: isGuest ? `訪客報告 - ${new Date().toLocaleString()}` : title,
-                            html_content: htmlContent,
-                            creator_id: creatorId
-                        })
-                    });
+                    let response;
+                    const requestBody = {
+                        title: title,
+                        html_content: htmlContent
+                    };
+                    
+                    if (currentEditingReportId) {
+                        // *** 編輯模式：發送 PUT 請求 ***
+                        response = await fetch(`/api/reports/report/${currentEditingReportId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${savedUserToken}`
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+                    } else {
+                        // *** 新增模式：發送 POST 請求 ***
+                        response = await fetch('/api/reports', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': savedUserToken ? `Bearer ${savedUserToken}` : ''
+                            },
+                            body: JSON.stringify({ // POST請求需要額外信息
+                                ...requestBody,
+                                title: savedUserId ? title : `訪客報告 - ${new Date().toLocaleString()}`,
+                                creator_id: savedUserId || 'guest'
+                            })
+                        });
+                    }
 
                     const data = await response.json();
 
                     if (!response.ok) {
-                        throw new Error(data.error || '儲存失敗，請稍後再試。');
+                        throw new Error(data.error || (currentEditingReportId ? '更新失敗' : '儲存失敗'));
                     }
                     
-                    // 顯示成功訊息和連結
-                    generatedLinkInput.value = `${window.location.origin}/store/report/view.html?id=${data.id}`;
-                    linkDisplayArea.style.display = 'block';
+                    if (currentEditingReportId) {
+                        // 更新成功
+                        alert('報告更新成功！');
+                    } else {
+                        // 新增成功
+                        generatedLinkInput.value = `${window.location.origin}/store/report/view.html?id=${data.id}`;
+                        linkDisplayArea.style.display = 'block';
+                    }
 
-                    // 如果是會員，重新載入列表
-                    if (!isGuest) {
+                    // 重設表單並重新載入列表
+                    resetFormToCreateMode();
+                    if (savedUserId) {
                         loadUserReports(savedUserId, savedUserToken);
-                        reportForm.reset(); // 清空表單
                     }
 
                 } catch (error) {
                     statusError.textContent = `錯誤: ${error.message}`;
                 } finally {
                     saveButton.disabled = false;
-                    saveButton.textContent = '儲存並產生分享連結';
+                    // 文字在 resetFormToCreateMode 中處理
                 }
             });
+            
+            // *** 新增：重設表單到新增模式的函數 ***
+            function resetFormToCreateMode() {
+                currentEditingReportId = null;
+                reportForm.reset();
+                saveButton.textContent = '儲存並產生分享連結';
+                statusError.textContent = '';
+                linkDisplayArea.style.display = 'none';
+                
+                // 移除可能存在的 "取消編輯" 按鈕
+                const cancelButton = document.getElementById('cancel-edit-btn');
+                if (cancelButton) {
+                    cancelButton.remove();
+                }
+            }
             
             // 載入用戶報告列表函數
             async function loadUserReports(userId, token) {
@@ -752,9 +791,25 @@
                             
                             const reportData = await response.json();
                             
+                            // *** 進入編輯模式 ***
+                            currentEditingReportId = reportData.id;
+                            
                             // 填充編輯區域
                             reportTitleInput.value = reportData.title;
                             htmlContentInput.value = reportData.html_content;
+                            
+                            // 更改按鈕文字並添加 "取消編輯" 按鈕
+                            saveButton.textContent = '更新報告';
+                            if (!document.getElementById('cancel-edit-btn')) {
+                                const cancelButton = document.createElement('button');
+                                cancelButton.textContent = '取消編輯';
+                                cancelButton.type = 'button';
+                                cancelButton.id = 'cancel-edit-btn';
+                                cancelButton.style.backgroundColor = '#78909c';
+                                cancelButton.style.marginLeft = '10px';
+                                cancelButton.addEventListener('click', resetFormToCreateMode);
+                                saveButton.insertAdjacentElement('afterend', cancelButton);
+                            }
                             
                             // 滾動到編輯區域
                             titleFormGroup.scrollIntoView({ behavior: 'smooth' });
