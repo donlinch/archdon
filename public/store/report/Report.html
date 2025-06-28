@@ -507,10 +507,9 @@
         </div>
 
         <form id="report-form">
-            <!-- 隱藏的標題欄位，預設值為guest -->
-            <div class="form-group hidden-field">
+            <div class="form-group" id="title-form-group" style="display: none;">
                 <label for="report-title">報告標題:</label>
-                <input type="text" id="report-title" value="guest" readonly>
+                <input type="text" id="report-title" placeholder="請輸入您的報告標題">
             </div>
 
             <div class="form-group">
@@ -554,7 +553,14 @@
             const memberReportsArea = document.getElementById('member-reports-area');
             const reportsList = document.getElementById('reports-list');
             const loginPrompt = document.getElementById('login-prompt');
+            const reportForm = document.getElementById('report-form');
+            const titleFormGroup = document.getElementById('title-form-group');
             const reportTitleInput = document.getElementById('report-title');
+            const htmlContentInput = document.getElementById('html-content');
+            const saveButton = document.getElementById('save-button');
+            const statusError = document.getElementById('status-error');
+            const linkDisplayArea = document.getElementById('link-display-area');
+            const generatedLinkInput = document.getElementById('generated-link');
 
             // 檢查是否有已保存的登入信息
             const savedUserId = localStorage.getItem('boxCurrentUserId');
@@ -568,12 +574,10 @@
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
                 userStatusName.textContent = savedDisplayName;
                 
-                // 用戶已登入，顯示報告列表區域，隱藏登入提示
+                // 用戶已登入
                 memberReportsArea.style.display = 'block';
                 loginPrompt.style.display = 'none';
-                
-                // 將報告標題設置為用戶ID，用於後續API調用
-                reportTitleInput.value = savedUserId;
+                titleFormGroup.style.display = 'block'; // 顯示標題輸入框
                 
                 // 載入用戶的報告列表
                 loadUserReports(savedUserId, savedUserToken);
@@ -586,17 +590,80 @@
                 userStatusAvatar.src = '/images/a01girlmove.gif';
                 userStatusName.textContent = '未登入';
                 
-                // 用戶未登入，隱藏報告列表區域，顯示登入提示
+                // 用戶未登入
                 memberReportsArea.style.display = 'none';
                 loginPrompt.style.display = 'block';
-                
-                // 保持報告標題為guest，用於後續API調用
-                reportTitleInput.value = 'guest';
+                titleFormGroup.style.display = 'none'; // 隱藏標題輸入框
                 
                 userStatus.addEventListener('click', () => {
                     window.location.href = `box.html`;
                 });
             }
+            
+            // 統一處理表單提交
+            reportForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                saveButton.disabled = true;
+                saveButton.textContent = '儲存中...';
+                statusError.textContent = '';
+                linkDisplayArea.style.display = 'none';
+
+                const title = reportTitleInput.value.trim();
+                const htmlContent = htmlContentInput.value;
+                const creatorId = savedUserId || 'guest';
+                const isGuest = !savedUserId;
+
+                if (isGuest && !htmlContent) {
+                    statusError.textContent = 'HTML 內容不能為空。';
+                    saveButton.disabled = false;
+                    saveButton.textContent = '儲存並產生分享連結';
+                    return;
+                }
+                
+                if (!isGuest && !title) {
+                    statusError.textContent = '報告標題為必填項。';
+                    saveButton.disabled = false;
+                    saveButton.textContent = '儲存並產生分享連結';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/reports', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': savedUserToken ? `Bearer ${savedUserToken}` : ''
+                        },
+                        body: JSON.stringify({
+                            title: isGuest ? `訪客報告 - ${new Date().toLocaleString()}` : title,
+                            html_content: htmlContent,
+                            creator_id: creatorId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || '儲存失敗，請稍後再試。');
+                    }
+                    
+                    // 顯示成功訊息和連結
+                    generatedLinkInput.value = `${window.location.origin}/store/report/view.html?id=${data.id}`;
+                    linkDisplayArea.style.display = 'block';
+
+                    // 如果是會員，重新載入列表
+                    if (!isGuest) {
+                        loadUserReports(savedUserId, savedUserToken);
+                        reportForm.reset(); // 清空表單
+                    }
+
+                } catch (error) {
+                    statusError.textContent = `錯誤: ${error.message}`;
+                } finally {
+                    saveButton.disabled = false;
+                    saveButton.textContent = '儲存並產生分享連結';
+                }
+            });
             
             // 載入用戶報告列表函數
             async function loadUserReports(userId, token) {
@@ -674,7 +741,7 @@
                         const reportId = btn.dataset.id;
                         try {
                             // 獲取報告內容
-                            const response = await fetch(`/api/report/${reportId}`, {
+                            const response = await fetch(`/api/reports/report/${reportId}`, {
                                 headers: {
                                     'Authorization': `Bearer ${savedUserToken}`
                                 }
@@ -685,10 +752,11 @@
                             const reportData = await response.json();
                             
                             // 填充編輯區域
-                            document.getElementById('html-content').value = reportData.html_content;
+                            reportTitleInput.value = reportData.title;
+                            htmlContentInput.value = reportData.html_content;
                             
                             // 滾動到編輯區域
-                            document.getElementById('html-content').scrollIntoView({ behavior: 'smooth' });
+                            titleFormGroup.scrollIntoView({ behavior: 'smooth' });
                             
                         } catch (error) {
                             alert(`編輯失敗: ${error.message}`);
@@ -703,7 +771,7 @@
                         
                         const reportId = btn.dataset.id;
                         try {
-                            const response = await fetch(`/api/report/${reportId}`, {
+                            const response = await fetch(`/api/reports/report/${reportId}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Authorization': `Bearer ${savedUserToken}`
@@ -730,29 +798,6 @@
                     });
                 });
             }
-
-            // 在提交表單時
-            const formData = {
-                title: document.getElementById('report-title').value,
-                html_content: document.getElementById('html-content').value,
-                creator_id: savedUserId || 'guest' // 從localStorage獲取用戶ID或使用'guest'
-            };
-
-            fetch('/api/reports', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': savedUserToken ? `Bearer ${savedUserToken}` : ''
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                // 處理成功響應
-            })
-            .catch(error => {
-                // 處理錯誤
-            });
         });
     </script>
 
