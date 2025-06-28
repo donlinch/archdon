@@ -668,14 +668,15 @@
             // 載入用戶報告列表函數
             async function loadUserReports(userId, token) {
                 try {
-                    const response = await fetch(`/api/report/user/${userId}`, {
+                    const response = await fetch(`/api/reports/user/${userId}`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
                     
                     if (!response.ok) {
-                        throw new Error('無法載入報告列表');
+                        const errorData = await response.json().catch(() => ({ error: '無法解析錯誤訊息' }));
+                        throw new Error(errorData.error || '無法載入報告列表');
                     }
                     
                     const reports = await response.json();
