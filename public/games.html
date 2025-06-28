@@ -651,15 +651,14 @@
                 
                 // Add click event to navigate to user editor page
                 userStatus.addEventListener('click', () => {
-                    // It's better to redirect to box.html to login first, then to the editor
-                    // But for now, let's redirect to member-editor.html directly as box.html
                     window.location.href = `member-editor.html?userId=${savedUserId}`;
                 });
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
                 userStatusName.textContent = '未登入';
                 userStatus.addEventListener('click', () => {
-                    window.location.href = `box.html`;
+                    // 變更為導向會員登入頁
+                    window.location.href = `member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
                 });
             }
         });
