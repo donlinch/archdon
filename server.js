@@ -3141,11 +3141,22 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
     const creatorIp = req.ip || 'unknown';
     const reportUUID = uuidv4();
 
-    if (creator_id !== 'guest' && (!title || title.trim() === '')) {
-        return res.status(400).json({ error: '報告標題為必填項。' });
+    let finalTitle;
+    if (!title || title.trim() === '') {
+        // 無論是訪客還是登入用戶，都給一個預設標題
+        const currentDate = new Date().toLocaleString('zh-TW', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        finalTitle = creator_id === 'guest' 
+            ? `訪客報告 - ${currentDate}` 
+            : `未命名報告 - ${currentDate}`;
+    } else {
+        finalTitle = title.trim();
     }
-    const finalTitle = creator_id === 'guest' ? `訪客報告 - ${new Date().toISOString()}` : title.trim();
-
     if (typeof html_content !== 'string') {
         return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
     }

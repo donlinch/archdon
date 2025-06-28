@@ -602,6 +602,52 @@
                 });
             }
             
+            // 檢查 URL 是否包含 edit 參數
+            const urlParams = new URLSearchParams(window.location.search);
+            const editReportId = urlParams.get('edit');
+
+            // 如果有 edit 參數且用戶已登入，載入報告內容
+            if (editReportId && savedUserId && savedUserToken) {
+                // 設置編輯模式
+                currentEditingReportId = editReportId;
+                saveButton.textContent = '更新報告';
+                
+                // 添加取消編輯按鈕
+                if (!document.getElementById('cancel-edit-btn')) {
+                    const cancelButton = document.createElement('button');
+                    cancelButton.textContent = '取消編輯';
+                    cancelButton.type = 'button';
+                    cancelButton.id = 'cancel-edit-btn';
+                    cancelButton.style.backgroundColor = '#78909c';
+                    cancelButton.style.marginLeft = '10px';
+                    cancelButton.addEventListener('click', resetFormToCreateMode);
+                    saveButton.insertAdjacentElement('afterend', cancelButton);
+                }
+                
+                // 載入報告內容
+                fetch(`/api/reports/report/${editReportId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${savedUserToken}`
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('無法獲取報告內容');
+                    return response.json();
+                })
+                .then(reportData => {
+                    // 填充編輯區域
+                    reportTitleInput.value = reportData.title;
+                    htmlContentInput.value = reportData.html_content;
+                    
+                    // 滾動到編輯區域
+                    titleFormGroup.scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => {
+                    alert(`載入報告內容失敗: ${error.message}`);
+                    resetFormToCreateMode(); // 如果載入失敗，重置為新增模式
+                });
+            }
+            
             // 統一處理表單提交
             reportForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
