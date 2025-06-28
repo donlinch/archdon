@@ -1569,7 +1569,6 @@
             <button class="tab-link active" data-tab="tab-warehouses">我的倉庫</button>
             <button class="tab-link" data-tab="tab-box-management" style="display:none;">紙箱管理</button> <!-- Initially hidden -->
             <button class="tab-link" data-tab="tab-search">找東西</button>
-            <button class="tab-link" data-tab="tab-user-settings">用戶設定</button>
         </nav>
 
         <!-- TAB Content: My Warehouses -->
@@ -1621,52 +1620,6 @@
                 <!-- Search results will be displayed here -->
             </div>
             <div id="search-pagination"></div>
-        </div>
-
-        <!-- TAB Content: User Settings -->
-        <div id="tab-user-settings" class="tab-content">
-            <h2>用戶設定</h2>
-            <!-- Change Password Form -->
-            <form id="changePasswordForm" style="margin-bottom: 30px;">
-                <h3>更改密碼</h3>
-                <div class="form-group">
-                    <label for="currentPassword">當前密碼:</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                <div class="form-group">
-                    <label for="newPassword">新密碼:</label>
-                    <input type="password" id="newPassword" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="confirmNewPassword">確認新密碼:</label>
-                    <input type="password" id="confirmNewPassword" required>
-                </div>
-                <button type="submit">更新密碼</button>
-                <p id="changePasswordStatus" style="margin-top:10px;"></p>
-            </form>
-            <hr>
-            <!-- Change Email Form -->
-            <form id="changeEmailForm" style="margin-top: 30px; margin-bottom: 30px;">
-                <h3>更改Email</h3>
-                <div class="form-group">
-                    <label for="newEmail">電子郵件 (用於密碼找回):</label>
-                    <input type="email" id="newEmail" required placeholder="請輸入您的電子郵件">
-                </div>
-                <button type="submit">更新Email</button>
-                <p id="changeEmailStatus" style="margin-top:10px;"></p>
-            </form>
-            <hr>
-            <!-- Change Profile Image Form -->
-            <form id="changeProfileImageForm" style="margin-top: 30px;">
-                 <h3>更改頭像</h3>
-                 <div class="form-group">
-                     <label for="profileImageFile">選擇新頭像圖片:</label>
-                     <input type="file" id="profileImageFile" accept="image/*">
-                     <div class="image-upload-preview" id="profileImagePreview"><img></div>
-                 </div>
-                 <button type="submit" id="uploadProfileImageBtn">上傳並更新頭像</button>
-                 <p id="changeProfileImageStatus" style="margin-top:10px;"></p>
-            </form>
         </div>
     </main>
 
