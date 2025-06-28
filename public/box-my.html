@@ -2021,13 +2021,29 @@
 
         async function initializePage() {
             const params = new URLSearchParams(window.location.search);
-            currentUserId = params.get('userId');
-            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
-            if (!currentUserId || !authToken) {
-                alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+            const urlUserId = params.get('userId');
+            const storedUserId = localStorage.getItem('boxCurrentUserId');
+
+            if (!urlUserId || !storedUserId || urlUserId !== storedUserId) {
+                alert('用戶ID不匹配或登入狀態無效，請重新登入。');
+                localStorage.removeItem(`boxUserToken_${urlUserId}`);
+                localStorage.removeItem(`boxUserToken_${storedUserId}`);
+                localStorage.removeItem('boxCurrentUserId');
+                localStorage.removeItem('boxCurrentUsername');
+                localStorage.removeItem('boxCurrentUserAvatar');
                 window.location.href = 'box.html';
                 return;
             }
+
+            currentUserId = storedUserId;
+            authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
+            
+            if (!authToken) {
+                alert('未找到有效的登入憑證，將跳轉回登入頁面。');
+                window.location.href = 'box.html';
+                return;
+            }
+
             try {
                 const userData = await apiFetch('/api/box/users/me');
                 const displayName = localStorage.getItem('boxCurrentDisplayName') || userData.display_name || userData.username;

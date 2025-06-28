@@ -511,11 +511,25 @@
             // --- Page Initialization ---
             async function initializePage() {
                 const params = new URLSearchParams(window.location.search);
-                currentUserId = params.get('userId');
+                const urlUserId = params.get('userId');
+                const storedUserId = localStorage.getItem('boxCurrentUserId');
+
+                if (!urlUserId || !storedUserId || urlUserId !== storedUserId) {
+                    alert('用戶ID不匹配或登入狀態無效，請重新登入。');
+                    localStorage.removeItem(`boxUserToken_${urlUserId}`); // 清除可能無效的 token
+                    localStorage.removeItem(`boxUserToken_${storedUserId}`); // 清除當前用戶的 token
+                    localStorage.removeItem('boxCurrentUserId');
+                    localStorage.removeItem('boxCurrentUsername');
+                    localStorage.removeItem('boxCurrentUserAvatar');
+                    window.location.href = 'box.html';
+                    return;
+                }
+
+                currentUserId = storedUserId;
                 authToken = localStorage.getItem(`boxUserToken_${currentUserId}`);
                 
-                if (!currentUserId || !authToken) {
-                    alert('未授權或用戶信息缺失，將跳轉回登入頁面。');
+                if (!authToken) {
+                    alert('未找到有效的登入憑證，將跳轉回登入頁面。');
                     window.location.href = 'box.html';
                     return;
                 }
