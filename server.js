@@ -3109,6 +3109,7 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 
 
 // --- Report Templates API ---
+const reportTemplatesRouter = express.Router();
 
 
 // 中介軟體，用於可選地驗證用戶。
