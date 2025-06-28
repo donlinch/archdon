@@ -2029,8 +2029,9 @@
                 return;
             }
             try {
-                const userData = await apiFetch(`/api/box/users/${currentUserId}`);
-                if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.display_name || userData.username);
+                const userData = await apiFetch('/api/box/users/me');
+                const displayName = localStorage.getItem('boxCurrentDisplayName') || userData.display_name || userData.username;
+                if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(displayName);
                 if (currentUserAvatarImg) {
                     currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
                 }
