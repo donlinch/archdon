@@ -730,6 +730,29 @@
                     });
                 });
             }
+
+            // 在提交表單時
+            const formData = {
+                title: document.getElementById('report-title').value,
+                html_content: document.getElementById('html-content').value,
+                creator_id: savedUserId || 'guest' // 從localStorage獲取用戶ID或使用'guest'
+            };
+
+            fetch('/api/reports', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': savedUserToken ? `Bearer ${savedUserToken}` : ''
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 處理成功響應
+            })
+            .catch(error => {
+                // 處理錯誤
+            });
         });
     </script>
 

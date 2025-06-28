@@ -3196,47 +3196,47 @@ reportTemplatesRouter.post('/', reportRateLimiter, async (req, res) => {
 
 
 // POST /api/reports - 新增報告模板
-
-// POST /api/reports - 新增報告模板 (更新版本，支持字節大小計算)
+// POST /api/reports - 新增報告模板
 reportTemplatesRouter.post('/', async (req, res) => {
     const { title, html_content } = req.body;
-    const creatorIp = req.ip || 'unknown'; // 獲取 IP
+    const creatorId = req.body.creator_id || 'guest'; // 使用專門的欄位
+    const creatorIp = req.ip || 'unknown';
     const reportUUID = uuidv4(); // 生成 UUID
 
     // 基本驗證
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: '報告標題為必填項。' });
     }
-    // 檢查 html_content 是否存在 (允許空字串)
+    // 檢查 html_content 是否存在
     if (typeof html_content !== 'string') {
-            return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
-        }
+        return res.status(400).json({ error: '報告內容為必填項且必須是字串。' });
+    }
 
-        // 計算內容大小（字節數）
-        const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
+    // 計算內容大小（字節數）
+    const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
 
     try {
-        // 使用修改後的 SQL 查詢，加入 size_bytes 欄位
+        // 修改 SQL 查詢，加入 creator_id 欄位
         const query = `
-            INSERT INTO report_templates (id, title, html_content, size_bytes, creator_ip)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO report_templates (id, title, html_content, size_bytes, creator_ip, creator_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, title, created_at, updated_at, size_bytes;
         `;
-        // 現在提供5個參數，與SQL查詢對應
+        // 提供6個參數
         const result = await pool.query(query, [
             reportUUID, 
             title.trim(), 
             html_content,
             contentSizeBytes,
-            creatorIp
+            creatorIp,
+            creatorId
         ]);
 
-        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}，大小: ${contentSizeBytes} 字節`);
+        console.log(`[API POST /api/reports] 新增報告成功，ID: ${result.rows[0].id}，大小: ${contentSizeBytes} 字節, 創建者ID: ${creatorId}`);
 
-        // 回傳包含 UUID 和大小資訊的成功訊息給前端
         res.status(201).json({
             success: true,
-            id: result.rows[0].id, // 返回 UUID
+            id: result.rows[0].id,
             title: result.rows[0].title,
             created_at: result.rows[0].created_at,
             size_bytes: result.rows[0].size_bytes
@@ -3264,6 +3264,129 @@ reportTemplatesRouter.get('/', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告列表。', detail: err.message });
     }
 });
+
+
+// GET /api/reports/user/:userId - 獲取特定用戶的報告列表
+reportTemplatesRouter.get('/user/:userId', authenticateBoxUser, async (req, res) => {
+    const { userId } = req.params;
+    
+    // 確認請求用戶與URL中的用戶ID一致
+    if (req.boxUser.user_id.toString() !== userId) {
+        return res.status(403).json({ error: '權限不足，無法訪問其他用戶的報告。' });
+    }
+    
+    try {
+        const query = `
+            SELECT id, title, created_at, updated_at, size_bytes
+            FROM report_templates
+            WHERE creator_id = $1
+            ORDER BY updated_at DESC;
+        `;
+        const result = await pool.query(query, [userId]);
+        
+        res.json(result.rows);
+        
+    } catch (err) {
+        console.error(`[API GET /api/reports/user/${userId}] 獲取用戶報告列表時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告列表。', detail: err.message });
+    }
+});
+
+// GET /api/report/:id - 獲取單一報告的完整資訊 (用於編輯)
+reportTemplatesRouter.get('/report/:id', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params;
+    
+    // UUID 格式的基礎驗證
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查報告是否屬於當前用戶
+        const checkQuery = `
+            SELECT id, creator_ip
+            FROM report_templates
+            WHERE id = $1;
+        `;
+        const checkResult = await pool.query(checkQuery, [id]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的報告。' });
+        }
+        
+        // 檢查報告是否屬於當前用戶
+        if (checkResult.rows[0].creator_ip !== req.boxUser.user_id.toString() && checkResult.rows[0].creator_ip !== 'guest') {
+            return res.status(403).json({ error: '權限不足，無法訪問其他用戶的報告。' });
+        }
+        
+        // 獲取報告完整資訊
+        const query = `
+            SELECT id, title, html_content, created_at, updated_at, size_bytes, creator_ip
+            FROM report_templates
+            WHERE id = $1;
+        `;
+        const result = await pool.query(query, [id]);
+        
+        res.json(result.rows[0]);
+        
+    } catch (err) {
+        console.error(`[API GET /api/report/${id}] 獲取報告詳情時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法獲取報告。', detail: err.message });
+    }
+});
+
+// DELETE /api/report/:id - 刪除報告
+reportTemplatesRouter.delete('/report/:id', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params;
+    
+    // UUID 格式的基礎驗證
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: '無效的報告 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查報告是否屬於當前用戶
+        const checkQuery = `
+            SELECT id, creator_ip
+            FROM report_templates
+            WHERE id = $1;
+        `;
+        const checkResult = await pool.query(checkQuery, [id]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ error: '找不到指定的報告。' });
+        }
+        
+        // 檢查報告是否屬於當前用戶
+        if (checkResult.rows[0].creator_ip !== req.boxUser.user_id.toString() && checkResult.rows[0].creator_ip !== 'guest') {
+            return res.status(403).json({ error: '權限不足，無法刪除其他用戶的報告。' });
+        }
+        
+        // 刪除報告
+        const query = `
+            DELETE FROM report_templates
+            WHERE id = $1
+            RETURNING id;
+        `;
+        const result = await pool.query(query, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到要刪除的報告。' });
+        }
+        
+        console.log(`[API DELETE /api/report/${id}] 刪除報告成功`);
+        res.json({ success: true, id: result.rows[0].id });
+        
+    } catch (err) {
+        console.error(`[API DELETE /api/report/${id}] 刪除報告時發生錯誤:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除報告。', detail: err.message });
+    }
+});
+
+
+
 
 // GET /api/reports/:id - 獲取單一報告內容 (用於 report-view.html 和編輯加載)
 reportTemplatesRouter.get('/:id', async (req, res) => {
