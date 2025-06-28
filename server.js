@@ -3107,8 +3107,6 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 
 
 
-
-
 // --- Report Templates API ---
 
 const reportTemplatesRouter = express.Router();
@@ -3120,15 +3118,17 @@ const optionalAuthenticateBoxUser = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
-        jwt.verify(token, BOX_JWT_SECRET, (err, decoded) => {
-            if (!err) {
-                req.boxUser = decoded; // Token有效，附加用戶信息
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            // If no error AND token has user_id, attach user info
+            if (!err && decoded && typeof decoded.user_id !== 'undefined') {
+                req.boxUser = decoded;
             }
-            // 即使Token無效或過期也繼續，因為此路由的登入是可選的
+            // Always continue, as authentication is optional.
             next();
         });
     } else {
-        next(); // 沒有提供Token，直接繼續
+        // No token provided, just continue.
+        next();
     }
 };
 
@@ -3141,9 +3141,9 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
     const { title, html_content } = req.body;
     
     // 根據驗證結果安全地確定 creator_id
-    // 如果 req.boxUser 存在，表示Token有效，我們使用來自Token的 user_id
+    // 如果 req.boxUser 存在且包含 user_id，我們使用來自Token的 user_id
     // 否則，就是訪客 'guest'
-    const creator_id = req.boxUser ? req.boxUser.user_id.toString() : 'guest';
+    const creator_id = (req.boxUser && req.boxUser.user_id) ? req.boxUser.user_id.toString() : 'guest';
     const creatorIp = req.ip || 'unknown';
     const reportUUID = uuidv4();
 
@@ -3159,7 +3159,7 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
     }
 
     // 內容大小限制
-    const MAX_CONTENT_BYTES = 100000;
+    const MAX_CONTENT_BYTES = 50000;
     const contentSizeBytes = Buffer.byteLength(html_content, 'utf8');
     if (contentSizeBytes > MAX_CONTENT_BYTES) {
         return res.status(413).json({ 
@@ -3196,6 +3196,7 @@ reportTemplatesRouter.post('/', optionalAuthenticateBoxUser, reportRateLimiter, 
 reportTemplatesRouter.get('/user/:userId', authenticateBoxUser, async (req, res) => {
     const { userId } = req.params;
     // 安全性檢查：確保請求的userId與token中的user_id匹配
+    // 此處的 req.boxUser 由 authenticateBoxUser 保證是有效且包含 user_id 的
     if (req.boxUser.user_id.toString() !== userId) {
         return res.status(403).json({ error: '權限不足，無法訪問此資源。' });
     }
@@ -3288,9 +3289,6 @@ reportTemplatesRouter.get('/:id', async (req, res) => {
 
 // 將定義好的 Router 掛載到 Express App 上
 app.use('/api/reports', reportTemplatesRouter);
-
-// --- 結束 Report Templates API ---
-
  
 
 
