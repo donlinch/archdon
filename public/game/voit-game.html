@@ -1748,7 +1748,7 @@
                 userStatus.addEventListener('click', () => {
                     // It's better to redirect to box.html to login first, then to the editor
                     // But for now, let's redirect to member-editor.html directly as box.html
-                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
                 });
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
