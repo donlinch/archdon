@@ -301,6 +301,7 @@
             </div>
         </div>
         <div class="controls-right">
+            <button id="copy-url-btn">複製網址 🔗</button>
             <button id="print-report-btn" disabled>列印此報告 🖨️</button>
             <a href="https://sunnyyummy.onrender.com/store/report/Report.html" class="back-link">返回</a>
         </div>
@@ -321,6 +322,25 @@
     <script>
         // 額外的 JavaScript 來增強視覺效果
         document.addEventListener('DOMContentLoaded', function() {
+            // 複製網址功能
+            const copyUrlBtn = document.getElementById('copy-url-btn');
+            copyUrlBtn.addEventListener('click', function() {
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    // 暫時改變按鈕文字提示已複製
+                    const originalText = copyUrlBtn.textContent;
+                    copyUrlBtn.textContent = '已複製 ✓';
+                    copyUrlBtn.style.backgroundColor = '#4CAF50';
+                    setTimeout(() => {
+                        copyUrlBtn.textContent = originalText;
+                        copyUrlBtn.style.backgroundColor = '';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('複製網址失敗:', err);
+                    alert('複製網址失敗，請手動複製。');
+                });
+            });
+            
             // 檢查是否有已保存的登入信息
             const savedUserId = localStorage.getItem('boxCurrentUserId');
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
