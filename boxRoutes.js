@@ -108,10 +108,10 @@ module.exports = function(dependencies) {
 
             // 插入新用戶到數據庫，使用 profileImageUrlToSave
             const newUserResult = await pool.query(
-                `INSERT INTO BOX_Users (username, email, password_hash, user_profile_image_url)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING user_id, username, email, user_profile_image_url, created_at`,
-                [username.trim(), email.trim(), hashedPassword, profileImageUrlToSave]
+                `INSERT INTO BOX_Users (username, email, password_hash, user_profile_image_url, display_name)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING user_id, username, email, user_profile_image_url, display_name, created_at`,
+                [username.trim(), email.trim(), hashedPassword, profileImageUrlToSave, username.trim()]
             );
             const newUser = newUserResult.rows[0];
 
@@ -203,7 +203,7 @@ module.exports = function(dependencies) {
             return res.status(400).json({ error: '請提供用戶名和密碼。' });
         }
         try {
-            const result = await pool.query('SELECT user_id, username, password_hash, user_profile_image_url FROM BOX_Users WHERE LOWER(username) = LOWER($1)', [username]);
+            const result = await pool.query('SELECT user_id, username, password_hash, user_profile_image_url, display_name FROM BOX_Users WHERE LOWER(username) = LOWER($1)', [username]);
             if (result.rows.length === 0) {
                 return res.status(401).json({ error: '用戶名或密碼錯誤。' });
             }
@@ -219,7 +219,7 @@ module.exports = function(dependencies) {
 
             res.json({
                 success: true, message: '登入成功', token: token,
-                user: { userId: user.user_id, username: user.username, profileImageUrl: user.user_profile_image_url }
+                user: { userId: user.user_id, username: user.username, profileImageUrl: user.user_profile_image_url, displayName: user.display_name }
             });
         } catch (err) {
             console.error('[API POST /box/users/login] Error:', err);
@@ -254,7 +254,7 @@ module.exports = function(dependencies) {
     router.get('/users/me', authenticateBoxUser, async (req, res) => {
         const userId = req.boxUser.userId;
         try {
-            const result = await pool.query('SELECT user_id, username, email, user_profile_image_url, created_at FROM BOX_Users WHERE user_id = $1', [userId]);
+            const result = await pool.query('SELECT user_id, username, email, user_profile_image_url, display_name, created_at FROM BOX_Users WHERE user_id = $1', [userId]);
             if (result.rows.length === 0) { return res.status(404).json({ error: '找不到用戶信息。' });}
             res.json(result.rows[0]);
         } catch (err) {
@@ -317,6 +317,27 @@ module.exports = function(dependencies) {
         } catch (err) {
             console.error(`[API PUT /users/me/email] User ${userId} Error:`, err);
             res.status(500).json({ error: 'Email更新失敗。' });
+        }
+    });
+
+    router.put('/users/me/display-name', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.userId;
+        const { display_name } = req.body;
+
+        if (!display_name || display_name.trim() === '') {
+            return res.status(400).json({ error: '顯示名稱不能為空。' });
+        }
+        
+        try {
+            await pool.query(
+                'UPDATE BOX_Users SET display_name = $1 WHERE user_id = $2',
+                [display_name.trim(), userId]
+            );
+
+            res.json({ success: true, message: '顯示名稱更新成功。' });
+        } catch (err) {
+            console.error(`[API PUT /users/me/display-name] User ${userId} Error:`, err);
+            res.status(500).json({ error: '顯示名稱更新失敗。' });
         }
     });
 

@@ -284,6 +284,21 @@
             
             <hr>
 
+            <!-- Change Display Name Form -->
+            <form id="changeDisplayNameForm">
+                <h3>更改顯示名稱</h3>
+                <div class="form-group">
+                    <label for="displayName">顯示名稱 (可與登入帳號不同):</label>
+                    <input type="text" id="displayName" required placeholder="請輸入您想顯示的名稱">
+                </div>
+                <div class="form-actions">
+                    <button type="submit">更新顯示名稱</button>
+                    <p id="changeDisplayNameStatus" class="form-status-message"></p>
+                </div>
+            </form>
+            
+            <hr>
+
             <!-- Change Profile Image Form -->
             <form id="changeProfileImageForm">
                  <h3>更改頭像</h3>
@@ -315,6 +330,7 @@
 
             const changePasswordForm = document.getElementById('changePasswordForm');
             const changeEmailForm = document.getElementById('changeEmailForm');
+            const changeDisplayNameForm = document.getElementById('changeDisplayNameForm');
             const changeProfileImageForm = document.getElementById('changeProfileImageForm');
             const profileImageFile = document.getElementById('profileImageFile');
             const profileImagePreviewContainer = document.getElementById('profileImagePreview');
@@ -429,11 +445,17 @@
                 
                 try {
                     const userData = await apiFetch('/api/box/users/me');
-                    if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.username);
+                    if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.display_name || userData.username);
                     if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
                     
                     const newEmailInput = document.getElementById('newEmail');
                     if (newEmailInput) newEmailInput.value = userData.email || '';
+                    
+                    const displayNameInput = document.getElementById('displayName');
+                    if (displayNameInput) displayNameInput.value = userData.display_name || userData.username;
+                    
+                    // 保存到本地存儲，以便其他頁面使用
+                    localStorage.setItem('boxCurrentDisplayName', userData.display_name || userData.username);
                     
                     setupEventListeners();
                 } catch (error) {
@@ -450,6 +472,7 @@
                 logoutButton.addEventListener('click', logout);
                 changePasswordForm.addEventListener('submit', handleChangePassword);
                 changeEmailForm.addEventListener('submit', handleChangeEmail);
+                changeDisplayNameForm.addEventListener('submit', handleChangeDisplayName);
                 changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
                 profileImageFile.addEventListener('change', previewImage);
             }
@@ -519,6 +542,27 @@
                 try {
                     await apiFetch('/api/box/users/me/email', { method: 'PUT', body: { email: email } });
                     setStatusMessage(statusEl, 'Email 更新成功！');
+                } catch (error) {
+                    setStatusMessage(statusEl, `更新失敗: ${error.data?.error || error.message}`, true);
+                }
+            }
+
+            async function handleChangeDisplayName(event) {
+                event.preventDefault();
+                const displayName = document.getElementById('displayName').value.trim();
+                const statusEl = document.getElementById('changeDisplayNameStatus');
+                
+                if (!displayName) {
+                    setStatusMessage(statusEl, '請輸入有效的顯示名稱。', true); return;
+                }
+
+                try {
+                    await apiFetch('/api/box/users/me/display-name', { method: 'PUT', body: { display_name: displayName } });
+                    setStatusMessage(statusEl, '顯示名稱更新成功！');
+                    
+                    // 更新頁面顯示和本地存儲
+                    localStorage.setItem('boxCurrentDisplayName', displayName);
+                    if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(displayName);
                 } catch (error) {
                     setStatusMessage(statusEl, `更新失敗: ${error.data?.error || error.message}`, true);
                 }

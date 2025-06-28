@@ -597,11 +597,12 @@
             const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
             const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
             const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
 
             // Update the user status indicator
             if (savedUserId && savedUserToken && savedUserName) {
                 userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-                userStatusName.textContent = savedUserName;
+                userStatusName.textContent = savedDisplayName;
                 
                 // Add click event to navigate to user editor page
                 document.getElementById('userStatus').addEventListener('click', () => {
@@ -615,7 +616,7 @@
             // 如果有保存的登入信息，顯示快速登入區域
             if (savedUserId && savedUserToken && savedUserName) {
                 savedUserAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-                savedUsername.textContent = savedUserName;
+                savedUsername.textContent = savedDisplayName;
                 quickLoginContainer.style.display = 'block';
                 loginFormContainer.style.display = 'none';
             }
@@ -705,151 +706,25 @@
                         }
                     } catch (error) {
                         console.error('登入請求失敗:', error);
-                        loginFormErrorMessage.textContent = `登入失敗: ${error.message}`;
+                        loginFormErrorMessage.textContent = '登入失敗，請稍後再試';
                         loginFormErrorMessage.style.display = 'block';
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = '登入';
-                    }
-                });
-            }
-
-            // 顯示註冊表單
-            if (showRegisterModalBtn) {
-                showRegisterModalBtn.addEventListener('click', () => {
-                    registerForm.reset();
-                    registerFormErrorMessage.style.display = 'none';
-                    registerFormContainer.classList.add('show');
-                    registerUsernameInput.focus();
-                });
-            }
-
-            // 取消註冊
-            if (cancelRegisterBtn) {
-                cancelRegisterBtn.addEventListener('click', () => {
-                    registerFormContainer.classList.remove('show');
-                });
-            }
-
-            // 顯示/隱藏 忘記密碼 Modal
-            if (forgotPasswordBtn) {
-                forgotPasswordBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    forgotPasswordModal.style.display = 'flex';
-                });
-            }
-            if (closeForgotPasswordModal) {
-                closeForgotPasswordModal.addEventListener('click', () => {
-                    forgotPasswordModal.style.display = 'none';
-                    forgotPasswordMessage.style.display = 'none';
-                    forgotPasswordForm.reset();
-                });
-            }
-
-            // 處理忘記密碼表單提交
-            if (forgotPasswordForm) {
-                forgotPasswordForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const email = forgotEmailInput.value.trim();
-                    const submitButton = forgotPasswordForm.querySelector('button[type="submit"]');
-
-                    forgotPasswordMessage.style.display = 'none';
-
-                    if (!email) {
-                        forgotPasswordMessage.textContent = '請輸入電子郵件。';
-                        forgotPasswordMessage.className = 'error-message';
-                        forgotPasswordMessage.style.display = 'block';
-                        return;
-                    }
-
-                    submitButton.disabled = true;
-                    submitButton.textContent = '處理中...';
-
-                    try {
-                        const response = await fetch('/api/box/users/forgot-password', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: email })
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok && data.success) {
-                            forgotPasswordMessage.textContent = data.message;
-                            // 使用一個不同的 class 來顯示成功訊息
-                            forgotPasswordMessage.className = 'success-message'; 
-                            forgotPasswordMessage.style.backgroundColor = '#d4edda';
-                            forgotPasswordMessage.style.color = '#155724';
-                            forgotPasswordMessage.style.padding = '0.75rem 1rem';
-                            forgotPasswordMessage.style.borderRadius = '8px';
-                            forgotPasswordMessage.style.display = 'block';
-                            forgotEmailInput.disabled = true;
-                            submitButton.textContent = '請求已送出';
-
-                        } else {
-                            forgotPasswordMessage.textContent = data.error || '請求失敗，請重試。';
-                            forgotPasswordMessage.className = 'error-message';
-                            forgotPasswordMessage.style.display = 'block';
-                            submitButton.disabled = false;
-                            submitButton.textContent = '送出請求';
-                        }
-                    } catch (error) {
-                        console.error('忘記密碼請求失敗:', error);
-                        forgotPasswordMessage.textContent = `請求失敗: ${error.message}`;
-                        forgotPasswordMessage.className = 'error-message';
-                        forgotPasswordMessage.style.display = 'block';
-                        submitButton.disabled = false;
-                        submitButton.textContent = '送出請求';
                     }
                 });
             }
 
             // 處理註冊表單提交
             if (registerForm) {
-                // 添加頭像預覽功能
-                const profileImageInput = document.getElementById('profileImage');
-                const profileImagePreview = document.getElementById('profileImagePreview');
-
-                if (profileImageInput) {
-                    profileImageInput.addEventListener('change', function(e) {
-                        if (e.target.files && e.target.files[0]) {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                profileImagePreview.style.display = 'block';
-                                profileImagePreview.querySelector('img').src = e.target.result;
-                            }
-                            reader.readAsDataURL(e.target.files[0]);
-                        } else {
-                            profileImagePreview.style.display = 'none';
-                        }
-                    });
-                }
-
                 registerForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const username = registerUsernameInput.value.trim();
-                    const email = registerEmailInput.value.trim();
+                    const email = registerEmailInput.value;
                     const password = registerPasswordInput.value;
                     const confirmPassword = registerConfirmPasswordInput.value;
-                    const profileImage = document.getElementById('profileImage').files[0];
 
                     registerFormErrorMessage.style.display = 'none';
 
-                    // 表單驗證
                     if (!username || !email || !password || !confirmPassword) {
-                        registerFormErrorMessage.textContent = '所有欄位都必須填寫';
-                        registerFormErrorMessage.style.display = 'block';
-                        return;
-                    }
-
-                    if (username.length < 3) {
-                        registerFormErrorMessage.textContent = '用戶名稱至少需要3個字元';
-                        registerFormErrorMessage.style.display = 'block';
-                        return;
-                    }
-
-                    if (password.length < 6) {
-                        registerFormErrorMessage.textContent = '密碼至少需要6個字元';
+                        registerFormErrorMessage.textContent = '請填寫所有必填欄位';
                         registerFormErrorMessage.style.display = 'block';
                         return;
                     }
@@ -865,44 +740,74 @@
                     submitButton.textContent = '註冊中...';
 
                     try {
-                        // 使用 FormData 來處理包含文件的表單數據
-                        const formData = new FormData();
-                        formData.append('username', username);
-                        formData.append('email', email);
-                        formData.append('password', password);
-                        formData.append('confirmPassword', confirmPassword);
-                        if (profileImage) {
-                            formData.append('profileImage', profileImage);
-                        }
-
                         const response = await fetch('/api/box/users/register', {
                             method: 'POST',
-                            body: formData // 不要設置 Content-Type，讓瀏覽器自動設置正確的 multipart/form-data
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, email, password })
                         });
 
                         const data = await response.json();
 
                         if (response.ok && data.success) {
-                            alert('註冊成功！您現在可以使用新帳號登入。');
-                            registerFormContainer.classList.remove('show');
-                            loginUsernameInput.value = username;
-                            loginPasswordInput.focus();
-
+                            localStorage.setItem(`boxUserToken_${data.user.userId}`, data.token);
+                            localStorage.setItem('boxCurrentUserId', data.user.userId);
+                            localStorage.setItem('boxCurrentUsername', data.user.username);
+                            localStorage.setItem('boxCurrentUserAvatar', data.user?.profileImageUrl || '/images/a01girlmove.gif');
+                            window.location.href = `box-my.html?userId=${data.user.userId}`;
                         } else {
-                            registerFormErrorMessage.textContent = data.error || '註冊失敗，請重試';
+                            registerFormErrorMessage.textContent = data.error || '註冊失敗，請稍後再試';
                             registerFormErrorMessage.style.display = 'block';
                         }
                     } catch (error) {
                         console.error('註冊請求失敗:', error);
-                        registerFormErrorMessage.textContent = `註冊失敗: ${error.message}`;
+                        registerFormErrorMessage.textContent = '註冊失敗，請稍後再試';
                         registerFormErrorMessage.style.display = 'block';
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = '註冊';
+                    }
+                });
+            }
+
+            // 處理忘記密碼表單提交
+            if (forgotPasswordForm) {
+                forgotPasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = forgotEmailInput.value.trim();
+
+                    forgotPasswordMessage.style.display = 'none';
+
+                    if (!email) {
+                        forgotPasswordMessage.textContent = '請輸入您的註冊信箱';
+                        forgotPasswordMessage.style.display = 'block';
+                        return;
+                    }
+
+                    const submitButton = forgotPasswordForm.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = '送出請求中...';
+
+                    try {
+                        const response = await fetch('/api/box/users/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            forgotPasswordMessage.textContent = '密碼重設連結已發送到您的電子郵件';
+                            forgotPasswordMessage.style.display = 'block';
+                        } else {
+                            forgotPasswordMessage.textContent = data.error || '請求處理失敗，請稍後再試';
+                            forgotPasswordMessage.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('忘記密碼請求失敗:', error);
+                        forgotPasswordMessage.textContent = '請求處理失敗，請稍後再試';
+                        forgotPasswordMessage.style.display = 'block';
                     }
                 });
             }
         });
     </script>
 </body>
-</html> 
+</html>
