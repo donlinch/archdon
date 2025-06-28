@@ -292,7 +292,7 @@
 
     <main class="main-container">
         <div class="settings-container">
-            <h2>用戶設定</h2>
+            <h2>用戶設定 <span id="usernameDisplay" style="font-size: 0.8em; color: var(--text-secondary); font-weight: normal;"></span></h2>
             
             <!-- 頁籤導航 -->
             <div class="tabs-container">
@@ -385,6 +385,7 @@
             const logoutButton = document.getElementById('logoutButton');
             const returnToDashboardBtn = document.getElementById('returnToDashboardBtn');
             const loadingOverlay = document.getElementById('loading-overlay');
+            const usernameDisplay = document.getElementById('usernameDisplay');
 
             const changePasswordForm = document.getElementById('changePasswordForm');
             const changeEmailForm = document.getElementById('changeEmailForm');
@@ -525,6 +526,7 @@
                     const userData = await apiFetch('/api/box/users/me');
                     if (currentUsernameSpan) currentUsernameSpan.textContent = escapeHtml(userData.display_name || userData.username);
                     if (currentUserAvatarImg) currentUserAvatarImg.src = userData.user_profile_image_url || '/images/a01girlmove.gif';
+                    if (usernameDisplay) usernameDisplay.textContent = `(${escapeHtml(userData.username)})`;
                     
                     const newEmailInput = document.getElementById('newEmail');
                     if (newEmailInput) newEmailInput.value = userData.email || '';
