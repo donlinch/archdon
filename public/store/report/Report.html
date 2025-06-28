@@ -586,7 +586,7 @@
                 
                 // Add click event to navigate to user editor page
                 userStatus.addEventListener('click', () => {
-                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
                 });
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
@@ -671,7 +671,7 @@
                         alert('報告更新成功！');
                     } else {
                         // 新增成功
-                        generatedLinkInput.value = `${window.location.origin}/store/report/view.html?id=${data.id}`;
+                        generatedLinkInput.value = `${window.location.origin}/store/report/report-view.html?id=${data.id}`;
                         linkDisplayArea.style.display = 'block';
                     }
 
