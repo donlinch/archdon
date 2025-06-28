@@ -122,13 +122,20 @@ module.exports = function(dependencies) {
             }
 
 
-            const tokenPayload = { userId: newUser.user_id, username: newUser.username };
+            // --- JWT Token Generation ---
+            const tokenPayload = {
+                user_id: newUser.user_id, // Use 'user_id' for consistency
+                username: newUser.username,
+                // Add any other non-sensitive data you might need client-side
+            };
             const token = jwt.sign(tokenPayload, BOX_JWT_SECRET, { expiresIn: '7d' });
 
             res.status(201).json({
                 success: true, message: '註冊成功！', token: token,
-                user: { userId: newUser.user_id, username: newUser.username, email: newUser.email, profileImageUrl: newUser.user_profile_image_url }
+                user: { userId: newUser.user_id, username: newUser.username, email: newUser.email, profileImageUrl: newUser.user_profile_image_url, display_name: newUser.display_name, avatar_url: newUser.avatar_url }
             });
+
+            console.log(`[Box Register] User ${newUser.username} registered successfully with ID ${newUser.user_id}.`);
 
         } catch (err) {
             console.error('[API POST /box/users/register] Error:', err);
@@ -214,7 +221,11 @@ module.exports = function(dependencies) {
                 return res.status(401).json({ error: '用戶名或密碼錯誤。' });
             }
 
-            const tokenPayload = { userId: user.user_id, username: user.username };
+            const tokenPayload = {
+                user_id: user.user_id, // Use 'user_id' for consistency
+                username: user.username,
+                // Add any other non-sensitive data you might need client-side
+            };
             const token = jwt.sign(tokenPayload, BOX_JWT_SECRET, { expiresIn: '7d' });
 
             res.json({

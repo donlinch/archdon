@@ -93,8 +93,6 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
 };
 
 
-
-
 // --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 const authenticateBoxUser = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -107,14 +105,19 @@ const authenticateBoxUser = (req, res, next) => {
                 return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
             }
             
-            // CRITICAL CHECK: Ensure the decoded token has the user_id.
-            if (!decoded || typeof decoded.user_id === 'undefined') {
-                console.error('[Box Auth] Invalid token payload: user_id is missing.', decoded);
+            // CRITICAL CHECK: Ensure the decoded token has user_id or userId.
+            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
+                console.error('[Box Auth] Invalid token payload: user_id/userId is missing.', decoded);
                 return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
             }
 
+            // Normalize to user_id for consistency
+            if (decoded.userId && !decoded.user_id) {
+                decoded.user_id = decoded.userId;
+            }
+
             // Attach user info to the request object
-            req.boxUser = decoded; // decoded contains user_id, etc.
+            req.boxUser = decoded; // decoded now reliably contains user_id
             next();
         });
     } else {
@@ -123,8 +126,6 @@ const authenticateBoxUser = (req, res, next) => {
     }
 };
 // --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-
-
 
 
 
@@ -3119,8 +3120,12 @@ const optionalAuthenticateBoxUser = (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            // If no error AND token has user_id, attach user info
-            if (!err && decoded && typeof decoded.user_id !== 'undefined') {
+            // If no error AND token has user_id or userId, attach user info
+            if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
+                // Normalize to user_id for consistency
+                if (decoded.userId && !decoded.user_id) {
+                    decoded.user_id = decoded.userId;
+                }
                 req.boxUser = decoded;
             }
             // Always continue, as authentication is optional.
