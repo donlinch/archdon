@@ -263,7 +263,7 @@ module.exports = function(dependencies) {
     });
 
     router.get('/users/me', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id; // 修改：使用 user_id 而不是 userId
         try {
             const result = await pool.query('SELECT user_id, username, email, user_profile_image_url, display_name, created_at FROM BOX_Users WHERE user_id = $1', [userId]);
             if (result.rows.length === 0) { return res.status(404).json({ error: '找不到用戶信息。' });}
@@ -275,7 +275,7 @@ module.exports = function(dependencies) {
     });
 
     router.put('/users/me/password', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id; // 修改：使用 user_id 而不是 userId
         const { currentPassword, newPassword } = req.body;
         if (!currentPassword || !newPassword) return res.status(400).json({ error: '請提供當前密碼和新密碼。' });
         if (newPassword.length < 6) return res.status(400).json({ error: '新密碼長度至少需要6位。' });
@@ -295,7 +295,7 @@ module.exports = function(dependencies) {
     });
 
     router.put('/users/me/email', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id; // 修改：使用 user_id 而不是 userId
         const { email } = req.body;
 
         if (!email || email.trim() === '') {
@@ -332,7 +332,7 @@ module.exports = function(dependencies) {
     });
 
     router.put('/users/me/display-name', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id; // 修改：使用 user_id 而不是 userId
         const { display_name } = req.body;
 
         if (!display_name || display_name.trim() === '') {
@@ -353,7 +353,7 @@ module.exports = function(dependencies) {
     });
 
     router.put('/users/me/profile-image', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id; // 修改：使用 user_id 而不是 userId
         const { user_profile_image_url } = req.body;
         if (!user_profile_image_url || !user_profile_image_url.startsWith('/uploads/')) {
             return res.status(400).json({ error: '請提供有效的頭像圖片URL。' });
@@ -482,7 +482,7 @@ module.exports = function(dependencies) {
             success: true, 
             message: 'Token is valid.', 
             user: { // 可以選擇性地返回一些用戶信息
-                userId: req.boxUser.userId,
+                userId: req.boxUser.user_id,
                 username: req.boxUser.username 
             }
         });
@@ -507,7 +507,7 @@ module.exports = function(dependencies) {
 
         const imageBuffer = req.file.buffer;
         const originalFilename = req.file.originalname;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const fileType = req.body.fileType || 'box_organizer_image';
         let diskPathForCleanup;
 
@@ -650,7 +650,7 @@ module.exports = function(dependencies) {
     // --- 倉庫管理 (Warehouses) ---
  router.post('/my-warehouses', authenticateBoxUser, async (req, res) => {
         const { warehouse_name, warehouse_description } = req.body;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
 
         if (!warehouse_name || warehouse_name.trim() === '') {
             return res.status(400).json({ error: '倉庫名稱為必填項。' });
@@ -674,7 +674,7 @@ module.exports = function(dependencies) {
     });
     
   router.get('/my-warehouses', authenticateBoxUser, async (req, res) => {
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         try {
             const query = `
                 SELECT w.*, 
@@ -693,7 +693,7 @@ module.exports = function(dependencies) {
 
     router.get('/warehouses/:warehouseId', authenticateBoxUser, async (req, res) => {
         const { warehouseId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         try {
             const ownership = await checkWarehouseOwnership(warehouseId, userId);
             if (!ownership.found) return res.status(404).json({ error: '找不到指定的倉庫。' });
@@ -709,7 +709,7 @@ module.exports = function(dependencies) {
     
     router.put('/warehouses/:warehouseId', authenticateBoxUser, async (req, res) => {
         const { warehouseId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const { warehouse_name, warehouse_description } = req.body;
 
         if (!warehouse_name || warehouse_name.trim() === '') {
@@ -743,7 +743,7 @@ module.exports = function(dependencies) {
 
     router.delete('/warehouses/:warehouseId', authenticateBoxUser, async (req, res) => {
         const { warehouseId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         try {
             const ownership = await checkWarehouseOwnership(warehouseId, userId);
             if (!ownership.found || !ownership.owned) return res.status(ownership.found ? 403 : 404).json({ error: ownership.message });
@@ -765,7 +765,7 @@ module.exports = function(dependencies) {
  // POST /api/box/warehouses/:warehouseId/boxes
     router.post('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, res) => {
         const { warehouseId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const { box_number, box_name, cover_image_url, ai_box_keywords, manual_notes } = req.body;
 
         if (!box_number || box_number.trim() === '' || !box_name || box_name.trim() === '') {
@@ -805,7 +805,7 @@ module.exports = function(dependencies) {
 // GET /api/box/warehouses/:warehouseId/boxes
 router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, res) => {
     const { warehouseId } = req.params;
-    const userId = req.boxUser.userId;
+    const userId = req.boxUser.user_id;
     // 分頁參數
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10; // 每頁數量
@@ -844,7 +844,7 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
   // GET /api/box/warehouses/:warehouseId/boxes/:boxId - 獲取特定紙箱詳情 (包含物品列表)
   router.get('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
     const { warehouseId, boxId } = req.params;
-    const userId = req.boxUser.userId; // 從已認證的 Token 中獲取用戶 ID
+    const userId = req.boxUser.user_id; // 從已認證的 Token 中獲取用戶 ID
 
     // 驗證輸入的 ID 是否為有效數字
     const numWarehouseId = parseInt(warehouseId);
@@ -909,7 +909,7 @@ router.get('/warehouses/:warehouseId/boxes', authenticateBoxUser, async (req, re
 
 router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
     const { warehouseId: originalWarehouseIdParam, boxId } = req.params; // 原始倉庫ID來自URL參數
-    const userId = req.boxUser.userId;
+    const userId = req.boxUser.user_id;
     const {
         box_number,
         box_name,
@@ -1034,7 +1034,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
     router.delete('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         try {
             const warehouseOwnership = await checkWarehouseOwnership(warehouseId, userId);
             if (!warehouseOwnership.found || !warehouseOwnership.owned) return res.status(warehouseOwnership.found ? 403 : 404).json({ error: warehouseOwnership.message });
@@ -1056,7 +1056,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
     // POST /api/box/warehouses/:warehouseId/boxes/:boxId/items
     router.post('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const { item_name, item_image_url, ai_item_keywords, item_description, quantity } = req.body;
 
         // 輸入驗證
@@ -1106,7 +1106,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
     router.get('/warehouses/:warehouseId/boxes/:boxId/items', authenticateBoxUser, async (req, res) => {
         const { warehouseId, boxId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
     
         const numWarehouseId = parseInt(warehouseId);
         const numBoxId = parseInt(boxId);
@@ -1155,11 +1155,11 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
     router.put('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
         // 日誌點 1: 請求入口
-        console.log(`[API PUT /items/:itemId] Request received for warehouseId: ${req.params.warehouseId}, itemId: ${req.params.itemId}, UserID: ${req.boxUser.userId}`);
+        console.log(`[API PUT /items/:itemId] Request received for warehouseId: ${req.params.warehouseId}, itemId: ${req.params.itemId}, UserID: ${req.boxUser.user_id}`);
         console.log('[API PUT /items/:itemId] Request body:', JSON.stringify(req.body, null, 2));
 
         const { warehouseId, itemId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const { item_name, item_image_url, ai_item_keywords, item_description, quantity, box_id } = req.body; // box_id for moving item
 
         if (!item_name || item_name.trim() === '') {
@@ -1239,7 +1239,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
     router.delete('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
         const { warehouseId, itemId } = req.params; // warehouseId for permission check context
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         try {
             const itemOwnership = await checkItemOwnership(itemId, userId);
             if (!itemOwnership.found || !itemOwnership.owned) return res.status(itemOwnership.found ? 403 : 404).json({ error: itemOwnership.message });
@@ -1266,7 +1266,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
     // --- 搜尋 API ---
     router.get('/warehouses/:warehouseId/search-items', authenticateBoxUser, async (req, res) => {
         const { warehouseId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
         const searchTerm = req.query.q?.trim() || '';
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -1361,7 +1361,7 @@ router.put('/warehouses/:warehouseId/boxes/:boxId', authenticateBoxUser, async (
 
 // GET /api/box/my-warehouses/search-all-items - 搜尋當前用戶所有倉庫的物品和紙箱
 router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, res) => {
-    const userId = req.boxUser.userId;
+    const userId = req.boxUser.user_id;
     const searchTerm = req.query.q?.trim() || '';
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10; // 可以調整預設值
@@ -1471,13 +1471,13 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
 
     // (測試用)
     router.get('/test-auth', authenticateBoxUser, (req, res) => {
-        res.json({ message: `你好, ${req.boxUser.username} (ID: ${req.boxUser.userId})! 你的Token有效。` });
+        res.json({ message: `你好, ${req.boxUser.username} (ID: ${req.boxUser.user_id})! 你的Token有效。` });
     });
 
     // GET /api/box/warehouses/:warehouseId/items/:itemId - 獲取特定物品詳情
     router.get('/warehouses/:warehouseId/items/:itemId', authenticateBoxUser, async (req, res) => {
         const { warehouseId, itemId } = req.params;
-        const userId = req.boxUser.userId;
+        const userId = req.boxUser.user_id;
 
         const numWarehouseId = parseInt(warehouseId);
         const numItemId = parseInt(itemId);

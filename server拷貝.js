@@ -1,5 +1,3 @@
-// --- START OF FILE server.js ---
- 
 // server.js
 require('dotenv').config();
 const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
@@ -14,15 +12,22 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session); 
 const multer = require('multer');
 const { ImageAnnotatorClient } = require('@google-cloud/vision');
+// 引入 Google Cloud Translation 客戶端庫
+const { TranslationServiceClient } = require('@google-cloud/translate');
 const fs = require('fs');
 const sharp = require('sharp')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
 const createReportRateLimiter = require('./report-ip-limiter');
+const bcrypt = require('bcryptjs'); // 用於密碼哈希
+const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
 
+const adminRouter = express.Router();
 const app = express();
 const PORT = process.env.PORT || 3000;
+const unboxingAiRouter = express.Router();
 
+const boxRoutes = require('./boxRoutes');
 
 
 if (process.env.NODE_ENV === 'production') {
@@ -69,6 +74,10 @@ app.use(session({
 }));
 
 
+ 
+
+
+
 
 // --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
 const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
@@ -82,6 +91,41 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
         return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
     }
 };
+
+
+
+
+
+
+// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+const authenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7, authHeader.length); // "Bearer " 後面的部分
+        jwt.verify(token, BOX_JWT_SECRET, (err, decoded) => {
+            if (err) {
+                console.warn('[Box Auth] Token 驗證失敗:', err.message);
+                return res.status(403).json({ error: '禁止訪問：Token 無效或已過期。' });
+            }
+            // 將解碼後的用戶信息附加到請求對象，方便後續路由使用
+            req.boxUser = decoded; // decoded 通常包含 user_id 和 username
+             next();
+        });
+    } else {
+     
+        console.warn('[Box Auth] 未提供 Authorization 標頭或格式不正確。');
+        res.status(401).json({ error: '未授權：請提供有效的Token。' });
+    }
+};
+// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+
+
+
+
+
+
+
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     const adminUsername = process.env.ADMIN_LOGIN;
@@ -135,6 +179,42 @@ app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/
         res.json({ success: true, message: '已登出 (無活動 session)。' });
     }
 });
+
+
+// GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
+app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                prr.id, prr.user_id, u.username, u.email, 
+                prr.reset_token, prr.token_expires_at, prr.created_at
+            FROM password_reset_requests prr
+            JOIN BOX_Users u ON prr.user_id = u.user_id
+            WHERE prr.status = 'pending'
+            ORDER BY prr.created_at ASC;
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending] Error:', err);
+        res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
+    }
+});
+
+// GET /api/admin/password-reset-requests/pending-count - 獲取待處理請求數量
+app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
+        const count = parseInt(result.rows[0].count, 10);
+        res.json({ count });
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending-count] Error:', err);
+        res.status(500).json({ error: '無法獲取請求數量' });
+    }
+});
+
+
+
 // Example of a protected admin route
 app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
     res.send(`
@@ -162,27 +242,6 @@ app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ �
 
 
 
-
-// 密碼驗證中介軟體
-const verifyAdminPassword = (req, res, next) => {
-    if (!ADMIN_PASSWORD) { // 如果未設定管理員密碼，則跳過驗證 (不安全，僅供開發)
-        console.warn("警告：ADMIN_PASSWORD 未設定，跳過標籤管理 API 的密碼驗證。");
-        return next();
-    }
-
-    const password = req.headers['x-admin-password'] || req.body.adminPassword;
-
-    if (!password) {
-        return res.status(401).json({ error: '未提供管理員密碼。' });
-    }
-    if (password !== ADMIN_PASSWORD) {
-        return res.status(403).json({ error: '管理員密碼錯誤。' });
-    }
-    next();
-};
-
- 
-const unboxingAiRouter = express.Router();
 
 // --- Multer Configuration for Product Images (used by adminRouter) ---
 const productStorage = multer.diskStorage({
@@ -241,8 +300,10 @@ const sessionProtectedAdminPages = [
     '/unboxing.html',
     '/unboxing-ai-admin.html',
     '/guestbook-admin.html',
+    '/advertisement.html',
+    '/product-views.html',
     '/admin-identities.html',
-   
+    '/box-admin.html',  // 添加倉庫管理員頁面
 
     // 把其他需要 session 保護的 HTML 檔案路徑加到這裡
     // 例如: '/inventory-admin.html', (如果它需要 session 保護而不是 basic auth)
@@ -296,31 +357,6 @@ if (GEMINI_API_KEY) {
 
 // --- START OF Cloud Vision AI Integration ---
 let visionClient;
-
-
-
-
-// --- 臨時調試程式碼 START ---
-const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-console.log(`[Cloud Vision AI Debug] GOOGLE_APPLICATION_CREDENTIALS path from env: ${credentialsPath}`);
-if (credentialsPath) {
-    try {
-        const credentialsFileContent = fs.readFileSync(credentialsPath, 'utf8');
-        console.log("[Cloud Vision AI Debug] Successfully read credentials file content.");
-        try {
-            const parsedCredentials = JSON.parse(credentialsFileContent);
-            console.log("[Cloud Vision AI Debug] Successfully parsed JSON credentials. Project ID:", parsedCredentials.project_id);
-        } catch (parseError) {
-            console.error("[Cloud Vision AI Debug] Failed to parse JSON credentials file:", parseError.message);
-        }
-    } catch (readError) {
-        console.error(`[Cloud Vision AI Debug] Failed to read credentials file at ${credentialsPath}:`, readError.message);
-    }
-} else {
-    console.warn("[Cloud Vision AI Debug] GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.");
-}
-// --- 臨時調試程式碼 END ---
-
 try {
 
 
@@ -335,6 +371,68 @@ try {
     console.error("[Cloud Vision AI] Image analysis features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup in Render Environment and Secret Files.");
     visionClient = null;
 }
+
+// --- START OF Cloud Translation AI Integration ---
+let translationClient;
+try {
+    // Translation API 服務的初始化通常不需要額外配置，除非您需要指定專案ID等
+    // GOOGLE_APPLICATION_CREDENTIALS 環境變數會自動被客戶端庫偵測到
+    translationClient = new TranslationServiceClient();
+    console.log("[Cloud Translation AI] Client initialized successfully.");
+} catch (error) {
+    console.error("[Cloud Translation AI] Failed to initialize TranslationServiceClient. Error:", error.message);
+    console.error("[Cloud Translation AI] Translation features will be disabled. Check your GOOGLE_APPLICATION_CREDENTIALS setup.");
+    translationClient = null;
+}
+// --- END OF Cloud Translation AI Integration ---
+
+
+
+
+
+
+
+
+
+// --- Get Google Cloud Project ID from Credentials --- 
+let googleProjectId = null;
+const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+if (credentialsPath) {
+    try {
+        const credentialsFileContent = require('fs').readFileSync(credentialsPath, 'utf8'); // 注意：这里是同步读取，对于 server.js 启动时通常可以接受
+        const parsedCredentials = JSON.parse(credentialsFileContent);
+        googleProjectId = parsedCredentials.project_id;
+        console.log("[Cloud AI] Successfully obtained Google Cloud Project ID from credentials:", googleProjectId); // 打印出来确认
+    } catch (error) {
+        console.error("[Cloud AI] Failed to get Google Cloud Project ID from credentials file:", error.message);
+    }
+}
+
+const BOX_JWT_SECRET = process.env.BOX_JWT_SECRET;
+if (!BOX_JWT_SECRET) {
+    console.error("嚴重錯誤: BOX_JWT_SECRET 環境變數未設定！紙箱系統認證將無法工作。");
+    // process.exit(1); // 或者其他錯誤處理
+}
+
+
+const dependenciesForBoxRoutes = {
+    pool,
+    visionClient,
+    translationClient,
+    BOX_JWT_SECRET,
+    uploadDir: '/data/uploads',
+    authenticateBoxUser,
+    isAdminAuthenticated,
+    googleProjectId // <--- 确保这里真的把获取到的值传进去了
+};
+
+app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
+
+
+
+ 
+
+
 // --- END OF Cloud Vision AI Integration ---
 
 
@@ -688,10 +786,6 @@ app.use(async (req, res, next) => {
         '/game/text-game.html',
         '/game/same-game.html', 
         '/rich/index.html', 
-        
-
-
-
         '/games.html'
     ];
 
@@ -700,38 +794,140 @@ app.use(async (req, res, next) => {
     if (shouldLog) {
         const pagePath = req.path;
          try {
-            // --- ↓↓↓ 關鍵修改在這裡 ↓↓↓ ---
+            // 記錄基本頁面訪問
             const sql = `
                 INSERT INTO page_views (page, view_date, view_count)
                 VALUES ($1, CURRENT_DATE, 1)
                 ON CONFLICT (page, view_date) DO UPDATE SET
                     view_count = page_views.view_count + 1;
             `;
-            // 如果你的 page_views 表有 last_updated_at 欄位，並且你想更新它，可以使用下面這個版本：
-            /*
-            const sql = `
-                INSERT INTO page_views (page, view_date, view_count, last_updated_at)
-                VALUES ($1, CURRENT_DATE, 1, NOW())
-                ON CONFLICT (page, view_date) DO UPDATE SET
-                    view_count = page_views.view_count + 1,
-                    last_updated_at = NOW();
-            `;
-            */
-            // --- ↑↑↑ 關鍵修改在這裡 ↑↑↑ ---
-
             const params = [pagePath];
             await pool.query(sql, params);
-         } catch (err) {
-             if (err.code === '23505' || (err.message && err.message.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'))) {
-             } else {
-             }
+
+            // --- 記錄來源資訊 ---
+            const referer = req.get('Referer') || '';
+            const userAgent = req.get('User-Agent') || '';
+            
+            // 判斷來源類型
+            let sourceType = 'direct';
+            let sourceName = '';
+            let sourceUrl = referer;
+
+            if (referer) {
+                try {
+                    const refererUrl = new URL(referer);
+                    
+                    // 搜尋引擎檢測
+                    if (refererUrl.hostname.includes('google.') || 
+                        refererUrl.hostname.includes('bing.') || 
+                        refererUrl.hostname.includes('yahoo.') ||
+                        refererUrl.hostname.includes('baidu.')) {
+                        sourceType = 'search_engine';
+                        sourceName = refererUrl.hostname.split('.')[1];
+                    }
+                    // 社交媒體檢測
+                    else if (refererUrl.hostname.includes('facebook.') || 
+                            refererUrl.hostname.includes('instagram.') || 
+                            refererUrl.hostname.includes('twitter.') || 
+                            refererUrl.hostname.includes('linkedin.') ||
+                            refererUrl.hostname.includes('line.me')) {
+                        sourceType = 'social';
+                        sourceName = refererUrl.hostname.split('.')[0];
+                    }
+                    // 其他外部連結
+                    else if (!refererUrl.hostname.includes(req.hostname)) {
+                        sourceType = 'referral';
+                        sourceName = refererUrl.hostname;
+                    } else {
+                        sourceType = 'internal';
+                        sourceName = 'internal';
+                    }
+                } catch (urlError) {
+                    console.warn('Invalid referer URL:', referer);
+                    sourceType = 'other';
+                    sourceName = 'invalid_url';
+                }
+            }
+            
+            // 為會話創建ID（如果不存在）
+            if (!req.session.visitor_id) {
+                req.session.visitor_id = uuidv4(); // 需要引入 uuid 包
+                req.session.page_views = [];
+            }
+            
+            const visitorId = req.session.visitor_id;
+            
+            // 記錄此訪客瀏覽的頁面
+            if (!req.session.page_views.includes(pagePath)) {
+                req.session.page_views.push(pagePath);
+            }
+            
+            // 更新 is_bounce 狀態
+            const isBounce = req.session.page_views.length <= 1;
+            
+            // 將來源資訊寫入資料庫
+            const sourceSql = `
+                INSERT INTO source_page_views (page, view_date, source_type, source_name, source_url, view_count, is_bounce)
+                VALUES ($1, CURRENT_DATE, $2, $3, $4, 1, $5)
+                ON CONFLICT (page, view_date, source_type, source_name) DO UPDATE SET
+                    view_count = source_page_views.view_count + 1,
+                    is_bounce = $5;
+            `;
+            await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl, isBounce]);
+
+        } catch (err) {
+            console.error('記錄頁面訪問或來源數據時出錯:', err);
+            // 但不中斷用戶體驗，繼續處理請求
         }
     }
+    
     next();
 });
 
+// 記錄轉換事件
+app.post('/api/track/conversion', async (req, res) => {
+    try {
+        const { conversionType, sourcePath } = req.body;
+        
+        if (!req.session.visitor_id) {
+            return res.status(400).json({ error: '無法識別訪客' });
+        }
+        
+        // 更新訪客來源的轉換狀態
+        const updateQuery = `
+            UPDATE source_page_views 
+            SET has_conversion = TRUE 
+            WHERE source_type IN (
+                SELECT source_type FROM source_page_views 
+                WHERE page = $1
+                ORDER BY view_date DESC
+                LIMIT 1
+            )
+            AND view_date >= CURRENT_DATE - INTERVAL '30 days';
+        `;
+        
+        await pool.query(updateQuery, [sourcePath || '/']);
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('記錄轉換事件失敗:', err);
+        res.status(500).json({ error: '伺服器錯誤' });
+    }
+});
+
+
  
 app.use(express.static(path.join(__dirname, 'public')));
+
+
+// --- 第二個跳出率更新中間件已被移除，因為其功能已包含在上面的「記錄 Page View 中間件」中 ---
+
+// --- 重複的 /api/track/conversion 路由已被移除 ---
+
+
+
+
+
+
 
 
 
@@ -817,47 +1013,10 @@ app.get('/api/admin/nav-links', async (req, res) => {
         res.status(500).json({ error: '無法獲取導覽連結' });
     }
 });
-
-// POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', verifyAdminPassword, async (req, res) => {
-    const { name, url, parent_id, display_order } = req.body;
-
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    // parent_id 可以是 null 或數字
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-    if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-    }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     // URL 可以是空字串或 null，代表是父層級選單
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-
-    try {
-        const { rows } = await pool.query(
-            `INSERT INTO admin_nav_links (name, url, parent_id, display_order)
-             VALUES ($1, $2, $3, $4)
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder]
-        );
-        res.status(201).json(rows[0]);
-    } catch (err) {
-        console.error('[API POST /api/admin/nav-links] 新增導覽連結失敗:', err.stack || err);
-        // 檢查外鍵約束錯誤
-        if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-        }
-        res.status(500).json({ error: '新增導覽連結時發生錯誤' });
-    }
-});
+ 
 
 // PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const { name, url, parent_id, display_order } = req.body;
     const linkId = parseInt(id, 10);
@@ -907,7 +1066,7 @@ app.put('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/admin/nav-links/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
      const linkId = parseInt(id, 10);
 
@@ -930,7 +1089,7 @@ app.delete('/api/admin/nav-links/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 修正後的排序 API 端點 - 正確處理傳入的數據
-app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) => {
+app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) => {
     try {
         const updates = req.body;
         
@@ -1048,24 +1207,10 @@ app.put('/api/admin/nav-links/reorder', verifyAdminPassword, async (req, res) =>
     }
 });
 
-// 其他 API 保持不變
-// GET /api/admin/nav-links
-app.get('/api/admin/nav-links', async (req, res) => {
-    try {
-        const { rows } = await pool.query(
-            `SELECT id, name, url, parent_id, display_order
-             FROM admin_nav_links
-             ORDER BY display_order ASC, name ASC`
-        );
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error('[API GET /api/admin/nav-links] 獲取導覽連結失敗:', err.stack || err);
-        res.status(500).json({ error: '無法獲取導覽連結' });
-    }
-});
+ 
 
 // POST /api/admin/nav-links - 新增導覽連結
-app.post('/api/admin/nav-links', async (req, res) => {
+app.post('/api/admin/nav-links', isAdminAuthenticated, async (req, res) => {
     const { name, url, parent_id, display_order } = req.body;
 
     if (!name || name.trim() === '') {
@@ -1102,78 +1247,8 @@ app.post('/api/admin/nav-links', async (req, res) => {
     }
 });
 
-// PUT /api/admin/nav-links/:id - 更新導覽連結
-app.put('/api/admin/nav-links/:id', async (req, res) => {
-    const { id } = req.params;
-    const { name, url, parent_id, display_order } = req.body;
-    const linkId = parseInt(id, 10);
 
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '連結名稱為必填項' });
-    }
-    const parentId = parent_id ? parseInt(parent_id, 10) : null;
-     if (parent_id && isNaN(parentId)) {
-         return res.status(400).json({ error: '無效的父層級 ID' });
-     }
-     // 防止將連結設置為自己的父級
-     if (parentId === linkId) {
-         return res.status(400).json({ error: '不能將連結設置為自己的父層級' });
-     }
-    const displayOrder = display_order ? parseInt(display_order, 10) : 0;
-     if (isNaN(displayOrder)) {
-         return res.status(400).json({ error: '無效的顯示順序' });
-     }
-     const linkUrl = url && url.trim() !== '' ? url.trim() : null;
-
-    try {
-        // 可選：檢查 parent_id 是否會造成循環引用 (更複雜的檢查)
-
-        const { rows } = await pool.query(
-            `UPDATE admin_nav_links
-             SET name = $1, url = $2, parent_id = $3, display_order = $4
-             WHERE id = $5
-             RETURNING *`,
-            [name.trim(), linkUrl, parentId, displayOrder, linkId]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ error: '找不到要更新的導覽連結' });
-        }
-        res.status(200).json(rows[0]);
-    } catch (err) {
-        console.error(`[API PUT /api/admin/nav-links/${id}] 更新導覽連結失敗:`, err.stack || err);
-         if (err.code === '23503') {
-             return res.status(400).json({ error: '指定的父層級 ID 不存在' });
-         }
-        res.status(500).json({ error: '更新導覽連結時發生錯誤' });
-    }
-});
-
-// DELETE /api/admin/nav-links/:id - 刪除導覽連結
-app.delete('/api/admin/nav-links/:id', async (req, res) => {
-    const { id } = req.params;
-     const linkId = parseInt(id, 10);
-
-     if (isNaN(linkId)) {
-        return res.status(400).json({ error: '無效的連結 ID' });
-    }
-
-    try {
-        // 由於設置了 ON DELETE CASCADE，刪除父連結會自動刪除子連結
-        const result = await pool.query('DELETE FROM admin_nav_links WHERE id = $1', [linkId]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要刪除的導覽連結' });
-        }
-        res.status(204).send(); // No Content, 表示成功刪除
-    } catch (err) {
-        console.error(`[API DELETE /api/admin/nav-links/${id}] 刪除導覽連結失敗:`, err.stack || err);
-        res.status(500).json({ error: '刪除導覽連結時發生錯誤' });
-    }
-});
+ 
 
 // --- 黑名單管理 API Router ---
 const blacklistRouter = express.Router();
@@ -1352,9 +1427,106 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 
+app.get('/api/admin/products', async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 設定到今天開始
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1); // 設定到明天開始
 
+        const sqlQuery = `
+            WITH product_daily_clicks AS (
+                SELECT
+                    product_id,
+                    COUNT(*) AS calculated_today_clicks
+                FROM product_click_events
+                WHERE clicked_at >= $1 AND clicked_at < $2
+                GROUP BY product_id
+            )
+            SELECT
+                p.*, -- 選擇 products 表的所有欄位
+                p.click_count AS historical_click_count, -- 將 products.click_count 明確命名為歷史點擊
+                (SELECT array_agg(t.tag_name) FROM tags t
+                 JOIN product_tags pt ON t.tag_id = pt.tag_id
+                 WHERE pt.product_id = p.id) as tags,
+                COALESCE(pdc.calculated_today_clicks, 0) AS today_click_increment -- 今日新增的點擊
+            FROM products p
+            LEFT JOIN product_daily_clicks pdc ON p.id = pdc.product_id
+            ORDER BY p.id DESC;
+        `;
+        
+        const result = await pool.query(sqlQuery, [today.toISOString(), tomorrow.toISOString()]);
 
+        // 現在 API 會返回包含 historical_click_count 和 today_click_increment 的數據
+        // 前端將負責組合顯示
+        const productsData = result.rows.map(product => {
+            return {
+                ...product, // 保留所有原始欄位
+                // historical_click_count 已經是 p.click_count 的值
+                // today_click_increment 已經是計算出的今日點擊
+                // 前端將使用這兩個欄位來組合顯示
+                // 如果需要一個 "總點擊數" 欄位 (歷史+今日) 也可以在這裡計算
+                // total_clicks_combined: (product.historical_click_count || 0) + (parseInt(product.today_click_increment, 10) || 0)
+            };
+        });
 
+        res.json(productsData);
+    } catch (err) {
+        console.error('Error fetching admin products with today clicks:', err.stack || err);
+        res.status(500).json({ error: '無法獲取商品列表', detail: err.message });
+    }
+});
+
+app.put('/api/admin/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, price, category, image_url, seven_eleven_url, expiration_type, start_date, end_date, tags } = req.body;
+        
+        // Update product
+        await pool.query(
+            'UPDATE products SET name = $1, description = $2, price = $3, category = $4, image_url = $5, seven_eleven_url = $6, expiration_type = $7, start_date = $8, end_date = $9, updated_at = NOW() WHERE id = $10',
+            [name, description, price, category, image_url, seven_eleven_url, expiration_type || 0, start_date, end_date, id]
+        );
+        
+        // Handle tags if provided
+        if (tags && Array.isArray(tags)) {
+            // Delete existing tag associations
+            await pool.query('DELETE FROM product_tags WHERE product_id = $1', [id]);
+            
+            // Add new tag associations if any
+            if (tags.length > 0) {
+                const tagValues = tags.map((tagId) => `(${id}, ${tagId})`).join(',');
+                await pool.query(`INSERT INTO product_tags (product_id, tag_id) VALUES ${tagValues}`);
+            }
+        }
+        
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('Error updating product:', err);
+        res.status(500).json({ error: '更新商品失敗' });
+    }
+});
+
+app.delete('/api/admin/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // First delete product tag associations
+        await pool.query('DELETE FROM product_tags WHERE product_id = $1', [id]);
+        
+        // Then delete the product
+        const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的商品' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error('Error deleting product:', err);
+        res.status(500).json({ error: '刪除商品失敗' });
+    }
+});
 
 // --- ★★★ 修改 wss.on('connection') ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
@@ -1466,13 +1638,6 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
    
 });
 
-
-
-
-
-
-
-
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息
  * @param {WebSocket} ws WebSocket 連接對象
@@ -1494,75 +1659,69 @@ async function handleSimpleWalkerMessage(ws, message) {
         const parsedMessage = JSON.parse(message);
         console.log(`[WS Simple Walker] Received message from ${playerId} in room ${roomId}:`, parsedMessage);
 
-
-
-// 處理模板應用請求 - 添加到 handleSimpleWalkerMessage 函數中 "// ← INSERT HERE" 位置
-if (parsedMessage.type === 'applyTemplate') {
-    const { templateId } = parsedMessage;
-    
-    if (!templateId) {
-      console.warn(`[WS Simple Walker] 收到無效的模板應用請求: ${JSON.stringify(parsedMessage)}`);
-      return;
-    }
-    
-    console.log(`[WS Simple Walker] 玩家 ${playerId} 請求應用模板 ${templateId} 到房間 ${roomId}`);
-    
-    try {
-      // 1. 從資料庫獲取模板詳情
-      const templateResult = await pool.query(
-        'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
-        [templateId]
-      );
-      
-      if (templateResult.rows.length === 0) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: '找不到指定的模板'
-        }));
-        return;
-      }
-      
-      const templateData = templateResult.rows[0];
-      
-      // 2. 更新房間狀態 - 添加模板 ID (可選，如果你想追蹤每個房間使用的模板)
-      const roomData = await dbClient.getRoom(roomId);
-      if (!roomData || !roomData.game_state) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: '無法更新房間：找不到房間狀態'
-        }));
-        return;
-      }
-      
-      // 將模板 ID 添加到房間狀態（假設 gameState 有個 templateId 屬性）
-      const gameState = roomData.game_state;
-      gameState.templateId = templateId;
-      
-      // 更新資料庫中的房間狀態
-      const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
-      
-      // 3. 廣播模板更新消息給房間內所有玩家
-      broadcastToSimpleWalkerRoom(roomId, {
-        type: 'templateUpdate',
-        templateId: templateId,
-        templateData: templateData
-      });
-     
-      console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
-    } catch (err) {
-      console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: '應用模板時發生錯誤'
-      }));
-    }
-    
-    return; // 處理完畢，結束函數
-  }
-
-
-
-
+        // 處理模板應用請求 - 添加到 handleSimpleWalkerMessage 函數中 "// ← INSERT HERE" 位置
+        if (parsedMessage.type === 'applyTemplate') {
+            const { templateId } = parsedMessage;
+            
+            if (!templateId) {
+              console.warn(`[WS Simple Walker] 收到無效的模板應用請求: ${JSON.stringify(parsedMessage)}`);
+              return;
+            }
+            
+            console.log(`[WS Simple Walker] 玩家 ${playerId} 請求應用模板 ${templateId} 到房間 ${roomId}`);
+            
+            try {
+              // 1. 從資料庫獲取模板詳情
+              const templateResult = await pool.query(
+                'SELECT template_id, template_name, description, style_data, cell_data FROM walk_map_templates WHERE template_id = $1',
+                [templateId]
+              );
+              
+              if (templateResult.rows.length === 0) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: '找不到指定的模板'
+                }));
+                return;
+              }
+              
+              const templateData = templateResult.rows[0];
+              
+              // 2. 更新房間狀態 - 添加模板 ID (可選，如果你想追蹤每個房間使用的模板)
+              const roomData = await dbClient.getRoom(roomId);
+              if (!roomData || !roomData.game_state) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  message: '無法更新房間：找不到房間狀態'
+                }));
+                return;
+              }
+              
+              // 將模板 ID 添加到房間狀態（假設 gameState 有個 templateId 屬性）
+              const gameState = roomData.game_state;
+              gameState.templateId = templateId;
+              
+              // 更新資料庫中的房間狀態
+              const updatedRoom = await dbClient.updateRoomState(roomId, gameState);
+              
+              // 3. 廣播模板更新消息給房間内所有玩家
+              broadcastToSimpleWalkerRoom(roomId, {
+                type: 'templateUpdate',
+                templateId: templateId,
+                templateData: templateData
+              });
+             
+              console.log(`[WS Simple Walker] 已將模板 ${templateId} 應用到房間 ${roomId}`);
+            } catch (err) {
+              console.error(`[WS Simple Walker] 應用模板 ${templateId} 到房間 ${roomId} 時出錯:`, err.stack || err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: '應用模板時發生錯誤'
+              }));
+            }
+            
+            return; // 處理完畢，結束函數
+          }
 
         // 根據消息類型進行不同處理
         if (parsedMessage.type === 'moveCommand' && parsedMessage.direction) {
@@ -1828,6 +1987,17 @@ function broadcastToSimpleWalkerRoom(roomId, message, senderWs = null) {
 // --- 指向 Render 的持久化磁碟 /data 下的 uploads 子目錄 ---
 const uploadDir = '/data/uploads'; // <-- 直接使用絕對路徑
 
+
+
+
+
+
+
+
+
+
+
+
 // 確保這個目錄存在 (如果不存在則創建)
 if (!fs.existsSync(uploadDir)) {
   try {
@@ -1847,8 +2017,19 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    // 檢查是否為 PNG 文件
+    const originalExt = path.extname(file.originalname).toLowerCase();
+    const isPNG = originalExt === '.png' || file.mimetype.toLowerCase() === 'image/png';
+    
+    // 如果是 PNG，保存為 JPG
+    const ext = isPNG ? '.jpg' : originalExt;
     const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e5) + ext;
+    
+    if (isPNG) {
+      // 如果是 PNG，修改 mimetype
+      file.mimetype = 'image/jpeg';
+    }
+    
     cb(null, uniqueName);
   }
 });
@@ -1880,145 +2061,17 @@ const publicSafeUpload = multer({
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
 });
 // --- END OF publicSafeUpload 定義 ---
+
+
+
+
+
+
 app.post('/api/upload', upload.single('image'), async (req, res) => {
-    try {
-        const file = req.file;
-        if (!file) {
-            return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "image")' });
-        }
-
-        let fileToProcess = { ...file }; // 複製檔案資訊
-        const originalFilePath = fileToProcess.path;
-        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
-        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-        let finalImageUrl = '/uploads/' + fileToProcess.filename;
-
-        // 只對 JPG/PNG 進行縮放
-        if (['.jpg', '.jpeg', '.png'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
-            try {
-                                console.log(`[API /api/upload] Reading metadata for: ${originalFilePath}`); // 新增日誌
-
-  
-                // --- START OF MODIFICATION for Orientation ---
-                let sharpInstance = sharp(originalFilePath);
-  const rotatedImageBuffer = await sharpInstance.rotate().toBuffer(); // 旋轉並獲取 buffer
-                sharpInstance = sharp(rotatedImageBuffer); // 用旋轉後的 buffer 重新初始化 sharp
- 
-
-                const metadata = await sharp(originalFilePath).metadata();
-                               console.log(`[API /api/upload] Metadata for ${fileToProcess.originalname}: width=${metadata.width}, height=${metadata.height}, format=${metadata.format}`); // 新增日誌
-
-                const originalWidth = metadata.width;
-                let targetWidth = originalWidth;
-                let needsResize = false;
-
-                if (originalWidth > 1500) {
-                    targetWidth = Math.round(originalWidth * 0.25); // 縮小到25%
-                    needsResize = true;
-                } else if (originalWidth > 800) {
-                    targetWidth = Math.round(originalWidth * 0.50); // 縮小到50%
-                    needsResize = true;
-                } else if (originalWidth > 500) {
-                    targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
-                    needsResize = true;
-                }
-                // 可以根據需求增加更多縮放級別或固定寬度
-                // 例如： const MAX_WIDTH = 800; if (originalWidth > MAX_WIDTH) { targetWidth = MAX_WIDTH; needsResize = true; }
 
 
 
 
-
-
-
-
-                if (needsResize) {
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                    const tempResizedPath = originalFilePath + '_guestbook_resized_temp' + lowerExt;
-                    
-                 // 使用已經是正確方向的 sharpInstance 進行縮放
-                    await sharpInstance 
-                        .resize({ width: targetWidth })
-                        .toFile(tempResizedPath); // 保存處理後的圖片 (已旋轉和縮放)
-                    
-                    console.log(`[API /api/upload] Image resized to temporary path: ${tempResizedPath}`);
-
- 
-                    // 刪除 multer 最初上傳的原始檔案
-                    if (fs.existsSync(originalFilePath)) {
-                        fs.unlinkSync(originalFilePath);
-                        console.log(`[API /api/upload] 已刪除原始 multer 檔案: ${originalFilePath}`);
-                    }
-
-                    // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
-                    fs.renameSync(tempResizedPath, originalFilePath);
-                    // fileToProcess.path 更新不是必要的，因為檔名沒變，URL路徑也沒變
-                    
-                    const newStats = fs.statSync(originalFilePath);
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} 已成功縮放並覆蓋原檔案，新大小: ${newStats.size} bytes`);
-                } else {
-
-
-                    console.log(`[API /api/upload] 圖片 ${fileToProcess.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
-
-
-
-
-                }
-            } catch (sharpError) {
-
- // <<<--- 這裡非常重要 ---<<<
-                console.error(`[API /api/upload] Sharp processing FAILED for ${fileToProcess.originalname}. Error Name: ${sharpError.name}, Message: ${sharpError.message}`);
-                console.error("[API /api/upload] Full Sharp Error Object:", sharpError); // 記錄完整的錯誤物件
-                console.error("[API /api/upload] Sharp Error Stack:", sharpError.stack); // 記錄堆疊追蹤
-                // --- >>> ---
-                try {
-                    if (fs.existsSync(originalFilePath)) {
-                        fs.unlinkSync(originalFilePath);
-                        console.warn(`[API /api/upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
-                    }
-                } catch (unlinkErr) {
-                    console.error(`[API /api/upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
-                }
-                return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
-            }
-        } else {
-            console.log(`[API /api/upload] 檔案 ${fileToProcess.originalname} (${lowerMimetype}) 不進行縮放。`);
-        }
-          console.log(`[API /api/upload] Successfully processed ${fileToProcess.originalname}. Responding with URL: ${finalImageUrl}`); // 新增日誌
-
-        res.json({ success: true, url: finalImageUrl }); // 修改這裡，確保回傳 'url'
-
-    } catch (err) {
-              console.error('[API /api/upload] Outer catch block error:', err); // 修改日誌
-
-      console.error('[API /api/upload] 上傳圖片錯誤:', err);
-      // 確保如果檔案已部分處理或存在，嘗試清理
-      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-          try {
-              fs.unlinkSync(req.file.path);
-              console.warn(`[API /api/upload] 因上傳過程錯誤，已清理檔案: ${req.file.path}`);
-          } catch (cleanupErr) {
-              console.error(`[API /api/upload] 清理錯誤檔案 ${req.file.path} 時再次出錯:`, cleanupErr);
-          }
-      }
-      res.status(500).json({ success: false, error: err.message || '伺服器錯誤' });
-    }
-  });
-
-
-
-
-
-// [app.use for voitRouter moved to an earlier position in the file]
-
-
-
-
-
-// --- 新的公開安全圖片上傳端點 ---
-app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
     // 'image' 是前端 input file 元素的 name 屬性
 
     if (!visionClient) { // 確保 Vision API 客戶端已初始化
@@ -2082,10 +2135,19 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
         const lowerMimetype = fileToProcess.mimetype.toLowerCase();
         const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-        let finalImageUrl = '/uploads/' + fileToProcess.filename; // 相對於 public 的路徑
-
+        
+        // 檢查是否為 PNG 格式
+        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+        
         // 自動旋轉（如果需要，基於之前的討論）
         let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
         const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
         sharpInstance = sharp(rotatedImageBuffer);
         
@@ -2093,29 +2155,37 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
 
         const originalWidth = metadata.width;
-        // ... (你的圖片尺寸限制檢查 MAX_DIMENSION, MAX_PIXELS - 如果需要的話) ...
-        // 如果尺寸超限，記得刪除 file.path 並返回錯誤
-
         let targetWidth = originalWidth;
         let needsResize = false;
         if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
         else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
         else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
 
+        let processedBuffer;
+        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
+        let finalImageUrl;
+
         if (needsResize) {
             console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-            const resizedBuffer = await sharpInstance.resize({ width: targetWidth }).toBuffer();
-            fs.writeFileSync(originalFilePath, resizedBuffer); // 用處理後的 buffer 覆蓋 multer 保存的檔案
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
             const newStats = fs.statSync(originalFilePath);
             console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
         } else {
-             // 如果不需要縮放，但進行了旋轉，也需要保存旋轉後的結果
-            fs.writeFileSync(originalFilePath, rotatedImageBuffer); // 用旋轉後的 buffer 覆蓋
-            console.log(`[API /upload-safe-image] Image ${file.originalname} saved after rotation (no resize needed).`);
+            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
+            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
+            // For JPGs only rotated, rotatedImageBuffer is the one to save.
+            // The key is that sharpInstance was updated if a conversion happened.
+            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
+            await fs.promises.writeFile(originalFilePath, bufferToSave);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
         }
         
+        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
         console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
-        res.json({ success: true, url: finalImageUrl }); // 和 /api/upload 一樣返回 'url'
+        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
 
     } catch (err) {
         console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
@@ -2138,6 +2208,180 @@ app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req,
         }
         return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
     }
+
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [app.use for voitRouter moved to an earlier position in the file]
+
+
+
+
+
+// --- 新的公開安全圖片上傳端點 ---
+app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    // 'image' 是前端 input file 元素的 name 屬性
+
+    if (!visionClient) { // 確保 Vision API 客戶端已初始化
+        console.error('[API /upload-safe-image] Vision API client not available.');
+        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
+    }
+
+    if (!req.file) {
+        // multer fileFilter 拒絕或沒有檔案上傳
+        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
+        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
+    }
+    
+    const file = req.file;
+    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
+                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
+
+    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+
+    try {
+        // --- 1. 安全搜尋偵測 ---
+        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
+        const [safeSearchResult] = await visionClient.annotateImage({
+            image: { content: imageBuffer },
+            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
+        });
+
+        const safeSearch = safeSearchResult.safeSearchAnnotation;
+        let isImageSafe = true;
+        let unsafeCategoriesDetected = [];
+
+        if (safeSearch) {
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('成人');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
+            }
+            // 你可以根據需要添加對 spoof, medical 的檢查
+        }
+
+        if (!isImageSafe) {
+            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
+            // 刪除已上傳的不安全圖片
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
+            }
+            return res.status(400).json({
+                success: false,
+                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
+            });
+        }
+        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
+
+        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
+        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
+        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
+        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
+        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
+        
+        // 檢查是否為 PNG 格式
+        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+        
+        // 自動旋轉（如果需要，基於之前的討論）
+        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
+        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
+        sharpInstance = sharp(rotatedImageBuffer);
+        
+        const metadata = await sharpInstance.metadata();
+        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
+
+        const originalWidth = metadata.width;
+        let targetWidth = originalWidth;
+        let needsResize = false;
+        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
+        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
+        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
+
+        let processedBuffer;
+        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
+        let finalImageUrl;
+
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
+        } else {
+            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
+            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
+            // For JPGs only rotated, rotatedImageBuffer is the one to save.
+            // The key is that sharpInstance was updated if a conversion happened.
+            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
+            await fs.promises.writeFile(originalFilePath, bufferToSave);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
+        }
+        
+        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
+        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
+        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
+
+    } catch (err) {
+        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
+        // 確保在錯誤時刪除已上傳的檔案
+        if (file && file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
+            }
+        }
+        // 使用你修改後的全局錯誤處理器，它會返回 JSON
+        // 但在這裡我們可以直接返回 JSON 錯誤
+        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
+            }
+            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
+        }
+        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
+    }
+
+
+
+
+
 });
 
 
@@ -3144,98 +3388,119 @@ app.use('/api/reports', reportTemplatesRouter);
 
 
 
-
-
-
 // POST /api/admin/files/upload - 上傳檔案
 app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, error: '沒有上傳檔案或欄位名稱不符 (應為 "file")' });
     }
     const file = req.file;
-    let fileToSave = { ...file }; // 複製一份檔案資訊，以便修改
-    const originalFilePath = fileToSave.path; // multer 儲存的原始檔案路徑
-
-    const fileUrlPath = '/uploads/' + fileToSave.filename;
+    let fileToSave = { ...file }; // 複製一份檔案資訊
+    const originalFilePath = fileToSave.path; // Multer 儲存的檔案路徑
+    const fileUrlPath = '/uploads/' + fileToSave.filename; // Multer 產生的 URL 路徑
 
     let fileType = 'other';
-    const lowerMimetype = fileToSave.mimetype.toLowerCase();
-    const lowerExt = path.extname(fileToSave.originalname).toLowerCase();
+    const originalFileExt = path.extname(fileToSave.originalname).toLowerCase(); // 獲取原始副檔名
+    // 注意：fileToSave.mimetype 可能已被 Multer 修改，所以原始副檔名更可靠
 
-    if (['.png', '.jpg', '.jpeg'].includes(lowerExt) || ['image/jpeg', 'image/png'].includes(lowerMimetype)) {
-        fileType = 'image'; // 明確標記為可處理的圖片
-        console.log(`檔案 ${fileToSave.originalname} 被識別為 JPEG/PNG，準備進行縮放檢查。`);
+    // 判斷是否為圖片 (PNG, JPG, JPEG)
+    if (['.png', '.jpg', '.jpeg'].includes(originalFileExt)) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} (${originalFileExt}) 被識別為圖片，準備處理。`);
         try {
-            const metadata = await sharp(originalFilePath).metadata();
-            const originalWidth = metadata.width;
-            let targetWidth = originalWidth;
+            // 1. 讀取 Multer 儲存的檔案到 Buffer
+            const imageBuffer = await fs.promises.readFile(originalFilePath);
+
+            // 2. 使用 Sharp 載入 Buffer
+            let sharpInstance = sharp(imageBuffer);
+
+            // 3. 定義 JPEG 輸出選項 (您可以根據需求調整品質)
+            const jpegOutputOptions = {
+                quality: 80, // 例如，設定為 80
+                chromaSubsampling: '4:2:0' // 可選的進一步壓縮
+            };
+
+            // 4. 強制轉換/重新壓縮
+            // 無論原始是 PNG 還是 JPG，都統一處理成指定品質的 JPG
+            // 這樣可以確保 Multer 偽裝的 JPG (實為PNG數據) 被正確轉換
+            console.log(`[Admin Upload] 準備將 ${fileToSave.originalname} 轉換/重新壓縮為 JPG (品質: ${jpegOutputOptions.quality})。`);
+            sharpInstance = sharpInstance.jpeg(jpegOutputOptions);
+
+            // 5. 進行旋轉 (修正方向)
+            sharpInstance = sharpInstance.rotate();
+
+            // 6. 獲取處理後 (已是JPG格式並旋轉後) 的 Buffer，以便獲取正確的元數據
+            const processedBufferBeforeResize = await sharpInstance.toBuffer();
+
+            // 7. 從這個 Buffer 獲取元數據
+            const metadata = await sharp(processedBufferBeforeResize).metadata();
+            const currentWidth = metadata.width;
+            let targetWidth = currentWidth;
             let needsResize = false;
 
-            if (originalWidth > 1500) {
-                targetWidth = Math.round(originalWidth * 0.25);
+            // 決定是否需要縮放
+            if (currentWidth > 1500) {
+                targetWidth = Math.round(currentWidth * 0.25);
                 needsResize = true;
-            } else if (originalWidth > 800) {
-                targetWidth = Math.round(originalWidth * 0.50);
+            } else if (currentWidth > 800) {
+                targetWidth = Math.round(currentWidth * 0.50);
                 needsResize = true;
-            } else if (originalWidth > 500) {
-                targetWidth = Math.round(originalWidth * 0.75); // 縮小到75%
+            } else if (currentWidth > 500) {
+                targetWidth = Math.round(currentWidth * 0.75);
                 needsResize = true;
             }
 
+            let finalBuffer;
             if (needsResize) {
-                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 需要縮放至 ${targetWidth}px`);
-                const tempResizedPath = originalFilePath + '_resized_temp' + lowerExt;
-                
-                await sharp(originalFilePath)
-                    .resize({ width: targetWidth })
-                    .toFile(tempResizedPath);
-                
-                console.log(`圖片已縮放至臨時路徑: ${tempResizedPath}`);
-
-                // 刪除 multer 最初上傳的原始檔案
-                if (fs.existsSync(originalFilePath)) {
-                    fs.unlinkSync(originalFilePath);
-                    console.log(`已刪除原始 multer 檔案: ${originalFilePath}`);
-                }
-
-                // 將縮放後的臨時檔案重命名為 multer 原本使用的檔案路徑
-                fs.renameSync(tempResizedPath, originalFilePath);
-                fileToSave.path = originalFilePath; // 更新 fileToSave 中的路徑
-                
-                // 更新檔案大小
-                const newStats = fs.statSync(fileToSave.path);
-                fileToSave.size = newStats.size;
-                console.log(`圖片 ${fileToSave.originalname} 已成功縮放並覆蓋原檔案，新路徑: ${fileToSave.path}, 新大小: ${fileToSave.size} bytes`);
+                console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} (處理後寬度: ${currentWidth}px) 需要縮放至 ${targetWidth}px。`);
+                finalBuffer = await sharp(processedBufferBeforeResize) // 從已是JPG的Buffer開始縮放
+                    .resize({ width: targetWidth, withoutEnlargement: true })
+                    .toBuffer();
             } else {
-                console.log(`圖片 ${fileToSave.originalname} (寬度: ${originalWidth}px) 無需縮放。`);
+                console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} (處理後寬度: ${currentWidth}px) 無需縮放。`);
+                finalBuffer = processedBufferBeforeResize; // 直接使用已轉換/壓縮/旋轉的 Buffer
             }
+
+            // 8. 將最終的 Buffer 寫回 Multer 指定的原始路徑
+            //    Multer 已經將 PNG 的副檔名改為 .jpg，所以 originalFilePath 副檔名是對的。
+            await fs.promises.writeFile(originalFilePath, finalBuffer);
+
+            // 更新 fileToSave 中的檔案大小資訊
+            const newStats = fs.statSync(originalFilePath);
+            fileToSave.size = newStats.size;
+            fileToSave.mimetype = 'image/jpeg'; // 確保 mimetype 也是正確的 JPG
+
+            console.log(`[Admin Upload] 圖片 ${fileToSave.originalname} 已成功處理為 JPG 並儲存。新路徑: ${originalFilePath}, 新大小: ${fileToSave.size} bytes`);
+
         } catch (sharpError) {
-            console.error(`Sharp 處理圖片 ${fileToSave.originalname} 失敗:`, sharpError);
-            // 如果縮放失敗，刪除已上傳的原始檔案並回報錯誤
+            console.error(`[Admin Upload] Sharp 處理圖片 ${fileToSave.originalname} 失敗:`, sharpError);
             try {
                 if (fs.existsSync(originalFilePath)) {
                     fs.unlinkSync(originalFilePath);
-                    console.warn(`已刪除處理失敗的原始檔案: ${originalFilePath}`);
+                    console.warn(`[Admin Upload] 已刪除處理失敗的原始檔案: ${originalFilePath}`);
                 }
             } catch (unlinkErr) {
-                console.error(`刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
+                console.error(`[Admin Upload] 刪除處理失敗的原始檔案 ${originalFilePath} 時再次出錯:`, unlinkErr);
             }
             return res.status(500).json({ success: false, error: `圖片處理失敗: ${sharpError.message}` });
         }
-    } else if (lowerExt === '.gif' || lowerMimetype === 'image/gif') {
-        fileType = 'image'; // 仍然是圖片類型
-        console.log(`檔案 ${fileToSave.originalname} 是 GIF，不進行縮放。`);
-    } else if (lowerExt === '.pdf' || lowerMimetype === 'application/pdf') {
+    } else if (originalFileExt === '.gif' || (fileToSave.mimetype && fileToSave.mimetype.toLowerCase() === 'image/gif')) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 GIF，不進行轉換或縮放。`);
+        // GIF 通常不建議轉換為 JPG，除非有特殊需求，因為會失去動畫。
+        // 如果需要，也可以加入 Sharp 處理 GIF 的邏輯（例如優化或轉為靜態圖）。
+    } else if (originalFileExt === '.pdf' || (fileToSave.mimetype && fileToSave.mimetype.toLowerCase() === 'application/pdf')) {
         fileType = 'pdf';
-        console.log(`檔案 ${fileToSave.originalname} 是 PDF，不進行縮放。`);
-    } else if (['.webp', '.svg'].includes(lowerExt) || ['image/webp', 'image/svg+xml'].includes(lowerMimetype)) {
-        fileType = 'image'; // 其他可被視為圖片的類型
-        console.log(`檔案 ${fileToSave.originalname} 是 ${lowerExt}，不進行縮放。`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 PDF，不進行圖片處理。`);
+    } else if (['.webp', '.svg'].includes(originalFileExt) || (fileToSave.mimetype && (fileToSave.mimetype.toLowerCase() === 'image/webp' || fileToSave.mimetype.toLowerCase() === 'image/svg+xml'))) {
+        fileType = 'image';
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是 ${originalFileExt}，不進行特定轉換或縮放 (除非您添加針對性處理)。`);
+        // WebP 和 SVG 的處理可以根據需求添加。SVG通常不需要柵格化壓縮。WebP本身壓縮效率很高。
     } else {
         fileType = 'other';
-        console.log(`檔案 ${fileToSave.originalname} 是其他類型 (${fileToSave.mimetype})，不進行縮放。`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} 是其他類型 (${fileToSave.mimetype || originalFileExt})，不進行圖片處理。`);
     }
 
+    // --- 資料庫儲存邏輯 (保持不變) ---
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -3246,29 +3511,32 @@ app.post('/api/admin/files/upload', isAdminAuthenticated, upload.single('file'),
             [fileUrlPath, fileToSave.originalname, fileToSave.mimetype, fileToSave.size, fileType]
         );
         await client.query('COMMIT');
-        console.log(`檔案 ${fileToSave.originalname} (處理後) 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
+        console.log(`[Admin Upload] 檔案 ${fileToSave.originalname} (處理後) 上傳成功並記錄到資料庫 ID: ${insertResult.rows[0].id}`);
         res.status(201).json({ success: true, file: insertResult.rows[0] });
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('[API POST /admin/files/upload] Error inserting file record (after potential resize):', err);
-        // 如果資料庫儲存失敗，此時檔案可能已經被縮放並覆蓋了原始檔案
-        // 由於我們策略是縮放失敗時就已刪除檔案並返回，這裡主要是處理資料庫錯誤
-        // 如果需要，可以考慮是否要刪除已處理的檔案，但通常資料庫錯誤更應關注
+        console.error('[Admin Upload] Error inserting file record:', err);
         const fullDiskPathToClean = path.join(uploadDir, fileToSave.filename);
-         try {
+        try {
             if (fs.existsSync(fullDiskPathToClean)) {
-                 fs.unlinkSync(fullDiskPathToClean); // 使用同步删除，因为在错误处理流程中
-                 console.warn(`因資料庫儲存失敗，已刪除磁碟上的檔案: ${fullDiskPathToClean}`);
+                fs.unlinkSync(fullDiskPathToClean);
+                console.warn(`[Admin Upload] 因資料庫儲存失敗，已刪除磁碟上的檔案: ${fullDiskPathToClean}`);
             }
         } catch (unlinkErr) {
-            console.error(`因資料庫儲存失敗後，嘗試刪除磁碟檔案 ${fullDiskPathToClean} 時再次出錯:`, unlinkErr);
+            console.error(`[Admin Upload] 因資料庫儲存失敗後，嘗試刪除磁碟檔案 ${fullDiskPathToClean} 時再次出錯:`, unlinkErr);
         }
         res.status(500).json({ success: false, error: '儲存檔案記錄到資料庫失敗', detail: err.message });
     } finally {
         client.release();
     }
 });
+
+
+
+
+
+
 // DELETE /api/admin/files/:id - 刪除檔案
 app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
     const fileId = parseInt(req.params.id);
@@ -3337,6 +3605,100 @@ app.delete('/api/admin/files/:id', isAdminAuthenticated, async (req, res) => {
 
 
 
+
+ 
+// ===============================================
+// 新增 API: 記錄商品點擊事件 pool.query
+ // ===============================================
+app.post('/api/product-clicks', async (req, res) => {
+    const { productId } = req.body;
+
+    if (!productId) {
+        return res.status(400).json({ error: '需要提供商品 ID' });
+    }
+
+    try {
+        // 將點擊事件記錄到 product_click_events 表
+        const result = await pool.query( // Changed db.query to pool.query
+            'INSERT INTO product_click_events (product_id) VALUES ($1) RETURNING *',
+            [productId]
+        );
+        // console.log('Product click recorded:', result.rows[0]); // 可選：用於偵錯
+        res.status(201).json({ message: '點擊記錄成功', clickEvent: result.rows[0] });
+
+    } catch (error) {
+        console.error('記錄商品點擊失敗:', error);
+        res.status(500).json({ error: '記錄商品點擊時發生錯誤' });
+    }
+});
+
+// ===============================================
+// 新增 API: 提供商品點擊統計數據
+// 建議放在處理 analytics 或 admin API 的區塊
+// 可能需要管理員權限認證 (isAdminAuthenticated)
+// ===============================================
+// 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
+app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
+    const { startDate, endDate, granularity, productId } = req.query;
+
+    // 日期和粒度驗證
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: '需要提供開始日期和結束日期' });
+    }
+    if (granularity !== 'daily' && granularity !== 'monthly') {
+        return res.status(400).json({ error: '粒度參數無效，請使用 "daily" 或 "monthly"' });
+    }
+
+    let dateFormat, groupByClause;
+    if (granularity === 'daily') {
+        dateFormat = 'YYYY-MM-DD';
+        groupByClause = "date_trunc('day', clicked_at)";
+    } else {
+        dateFormat = 'YYYY-MM';
+        groupByClause = "date_trunc('month', clicked_at)";
+    }
+
+    // 構建查詢和參數
+    let query = `
+        SELECT
+            to_char(${groupByClause}, '${dateFormat}') AS period,
+            COUNT(*) AS total_clicks,
+            p.name AS product_name
+        FROM
+            product_click_events pce
+        JOIN
+            products p ON pce.product_id = p.id
+        WHERE
+            clicked_at >= $1 AND clicked_at < ($2::date + INTERVAL '1 day')
+    `;
+    
+    const queryParams = [startDate, endDate];
+    let paramIndex = 3; // Start from 3 since $1 and $2 are used
+    
+    if (productId) {
+        query += ` AND pce.product_id = $${paramIndex}`; // <<--- 直接使用 paramIndex
+        queryParams.push(productId);
+        paramIndex++; // <<--- 在這裡遞增以備將來可能的更多參數
+    }
+
+    query += `
+        GROUP BY ${groupByClause}, p.name
+        ORDER BY ${groupByClause}, p.name
+    `;
+
+    try {
+        const result = await pool.query(query, queryParams);
+        const formattedData = result.rows.map(row => ({
+            [granularity === 'daily' ? 'date' : 'month']: row.period,
+            clicks: parseInt(row.total_clicks, 10),
+            product_name: row.product_name
+        }));
+        res.json(formattedData);
+    } catch (error) {
+        console.error('獲取商品點擊統計失敗:', error);
+        res.status(500).json({ error: '獲取商品點擊統計時發生錯誤' });
+    }
+});
 
 
 
@@ -3437,7 +3799,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3462,7 +3824,7 @@ app.post('/api/samegame/templates', verifyAdminPassword, async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3499,7 +3861,7 @@ app.put('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => 
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3522,7 +3884,7 @@ app.delete('/api/samegame/templates/:id', verifyAdminPassword, async (req, res) 
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3624,7 +3986,7 @@ app.post('/api/samegame/templates/:templateId/levels', verifyAdminPassword, asyn
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3715,7 +4077,7 @@ app.put('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3820,7 +4182,7 @@ app.get('/api/samegame/active-templates', async (req, res) => {
             SELECT id, name, description, difficulty
             FROM samegame_templates
             WHERE is_active = TRUE
-            ORDER BY name ASC
+            ORDER BY updated_at DESC
         `);
         res.json(result.rows);
     } catch (err) {
@@ -5424,7 +5786,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5464,7 +5826,7 @@ unboxingAiRouter.put('/schemes/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', verifyAdminPassword, async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5513,7 +5875,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', verifyAdminPassword, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', isAdminAuthenticated, unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -6223,44 +6585,57 @@ app.get('/api/products', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
+
+
 app.get('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的商品 ID 格式。' }); }
-    
-    // *** 修改 SQL 查詢以包含標籤 ***
-    // 與獲取列表類似，使用 LEFT JOIN 和 json_agg
-    const queryText = `
-        SELECT 
-            p.id, p.name, p.description, p.price, p.image_url, 
-            p.seven_eleven_url, p.click_count, p.category,
-            COALESCE(json_agg(t.tag_name) FILTER (WHERE t.tag_id IS NOT NULL), '[]'::json) AS tags
-        FROM products p
-        LEFT JOIN product_tags pt ON p.id = pt.product_id
-        LEFT JOIN tags t ON pt.tag_id = t.tag_id
-        WHERE p.id = $1  -- 篩選特定商品 ID
-        GROUP BY p.id, p.name, p.description, p.price, p.image_url, p.seven_eleven_url, p.click_count, p.category -- 同樣需要 GROUP BY
-    `;
-    
-    console.log("Executing SQL for single product:", queryText, [id]); // 調試用
-
+    if (isNaN(parseInt(id))) { 
+        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
+    }
     try {
+        // 修改查詢以包含所有需要的字段和標籤
+        const queryText = `
+            SELECT 
+                p.id, p.name, p.description, p.price, p.category, p.image_url, 
+                p.seven_eleven_url, p.click_count, p.expiration_type, p.start_date, p.end_date,
+                COALESCE(
+                  (SELECT json_agg(t.tag_id) 
+                   FROM product_tags pt 
+                   JOIN tags t ON pt.tag_id = t.tag_id 
+                   WHERE pt.product_id = p.id), 
+                  '[]'::json
+                ) AS tags
+            FROM products p
+            WHERE p.id = $1
+        `;
         const result = await pool.query(queryText, [id]);
         if (result.rows.length === 0) { 
-            // 考慮到 JOIN 可能不會返回任何行如果 ID 不存在，這個檢查仍然有效
             return res.status(404).json({ error: '找不到商品。' }); 
         }
-        // json_agg 返回的 tags 是 JSON 數組字符串
-        res.json(result.rows[0]); // 回傳單一商品物件，包含 tags 陣列
+        res.json(result.rows[0]);
     } catch (err) {
         console.error(`獲取商品 ID ${id} 時出錯:`, err);
         res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
+
+
+
+
+
 app.post('/api/products/:id/click', async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id))) { console.warn(`收到無效商品 ID (${id}) 的點擊記錄請求`); return res.status(204).send(); }
     try {
+        // 更新商品點擊計數
         await pool.query('UPDATE products SET click_count = click_count + 1 WHERE id = $1', [id]);
+        
+        // 記錄點擊事件到 product_click_events 表
+        await pool.query('INSERT INTO product_click_events (product_id) VALUES ($1)', [id]);
+        
         res.status(204).send();
     } catch (err) {
         console.error(`記錄商品 ID ${id} 點擊時出錯:`, err);
@@ -6369,7 +6744,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', verifyAdminPassword, async (req, res) => {
+app.post('/api/music', isAdminAuthenticated, async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6515,7 +6890,7 @@ app.post('/api/music', verifyAdminPassword, async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6614,7 +6989,7 @@ app.put('/api/music/:id', verifyAdminPassword, async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', verifyAdminPassword, async (req, res) => {
+app.delete('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
@@ -6876,27 +7251,7 @@ app.put('/api/products/:id', async (req, res) => {
  
 
 
-
-
-// 在 server.js 中添加以下代碼，放在適當的位置（比如在留言板 API 相關程式碼後面）
-
-// --- 產品 API 路徑 ---
-app.get('/api/products/:id', async (req, res) => {
-    const { id } = req.params;
-    if (isNaN(parseInt(id))) { 
-        return res.status(400).json({ error: '無效的商品 ID 格式。' }); 
-    }
-    try {
-        const result = await pool.query('SELECT id, name, description, price, image_url, seven_eleven_url, click_count FROM products WHERE id = $1', [id]);
-        if (result.rows.length === 0) { 
-            return res.status(404).json({ error: '找不到商品。' }); 
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`獲取商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
+ 
 
 // --- 頁面分析相關的 API ---
 app.get('/api/analytics/page-list', async (req, res) => {
@@ -7037,21 +7392,188 @@ app.get('/api/analytics/monthly-traffic', async (req, res) => {
     }
 });
 
+// --- 新增來源分析相關的 API 端點 ---
+app.get('/api/analytics/source-traffic', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                SUM(view_count) as total_views,
+                COUNT(DISTINCT page) as unique_pages
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name
+            ORDER BY total_views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源分析數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
+app.get('/api/analytics/source-pages', async (req, res) => {
+    const { sourceType, sourceName, startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                page,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE source_type = $1
+            AND source_name = $2
+            AND view_date BETWEEN $3 AND $4
+            GROUP BY page
+            ORDER BY views DESC;
+        `;
+        const result = await pool.query(query, [
+            sourceType,
+            sourceName,
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源頁面數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
+app.get('/api/analytics/source-trend', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                view_date,
+                source_type,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY view_date, source_type
+            ORDER BY view_date ASC, source_type;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源趨勢數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
+// --- 新增缺少的來源分析 API 端點 ---
+app.get('/api/analytics/source-details', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                source_url,
+                SUM(view_count) as total_views,
+                COUNT(DISTINCT page) as unique_pages,
+                AVG(time_on_site) as avg_time_on_site,
+                AVG(CASE WHEN is_bounce THEN 1 ELSE 0 END) as bounce_rate,
+                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name, source_url
+            ORDER BY total_views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源詳細數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
+app.get('/api/analytics/source-ranking', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                source_name,
+                SUM(view_count) as total_views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type, source_name
+            ORDER BY total_views DESC
+            LIMIT 20;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源排名數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
+app.get('/api/analytics/source-conversion', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                source_type,
+                SUM(view_count) as total_views,
+                AVG(CASE WHEN has_conversion THEN 1 ELSE 0 END) as conversion_rate
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY source_type
+            ORDER BY conversion_rate DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源轉換率數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
-
-
-
-
-
+app.get('/api/analytics/source-geo', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        const query = `
+            SELECT 
+                region,
+                SUM(view_count) as views
+            FROM source_page_views
+            WHERE view_date BETWEEN $1 AND $2
+            GROUP BY region
+            ORDER BY views DESC;
+        `;
+        const result = await pool.query(query, [
+            startDate || '2023-01-01',
+            endDate || 'CURRENT_DATE'
+        ]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('獲取來源地理數據失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
+    }
+});
 
 
 // --- ★★★ 留言板管理 API (Admin Guestbook API) ★★★ ---
-const adminRouter = express.Router();
+
 
 // --- 身份管理 (Identities Management) ---
 adminRouter.get('/identities', async (req, res) => {
@@ -7133,7 +7655,7 @@ adminRouter.delete('/identities/:id', async (req, res) => {
 
 
 
-// --- ★ 新增: 管理員發表新留言 API (已更新處理 image_url) ---
+// --- 新增: 管理員發表新留言 API (已更新處理 image_url) ---
 adminRouter.post('/guestbook/messages', async (req, res) => {
     // 從請求 body 中獲取 image_url
     const { admin_identity_id, content, image_url } = req.body;
@@ -7153,12 +7675,12 @@ adminRouter.post('/guestbook/messages', async (req, res) => {
 
         const insertQuery = `
             INSERT INTO guestbook_messages (
-                author_name, content, image_url, /* <--- 新增 image_url 欄位 */
+                author_name, content, image_url, 
                 is_admin_post, admin_identity_id,
                 last_activity_at, created_at, is_visible,
                 reply_count, view_count, like_count
             )
-            VALUES ($1, $2, $3, TRUE, $4, NOW(), NOW(), TRUE, 0, 0, 0) /* <--- 新增 $3 給 image_url */
+            VALUES ($1, $2, $3, TRUE, $4, NOW(), NOW(), TRUE, 0, 0, 0) 
             RETURNING id, author_name, content, image_url, is_admin_post, admin_identity_id, created_at, last_activity_at, reply_count, view_count, like_count, is_visible;
         `;
         // 調整參數順序以匹配 SQL
@@ -7223,7 +7745,7 @@ adminRouter.get('/guestbook', async (req, res) => {
             SELECT m.id, m.author_name,
                    substring(m.content for 50) || (CASE WHEN length(m.content) > 50 THEN '...' ELSE '' END) AS content_preview,
                    m.reply_count, m.view_count, m.like_count, m.last_activity_at, m.created_at, m.is_visible,
-                   m.is_reported, m.can_be_reported -- 新增 is_reported 和 can_be_reported
+                   m.is_reported, m.can_be_reported
             FROM guestbook_messages m
             ${whereSql} ${orderByClause}
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
@@ -7540,100 +8062,6 @@ adminRouter.get('/news/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取消息詳情' });
     }
 });
-
-
-
-
-
-// --- 分類管理 API (需要身份驗證) ---
-adminRouter.get('/news-categories', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT id, name, slug, description, display_order, is_active, created_at, updated_at
-            FROM news_categories 
-            ORDER BY display_order ASC, name ASC
-        `);
-        res.status(200).json(result.rows);
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 獲取管理新聞分類時出錯:', err.stack || err);
-        res.status(500).json({ error: '伺服器內部錯誤，無法獲取分類列表' });
-    }
-});
-
-adminRouter.post('/news-categories', async (req, res) => {
-    const { name, slug, description, display_order, is_active } = req.body;
-    
-    // 必填驗證
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '分類名稱為必填項。' });
-    }
-    if (!slug || slug.trim() === '') {
-        return res.status(400).json({ error: '分類標識符為必填項。' });
-    }
-    
-    try {
-        const result = await pool.query(`
-            INSERT INTO news_categories (name, slug, description, display_order, is_active, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-            RETURNING *
-        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
-            display_order || 0, is_active !== false]);
-        
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[受保護 API 錯誤] 新增分類時出錯:', err.stack || err);
-        if (err.code === '23505') { // 唯一約束衝突
-            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
-        }
-        res.status(500).json({ error: '伺服器內部錯誤，無法新增分類。' });
-    }
-});
-
-adminRouter.put('/news-categories/:id', async (req, res) => {
-    const { id } = req.params;
-    const categoryId = parseInt(id);
-    if (isNaN(categoryId)) {
-        return res.status(400).json({ error: '無效的分類 ID 格式。' });
-    }
-    
-    const { name, slug, description, display_order, is_active } = req.body;
-    
-    // 必填驗證
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: '分類名稱為必填項。' });
-    }
-    if (!slug || slug.trim() === '') {
-        return res.status(400).json({ error: '分類標識符為必填項。' });
-    }
-    
-    try {
-        const result = await pool.query(`
-            UPDATE news_categories
-            SET name = $1, slug = $2, description = $3, display_order = $4, is_active = $5, updated_at = NOW()
-            WHERE id = $6
-            RETURNING *
-        `, [name.trim(), slug.trim(), description ? description.trim() : null, 
-            display_order || 0, is_active !== false, categoryId]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到要更新的分類。' });
-        }
-        
-        res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error(`[受保護 API 錯誤] 更新分類 ID ${id} 時出錯:`, err.stack || err);
-        if (err.code === '23505') { // 唯一約束衝突
-            return res.status(400).json({ error: '該分類標識符已存在，請使用其他標識符。' });
-        }
-        res.status(500).json({ error: '伺服器內部錯誤，無法更新分類。' });
-    }
-});
-
-
-
-
-
-
 adminRouter.post('/news', async (req, res) => {
     const { title, event_date, summary, content, thumbnail_url, image_url, category_id } = req.body;
     
@@ -8108,196 +8536,8 @@ app.get('/api/analytics/page-views', async (req, res) => {
 
 
 
-// --- 銷售報告 API (受保護) ---
-app.get('/api/analytics/sales-report', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    let queryStartDate = startDate ? new Date(startDate) : null;
-    let queryEndDate = endDate ? new Date(endDate) : null;
-    if (!queryStartDate || !queryEndDate || isNaN(queryStartDate) || isNaN(queryEndDate)) {
-        queryEndDate = new Date();
-        queryStartDate = new Date();
-        queryStartDate.setDate(queryEndDate.getDate() - 30);
-    } else {
-         queryEndDate.setHours(23, 59, 59, 999);
-    }
-    const startDateISO = queryStartDate.toISOString();
-    const endDateISO = queryEndDate.toISOString();
 
-    const client = await pool.connect();
-    try {
-        const totalItemsResult = await client.query(`SELECT COALESCE(SUM(quantity_sold), 0)::integer AS total_items FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2`, [startDateISO, endDateISO]);
-        const totalItemsSold = totalItemsResult.rows[0].total_items;
 
-        const trendResult = await client.query(`SELECT DATE(sale_timestamp AT TIME ZONE 'Asia/Taipei') AS sale_date, SUM(quantity_sold)::integer AS daily_quantity FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2 GROUP BY sale_date ORDER BY sale_date ASC`, [startDateISO, endDateISO]);
-        const salesTrend = trendResult.rows.map(row => ({ date: row.sale_date.toISOString().split('T')[0], quantity: row.daily_quantity }));
-
-        const topProductsResult = await client.query(`SELECT f.name AS figure_name, fv.name AS variation_name, SUM(sl.quantity_sold)::integer AS total_quantity FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 GROUP BY f.name, fv.name ORDER BY total_quantity DESC LIMIT 10`, [startDateISO, endDateISO]);
-        const topSellingProducts = topProductsResult.rows;
-
-        const detailedLogResult = await client.query(`SELECT sl.sale_timestamp, f.name AS figure_name, fv.name AS variation_name, sl.quantity_sold FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 ORDER BY sl.sale_timestamp DESC`, [startDateISO, endDateISO]);
-        const detailedLog = detailedLogResult.rows.map(row => ({ timestamp: row.sale_timestamp, figureName: row.figure_name, variationName: row.variation_name, quantity: row.quantity_sold }));
-
-        res.status(200).json({
-            summary: { totalItemsSold, startDate: startDateISO.split('T')[0], endDate: endDateISO.split('T')[0] },
-            trend: salesTrend,
-            topProducts: topSellingProducts,
-            details: detailedLog
-        });
-    } catch (err) {
-        console.error('[Sales Report API Error] 獲取銷售報告數據時出錯:', err.stack || err);
-        res.status(500).json({ error: '獲取銷售報告數據時發生伺服器內部錯誤' });
-    } finally {
-        client.release();
-    }
-});
-
-// --- 銷售紀錄管理 API (受保護) ---
-app.get('/api/admin/sales', async (req, res) => {
-    const { startDate, endDate, productName } = req.query;
-    let queryText = `SELECT id, product_name, quantity_sold, sale_timestamp FROM sales_log`;
-    const queryParams = [];
-    const conditions = [];
-    let paramIndex = 1;
-    if (startDate) { conditions.push(`sale_timestamp >= $${paramIndex++}`); queryParams.push(startDate); }
-    if (endDate) { const nextDay = new Date(endDate); nextDay.setDate(nextDay.getDate() + 1); conditions.push(`sale_timestamp < $${paramIndex++}`); queryParams.push(nextDay.toISOString().split('T')[0]); }
-    if (productName) { conditions.push(`product_name ILIKE $${paramIndex++}`); queryParams.push(`%${productName}%`); }
-    if (conditions.length > 0) { queryText += ' WHERE ' + conditions.join(' AND '); }
-    queryText += ' ORDER BY sale_timestamp DESC, id DESC';
-    try {
-        const result = await pool.query(queryText, queryParams);
-        res.status(200).json(result.rows);
-    } catch (err) { console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err); res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' }); }
-});
-app.get('/api/admin/sales/summary', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    let whereClause = ''; const queryParams = []; let paramIndex = 1;
-    if (startDate) { whereClause += `WHERE sale_timestamp >= $${paramIndex++} `; queryParams.push(startDate); }
-    if (endDate) { const nextDay = new Date(endDate); nextDay.setDate(nextDay.getDate() + 1); whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `; queryParams.push(nextDay.toISOString().split('T')[0]); }
-    try {
-        const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
-        const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
-        const totalItems = totalItemsResult.rows[0].total_items;
-        const topProductsQuery = `SELECT product_name, SUM(quantity_sold)::integer as total_sold FROM sales_log ${whereClause} GROUP BY product_name ORDER BY total_sold DESC LIMIT 5;`;
-        const topProductsResult = await pool.query(topProductsQuery, queryParams);
-        const topProducts = topProductsResult.rows;
-        const salesTrendQuery = `SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total FROM sales_log ${whereClause} GROUP BY sale_date ORDER BY sale_date ASC;`;
-        const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
-        const salesTrend = salesTrendResult.rows.map(row => ({ date: new Date(row.sale_date).toISOString().split('T')[0], quantity: row.daily_total }));
-        res.status(200).json({ totalItems, topProducts, salesTrend });
-    } catch (err) { console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err); res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' }); }
-});
-app.post('/api/admin/sales', async (req, res) => {
-    const { product_name, quantity_sold, sale_timestamp } = req.body;
-    if (!product_name || !quantity_sold) { return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' }); }
-    const quantity = parseInt(quantity_sold);
-    if (isNaN(quantity) || quantity <= 0) { return res.status(400).json({ error: '銷售數量必須是正整數。' }); }
-    let timestampToInsert = sale_timestamp ? new Date(sale_timestamp) : new Date();
-    if (isNaN(timestampToInsert.getTime())) { timestampToInsert = new Date(); }
-    try {
-        const queryText = `INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp) VALUES ($1, $2, $3) RETURNING id, product_name, quantity_sold, sale_timestamp;`;
-        const result = await pool.query(queryText, [ product_name.trim(), quantity, timestampToInsert ]);
-        res.status(201).json(result.rows[0]);
-    } catch (err) { console.error('[Admin API Error] 新增銷售紀錄時出錯:', err.stack || err); res.status(500).json({ error: '新增銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-app.put('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params; const { product_name, quantity_sold, sale_timestamp } = req.body;
-    const recordId = parseInt(id); if (isNaN(recordId)) { return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' }); }
-    if (!product_name || !quantity_sold) { return res.status(400).json({ error: '商品名稱和銷售數量為必填項。' }); }
-    const quantity = parseInt(quantity_sold); if (isNaN(quantity) || quantity <= 0) { return res.status(400).json({ error: '銷售數量必須是正整數。' }); }
-    let timestampToUpdate = new Date(sale_timestamp); if (isNaN(timestampToUpdate.getTime())) { return res.status(400).json({ error: '無效的銷售時間格式。' }); }
-    try {
-        const queryText = `UPDATE sales_log SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW() WHERE id = $4 RETURNING id, product_name, quantity_sold, sale_timestamp;`;
-        const result = await pool.query(queryText, [ product_name.trim(), quantity, timestampToUpdate, recordId ]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要更新的銷售紀錄。' }); }
-        res.status(200).json(result.rows[0]);
-    } catch (err) { console.error(`[Admin API Error] 更新銷售紀錄 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '更新銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-app.delete('/api/admin/sales/:id', async (req, res) => {
-    const { id } = req.params; const recordId = parseInt(id); if (isNaN(recordId)) { return res.status(400).json({ error: '無效的銷售紀錄 ID 格式。' }); }
-    try {
-        const queryText = 'DELETE FROM sales_log WHERE id = $1';
-        const result = await pool.query(queryText, [recordId]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`[Admin API Error] 刪除銷售紀錄 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除銷售紀錄過程中發生伺服器內部錯誤。' }); }
-});
-
-// --- 公仔庫存管理 API (受保護) ---
-app.get('/api/admin/figures', async (req, res) => {
-    try {
-        const queryText = ` SELECT f.id, f.name, f.image_url, f.purchase_price, f.selling_price, f.ordering_method, f.created_at, f.updated_at, COALESCE( (SELECT json_agg( json_build_object( 'id', v.id, 'name', v.name, 'quantity', v.quantity ) ORDER BY v.name ASC ) FROM figure_variations v WHERE v.figure_id = f.id), '[]'::json ) AS variations FROM figures f ORDER BY f.created_at DESC; `;
-        const result = await pool.query(queryText);
-        res.json(result.rows);
-    } catch (err) { console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err); res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' }); }
-});
-app.post('/api/admin/figures', async (req, res) => {
-    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
-    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const figureInsertQuery = ` INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method) VALUES ($1, $2, $3, $4, $5) RETURNING *; `;
-        const figureResult = await client.query(figureInsertQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null ]);
-        const newFigure = figureResult.rows[0]; const newFigureId = newFigure.id;
-        let insertedVariations = [];
-        if (variations && variations.length > 0) {
-            const variationInsertQuery = ` INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *; `;
-            for (const variation of variations) {
-                if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
-                const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
-                const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
-                insertedVariations.push(variationResult.rows[0]);
-            }
-        }
-        await client.query('COMMIT'); newFigure.variations = insertedVariations; res.status(201).json(newFigure);
-    } catch (err) {
-        await client.query('ROLLBACK'); console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
-        else { res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` }); }
-    } finally { client.release(); }
-});
-app.put('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params; const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
-    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
-    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const figureUpdateQuery = ` UPDATE figures SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW() WHERE id = $6 RETURNING *; `;
-        const figureResult = await client.query(figureUpdateQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id ]);
-        if (figureResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要更新的公仔。' }); }
-        const updatedFigure = figureResult.rows[0];
-        const variationsToProcess = variations || []; const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
-        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]); const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
-        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
-        if (variationIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [variationIdsToDelete]); }
-        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
-        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
-        let finalVariations = [];
-        for (const variation of variationsToProcess) {
-            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
-            const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
-            const variationId = variation.id ? parseInt(variation.id) : null;
-            if (variationId && existingVariationIds.has(variationId)) { await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]); finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity }); }
-            else { const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]); finalVariations.push(insertResult.rows[0]); }
-        }
-        await client.query('COMMIT'); updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); res.status(200).json(updatedFigure);
-    } catch (err) {
-        await client.query('ROLLBACK'); console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
-        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
-        else { res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` }); }
-    } finally { client.release(); }
-});
-app.delete('/api/admin/figures/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
-    try {
-        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
-        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的公仔。' }); }
-        res.status(204).send();
-    } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
-});
 
 // --- Banner 管理 API ---
 app.get('/api/admin/banners', async (req, res) => {
@@ -8341,540 +8581,6 @@ app.delete('/api/admin/banners/:id', async (req, res) => {
         res.status(204).send();
     } catch (err) { console.error(`[Admin API Error] 刪除 Banner ID ${id} 時出錯:`, err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
 });
-
-// --- 商品管理 API (受保護) ---
-// GET /api/admin/products - 獲取所有商品列表供管理後台使用
-adminRouter.get('/products', async (req, res) => {
-    try {
-        // 直接使用 pool.query 獲取商品，包含所有需要的欄位
-        const result = await pool.query(
-            `SELECT p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
-                    p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
-                    COALESCE(
-                        (SELECT json_agg(t.tag_name ORDER BY t.tag_name)
-                         FROM product_tags pt
-                         JOIN tags t ON pt.tag_id = t.tag_id
-                         WHERE pt.product_id = p.id),
-                        '[]'::json
-                    ) AS tags
-             FROM products p
-             ORDER BY p.id DESC`
-        );
-        const productsFromDb = result.rows;
-
-        const products = productsFromDb.map(product => {
-            // 'tags' field from query is already an array of tag names (or empty array)
-            // product.tags will be used directly by frontend if it's an array of strings
-            // If frontend expects array of objects {tag_id, tag_name}, query needs adjustment
-            // For now, assuming frontend's product.tags.map(tag => `<span class="product-tag">${tag}</span>`) expects tag names
-            let calculated_status;
-            // pg driver 通常會將 INTEGER 轉為 number, DATE 轉為 Date object or string
-            // 確保 expiration_type 是數字進行比較
-            const expType = product.expiration_type !== null ? parseInt(product.expiration_type) : null;
-
-            if (expType === 0) {
-                calculated_status = '有效';
-            } else if (expType === 1) {
-                calculated_status = '有效'; // 預設
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                // product.start_date 和 product.end_date 可能直接是 Date 物件或 ISO 字串
-                const startDate = product.start_date ? new Date(product.start_date) : null;
-                const endDate = product.end_date ? new Date(product.end_date) : null;
-
-                if (startDate && endDate) {
-                    if (today < startDate) calculated_status = '尚未開始';
-                    else if (today > endDate) calculated_status = '已過期';
-                } else if (startDate && !endDate && today < startDate) { // 只有開始日期且未到
-                    calculated_status = '尚未開始';
-                } else if (!startDate && endDate && today > endDate) { // 只有結束日期且已過
-                    calculated_status = '已過期';
-                } else if (startDate && !endDate && today >= startDate) { // 只有開始日期且已到或進行中
-                    calculated_status = '有效';
-                } else if (!startDate && endDate && today <= endDate) { // 只有結束日期且未到或進行中
-                    calculated_status = '有效';
-                }
-                // 如果 expiration_type=1 但日期都為 null，則維持 '有效'
-            } else {
-                // expiration_type 為 null 或其他非預期值 (例如資料庫中有些舊資料是 NULL)
-                calculated_status = '有效'; // 或者 '狀態未明'，根據需求，這裡暫設為有效
-            }
-            return { ...product, product_status: calculated_status };
-        });
-        res.json(products);
-    } catch (err) {
-        console.error('[Admin API Error] 獲取商品列表失敗:', err);
-        res.status(500).json({ error: '獲取商品列表失敗', details: err.message });
-    }
-});
-
-// GET /api/admin/products/:id - 獲取單個商品詳情供編輯使用
-adminRouter.get('/products/:id', async (req, res) => {
-    const { id } = req.params;
-    const productId = parseInt(id);
-
-    if (isNaN(productId)) {
-        return res.status(400).json({ error: '無效的商品 ID 格式。' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT
-                p.id, p.name, p.description, p.price, p.image_url, p.category, p.click_count,
-                p.expiration_type, p.start_date, p.end_date, p.created_at, p.updated_at,
-                COALESCE(
-                    (SELECT json_agg(pt_inner.tag_id) -- 選擇 tag_id
-                     FROM product_tags pt_inner
-                     WHERE pt_inner.product_id = p.id),
-                    '[]'::json
-                ) AS tags
-             FROM products p
-             WHERE p.id = $1`,
-            [productId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到該商品。' });
-        }
-        // 不需要計算 product_status，前端 openEditModal 會處理顯示邏輯
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error(`[Admin API Error] 獲取商品 ID ${id} 詳情失敗:`, err);
-        res.status(500).json({ error: '獲取商品詳情失敗', details: err.message });
-    }
-});
-
-adminRouter.post('/products', productUpload.single('image'), async (req, res) => {
-    try {
-        // Logic from public/store/store-routes.js router.post('/products',...)
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url, tags } = req.body; // Added seven_eleven_url, body_image_url, and tags
-
-        if (!name || !price) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
-            return res.status(400).json({ error: '商品名稱和價格為必填項' });
-        }
-
-        let final_image_url = req.file ? `/uploads/storemarket/${req.file.filename}` : (body_image_url || null);
-
-        const productData = {
-            name,
-            description,
-            price: parseFloat(price),
-            image_url: final_image_url, // Use final_image_url which considers body_image_url
-            category,
-            expiration_type: parseInt(expiration_type || 0),
-            start_date: start_date || null,
-            end_date: end_date || null,
-            seven_eleven_url: seven_eleven_url || null // Added seven_eleven_url
-            // stock field removed
-            // click_count will be default in DB or handled by other logic
-        };
-        
-        // If expiration_type is 0 (unlimited), force start_date and end_date to null
-        if (productData.expiration_type === 0) {
-            productData.start_date = null;
-            productData.end_date = null;
-        }
-        
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            const insertQuery = `
-                INSERT INTO products
-                    (name, description, price, image_url, category,
-                     expiration_type, start_date, end_date, seven_eleven_url, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-                RETURNING *`; // Placeholders count adjusted
-            const values = [
-                productData.name,
-                productData.description,
-                productData.price,
-                productData.image_url, // Corrected to use productData.image_url
-                productData.category,
-                productData.expiration_type,
-                productData.start_date,
-                productData.end_date,
-                productData.seven_eleven_url // Added seven_eleven_url
-            ]; // stock removed
-            
-            const result = await client.query(insertQuery, values);
-            const newProduct = result.rows[0];
-
-            if (tags && Array.isArray(tags) && tags.length > 0) {
-                const insertProductTagQuery = 'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2)';
-                for (const tagId of tags) {
-                    // Ensure tagId is an integer
-                    const parsedTagId = parseInt(tagId, 10);
-                    if (!isNaN(parsedTagId)) {
-                        await client.query(insertProductTagQuery, [newProduct.id, parsedTagId]);
-                    } else {
-                        console.warn(`[Admin API Post Product] Invalid tag_id skipped: ${tagId}`);
-                    }
-                }
-            }
-
-            await client.query('COMMIT');
-            // To return tags with the product, you might need another query or adjust frontend to refetch
-            res.status(201).json(newProduct);
-        } catch (commitErr) {
-            await client.query('ROLLBACK');
-            console.error('[Admin API Error] 創建商品並處理標籤時事務失敗:', commitErr);
-            // req.file cleanup is handled by the outer catch block
-            throw commitErr; // Re-throw to be caught by the outer catch block
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error('[Admin API Error] 創建商品失敗:', err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (創建商品時):', unlinkErr);
-            }
-        }
-        res.status(500).json({ error: '創建商品失敗', details: err.message });
-    }
-});
-adminRouter.put('/products/:id', productUpload.single('image'), async (req, res) => {
-    try {
-        const productId = parseInt(req.params.id);
-        if (isNaN(productId)) {
-            if (req.file) {
-                 fs.unlinkSync(req.file.path);
-            }
-            return res.status(400).json({ error: '無效的商品 ID' });
-        }
- 
-        const { name, description, price, stock, category, expiration_type, start_date, end_date, seven_eleven_url, image_url: body_image_url, tags } = req.body; // Added tags
- 
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            // Directly fetch existing product using pool.query
-            const existingProductResult = await client.query( // Use client for transaction
-                `SELECT id, name, description, price, image_url, category, seven_eleven_url,
-                        click_count, expiration_type, start_date, end_date
-                 FROM products WHERE id = $1`,
-                [productId]
-            );
-    
-            if (existingProductResult.rows.length === 0) {
-                await client.query('ROLLBACK'); // Rollback before returning
-                if (req.file) {
-                    fs.unlinkSync(req.file.path);
-                }
-                return res.status(404).json({ error: '商品不存在' });
-            }
-            const existingProduct = existingProductResult.rows[0];
-            
-            let final_image_url = existingProduct.image_url;
-            if (req.file) {
-                if (existingProduct.image_url && existingProduct.image_url.startsWith('/uploads/storemarket/')) {
-                    const oldImagePath = path.join(__dirname, 'public', existingProduct.image_url);
-                     if (fs.existsSync(oldImagePath)) {
-                         try {
-                             fs.unlinkSync(oldImagePath);
-                         } catch (unlinkErr) {
-                             console.error('[Admin API Error] 刪除舊圖片失敗:', unlinkErr);
-                         }
-                     }
-                }
-                final_image_url = `/uploads/storemarket/${req.file.filename}`;
-            } else if (body_image_url !== undefined) {
-                final_image_url = body_image_url || null;
-            }
-    
-            const productData = {
-                name: name !== undefined ? name : existingProduct.name,
-                description: description !== undefined ? description : existingProduct.description,
-                price: price !== undefined ? parseFloat(price) : existingProduct.price,
-                image_url: final_image_url,
-                category: category !== undefined ? category : existingProduct.category,
-                seven_eleven_url: seven_eleven_url !== undefined ? seven_eleven_url : existingProduct.seven_eleven_url,
-                expiration_type: expiration_type !== undefined ? parseInt(expiration_type) : existingProduct.expiration_type,
-                start_date: start_date !== undefined ? start_date : existingProduct.start_date,
-                end_date: end_date !== undefined ? end_date : existingProduct.end_date
-            };
-    
-            if (productData.expiration_type === 0) {
-                productData.start_date = null;
-                productData.end_date = null;
-            }
-            
-            const updateQuery = `
-                UPDATE products
-                SET name = $1, description = $2, price = $3, image_url = $4, category = $5,
-                    expiration_type = $6, start_date = $7, end_date = $8, seven_eleven_url = $9, updated_at = NOW()
-                WHERE id = $10
-                RETURNING *`;
-            const values = [
-                productData.name,
-                productData.description,
-                productData.price,
-                productData.image_url,
-                productData.category,
-                productData.expiration_type,
-                productData.start_date,
-                productData.end_date,
-                productData.seven_eleven_url,
-                productId
-            ];
-    
-            const result = await client.query(updateQuery, values); // Use client
-    
-            if (result.rows.length === 0) {
-                 await client.query('ROLLBACK'); // Rollback
-                 if (req.file && final_image_url === `/uploads/storemarket/${req.file.filename}`) {
-                     fs.unlinkSync(req.file.path);
-                 }
-                 return res.status(500).json({ error: '更新商品失敗 (資料庫操作未返回更新後的記錄)' });
-            }
-            const updatedProduct = result.rows[0];
-
-            // Update tags
-            await client.query('DELETE FROM product_tags WHERE product_id = $1', [productId]);
-            if (tags && Array.isArray(tags) && tags.length > 0) {
-                const insertProductTagQuery = 'INSERT INTO product_tags (product_id, tag_id) VALUES ($1, $2)';
-                for (const tagId of tags) {
-                    const parsedTagId = parseInt(tagId, 10);
-                    if (!isNaN(parsedTagId)) {
-                        await client.query(insertProductTagQuery, [productId, parsedTagId]);
-                    } else {
-                        console.warn(`[Admin API Put Product] Invalid tag_id skipped: ${tagId}`);
-                    }
-                }
-            }
-
-            await client.query('COMMIT');
-            // To return tags with the product, you might need another query or adjust frontend to refetch
-            res.json(updatedProduct);
-        } catch (commitErr) {
-            await client.query('ROLLBACK');
-            console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 時事務失敗:`, commitErr);
-            // req.file cleanup is handled by the outer catch block
-            throw commitErr; // Re-throw
-        } finally {
-            client.release();
-        }
-    } catch (err) {
-        console.error(`[Admin API Error] 更新商品 ID ${req.params.id} 失敗:`, err);
-        if (req.file) {
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (unlinkErr) {
-                console.error('[Admin API Error] 刪除上傳文件失敗 (更新商品時):', unlinkErr);
-            }
-        }
-        res.status(500).json({ error: '更新商品失敗', details: err.message });
-    }
-});
-adminRouter.delete('/products/:id', async (req, res) => {
-    const { id } = req.params;
-    // Logic from public/store/store-routes.js router.delete('/products/:id',...)
-    // This typically involves:
-    // 1. Parsing productId
-    // 2. Getting product by ID to find image path (if deleting associated image)
-    // 3. Deleting image file from disk
-    // 4. Deleting product from database using storeDb.deleteProduct(productId)
-    // For now, using the simpler delete logic already present in server.js for adminRouter,
-    // but ideally, it should also handle image file deletion like in store-routes.js.
-    // We'll keep the existing simple delete for now to avoid further complexity in this step,
-    // but acknowledge that image files won't be deleted from disk with this.
-    try {
-        const productId = parseInt(id);
-        if (isNaN(productId)) {
-            return res.status(400).json({ error: '無效的商品 ID' });
-        }
-        
-        // Fetch product to delete its image using pool.query
-        const productResult = await pool.query("SELECT image_url FROM products WHERE id = $1", [productId]);
-
-        if (productResult.rows.length > 0) {
-            const product = productResult.rows[0];
-            // Ensure product.image_url is used, as 'image' might not exist or be correct
-            if (product.image_url && product.image_url.startsWith('/uploads/storemarket/')) {
-                const imagePathToDelete = path.join(__dirname, 'public', product.image_url);
-                if (fs.existsSync(imagePathToDelete)) {
-                    try {
-                        fs.unlinkSync(imagePathToDelete);
-                        console.log(`[Admin API] Deleted image file: ${imagePathToDelete}`);
-                    } catch (unlinkErr) {
-                        console.error(`[Admin API] Error deleting image file ${imagePathToDelete}:`, unlinkErr);
-                    }
-                }
-            }
-        }
-        
-        // Delete product from database using pool.query
-        const deleteResult = await pool.query("DELETE FROM products WHERE id = $1", [productId]);
-
-        if (deleteResult.rowCount > 0) {
-            res.status(204).send();
-        } else {
-            // This case might occur if the product was already deleted by another request,
-            // or if the ID was valid but somehow not found during the delete operation itself.
-            // If productResult found it, but deleteResult didn't, it's an anomaly.
-            // However, if productResult didn't find it, we might not even reach here if we threw 404 earlier.
-            // For simplicity, if delete didn't affect rows, assume it wasn't found for deletion.
-            res.status(404).json({ error: '找不到商品，無法刪除 (或者已被刪除)。' });
-        }
-    } catch (err) {
-        console.error(`[Admin API Error] 刪除商品 ID ${id} 時出錯:`, err);
-        res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' });
-    }
-});
-
-// --- 音樂管理 API (受保護 - POST/PUT/DELETE) ---
-app.post('/api/admin/music', async (req, res) => {
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const musicInsertQuery = `INSERT INTO music (title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;`;
-        const musicResult = await client.query(musicInsertQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null]);
-        const newMusic = musicResult.rows[0];
-        if (scores && Array.isArray(scores) && scores.length > 0) {
-            const scoreInsertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-            for (const score of scores) { if (score.type && score.pdf_url) await client.query(scoreInsertQuery, [newMusic.id, score.type, score.pdf_url, score.display_order || 0]); }
-        }
-        await client.query('COMMIT'); newMusic.scores = scores || []; res.status(201).json(newMusic);
-    } catch (err) { await client.query('ROLLBACK'); console.error('新增音樂時出錯:', err.stack || err); res.status(500).json({ error: '新增音樂時發生內部伺服器錯誤' });
-    } finally { client.release(); }
-});
-app.put('/api/admin/music/:id', async (req, res) => {
-    const { id } = req.params; if (isNaN(parseInt(id, 10))) { return res.status(400).json({ error: '無效的音樂 ID' }); }
-    const { title, artist, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
-    if (!title || !artist) { return res.status(400).json({ error: '標題和歌手為必填項。' }); }
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const musicUpdateQuery = `UPDATE music SET title = $1, artist = $2, release_date = $3, description = $4, cover_art_url = $5, platform_url = $6, youtube_video_id = $7, updated_at = NOW() WHERE id = $8 RETURNING *;`;
-        const musicResult = await client.query(musicUpdateQuery, [title, artist, release_date || null, description || null, cover_art_url || null, platform_url || null, youtube_video_id || null, id]);
-        if (musicResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到音樂' }); }
-        const updatedMusic = musicResult.rows[0];
-        const incomingScoreIds = new Set(); const scoresToUpdate = []; const scoresToInsert = [];
-        if (scores && Array.isArray(scores)) {
-             scores.forEach(score => {
-                 if (score.type && score.pdf_url) {
-                     if (score.id) { const scoreIdInt = parseInt(score.id, 10); if (!isNaN(scoreIdInt)) { incomingScoreIds.add(scoreIdInt); scoresToUpdate.push(score); } else { scoresToInsert.push(score); } }
-                     else { scoresToInsert.push(score); }
-                 }
-             });
-         }
-         const existingScoresResult = await client.query('SELECT id FROM scores WHERE music_id = $1', [id]);
-         const existingScoreIds = new Set(existingScoresResult.rows.map(r => r.id));
-         const scoreIdsToDelete = [...existingScoreIds].filter(existingId => !incomingScoreIds.has(existingId));
-         if (scoreIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM scores WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [scoreIdsToDelete]); }
-         if (scoresToUpdate.length > 0) {
-             const updateQuery = `UPDATE scores SET type = $1, pdf_url = $2, display_order = $3, updated_at = NOW() WHERE id = $4 AND music_id = $5;`;
-             for (const score of scoresToUpdate) { if (existingScoreIds.has(parseInt(score.id, 10))) { await client.query(updateQuery, [score.type, score.pdf_url, score.display_order || 0, score.id, id]); } }
-         }
-         if (scoresToInsert.length > 0) {
-             const insertQuery = `INSERT INTO scores (music_id, type, pdf_url, display_order) VALUES ($1, $2, $3, $4);`;
-             for (const score of scoresToInsert) { await client.query(insertQuery, [id, score.type, score.pdf_url, score.display_order || 0]); }
-         }
-        await client.query('COMMIT');
-         const finalScoresResult = await pool.query('SELECT id, type, pdf_url, display_order FROM scores WHERE music_id = $1 ORDER BY display_order ASC, type ASC', [id]);
-         updatedMusic.scores = finalScoresResult.rows; res.json(updatedMusic);
-    } catch (err) {
-         if (!res.headersSent) { await client.query('ROLLBACK'); res.status(500).json({ error: '更新音樂時發生內部伺服器錯誤' }); }
-         console.error(`[DEBUG PUT /api/music/${id}] Error occurred, rolling back transaction. Error:`, err.stack || err);
-    } finally { client.release(); }
-});
-app.delete('/api/admin/music/:id', async (req, res) => {
-    const { id } = req.params;
-    try { const result = await pool.query('DELETE FROM music WHERE id = $1', [id]); if (result.rowCount === 0) { return res.status(404).json({ error: '找不到音樂項目，無法刪除。' }); } res.status(204).send(); }
-    catch (err) { console.error(`刪除音樂 ID ${id} 時出錯：`, err.stack || err); res.status(500).json({ error: '刪除過程中發生伺服器內部錯誤。' }); }
-});
-
-
-
-// --- 路由 ---
-app.get('/news/:id(\\d+)', (req, res) => res.sendFile(path.join(__dirname, 'public', 'news-detail.html')));
-app.get('/scores', (req, res) => res.sendFile(path.join(__dirname, 'public', 'scores.html')));
-app.get('/guestbook', (req, res) => res.sendFile(path.join(__dirname, 'public', 'guestbook.html')));
-app.get('/message-detail.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'message-detail.html')));
-app.get('/rich.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich.html')));
-app.get('/rich-control.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rich-control.html')));
-
-// --- Create HTTP Server ---
- 
-// --- WebSocket Server Setup ---
- 
-let gameClient = null;
-const controllerClients = new Set();
-
-
-
-
-
-// --- 404 Handler ---
-app.use((req, res, next) => {
-    
-    console.log(`[404 Handler] Path not found: ${req.method} ${req.originalUrl}`);
-    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-});
-
-/// --- Global Error Handler ---
-app.use((err, req, res, next) => {
-    console.error("全局錯誤處理:", {
-        message: err.message,
-        status: err.status,
-        // 在開發模式下顯示堆疊，生產環境隱藏或記錄到文件
-        stack: process.env.NODE_ENV !== 'production' ? err.stack : 'Stack trace hidden in production',
-        url: req.originalUrl,
-        method: req.method,
-        ip: req.ip
-    });
-
-    if (res.headersSent) {
-        return next(err);
-    }
-
-    const errorStatus = err.status || 500;
-    const errorMessageForClient = (process.env.NODE_ENV === 'production' && errorStatus === 500)
-        ? '伺服器發生了一些問題！請稍後再試。' // 更友好的生產環境消息
-        : err.message || '未知伺服器錯誤';
-
-    res.status(errorStatus).json({ // <--- 確保這裡回傳 JSON
-        success: false,
-        error: errorMessageForClient
-    });
-});
-// --- END OF FILE server.js ---
-
- 
-server.listen(PORT, async () => { // <--- 注意這裡可能需要加上 async
-    console.log(`Server running on port ${PORT}`);
-    // 可能還有其他現有的啟動代碼
-
-    // ---> 添加以下代碼來初始化商店數據庫 <---
-    // try {
-    //     await storeDb.initStoreDatabase(); // storeDb is removed
-    //     // 初始化成功日誌已在 storeDb.initStoreDatabase 內部處理
-    // } catch (err) {
-    //     // 錯誤日誌已在 storeDb.initStoreDatabase 內部處理
-    //     // 您可以選擇在這裡添加額外的錯誤處理，例如退出應用
-    //     console.error('*** 商店數據庫初始化失敗，應用可能無法正常運行商店功能 ***'); // This was related to storeDb
-    // }
-    // ---> 添加結束 <---
-
-});
-
-
-
-
-console.log('註冊路由: /api/news-categories');
-
- 
-
 
 
 
@@ -8990,3 +8696,376 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
     }
 });
+
+// --- 銷售報告 API (受保護) ---
+app.get('/api/analytics/sales-report', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    let queryStartDate = startDate ? new Date(startDate) : null;
+    let queryEndDate = endDate ? new Date(endDate) : null;
+    if (!queryStartDate || !queryEndDate || isNaN(queryStartDate) || isNaN(queryEndDate)) {
+        queryEndDate = new Date();
+        queryStartDate = new Date();
+        queryStartDate.setDate(queryEndDate.getDate() - 30);
+    } else {
+         queryEndDate.setHours(23, 59, 59, 999);
+    }
+    const startDateISO = queryStartDate.toISOString();
+    const endDateISO = queryEndDate.toISOString();
+
+    const client = await pool.connect();
+    try {
+        const totalItemsResult = await client.query(`SELECT COALESCE(SUM(quantity_sold), 0)::integer AS total_items FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2`, [startDateISO, endDateISO]);
+        const totalItemsSold = totalItemsResult.rows[0].total_items;
+
+        const trendResult = await client.query(`SELECT DATE(sale_timestamp AT TIME ZONE 'Asia/Taipei') AS sale_date, SUM(quantity_sold)::integer AS daily_quantity FROM sales_log WHERE sale_timestamp BETWEEN $1 AND $2 GROUP BY sale_date ORDER BY sale_date ASC`, [startDateISO, endDateISO]);
+        const salesTrend = trendResult.rows.map(row => ({ date: row.sale_date.toISOString().split('T')[0], quantity: row.daily_quantity }));
+
+        const topProductsResult = await client.query(`SELECT f.name AS figure_name, fv.name AS variation_name, SUM(sl.quantity_sold)::integer AS total_quantity FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 GROUP BY f.name, fv.name ORDER BY total_quantity DESC LIMIT 10`, [startDateISO, endDateISO]);
+        const topSellingProducts = topProductsResult.rows;
+
+        const detailedLogResult = await client.query(`SELECT sl.sale_timestamp, f.name AS figure_name, fv.name AS variation_name, sl.quantity_sold FROM sales_log sl JOIN figure_variations fv ON sl.figure_variation_id = fv.id JOIN figures f ON fv.figure_id = f.id WHERE sl.sale_timestamp BETWEEN $1 AND $2 ORDER BY sl.sale_timestamp DESC`, [startDateISO, endDateISO]);
+        const detailedLog = detailedLogResult.rows.map(row => ({ timestamp: row.sale_timestamp, figureName: row.figure_name, variationName: row.variation_name, quantity: row.quantity_sold }));
+
+        res.status(200).json({
+            summary: { totalItemsSold, startDate: startDateISO.split('T')[0], endDate: endDateISO.split('T')[0] },
+            trend: salesTrend,
+            topProducts: topSellingProducts,
+            details: detailedLog
+        });
+    } catch (err) {
+        console.error('[Sales Report API Error] 獲取銷售報告數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售報告數據時發生伺服器內部錯誤' });
+    } finally {
+        client.release();
+    }
+});
+
+
+// --- 公仔庫存管理 API (受保護) ---
+app.get('/api/admin/figures', async (req, res) => {
+    try {
+        const queryText = ` SELECT f.id, f.name, f.image_url, f.purchase_price, f.selling_price, f.ordering_method, f.created_at, f.updated_at, COALESCE( (SELECT json_agg( json_build_object( 'id', v.id, 'name', v.name, 'quantity', v.quantity ) ORDER BY v.name ASC ) FROM figure_variations v WHERE v.figure_id = f.id), '[]'::json ) AS variations FROM figures f ORDER BY f.created_at DESC; `;
+        const result = await pool.query(queryText);
+        res.json(result.rows);
+    } catch (err) { console.error('[Admin API Error] 獲取公仔列表時出錯:', err.stack || err); res.status(500).json({ error: '獲取公仔列表時發生伺服器內部錯誤' }); }
+});
+app.post('/api/admin/figures', async (req, res) => {
+    const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureInsertQuery = ` INSERT INTO figures (name, image_url, purchase_price, selling_price, ordering_method) VALUES ($1, $2, $3, $4, $5) RETURNING *; `;
+        const figureResult = await client.query(figureInsertQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null ]);
+        const newFigure = figureResult.rows[0]; const newFigureId = newFigure.id;
+        let insertedVariations = [];
+        if (variations && variations.length > 0) {
+            const variationInsertQuery = ` INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *; `;
+            for (const variation of variations) {
+                if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未命名'}" 缺少名稱或數量。`); }
+                const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+                const variationResult = await client.query(variationInsertQuery, [ newFigureId, variation.name.trim(), quantity ]);
+                insertedVariations.push(variationResult.rows[0]);
+            }
+        }
+        await client.query('COMMIT'); newFigure.variations = insertedVariations; res.status(201).json(newFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error('[Admin API Error] 新增公仔及其規格時出錯:', err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `新增失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `新增公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.put('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; const { name, image_url, purchase_price, selling_price, ordering_method, variations } = req.body;
+    if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    if (!name) { return res.status(400).json({ error: '公仔名稱為必填項。' }); }
+    if (variations && !Array.isArray(variations)) { return res.status(400).json({ error: '規格資料格式必須是陣列。' }); }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const figureUpdateQuery = ` UPDATE figures SET name = $1, image_url = $2, purchase_price = $3, selling_price = $4, ordering_method = $5, updated_at = NOW() WHERE id = $6 RETURNING *; `;
+        const figureResult = await client.query(figureUpdateQuery, [ name, image_url || null, purchase_price || 0, selling_price || 0, ordering_method || null, id ]);
+        if (figureResult.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: '找不到要更新的公仔。' }); }
+        const updatedFigure = figureResult.rows[0];
+        const variationsToProcess = variations || []; const incomingVariationIds = new Set(variationsToProcess.filter(v => v.id).map(v => parseInt(v.id)));
+        const existingVariationsResult = await client.query('SELECT id FROM figure_variations WHERE figure_id = $1', [id]); const existingVariationIds = new Set(existingVariationsResult.rows.map(r => r.id));
+        const variationIdsToDelete = [...existingVariationIds].filter(existingId => !incomingVariationIds.has(existingId));
+        if (variationIdsToDelete.length > 0) { const deleteQuery = `DELETE FROM figure_variations WHERE id = ANY($1::int[])`; await client.query(deleteQuery, [variationIdsToDelete]); }
+        const variationUpdateQuery = `UPDATE figure_variations SET name = $1, quantity = $2, updated_at = NOW() WHERE id = $3 AND figure_id = $4`;
+        const variationInsertQuery = `INSERT INTO figure_variations (figure_id, name, quantity) VALUES ($1, $2, $3) RETURNING *`;
+        let finalVariations = [];
+        for (const variation of variationsToProcess) {
+            if (!variation.name || variation.quantity === undefined || variation.quantity === null) { throw new Error(`規格 "${variation.name || '未提供'}" 缺少名稱或數量。`); }
+            const quantity = parseInt(variation.quantity); if (isNaN(quantity) || quantity < 0) { throw new Error(`規格 "${variation.name}" 的數量必須是非負整數。`); }
+            const variationId = variation.id ? parseInt(variation.id) : null;
+            if (variationId && existingVariationIds.has(variationId)) { await client.query(variationUpdateQuery, [variation.name.trim(), quantity, variationId, id]); finalVariations.push({ id: variationId, name: variation.name.trim(), quantity: quantity }); }
+            else { const insertResult = await client.query(variationInsertQuery, [id, variation.name.trim(), quantity]); finalVariations.push(insertResult.rows[0]); }
+        }
+        await client.query('COMMIT'); updatedFigure.variations = finalVariations.sort((a, b) => a.name.localeCompare(b.name)); res.status(200).json(updatedFigure);
+    } catch (err) {
+        await client.query('ROLLBACK'); console.error(`[Admin API Error] 更新公仔 ID ${id} 時出錯:`, err.stack || err);
+        if (err.code === '23505' && err.constraint === 'figure_variations_figure_id_name_key') { res.status(409).json({ error: `更新失敗：同一個公仔下不能有重複的規格名稱。錯誤詳情: ${err.detail}` }); }
+        else { res.status(500).json({ error: `更新公仔過程中發生錯誤: ${err.message}` }); }
+    } finally { client.release(); }
+});
+app.delete('/api/admin/figures/:id', async (req, res) => {
+    const { id } = req.params; if (isNaN(parseInt(id))) { return res.status(400).json({ error: '無效的公仔 ID 格式。' }); }
+    try {
+        const result = await pool.query('DELETE FROM figures WHERE id = $1', [id]);
+        if (result.rowCount === 0) { return res.status(404).json({ error: '找不到要刪除的公仔。' }); }
+        res.status(204).send();
+    } catch (err) { console.error(`[Admin API Error] 刪除公仔 ID ${id} 時出錯:`, err.stack || err); res.status(500).json({ error: '刪除公仔過程中發生伺服器內部錯誤。' }); }
+});
+
+
+
+
+
+// GET /api/admin/sales - 獲取銷售紀錄 (您已有的，確保它在 app 上，而不是 adminRouter，如果其他 API 也是這樣)
+app.get('/api/admin/sales', async (req, res) => {
+    const { startDate, endDate, productName } = req.query;
+    // 確保您的查詢能正確處理 product_name，如果您的 sales_log 依賴 figure_variation_id，
+    // 則需要 JOIN figures 和 figure_variations 表來獲取正確的商品名稱。
+    // 這裡假設 product_name 直接存在於 sales_log 中，或可以通過 JOIN 獲得。
+    let queryText = `SELECT sl.id, sl.product_name, sl.quantity_sold, sl.sale_timestamp
+                     FROM sales_log sl`;
+    // 如果需要 JOIN:
+    // let queryText = `SELECT sl.id, COALESCE(f.name, fv.name, sl.product_name) as product_name,
+    //                         sl.quantity_sold, sl.sale_timestamp
+    //                  FROM sales_log sl
+    //                  LEFT JOIN figure_variations fv ON sl.figure_variation_id = fv.id
+    //                  LEFT JOIN figures f ON fv.figure_id = f.id`;
+
+
+    const queryParams = [];
+    const conditions = [];
+    let paramIndex = 1;
+    if (startDate) { conditions.push(`sl.sale_timestamp >= $${paramIndex++}`); queryParams.push(startDate); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        conditions.push(`sl.sale_timestamp < $${paramIndex++}`);
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    if (productName) { conditions.push(`sl.product_name ILIKE $${paramIndex++}`); queryParams.push(`%${productName}%`); }
+
+    if (conditions.length > 0) { queryText += ' WHERE ' + conditions.join(' AND '); }
+    queryText += ' ORDER BY sl.sale_timestamp DESC, sl.id DESC';
+
+    try {
+        const result = await pool.query(queryText, queryParams);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售紀錄時發生伺服器內部錯誤' });
+    }
+});
+
+// GET /api/admin/sales/summary - 獲取銷售彙總 (您已有的)
+app.get('/api/admin/sales/summary', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    let whereClause = ''; const queryParams = []; let paramIndex = 1;
+    if (startDate) { whereClause += `WHERE sale_timestamp >= $${paramIndex++} `; queryParams.push(startDate); }
+    if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        whereClause += (whereClause ? 'AND ' : 'WHERE ') + `sale_timestamp < $${paramIndex++} `;
+        queryParams.push(nextDay.toISOString().split('T')[0]);
+    }
+    try {
+        const totalItemsQuery = `SELECT COALESCE(SUM(quantity_sold)::integer, 0) as total_items FROM sales_log ${whereClause}`;
+        const totalItemsResult = await pool.query(totalItemsQuery, queryParams);
+        const totalItems = totalItemsResult.rows[0].total_items;
+
+        // 熱銷商品查詢 - 確保 product_name 來源正確
+        const topProductsQuery = `
+            SELECT product_name, SUM(quantity_sold)::integer as total_sold
+            FROM sales_log ${whereClause}
+            GROUP BY product_name
+            ORDER BY total_sold DESC
+            LIMIT 5;`;
+        const topProductsResult = await pool.query(topProductsQuery, queryParams);
+        const topProducts = topProductsResult.rows;
+
+        const salesTrendQuery = `
+            SELECT DATE(sale_timestamp) as sale_date, SUM(quantity_sold)::integer as daily_total
+            FROM sales_log ${whereClause}
+            GROUP BY sale_date
+            ORDER BY sale_date ASC;`;
+        const salesTrendResult = await pool.query(salesTrendQuery, queryParams);
+        const salesTrend = salesTrendResult.rows.map(row => ({ date: new Date(row.sale_date).toISOString().split('T')[0], quantity: row.daily_total }));
+
+        res.status(200).json({ totalItems, topProducts, salesTrend });
+    } catch (err) {
+        console.error('[Admin API Error] 獲取銷售彙總數據時出錯:', err.stack || err);
+        res.status(500).json({ error: '獲取銷售彙總數據時發生伺服器內部錯誤' });
+    }
+});
+
+// 新增: GET /api/admin/sales/product-names - 用於商品名稱輸入建議
+app.get('/api/admin/sales/product-names', async (req, res) => {
+    try {
+        // 這個查詢假設商品名稱直接存儲在 sales_log 中。
+        // 更健壯的系統可能從您的實際商品表（例如 `figures` 或 `products`）查詢。
+        const result = await pool.query('SELECT DISTINCT product_name FROM sales_log WHERE product_name IS NOT NULL ORDER BY product_name ASC');
+        const productNames = result.rows.map(row => row.product_name);
+        res.json(productNames);
+    } catch (error) {
+        console.error('獲取商品名稱列表失敗:', error);
+        res.status(500).json({ error: '無法獲取商品名稱列表' });
+    }
+});
+
+
+// 新增: POST /api/admin/sales - 新增一筆銷售紀錄
+app.post('/api/admin/sales', async (req, res) => {
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+
+    // 基本驗證
+    if (!product_name || !quantity_sold || !sale_timestamp) {
+        return res.status(400).json({ error: '請填寫所有必填欄位 (商品名稱, 銷售數量, 銷售時間)。' });
+    }
+
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是有效的正整數。' });
+    }
+
+    let timestampToSave;
+    try {
+        // 確保時間戳有效並轉換為 ISO 字符串存入數據庫
+        timestampToSave = new Date(sale_timestamp).toISOString();
+    } catch (e) {
+        return res.status(400).json({ error: '銷售時間格式無效。' });
+    }
+
+    try {
+        // 假設 sales_log 表有 product_name, quantity_sold, sale_timestamp 和一個自動遞增的 id。
+        // 如果您的表結構不同（例如，需要 figure_variation_id），請調整此查詢。
+        const queryText = `
+            INSERT INTO sales_log (product_name, quantity_sold, sale_timestamp)
+            VALUES ($1, $2, $3)
+            RETURNING *;  -- 返回新增的紀錄
+        `;
+        // 如果您的數據庫設計是通過 figure_variation_id 關聯的，
+        // 您需要修改表單讓用戶選擇公仔/規格，然後在這裡傳入 figure_variation_id。
+        // 目前根據表單，我們只有 product_name。
+        const result = await pool.query(queryText, [product_name.trim(), quantity, timestampToSave]);
+
+        console.log('[Admin API POST /sales] 新增銷售紀錄成功:', result.rows[0]);
+        res.status(201).json(result.rows[0]); // 201 Created
+
+    } catch (err) {
+        console.error('[Admin API POST /sales] 新增銷售紀錄時出錯:', err.stack || err);
+        res.status(500).json({ error: '新增銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+// 新增: PUT /api/admin/sales/:id - 更新現有的銷售紀錄
+app.put('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const saleId = parseInt(id);
+    if (isNaN(saleId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID。' });
+    }
+
+    const { product_name, quantity_sold, sale_timestamp } = req.body;
+
+    if (!product_name || !quantity_sold || !sale_timestamp) {
+        return res.status(400).json({ error: '請填寫所有必填欄位 (商品名稱, 銷售數量, 銷售時間)。' });
+    }
+    const quantity = parseInt(quantity_sold);
+    if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: '銷售數量必須是有效的正整數。' });
+    }
+    let timestampToSave;
+    try {
+        timestampToSave = new Date(sale_timestamp).toISOString();
+    } catch (e) {
+        return res.status(400).json({ error: '銷售時間格式無效。' });
+    }
+
+    try {
+        // 假設有一個 `updated_at` 欄位需要更新為 NOW()
+        const queryText = `
+            UPDATE sales_log
+            SET product_name = $1, quantity_sold = $2, sale_timestamp = $3, updated_at = NOW()
+            WHERE id = $4
+            RETURNING *; -- 返回更新後的紀錄
+        `;
+        const result = await pool.query(queryText, [product_name.trim(), quantity, timestampToSave, saleId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要更新的銷售紀錄。' });
+        }
+        console.log('[Admin API PUT /sales/:id] 更新銷售紀錄成功:', result.rows[0]);
+        res.status(200).json(result.rows[0]); // 200 OK
+
+    } catch (err) {
+        console.error(`[Admin API PUT /sales/${id}] 更新銷售紀錄時出錯:`, err.stack || err);
+        res.status(500).json({ error: '更新銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+// 新增: DELETE /api/admin/sales/:id - 刪除一筆銷售紀錄
+app.delete('/api/admin/sales/:id', async (req, res) => {
+    const { id } = req.params;
+    const saleId = parseInt(id);
+    if (isNaN(saleId)) {
+        return res.status(400).json({ error: '無效的銷售紀錄 ID。' });
+    }
+
+    try {
+        const queryText = `DELETE FROM sales_log WHERE id = $1 RETURNING id;`; // RETURNING id 可以確認確實刪除了
+        const result = await pool.query(queryText, [saleId]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的銷售紀錄。' });
+        }
+        console.log(`[Admin API DELETE /sales/:id] 刪除銷售紀錄 ID ${saleId} 成功。`);
+        res.status(204).send(); // 204 No Content，表示成功，無響應體
+
+    } catch (err) {
+        console.error(`[Admin API DELETE /sales/${id}] 刪除銷售紀錄時出錯:`, err.stack || err);
+        res.status(500).json({ error: '刪除銷售紀錄時發生伺服器內部錯誤。', detail: err.message });
+    }
+});
+
+
+
+
+
+
+adminRouter.delete('/news-categories/:id', async (req, res) => {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+    if (isNaN(categoryId)) {
+        return res.status(400).json({ error: '無效的分類 ID 格式。' });
+    }
+    
+    try {
+        // 首先檢查該分類是否有關聯的新聞
+        const checkResult = await pool.query('SELECT COUNT(*) FROM news WHERE category_id = $1', [categoryId]);
+        if (parseInt(checkResult.rows[0].count) > 0) {
+            return res.status(400).json({ 
+                error: '無法刪除此分類，因為有新聞正在使用它。請先變更這些新聞的分類，或考慮停用而非刪除該分類。' 
+            });
+        }
+        
+        const result = await pool.query('DELETE FROM news_categories WHERE id = $1', [categoryId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: '找不到要刪除的分類。' });
+        }
+        
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[受保護 API 錯誤] 刪除分類 ID ${id} 時出錯:`, err.stack || err);
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`伺服器正在監聽端口 ${PORT}`);
+  });
+
