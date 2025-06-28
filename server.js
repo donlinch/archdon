@@ -95,32 +95,34 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
 
 
 
-
-
 // --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 const authenticateBoxUser = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7, authHeader.length); // "Bearer " 後面的部分
-        jwt.verify(token, BOX_JWT_SECRET, (err, decoded) => {
+        const token = authHeader.substring(7); // "Bearer " is 7 chars
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
             if (err) {
-                console.warn('[Box Auth] Token 驗證失敗:', err.message);
-                return res.status(403).json({ error: '禁止訪問：Token 無效或已過期。' });
+                console.warn('[Box Auth] Token verification failed:', err.message);
+                return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
             }
-            // 將解碼後的用戶信息附加到請求對象，方便後續路由使用
-            req.boxUser = decoded; // decoded 通常包含 user_id 和 username
-             next();
+            
+            // CRITICAL CHECK: Ensure the decoded token has the user_id.
+            if (!decoded || typeof decoded.user_id === 'undefined') {
+                console.error('[Box Auth] Invalid token payload: user_id is missing.', decoded);
+                return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
+            }
+
+            // Attach user info to the request object
+            req.boxUser = decoded; // decoded contains user_id, etc.
+            next();
         });
     } else {
-     
-        console.warn('[Box Auth] 未提供 Authorization 標頭或格式不正確。');
-        res.status(401).json({ error: '未授權：請提供有效的Token。' });
+        console.warn('[Box Auth] Authorization header missing or format incorrect.');
+        res.status(401).json({ error: 'Unauthorized: Please provide a valid token.' });
     }
 };
 // --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-
-
 
 
 
