@@ -1669,9 +1669,22 @@
                         const campaignData = { title, description, options };
 
                         try {
+                            // 获取当前登录用户ID和令牌
+                            const savedUserId = localStorage.getItem('boxCurrentUserId');
+                            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                            
+                            // 准备请求头
+                            const headers = {
+                                'Content-Type': 'application/json'
+                            };
+                            
+                            if (savedUserId && savedUserToken) {
+                                headers['Authorization'] = `Bearer ${savedUserToken}`;
+                            }
+                            
                             const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: headers,
                                 body: JSON.stringify(campaignData)
                             });
                             if (!response.ok) {
@@ -1865,9 +1878,22 @@
                         }
                         
                         try {
+                            // 获取当前登录用户ID和令牌
+                            const savedUserId = localStorage.getItem('boxCurrentUserId');
+                            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                            
+                            // 准备请求头
+                            const headers = {
+                                'Content-Type': 'application/json'
+                            };
+                            
+                            if (savedUserId && savedUserToken) {
+                                headers['Authorization'] = `Bearer ${savedUserToken}`;
+                            }
+                            
                             const response = await fetch(`${API_BASE_URL}/campaigns`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: headers,
                                 body: JSON.stringify(campaignData)
                             });
                             if (!response.ok) {
