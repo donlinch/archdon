@@ -1,8 +1,3 @@
- 
-
-
-
-
 // server.js
 require('dotenv').config();
 const http = require('http'); // <--- Need http module
@@ -93,129 +88,6 @@ app.use(session({
 
 
 // --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
-const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
-    if (req.session && req.session.isAdmin) {      // (之前叫 isAdmin，建議改名)
-        return next();
-    }
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
-        return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
-    } else {
-        req.session.returnTo = req.originalUrl;
-        return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
-    }
-};
-
-
-
-
-
-
-
-
-
-// =================================================================
-// ★★★ BOX 前台會員專用認證中介軟體 (Member Authentication) ★★★
-// =================================================================
-// 說明：此中介軟體用於保護 "Box Organizer" 前台應用的 API 路由 (例如 /api/box/users/me)。
-//       這是給一般會員或使用者登入時使用的。
-// 機制：它採用基於 Token 的認證 (JWT - JSON Web Token)。
-//       會員登入後，客戶端 (瀏覽器) 會收到一個 JWT。
-//       對於每個需要保護的 API 請求，客戶端必須在 HTTP 的 `Authorization` 標頭中
-//       以 `Bearer <token>` 的形式附上這個 JWT。
-//       伺服器會驗證此 token 的簽名和時效性，如果合法，則允許訪問。
-//       這種方式是無狀態的 (stateless)，適合現代 Web 應用和 API。
-// =================================================================
-
-
-app.post('/api/admin/login', (req, res) => {
-    const { username, password } = req.body;
-    const adminUsername = process.env.ADMIN_LOGIN;
-    const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
-
-    if (!adminUsername || !adminPassword) {
-        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD 環境變數未設定。');
-        return res.status(500).json({ success: false, error: '伺服器認證配置錯誤。' });
-    }
-
-    if (username === adminUsername && password === adminPassword) {
-        if (!req.session) {
-            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！');
-            return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
-        }
-        req.session.isAdmin = true;
-        const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
-        delete req.session.returnTo;
-        console.log('[Login Success] Session isAdmin set. Attempting to save session. redirectTo:', returnTo); // 新日誌
-
-
-        // 保存 session 然後再發送回應
-        req.session.save(err => {
-            if (err) {
-                console.error("Session 保存失敗:", err);
-                return res.status(500).json({ success: false, error: 'Session 保存失敗，無法登入。' });
-            }
-            console.log(`[Login Success] Session saved. Responding with JSON. Session ID: ${req.sessionID}`); // 新日誌
-            res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
-        });
-    } else {
-        console.warn(`[Admin Login] 使用者 '${username}' 登入失敗：帳號或密碼錯誤。`);
-        res.status(401).json({ success: false, error: '帳號或密碼錯誤。' });
-    }
-});
-// Admin Logout Route
-app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/admin/logout 且為 POST
-    if (req.session) { // 先檢查 req.session 是否存在
-        req.session.destroy(err => {
-            if (err) {
-                console.error('Session 銷毀失敗:', err);
-                return res.status(500).json({ success: false, error: '登出失敗。' });
-            }
-            res.clearCookie('connect.sid'); // 假設 'connect.sid' 是您的 session cookie 名稱
-            console.log("[Admin Logout] Session 已成功銷毀。");
-            res.json({ success: true, message: '已成功登出。' });
-        });
-    } else {
-        // 如果沒有 session，也算登出成功
-        console.log("[Admin Logout] 沒有活動的 session，無需銷毀。");
-        res.json({ success: true, message: '已登出 (無活動 session)。' });
-    }
-});
-
-
-// GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
-app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                prr.id, prr.user_id, u.username, u.email, 
-                prr.reset_token, prr.token_expires_at, prr.created_at
-            FROM password_reset_requests prr
-            JOIN box_users u ON prr.user_id = u.user_id
-            WHERE prr.status = 'pending'
-            ORDER BY prr.created_at ASC;
-        `;
-        const result = await pool.query(query);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('[API GET /api/admin/password-reset-requests/pending] Error:', err);
-        res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
-    }
-});
-
-// GET /api/admin/password-reset-requests/pending-count - 獲取待處理請求數量
-app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
-    try {
-        const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
-        const count = parseInt(result.rows[0].count, 10);
-        res.json({ count });
-    } catch (err) {
-        console.error('[API GET /api/admin/password-reset-requests/pending-count] Error:', err);
-        res.status(500).json({ error: '無法獲取請求數量' });
-    }
-});
-
-
-
 // Example of a protected admin route
 app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
     res.send(`
@@ -282,7 +154,7 @@ const productUpload = multer({
 
  
 
-const sessionProtectedAdminPages =  [
+const sessionProtectedAdminPages = [
     // 注意：admin-main.html 和 admin-nav.html 已有特定處理，這裡僅為示例結構
     '/admin-main.html',
     '/admin-nav.html',
@@ -747,7 +619,6 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
     }
 });
 // --- END OF Voit Router Definitions ---
-
 
 
 
