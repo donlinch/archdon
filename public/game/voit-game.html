@@ -273,6 +273,12 @@
             margin-right: 12px;
             vertical-align: middle;
             border: 2px solid var(--border-color);
+            cursor: pointer; /* 添加指針樣式表示可點擊 */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .result-item-image:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
         }
         .result-item-no-image { 
             display: inline-block;
@@ -1277,7 +1283,9 @@
                             <div class="result-item" data-result-id="${opt.option_id}">
                                 <div class="result-label">
                                     <div>
-                                        ${opt.image_url && opt.image_url.trim() !== '' ? `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image">` : '<span class="result-item-no-image"></span>'}
+                                        ${opt.image_url && opt.image_url.trim() !== '' ? 
+                                          `<img src="${opt.image_url}" alt="${opt.name}" class="result-item-image" title="點擊查看大圖">` : 
+                                          '<span class="result-item-no-image"></span>'}
                                         <span>${opt.name}</span>
                                     </div>
                                     <span class="percentage">0% (0票)</span>
@@ -1398,6 +1406,15 @@
                                     progressBar.textContent = `${percentage.toFixed(1)}%`;
                                     percentageSpan.textContent = `${percentage.toFixed(1)}% (${votesForOption}票)`;
                                 }, 50 * (index + 1)); 
+                                
+                                // 添加圖片點擊事件
+                                const resultImage = resultItem.querySelector('.result-item-image');
+                                if (resultImage && opt.image_url) {
+                                    resultImage.addEventListener('click', function() {
+                                        lightboxImg.src = opt.image_url;
+                                        lightbox.style.display = 'flex';
+                                    });
+                                }
                             }
                         });
 
