@@ -61,6 +61,11 @@ function getDOMElements() {
 
         // 最新模板按鈕
         latestTemplatesBtn: document.getElementById('latestTemplatesBtn'),
+
+        // 最新模板抽屜內的篩選控制項
+        latestSortSelect: document.getElementById('latestSortSelect'),
+        latestSearchBySelect: document.getElementById('latestSearchBySelect'),
+        latestSearchInput: document.getElementById('latestSearchInput'),
     };
 }
 
@@ -118,7 +123,7 @@ function initializeBoard() {
     gameBoard.innerHTML = ''; // 清空現有格子
 
     const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-    
+
     // 確保 contentPositions 陣列長度正確
     if (gameState.contentPositions.length !== totalCells) {
         gameState.contentPositions = Array(totalCells).fill(0).map((_, i) => i);
@@ -291,7 +296,7 @@ function initializeInputs() {
     let contents = [];
     if (Array.isArray(gameState.contents) && gameState.contents.length === totalCells) {
         contents = gameState.contents;
-    } else {
+        } else {
         contents = Array(totalCells).fill('').map((_, i) => `內容 ${i + 1}`);
     }
 
@@ -314,7 +319,7 @@ function initializeInputs() {
         input.style.transform = 'translateX(-10px)';
         
         // 延遲顯示每個輸入框，創建淡入效果
-        setTimeout(() => {
+    setTimeout(() => {
             input.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
             input.style.opacity = '1';
             input.style.transform = 'translateX(0)';
@@ -376,7 +381,7 @@ function loadDefaultTemplate() {
             console.error('無法載入預設模板:', error);
             // 如果無法載入預設模板，則使用硬編碼的內容
             setExampleContent();
-            initializeBoard();
+    initializeBoard();
         });
 }
 
@@ -452,7 +457,7 @@ function openLatestTemplatesDrawer() {
 
     // 加載最新模板列表
     loadLatestTemplates();
-
+    
     // 打開抽屜
     gamesDrawer.classList.add('open');
     drawerOverlay.classList.add('visible');
@@ -465,8 +470,8 @@ function closeGamesDrawer() {
     if (!gamesDrawer) return;
 
     gamesDrawer.classList.remove('open');
-    drawerOverlay.classList.remove('visible');
-    document.body.style.overflow = ''; // 恢復滾動
+        drawerOverlay.classList.remove('visible');
+        document.body.style.overflow = ''; // 恢復滾動
 }
 
 // 分享遊戲
@@ -499,24 +504,31 @@ function shareGame() {
 
 // 加載最新模板列表到抽屜
 async function loadLatestTemplates() {
-    const { gamesGrid } = getDOMElements();
+    const { gamesGrid, latestSortSelect, latestSearchBySelect, latestSearchInput } = getDOMElements();
     if (!gamesGrid) return;
-
+    
     // 顯示加載中
     gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">正在載入最新模板...</div>';
 
     try {
+        const params = new URLSearchParams();
+        params.append('sortBy', latestSortSelect.value);
+        if (latestSearchInput.value) {
+            params.append('searchBy', latestSearchBySelect.value);
+            params.append('search', latestSearchInput.value);
+        }
+
         // 從 API 獲取最新模板列表 (只獲取公開的)
-        const templates = await api.get('/api/card-game/templates?sortBy=newest');
+        const templates = await api.get(`/api/card-game/templates?${params.toString()}`);
         
         // 清空容器
         gamesGrid.innerHTML = '';
-
+        
         if (!templates || templates.length === 0) {
             gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">暫無公開模板，快來創建一個吧！</div>';
             return;
         }
-
+        
         // 創建模板卡片
         templates.forEach((template, index) => {
             const gameCard = document.createElement('div');
@@ -540,7 +552,7 @@ async function loadLatestTemplates() {
             });
             
             gamesGrid.appendChild(gameCard);
-
+            
             // 添加動畫效果，延遲顯示
             setTimeout(() => {
                 gameCard.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -548,7 +560,7 @@ async function loadLatestTemplates() {
                 gameCard.style.transform = 'translateY(0)';
             }, 50 * index);
         });
-
+        
     } catch (error) {
         console.error('加載最新模板列表失敗:', error);
         gamesGrid.innerHTML = `
@@ -565,17 +577,19 @@ async function loadLatestTemplates() {
 
 // 打開模板管理器
 async function openTemplateManager() {
-    const { configModal, templateEditor } = getDOMElements();
+    const { configModal } = getDOMElements();
     if (!configModal) return;
-    
-    // 檢查用戶登入狀態
-    checkLoginStatus();
-    
-    // 填充創作者下拉列表
-    await populateCreators();
+
+    // 檢查用戶是否登入
+    if (!gameState.loggedInUser) {
+        showNotification('請先登入才能管理您的模板！', 'error');
+        // 可以在此引導用戶到登入頁面
+        // window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+        return; // 未登入則不打開
+    }
     
     // 填充模板列表
-    await populateTemplates();
+    await populateMyTemplates();
     
     // 初始化輸入框
     initializeInputs();
@@ -626,67 +640,36 @@ function checkLoginStatus() {
     }
 }
 
-// 填充創作者下拉列表
+// 填充創作者下拉列表 (此功能已在UI上移除，但保留函數以備不時之需)
 async function populateCreators() {
-    const { creatorSelect } = getDOMElements();
-    if (!creatorSelect) return;
-    
-    try {
-        const creators = await api.get('/api/card-game/creators');
-        
-        // 清空舊選項（保留前兩個固定選項）
-        const fixedOptions = Array.from(creatorSelect.querySelectorAll('option:not([data-creator-id])'));
-        creatorSelect.innerHTML = '';
-        fixedOptions.forEach(option => creatorSelect.appendChild(option));
-        
-        // 添加創作者選項
-        creators.forEach(creator => {
-            const option = document.createElement('option');
-            option.value = creator.user_id;
-            option.textContent = creator.username;
-            option.dataset.creatorId = true;
-            creatorSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('載入創作者列表失敗:', error);
-        showNotification('無法載入創作者列表', 'error');
-    }
+    // 功能已停用
 }
 
-// 填充模板列表
-async function populateTemplates() {
-    const { templateList, creatorSelect, sortSelect, templateSearchInput } = getDOMElements();
+// 填充"我的模板"列表
+async function populateMyTemplates() {
+    const { templateList } = getDOMElements();
     if (!templateList) return;
-    
-    // 顯示加載中
-    templateList.innerHTML = '<p style="text-align: center; padding: 20px;">正在載入模板...</p>';
-    
+
+    templateList.innerHTML = '<p style="text-align: center; padding: 20px;">正在載入您的模板...</p>';
+
     try {
-        // 構建查詢參數
-        const params = new URLSearchParams();
-        if (creatorSelect.value) {
-            params.append('creatorId', creatorSelect.value);
-        }
-        if (sortSelect.value) {
-            params.append('sortBy', sortSelect.value);
-        }
-        if (templateSearchInput.value) {
-            params.append('search', templateSearchInput.value);
-        }
-        
-        // 發送請求
-        const templates = await api.get(`/api/card-game/templates?${params.toString()}`);
-        
-        // 渲染模板列表
+        const templates = await api.get(`/api/card-game/templates?creatorId=mine`);
         renderTemplateList(templates);
     } catch (error) {
-        console.error('載入模板列表失敗:', error);
+        console.error('載入我的模板列表失敗:', error);
         templateList.innerHTML = `
             <p style="text-align: center; color: #e53935; padding: 20px;">
-                載入模板列表失敗：${error.message || '未知錯誤'}
+                載入您的模板失敗：${error.message || '未知錯誤'}
             </p>
         `;
     }
+}
+
+// 填充模板列表 (舊版，適用於所有公開模板，現由 populateMyTemplates 取代主要功能)
+async function populateTemplates() {
+    // 這個函數現在可以被視為 deprecated 或用於其他地方
+    // 目前主要由 populateMyTemplates 取代其在模板管理器中的作用
+    console.log("populateTemplates is deprecated for the main manager view.");
 }
 
 // 渲染模板列表
@@ -875,7 +858,7 @@ function renderTemplateList(templates) {
           showNotification('模板已成功刪除');
           
           // 重新載入模板列表
-          populateTemplates();
+          populateMyTemplates();
       } catch (error) {
           console.error('刪除模板失敗:', error);
           showNotification('刪除模板失敗', 'error');
@@ -889,7 +872,7 @@ function renderTemplateList(templates) {
           showNotification('模板已成功複製！您現在可以編輯這個新副本了。');
           
           // 重新載入模板列表
-          await populateTemplates();
+          populateMyTemplates();
           
           // 載入新模板到編輯器
           fillEditorForEdit(result.id);
@@ -973,7 +956,7 @@ function renderTemplateList(templates) {
           clearEditor();
           
           // 重新載入模板列表
-          populateTemplates();
+          populateMyTemplates();
       } catch (error) {
           console.error('保存模板失敗:', error);
           showNotification('保存模板失敗', 'error');
@@ -1003,51 +986,51 @@ function renderTemplateList(templates) {
       // 配置模態窗口相關
       if (elements.configBtn) {
           elements.configBtn.addEventListener('click', openTemplateManager);
-      }
-      
-      if (elements.closeConfigModal) {
-          elements.closeConfigModal.addEventListener('click', () => {
-              if (elements.configModal) {
-                  elements.configModal.style.display = 'none';
-              }
-          });
-      }
-      
-      // 當點擊模態窗口的背景時關閉
-      if (elements.configModal) {
-          elements.configModal.addEventListener('click', (event) => {
-              if (event.target === elements.configModal) {
-                  elements.configModal.style.display = 'none';
-              }
-          });
-      }
-      
-      // 重置遊戲按鈕
-      if (elements.resetBtn) {
-          elements.resetBtn.addEventListener('click', resetGame);
-      }
-      
+    }
+    
+    if (elements.closeConfigModal) {
+        elements.closeConfigModal.addEventListener('click', () => {
+            if (elements.configModal) {
+                elements.configModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // 當點擊模態窗口的背景時關閉
+    if (elements.configModal) {
+        elements.configModal.addEventListener('click', (event) => {
+            if (event.target === elements.configModal) {
+                elements.configModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // 重置遊戲按鈕
+    if (elements.resetBtn) {
+        elements.resetBtn.addEventListener('click', resetGame);
+    }
+    
       // 最新模板按鈕
       if (elements.latestTemplatesBtn) {
           elements.latestTemplatesBtn.addEventListener('click', openLatestTemplatesDrawer);
-      }
-      
-      if (elements.gamesDrawerClose) {
-          elements.gamesDrawerClose.addEventListener('click', closeGamesDrawer);
-      }
-      
-      // 抽屜背景點擊關閉
-      if (elements.drawerOverlay) {
-          elements.drawerOverlay.addEventListener('click', closeAllDrawers);
-      }
-      
+    }
+    
+    if (elements.gamesDrawerClose) {
+        elements.gamesDrawerClose.addEventListener('click', closeGamesDrawer);
+    }
+    
+    // 抽屜背景點擊關閉
+    if (elements.drawerOverlay) {
+        elements.drawerOverlay.addEventListener('click', closeAllDrawers);
+    }
+    
       // 模板管理相關
       if (elements.creatorSelect) {
-          elements.creatorSelect.addEventListener('change', populateTemplates);
+          elements.creatorSelect.addEventListener('change', populateMyTemplates);
       }
       
       if (elements.sortSelect) {
-          elements.sortSelect.addEventListener('change', populateTemplates);
+          elements.sortSelect.addEventListener('change', populateMyTemplates);
       }
       
       if (elements.templateSearchInput) {
@@ -1055,7 +1038,7 @@ function renderTemplateList(templates) {
               // 使用防抖動，避免每次輸入都觸發搜尋
               clearTimeout(elements.templateSearchInput.searchTimeout);
               elements.templateSearchInput.searchTimeout = setTimeout(() => {
-                  populateTemplates();
+                  populateMyTemplates();
               }, 300);
           });
       }
@@ -1077,29 +1060,45 @@ function renderTemplateList(templates) {
       if (elements.isPublicSwitch) {
           elements.isPublicSwitch.addEventListener('change', updatePublicLabel);
       }
-      
-      // 鍵盤事件處理
-      document.addEventListener('keydown', (e) => {
-          // ESC 鍵關閉所有彈窗和抽屜
-          if (e.key === 'Escape') {
-              closeAllDrawers();
-          }
-      });
-  }
-  
+    
+    // 鍵盤事件處理
+    document.addEventListener('keydown', (e) => {
+        // ESC 鍵關閉所有彈窗和抽屜
+        if (e.key === 'Escape') {
+            closeAllDrawers();
+        }
+    });
+
+    // 最新模板抽屜篩選
+    if (elements.latestSortSelect) {
+        elements.latestSortSelect.addEventListener('change', loadLatestTemplates);
+    }
+    if (elements.latestSearchBySelect) {
+        elements.latestSearchBySelect.addEventListener('change', loadLatestTemplates);
+    }
+    if (elements.latestSearchInput) {
+        elements.latestSearchInput.addEventListener('input', () => {
+            clearTimeout(elements.latestSearchInput.searchTimeout);
+            elements.latestSearchInput.searchTimeout = setTimeout(() => {
+                loadLatestTemplates();
+            }, 300); // 防抖
+        });
+    }
+}
+
   // 初始化應用
   async function initializeApp() {
-      console.log("洞洞樂遊戲初始化開始...");
-      try {
+    console.log("洞洞樂遊戲初始化開始...");
+    try {
           // 1. 檢查登入狀態
           checkLoginStatus();
-          
+
           // 2. 初始化輸入框
           initializeInputs();
-          
+
           // 3. 設置事件監聽器
-          setupEventListeners();
-          
+        setupEventListeners();
+
           // 4. 檢查 URL 是否有模板 ID
           const urlParams = new URLSearchParams(window.location.search);
           const templateId = urlParams.get('template');
@@ -1110,27 +1109,27 @@ function renderTemplateList(templates) {
           } else {
               // 否則載入預設模板
               await loadDefaultTemplate();
-          }
-          
-          console.log("洞洞樂遊戲初始化完成。");
-      } catch (error) {
-          console.error('初始化應用時發生嚴重錯誤:', error);
-          // 顯示錯誤通知
+        }
+
+        console.log("洞洞樂遊戲初始化完成。");
+    } catch (error) {
+        console.error('初始化應用時發生嚴重錯誤:', error);
+        // 顯示錯誤通知
           showNotification('應用初始化失敗，請刷新頁面重試：' + (error.message || '未知錯誤'), 'error');
-      }
-  }
-  
+    }
+}
+
   // 檢測設備類型
-  function detectDevice() {
-      const isMobile = window.innerWidth <= 767;
-      document.body.classList.toggle('is-mobile', isMobile);
-  }
-  
-  // 監聽設備寬度變化
-  window.addEventListener('resize', detectDevice);
-  
-  // 初始化遊戲應用
-  document.addEventListener('DOMContentLoaded', () => {
-      detectDevice();
-      initializeApp();
-  });
+function detectDevice() {
+    const isMobile = window.innerWidth <= 767;
+    document.body.classList.toggle('is-mobile', isMobile);
+}
+
+// 監聽設備寬度變化
+window.addEventListener('resize', detectDevice);
+
+// 初始化遊戲應用
+document.addEventListener('DOMContentLoaded', () => {
+    detectDevice();
+    initializeApp();
+});
