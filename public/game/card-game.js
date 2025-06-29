@@ -1255,10 +1255,46 @@ function renderTemplateList(templates) {
     }
 }
 
-  // 初始化應用
-  async function initializeApp() {
+// 調試函數：顯示localStorage中的所有內容
+function debugLocalStorage() {
+    console.group('localStorage 內容');
+    console.log('總項目數:', localStorage.length);
+    
+    // 列出所有項目
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        let value = localStorage.getItem(key);
+        
+        // 如果值看起來像token，只顯示前10個字符
+        if (key.includes('Token') && value && value.length > 15) {
+            value = value.substring(0, 10) + '...';
+        }
+        
+        console.log(`${key}: ${value}`);
+    }
+    
+    // 特別檢查登入相關的值
+    console.log('特別檢查:');
+    console.log('- boxCurrentUserId:', localStorage.getItem('boxCurrentUserId'));
+    console.log('- boxCurrentUsername:', localStorage.getItem('boxCurrentUsername'));
+    console.log('- boxCurrentDisplayName:', localStorage.getItem('boxCurrentDisplayName'));
+    
+    const userId = localStorage.getItem('boxCurrentUserId');
+    if (userId) {
+        console.log(`- boxUserToken_${userId}:`, localStorage.getItem(`boxUserToken_${userId}`) ? '存在' : '不存在');
+    }
+    console.log('- boxUserToken:', localStorage.getItem('boxUserToken') ? '存在' : '不存在');
+    
+    console.groupEnd();
+}
+
+// 初始化應用
+async function initializeApp() {
     console.log("洞洞樂遊戲初始化開始...");
     try {
+        // 0. 調試localStorage
+        debugLocalStorage();
+        
         // 1. 檢查登入狀態
         checkLoginStatus();
 
@@ -1288,7 +1324,7 @@ function renderTemplateList(templates) {
     }
 }
 
-  // 檢測設備類型
+// 檢測設備類型
 function detectDevice() {
     const isMobile = window.innerWidth <= 767;
     document.body.classList.toggle('is-mobile', isMobile);
