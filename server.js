@@ -2829,221 +2829,233 @@ app.get('/api/diffrent-game/levels', async (req, res) => {
 
 
 
+// --- 洞洞樂遊戲 API (Card Game APIs) ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
-
-
-
-
-// 新增關卡
-app.post('/api/diffrent-game/levels', async (req, res) => {
+// 1. 獲取所有擁有公開模板的創作者列表
+app.get('/api/card-game/creators', async (req, res) => {
     try {
-      const { level_name, left_image_url, right_image_url, active } = req.body;
-      
-      // 驗證數據
-      if (!level_name || !left_image_url || !right_image_url) {
-        return res.status(400).json({ error: '必須提供所有必要欄位' });
-      }
-      
-      const result = await pool.query(
-        'INSERT INTO diffrent_game_levels (level_name, left_image_url, right_image_url, active) VALUES ($1, $2, $3, $4) RETURNING id',
-        [level_name, left_image_url, right_image_url, active || true]
-      );
-      
-      res.status(201).json({ 
-        success: true, 
-        id: result.rows[0].id,
-        message: '關卡已成功新增' 
-      });
-    } catch (error) {
-      console.error('新增關卡錯誤:', error);
-      res.status(500).json({ error: '伺服器錯誤' });
-    }
-  });
-
-
-
-// --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
-
-// GET /api/card-game/templates - 獲取所有公開模板
-app.get('/api/card-game/templates', async (req, res) => {
-    try {
-        // 查詢 ID, 名稱和內容數據
-        const result = await pool.query(
-            `SELECT id, template_name, content_data, created_at, updated_at
-             FROM card_game_templates
-             WHERE is_public = TRUE
-             ORDER BY updated_at DESC`
-        );
-        // 直接返回查詢結果的 rows (包含 id, template_name, content_data)
+        const result = await pool.query(`
+            SELECT DISTINCT u.user_id, u.username, u.user_profile_image_url
+            FROM box_users u
+            JOIN card_game_templates t ON u.user_id = t.creator_id
+            WHERE t.is_public = TRUE
+            ORDER BY u.username;
+        `);
         res.json(result.rows);
     } catch (err) {
-        console.error('獲取洞洞樂模板失敗:', err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
+        console.error('[API ERROR] /api/card-game/creators:', err.stack);
+        res.status(500).json({ error: '無法獲取創作者列表' });
     }
 });
 
-// GET /api/card-game/templates/:id - 獲取特定模板 (保留，雖然前端目前可能不直接用)
-app.get('/api/card-game/templates/:id', async (req, res) => {
-    const { id } = req.params;
-    const templateId = parseInt(id, 10); // 確保是整數
-    if (isNaN(templateId)) {
-        return res.status(400).json({ error: '無效的模板 ID' });
-    }
+// 2. 獲取模板列表 (支持篩選、排序、搜尋)
+app.get('/api/card-game/templates', optionalAuthenticateBoxUser, async (req, res) => {
+    const { creatorId, sortBy, search } = req.query;
+    const currentUserId = req.boxUser ? req.boxUser.userId : null;
 
     try {
-        const result = await pool.query(
-            'SELECT id, template_name, content_data, created_at, updated_at FROM card_game_templates WHERE id = $1 AND is_public = TRUE', // 假設只能獲取公開的
-            [templateId]
-        );
+        let query = `
+            SELECT 
+                t.id, t.template_name, t.is_public, t.play_count, t.copy_count, 
+                t.creator_id, u.username AS creator_name,
+                CASE WHEN t.creator_id = $1 THEN TRUE ELSE FALSE END AS is_owner
+            FROM card_game_templates t
+            JOIN box_users u ON t.creator_id = u.user_id
+        `;
+        const params = [currentUserId];
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: '找不到模板或模板不公開' });
+        let whereClauses = [];
+        if (creatorId === 'mine' && currentUserId) {
+            whereClauses.push(`t.creator_id = $${params.push(currentUserId)}`);
+        } else if (creatorId) {
+            whereClauses.push(`t.creator_id = $${params.push(creatorId)} AND t.is_public = TRUE`);
+        } else {
+            // 預設只顯示公開的
+            whereClauses.push(`t.is_public = TRUE`);
         }
 
-        res.json(result.rows[0]);
+        if (search) {
+            whereClauses.push(`t.template_name ILIKE $${params.push(`%${search}%`)}`);
+        }
+        
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+
+        let orderByClause = ' ORDER BY t.created_at DESC';
+        if (sortBy === 'popular') {
+            orderByClause = ' ORDER BY (t.play_count + t.copy_count * 2) DESC, t.created_at DESC';
+        }
+        query += orderByClause;
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
     } catch (err) {
-        console.error(`獲取洞洞樂模板 ${id} 失敗:`, err);
-        res.status(500).json({ error: '伺服器內部錯誤' });
-    }
-});
-// POST /api/card-game/templates - 创建新模板 (修正版)
-app.post('/api/card-game/templates', async (req, res) => {
-    const { template_name, content_data, is_public = true } = req.body;
-    
-    console.log('收到模板創建請求:', {
-        template_name,
-        content_data_type: typeof content_data,
-        is_array: Array.isArray(content_data),
-        content_sample: Array.isArray(content_data) ? content_data.slice(0, 3) : content_data
-    });
-    
-    if (!template_name) {
-        return res.status(400).json({ error: '模板名称不能为空' });
-    }
-    
-    // 数据验证和处理
-    let validContentData;
-    try {
-        // 確保我們有一個有效的陣列
-        if (Array.isArray(content_data)) {
-            validContentData = content_data;
-        } 
-        // 如果是字符串，尝试解析
-        else if (typeof content_data === 'string') {
-            const parsed = JSON.parse(content_data);
-            // 解析後確保它是陣列
-            validContentData = Array.isArray(parsed) ? parsed : [parsed];
-        } 
-        // 其他类型，包装成数组
-        else if (content_data !== null && content_data !== undefined) {
-            validContentData = [content_data];
-        }
-        // 兜底：如果都不是，使用空陣列
-        else {
-            validContentData = [];
-        }
-        
-        // 再次验证是否為有效 JSON，確保可序列化
-        console.log('處理後的 content_data:', {
-            is_array: Array.isArray(validContentData),
-            length: Array.isArray(validContentData) ? validContentData.length : 0,
-            sample: Array.isArray(validContentData) ? validContentData.slice(0, 3) : validContentData
-        });
-        
-        // 測試是否可序列化
-        JSON.stringify(validContentData); 
-    } catch (error) {
-        console.error('内容数据格式错误:', error, '收到的数据:', content_data);
-        return res.status(400).json({ 
-            error: '内容数据格式错误，必须是有效的JSON',
-            detail: error.message,
-            received: typeof content_data
-        });
-    }
-    
-    try {
-        // 检查模板名称是否已存在
-        const existingCheck = await pool.query(
-            'SELECT 1 FROM card_game_templates WHERE template_name = $1',
-            [template_name]
-        );
-        
-        if (existingCheck.rows.length > 0) {
-            return res.status(409).json({ error: '此模板名称已存在' });
-        }
-        
-        // 插入新模板，使用验证过的数据
-        const ip_address = req.ip || 'unknown';        
-        const result = await pool.query(
-            `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
-             VALUES ($1, $2::json, $3, $4) 
-             RETURNING id, template_name, content_data, created_at, updated_at`,
-            [template_name, JSON.stringify(validContentData), ip_address, is_public]
-          );
-        
-        console.log('模板創建成功:', {
-            id: result.rows[0].id,
-            template_name: result.rows[0].template_name
-        });
-        
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('创建洞洞乐模板失败:', err);
-        res.status(500).json({ 
-            error: '服务器内部错误',
-            detail: err.message,
-            code: err.code
-        });
+        console.error('[API ERROR] /api/card-game/templates:', err.stack);
+        res.status(500).json({ error: '無法獲取模板列表' });
     }
 });
 
-// DELETE /api/card-game/templates/:id - 刪除模板 (使用 ID)
-app.delete('/api/card-game/templates/:id', async (req, res) => {
+
+// 3. 獲取單一模板的完整內容 (用於遊玩或編輯)
+app.get('/api/card-game/templates/:id', optionalAuthenticateBoxUser, async (req, res) => {
     const { id } = req.params;
-    const templateId = parseInt(id, 10); // 確保是整數
-    if (isNaN(templateId)) {
-        return res.status(400).json({ error: '無效的模板 ID' });
-    }
+    const currentUserId = req.boxUser ? req.boxUser.userId : null;
 
     try {
-        const result = await pool.query(
-            'DELETE FROM card_game_templates WHERE id = $1',
-            [templateId]
-        );
+        const result = await pool.query(`
+            SELECT t.*, u.username AS creator_name,
+                   CASE WHEN t.creator_id = $2 THEN TRUE ELSE FALSE END AS is_owner
+            FROM card_game_templates t
+            JOIN box_users u ON t.creator_id = u.user_id
+            WHERE t.id = $1
+        `, [id, currentUserId]);
 
         if (result.rowCount === 0) {
-            // 如果沒有刪除任何行，表示找不到該 ID
-            return res.status(404).json({ error: '找不到要刪除的模板' });
+            return res.status(404).json({ error: '找不到該模板' });
         }
 
-        console.log(`模板 ID ${templateId} 已成功刪除`);
-        res.status(204).send(); // 成功刪除，無內容返回
-
+        const template = result.rows[0];
+        // 如果模板是私有的，只有擁有者可以訪問
+        if (!template.is_public && template.creator_id !== currentUserId) {
+            return res.status(403).json({ error: '無權訪問此模板' });
+        }
+        
+        res.json(template);
     } catch (err) {
-        console.error(`刪除洞洞樂模板 ${id} 失敗:`, err);
-        // 可以根據錯誤碼判斷是否是外鍵約束等問題
-        res.status(500).json({ error: '伺服器內部錯誤，無法刪除模板' });
+        console.error(`[API ERROR] /api/card-game/templates/${id}:`, err.stack);
+        res.status(500).json({ error: '無法獲取模板' });
     }
 });
+
+// 4. 新增模板 (需要會員登入)
+app.post('/api/card-game/templates', authenticateBoxUser, async (req, res) => {
+    const { template_name, content_data, is_public } = req.body;
+    const creatorId = req.boxUser.userId;
+
+    if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
+        return res.status(400).json({ error: '參數無效，請檢查模板名稱和內容 (需為20個項目的陣列)。' });
+    }
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO card_game_templates (creator_id, template_name, content_data, is_public) VALUES ($1, $2, $3, $4) RETURNING *',
+            [creatorId, template_name, content_data, is_public]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[API ERROR] POST /api/card-game/templates:', err.stack);
+        res.status(500).json({ error: '無法新增模板' });
+    }
+});
+
+// 5. 更新模板 (需要會員登入且為擁有者)
+app.put('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params;
+    const { template_name, content_data, is_public } = req.body;
+    const creatorId = req.boxUser.userId;
+
+    if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
+        return res.status(400).json({ error: '參數無效' });
+    }
+
+    try {
+        const result = await pool.query(
+            'UPDATE card_game_templates SET template_name = $1, content_data = $2, is_public = $3, updated_at = NOW() WHERE id = $4 AND creator_id = $5 RETURNING *',
+            [template_name, content_data, is_public, id, creatorId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(403).json({ error: '無權更新此模板或模板不存在' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(`[API ERROR] PUT /api/card-game/templates/${id}:`, err.stack);
+        res.status(500).json({ error: '無法更新模板' });
+    }
+});
+
+// 6. 刪除模板 (需要會員登入且為擁有者)
+app.delete('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params;
+    const creatorId = req.boxUser.userId;
+    try {
+        const result = await pool.query(
+            'DELETE FROM card_game_templates WHERE id = $1 AND creator_id = $2',
+            [id, creatorId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(403).json({ error: '無權刪除此模板或模板不存在' });
+        }
+        res.status(204).send();
+    } catch (err) {
+        console.error(`[API ERROR] DELETE /api/card-game/templates/${id}:`, err.stack);
+        res.status(500).json({ error: '無法刪除模板' });
+    }
+});
+
+// 7. 追蹤遊玩次數 (任何人都可以觸發)
+app.post('/api/card-game/templates/:id/play', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('UPDATE card_game_templates SET play_count = play_count + 1 WHERE id = $1', [id]);
+        res.status(200).json({ message: 'Play count updated.' });
+    } catch (err) {
+        // 即使出錯也不要影響前端遊戲體驗，所以只在後端紀錄
+        console.error(`[API ERROR] Failed to increment play count for template ${id}:`, err.stack);
+        res.status(500).json({ error: 'Failed to update play count.' });
+    }
+});
+
+// 8. 複製 (Clone) 模板 (需要會員登入)
+app.post('/api/card-game/templates/:id/copy', authenticateBoxUser, async (req, res) => {
+    const { id } = req.params; // 原始模板 ID
+    const newOwnerId = req.boxUser.userId;
+    
+    try {
+        // 使用 transaction 確保資料一致性
+        await pool.query('BEGIN');
+
+        // 獲取原始模板
+        const originalTemplateResult = await pool.query('SELECT * FROM card_game_templates WHERE id = $1', [id]);
+        if (originalTemplateResult.rowCount === 0) {
+            await pool.query('ROLLBACK');
+            return res.status(404).json({ error: '原始模板不存在' });
+        }
+        const originalTemplate = originalTemplateResult.rows[0];
+        
+        // 檢查使用者是否在複製自己的模板
+        if (originalTemplate.creator_id === newOwnerId) {
+             await pool.query('ROLLBACK');
+             return res.status(400).json({ error: '無法複製自己的模板。' });
+        }
+
+        // 增加原始模板的 copy_count
+        await pool.query('UPDATE card_game_templates SET copy_count = copy_count + 1 WHERE id = $1', [id]);
+
+        // 創建一個新的模板給目前使用者
+        const newTemplateName = `副本: ${originalTemplate.template_name}`.slice(0, 100);
+        const newTemplateResult = await pool.query(
+            'INSERT INTO card_game_templates (creator_id, template_name, content_data, is_public) VALUES ($1, $2, $3, $4) RETURNING *',
+            [newOwnerId, newTemplateName, originalTemplate.content_data, false] // 複製後預設為私有
+        );
+
+        // 提交 transaction
+        await pool.query('COMMIT');
+        
+        res.status(201).json(newTemplateResult.rows[0]);
+
+    } catch (err) {
+        await pool.query('ROLLBACK');
+        console.error(`[API ERROR] POST /api/card-game/templates/${id}/copy:`, err.stack);
+        res.status(500).json({ error: '無法複製模板' });
+    }
+});
+
+
+
+
+
+
 
 
 

@@ -1,21 +1,55 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunnyYummy 洞洞樂遊戲</title>
-    <meta name="description" content="SunnyYummy 趣味洞洞樂遊戲，自定義內容互動體驗。">
-    <!-- 絕對路徑 CSS -->
-    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>SunnyYummy 洞洞樂遊戲 - 互動趣味遊戲體驗</title>
+    <meta name="description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗，適合所有年齡層。">
+    <meta name="keywords" content="SunnyYummy, 互動遊戲, 洞洞樂, 記憶遊戲, 兒童遊戲, 教育遊戲, 互動學習">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.sunnyyummy.com/game/card-game.html">
+    <meta property="og:title" content="SunnyYummy 洞洞樂遊戲">
+    <meta property="og:description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗。">
+    <meta property="og:image" content="/images/game-og-image.jpg">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.sunnyyummy.com/game/card-game.html">
+    <meta name="twitter:title" content="SunnyYummy 洞洞樂遊戲">
+    <meta name="twitter:description" content="SunnyYummy 洞洞樂遊戲，一款創新互動的記憶翻牌遊戲。自定義內容，提供有趣的學習和娛樂體驗。">
+    <meta name="twitter:image" content="/images/game-og-image.jpg">
+    
+    <!-- Canonical Link -->
+    <link rel="canonical" href="https://www.sunnyyummy.com/game/card-game.html">
+    
+    <!-- Robots Meta Tag -->
+    <meta name="robots" content="index, follow">
+    
     <!-- Favicon and PWA icons (使用絕對路徑) -->
     <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/style.css" as="style">
+    <link rel="preload" href="card-game拷貝.js" as="script">
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <!-- Optional: Add animation library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    
+    <!-- Structured Data - WebPage -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
+    crossorigin="anonymous"></script>
+    
+    <!-- Performance Optimization -->
     <style>
         /* --- 自定義動畫效果 --- */
         @keyframes floatAnimation {
@@ -31,9 +65,9 @@
         }
         
         @keyframes revealSpin {
-            0% { transform: rotateY(0) scale(1); }
-            50% { transform: rotateY(90deg) scale(1.1); }
-            100% { transform: rotateY(180deg) scale(1); }
+            0% { transform: rotateY(0) }
+            50% { transform: rotateY(90deg)  }
+            100% { transform: rotateY(180deg)   }
         }
         
         /* --- 基本樣式 --- */
@@ -240,7 +274,7 @@
         }
         
         .hole.revealed {
-            transform: rotateY(180deg);
+            transform: rotateY(180deg) !important;
         }
         
         .hole-front::before {
@@ -312,21 +346,13 @@
             background-color: #E64A19;
         }
         
-        /* 自定義內容按鈕和模板列表按鈕 */
+        /* 自定義內容按鈕 */
         .game-controls .config-btn {
             background-color: #FFB74D; /* 黃色配置按鈕 */
         }
         
         .game-controls .config-btn:hover {
             background-color: #FFA726;
-        }
-        
-        .game-controls .templates-btn {
-            background-color: #4DB6AC; /* 綠色模板按鈕 */
-        }
-        
-        .game-controls .templates-btn:hover {
-            background-color: #26A69A;
         }
         
         /* 分享按鈕 */
@@ -340,22 +366,7 @@
         
         /* 控制按鈕開關 */
         .controls-toggle {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #FF9800;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            z-index: 901;
-            font-size: 24px;
-            transition: all 0.3s;
+            display: none !important; /* 完全禁用顯示 */
         }
         
         .controls-toggle:hover {
@@ -547,7 +558,7 @@
             transform: rotate(90deg);
         }
 
-        /* 模板抽屜樣式 */
+        /* 模板抽屜樣式 (保留但不會使用) */
         .template-drawer {
             position: fixed;
             top: 0;
@@ -864,6 +875,8 @@
             font-size: 24px;
             color: #777;
             cursor: pointer;
+            
+
             width: 30px;
             height: 30px;
             display: flex;
@@ -970,131 +983,25 @@
 
         /* --- 響應式設計 --- */
         @media (max-width: 767px) {
-            .input-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .desktop-footer {
-                display: none; /* 手機版隱藏桌面頁腳 */
-            }
-            
-            .game-controls button {
-                font-size: 13px;
-                padding: 8px 12px;
-            }
+            .game-controls {
+        padding: 10px 0;
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .game-controls button {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
         }
 
         @media (min-width: 768px) {
-            .hole {
-                height: 120px; /* 增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 40px; /* 增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 20px; /* 增加背面文字大小 */
-                padding: 10px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 15px; /* 增加格子間距 */
-                max-width: 700px; /* 控制遊戲板最大寬度 */
-                margin: 0 auto 30px;
-            }
-            
-            .game-container {
-                max-width: 700px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .centered-card-content {
-                font-size: 42px; /* 增加卡片文字大小 */
-                padding: 50px; /* 增加卡片內邊距 */
-            }
-            
-            .card-inner {
-                padding: 30px 40px; /* 增加卡片內部內邊距 */
-            }
-            
-            .card-hint {
-                font-size: 18px; /* 增加提示文字大小 */
-            }
-            
-            body {
-                padding-bottom: 0; /* 取消底部填充 */
-            }
-            
-            .bottom-nav {
-                display: none; /* 隱藏底部導航 */
-            }
-            
-            .desktop-footer {
-                display: block; /* 顯示桌面頁腳 */
-            }
-            
-            .category-tabs {
-                padding: 15px 20px;
-            }
-            
-            .category-tabs a, .category-tabs button {
-                font-size: 16px;
-                padding: 10px 20px;
-            }
-            
-            .template-drawer, .games-drawer {
-                width: 350px;
-                max-width: 350px;
-            }
-            
-            .template-drawer-content {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            
-            .games-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
             .game-controls {
-                position: static;
-                background-color: transparent;
-                box-shadow: none;
-                padding: 20px 0;
-                margin-bottom: 20px;
-                transform: translateY(0);
-            }
-            
-            .controls-toggle {
-                display: none;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .hole {
-                height: 150px; /* 進一步增加格子高度 */
-            }
-            
-            .hole-front::before {
-                font-size: 48px; /* 進一步增加問號大小 */
-            }
-            
-            .hole-back {
-                font-size: 24px; /* 進一步增加背面文字大小 */
-                padding: 15px; /* 增加內邊距 */
-            }
-            
-            .board {
-                grid-gap: 20px; /* 增加格子間距 */
-                max-width: 900px; /* 進一步控制遊戲板最大寬度 */
-            }
-            
-            .game-container {
-                max-width: 900px; /* 調整遊戲容器最大寬度 */
-            }
-            
-            .games-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        position: static;
+        background-color: transparent;
+        box-shadow: none;
+        padding: 20px 0;
+        margin-bottom: 20px;
+    }
         }
         
         /* 孔洞懸停效果 */
@@ -1128,7 +1035,12 @@
                 opacity: 0;
             }
         }
-
+        .bottom-nav .icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin-bottom: 3px;
+}
     </style>
 </head>
 
@@ -1140,7 +1052,7 @@
     <!-- 分類標籤 -->
     <div class="category-tabs">
         <button id="configBtn" class="config-btn">自定義內容</button>
-        <button id="templatesBtn" class="templates-btn">模板列表</button>
+        <!-- 模板列表按鈕已刪除 -->
         <button id="resetBtn" class="reset-btn">重置遊戲</button>
         <button id="allGamesBtn" class="all-games-btn">全部遊戲</button>
     </div>
@@ -1157,12 +1069,7 @@
     <div class="controls-toggle" id="controlsToggle">⚙️</div>
     
     <!-- 遊戲控制區域 -->
-    <div class="game-controls" id="gameControls">
-        <button id="mobileConfigBtn" class="config-btn">自定義內容</button>
-        <button id="mobileTemplatesBtn" class="templates-btn">模板列表</button>
-        <button id="mobileResetBtn" class="reset-btn">重置遊戲</button>
-        <button id="shareBtn" class="share-btn">分享遊戲</button>
-    </div>
+ 
     
     <!-- 自定義內容彈窗 -->
     <div id="configModal" class="modal">
@@ -1205,14 +1112,14 @@
         </div>
     </div>
     
-    <!-- 模板抽屜 -->
-    <div id="templateDrawer" class="template-drawer">
+    <!-- 模板抽屜功能已移除，但保留相關HTML結構以避免JS錯誤 -->
+    <div id="templateDrawer" class="template-drawer" style="display:none;">
         <div class="template-drawer-header">
             <div class="template-drawer-title">模板列表</div>
             <button id="templateDrawerClose" class="template-drawer-close">×</button>
         </div>
         <div id="templateDrawerContent" class="template-drawer-content">
-            <!-- 模板按鈕將由 JavaScript 動態載入 -->
+            <!-- 模板列表功能已移除 -->
         </div>
     </div>
     
@@ -1238,19 +1145,25 @@
             <div class="card-hint">點擊任意位置關閉</div>
         </div>
     </div>
+
+
+
     
     <!-- 底部導航 -->
     <nav class="bottom-nav">
         <ul>
-            <li><a href="/"><span class="icon">🛍️</span><span>商品</span></a></li>
-            <li><a href="/music.html"><span class="icon">🎵</span><span>音樂</span></a></li>
-            <li><a href="/news.html"><span class="icon">📢</span><span>消息</span></a></li>
-            <li><a href="/scores.html"><span class="icon">🎼</span><span>樂譜</span></a></li>
-            <li><a href="/games.html" class="active"><span class="icon">🎮</span><span>遊戲</span></a></li>
-            <li><a href="/guestbook.html"><span class="icon">💬</span><span>留言</span></a></li>
+            <li><a href="/"><img src="/images/footicon_store.png" alt="商品" class="icon"><span>商品</span></a></li>
+            <li><a href="/music.html"><img src="/images/footicon_music.png" alt="音樂" class="icon"><span>音樂</span></a></li>
+            <li><a href="/news.html"><img src="/images/footicon_nuews.png" alt="消息" class="icon"><span>消息</span></a></li>
+            <li><a href="/scores.html"><img src="/images/footicon_score.png" alt="樂譜" class="icon"><span>樂譜</span></a></li>
+            <li><a href="/games.html" class="active"><img src="/images/footicon_game.png" alt="遊戲" class="icon"><span>遊戲</span></a></li>
+            <li><a href="/guestbook.html"><img src="/images/footicon_guestbook.png" alt="留言" class="icon"><span>留言</span></a></li>
         </ul>
     </nav>
     
+
+
+
     <!-- 頁腳 - 在大屏幕設備上顯示 -->
     <footer class="desktop-footer">
         <div class="footer-container">
@@ -1270,4 +1183,4 @@
     
     <script src="card-game拷貝.js"></script>
 </body>
-</html>
+</html>   

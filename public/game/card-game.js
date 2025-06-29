@@ -1,18 +1,17 @@
-// 洞洞樂遊戲 - 移除模板列表按鈕後的 JavaScript 文件
+// 洞洞樂遊戲 - 會員模板管理版本
 
-// 全局變量來緩存模板數據
-let cachedTemplates = null;
-
-// 遊戲狀態和默認內容
+// 全局變量來儲存遊戲狀態
 const gameState = {
     boardSize: {rows: 4, cols: 5},
-    contents: Array(20).fill('').map((_, i) => `內容 ${i+1}`), // 編輯器的內容
+    contents: [], // 由模板載入
     revealed: Array(20).fill(false),
-    contentPositions: Array(20).fill(0).map((_, i) => i), // 內容位置映射 (用於隨機化)
+    contentPositions: Array(20).fill(0).map((_, i) => i), // 內容位置映射
     cardTimerId: null, // 計時器ID追蹤變數
+    currentTemplateId: null, // 當前載入的模板ID
+    loggedInUser: null, // 儲存登入的會員資訊
 };
 
-// DOM 元素引用獲取函數 - 避免在DOM加載前嘗試獲取元素
+// DOM 元素引用獲取函數
 function getDOMElements() {
     return {
         // 主要元素
@@ -21,35 +20,36 @@ function getDOMElements() {
         cardInner: document.getElementById('cardInner'),
         cardCloseBtn: document.querySelector('#centeredCard .card-close'),
         
+        // 會員狀態
+        userStatus: document.getElementById('userStatus'),
+        userStatusAvatar: document.getElementById('userStatusAvatar'),
+        userStatusName: document.getElementById('userStatusName'),
+        
         // 設置相關元素
         configModal: document.getElementById('configModal'),
         closeConfigModal: document.getElementById('closeConfigModal'),
         inputGrid: document.getElementById('inputGrid'),
-        saveConfigBtn: document.getElementById('saveConfigBtn'),
         
-        // 操作按鈕 (移除了 templatesBtn)
+        // 模板載入區
+        creatorSelect: document.getElementById('creatorSelect'),
+        sortSelect: document.getElementById('sortSelect'),
+        templateSearchInput: document.getElementById('templateSearchInput'),
+        templateList: document.getElementById('templateList'),
+
+        // 模板編輯器區
+        editorTitle: document.getElementById('editorTitle'),
+        templateIdInput: document.getElementById('templateIdInput'),
+        templateNameInput: document.getElementById('templateNameInput'),
+        isPublicSwitch: document.getElementById('isPublicSwitch'),
+        isPublicLabel: document.getElementById('isPublicLabel'),
+        saveTemplateBtn: document.getElementById('saveTemplateBtn'),
+        updateTemplateBtn: document.getElementById('updateTemplateBtn'),
+        clearEditorBtn: document.getElementById('clearEditorBtn'),
+        
+        // 操作按鈕
         configBtn: document.getElementById('configBtn'),
         resetBtn: document.getElementById('resetBtn'),
         allGamesBtn: document.getElementById('allGamesBtn'),
-        
-        // 移動端操作按鈕 (移除了 mobileTemplatesBtn)
-        mobileConfigBtn: document.getElementById('mobileConfigBtn'),
-        mobileResetBtn: document.getElementById('mobileResetBtn'),
-        shareBtn: document.getElementById('shareBtn'),
-        gameControls: document.getElementById('gameControls'),
-        // controlsToggle 已從這裡移除
-        
-        // 模板管理元素 (保留以避免函數錯誤)
-        templateSelect: document.getElementById('templateSelect'),
-        templateNameInput: document.getElementById('templateNameInput'),
-        saveTemplateBtn: document.getElementById('saveTemplateBtn'),
-        loadTemplateBtn: document.getElementById('loadTemplateBtn'),
-        deleteTemplateBtn: document.getElementById('deleteTemplateBtn'),
-        
-        // 模板抽屜元素 (保留以避免函數錯誤)
-        templateDrawer: document.getElementById('templateDrawer'),
-        templateDrawerClose: document.getElementById('templateDrawerClose'),
-        templateDrawerContent: document.getElementById('templateDrawerContent'),
         
         // 遊戲抽屜元素
         gamesDrawer: document.getElementById('gamesDrawer'),
@@ -60,6 +60,22 @@ function getDOMElements() {
         drawerOverlay: document.getElementById('drawerOverlay')
     };
 }
+
+// --- API 請求函數 ---
+const api = {
+    get: (url) => fetch(url).then(res => res.ok ? res.json() : Promise.reject(res)),
+    post: (url, body) => fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(res => res.ok ? res.json() : Promise.reject(res)),
+    put: (url, body) => fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(res => res.ok ? res.json() : Promise.reject(res)),
+    delete: (url) => fetch(url, { method: 'DELETE' }).then(res => res.ok ? res : Promise.reject(res)),
+};
 
 // 洗牌函數 (Fisher-Yates 算法)
 function shuffleArray(array) {
@@ -99,10 +115,9 @@ function initializeBoard() {
     gameBoard.innerHTML = ''; // 清空現有格子
 
     const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-
+    
     // 確保 contentPositions 陣列長度正確
     if (gameState.contentPositions.length !== totalCells) {
-        console.warn("Content positions array length mismatch. Resetting.");
         gameState.contentPositions = Array(totalCells).fill(0).map((_, i) => i);
         shuffleArray(gameState.contentPositions);
     }
@@ -115,7 +130,6 @@ function initializeBoard() {
     
     // 確保 revealed 陣列長度正確
     if (gameState.revealed.length !== totalCells) {
-        console.warn("Revealed array length mismatch. Resetting.");
         gameState.revealed = Array(totalCells).fill(false);
     }
 
@@ -168,54 +182,6 @@ function initializeBoard() {
             hole.style.transform = 'scale(1) translateY(0)';
         }, 50 * index);
     });
-}
-
-// 初始化配置模態窗口中的輸入框
-function initializeInputs() {
-    const { inputGrid } = getDOMElements();
-    if (!inputGrid) {
-        console.error("輸入網格元素未找到！");
-        return;
-    }
-    inputGrid.innerHTML = ''; // 清空現有輸入框
-    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-
-    // 確保 gameState.contents 陣列長度正確
-    if (!Array.isArray(gameState.contents) || gameState.contents.length !== totalCells) {
-        console.warn("Contents array length mismatch or not an array during input init. Resetting to defaults.");
-        gameState.contents = Array(totalCells).fill('').map((_, i) => `內容 ${i + 1}`);
-    }
-
-    for (let i = 0; i < totalCells; i++) {
-        const inputGroup = document.createElement('div');
-        inputGroup.className = 'input-group';
-
-        const label = document.createElement('label');
-        label.textContent = i + 1;
-        label.setAttribute('for', `content-${i}`);
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.id = `content-${i}`;
-        // 從 gameState.contents 讀取值來填充輸入框
-        input.value = gameState.contents[i] || ''; // 如果內容為空，顯示空字串
-        input.placeholder = `格子 ${i+1} 內容`;
-        
-        // 添加輸入框動畫效果
-        input.style.opacity = '0';
-        input.style.transform = 'translateX(-10px)';
-        
-        // 延遲顯示每個輸入框，創建淡入效果
-        setTimeout(() => {
-            input.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            input.style.opacity = '1';
-            input.style.transform = 'translateX(0)';
-        }, 30 * i);
-
-        inputGroup.appendChild(label);
-        inputGroup.appendChild(input);
-        inputGrid.appendChild(inputGroup);
-    }
 }
 
 // 點擊揭示內容
@@ -308,32 +274,123 @@ function closeCenteredCard() {
     }, 500); // 動畫時間為 0.5s
 }
 
-// 保存配置 (從輸入框更新 gameState.contents)
-function saveConfig() {
-    const { configModal } = getDOMElements();
+// 初始化配置模態窗口中的輸入框
+function initializeInputs() {
+    const { inputGrid } = getDOMElements();
+    if (!inputGrid) {
+        console.error("輸入網格元素未找到！");
+        return;
+    }
+    inputGrid.innerHTML = ''; // 清空現有輸入框
     const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-    const newContents = [];
+
+    // 確保 gameState.contents 陣列長度正確
+    let contents = [];
+    if (Array.isArray(gameState.contents) && gameState.contents.length === totalCells) {
+        contents = gameState.contents;
+    } else {
+        contents = Array(totalCells).fill('').map((_, i) => `內容 ${i + 1}`);
+    }
 
     for (let i = 0; i < totalCells; i++) {
-        const input = document.getElementById(`content-${i}`);
-        if (input) {
-            // 如果輸入為空，存儲一個預設值或空字符串
-            newContents.push(input.value || `格子 ${i+1}`);
-        } else {
-            // 如果找不到輸入框，保留舊內容或預設值
-            newContents.push(gameState.contents[i] || `格子 ${i+1}`);
-        }
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'input-group';
+
+        const label = document.createElement('label');
+        label.textContent = i + 1;
+        label.setAttribute('for', `content-${i}`);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `content-${i}`;
+        input.value = contents[i] || ''; // 如果內容為空，顯示空字串
+        input.placeholder = `格子 ${i+1} 內容`;
+        
+        // 添加輸入框動畫效果
+        input.style.opacity = '0';
+        input.style.transform = 'translateX(-10px)';
+        
+        // 延遲顯示每個輸入框，創建淡入效果
+        setTimeout(() => {
+            input.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            input.style.opacity = '1';
+            input.style.transform = 'translateX(0)';
+        }, 30 * i);
+
+        inputGroup.appendChild(label);
+        inputGroup.appendChild(input);
+        inputGrid.appendChild(inputGroup);
     }
-    // 更新 gameState
-    gameState.contents = newContents;
+}
 
-    // 更新遊戲板上顯示的內容
-    updateBoardContent();
+// 更新遊戲板格子背面的內容
+function updateBoardContent() {
+    const holes = document.querySelectorAll('#gameBoard .hole');
+    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
 
-    if(configModal) configModal.style.display = 'none';
+    if (holes.length !== totalCells) {
+        console.error("遊戲板上的格子數量與預期不符！");
+        initializeBoard(); // 嘗試重新初始化
+        return;
+    }
     
-    // 顯示保存成功的提示，帶動畫效果
-    showNotification('設置已成功保存！');
+    // 確保 gameState.contents 是有效陣列且長度正確
+    if (!Array.isArray(gameState.contents) || gameState.contents.length !== totalCells) {
+        console.error("無法更新遊戲板：gameState.contents 無效或長度不正確。");
+        return;
+    }
+
+    holes.forEach((hole, i) => {
+        const back = hole.querySelector('.hole-back');
+        if (back) {
+            // 使用 gameState.contentPositions 確定該格子對應哪個內容索引
+            const contentIndex = gameState.contentPositions[i];
+            // 從 gameState.contents 中獲取實際內容
+            back.textContent = gameState.contents[contentIndex] || `?`; // 使用預設值以防萬一
+        }
+    });
+}
+
+// 重置遊戲狀態並重新渲染
+function resetGame() {
+    if (gameState.currentTemplateId) {
+        loadTemplate(gameState.currentTemplateId); // 重新載入當前模板
+    } else {
+        // 如果沒有當前模板，嘗試載入預設模板
+        loadDefaultTemplate();
+    }
+    showNotification('遊戲已重置！');
+}
+
+// 載入預設模板
+function loadDefaultTemplate() {
+    // 嘗試載入 ID=1 的官方模板
+    api.get('/api/card-game/templates/1')
+        .then(template => {
+            processLoadedTemplate(template);
+        })
+        .catch(error => {
+            console.error('無法載入預設模板:', error);
+            // 如果無法載入預設模板，則使用硬編碼的內容
+            setExampleContent();
+            initializeBoard();
+        });
+}
+
+// 設置默認/示例內容到 gameState.contents
+function setExampleContent() {
+    const exampleContent = [
+        '恭喜獲得100元', '再接再厲', '謝謝參與', '恭喜獲得50元',
+        '幸運獎', '謝謝參與', '恭喜獲得20元', '再接再厲',
+        '謝謝參與', '恭喜獲得10元', '加油', '謝謝參與',
+        '恭喜獲得5元', '不要灰心', '謝謝參與', '恭喜獲得2元',
+        '繼續努力', '謝謝參與', '恭喜獲得1元', '期待下次'
+    ];
+    
+    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
+    // 確保示例內容長度足夠
+    gameState.contents = Array(totalCells).fill('').map((_, i) => exampleContent[i % exampleContent.length]);
+    gameState.currentTemplateId = null;
 }
 
 // 顯示通知提示
@@ -372,105 +429,21 @@ function showNotification(message, type = 'success') {
             document.body.removeChild(notification);
         }, 300);
     }, 3000);
-
 }
 
-// 更新遊戲板格子背面的內容 (使用 gameState.contents)
-function updateBoardContent() {
-    const holes = document.querySelectorAll('#gameBoard .hole');
-    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-
-    if (holes.length !== totalCells) {
-        console.error("遊戲板上的格子數量與預期不符！");
-        initializeBoard(); // 嘗試重新初始化
-        return;
-    }
+// 關閉所有抽屜
+function closeAllDrawers() {
+    closeGamesDrawer();
     
-    // 確保 gameState.contents 是有效陣列且長度正確
-    if (!Array.isArray(gameState.contents) || gameState.contents.length !== totalCells) {
-        console.error("無法更新遊戲板：gameState.contents 無效或長度不正確。");
-        return;
-    }
-
-    holes.forEach((hole, i) => {
-        const back = hole.querySelector('.hole-back');
-        if (back) {
-            // 使用 gameState.contentPositions 確定該格子對應哪個內容索引
-            const contentIndex = gameState.contentPositions[i];
-            // 從 gameState.contents 中獲取實際內容
-            back.textContent = gameState.contents[contentIndex] || `?`; // 使用預設值以防萬一
-        }
-    });
-}
-
-// 重置遊戲狀態並重新渲染
-function resetGame() {
-    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-    gameState.revealed = Array(totalCells).fill(false);
-
-    // 隨機打亂內容位置映射
-    gameState.contentPositions = Array(totalCells).fill(0).map((_, i) => i);
-    shuffleArray(gameState.contentPositions);
-
-    // 重新渲染遊戲板（會使用最新的 gameState.contents 和隨機的 contentPositions）
-    initializeBoard();
-
-    // 關閉所有可能打開的抽屜
-    closeAllDrawers();
-    
-    // 顯示重置成功的提示
-    showNotification('遊戲已重置！');
-}
-
-// 設置默認/示例內容到 gameState.contents
-function setExampleContent() {
-    const exampleContent = [
-        '恭喜獲得100元', '再接再厲', '謝謝參與', '恭喜獲得50元',
-        '幸運獎', '謝謝參與', '恭喜獲得20元', '再接再厲',
-        '謝謝參與', '恭喜獲得10元', '加油', '謝謝參與',
-        '恭喜獲得5元', '不要灰心', '謝謝參與', '恭喜獲得2元',
-        '繼續努力', '謝謝參與', '恭喜獲得1元', '期待下次'
-    ];
-    
-    const totalCells = gameState.boardSize.rows * gameState.boardSize.cols;
-    // 確保示例內容長度足夠
-    gameState.contents = Array(totalCells).fill('').map((_, i) => exampleContent[i % exampleContent.length]);
-}
-
-// 打開控制面板 - 移除控制面板切換功能
-function toggleControlPanel() {
-    const { gameControls } = getDOMElements();
-    if (!gameControls) return;
-
-    // 始終顯示控制面板
-    gameControls.classList.add('visible');
-}
-
-// 打開模板抽屜 (保留函數但不再實際使用)
-function openTemplateDrawer() {
-    console.log("模板列表功能已移除");
-    showNotification('模板列表功能已移除', 'error');
-}
-
-// 關閉模板抽屜 (保留函數但不再實際使用)
-function closeTemplateDrawer() {
-    const { templateDrawer, drawerOverlay } = getDOMElements();
-    if (!templateDrawer) return;
-
-    templateDrawer.classList.remove('open');
-    if (!document.querySelector('.games-drawer.open')) {
-        drawerOverlay.classList.remove('visible');
-        document.body.style.overflow = ''; // 恢復滾動
-    }
+    // 關閉模態窗口
+    const { configModal } = getDOMElements();
+    if (configModal) configModal.style.display = 'none';
 }
 
 // 打開遊戲抽屜
 function openGamesDrawer() {
     const { gamesDrawer, drawerOverlay } = getDOMElements();
     if (!gamesDrawer || !drawerOverlay) return;
-
-    // 關閉其他抽屜
-    closeTemplateDrawer();
     
     // 加載遊戲列表
     loadGames();
@@ -487,36 +460,23 @@ function closeGamesDrawer() {
     if (!gamesDrawer) return;
 
     gamesDrawer.classList.remove('open');
-    if (!document.querySelector('.template-drawer.open')) {
-        drawerOverlay.classList.remove('visible');
-        document.body.style.overflow = ''; // 恢復滾動
-    }
-}
-
-// 關閉所有抽屜
-function closeAllDrawers() {
-    closeTemplateDrawer();
-    closeGamesDrawer();
-    
-    // 關閉控制面板
-    const { gameControls } = getDOMElements();
-    if (gameControls && gameControls.classList.contains('visible')) {
-        gameControls.classList.remove('visible');
-    }
-    
-    // 關閉模態窗口
-    const { configModal } = getDOMElements();
-    if (configModal) configModal.style.display = 'none';
+    drawerOverlay.classList.remove('visible');
+    document.body.style.overflow = ''; // 恢復滾動
 }
 
 // 分享遊戲
 function shareGame() {
+    // 構建帶有模板ID的URL
+    const shareUrl = gameState.currentTemplateId 
+        ? `${window.location.origin}${window.location.pathname}?template=${gameState.currentTemplateId}`
+        : window.location.href;
+    
     // 檢查是否支持 Web Share API
     if (navigator.share) {
         navigator.share({
             title: 'SunnyYummy 洞洞樂遊戲',
             text: '來玩 SunnyYummy 的洞洞樂遊戲！',
-            url: window.location.href,
+            url: shareUrl,
         })
         .then(() => {
             showNotification('分享成功！');
@@ -527,15 +487,9 @@ function shareGame() {
         });
     } else {
         // 不支持 Web Share API，顯示替代方案
-        prompt('複製此網址分享給朋友:', window.location.href);
+        prompt('複製此網址分享給朋友:', shareUrl);
         showNotification('網址已準備好，請手動複製！');
     }
-}
-
-// 從服務器加載所有模板 (保留但不再使用)
-async function loadTemplates() {
-    console.log("模板功能已移除，此函數不再使用");
-    return [];
 }
 
 // 加載遊戲列表到抽屜
@@ -605,156 +559,576 @@ async function loadGames() {
     }
 }
 
-// 設置事件監聽器 - 移除齒輪按鈕相關的監聽器
-function setupEventListeners() {
-    const elements = getDOMElements();
+// --- 模板管理功能 ---
+
+// 打開模板管理器
+async function openTemplateManager() {
+    const { configModal, templateEditor } = getDOMElements();
+    if (!configModal) return;
     
-    // 檢查是否能獲取所有必要元素
-    if (!elements.gameBoard) {
-        console.error("無法找到遊戲板元素！");
+    // 檢查用戶登入狀態
+    checkLoginStatus();
+    
+    // 填充創作者下拉列表
+    await populateCreators();
+    
+    // 填充模板列表
+    await populateTemplates();
+    
+    // 初始化輸入框
+    initializeInputs();
+    
+    // 顯示模態窗口
+    configModal.style.display = 'block';
+}
+
+// 檢查用戶登入狀態
+function checkLoginStatus() {
+    const savedUserId = localStorage.getItem('boxCurrentUserId');
+    const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+    const savedUserName = localStorage.getItem('boxCurrentUsername');
+    
+    const templateEditor = document.querySelector('.template-editor');
+    
+    if (savedUserId && savedUserToken && savedUserName) {
+        // 用戶已登入
+        gameState.loggedInUser = {
+            userId: savedUserId,
+            username: savedUserName
+        };
+        
+        // 顯示模板編輯器
+        if (templateEditor) {
+            templateEditor.style.display = 'block';
+        }
+    } else {
+        // 用戶未登入
+        gameState.loggedInUser = null;
+        
+        // 隱藏模板編輯器，顯示登入提示
+        if (templateEditor) {
+            templateEditor.style.display = 'none';
+            
+            // 在模板載入區域添加登入提示
+            const templateLoader = document.querySelector('.template-loader');
+            if (templateLoader && !document.querySelector('.login-prompt')) {
+                const loginPrompt = document.createElement('div');
+                loginPrompt.className = 'login-prompt';
+                loginPrompt.innerHTML = `
+                    <p>要創建自己的洞洞樂模板，請先登入！</p>
+                    <p><a href="/member-login.html?redirect=${encodeURIComponent(window.location.href)}">點擊此處登入</a></p>
+                `;
+                templateLoader.insertBefore(loginPrompt, templateLoader.firstChild);
+            }
+        }
+    }
+}
+
+// 填充創作者下拉列表
+async function populateCreators() {
+    const { creatorSelect } = getDOMElements();
+    if (!creatorSelect) return;
+    
+    try {
+        const creators = await api.get('/api/card-game/creators');
+        
+        // 清空舊選項（保留前兩個固定選項）
+        const fixedOptions = Array.from(creatorSelect.querySelectorAll('option:not([data-creator-id])'));
+        creatorSelect.innerHTML = '';
+        fixedOptions.forEach(option => creatorSelect.appendChild(option));
+        
+        // 添加創作者選項
+        creators.forEach(creator => {
+            const option = document.createElement('option');
+            option.value = creator.user_id;
+            option.textContent = creator.username;
+            option.dataset.creatorId = true;
+            creatorSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('載入創作者列表失敗:', error);
+        showNotification('無法載入創作者列表', 'error');
+    }
+}
+
+// 填充模板列表
+async function populateTemplates() {
+    const { templateList, creatorSelect, sortSelect, templateSearchInput } = getDOMElements();
+    if (!templateList) return;
+    
+    // 顯示加載中
+    templateList.innerHTML = '<p style="text-align: center; padding: 20px;">正在載入模板...</p>';
+    
+    try {
+        // 構建查詢參數
+        const params = new URLSearchParams();
+        if (creatorSelect.value) {
+            params.append('creatorId', creatorSelect.value);
+        }
+        if (sortSelect.value) {
+            params.append('sortBy', sortSelect.value);
+        }
+        if (templateSearchInput.value) {
+            params.append('search', templateSearchInput.value);
+        }
+        
+        // 發送請求
+        const templates = await api.get(`/api/card-game/templates?${params.toString()}`);
+        
+        // 渲染模板列表
+        renderTemplateList(templates);
+    } catch (error) {
+        console.error('載入模板列表失敗:', error);
+        templateList.innerHTML = `
+            <p style="text-align: center; color: #e53935; padding: 20px;">
+                載入模板列表失敗：${error.message || '未知錯誤'}
+            </p>
+        `;
+    }
+}
+
+// 渲染模板列表
+function renderTemplateList(templates) {
+    const { templateList } = getDOMElements();
+    if (!templateList) return;
+    
+    // 清空列表
+    templateList.innerHTML = '';
+    
+    if (!templates || templates.length === 0) {
+        templateList.innerHTML = '<p style="text-align: center; padding: 20px;">找不到符合條件的模板</p>';
         return;
     }
     
-    // 配置模態窗口相關
-    if (elements.configBtn) {
-        elements.configBtn.addEventListener('click', () => {
-            if (elements.configModal) {
-                initializeInputs(); // 初始化輸入框
-                elements.configModal.style.display = 'block';
-            }
-        });
-    }
-    
-    if (elements.mobileConfigBtn) {
-        elements.mobileConfigBtn.addEventListener('click', () => {
-            if (elements.configModal) {
-                initializeInputs();
-                elements.configModal.style.display = 'block';
-                if (elements.gameControls) {
-                    elements.gameControls.classList.remove('visible');
-                }
-            }
-        });
-    }
-    
-    if (elements.closeConfigModal) {
-        elements.closeConfigModal.addEventListener('click', () => {
-            if (elements.configModal) {
-                elements.configModal.style.display = 'none';
-            }
-        });
-    }
-    
-    // 當點擊模態窗口的背景時關閉
-    if (elements.configModal) {
-        elements.configModal.addEventListener('click', (event) => {
-            if (event.target === elements.configModal) {
-                elements.configModal.style.display = 'none';
-            }
-        });
-    }
-    
-    // 保存配置按鈕
-    if (elements.saveConfigBtn) {
-        elements.saveConfigBtn.addEventListener('click', saveConfig);
-    }
-    
-    // 重置遊戲按鈕
-    if (elements.resetBtn) {
-        elements.resetBtn.addEventListener('click', resetGame);
-    }
-    
-    if (elements.mobileResetBtn) {
-        elements.mobileResetBtn.addEventListener('click', () => {
-            resetGame();
-            if (elements.gameControls) {
-                elements.gameControls.classList.remove('visible');
-            }
-        });
-    }
-    
-    // 全部遊戲按鈕
-    if (elements.allGamesBtn) {
-        elements.allGamesBtn.addEventListener('click', openGamesDrawer);
-    }
-    
-    if (elements.gamesDrawerClose) {
-        elements.gamesDrawerClose.addEventListener('click', closeGamesDrawer);
-    }
-    
-    // 抽屜背景點擊關閉
-    if (elements.drawerOverlay) {
-        elements.drawerOverlay.addEventListener('click', closeAllDrawers);
-    }
-    
-    // 分享按鈕
-    if (elements.shareBtn) {
-        elements.shareBtn.addEventListener('click', () => {
-            shareGame();
-            if (elements.gameControls) {
-                elements.gameControls.classList.remove('visible');
-            }
-        });
-    }
-    
-    // 鍵盤事件處理
-    document.addEventListener('keydown', (e) => {
-        // ESC 鍵關閉所有彈窗和抽屜
-        if (e.key === 'Escape') {
-            closeAllDrawers();
-        }
-    });
-}
-
-// 初始化應用 - 移除齒輪按鈕
-function initializeApp() {
-    console.log("洞洞樂遊戲初始化開始...");
-    try {
-        // 1. 設置初始內容
-        setExampleContent();
-
-        // 2. 初始隨機排列內容位置
-        shuffleArray(gameState.contentPositions);
-
-        // 3. 初始化遊戲板
-        initializeBoard();
-
-        // 4. 設置事件監聽器
-        setupEventListeners();
-
-        // 5. 顯示控制按鈕 (移動設備上始終顯示控制面板)
-        const { gameControls } = getDOMElements();
-        if (gameControls) {
-            // 始終顯示控制面板
-            gameControls.classList.add('visible');
-        }
-
-        console.log("洞洞樂遊戲初始化完成。");
-    } catch (error) {
-        console.error('初始化應用時發生嚴重錯誤:', error);
-        // 顯示錯誤通知
-        showNotification('應用初始化失敗，請刷新頁面重試：' + error.message, 'error');
-    }
-}
-
-// 檢測設備類型 (移除齒輪按鈕相關代碼)
-function detectDevice() {
-    const isMobile = window.innerWidth <= 767;
-    document.body.classList.toggle('is-mobile', isMobile);
-    
-    // 根據設備類型調整控制面板
-    const { gameControls } = getDOMElements();
-    if (gameControls) {
-        // 無論移動還是桌面設備，始終顯示控制面板
-        gameControls.classList.add('visible');
-    }
-}
-
-// 監聽設備寬度變化
-window.addEventListener('resize', detectDevice);
-
-// 初始化遊戲應用
-document.addEventListener('DOMContentLoaded', () => {
-    detectDevice();
-    initializeApp();
-});
+    // 添加每個模板項目
+    templates.forEach(template => {
+        const item = document.createElement('div');
+        item.className = 'template-item';
+        
+              // 模板基本信息
+              item.innerHTML = `
+              <div class="template-info">
+                  <strong>${template.template_name}</strong>
+                  <small>作者: ${template.creator_name} | 遊玩: ${template.play_count || 0} | 複製: ${template.copy_count || 0}</small>
+              </div>
+              <div class="template-actions">
+                  <button class="btn-load" data-id="${template.id}">載入</button>
+                  ${template.is_owner ? `<button class="btn-edit" data-id="${template.id}">編輯</button>` : ''}
+                  ${template.is_owner ? `<button class="btn-delete" data-id="${template.id}">刪除</button>` : ''}
+                  ${gameState.loggedInUser && !template.is_owner ? `<button class="btn-copy" data-id="${template.id}">複製</button>` : ''}
+              </div>
+          `;
+          
+          // 添加到列表
+          templateList.appendChild(item);
+      });
+      
+      // 綁定按鈕事件
+      bindTemplateActions();
+  }
+  
+  // 綁定模板操作按鈕事件
+  function bindTemplateActions() {
+      const { templateList } = getDOMElements();
+      if (!templateList) return;
+      
+      // 載入按鈕
+      templateList.querySelectorAll('.btn-load').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const id = btn.dataset.id;
+              if (id) loadTemplate(id);
+          });
+      });
+      
+      // 編輯按鈕
+      templateList.querySelectorAll('.btn-edit').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const id = btn.dataset.id;
+              if (id) fillEditorForEdit(id);
+          });
+      });
+      
+      // 刪除按鈕
+      templateList.querySelectorAll('.btn-delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const id = btn.dataset.id;
+              if (id) deleteTemplate(id);
+          });
+      });
+      
+      // 複製按鈕
+      templateList.querySelectorAll('.btn-copy').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const id = btn.dataset.id;
+              if (id) copyTemplate(id);
+          });
+      });
+  }
+  
+  // 載入模板到遊戲
+  async function loadTemplate(id) {
+      const { configModal } = getDOMElements();
+      
+      try {
+          // 從 API 獲取模板詳情
+          const template = await api.get(`/api/card-game/templates/${id}`);
+          
+          // 處理載入的模板
+          processLoadedTemplate(template);
+          
+          // 關閉模態窗口
+          if (configModal) configModal.style.display = 'none';
+          
+          // 更新 URL 以便分享
+          const url = new URL(window.location);
+          url.searchParams.set('template', id);
+          window.history.pushState({}, '', url);
+          
+          // 追蹤遊玩次數
+          try {
+              await api.post(`/api/card-game/templates/${id}/play`, {});
+          } catch (error) {
+              console.error('無法更新遊玩次數:', error);
+              // 不影響主要功能，所以忽略錯誤
+          }
+      } catch (error) {
+          console.error('載入模板失敗:', error);
+          showNotification('載入模板失敗', 'error');
+      }
+  }
+  
+  // 處理載入的模板數據
+  function processLoadedTemplate(template) {
+      // 從模板中提取內容
+      if (template && template.content_data && Array.isArray(template.content_data.items)) {
+          gameState.contents = template.content_data.items;
+      } else {
+          console.error('模板內容格式無效:', template);
+          gameState.contents = Array(20).fill('').map((_, i) => `內容 ${i + 1}`);
+      }
+      
+      // 保存當前模板 ID
+      gameState.currentTemplateId = template.id;
+      
+      // 重置遊戲狀態
+      gameState.revealed = Array(20).fill(false);
+      gameState.contentPositions = Array(20).fill(0).map((_, i) => i);
+      shuffleArray(gameState.contentPositions);
+      
+      // 重新初始化遊戲板
+      initializeBoard();
+      
+      showNotification(`已載入「${template.template_name}」模板`);
+  }
+  
+  // 填充編輯器以供編輯
+  async function fillEditorForEdit(id) {
+      const { editorTitle, templateIdInput, templateNameInput, isPublicSwitch, saveTemplateBtn, updateTemplateBtn } = getDOMElements();
+      
+      try {
+          // 從 API 獲取模板詳情
+          const template = await api.get(`/api/card-game/templates/${id}`);
+          
+          // 填充表單
+          if (editorTitle) editorTitle.textContent = '編輯模板';
+          if (templateIdInput) templateIdInput.value = template.id;
+          if (templateNameInput) templateNameInput.value = template.template_name;
+          if (isPublicSwitch) isPublicSwitch.checked = template.is_public;
+          
+          // 填充內容輸入框
+          if (template.content_data && Array.isArray(template.content_data.items)) {
+              template.content_data.items.forEach((content, i) => {
+                  const input = document.getElementById(`content-${i}`);
+                  if (input) input.value = content || '';
+              });
+          }
+          
+          // 切換按鈕顯示
+          if (saveTemplateBtn) saveTemplateBtn.style.display = 'none';
+          if (updateTemplateBtn) updateTemplateBtn.style.display = 'inline-block';
+          
+          // 滾動到編輯器區域
+          const editorSection = document.querySelector('.template-editor');
+          if (editorSection) {
+              editorSection.scrollIntoView({ behavior: 'smooth' });
+          }
+      } catch (error) {
+          console.error('載入模板進行編輯失敗:', error);
+          showNotification('無法載入模板進行編輯', 'error');
+      }
+  }
+  
+  // 刪除模板
+  async function deleteTemplate(id) {
+      if (!confirm('確定要刪除這個模板嗎？此操作無法復原。')) {
+          return;
+      }
+      
+      try {
+          await api.delete(`/api/card-game/templates/${id}`);
+          showNotification('模板已成功刪除');
+          
+          // 重新載入模板列表
+          populateTemplates();
+      } catch (error) {
+          console.error('刪除模板失敗:', error);
+          showNotification('刪除模板失敗', 'error');
+      }
+  }
+  
+  // 複製模板
+  async function copyTemplate(id) {
+      try {
+          const result = await api.post(`/api/card-game/templates/${id}/copy`, {});
+          showNotification('模板已成功複製！您現在可以編輯這個新副本了。');
+          
+          // 重新載入模板列表
+          await populateTemplates();
+          
+          // 載入新模板到編輯器
+          fillEditorForEdit(result.id);
+      } catch (error) {
+          console.error('複製模板失敗:', error);
+          showNotification('複製模板失敗', 'error');
+      }
+  }
+  
+  // 清空編輯器
+  function clearEditor() {
+      const { editorTitle, templateIdInput, templateNameInput, isPublicSwitch, saveTemplateBtn, updateTemplateBtn } = getDOMElements();
+      
+      // 重置表單
+      if (editorTitle) editorTitle.textContent = '新增模板';
+      if (templateIdInput) templateIdInput.value = '';
+      if (templateNameInput) templateNameInput.value = '';
+      if (isPublicSwitch) isPublicSwitch.checked = true;
+      
+      // 清空所有輸入框
+      for (let i = 0; i < 20; i++) {
+          const input = document.getElementById(`content-${i}`);
+          if (input) input.value = '';
+      }
+      
+      // 切換按鈕顯示
+      if (saveTemplateBtn) saveTemplateBtn.style.display = 'inline-block';
+      if (updateTemplateBtn) updateTemplateBtn.style.display = 'none';
+  }
+  
+  // 保存或更新模板
+  async function saveOrUpdateTemplate() {
+      const { templateIdInput, templateNameInput, isPublicSwitch } = getDOMElements();
+      
+      // 檢查用戶是否登入
+      if (!gameState.loggedInUser) {
+          showNotification('請先登入才能保存模板', 'error');
+          return;
+      }
+      
+      // 檢查模板名稱
+      const templateName = templateNameInput ? templateNameInput.value.trim() : '';
+      if (!templateName) {
+          showNotification('請輸入模板名稱', 'error');
+          return;
+      }
+      
+      // 收集內容
+      const contents = { items: [] };
+      for (let i = 0; i < 20; i++) {
+          const input = document.getElementById(`content-${i}`);
+          contents.items.push(input ? input.value.trim() || `格子 ${i+1}` : `格子 ${i+1}`);
+      }
+      
+      // 檢查是新增還是更新
+      const templateId = templateIdInput ? templateIdInput.value : '';
+      const isPublic = isPublicSwitch ? isPublicSwitch.checked : true;
+      
+      try {
+          let result;
+          
+          if (templateId) {
+              // 更新現有模板
+              result = await api.put(`/api/card-game/templates/${templateId}`, {
+                  template_name: templateName,
+                  content_data: contents,
+                  is_public: isPublic
+              });
+              showNotification('模板已成功更新');
+          } else {
+              // 創建新模板
+              result = await api.post('/api/card-game/templates', {
+                  template_name: templateName,
+                  content_data: contents,
+                  is_public: isPublic
+              });
+              showNotification('模板已成功創建');
+          }
+          
+          // 清空編輯器
+          clearEditor();
+          
+          // 重新載入模板列表
+          populateTemplates();
+      } catch (error) {
+          console.error('保存模板失敗:', error);
+          showNotification('保存模板失敗', 'error');
+      }
+  }
+  
+  // 切換公開/私有狀態標籤
+  function updatePublicLabel() {
+      const { isPublicSwitch, isPublicLabel } = getDOMElements();
+      if (!isPublicSwitch || !isPublicLabel) return;
+      
+      isPublicLabel.textContent = isPublicSwitch.checked 
+          ? '公開 (其他人可以看到)' 
+          : '私有 (只有您能看到)';
+  }
+  
+  // 設置事件監聽器
+  function setupEventListeners() {
+      const elements = getDOMElements();
+      
+      // 檢查是否能獲取所有必要元素
+      if (!elements.gameBoard) {
+          console.error("無法找到遊戲板元素！");
+          return;
+      }
+      
+      // 配置模態窗口相關
+      if (elements.configBtn) {
+          elements.configBtn.addEventListener('click', openTemplateManager);
+      }
+      
+      if (elements.closeConfigModal) {
+          elements.closeConfigModal.addEventListener('click', () => {
+              if (elements.configModal) {
+                  elements.configModal.style.display = 'none';
+              }
+          });
+      }
+      
+      // 當點擊模態窗口的背景時關閉
+      if (elements.configModal) {
+          elements.configModal.addEventListener('click', (event) => {
+              if (event.target === elements.configModal) {
+                  elements.configModal.style.display = 'none';
+              }
+          });
+      }
+      
+      // 重置遊戲按鈕
+      if (elements.resetBtn) {
+          elements.resetBtn.addEventListener('click', resetGame);
+      }
+      
+      // 全部遊戲按鈕
+      if (elements.allGamesBtn) {
+          elements.allGamesBtn.addEventListener('click', openGamesDrawer);
+      }
+      
+      if (elements.gamesDrawerClose) {
+          elements.gamesDrawerClose.addEventListener('click', closeGamesDrawer);
+      }
+      
+      // 抽屜背景點擊關閉
+      if (elements.drawerOverlay) {
+          elements.drawerOverlay.addEventListener('click', closeAllDrawers);
+      }
+      
+      // 模板管理相關
+      if (elements.creatorSelect) {
+          elements.creatorSelect.addEventListener('change', populateTemplates);
+      }
+      
+      if (elements.sortSelect) {
+          elements.sortSelect.addEventListener('change', populateTemplates);
+      }
+      
+      if (elements.templateSearchInput) {
+          elements.templateSearchInput.addEventListener('input', () => {
+              // 使用防抖動，避免每次輸入都觸發搜尋
+              clearTimeout(elements.templateSearchInput.searchTimeout);
+              elements.templateSearchInput.searchTimeout = setTimeout(() => {
+                  populateTemplates();
+              }, 300);
+          });
+      }
+      
+      // 模板編輯器按鈕
+      if (elements.saveTemplateBtn) {
+          elements.saveTemplateBtn.addEventListener('click', saveOrUpdateTemplate);
+      }
+      
+      if (elements.updateTemplateBtn) {
+          elements.updateTemplateBtn.addEventListener('click', saveOrUpdateTemplate);
+      }
+      
+      if (elements.clearEditorBtn) {
+          elements.clearEditorBtn.addEventListener('click', clearEditor);
+      }
+      
+      // 公開/私有切換
+      if (elements.isPublicSwitch) {
+          elements.isPublicSwitch.addEventListener('change', updatePublicLabel);
+      }
+      
+      // 鍵盤事件處理
+      document.addEventListener('keydown', (e) => {
+          // ESC 鍵關閉所有彈窗和抽屜
+          if (e.key === 'Escape') {
+              closeAllDrawers();
+          }
+      });
+  }
+  
+  // 初始化應用
+  async function initializeApp() {
+      console.log("洞洞樂遊戲初始化開始...");
+      try {
+          // 1. 檢查登入狀態
+          checkLoginStatus();
+          
+          // 2. 初始化輸入框
+          initializeInputs();
+          
+          // 3. 設置事件監聽器
+          setupEventListeners();
+          
+          // 4. 檢查 URL 是否有模板 ID
+          const urlParams = new URLSearchParams(window.location.search);
+          const templateId = urlParams.get('template');
+          
+          if (templateId) {
+              // 如果 URL 中有模板 ID，則載入該模板
+              await loadTemplate(templateId);
+          } else {
+              // 否則載入預設模板
+              await loadDefaultTemplate();
+          }
+          
+          console.log("洞洞樂遊戲初始化完成。");
+      } catch (error) {
+          console.error('初始化應用時發生嚴重錯誤:', error);
+          // 顯示錯誤通知
+          showNotification('應用初始化失敗，請刷新頁面重試：' + (error.message || '未知錯誤'), 'error');
+      }
+  }
+  
+  // 檢測設備類型
+  function detectDevice() {
+      const isMobile = window.innerWidth <= 767;
+      document.body.classList.toggle('is-mobile', isMobile);
+  }
+  
+  // 監聽設備寬度變化
+  window.addEventListener('resize', detectDevice);
+  
+  // 初始化遊戲應用
+  document.addEventListener('DOMContentLoaded', () => {
+      detectDevice();
+      initializeApp();
+  });

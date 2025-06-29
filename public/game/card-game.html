@@ -1091,6 +1091,175 @@
     object-fit: contain;
     margin-bottom: 3px;
 }
+
+
+/* --- 模板管理相關樣式 --- */
+.filter-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.filter-controls select, .filter-controls input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    flex-grow: 1;
+}
+
+.template-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.template-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    background-color: white;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+
+.template-item:hover {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.template-info {
+    flex-grow: 1;
+}
+
+.template-info strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.template-info small {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.template-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.template-actions button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.btn-load {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-edit {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn-delete {
+    background-color: #F44336;
+    color: white;
+}
+
+.btn-copy {
+    background-color: #9C27B0;
+    color: white;
+}
+
+.template-actions button:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.editor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.login-prompt {
+    text-align: center;
+    padding: 20px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.login-prompt a {
+    color: #2196F3;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.login-prompt a:hover {
+    text-decoration: underline;
+}
+
+
+
     </style>
 </head>
 
@@ -1127,46 +1296,67 @@
     <!-- 遊戲控制區域 -->
  
     
-    <!-- 自定義內容彈窗 -->
-    <div id="configModal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="closeConfigModal">&times;</span>
-            <h2>自定義洞洞樂內容</h2>
+ <!-- 自定義內容彈窗 -->
+<div id="configModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeConfigModal">&times;</span>
+        <h2>洞洞樂模板管理</h2>
+        
+        <!-- 模板載入區 -->
+        <div class="template-loader">
+            <h3>載入模板</h3>
+            <div class="filter-controls">
+                <select id="creatorSelect">
+                    <option value="">所有公開模板</option>
+                    <option value="mine">我的模板</option>
+                    <!-- 其他創作者由 JS 動態載入 -->
+                </select>
+                <select id="sortSelect">
+                    <option value="newest">最新</option>
+                    <option value="popular">熱門</option>
+                </select>
+                <input type="search" id="templateSearchInput" placeholder="搜尋模板名稱...">
+            </div>
+            <div id="templateList" class="template-list">
+                <!-- 模板列表由 JS 動態生成 -->
+                <p>正在加載模板...</p>
+            </div>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <!-- 模板編輯器區 -->
+        <div class="template-editor">
+            <h3 id="editorTitle">新增模板</h3>
+            <input type="hidden" id="templateIdInput">
             
-            <!-- 模板管理區域 -->
-            <div class="template-manager">
-                <h3>模板管理</h3>
-                
-                <!-- 模板列表區域 -->
-                <div class="template-row">
-                    <select id="templateSelect" class="template-select">
-                        <option value="" disabled selected>-- 選擇已保存的模板 --</option>
-                        <!-- 模板選項將由JS動態生成 -->
-                    </select>
-                    <button id="loadTemplateBtn" class="template-action-btn load-template-btn">載入</button>
-                    <button id="deleteTemplateBtn" class="template-action-btn delete-template-btn">刪除</button>
-                </div>
-                
-                <!-- 保存新模板區域 -->
-                <div class="template-row" style="margin-top: 15px;">
-                    <input type="text" id="templateNameInput" class="template-input" placeholder="輸入模板名稱...">
-                    <button id="saveTemplateBtn" class="template-action-btn save-template-btn">保存為模板</button>
-                </div>
-                
-                <p>提示：保存模板可以方便下次快速載入相同的內容配置。</p>
+            <div class="editor-row">
+                <label for="templateNameInput">模板名稱:</label>
+                <input type="text" id="templateNameInput" placeholder="請輸入模板名稱...">
             </div>
             
-            <p>請為每個格子填寫內容：</p>
-            
+            <div class="editor-row">
+                <label>模板狀態:</label>
+                <label class="switch">
+                    <input type="checkbox" id="isPublicSwitch" checked>
+                    <span class="slider round"></span>
+                </label>
+                <span id="isPublicLabel">公開 (其他人可以看到)</span>
+            </div>
+
+            <p>請為 20 個格子填寫內容：</p>
             <div class="input-grid" id="inputGrid">
                 <!-- 輸入框由JS動態生成 -->
             </div>
             
             <div class="modal-buttons">
-                <button id="saveConfigBtn">保存設置</button>
+                <button id="saveTemplateBtn">儲存新模板</button>
+                <button id="updateTemplateBtn" style="display: none;">更新此模板</button>
+                <button id="clearEditorBtn">清空編輯器</button>
             </div>
         </div>
     </div>
+</div>
     
     <!-- 模板抽屜功能已移除，但保留相關HTML結構以避免JS錯誤 -->
     <div id="templateDrawer" class="template-drawer" style="display:none;">
