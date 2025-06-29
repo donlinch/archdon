@@ -400,35 +400,82 @@ function initializeInputs() {
         contents = Array(totalCells).fill('').map((_, i) => `內容 ${i + 1}`);
     }
 
+    // 創建一個包裝容器用於動畫
+    const containerDiv = document.createElement('div');
+    containerDiv.style.opacity = '0';
+    containerDiv.style.transform = 'translateY(20px)';
+    containerDiv.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    
+    // 定義一些柔和的背景顏色
+    const pastelColors = [
+        '#FFD6E0', // 淡粉紅
+        '#FFEFCF', // 淡黃
+        '#D4F0F0', // 淡藍綠
+        '#E2F0CB', // 淡綠
+        '#F0E6EF', // 淡紫
+        '#F9E1E0', // 淡珊瑚
+        '#DBE7ED', // 淡藍灰
+        '#FCE1BE', // 淡橙
+        '#E8F1F5', // 淡天藍
+        '#F0EAD6'  // 淡米色
+    ];
+
     for (let i = 0; i < totalCells; i++) {
         const inputGroup = document.createElement('div');
         inputGroup.className = 'input-group';
-
+        
+        // 隨機選擇一個柔和的背景色
+        const colorIndex = i % pastelColors.length;
+        inputGroup.style.borderLeft = `4px solid ${pastelColors[colorIndex]}`;
+        
         const label = document.createElement('label');
         label.textContent = i + 1;
         label.setAttribute('for', `content-${i}`);
-
+        label.style.background = pastelColors[colorIndex];
+        
         const input = document.createElement('input');
         input.type = 'text';
         input.id = `content-${i}`;
         input.value = contents[i] || ''; // 如果內容為空，顯示空字串
         input.placeholder = `格子 ${i+1} 內容`;
         
-        // 添加輸入框動畫效果
-        input.style.opacity = '0';
-        input.style.transform = 'translateX(-10px)';
+        // 添加聚焦效果
+        input.addEventListener('focus', function() {
+            inputGroup.style.boxShadow = `0 5px 15px rgba(0, 0, 0, 0.1), 0 0 0 2px ${pastelColors[colorIndex]}`;
+            inputGroup.style.transform = 'translateY(-3px)';
+        });
         
-        // 延遲顯示每個輸入框，創建淡入效果
-    setTimeout(() => {
-            input.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            input.style.opacity = '1';
-            input.style.transform = 'translateX(0)';
-        }, 30 * i);
-
+        input.addEventListener('blur', function() {
+            inputGroup.style.boxShadow = '0 3px 8px rgba(0, 0, 0, 0.05)';
+            inputGroup.style.transform = 'translateY(0)';
+        });
+        
         inputGroup.appendChild(label);
         inputGroup.appendChild(input);
-        inputGrid.appendChild(inputGroup);
+        containerDiv.appendChild(inputGroup);
     }
+    
+    // 將容器添加到網格
+    inputGrid.appendChild(containerDiv);
+    
+    // 觸發動畫
+    setTimeout(() => {
+        containerDiv.style.opacity = '1';
+        containerDiv.style.transform = 'translateY(0)';
+    }, 100);
+    
+    // 為每個輸入組添加延遲動畫
+    const inputGroups = containerDiv.querySelectorAll('.input-group');
+    inputGroups.forEach((group, index) => {
+        group.style.opacity = '0';
+        group.style.transform = 'translateX(-10px)';
+        
+        setTimeout(() => {
+            group.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            group.style.opacity = '1';
+            group.style.transform = 'translateX(0)';
+        }, 150 + (index * 30));
+    });
 }
 
 // 更新遊戲板格子背面的內容
@@ -513,13 +560,31 @@ function showNotification(message, type = 'success') {
     notification.style.top = '20px';
     notification.style.left = '50%';
     notification.style.transform = 'translateX(-50%) translateY(-100px)';
-    notification.style.padding = '10px 20px';
-    notification.style.background = type === 'success' ? '#4CAF50' : '#F44336';
-    notification.style.color = 'white';
-    notification.style.borderRadius = '4px';
-    notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    notification.style.padding = '12px 25px';
+    notification.style.borderRadius = '30px';
+    notification.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
     notification.style.zIndex = '9999';
-    notification.style.transition = 'transform 0.3s ease-out';
+    notification.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    notification.style.fontSize = '16px';
+    notification.style.fontWeight = 'bold';
+    notification.style.textAlign = 'center';
+    notification.style.minWidth = '250px';
+    notification.style.maxWidth = '80%';
+    
+    // 根據類型設置不同的樣式
+    if (type === 'success') {
+        notification.style.background = 'linear-gradient(to right, #a8e063, #56ab2f)';
+        notification.style.color = 'white';
+        notification.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+    } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(to right, #ff9a9e, #fad0c4)';
+        notification.style.color = '#d5548b';
+        notification.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+    } else if (type === 'info') {
+        notification.style.background = 'linear-gradient(to right, #89f7fe, #66a6ff)';
+        notification.style.color = '#1a5276';
+        notification.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+    }
     
     // 添加到頁面
     document.body.appendChild(notification);
@@ -530,12 +595,16 @@ function showNotification(message, type = 'success') {
     // 顯示通知
     notification.style.transform = 'translateX(-50%) translateY(0)';
     
+    // 添加輕微的浮動動畫
+    notification.style.animation = 'floatAnimation 2s ease-in-out infinite';
+    
     // 3秒後淡出
     setTimeout(() => {
-        notification.style.transform = 'translateX(-50%) translateY(-100px)';
+        notification.style.transform = 'translateX(-50%) translateY(-100px) scale(0.8)';
+        notification.style.opacity = '0';
         setTimeout(() => {
             document.body.removeChild(notification);
-        }, 300);
+        }, 500);
     }, 3000);
 }
 
@@ -558,10 +627,39 @@ function openLatestTemplatesDrawer() {
     // 加載最新模板列表
     loadLatestTemplates();
     
-    // 打開抽屜
-    gamesDrawer.classList.add('open');
+    // 打開抽屜背景
     drawerOverlay.classList.add('visible');
     document.body.style.overflow = 'hidden'; // 防止背景滾動
+    
+    // 添加抽屜動畫效果
+    gamesDrawer.style.transition = 'right 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    gamesDrawer.classList.add('open');
+    
+    // 添加標題動畫
+    const drawerTitle = gamesDrawer.querySelector('.games-drawer-title');
+    if (drawerTitle) {
+        drawerTitle.style.opacity = '0';
+        drawerTitle.style.transform = 'translateY(-20px)';
+        
+        setTimeout(() => {
+            drawerTitle.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            drawerTitle.style.opacity = '1';
+            drawerTitle.style.transform = 'translateY(0)';
+        }, 300);
+    }
+    
+    // 添加控制項動畫
+    const drawerControls = gamesDrawer.querySelector('.games-drawer-controls');
+    if (drawerControls) {
+        drawerControls.style.opacity = '0';
+        drawerControls.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            drawerControls.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            drawerControls.style.opacity = '1';
+            drawerControls.style.transform = 'translateY(0)';
+        }, 400);
+    }
 }
 
 // 關閉遊戲(最新模板)抽屜
@@ -569,9 +667,59 @@ function closeGamesDrawer() {
     const { gamesDrawer, drawerOverlay } = getDOMElements();
     if (!gamesDrawer) return;
 
-    gamesDrawer.classList.remove('open');
-        drawerOverlay.classList.remove('visible');
-        document.body.style.overflow = ''; // 恢復滾動
+    // 添加關閉動畫
+    const drawerTitle = gamesDrawer.querySelector('.games-drawer-title');
+    const drawerControls = gamesDrawer.querySelector('.games-drawer-controls');
+    const gamesGrid = gamesDrawer.querySelector('.games-grid');
+    
+    // 先淡出內容
+    if (drawerTitle) {
+        drawerTitle.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        drawerTitle.style.opacity = '0';
+        drawerTitle.style.transform = 'translateY(-20px)';
+    }
+    
+    if (drawerControls) {
+        drawerControls.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        drawerControls.style.opacity = '0';
+        drawerControls.style.transform = 'translateY(20px)';
+    }
+    
+    if (gamesGrid) {
+        gamesGrid.style.transition = 'opacity 0.3s ease';
+        gamesGrid.style.opacity = '0';
+    }
+    
+    // 然後淡出背景遮罩
+    drawerOverlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
+    drawerOverlay.style.opacity = '0';
+    
+    // 最後關閉抽屜
+    setTimeout(() => {
+        gamesDrawer.style.transition = 'right 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045)';
+        gamesDrawer.classList.remove('open');
+        
+        // 延遲後移除背景遮罩
+        setTimeout(() => {
+            drawerOverlay.classList.remove('visible');
+            document.body.style.overflow = ''; // 恢復滾動
+            
+            // 重置內容樣式，以便下次打開時正常顯示
+            if (drawerTitle) {
+                drawerTitle.style.opacity = '';
+                drawerTitle.style.transform = '';
+            }
+            
+            if (drawerControls) {
+                drawerControls.style.opacity = '';
+                drawerControls.style.transform = '';
+            }
+            
+            if (gamesGrid) {
+                gamesGrid.style.opacity = '';
+            }
+        }, 400);
+    }, 200);
 }
 
 // 分享遊戲
@@ -700,14 +848,31 @@ async function openTemplateManager() {
     // 更新用戶登入狀態
     checkLoginStatus();
     
+    // 顯示模態窗口
+    configModal.style.display = 'block';
+    
+    // 添加入場動畫效果
+    const modalContent = configModal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.style.opacity = '0';
+        modalContent.style.transform = 'translateY(-50%) scale(0.8)';
+        
+        // 觸發動畫
+        setTimeout(() => {
+            modalContent.style.transition = 'opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            modalContent.style.opacity = '1';
+            modalContent.style.transform = 'translateY(-50%) scale(1)';
+            
+            // 添加彩色氣泡效果
+            createBubbles(modalContent);
+        }, 50);
+    }
+    
     // 填充模板列表
     await populateMyTemplates();
     
     // 初始化輸入框
     initializeInputs();
-    
-    // 顯示模態窗口
-    configModal.style.display = 'block';
 }
 
 // 檢查用戶登入狀態
@@ -1508,3 +1673,88 @@ document.addEventListener('DOMContentLoaded', () => {
     detectDevice();
     initializeApp();
 });
+
+// 創建彩色氣泡效果
+function createBubbles(parentElement) {
+    // 氣泡數量
+    const bubbleCount = 12;
+    
+    // 氣泡顏色
+    const bubbleColors = [
+        '#FFD6E0', // 淡粉紅
+        '#FFEFCF', // 淡黃
+        '#D4F0F0', // 淡藍綠
+        '#E2F0CB', // 淡綠
+        '#F0E6EF', // 淡紫
+        '#FCE1BE', // 淡橙
+    ];
+    
+    // 創建氣泡容器
+    const bubbleContainer = document.createElement('div');
+    bubbleContainer.style.position = 'absolute';
+    bubbleContainer.style.top = '0';
+    bubbleContainer.style.left = '0';
+    bubbleContainer.style.width = '100%';
+    bubbleContainer.style.height = '100%';
+    bubbleContainer.style.overflow = 'hidden';
+    bubbleContainer.style.pointerEvents = 'none';
+    bubbleContainer.style.zIndex = '-1';
+    bubbleContainer.style.borderRadius = '20px';
+    
+    // 添加氣泡
+    for (let i = 0; i < bubbleCount; i++) {
+        const bubble = document.createElement('div');
+        
+        // 隨機大小、位置和顏色
+        const size = Math.random() * 60 + 20; // 20px - 80px
+        const left = Math.random() * 100;
+        const delay = Math.random() * 2;
+        const duration = Math.random() * 10 + 10; // 10s - 20s
+        const colorIndex = Math.floor(Math.random() * bubbleColors.length);
+        
+        // 設置氣泡樣式
+        bubble.style.position = 'absolute';
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        bubble.style.borderRadius = '50%';
+        bubble.style.backgroundColor = bubbleColors[colorIndex];
+        bubble.style.opacity = '0.2';
+        bubble.style.left = `${left}%`;
+        bubble.style.bottom = '-100px';
+        bubble.style.animation = `bubbleRise ${duration}s ease-in infinite ${delay}s`;
+        
+        // 添加氣泡動畫
+        const keyframes = `
+            @keyframes bubbleRise {
+                0% {
+                    transform: translateY(0) rotate(0);
+                    opacity: 0.2;
+                }
+                50% {
+                    opacity: 0.1;
+                }
+                100% {
+                    transform: translateY(-${parentElement.clientHeight + 100}px) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        
+        const style = document.createElement('style');
+        style.textContent = keyframes;
+        document.head.appendChild(style);
+        
+        // 添加到容器
+        bubbleContainer.appendChild(bubble);
+    }
+    
+    // 添加到父元素
+    parentElement.appendChild(bubbleContainer);
+    
+    // 5秒後移除氣泡效果
+    setTimeout(() => {
+        if (parentElement.contains(bubbleContainer)) {
+            parentElement.removeChild(bubbleContainer);
+        }
+    }, 5000);
+}
