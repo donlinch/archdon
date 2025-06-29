@@ -718,18 +718,34 @@ async function openTemplateManager() {
 
 // 檢查用戶登入狀態
 function checkLoginStatus() {
-    const savedUserId = localStorage.getItem('boxCurrentUserId');
-    const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
-    const savedUserName = localStorage.getItem('boxCurrentUsername');
+    console.log("檢查用戶登入狀態...");
     
+    // 檢查所有可能的登入信息存儲方式
+    const savedUserId = localStorage.getItem('boxCurrentUserId');
+    const savedUserToken = localStorage.getItem('boxUserToken') || 
+                          (savedUserId ? localStorage.getItem(`boxUserToken_${savedUserId}`) : null);
+    const savedUserName = localStorage.getItem('boxCurrentUsername');
+    const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+    
+    // 調試信息
+    console.log('localStorage中的信息:');
+    console.log('- userId:', savedUserId);
+    console.log('- userName:', savedUserName);
+    console.log('- displayName:', savedDisplayName);
+    console.log('- token存在:', savedUserToken ? '是' : '否');
+    
+    // 獲取DOM元素
     const templateEditor = document.querySelector('.template-editor');
     const loginPromptDiv = document.querySelector('.login-prompt');
+    const templateList = document.getElementById('templateList');
     
     if (savedUserId && savedUserToken && savedUserName) {
         // 用戶已登入
+        console.log("用戶已登入:", savedDisplayName);
         gameState.loggedInUser = {
             userId: savedUserId,
-            username: savedUserName
+            username: savedUserName,
+            displayName: savedDisplayName
         };
         
         // 顯示模板編輯器
@@ -741,8 +757,15 @@ function checkLoginStatus() {
         if (loginPromptDiv) {
             loginPromptDiv.remove();
         }
+        
+        // 更新用戶狀態顯示
+        const userStatusName = document.getElementById('userStatusName');
+        if (userStatusName) {
+            userStatusName.textContent = savedDisplayName;
+        }
     } else {
         // 用戶未登入
+        console.warn("用戶未登入或登入信息不完整");
         gameState.loggedInUser = null;
         
         // 隱藏模板編輯器，顯示登入提示
@@ -761,7 +784,20 @@ function checkLoginStatus() {
                 templateLoader.insertBefore(loginPrompt, templateLoader.firstChild);
             }
         }
+        
+        // 如果模板列表存在，顯示登入提示
+        if (templateList) {
+            templateList.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <p>請先登入才能查看和管理您的模板</p>
+                    <p><a href="/member-login.html?redirect=${encodeURIComponent(window.location.href)}" 
+                          style="color: #2196F3; font-weight: bold;">點擊此處登入</a></p>
+                </div>
+            `;
+        }
     }
+    
+    return gameState.loggedInUser !== null;
 }
 
 // 填充創作者下拉列表 (此功能已在UI上移除，但保留函數以備不時之需)
