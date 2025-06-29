@@ -89,6 +89,17 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        
+        /* 在手機畫面隱藏用戶名稱 */
+        @media (max-width: 767px) {
+            .user-status {
+                padding: 3px;
+            }
+            
+            .user-status .username {
+                display: none;
+            }
+        }
 
         /* --- 自定義動畫效果 --- */
         @keyframes floatAnimation {
@@ -1248,7 +1259,7 @@
                 
                 // Add click event to navigate to user editor page
                 userStatus.addEventListener('click', () => {
-                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
                 });
             } else {
                 userStatusAvatar.src = '/images/a01girlmove.gif';
