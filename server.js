@@ -123,6 +123,61 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
 // =================================================================
 
 
+// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+const authenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7); // "Bearer " is 7 chars
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            if (err) {
+                console.warn('[Box Auth] Token verification failed:', err.message);
+                return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
+            }
+            
+            // CRITICAL CHECK: Ensure the decoded token has user_id or userId.
+            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
+                console.error('[Box Auth] Invalid token payload: user_id/userId is missing.', decoded);
+                return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
+            }
+
+            // Normalize to user_id for consistency
+            if (decoded.userId && !decoded.user_id) {
+                decoded.user_id = decoded.userId;
+            }
+
+            // Attach user info to the request object
+            req.boxUser = decoded; // decoded now reliably contains user_id
+            next();
+        });
+    } else {
+        console.warn('[Box Auth] Authorization header missing or format incorrect.');
+        res.status(401).json({ error: 'Unauthorized: Please provide a valid token.' });
+    }
+};
+// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+
+
+
+// 中介軟體，用於可選地驗證用戶。
+const optionalAuthenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
+                if (decoded.userId && !decoded.user_id) {
+                    decoded.user_id = decoded.userId;
+                }
+                req.boxUser = decoded;
+            }
+            next();
+        });
+    } else {
+        next();
+    }
+};
+
 
 
 app.post('/api/admin/login', (req, res) => {
@@ -2790,61 +2845,6 @@ app.get('/api/diffrent-game/levels', async (req, res) => {
 
 
 
-
-// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-const authenticateBoxUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7); // "Bearer " is 7 chars
-        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            if (err) {
-                console.warn('[Box Auth] Token verification failed:', err.message);
-                return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
-            }
-            
-            // CRITICAL CHECK: Ensure the decoded token has user_id or userId.
-            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
-                console.error('[Box Auth] Invalid token payload: user_id/userId is missing.', decoded);
-                return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
-            }
-
-            // Normalize to user_id for consistency
-            if (decoded.userId && !decoded.user_id) {
-                decoded.user_id = decoded.userId;
-            }
-
-            // Attach user info to the request object
-            req.boxUser = decoded; // decoded now reliably contains user_id
-            next();
-        });
-    } else {
-        console.warn('[Box Auth] Authorization header missing or format incorrect.');
-        res.status(401).json({ error: 'Unauthorized: Please provide a valid token.' });
-    }
-};
-// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-
-
-
-// 中介軟體，用於可選地驗證用戶。
-const optionalAuthenticateBoxUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
-                if (decoded.userId && !decoded.user_id) {
-                    decoded.user_id = decoded.userId;
-                }
-                req.boxUser = decoded;
-            }
-            next();
-        });
-    } else {
-        next();
-    }
-};
 
 
 // --- 洞洞樂遊戲 API (Card Game APIs) ---
