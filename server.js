@@ -74,6 +74,7 @@ app.use(session({
 
 
  
+ 
 // =================================================================
 // ★★★ 管理後台專用認證中介軟體 (Admin Authentication) ★★★
 // =================================================================
@@ -88,28 +89,73 @@ app.use(session({
 
 
 // --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
-// Example of a protected admin route
-app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
-    res.send(`
-        <h1>Admin Dashboard</h1>
-        <p>Welcome, admin!</p>
-        <p><a href="#" onclick="logout()">Logout</a></p> <!-- 改為 JS 登出 -->
-        <p>Protected content here.</p>
-        <script>
-            async function logout() {
-                const response = await fetch('/api/admin/logout', { method: 'POST' });
-                if (response.ok) {
-                    window.location.href = '/admin-login.html';
-                } else {
-                    alert('登出失敗');
-                }
+const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
+    if (req.session && req.session.isAdmin) {      // (之前叫 isAdmin，建議改名)
+        return next();
+    }
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
+    } else {
+        req.session.returnTo = req.originalUrl;
+        return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
+    }
+};
+
+
+
+
+
+
+
+
+
+// =================================================================
+// ★★★ BOX 前台會員專用認證中介軟體 (Member Authentication) ★★★
+// =================================================================
+// 說明：此中介軟體用於保護 "Box Organizer" 前台應用的 API 路由 (例如 /api/box/users/me)。
+//       這是給一般會員或使用者登入時使用的。
+// 機制：它採用基於 Token 的認證 (JWT - JSON Web Token)。
+//       會員登入後，客戶端 (瀏覽器) 會收到一個 JWT。
+//       對於每個需要保護的 API 請求，客戶端必須在 HTTP 的 `Authorization` 標頭中
+//       以 `Bearer <token>` 的形式附上這個 JWT。
+//       伺服器會驗證此 token 的簽名和時效性，如果合法，則允許訪問。
+//       這種方式是無狀態的 (stateless)，適合現代 Web 應用和 API。
+// =================================================================
+
+
+// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+const authenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7); // "Bearer " is 7 chars
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            if (err) {
+                console.warn('[Box Auth] Token verification failed:', err.message);
+                return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
             }
-        </script>
-    `);
-});
+            
+            // CRITICAL CHECK: Ensure the decoded token has user_id or userId.
+            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
+                console.error('[Box Auth] Invalid token payload: user_id/userId is missing.', decoded);
+                return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
+            }
 
+            // Normalize to user_id for consistency
+            if (decoded.userId && !decoded.user_id) {
+                decoded.user_id = decoded.userId;
+            }
 
-
+            // Attach user info to the request object
+            req.boxUser = decoded; // decoded now reliably contains user_id
+            next();
+        });
+    } else {
+        console.warn('[Box Auth] Authorization header missing or format incorrect.');
+        res.status(401).json({ error: 'Unauthorized: Please provide a valid token.' });
+    }
+};
+// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
 
 
