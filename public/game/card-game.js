@@ -75,12 +75,28 @@ const api = {
         const headers = {
             'Content-Type': 'application/json'
         };
+        
+        // 檢查所有可能的token存儲方式
         const savedUserId = localStorage.getItem('boxCurrentUserId');
-        const savedUserToken = savedUserId ? localStorage.getItem(`boxUserToken_${savedUserId}`) : null;
-
+        const savedUserToken = localStorage.getItem('boxUserToken') || 
+                              (savedUserId ? localStorage.getItem(`boxUserToken_${savedUserId}`) : null);
+        
+        // 調試信息
+        console.log('用戶ID:', savedUserId);
+        console.log('找到的Token:', savedUserToken ? '是' : '否');
+        
         if (savedUserToken) {
-            headers['Authorization'] = `Bearer ${savedUserToken}`;
+            // 檢查token格式，有些系統可能不需要Bearer前綴
+            if (savedUserToken.startsWith('Bearer ')) {
+                headers['Authorization'] = savedUserToken;
+            } else {
+                headers['Authorization'] = `Bearer ${savedUserToken}`;
+            }
+            console.log('已添加Authorization標頭');
+        } else {
+            console.warn('未找到用戶Token，API請求將不包含認證信息');
         }
+        
         return headers;
     },
 
