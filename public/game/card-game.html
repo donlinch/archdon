@@ -51,6 +51,45 @@
     
     <!-- Performance Optimization -->
     <style>
+        /* --- User Status Indicator --- */
+        .user-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #FF9800;
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* --- 自定義動畫效果 --- */
         @keyframes floatAnimation {
             0% { transform: translateY(0px); }
@@ -1045,6 +1084,12 @@
 </head>
 
 <body>
+    <!-- User Status Indicator -->
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
+    
     <header class="page-title-header">
         <h1 class="page-title">SunnyYummy 洞洞樂遊戲</h1>
     </header>
@@ -1182,5 +1227,38 @@
     </footer>
     
     <script src="card-game拷貝.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+
+            // Update the user status indicator
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                
+                // Add click event to navigate to user editor page
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                userStatus.addEventListener('click', () => {
+                    // 變更為導向會員登入頁
+                    window.location.href = `member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                });
+            }
+        });
+    </script>
 </body>
 </html>   
