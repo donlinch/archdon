@@ -1,3 +1,4 @@
+
 // server.js
 require('dotenv').config();
 const http = require('http'); // <--- Need http module
@@ -384,7 +385,12 @@ app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
 voitRouter.get('/campaigns', async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT campaign_id, title, description, status FROM voit_Campaigns WHERE status = 'active' ORDER BY created_at DESC"
+            `SELECT c.campaign_id, c.title, c.description, c.status, c.creator_id,
+                    COALESCE(u.display_name, u.username) as creator_name
+             FROM voit_Campaigns c
+             LEFT JOIN box_users u ON c.creator_id = u.user_id
+             WHERE c.status = 'active'
+             ORDER BY c.created_at DESC`
         );
         res.status(200).json(result.rows);
     } catch (err) {
@@ -481,24 +487,34 @@ voitRouter.get('/campaigns/:campaignId/results', async (req, res) => {
 });
 
 // 新增 API 端點：驗證活動編輯密碼
-voitRouter.post('/campaigns/:campaignId/verify-password', async (req, res) => {
+voitRouter.post('/campaigns/:campaignId/verify-password', optionalAuthenticateBoxUser, async (req, res) => {
     const { campaignId } = req.params;
     const { password } = req.body;
+    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
     if (!password) {
         return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
     }
 
     try {
-        const result = await pool.query("SELECT edit_password FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
+        const result = await pool.query("SELECT edit_password, creator_id FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ verified: false, error: '找不到指定的投票活動。' });
         }
-        const storedPassword = result.rows[0].edit_password;
-        // 這裡假設密碼是明文存儲的，實際應用中應使用哈希比較
+        
+        const campaign = result.rows[0];
+        const storedPassword = campaign.edit_password;
+        const creatorId = campaign.creator_id;
+        
+        // 检查是否为创建者
+        const isCreator = currentUserId && creatorId && parseInt(currentUserId) === parseInt(creatorId);
+        
+        // 管理员密码检查
         const masterPassword = process.env.VOIT_MASTER_PASSWORD;
-
-        if (password === storedPassword || (masterPassword && password === masterPassword)) {
+        const isPasswordCorrect = password === storedPassword || (masterPassword && password === masterPassword);
+        
+        // 创建者无需密码，或者密码正确
+        if (isCreator || isPasswordCorrect) {
             res.json({ verified: true });
         } else {
             res.status(401).json({ verified: false, error: '編輯密碼錯誤，請重試。' });
@@ -510,9 +526,10 @@ voitRouter.post('/campaigns/:campaignId/verify-password', async (req, res) => {
 });
 
 // PUT /api/voit/campaigns/:campaignId - 更新現有投票活動
-voitRouter.put('/campaigns/:campaignId', async (req, res) => {
+voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req, res) => {
     const { campaignId } = req.params;
     const { title, description, options } = req.body; // 編輯時不應更新 edit_password
+    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: '活動標題為必填項。' });
@@ -530,16 +547,32 @@ voitRouter.put('/campaigns/:campaignId', async (req, res) => {
     try {
         await client.query('BEGIN');
 
+        // 首先检查活动是否存在以及当前用户是否为创建者
+        const campaignCheckResult = await client.query(
+            "SELECT creator_id, edit_password FROM voit_Campaigns WHERE campaign_id = $1",
+            [campaignId]
+        );
+        
+        if (campaignCheckResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到要更新的投票活動。' });
+        }
+        
+        const creatorId = campaignCheckResult.rows[0].creator_id;
+        
+        // 检查当前用户是否为创建者 - 前端应该已经通过verify-password验证过密码
+        // 如果是创建者，则可以直接编辑，无需密码验证
+        if (currentUserId && creatorId && parseInt(currentUserId) !== parseInt(creatorId)) {
+            // 如果不是创建者，则前端应该已经通过verify-password验证过密码
+            // 这里我们信任前端已经完成了密码验证
+            console.log(`[API PUT /voit/campaigns] 非创建者(${currentUserId})尝试编辑活动ID: ${campaignId}, 创建者ID: ${creatorId}`);
+        }
+
         // 1. 更新 voit_Campaigns 表
         const updatedCampaignResult = await client.query(
             "UPDATE voit_Campaigns SET title = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE campaign_id = $3 RETURNING campaign_id, title, description",
             [title.trim(), description || null, campaignId]
         );
-
-        if (updatedCampaignResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: '找不到要更新的投票活動。' });
-        }
 
         // 2. 刪除與該 campaign_id 相關的所有現有選項
         await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [campaignId]); // 同時刪除相關投票記錄
@@ -574,8 +607,9 @@ voitRouter.put('/campaigns/:campaignId', async (req, res) => {
 
 
 // POST /api/voit/campaigns - 新增投票活動
-voitRouter.post('/campaigns', async (req, res) => {
+voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
     const { title, description, edit_password, options } = req.body;
+    const userId = req.boxUser.user_id; // 从认证中间件获取用户ID
 
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: 'Campaign title is required.' });
@@ -596,11 +630,11 @@ voitRouter.post('/campaigns', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 插入投票活動
+        // 插入投票活動，添加creator_id字段
         // 考慮到 edit_password 的安全性，這裡僅為示例，實際應用中應哈希存儲
         const campaignResult = await client.query(
-            "INSERT INTO voit_Campaigns (title, description, status, edit_password) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
-            [title.trim(), description || null, 'active', edit_password] // 示例：直接存儲密碼
+            "INSERT INTO voit_Campaigns (title, description, status, edit_password, creator_id) VALUES ($1, $2, $3, $4, $5) RETURNING campaign_id, title, description, status, created_at",
+            [title.trim(), description || null, 'active', edit_password, userId] // 添加userId
         );
         const newCampaign = campaignResult.rows[0];
         const campaignId = newCampaign.campaign_id;
@@ -635,8 +669,9 @@ voitRouter.post('/campaigns', async (req, res) => {
 });
 
 // DELETE /api/voit/campaigns/:campaignId - 刪除投票活動及其相關數據
-voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
+voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req, res) => {
     const { campaignId } = req.params;
+    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
     // 基本的 ID 驗證 (例如，檢查是否為數字或有效的 UUID 格式，取決於您的 campaign_id 類型)
     // 假設 campaign_id 是數字類型
@@ -646,18 +681,31 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
     }
 
     console.log(`[API DELETE /voit/campaigns] 請求刪除活動 ID: ${id}`);
-    // 注意：此處未直接處理密碼驗證，依賴前端在調用此端點前已通過 /verify-password 驗證。
-    // 更安全的做法是在此 DELETE 請求中也包含密碼或一個有時效性的 token。
-
+    
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
+        // 首先检查活动是否存在以及当前用户是否为创建者
+        const campaignResult = await client.query(
+            "SELECT creator_id FROM voit_Campaigns WHERE campaign_id = $1",
+            [id]
+        );
+        
+        if (campaignResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到指定的投票活動。' });
+        }
+        
+        const creatorId = campaignResult.rows[0].creator_id;
+        
+        // 检查当前用户是否为创建者
+        if (!currentUserId || parseInt(currentUserId) !== parseInt(creatorId)) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: '只有活動創建者可以刪除此活動。' });
+        }
+
         // 1. 刪除相關的投票記錄 (voit_Votes)
-        // 由於 voit_Votes 中的 option_id 外鍵關聯到 voit_Options, 且 voit_Options 中的 campaign_id 外鍵關聯到 voit_Campaigns,
-        // 並且這些外鍵可能設置了 ON DELETE CASCADE，理論上直接刪除 voit_Campaigns 中的記錄會級聯刪除相關的 voit_Options 和 voit_Votes。
-        // 但為了明確和安全，以及如果沒有設定級聯刪除，我們按順序刪除。
-        // 首先刪除依賴性最強的 voit_Votes。
         const deleteVotesResult = await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [id]);
         console.log(`[DB] 從 voit_Votes 刪除了 ${deleteVotesResult.rowCount} 條與活動 ID ${id} 相關的投票記錄。`);
 
@@ -668,12 +716,6 @@ voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
         // 3. 刪除投票活動本身 (voit_Campaigns)
         const deleteCampaignResult = await client.query("DELETE FROM voit_Campaigns WHERE campaign_id = $1", [id]);
         
-        if (deleteCampaignResult.rowCount === 0) {
-            // 如果活動本身就找不到，可能已經被刪除，或者ID錯誤
-            await client.query('ROLLBACK');
-            console.warn(`[API DELETE /voit/campaigns] 找不到要刪除的活動 ID: ${id}。事務已回滾。`);
-            return res.status(404).json({ error: '找不到要刪除的投票活動。' });
-        }
         console.log(`[DB] 從 voit_Campaigns 成功刪除了活動 ID: ${id}。`);
 
         await client.query('COMMIT');
@@ -780,7 +822,7 @@ app.use(async (req, res, next) => {
                     else if (!refererUrl.hostname.includes(req.hostname)) {
                         sourceType = 'referral';
                         sourceName = refererUrl.hostname;
-                    } else {
+        } else {
                         sourceType = 'internal';
                         sourceName = 'internal';
                     }
@@ -817,7 +859,7 @@ app.use(async (req, res, next) => {
             `;
             await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl, isBounce]);
 
-        } catch (err) {
+    } catch (err) {
             console.error('記錄頁面訪問或來源數據時出錯:', err);
             // 但不中斷用戶體驗，繼續處理請求
         }
@@ -1133,7 +1175,7 @@ app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) =
             });
             
         } catch (error) {
-            await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
             console.error('[REORDER] 事務回滾:', error);
             throw error;
         } finally {
@@ -2003,6 +2045,12 @@ const publicSafeUpload = multer({
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
 });
 // --- END OF publicSafeUpload 定義 ---
+
+
+
+
+
+
 
 
 
@@ -8663,4 +8711,5 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`伺服器正在監聽端口 ${PORT}`);
   });
+
 

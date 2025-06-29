@@ -904,10 +904,28 @@
                         if (campaignsCache && campaignsCache.length > 0) {
                             campaignsCache.forEach(campaign => {
                                 const listItem = document.createElement('li');
+                                
+                                // 创建标题和创建者信息的容器
+                                const infoContainer = document.createElement('div');
+                                infoContainer.style.display = 'flex';
+                                infoContainer.style.flexDirection = 'column';
+                                
+                                // 添加标题
                                 const campaignTitle = document.createElement('span');
                                 campaignTitle.textContent = campaign.title;
+                                campaignTitle.style.fontWeight = 'bold';
+                                infoContainer.appendChild(campaignTitle);
                                 
-                                listItem.appendChild(campaignTitle);
+                                // 添加创建者信息
+                                if (campaign.creator_name) {
+                                    const creatorInfo = document.createElement('small');
+                                    creatorInfo.textContent = `創建者: ${campaign.creator_name}`;
+                                    creatorInfo.style.color = '#666';
+                                    creatorInfo.style.fontSize = '0.85em';
+                                    infoContainer.appendChild(creatorInfo);
+                                }
+                                
+                                listItem.appendChild(infoContainer);
                                 
                                 // Always show vote count badge
                                 const votesBadge = document.createElement('span');
@@ -1244,6 +1262,26 @@
                     async function showDefaultDrawerContent() { 
                         if (!drawerContent) return; 
                         
+                        // 检查用户是否已登录
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                        
+                        if (!savedUserId || !savedUserToken) {
+                            // 用户未登录，显示登录提示
+                            drawerContent.innerHTML = `
+                                <div style="text-align: center; padding: 20px;">
+                                    <p>您需要登入才能創建投票活動</p>
+                                    <button id="login-redirect-button" class="button" style="background-color: #4CAF50;">前往登入</button>
+                                </div>
+                            `;
+                            
+                            document.getElementById('login-redirect-button').addEventListener('click', () => {
+                                window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                            });
+                            
+                            return;
+                        }
+                        
                         drawerContent.innerHTML = `
                         <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
                             <ul id="drawer-item-list" class="drawer-item-list">
@@ -1266,19 +1304,26 @@
 
                             itemListUl.innerHTML = ''; 
                             if (campaigns && campaigns.length > 0) {
-                                campaigns.forEach(campaign => {
-                                    const listItem = document.createElement('li');
-                                    listItem.innerHTML = `
-                                        <span>${escapeHtml(campaign.title)}</span>
-                                        <div>
-                                            <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">編輯</button>
-                                            <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
-                                        </div>
-                                    `;
-                                    itemListUl.appendChild(listItem);
-                                    listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
-                                    listItem.querySelector('.delete-item-button').addEventListener('click', handleDeleteCampaignClick);
-                                });
+                                // 只显示当前用户创建的活动
+                                const userCampaigns = campaigns.filter(campaign => campaign.creator_id == savedUserId);
+                                
+                                if (userCampaigns.length > 0) {
+                                    userCampaigns.forEach(campaign => {
+                                        const listItem = document.createElement('li');
+                                        listItem.innerHTML = `
+                                            <span>${escapeHtml(campaign.title)}</span>
+                                            <div>
+                                                <button class="edit-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">編輯</button>
+                                                <button class="delete-item-button" data-campaign-id="${campaign.campaign_id}" data-campaign-title="${escapeHtml(campaign.title)}">刪除</button>
+                                            </div>
+                                        `;
+                                        itemListUl.appendChild(listItem);
+                                        listItem.querySelector('.edit-item-button').addEventListener('click', handleEditCampaignClick);
+                                        listItem.querySelector('.delete-item-button').addEventListener('click', handleDeleteCampaignClick);
+                                    });
+                                } else {
+                                    itemListUl.innerHTML = '<li>您尚未創建任何投票活動。</li>';
+                                }
                             } else {
                                 itemListUl.innerHTML = '<li>目前沒有可管理的投票活動。</li>';
                             }
