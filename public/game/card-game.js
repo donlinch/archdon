@@ -57,7 +57,10 @@ function getDOMElements() {
         gamesGrid: document.getElementById('gamesGrid'),
         
         // 抽屜背景遮罩
-        drawerOverlay: document.getElementById('drawerOverlay')
+        drawerOverlay: document.getElementById('drawerOverlay'),
+
+        // 最新模板按鈕
+        latestTemplatesBtn: document.getElementById('latestTemplatesBtn'),
     };
 }
 
@@ -440,21 +443,23 @@ function closeAllDrawers() {
     if (configModal) configModal.style.display = 'none';
 }
 
-// 打開遊戲抽屜
-function openGamesDrawer() {
+// --- 最新模板抽屜功能 ---
+
+// 打開最新模板抽屜
+function openLatestTemplatesDrawer() {
     const { gamesDrawer, drawerOverlay } = getDOMElements();
     if (!gamesDrawer || !drawerOverlay) return;
-    
-    // 加載遊戲列表
-    loadGames();
-    
+
+    // 加載最新模板列表
+    loadLatestTemplates();
+
     // 打開抽屜
     gamesDrawer.classList.add('open');
     drawerOverlay.classList.add('visible');
     document.body.style.overflow = 'hidden'; // 防止背景滾動
 }
 
-// 關閉遊戲抽屜
+// 關閉遊戲(最新模板)抽屜
 function closeGamesDrawer() {
     const { gamesDrawer, drawerOverlay } = getDOMElements();
     if (!gamesDrawer) return;
@@ -492,53 +497,50 @@ function shareGame() {
     }
 }
 
-// 加載遊戲列表到抽屜
-async function loadGames() {
+// 加載最新模板列表到抽屜
+async function loadLatestTemplates() {
     const { gamesGrid } = getDOMElements();
     if (!gamesGrid) return;
-    
+
     // 顯示加載中
-    gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">正在加載遊戲列表...</div>';
-    
+    gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">正在載入最新模板...</div>';
+
     try {
-        // 從 API 獲取遊戲列表
-        const response = await fetch('/api/games');
-        if (!response.ok) {
-            throw new Error(`獲取遊戲列表失敗：HTTP ${response.status}`);
-        }
-        
-        const games = await response.json();
+        // 從 API 獲取最新模板列表 (只獲取公開的)
+        const templates = await api.get('/api/card-game/templates?sortBy=newest');
         
         // 清空容器
         gamesGrid.innerHTML = '';
-        
-        if (!games || games.length === 0) {
-            gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">暫無遊戲，敬請期待！</div>';
+
+        if (!templates || templates.length === 0) {
+            gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">暫無公開模板，快來創建一個吧！</div>';
             return;
         }
-        
-        // 創建遊戲卡片
-        games.forEach((game, index) => {
+
+        // 創建模板卡片
+        templates.forEach((template, index) => {
             const gameCard = document.createElement('div');
-            gameCard.className = 'game-card';
+            gameCard.className = 'game-card'; // 復用遊戲卡片樣式
             gameCard.style.opacity = '0';
             gameCard.style.transform = 'translateY(20px)';
             
+            // 模板卡片沒有圖片，所以調整內容
             gameCard.innerHTML = `
-                <img src="${game.image_url || '/images/placeholder.png'}" alt="${game.title}" class="game-image">
-                <div class="game-info">
-                    <h3 class="game-title">${game.title}</h3>
-                    <p class="game-description">${game.description || '暫無描述'}</p>
+                <div class="game-info" style="padding: 15px;">
+                    <h3 class="game-title" style="font-size: 16px; margin-bottom: 8px;">${template.template_name}</h3>
+                    <p class="game-description" style="font-size: 12px; margin-bottom: 8px;">作者: ${template.creator_name}</p>
+                    <small style="color: #666; font-size: 11px;">遊玩: ${template.play_count || 0} | 複製: ${template.copy_count || 0}</small>
                 </div>
             `;
             
-            // 點擊卡片跳轉到遊戲頁面
+            // 點擊卡片載入模板並關閉抽屜
             gameCard.addEventListener('click', () => {
-                window.location.href = game.play_url || '/games.html';
+                loadTemplate(template.id);
+                closeGamesDrawer();
             });
             
             gamesGrid.appendChild(gameCard);
-            
+
             // 添加動畫效果，延遲顯示
             setTimeout(() => {
                 gameCard.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -546,14 +548,14 @@ async function loadGames() {
                 gameCard.style.transform = 'translateY(0)';
             }, 50 * index);
         });
-        
+
     } catch (error) {
-        console.error('加載遊戲列表失敗:', error);
+        console.error('加載最新模板列表失敗:', error);
         gamesGrid.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #e53935;">
-                加載遊戲列表失敗：${error.message}
+                加載最新模板失敗：${error.message || '未知錯誤'}
                 <br><br>
-                <button onclick="loadGames()" style="padding: 8px 16px; background-color: #4fc3f7; color: white; border: none; border-radius: 4px; cursor: pointer;">重試</button>
+                <button onclick="loadLatestTemplates()" style="padding: 8px 16px; background-color: #4fc3f7; color: white; border: none; border-radius: 4px; cursor: pointer;">重試</button>
             </div>
         `;
     }
@@ -1025,9 +1027,9 @@ function renderTemplateList(templates) {
           elements.resetBtn.addEventListener('click', resetGame);
       }
       
-      // 全部遊戲按鈕
-      if (elements.allGamesBtn) {
-          elements.allGamesBtn.addEventListener('click', openGamesDrawer);
+      // 最新模板按鈕
+      if (elements.latestTemplatesBtn) {
+          elements.latestTemplatesBtn.addEventListener('click', openLatestTemplatesDrawer);
       }
       
       if (elements.gamesDrawerClose) {
