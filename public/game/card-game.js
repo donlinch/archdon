@@ -475,7 +475,7 @@ function loadDefaultTemplate() {
     console.log("載入預設模板...");
     
     // 直接使用硬編碼的內容，不再嘗試從API獲取預設模板
-    setExampleContent();
+            setExampleContent();
     initializeBoard();
     console.log("已載入預設內容");
     
@@ -637,22 +637,23 @@ async function loadLatestTemplates() {
         gamesGrid.innerHTML = '';
         
         if (!templates || templates.length === 0) {
-            gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">暫無公開模板，快來創建一個吧！</div>';
+            gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; background-color: rgba(255, 255, 255, 0.7); border-radius: 15px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);">暫無公開模板，快來創建一個吧！</div>';
             return;
         }
         
         // 創建模板卡片
         templates.forEach((template, index) => {
             const gameCard = document.createElement('div');
-            gameCard.className = 'game-card'; // 復用遊戲卡片樣式
-            gameCard.style.opacity = '0';
-            gameCard.style.transform = 'translateY(20px)';
+            gameCard.className = 'game-card';
+            
+            // 設置動畫延遲
+            gameCard.style.animationDelay = `${index * 0.05}s`;
             
             // 模板卡片沒有圖片，所以調整內容
             gameCard.innerHTML = `
-                <div class="game-info" style="padding: 15px;">
-                    <h3 class="game-title" style="font-size: 16px; margin-bottom: 8px;">${template.template_name}</h3>
-                    <p class="game-description" style="font-size: 12px; margin-bottom: 8px;">作者: ${template.creator_name || '未知'}</p>
+                <div class="game-info">
+                    <h3 class="game-title">${template.template_name}</h3>
+                    <p class="game-description">作者: ${template.creator_name || '未知'}</p>
                     <small style="color: #666; font-size: 11px;">遊玩: ${template.play_count || 0} | 複製: ${template.copy_count || 0}</small>
                 </div>
             `;
@@ -664,22 +665,15 @@ async function loadLatestTemplates() {
             });
             
             gamesGrid.appendChild(gameCard);
-            
-            // 添加動畫效果，延遲顯示
-            setTimeout(() => {
-                gameCard.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                gameCard.style.opacity = '1';
-                gameCard.style.transform = 'translateY(0)';
-            }, 50 * index);
         });
         
     } catch (error) {
         console.error('加載最新模板列表失敗:', error);
         gamesGrid.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: #e53935;">
+            <div style="grid-column: 1/-1; text-align: center; padding: 20px; background-color: rgba(255, 255, 255, 0.7); border-radius: 15px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05); color: #e53935;">
                 加載最新模板失敗：${error.message || '未知錯誤'}
                 <br><br>
-                <button onclick="loadLatestTemplates()" style="padding: 8px 16px; background-color: #4fc3f7; color: white; border: none; border-radius: 4px; cursor: pointer;">重試</button>
+                <button onclick="loadLatestTemplates()" style="padding: 10px 20px; background: linear-gradient(to bottom right, #4fc3f7, #29b6f6); color: white; border: none; border-radius: 20px; cursor: pointer; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1); font-weight: bold;">重試</button>
             </div>
         `;
     }
@@ -830,9 +824,9 @@ async function populateMyTemplates() {
         
         if (!templates || templates.length === 0) {
             templateList.innerHTML = '<p style="text-align: center; padding: 20px;">暫無模板。</p>';
-            return;
-        }
-        
+        return;
+    }
+    
         // 獲取當前用戶ID
         const currentUserId = localStorage.getItem('boxCurrentUserId');
         console.log("當前用戶ID:", currentUserId);
@@ -971,9 +965,13 @@ function renderTemplateList(templates) {
     }
     
     // 添加每個模板項目
-    visibleTemplates.forEach(template => {
+    visibleTemplates.forEach((template, index) => {
         const item = document.createElement('div');
         item.className = 'template-item';
+        
+        // 添加初始樣式用於動畫
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
         
         // 檢查是否有creator_id
         if (!template.creator_id && gameState.loggedInUser) {
@@ -1000,6 +998,13 @@ function renderTemplateList(templates) {
         
         // 添加到列表
         templateList.appendChild(item);
+        
+        // 添加延遲動畫效果
+        setTimeout(() => {
+            item.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, 50 * index);
     });
     
     // 綁定按鈕事件
@@ -1046,15 +1051,15 @@ function bindTemplateActions() {
             if (id) copyTemplate(id);
         });
     });
-    
-    // 隱藏按鈕
-    templateList.querySelectorAll('.btn-hide').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            if (id) hideTemplateFromUI(id);
-        });
-    });
+  
+  // 隱藏按鈕
+  templateList.querySelectorAll('.btn-hide').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          if (id) hideTemplateFromUI(id);
+      });
+  });
 }
 
 // 載入模板到遊戲
@@ -1152,41 +1157,41 @@ async function fillEditorForEdit(id) {
 
 // 刪除模板
 async function deleteTemplate(id) {
-    // 在確認對話框中就告知使用者可能會失敗
-    if (!confirm(`您確定要嘗試刪除模板 ID: ${id} 嗎？\n\n注意：由於伺服器權限設定，此操作可能會失敗。如果失敗，建議使用旁邊的「隱藏」按鈕。`)) {
+  // 在確認對話框中就告知使用者可能會失敗
+  if (!confirm(`您確定要嘗試刪除模板 ID: ${id} 嗎？\n\n注意：由於伺服器權限設定，此操作可能會失敗。如果失敗，建議使用旁邊的「隱藏」按鈕。`)) {
         return;
     }
-
+    
     try {
-        console.log(`正在發送刪除模板 ID: ${id} 的請求`);
-        showNotification('正在刪除...', 'info');
+      console.log(`正在發送刪除模板 ID: ${id} 的請求`);
+      showNotification('正在刪除...', 'info');
 
-        // 直接調用 API 刪除
+      // 直接調用 API 刪除
         await api.delete(`/api/card-game/templates/${id}`);
 
         showNotification('模板已成功刪除');
-
-        // 成功後，重新載入模板列表以更新 UI
-        await populateMyTemplates();
+        
+      // 成功後，重新載入模板列表以更新 UI
+      await populateMyTemplates();
 
     } catch (error) {
         console.error('刪除模板失敗:', error);
 
-        let errorMessage = '刪除失敗，發生未知錯誤。';
-        if (error.message) {
-            // 根據錯誤碼提供更友善的提示
-            if (error.message.includes('403')) {
-                errorMessage = '刪除失敗：伺服器回報無此權限。這很可能是後端問題，請改用「隱藏」按鈕。';
-            } else if (error.message.includes('404')) {
-                errorMessage = '刪除失敗：模板不存在或已被刪除。';
-                // 既然不存在，就直接更新UI
-                await populateMyTemplates();
-            } else {
-                errorMessage = `刪除失敗: ${error.message}`;
-            }
-        }
+      let errorMessage = '刪除失敗，發生未知錯誤。';
+      if (error.message) {
+          // 根據錯誤碼提供更友善的提示
+          if (error.message.includes('403')) {
+              errorMessage = '刪除失敗：伺服器回報無此權限。這很可能是後端問題，請改用「隱藏」按鈕。';
+          } else if (error.message.includes('404')) {
+              errorMessage = '刪除失敗：模板不存在或已被刪除。';
+              // 既然不存在，就直接更新UI
+              await populateMyTemplates();
+          } else {
+              errorMessage = `刪除失敗: ${error.message}`;
+          }
+      }
 
-        showNotification(errorMessage, 'error');
+      showNotification(errorMessage, 'error');
     }
 }
 
@@ -1255,10 +1260,10 @@ async function saveOrUpdateTemplate() {
     // 檢查是新增還是更新
     const templateId = templateIdInput ? templateIdInput.value : '';
     const isPublic = isPublicSwitch ? isPublicSwitch.checked : true;
-    
-    // 獲取用戶ID
-    const userId = localStorage.getItem('boxCurrentUserId');
-    console.log("保存模板的用戶ID:", userId);
+  
+  // 獲取用戶ID
+  const userId = localStorage.getItem('boxCurrentUserId');
+  console.log("保存模板的用戶ID:", userId);
     
     try {
         let result;
@@ -1268,8 +1273,8 @@ async function saveOrUpdateTemplate() {
             result = await api.put(`/api/card-game/templates/${templateId}`, {
                 template_name: templateName,
                 content_data: contents,
-                is_public: isPublic,
-                creator_id: userId // 明確添加creator_id
+              is_public: isPublic,
+              creator_id: userId // 明確添加creator_id
             });
             showNotification('模板已成功更新');
         } else {
@@ -1277,13 +1282,13 @@ async function saveOrUpdateTemplate() {
             result = await api.post('/api/card-game/templates', {
                 template_name: templateName,
                 content_data: contents,
-                is_public: isPublic,
-                creator_id: userId // 明確添加creator_id
+              is_public: isPublic,
+              creator_id: userId // 明確添加creator_id
             });
             showNotification('模板已成功創建');
-            
-            // 調試信息
-            console.log("新模板創建結果:", result);
+          
+          // 調試信息
+          console.log("新模板創建結果:", result);
         }
         
         // 清空編輯器
@@ -1293,7 +1298,7 @@ async function saveOrUpdateTemplate() {
         populateMyTemplates();
     } catch (error) {
         console.error('保存模板失敗:', error);
-        showNotification('保存模板失敗: ' + (error.message || '未知錯誤'), 'error');
+      showNotification('保存模板失敗: ' + (error.message || '未知錯誤'), 'error');
     }
 }
 
@@ -1394,30 +1399,30 @@ function setupEventListeners() {
     if (elements.isPublicSwitch) {
         elements.isPublicSwitch.addEventListener('change', updatePublicLabel);
     }
+  
+  // 鍵盤事件處理
+  document.addEventListener('keydown', (e) => {
+      // ESC 鍵關閉所有彈窗和抽屜
+      if (e.key === 'Escape') {
+          closeAllDrawers();
+      }
+  });
 
-    // 鍵盤事件處理
-    document.addEventListener('keydown', (e) => {
-        // ESC 鍵關閉所有彈窗和抽屜
-        if (e.key === 'Escape') {
-            closeAllDrawers();
-        }
-    });
-
-    // 最新模板抽屜篩選
-    if (elements.latestSortSelect) {
-        elements.latestSortSelect.addEventListener('change', loadLatestTemplates);
-    }
-    if (elements.latestSearchBySelect) {
-        elements.latestSearchBySelect.addEventListener('change', loadLatestTemplates);
-    }
-    if (elements.latestSearchInput) {
-        elements.latestSearchInput.addEventListener('input', () => {
-            clearTimeout(elements.latestSearchInput.searchTimeout);
-            elements.latestSearchInput.searchTimeout = setTimeout(() => {
-                loadLatestTemplates();
-            }, 300); // 防抖
-        });
-    }
+  // 最新模板抽屜篩選
+  if (elements.latestSortSelect) {
+      elements.latestSortSelect.addEventListener('change', loadLatestTemplates);
+  }
+  if (elements.latestSearchBySelect) {
+      elements.latestSearchBySelect.addEventListener('change', loadLatestTemplates);
+  }
+  if (elements.latestSearchInput) {
+      elements.latestSearchInput.addEventListener('input', () => {
+          clearTimeout(elements.latestSearchInput.searchTimeout);
+          elements.latestSearchInput.searchTimeout = setTimeout(() => {
+              loadLatestTemplates();
+          }, 300); // 防抖
+      });
+  }
 }
 
 // 調試函數：顯示localStorage中的所有內容
@@ -1453,8 +1458,8 @@ function debugLocalStorage() {
     console.groupEnd();
 }
 
-// 初始化應用
-async function initializeApp() {
+  // 初始化應用
+  async function initializeApp() {
     console.log("洞洞樂遊戲初始化開始...");
     try {
         // 0. 調試localStorage
@@ -1489,7 +1494,7 @@ async function initializeApp() {
     }
 }
 
-// 檢測設備類型
+  // 檢測設備類型
 function detectDevice() {
     const isMobile = window.innerWidth <= 767;
     document.body.classList.toggle('is-mobile', isMobile);
