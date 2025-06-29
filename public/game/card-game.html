@@ -719,47 +719,55 @@
         /* 改進輸入格子的佈局 */
         .input-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-gap: 12px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-gap: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
         .input-group {
             display: flex;
             align-items: center;
             background-color: #ffffff;
-            border-radius: 6px;
-            padding: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
             transition: all 0.3s;
+            border: 2px solid transparent;
         }
         
         .input-group:hover {
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 5px 12px rgba(255, 182, 193, 0.2);
             transform: translateY(-2px);
+            border-color: #ffe0e6;
         }
 
         .input-group label {
-            width: 24px;
+            width: 30px;
+            height: 30px;
             font-weight: bold;
-            margin-right: 8px;
+            margin-right: 10px;
             text-align: center;
-            color: #666;
+            line-height: 30px;
+            color: white;
+            background: linear-gradient(135deg, #ffb6c1, #ff8ba7);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(255, 182, 193, 0.5);
         }
 
         .input-group input {
             flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            padding: 10px;
+            border: 1px solid #ffe0e6;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
         }
         
         .input-group input:focus {
-            border-color: #64B5F6;
+            border-color: #ffb6c1;
+            box-shadow: 0 0 0 3px rgba(255, 182, 193, 0.2);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
         }
 
         /* 按鈕容器樣式 */
@@ -1587,12 +1595,23 @@ input:checked + .slider:before {
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
             transition: all 0.3s;
             border: 2px solid transparent;
+            position: relative;
         }
         
         .input-group:hover {
             box-shadow: 0 5px 12px rgba(255, 182, 193, 0.2);
             transform: translateY(-2px);
             border-color: #ffe0e6;
+        }
+        
+        .input-bracket {
+            position: absolute;
+            left: -3px;
+            top: 10%;
+            height: 80%;
+            width: 6px;
+            border-radius: 3px;
+            transition: all 0.3s ease;
         }
         
         .input-group label {
@@ -1882,24 +1901,31 @@ input:checked + .slider:before {
             }
             
             .input-grid {
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                grid-template-columns: 1fr;
                 grid-gap: 10px;
             }
             
             .input-group {
-                padding: 8px;
+                padding: 12px;
+            }
+            
+            .input-bracket {
+                left: -4px;
+                width: 8px;
+                border-radius: 4px;
             }
             
             .input-group label {
-                width: 25px;
-                height: 25px;
-                line-height: 25px;
-                font-size: 12px;
+                width: 35px;
+                height: 35px;
+                line-height: 35px;
+                font-size: 14px;
+                margin-right: 12px;
             }
             
             .input-group input {
-                padding: 8px;
-                font-size: 14px;
+                padding: 12px;
+                font-size: 16px;
             }
             
             .template-actions {

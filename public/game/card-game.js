@@ -426,7 +426,11 @@ function initializeInputs() {
         
         // 隨機選擇一個柔和的背景色
         const colorIndex = i % pastelColors.length;
-        inputGroup.style.borderLeft = `4px solid ${pastelColors[colorIndex]}`;
+        
+        // 創建左側括號裝飾
+        const bracketDiv = document.createElement('div');
+        bracketDiv.className = 'input-bracket';
+        bracketDiv.style.backgroundColor = pastelColors[colorIndex];
         
         const label = document.createElement('label');
         label.textContent = i + 1;
@@ -443,13 +447,16 @@ function initializeInputs() {
         input.addEventListener('focus', function() {
             inputGroup.style.boxShadow = `0 5px 15px rgba(0, 0, 0, 0.1), 0 0 0 2px ${pastelColors[colorIndex]}`;
             inputGroup.style.transform = 'translateY(-3px)';
+            bracketDiv.style.height = '100%';
         });
         
         input.addEventListener('blur', function() {
             inputGroup.style.boxShadow = '0 3px 8px rgba(0, 0, 0, 0.05)';
             inputGroup.style.transform = 'translateY(0)';
+            bracketDiv.style.height = '80%';
         });
         
+        inputGroup.appendChild(bracketDiv);
         inputGroup.appendChild(label);
         inputGroup.appendChild(input);
         containerDiv.appendChild(inputGroup);
@@ -1157,7 +1164,6 @@ function renderTemplateList(templates) {
                 ${forceOwnership || template.is_owner ? `<button class="btn-edit" data-id="${template.id}">編輯</button>` : ''}
                 ${forceOwnership || template.is_owner ? `<button class="btn-delete" data-id="${template.id}">刪除</button>` : ''}
                 ${gameState.loggedInUser && !template.is_owner ? `<button class="btn-copy" data-id="${template.id}">複製</button>` : ''}
-                <button class="btn-hide" data-id="${template.id}" title="從列表中隱藏此模板">隱藏</button>
             </div>
         `;
         
@@ -1216,15 +1222,6 @@ function bindTemplateActions() {
             if (id) copyTemplate(id);
         });
     });
-  
-  // 隱藏按鈕
-  templateList.querySelectorAll('.btn-hide').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const id = btn.dataset.id;
-          if (id) hideTemplateFromUI(id);
-      });
-  });
 }
 
 // 載入模板到遊戲
