@@ -2884,7 +2884,7 @@ app.get('/api/card-game/templates', optionalAuthenticateBoxUser, async (req, res
         FROM 
             card_game_templates t
         LEFT JOIN 
-            box_users u ON t.creator_id = u.id
+            box_users u ON t.creator_id = u.user_id
         WHERE 1=1
     `;
     const params = [userIdFromToken || null];
@@ -2940,7 +2940,7 @@ app.get('/api/card-game/templates/:id', optionalAuthenticateBoxUser, async (req,
             SELECT t.*, COALESCE(u.display_name, u.username) AS creator_name,
                    CASE WHEN t.creator_id = $2 THEN TRUE ELSE FALSE END AS is_owner
             FROM card_game_templates t
-            LEFT JOIN box_users u ON t.creator_id = u.id
+            LEFT JOIN box_users u ON t.creator_id = u.user_id
             WHERE t.id = $1
         `, [id, currentUserId]);
 
