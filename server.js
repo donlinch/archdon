@@ -2757,7 +2757,7 @@ app.get('/api/card-game/creators', async (req, res) => {
 // 2. 獲取模板列表 (支持篩選、排序、搜尋)
 app.get('/api/card-game/templates', optionalAuthenticateBoxUser, async (req, res) => {
     const { creatorId, sortBy, search, searchBy = 'template_name' } = req.query;
-    const userIdFromToken = req.userId; // 從 authMiddleware 獲取
+    const userIdFromToken = req.boxUser ? req.boxUser.user_id : null; // 從 req.boxUser 獲取
 
     let query = `
         SELECT 
@@ -2821,7 +2821,7 @@ app.get('/api/card-game/templates', optionalAuthenticateBoxUser, async (req, res
 // 3. 獲取單一模板的完整內容 (用於遊玩或編輯)
 app.get('/api/card-game/templates/:id', optionalAuthenticateBoxUser, async (req, res) => {
     const { id } = req.params;
-    const currentUserId = req.userId;
+    const currentUserId = req.boxUser ? req.boxUser.user_id : null; // 從 req.boxUser 獲取
 
     try {
         const result = await pool.query(`
@@ -2852,7 +2852,7 @@ app.get('/api/card-game/templates/:id', optionalAuthenticateBoxUser, async (req,
 // 4. 新增模板 (需要會員登入)
 app.post('/api/card-game/templates', authenticateBoxUser, async (req, res) => {
     const { template_name, content_data, is_public } = req.body;
-    const creatorId = req.userId;
+    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
 
     if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
         return res.status(400).json({ error: '參數無效，請檢查模板名稱和內容 (需為20個項目的陣列)。' });
@@ -2874,7 +2874,7 @@ app.post('/api/card-game/templates', authenticateBoxUser, async (req, res) => {
 app.put('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
     const { id } = req.params;
     const { template_name, content_data, is_public } = req.body;
-    const creatorId = req.userId;
+    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
 
     if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
         return res.status(400).json({ error: '參數無效' });
@@ -2898,7 +2898,7 @@ app.put('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) =>
 // 6. 刪除模板 (需要會員登入且為擁有者)
 app.delete('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
     const { id } = req.params;
-    const creatorId = req.userId;
+    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
     try {
         const result = await pool.query(
             'DELETE FROM card_game_templates WHERE id = $1 AND creator_id = $2',
@@ -2930,7 +2930,7 @@ app.post('/api/card-game/templates/:id/play', async (req, res) => {
 // 8. 複製 (Clone) 模板 (需要會員登入)
 app.post('/api/card-game/templates/:id/copy', authenticateBoxUser, async (req, res) => {
     const { id } = req.params; // 原始模板 ID
-    const newOwnerId = req.userId;
+    const newOwnerId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
     
     try {
         // 使用 transaction 確保資料一致性
