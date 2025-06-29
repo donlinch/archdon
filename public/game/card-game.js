@@ -71,18 +71,70 @@ function getDOMElements() {
 
 // --- API 請求函數 ---
 const api = {
-    get: (url) => fetch(url).then(res => res.ok ? res.json() : Promise.reject(res)),
-    post: (url, body) => fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    }).then(res => res.ok ? res.json() : Promise.reject(res)),
-    put: (url, body) => fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    }).then(res => res.ok ? res.json() : Promise.reject(res)),
-    delete: (url) => fetch(url, { method: 'DELETE' }).then(res => res.ok ? res : Promise.reject(res)),
+    get: async (url) => {
+        try {
+            console.log(`API GET: ${url}`);
+            const res = await fetch(url);
+            if (!res.ok) {
+                console.error(`API Error (${res.status}): ${url}`);
+                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+            }
+            return await res.json();
+        } catch (error) {
+            console.error('API GET Error:', error);
+            throw error;
+        }
+    },
+    post: async (url, body) => {
+        try {
+            console.log(`API POST: ${url}`, body);
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                console.error(`API Error (${res.status}): ${url}`);
+                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+            }
+            return await res.json();
+        } catch (error) {
+            console.error('API POST Error:', error);
+            throw error;
+        }
+    },
+    put: async (url, body) => {
+        try {
+            console.log(`API PUT: ${url}`, body);
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                console.error(`API Error (${res.status}): ${url}`);
+                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+            }
+            return await res.json();
+        } catch (error) {
+            console.error('API PUT Error:', error);
+            throw error;
+        }
+    },
+    delete: async (url) => {
+        try {
+            console.log(`API DELETE: ${url}`);
+            const res = await fetch(url, { method: 'DELETE' });
+            if (!res.ok) {
+                console.error(`API Error (${res.status}): ${url}`);
+                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+            }
+            return res;
+        } catch (error) {
+            console.error('API DELETE Error:', error);
+            throw error;
+        }
+    },
 };
 
 // 洗牌函數 (Fisher-Yates 算法)
@@ -511,14 +563,26 @@ async function loadLatestTemplates() {
     gamesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">正在載入最新模板...</div>';
 
     try {
+        // 構建查詢參數
         const params = new URLSearchParams();
-        params.append('sortBy', latestSortSelect.value);
-        if (latestSearchInput.value) {
-            params.append('searchBy', latestSearchBySelect.value);
-            params.append('search', latestSearchInput.value);
+        
+        // 添加排序參數
+        if (latestSortSelect && latestSortSelect.value) {
+            params.append('sortBy', latestSortSelect.value);
+        } else {
+            params.append('sortBy', 'newest'); // 預設為最新
+        }
+        
+        // 添加搜尋參數
+        if (latestSearchInput && latestSearchInput.value.trim()) {
+            if (latestSearchBySelect && latestSearchBySelect.value) {
+                params.append('searchBy', latestSearchBySelect.value);
+            }
+            params.append('search', latestSearchInput.value.trim());
         }
 
-        // 從 API 獲取最新模板列表 (只獲取公開的)
+        // 從 API 獲取模板列表 (只獲取公開的)
+        console.log('Fetching templates with params:', params.toString());
         const templates = await api.get(`/api/card-game/templates?${params.toString()}`);
         
         // 清空容器
@@ -540,7 +604,7 @@ async function loadLatestTemplates() {
             gameCard.innerHTML = `
                 <div class="game-info" style="padding: 15px;">
                     <h3 class="game-title" style="font-size: 16px; margin-bottom: 8px;">${template.template_name}</h3>
-                    <p class="game-description" style="font-size: 12px; margin-bottom: 8px;">作者: ${template.creator_name}</p>
+                    <p class="game-description" style="font-size: 12px; margin-bottom: 8px;">作者: ${template.creator_name || '未知'}</p>
                     <small style="color: #666; font-size: 11px;">遊玩: ${template.play_count || 0} | 複製: ${template.copy_count || 0}</small>
                 </div>
             `;
@@ -579,14 +643,20 @@ async function loadLatestTemplates() {
 async function openTemplateManager() {
     const { configModal } = getDOMElements();
     if (!configModal) return;
-
+    
     // 檢查用戶是否登入
-    if (!gameState.loggedInUser) {
+    const savedUserId = localStorage.getItem('boxCurrentUserId');
+    const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+    
+    if (!savedUserId || !savedUserToken) {
         showNotification('請先登入才能管理您的模板！', 'error');
         // 可以在此引導用戶到登入頁面
-        // window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+        window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
         return; // 未登入則不打開
     }
+    
+    // 更新用戶登入狀態
+    checkLoginStatus();
     
     // 填充模板列表
     await populateMyTemplates();
@@ -605,6 +675,7 @@ function checkLoginStatus() {
     const savedUserName = localStorage.getItem('boxCurrentUsername');
     
     const templateEditor = document.querySelector('.template-editor');
+    const loginPromptDiv = document.querySelector('.login-prompt');
     
     if (savedUserId && savedUserToken && savedUserName) {
         // 用戶已登入
@@ -616,6 +687,11 @@ function checkLoginStatus() {
         // 顯示模板編輯器
         if (templateEditor) {
             templateEditor.style.display = 'block';
+        }
+        
+        // 移除登入提示（如果存在）
+        if (loginPromptDiv) {
+            loginPromptDiv.remove();
         }
     } else {
         // 用戶未登入
@@ -649,17 +725,26 @@ async function populateCreators() {
 async function populateMyTemplates() {
     const { templateList } = getDOMElements();
     if (!templateList) return;
-
+    
     templateList.innerHTML = '<p style="text-align: center; padding: 20px;">正在載入您的模板...</p>';
-
+    
     try {
+        // 確保我們只請求當前登入用戶的模板
         const templates = await api.get(`/api/card-game/templates?creatorId=mine`);
+        
+        if (!templates || templates.length === 0) {
+            templateList.innerHTML = '<p style="text-align: center; padding: 20px;">您還沒有創建任何模板。</p>';
+            return;
+        }
+        
         renderTemplateList(templates);
     } catch (error) {
         console.error('載入我的模板列表失敗:', error);
         templateList.innerHTML = `
             <p style="text-align: center; color: #e53935; padding: 20px;">
                 載入您的模板失敗：${error.message || '未知錯誤'}
+                <br><br>
+                <button onclick="populateMyTemplates()" style="padding: 8px 16px; background-color: #4fc3f7; color: white; border: none; border-radius: 4px; cursor: pointer;">重試</button>
             </p>
         `;
     }
@@ -1090,32 +1175,32 @@ function renderTemplateList(templates) {
   async function initializeApp() {
     console.log("洞洞樂遊戲初始化開始...");
     try {
-          // 1. 檢查登入狀態
-          checkLoginStatus();
+        // 1. 檢查登入狀態
+        checkLoginStatus();
 
-          // 2. 初始化輸入框
-          initializeInputs();
+        // 2. 初始化輸入框
+        initializeInputs();
 
-          // 3. 設置事件監聽器
+        // 3. 設置事件監聽器
         setupEventListeners();
 
-          // 4. 檢查 URL 是否有模板 ID
-          const urlParams = new URLSearchParams(window.location.search);
-          const templateId = urlParams.get('template');
-          
-          if (templateId) {
-              // 如果 URL 中有模板 ID，則載入該模板
-              await loadTemplate(templateId);
-          } else {
-              // 否則載入預設模板
-              await loadDefaultTemplate();
+        // 4. 檢查 URL 是否有模板 ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const templateId = urlParams.get('template');
+        
+        if (templateId) {
+            // 如果 URL 中有模板 ID，則載入該模板
+            await loadTemplate(templateId);
+        } else {
+            // 否則載入預設模板
+            await loadDefaultTemplate();
         }
 
         console.log("洞洞樂遊戲初始化完成。");
     } catch (error) {
         console.error('初始化應用時發生嚴重錯誤:', error);
         // 顯示錯誤通知
-          showNotification('應用初始化失敗，請刷新頁面重試：' + (error.message || '未知錯誤'), 'error');
+        showNotification('應用初始化失敗，請刷新頁面重試：' + (error.message || '未知錯誤'), 'error');
     }
 }
 

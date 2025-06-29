@@ -949,13 +949,28 @@
             border-bottom: 1px solid #eee;
         }
 
+        .sort-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sort-container label {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap;
+        }
+
         .games-drawer-controls select,
         .games-drawer-controls input {
-            width: 100%;
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ccc;
             font-size: 14px;
+        }
+        
+        .sort-container select {
+            flex-grow: 1;
         }
 
         .search-container {
@@ -963,12 +978,12 @@
             gap: 5px;
         }
 
-        #latestSearchBySelect {
-            flex-basis: 40%;
-        }
-
         #latestSearchInput {
             flex-grow: 1;
+        }
+
+        #latestSearchBySelect {
+            width: auto;
         }
 
         .games-grid {
@@ -1331,48 +1346,47 @@ input:checked + .slider:before {
     <div id="configModal" class="modal">
         <div class="modal-content">
             <span class="close" id="closeConfigModal">&times;</span>
-        <h2>洞洞樂模板管理</h2>
+            <h2>我的洞洞樂模板</h2>
             
-        <!-- 模板載入區 -->
-        <div class="template-loader">
-            <h3 id="myTemplatesTitle">我的模板</h3>
-            <div id="templateList" class="template-list">
-                <!-- 模板列表由 JS 動態生成 -->
-                <p>正在加載模板...</p>
-            </div>
+            <!-- 模板載入區 -->
+            <div class="template-loader">
+                <div id="templateList" class="template-list">
+                    <!-- 模板列表由 JS 動態生成 -->
+                    <p>正在加載您的模板...</p>
                 </div>
+            </div>
                 
-        <hr style="margin: 20px 0;">
+            <hr style="margin: 20px 0;">
 
-        <!-- 模板編輯器區 -->
-        <div class="template-editor">
-            <h3 id="editorTitle">新增模板</h3>
-            <input type="hidden" id="templateIdInput">
-            
-            <div class="editor-row">
-                <label for="templateNameInput">模板名稱:</label>
-                <input type="text" id="templateNameInput" placeholder="請輸入模板名稱...">
+            <!-- 模板編輯器區 -->
+            <div class="template-editor">
+                <h3 id="editorTitle">新增模板</h3>
+                <input type="hidden" id="templateIdInput">
+                
+                <div class="editor-row">
+                    <label for="templateNameInput">模板名稱:</label>
+                    <input type="text" id="templateNameInput" placeholder="請輸入模板名稱...">
+                </div>
+                    
+                <div class="editor-row">
+                    <label>模板狀態:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="isPublicSwitch" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="isPublicLabel">公開 (其他人可以看到)</span>
                 </div>
                 
-            <div class="editor-row">
-                <label>模板狀態:</label>
-                <label class="switch">
-                    <input type="checkbox" id="isPublicSwitch" checked>
-                    <span class="slider round"></span>
-                </label>
-                <span id="isPublicLabel">公開 (其他人可以看到)</span>
-            </div>
-            
-            <p>請為 20 個格子填寫內容：</p>
-            <div class="input-grid" id="inputGrid">
-                <!-- 輸入框由JS動態生成 -->
-            </div>
-            
-            <div class="modal-buttons">
-                <button id="saveTemplateBtn">儲存新模板</button>
-                <button id="updateTemplateBtn" style="display: none;">更新此模板</button>
-                <button id="clearEditorBtn">清空編輯器</button>
-            </div>
+                <p>請為 20 個格子填寫內容：</p>
+                <div class="input-grid" id="inputGrid">
+                    <!-- 輸入框由JS動態生成 -->
+                </div>
+                
+                <div class="modal-buttons">
+                    <button id="saveTemplateBtn">儲存新模板</button>
+                    <button id="updateTemplateBtn" style="display: none;">更新此模板</button>
+                    <button id="clearEditorBtn">清空編輯器</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1395,16 +1409,19 @@ input:checked + .slider:before {
             <button id="gamesDrawerClose" class="games-drawer-close">×</button>
         </div>
         <div class="games-drawer-controls">
-            <select id="latestSortSelect">
-                <option value="newest">最新發佈</option>
-                <option value="popular">最熱門</option>
-            </select>
-            <div class="search-container">
-                <select id="latestSearchBySelect">
-                    <option value="template_name">按模板名稱</option>
-                    <option value="creator_name">按作者</option>
+            <div class="sort-container">
+                <label for="latestSortSelect">排序方式：</label>
+                <select id="latestSortSelect">
+                    <option value="newest">最新發佈</option>
+                    <option value="popular">最熱門</option>
                 </select>
-                <input type="search" id="latestSearchInput" placeholder="搜尋...">
+            </div>
+            <div class="search-container">
+                <input type="search" id="latestSearchInput" placeholder="搜尋模板或作者...">
+                <select id="latestSearchBySelect">
+                    <option value="template_name">搜尋模板名稱</option>
+                    <option value="creator_name">搜尋作者</option>
+                </select>
             </div>
         </div>
         <div id="gamesGrid" class="games-grid">
