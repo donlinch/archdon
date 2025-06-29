@@ -32,7 +32,7 @@
     <!-- Preconnect and Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <meta name="google-adsense-account" content="ca-pub-8966114892131293">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8966114892131293"
     crossorigin="anonymous"></script>
@@ -44,21 +44,37 @@
  
       
     <style>
+        :root {
+            --bg-color: #fdf4f6; /* 柔和的粉色背景 */
+            --primary-color: #ffb6c1; /* 淺粉色 */
+            --secondary-color: #87CEEB; /* 天藍色 */
+            --accent-color: #fddc5c; /* 淡黃色 */
+            --text-color: #5d5d5d; /* 柔和的深灰色文字 */
+            --heading-color: #4a4a4a; /* 標題顏色 */
+            --white-color: #ffffff;
+            --border-color: #eeeeee;
+            --shadow-color: rgba(93, 93, 93, 0.1);
+            --disabled-bg: #f2f2f2;
+            --disabled-text: #b0b0b0;
+            --success-color: #77dd77; /* 粉彩綠 */
+            --danger-color: #ff6961;  /* 粉彩紅 */
+        }
+
         body {
-            font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
-            background-color: #fff5f7;
-            color: #333;
+            font-family: 'Nunito', 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             display: flex;
             flex-direction: column;
-            align-items: stretch; /* Changed from center to stretch for full-width header/footer */
+            align-items: stretch; 
             min-height: 100vh;
             position: relative;
-            padding-bottom: 70px; /* Space for bottom nav */
+            padding-bottom: 70px; 
             overflow-x: hidden;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffdde2' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
         
-        /* Add styles for centered ad container */
         .ad-container {
             width: 100%;
             max-width: 800px;
@@ -70,70 +86,98 @@
         .container {
             max-width: 800px;
             width: 100%;
-            background-color: white;
-            border-radius: 16px; /* Slightly larger radius */
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Softer shadow */
-            padding: 30px; /* Increased padding */
-            margin-bottom: 25px; /* Increased margin */
+            background-color: var(--white-color);
+            border-radius: 24px; /* 更大的圓角 */
+            box-shadow: 0 10px 30px var(--shadow-color);
+            padding: 30px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
         }
-        h1, #vote-title, .results h2, .drawer-header h2 { /* Unified heading styles */
-            color: #424242; /* Match page-title color */
+        h1, h2, h3, #vote-title, .results h2, .drawer-header h2 {
+            color: var(--heading-color);
             text-align: center;
             margin-bottom: 24px;
-            font-weight: 600; /* Slightly less bold than page-title */
+            font-weight: 700;
         }
         #vote-title {
-            font-size: 1.6em; /* Specific size for vote title */
+            font-size: 1.8em; 
         }
         .results h2 {
-            font-size: 1.4em;
+            font-size: 1.6em;
         }
         .options {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 25px;
             margin-bottom: 24px;
-            padding: 10px; /* 增加選項容器與邊界的間隔 */
         }
         .option {
             position: relative;
             cursor: pointer;
-            border-radius: 12px; /* Increased radius */
+            border-radius: 18px;
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s; /* Smoother transition */
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07); /* Softer shadow */
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 俏皮的彈跳動畫 */
+            border: 2px dashed var(--border-color);
             aspect-ratio: 1 / 1;
-            background-color: #fdfdfd; /* Lighter background */
+            background-color: #fdfdfd;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #e0e0e0; /* Subtle border */
         }
         .option:hover {
-            transform: translateY(-6px) scale(1.02); /* Enhanced hover effect */
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); /* Enhanced shadow */
+            transform: translateY(-8px) scale(1.03);
+            border-color: var(--accent-color);
+            box-shadow: 0 8px 20px rgba(253, 220, 92, 0.3);
         }
+        .option.selected {
+            border: 3px solid var(--primary-color);
+            transform: scale(1.05);
+            box-shadow: 0 0 0 4px rgba(255, 182, 193, 0.4);
+        }
+        .option.selected::after {
+            content: '✔';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 11;
+            border: 2px solid white;
+        }
+
         .option .zoom-icon {
             position: absolute;
             top: 10px;
             right: 10px;
-            width: 25px;
-            height: 25px;
-            background-color: transparent;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             cursor: pointer;
             transition: transform 0.2s;
-            z-index: 10; 
-        }
-        .option .zoom-icon:hover {
-            transform: scale(1.1);
+            z-index: 10;
+            opacity: 0;
         }
         .option:hover .zoom-icon {
             opacity: 1;
+            transform: scale(1.1);
         }
+        .option.selected .zoom-icon {
+             right: 45px; /* 為勾勾圖示留出空間 */
+        }
+
         .option img {
             width: 100%;
             height: 100%; 
@@ -142,141 +186,153 @@
             max-width: 100%; 
             max-height: 100%; 
         }
-        .option.selected {
-            border: 3px solid #FFB74D; /* Theme color for selection */
-            box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.5), 0 6px 18px rgba(0, 0, 0, 0.15); /* Themed shadow */
-        }
+
         .option-content {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
             color: white;
-            padding: 10px;
+            padding: 20px 10px 10px 10px;
             text-align: center;
             font-size: 1.1em;
+            font-weight: 600;
             box-sizing: border-box;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
         }
         .option.option-with-image .option-content {
-            top: 5px;
-            left: 5px;
-            bottom: auto;
-            right: auto;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 4px 8px; /* 調整padding */
-            font-size: 0.8em; /* 更小的字體 */
-            border-radius: 4px;
-            text-align: left;
-            max-width: calc(100% - 50px); /* 避免與右上角的縮放圖標重疊，留出更多空間 */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            z-index: 5; /* 確保在圖片之上，但在 zoom-icon 之下 */
+            /* Now handled by the general .option-content style */
+            text-align: center;
         }
-        .button, #back-to-campaigns-button.moved-button { /* Unified button styles */
-            background-color: #FFB74D; /* Theme color */
+
+        .button, #back-to-campaigns-button.moved-button { 
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 12px 28px; /* Slightly more padding */
-            font-size: 1rem; /* Relative font size */
-            font-weight: 500;
-            border-radius: 25px; /* Rounded buttons */
+            padding: 14px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 30px;
             cursor: pointer;
-            transition: all 0.3s;
-            margin: 10px auto; /* Consistent margin */
+            transition: all 0.3s ease;
+            margin: 10px auto; 
             display: block;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
-            text-transform: uppercase; /* Optional: for a more "button" feel */
-            letter-spacing: 0.5px; /* Optional */
+            box-shadow: 0 4px 12px rgba(255, 182, 193, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         .button:hover, #back-to-campaigns-button.moved-button:hover {
-            background-color: #ffa726; /* Darker theme color on hover */
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 183, 77, 0.4);
+            background-color: #ffA9B5;
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 6px 18px rgba(255, 182, 193, 0.6);
         }
         .button:disabled, #back-to-campaigns-button.moved-button:disabled {
-            background-color: #E0E0E0; /* Lighter grey for disabled */
-            color: #9E9E9E;
+            background-color: var(--disabled-bg);
+            color: var(--disabled-text);
             cursor: not-allowed;
             box-shadow: none;
             transform: none;
         }
         #back-to-campaigns-button.moved-button {
-             background-color: #757575; /* Specific color for back button */
+             background-color: #b0bec5; /* Soft grey */
+             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         #back-to-campaigns-button.moved-button:hover {
-             background-color: #616161;
-             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+             background-color: #90a4ae;
+             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
         }
 
         .results {
             display: none; 
             width: 100%;
             margin-top: 30px;
+            animation: fadeIn 0.5s ease-in-out;
         }
-        /* .results h2 styling is now part of the unified h1, #vote-title, .results h2 rule */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
         .result-item {
-            margin-bottom: 18px; /* Increased margin */
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
+            margin-bottom: 18px;
+            padding: 12px;
+            background-color: #fafafa;
+            border-radius: 12px;
         }
         .result-label {
             display: flex;
             justify-content: space-between;
             align-items: center; 
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-size: 1.1em;
+            font-weight: 600;
         }
         .result-item-image {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             object-fit: cover;
-            border-radius: 4px;
-            margin-right: 10px;
+            border-radius: 8px;
+            margin-right: 12px;
             vertical-align: middle;
+            border: 2px solid var(--border-color);
         }
         .result-item-no-image { 
             display: inline-block;
-            width: 40px; 
+            width: 45px;
             height: 1px; 
-            margin-right: 10px; 
+            margin-right: 12px;
             vertical-align: middle; 
         }
         .progress-bar {
-            height: 28px; /* Slightly taller */
-            border-radius: 14px; /* Matching radius */
-            background-color: #e0e0e0; /* Lighter grey */
+            height: 30px;
+            border-radius: 15px;
+            background-color: var(--disabled-bg);
             overflow: hidden;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* Inner shadow */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
         }
         .progress {
             height: 100%;
-            background-color: #FFB74D; /* Theme color */
+            background-color: var(--accent-color);
+            background-image: linear-gradient(
+                45deg, 
+                rgba(255, 255, 255, 0.25) 25%, 
+                transparent 25%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.25) 50%, 
+                rgba(255, 255, 255, 0.25) 75%, 
+                transparent 75%, 
+                transparent
+            );
+            background-size: 40px 40px;
+            animation: progress-bar-stripes 1.5s linear infinite;
             width: 0;
-            transition: width 1s ease-in-out;
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 500; /* Adjusted weight */
+            color: var(--heading-color);
+            font-weight: 700;
             font-size: 0.9em;
         }
+        @keyframes progress-bar-stripes {
+            from { background-position: 40px 0; }
+            to { background-position: 0 0; }
+        }
+
         .thank-you {
             text-align: center;
-            margin-top: 25px; /* Increased margin */
-            font-size: 1.2em; /* Relative size */
-            color: #4CAF50; /* Softer green */
-            font-weight: 600;
+            margin-top: 25px;
+            font-size: 1.3em;
+            color: var(--success-color);
+            font-weight: 700;
             display: none;
         }
-        .restart-button { /* Will inherit .button styles, specific overrides here */
-            background-color: #4CAF50; /* Green for restart/again */
+        .restart-button {
+            background-color: var(--success-color);
+            box-shadow: 0 4px 12px rgba(119, 221, 119, 0.4);
             margin-top: 20px;
         }
         .restart-button:hover {
-            background-color: #43A047; /* Darker green */
+            background-color: #6edc6e;
+            box-shadow: 0 6px 18px rgba(119, 221, 119, 0.5);
         }
         
         #campaign-list {
@@ -285,65 +341,99 @@
             margin: 0 0 20px 0;
         }
         #campaign-list li {
-            padding: 15px;
-            border: 1px solid #eee;
-            margin-bottom: 10px;
-            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            border-radius: 16px;
             cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            background-color: #fff;
+            transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+            background-color: var(--white-color);
+            box-shadow: 0 4px 15px var(--shadow-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         #campaign-list li:hover {
-            background-color: #f9f9f9;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-color);
         }
-        #campaign-selection-area h1 { /* Already covered by unified h1 style */
+        .campaign-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .campaign-title {
+            font-weight: 700;
+            font-size: 1.2em;
+            color: var(--heading-color);
+        }
+        .campaign-creator {
+            font-size: 0.85em;
+            color: #999;
+        }
+        .votes-badge {
+            background-color: var(--secondary-color);
+            color: var(--white-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+
+        #campaign-selection-area h2 { 
              margin-bottom: 20px;
         }
 
         .share-link-container {
-            margin-top: 25px;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 8px;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f7f9fc;
+            border-radius: 12px;
             text-align: center;
+            border: 1px solid var(--border-color);
         }
         .share-link-container p {
-            margin: 0 0 10px 0;
-            font-weight: 500;
-            color: #555;
+            margin: 0 0 12px 0;
+            font-weight: 600;
+            color: var(--text-color);
         }
         .share-link-container input[type="text"] {
-            width: calc(100% - 100px); /* Adjust width to fit button */
-            padding: 8px 10px;
-            border-radius: 4px;
+            width: calc(100% - 110px);
+            padding: 10px 12px;
+            border-radius: 8px;
             border: 1px solid #ccc;
             margin-right: 10px;
             box-sizing: border-box;
+            background-color: white;
+            font-family: 'Nunito', sans-serif;
         }
         .share-link-container button {
-            padding: 8px 15px;
+            padding: 10px 18px;
             font-size: 0.9em;
-            background-color: #5cb85c;
+            font-weight: 600;
+            background-color: var(--success-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         .share-link-container button:hover {
-            background-color: #4cae4c;
+            background-color: #6edc6e;
         }
 
         .lightbox {
             display: none;
             position: fixed;
-            z-index: 1011; /* Increased z-index */
+            z-index: 1011;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.85);
+            background-color: rgba(0,0,0,0.88);
             justify-content: center;
             align-items: center;
         }
@@ -381,44 +471,57 @@
 
         @media (max-width: 600px) {
             .options {
-                grid-template-columns: repeat(2, 1fr); 
-                gap: 10px; 
+                grid-template-columns: repeat(1, 1fr); /* 垂直排列 */
+                gap: 15px; 
+            }
+            .container {
+                padding: 20px;
+            }
+            .page-title {
+                font-size: 1.5rem;
+            }
+            .button, #back-to-campaigns-button.moved-button {
+                padding: 12px 28px;
+                font-size: 1rem;
             }
         }
 
         .settings-fab {
             position: fixed;
-            top: 85px; /* Adjusted to be below fixed header */
+            top: 85px; 
             right: 20px;
-            width: 50px;
-            height: 50px;
-            background-color: #FFB74D; /* Theme color */
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             color: white;
             border: none;
             border-radius: 50%;
-            font-size: 24px;
-            line-height: 50px;
+            font-size: 18px; /* For text */
+            line-height: 55px;
             text-align: center;
-            box-shadow: 0 3px 12px rgba(0,0,0,0.15); /* Softer shadow */
+            box-shadow: 0 5px 15px rgba(255, 182, 193, 0.5);
             cursor: pointer;
             z-index: 1005;
-            transition: background-color 0.3s, transform 0.3s;
+            transition: all 0.3s ease;
+            font-weight: 700;
         }
         .settings-fab:hover {
-            background-color: #ffa726; /* Darker theme color */
-            transform: scale(1.1);
+            background: linear-gradient(135deg, #ffA9B5, #fadc4c);
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 8px 20px rgba(255, 182, 193, 0.6);
         }
 
         .drawer {
             position: fixed;
             top: 0;
-            right: -350px;
-            width: 350px;
+            right: -100%; /* Start off-screen */
+            width: 95%;
+            max-width: 400px;
             height: 100%;
-            background-color: #ffffff; /* Ensure it's white */
-            box-shadow: -3px 0 15px rgba(0,0,0,0.12); /* Softer shadow */
+            background-color: var(--white-color);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
             z-index: 1010;
-            transition: right 0.3s ease-in-out;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             padding: 20px;
             box-sizing: border-box;
             display: flex;
@@ -427,28 +530,30 @@
         .drawer.open {
             right: 0;
         }
-        .drawer-header { /* h2 style already unified */
+        .drawer-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
         }
         .drawer-header h2 {
             margin: 0;
-            font-size: 1.5em;
-            color: #2c3e50;
+            font-size: 1.6em;
+            color: var(--heading-color);
         }
         .drawer-close-button {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 30px;
             cursor: pointer;
-            color: #7f8c8d;
+            color: #ccc;
+            transition: color 0.2s, transform 0.2s;
         }
         .drawer-close-button:hover {
-            color: #2c3e50;
+            color: var(--danger-color);
+            transform: rotate(90deg);
         }
         .drawer-content {
             flex-grow: 1;
@@ -460,44 +565,116 @@
             margin: 0;
         }
         .drawer-item-list li {
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 15px 10px;
+            border-bottom: 1px solid #f5f5f5;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background-color 0.2s;
+        }
+        .drawer-item-list li:hover {
+            background-color: #fafcff;
         }
         .drawer-item-list li:last-child {
             border-bottom: none;
         }
-        .drawer-item-list .edit-item-button {
-            background-color: #ecf0f1;
-            color: #2c3e50;
-            border: 1px solid #bdc3c7;
-            padding: 5px 10px;
-            border-radius: 4px;
+        .drawer-item-list .edit-item-button,
+        .drawer-item-list .delete-item-button {
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
             cursor: pointer;
             font-size: 0.9em;
-            margin-left: 5px; /* Add some space between buttons */
+            font-weight: 600;
+            margin-left: 8px;
+            transition: all 0.2s;
+        }
+        .drawer-item-list .edit-item-button {
+            background-color: var(--secondary-color);
         }
         .drawer-item-list .edit-item-button:hover {
-            background-color: #dadada; /* Lighter hover */
+            background-color: #77c5eb;
+            transform: scale(1.05);
         }
         .drawer-item-list .delete-item-button {
-            background-color: #f44336; /* Red for delete */
-            color: white;
-            border: 1px solid #d32f2f;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            margin-left: 5px;
+            background-color: var(--danger-color);
         }
         .drawer-item-list .delete-item-button:hover {
-            background-color: #d32f2f;
+            background-color: #ff544c;
+            transform: scale(1.05);
         }
-        .drawer-add-new-button { /* Will inherit .button styles */
-            margin-top: 20px;
+        .drawer-add-new-button {
             width: 100%;
+            background-color: var(--success-color);
+            box-shadow: 0 4px 12px rgba(119, 221, 119, 0.4);
+            margin-bottom: 20px;
+        }
+        .drawer-add-new-button:hover {
+            background-color: #6edc6e;
+            box-shadow: 0 6px 18px rgba(119, 221, 119, 0.5);
+        }
+
+        /* Drawer Form Styles */
+        #add-campaign-form, #edit-campaign-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px !important;
+        }
+        #add-campaign-form label, #edit-campaign-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        #add-campaign-form input[type="text"], 
+        #edit-campaign-form input[type="text"], 
+        #add-campaign-form textarea,
+        #edit-campaign-form textarea,
+        #add-campaign-form input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #add-campaign-form input[type="text"]:focus, 
+        #edit-campaign-form input[type="text"]:focus,
+        #add-campaign-form textarea:focus,
+        #edit-campaign-form textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 182, 193, 0.3);
+        }
+        .campaign-option-input-group {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            position: relative;
+        }
+        .remove-option-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--danger-color) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            line-height: 24px;
+            text-align: center;
+            padding: 0 !important;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .remove-option-button:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: #ff544c !important;
         }
 
         .drawer-overlay {
@@ -516,40 +693,41 @@
 
         /* --- Page Header --- */
         .page-header {
-            background-color: #FFB74D;
-            padding: 1.5rem 1rem;
+            background: linear-gradient(135deg, #ffdee9, #ffb6c1);
+            padding: 1rem 1rem;
             text-align: center;
             width: 100%;
-            box-shadow: 0 2px 8px rgba(255, 183, 77, 0.3);
+            box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
             position: fixed;
             top: 0;
             left: 0;
             z-index: 999;
-            box-sizing: border-box; /* Ensure padding doesn't add to width/height */
+            box-sizing: border-box;
         }
 
         .page-title {
-            color: #424242;
+            color: var(--white-color);
             margin: 0;
             font-size: 1.8rem;
             font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
         }
 
         /* --- Footer --- */
         .footer {
             text-align: center;
-            /* margin-top: 30px; Removed, wrapper handles spacing */
             padding: 15px;
             font-size: 0.9rem;
-            color: #757575;
+            color: #aaaaaa;
             width: 100%;
-            background-color: #fff5f7;
+            background-color: transparent; /* Make it transparent to show body background */
             box-sizing: border-box;
         }
 
         .footer a {
-            color: #2196f3;
+            color: var(--primary-color);
             text-decoration: none;
+            font-weight: 600;
         }
 
         .footer a:hover {
@@ -645,28 +823,36 @@
         .sort-controls {
             display: flex;
             justify-content: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             gap: 10px;
+            background-color: rgba(255,255,255,0.5);
+            padding: 8px;
+            border-radius: 30px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .sort-option {
-            padding: 8px 15px;
+            padding: 8px 20px;
             border-radius: 20px;
-            border: 1px solid #e0e0e0;
-            background-color: #f9f9f9;
+            border: none;
+            background-color: transparent;
             cursor: pointer;
             font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-color);
             transition: all 0.3s;
         }
         
         .sort-option:hover {
-            background-color: #f0f0f0;
+            background-color: rgba(255,255,255,0.8);
         }
         
         .sort-option.active {
-            background-color: #FFB74D;
-            color: white;
-            border-color: #FFB74D;
+            background-color: var(--white-color);
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
         }
 
         /* --- User Status Indicator --- */
@@ -720,19 +906,15 @@
         <h1 class="page-title" itemprop="name">圖片投票遊戲</h1>
     </header>
     <main class="main-content-wrapper" role="main">
-    <button id="settings-fab" class="settings-fab" aria-label="設定" title="管理投票設定">⚙️</button>
+    <button id="settings-fab" class="settings-fab" aria-label="設定" title="管理投票設定">管理</button>
 
     <aside id="settings-drawer" class="drawer" role="complementary" aria-label="投票管理抽屜">
         <div class="drawer-header">
-            <h2>管理投票項目</h2>
+            <h2>管理投票</h2>
             <button id="close-drawer-button" class="drawer-close-button" aria-label="關閉抽屜">×</button>
         </div>
         <div class="drawer-content">
-            <button id="drawer-add-new-button" class="button drawer-add-new-button" aria-label="新增投票活動">新增投票活動</button>
-            <ul id="drawer-item-list" class="drawer-item-list" aria-label="投票活動列表">
-                <li><span>(此處將顯示現有投票活動列表)</span></li>
-            </ul>
-           
+            <!-- Drawer content is populated by JS -->
         </div>
     </aside>
     <div id="drawer-overlay" class="drawer-overlay" aria-hidden="true"></div>
@@ -752,7 +934,7 @@
             <h2 id="vote-title"></h2>
             <div class="options" role="group" aria-label="投票選項">
             </div>
-            <button id="vote-button" class="button" disabled aria-label="提交投票">投票</button>
+            <button id="vote-button" class="button" disabled aria-label="提交投票">投下神聖的一票！</button>
             
             <section class="results" aria-live="polite">
                 <h3>投票結果</h3>
@@ -917,21 +1099,19 @@
                                 
                                 // 创建标题和创建者信息的容器
                                 const infoContainer = document.createElement('div');
-                                infoContainer.style.display = 'flex';
-                                infoContainer.style.flexDirection = 'column';
+                                infoContainer.className = 'campaign-info';
                                 
                                 // 添加标题
                                 const campaignTitle = document.createElement('span');
                                 campaignTitle.textContent = campaign.title;
-                                campaignTitle.style.fontWeight = 'bold';
+                                campaignTitle.className = 'campaign-title';
                                 infoContainer.appendChild(campaignTitle);
                                 
                                 // 添加创建者信息
                                 if (campaign.creator_name) {
                                     const creatorInfo = document.createElement('small');
                                     creatorInfo.textContent = `創建者: ${campaign.creator_name}`;
-                                    creatorInfo.style.color = '#666';
-                                    creatorInfo.style.fontSize = '0.85em';
+                                    creatorInfo.className = 'campaign-creator';
                                     infoContainer.appendChild(creatorInfo);
                                 }
                                 
@@ -939,20 +1119,10 @@
                                 
                                 // Always show vote count badge
                                 const votesBadge = document.createElement('span');
-                                votesBadge.textContent = `目前 ${campaign.totalVotes} 票`;
-                                votesBadge.style.marginLeft = '10px';
-                                votesBadge.style.padding = '3px 8px';
-                                votesBadge.style.backgroundColor = '#f0f0f0';
-                                votesBadge.style.borderRadius = '10px';
-                                votesBadge.style.fontSize = '0.8em';
+                                votesBadge.textContent = `${campaign.totalVotes} 票`;
+                                votesBadge.className = 'votes-badge';
                                 listItem.appendChild(votesBadge);
                                 
-                                listItem.style.cursor = 'pointer';
-                                listItem.style.padding = '10px';
-                                listItem.style.borderBottom = '1px solid #eee';
-                                listItem.style.display = 'flex';
-                                listItem.style.justifyContent = 'space-between';
-                                listItem.style.alignItems = 'center';
                                 listItem.addEventListener('click', () => loadCampaign(campaign.campaign_id));
                                 campaignListUl.appendChild(listItem);
                             });
@@ -1025,10 +1195,10 @@
                                 optionContentDiv.textContent = opt.name;
 
                                 if (opt.image_url && opt.image_url.trim() !== '') {
-                                    optionDiv.classList.add('option-with-image'); // 添加class以便CSS控制
+                                    optionDiv.classList.add('option-with-image');
                                     const zoomIconSpan = document.createElement('span');
                                     zoomIconSpan.className = 'zoom-icon';
-                                    zoomIconSpan.innerHTML = '<img src="/images/zoomin.png" alt="放大" style="width: 25px; height: 25px;">';
+                                    zoomIconSpan.innerHTML = '<img src="/images/zoomin.png" alt="放大" style="width: 18px; height: 18px;">';
                                     
                                     const imgElement = document.createElement('img');
                                     imgElement.src = opt.image_url;
@@ -1062,6 +1232,7 @@
                                         }
                                     });
                                 } else {
+                                    optionDiv.classList.add('option-text-only'); // Add a class for text-only options
                                     optionContentDiv.style.position = 'static';
                                     optionContentDiv.style.background = 'transparent';
                                     optionContentDiv.style.color = '#333';
@@ -1070,7 +1241,7 @@
                                     optionContentDiv.style.alignItems = 'center';
                                     optionContentDiv.style.justifyContent = 'center';
                                     optionContentDiv.style.padding = '10px';
-                                    optionDiv.style.backgroundColor = '#e9ecef'; 
+                                    optionDiv.style.backgroundColor = '#f8f8f8';
                                     optionDiv.appendChild(optionContentDiv);
                                 }
                                 
@@ -1290,9 +1461,34 @@
 
                 if (settingsFab && settingsDrawer && closeDrawerButton && drawerOverlay) {
                     settingsFab.addEventListener('click', () => {
+                        // 檢查用戶是否已登入
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                        
+                        if (!savedUserId || !savedUserToken) {
+                             // 用户未登录，显示登录提示
+                            if(drawerContent) {
+                                drawerContent.innerHTML = `
+                                    <div style="text-align: center; padding: 20px;">
+                                        <h3>請先登入</h3>
+                                        <p>您需要登入才能創建或管理投票活動。</p>
+                                        <button id="login-redirect-button" class="button" style="background-color: var(--success-color);">前往登入</button>
+                                    </div>
+                                `;
+                                const loginBtn = document.getElementById('login-redirect-button');
+                                if (loginBtn) {
+                                    loginBtn.addEventListener('click', () => {
+                                        window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                                    });
+                                }
+                            }
+                        } else {
+                            // 用戶已登入，顯示預設內容
+                            showDefaultDrawerContent();
+                        }
+
                         settingsDrawer.classList.add('open');
                         drawerOverlay.classList.add('active');
-                        showDefaultDrawerContent(); 
                     });
                     function closeDrawer() {
                         settingsDrawer.classList.remove('open');
@@ -1304,32 +1500,21 @@
                     async function showDefaultDrawerContent() { 
                         if (!drawerContent) return; 
                         
-                        // 检查用户是否已登录
+                        // 获取登录信息
                         const savedUserId = localStorage.getItem('boxCurrentUserId');
                         const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
-                        
+
+                        // 再次確認，雖然外面已經檢查過
                         if (!savedUserId || !savedUserToken) {
-                            // 用户未登录，显示登录提示
-                            drawerContent.innerHTML = `
-                                <div style="text-align: center; padding: 20px;">
-                                    <p>您需要登入才能創建投票活動</p>
-                                    <button id="login-redirect-button" class="button" style="background-color: #4CAF50;">前往登入</button>
-                                </div>
-                            `;
-                            
-                            document.getElementById('login-redirect-button').addEventListener('click', () => {
-                                window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
-                            });
-                            
+                            // 如果意外進入此函數但未登入，則不執行任何操作
                             return;
                         }
                         
                         drawerContent.innerHTML = `
                         <button id="drawer-add-new-button" class="button drawer-add-new-button">新增投票活動</button>
                             <ul id="drawer-item-list" class="drawer-item-list">
-                                <li>載入活動列表中...</li>
+                                <li><p style="text-align:center; padding: 20px; color: #999;">載入您的活動中...</p></li>
                             </ul>
-                            
                         `;
                         const newDrawerButton = document.getElementById('drawer-add-new-button');
                         if (newDrawerButton) {
@@ -1643,15 +1828,19 @@
                         const uploadStatusId = `upload-status-${optionNumber}-${Date.now()}`;
 
                         newInputGroup.innerHTML = `
-                            <label style="display:block; margin-bottom:3px;">選項 ${optionNumber} 名稱:</label>
-                            <input type="text" name="option_name[]" placeholder="選項名稱" required style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;" value="${escapeHtml(optionName)}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                               <label style="font-weight: bold; color: var(--heading-color);">選項 ${optionNumber}</label>
+                               <button type="button" class="remove-option-button">×</button>
+                            </div>
+                            <input type="text" name="option_name[]" placeholder="選項名稱 (必填)" required style="width: 100%;" value="${escapeHtml(optionName)}">
                             
-                            <label for="${fileInputId}" style="display:block; margin-bottom:3px;">選項 ${optionNumber} 圖片 (可選, JPG/PNG):</label>
-                            <input type="file" id="${fileInputId}" name="option_image_file[]" accept=".jpg,.jpeg,.png" style="width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 5px;">
+                            <label for="${fileInputId}" style="display:block; margin-top: 10px; margin-bottom:3px; font-size: 0.9em;">圖片 (可選, JPG/PNG, 小於4MB):</label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img id="${imagePreviewId}" src="${escapeHtml(optionImageUrl) || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='}" alt="預覽" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background-color: #eee; display: ${optionImageUrl ? 'block' : 'none'};">
+                                <input type="file" id="${fileInputId}" name="option_image_file[]" accept=".jpg,.jpeg,.png,.webp" style="flex-grow: 1;">
+                            </div>
                             <input type="hidden" id="${hiddenImageUrlId}" name="option_image_url[]" value="${escapeHtml(optionImageUrl)}">
-                            <img id="${imagePreviewId}" src="${escapeHtml(optionImageUrl)}" alt="圖片預覽" style="max-width: 100px; max-height: 100px; display: ${optionImageUrl ? 'block' : 'none'}; margin-top: 5px;">
-                            <div id="${uploadStatusId}" style="font-size: 0.8em; margin-top: 3px;"></div>
-                            <button type="button" class="remove-option-button" style="color:red; background:transparent; border:none; cursor:pointer; padding: 5px; float:right;">移除此選項</button>
+                            <div id="${uploadStatusId}" style="font-size: 0.85em; margin-top: 5px; height: 1.2em;"></div>
                         `;
 
                         const fileInput = newInputGroup.querySelector(`#${fileInputId}`);
@@ -1662,15 +1851,23 @@
                         fileInput.addEventListener('change', async function(event) {
                             const file = event.target.files[0];
                             if (file) {
-                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { // 根據 publicSafeUpload 的 fileFilter 調整
-                                    uploadStatusDiv.textContent = '錯誤：只允許 JPG 或 PNG 檔案。';
+                                // 預覽本地圖片
+                                const reader = new FileReader();
+                                reader.onload = function(e) {
+                                    imagePreview.src = e.target.result;
+                                    imagePreview.style.display = 'block';
+                                };
+                                reader.readAsDataURL(file);
+
+                                if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                                    uploadStatusDiv.textContent = '錯誤：只允許 JPG, PNG, WEBP 檔案。';
                                     uploadStatusDiv.style.color = 'red';
                                     imagePreview.style.display = 'none';
-                                    hiddenImageUrlInput.value = ''; // Clear previous URL if any
+                                    hiddenImageUrlInput.value = '';
                                     return;
                                 }
                                if (file.size > 4 * 1024 * 1024) { // 4MB limit
-                                    uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 4MB。'; // Updated message
+                                    uploadStatusDiv.textContent = '錯誤：檔案大小不能超過 4MB。';
                                     uploadStatusDiv.style.color = 'red';
                                     imagePreview.style.display = 'none';
                                     hiddenImageUrlInput.value = '';
@@ -1716,7 +1913,7 @@
                         });
 
                         newInputGroup.querySelector('.remove-option-button').addEventListener('click', function() {
-                            this.parentElement.remove();
+                            this.closest('.campaign-option-input-group').remove();
                         });
                         containerElement.appendChild(newInputGroup);
                     }
