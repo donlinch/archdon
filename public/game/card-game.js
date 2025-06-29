@@ -805,6 +805,17 @@ async function populateCreators() {
     // 功能已停用
 }
 
+// 恢復已隱藏的模板
+function restoreHiddenTemplates() {
+    // 清除隱藏模板列表
+    localStorage.removeItem('hiddenTemplates');
+    
+    // 重新載入模板列表
+    populateMyTemplates();
+    
+    showNotification('已恢復所有隱藏的模板');
+}
+
 // 填充"我的模板"列表
 async function populateMyTemplates() {
     const { templateList } = getDOMElements();
@@ -853,6 +864,37 @@ async function populateMyTemplates() {
             return;
         }
         
+        // 檢查是否有隱藏的模板
+        const hiddenTemplates = JSON.parse(localStorage.getItem('hiddenTemplates') || '[]');
+        
+        // 如果有隱藏的模板，添加一個恢復按鈕
+        if (hiddenTemplates.length > 0) {
+            const restoreButtonContainer = document.createElement('div');
+            restoreButtonContainer.style.textAlign = 'center';
+            restoreButtonContainer.style.marginBottom = '15px';
+            restoreButtonContainer.style.padding = '10px';
+            restoreButtonContainer.style.backgroundColor = '#f5f5f5';
+            restoreButtonContainer.style.borderRadius = '5px';
+            
+            const restoreButton = document.createElement('button');
+            restoreButton.textContent = `恢復 ${hiddenTemplates.length} 個隱藏的模板`;
+            restoreButton.className = 'restore-hidden-btn';
+            restoreButton.style.padding = '5px 10px';
+            restoreButton.style.backgroundColor = '#4CAF50';
+            restoreButton.style.color = 'white';
+            restoreButton.style.border = 'none';
+            restoreButton.style.borderRadius = '4px';
+            restoreButton.style.cursor = 'pointer';
+            
+            restoreButton.addEventListener('click', restoreHiddenTemplates);
+            
+            restoreButtonContainer.appendChild(restoreButton);
+            templateList.innerHTML = '';
+            templateList.appendChild(restoreButtonContainer);
+        } else {
+            templateList.innerHTML = '';
+        }
+        
         renderTemplateList(myTemplates);
     } catch (error) {
         console.error('載入我的模板列表失敗:', error);
@@ -873,6 +915,37 @@ async function populateTemplates() {
     console.log("populateTemplates is deprecated for the main manager view.");
 }
 
+// 從UI中隱藏模板（不實際刪除）
+function hideTemplateFromUI(id) {
+    // 將隱藏的模板ID存儲在localStorage中
+    const hiddenTemplates = JSON.parse(localStorage.getItem('hiddenTemplates') || '[]');
+    if (!hiddenTemplates.includes(id)) {
+        hiddenTemplates.push(id);
+        localStorage.setItem('hiddenTemplates', JSON.stringify(hiddenTemplates));
+    }
+    
+    // 從UI中移除
+    const templateItem = document.querySelector(`.template-item button[data-id="${id}"]`)?.closest('.template-item');
+    if (templateItem) {
+        templateItem.style.transition = 'all 0.3s ease';
+        templateItem.style.opacity = '0';
+        templateItem.style.height = '0';
+        templateItem.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            templateItem.remove();
+            
+            // 檢查是否所有模板都被隱藏
+            const templateList = document.getElementById('templateList');
+            if (templateList && !templateList.querySelector('.template-item')) {
+                templateList.innerHTML = '<p style="text-align: center; padding: 20px;">沒有顯示的模板</p>';
+            }
+        }, 300);
+    }
+    
+    showNotification('模板已從列表中隱藏');
+}
+
 // 渲染模板列表
 function renderTemplateList(templates) {
     const { templateList } = getDOMElements();
@@ -886,8 +959,19 @@ function renderTemplateList(templates) {
         return;
     }
     
+    // 獲取已隱藏的模板列表
+    const hiddenTemplates = JSON.parse(localStorage.getItem('hiddenTemplates') || '[]');
+    
+    // 過濾掉已隱藏的模板
+    const visibleTemplates = templates.filter(template => !hiddenTemplates.includes(template.id.toString()));
+    
+    if (visibleTemplates.length === 0) {
+        templateList.innerHTML = '<p style="text-align: center; padding: 20px;">所有模板都已隱藏</p>';
+        return;
+    }
+    
     // 添加每個模板項目
-    templates.forEach(template => {
+    visibleTemplates.forEach(template => {
         const item = document.createElement('div');
         item.className = 'template-item';
         
@@ -910,6 +994,7 @@ function renderTemplateList(templates) {
                 ${forceOwnership || template.is_owner ? `<button class="btn-edit" data-id="${template.id}">編輯</button>` : ''}
                 ${forceOwnership || template.is_owner ? `<button class="btn-delete" data-id="${template.id}">刪除</button>` : ''}
                 ${gameState.loggedInUser && !template.is_owner ? `<button class="btn-copy" data-id="${template.id}">複製</button>` : ''}
+                <button class="btn-hide" data-id="${template.id}" title="從列表中隱藏此模板">隱藏</button>
             </div>
         `;
         
@@ -959,6 +1044,15 @@ function bindTemplateActions() {
             e.stopPropagation();
             const id = btn.dataset.id;
             if (id) copyTemplate(id);
+        });
+    });
+    
+    // 隱藏按鈕
+    templateList.querySelectorAll('.btn-hide').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (id) hideTemplateFromUI(id);
         });
     });
 }
@@ -1063,14 +1157,67 @@ async function deleteTemplate(id) {
     }
     
     try {
-        await api.delete(`/api/card-game/templates/${id}`);
-        showNotification('模板已成功刪除');
+        console.log(`嘗試刪除模板 ID: ${id}`);
         
-        // 重新載入模板列表
-        populateMyTemplates();
+        // 顯示刪除中提示
+        showNotification('正在刪除模板...', 'info');
+        
+        // 嘗試標準刪除
+        try {
+            await api.delete(`/api/card-game/templates/${id}`);
+            console.log("標準刪除成功");
+            showNotification('模板已成功刪除');
+            
+            // 重新載入模板列表
+            populateMyTemplates();
+            return;
+        } catch (standardError) {
+            console.error('標準刪除失敗:', standardError);
+            
+            // 如果標準刪除失敗，嘗試使用PUT請求將模板標記為已刪除
+            try {
+                console.log("嘗試替代刪除方法...");
+                await api.put(`/api/card-game/templates/${id}`, {
+                    is_deleted: true,
+                    deleted_at: new Date().toISOString()
+                });
+                console.log("替代刪除成功");
+                showNotification('模板已標記為刪除');
+                
+                // 重新載入模板列表
+                populateMyTemplates();
+                return;
+            } catch (alternativeError) {
+                console.error('替代刪除也失敗:', alternativeError);
+                throw standardError; // 仍然拋出原始錯誤
+            }
+        }
     } catch (error) {
         console.error('刪除模板失敗:', error);
-        showNotification('刪除模板失敗', 'error');
+        
+        // 提取錯誤信息
+        let errorMessage = '刪除失敗';
+        if (error.message) {
+            if (error.message.includes('403')) {
+                errorMessage = '您沒有權限刪除此模板。請刷新頁面後重試。';
+            } else if (error.message.includes('404')) {
+                errorMessage = '模板不存在或已被刪除。';
+                
+                // 如果是404，我們可以從列表中移除該模板
+                const templateItem = document.querySelector(`.template-item button[data-id="${id}"]`)?.closest('.template-item');
+                if (templateItem) {
+                    templateItem.style.opacity = '0.5';
+                    templateItem.style.textDecoration = 'line-through';
+                    setTimeout(() => {
+                        templateItem.remove();
+                    }, 1000);
+                }
+            } else {
+                errorMessage = `刪除失敗: ${error.message}`;
+            }
+        }
+        
+        showNotification(errorMessage, 'error');
     }
 }
 
