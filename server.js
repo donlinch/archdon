@@ -435,6 +435,60 @@ voitRouter.get('/campaigns/:campaignId', async (req, res) => {
     }
 });
 
+// POST /api/voit/campaigns - 新增投票活動
+voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
+    const { title, description, options } = req.body;
+    const userId = req.boxUser.user_id; // 从认证中间件获取用户ID
+
+    if (!title || title.trim() === '') {
+        return res.status(400).json({ error: 'Campaign title is required.' });
+    }
+    if (!options || !Array.isArray(options) || options.length === 0) {
+        return res.status(400).json({ error: 'At least one option is required.' });
+    }
+    for (const opt of options) {
+        if (!opt.name || opt.name.trim() === '') { // 移除了對 image_url 的強制要求
+            return res.status(400).json({ error: 'All options must have a name.' });
+        }
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 插入投票活動，添加creator_id字段
+        const campaignResult = await client.query(
+            "INSERT INTO voit_Campaigns (title, description, status, creator_id) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
+            [title.trim(), description || null, 'active', userId]
+        );
+        const newCampaign = campaignResult.rows[0];
+        const campaignId = newCampaign.campaign_id;
+
+        // 插入投票選項
+        const insertedOptions = [];
+        for (let i = 0; i < options.length; i++) {
+            const opt = options[i];
+            const optionResult = await client.query(
+                "INSERT INTO voit_Options (campaign_id, name, image_url, display_order) VALUES ($1, $2, $3, $4) RETURNING option_id, name, image_url, display_order",
+                [campaignId, opt.name.trim(), opt.image_url ? opt.image_url.trim() : null, i] // 如果 image_url 為空則存儲 NULL
+            );
+            insertedOptions.push(optionResult.rows[0]);
+        }
+        
+        await client.query('COMMIT');
+        
+        newCampaign.options = insertedOptions; // 將選項附加到返回的活動對象中
+        res.status(201).json(newCampaign);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error creating new voit campaign:', err.stack || err);
+        res.status(500).json({ error: 'Failed to create campaign' });
+    } finally {
+        client.release();
+    }
+});
+
 // POST /api/voit/campaigns/:campaignId/vote - 提交投票
 voitRouter.post('/campaigns/:campaignId/vote', async (req, res) => {
     const { campaignId } = req.params;
@@ -614,8 +668,10 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: 'Campaign title is required.' });
     }
-    if (!edit_password || edit_password.length < 4 || edit_password.length > 6) {
-        return res.status(400).json({ error: 'Edit password must be 4-6 characters long.' });
+    // 移除密码必填验证，使其成为可选项
+    // 如果提供了密码，则验证长度
+    if (edit_password && (edit_password.length < 4 || edit_password.length > 6)) {
+        return res.status(400).json({ error: 'If provided, edit password must be 4-6 characters long.' });
     }
     if (!options || !Array.isArray(options) || options.length === 0) {
         return res.status(400).json({ error: 'At least one option is required.' });
@@ -631,10 +687,10 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
         await client.query('BEGIN');
 
         // 插入投票活動，添加creator_id字段
-        // 考慮到 edit_password 的安全性，這裡僅為示例，實際應用中應哈希存儲
+        // 密码现在是可选的，如果未提供则存储为null
         const campaignResult = await client.query(
             "INSERT INTO voit_Campaigns (title, description, status, edit_password, creator_id) VALUES ($1, $2, $3, $4, $5) RETURNING campaign_id, title, description, status, created_at",
-            [title.trim(), description || null, 'active', edit_password, userId] // 添加userId
+            [title.trim(), description || null, 'active', edit_password || null, userId] // 密码可为null
         );
         const newCampaign = campaignResult.rows[0];
         const campaignId = newCampaign.campaign_id;
@@ -658,10 +714,6 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Error creating new voit campaign:', err.stack || err);
-        // 檢查是否為唯一約束衝突 (例如 title) - 根據您的資料庫設計
-        // if (err.code === '23505' && err.constraint === 'your_unique_title_constraint_name') {
-        //    return res.status(409).json({ error: 'A campaign with this title already exists.' });
-        // }
         res.status(500).json({ error: 'Failed to create campaign' });
     } finally {
         client.release();

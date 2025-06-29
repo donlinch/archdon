@@ -858,7 +858,17 @@
                 async function renderCampaignList() {
                     campaignListUl.innerHTML = '<li>載入中...</li>';
                     try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns`);
+                        // 获取当前登录用户ID和令牌（如果有）
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                        
+                        // 准备请求头
+                        const headers = {};
+                        if (savedUserId && savedUserToken) {
+                            headers['Authorization'] = `Bearer ${savedUserToken}`;
+                        }
+                        
+                        const response = await fetch(`${API_BASE_URL}/campaigns`, { headers });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         campaignsCache = await response.json();
                         
@@ -964,7 +974,17 @@
                     voteArea.style.display = 'block'; 
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
+                        // 获取当前登录用户ID和令牌（如果有）
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                        
+                        // 准备请求头
+                        const headers = {};
+                        if (savedUserId && savedUserToken) {
+                            headers['Authorization'] = `Bearer ${savedUserToken}`;
+                        }
+                        
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, { headers });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         currentCampaignData = await response.json(); 
                         
@@ -1105,9 +1125,21 @@
                         voteButton.disabled = true;
                         voteButton.textContent = '投票中...';
                         try {
+                            // 获取当前登录用户ID和令牌（如果有）
+                            const savedUserId = localStorage.getItem('boxCurrentUserId');
+                            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                            
+                            // 准备请求头
+                            const headers = {
+                                'Content-Type': 'application/json'
+                            };
+                            if (savedUserId && savedUserToken) {
+                                headers['Authorization'] = `Bearer ${savedUserToken}`;
+                            }
+                            
                             const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/vote`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: headers,
                                 body: JSON.stringify({ option_id: selectedOptionId })
                             });
                             
@@ -1160,7 +1192,17 @@
                     if (shareLinkArea) shareLinkArea.style.display = 'none'; // Hide initially
 
                     try {
-                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`);
+                        // 获取当前登录用户ID和令牌（如果有）
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+                        
+                        // 准备请求头
+                        const headers = {};
+                        if (savedUserId && savedUserToken) {
+                            headers['Authorization'] = `Bearer ${savedUserToken}`;
+                        }
+                        
+                        const response = await fetch(`${API_BASE_URL}/campaigns/${currentCampaignData.campaign_id}/results`, { headers });
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         const resultsData = await response.json(); 
 
@@ -1298,7 +1340,11 @@
                         if (!itemListUl) return;
 
                         try {
-                            const response = await fetch(`${API_BASE_URL}/campaigns`);
+                            const response = await fetch(`${API_BASE_URL}/campaigns`, {
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
+                            });
                             if (!response.ok) throw new Error('無法獲取活動列表');
                             const campaigns = await response.json();
 
@@ -1337,34 +1383,67 @@
                         const campaignId = event.target.dataset.campaignId;
                         const campaignTitle = event.target.dataset.campaignTitle; // 從 data attribute 獲取標題
                         
-                        const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位):`);
+                        // 获取当前登录用户ID
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
                         
-                        if (password === null) { 
-                            return;
-                        }
-
-                        if (password.trim() === '') {
-                            alert('請輸入編輯密碼。');
+                        if (!savedUserId || !savedUserToken) {
+                            alert('請先登入以編輯投票活動。');
                             return;
                         }
 
                         try {
-                            const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
+                            // 首先检查用户是否是活动创建者
+                            const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error('無法獲取活動信息');
+                            }
+                            
+                            const campaignData = await response.json();
+                            
+                            // 检查当前用户是否为创建者
+                            if (campaignData.creator_id && parseInt(campaignData.creator_id) === parseInt(savedUserId)) {
+                                // 如果是创建者，直接显示编辑表单
+                                showEditCampaignForm(campaignId);
+                                return;
+                            }
+                            
+                            // 如果不是创建者，则需要验证密码
+                            const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位):`);
+                            
+                            if (password === null) { 
+                                return;
+                            }
+
+                            if (password.trim() === '') {
+                                alert('請輸入編輯密碼。');
+                                return;
+                            }
+
+                            const verifyResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                },
                                 body: JSON.stringify({ password: password })
                             });
                             
-                            const result = await response.json();
+                            const result = await verifyResponse.json();
 
-                            if (response.ok && result.verified) {
+                            if (verifyResponse.ok && result.verified) {
                                 showEditCampaignForm(campaignId); 
                             } else {
                                 alert(result.error || '密碼驗證失敗，請重試。');
                             }
                         } catch (error) {
-                            console.error('驗證編輯密碼時出錯:', error);
-                            alert('驗證密碼時發生錯誤，請稍後再試。');
+                            console.error('驗證編輯權限時出錯:', error);
+                            alert('驗證權限時發生錯誤，請稍後再試。');
                         }
                     }
 
@@ -1376,21 +1455,74 @@
                             return;
                         }
 
-                        const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位) 以確認刪除:`);
+                        // 获取当前登录用户ID
+                        const savedUserId = localStorage.getItem('boxCurrentUserId');
+                        const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
                         
-                        if (password === null) { // User cancelled prompt
-                            return;
-                        }
-                        if (password.trim() === '') {
-                            alert('請輸入編輯密碼以進行刪除。');
+                        if (!savedUserId || !savedUserToken) {
+                            alert('請先登入以刪除投票活動。');
                             return;
                         }
 
                         try {
+                            // 首先检查用户是否是活动创建者
+                            const campaignResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
+                            });
+                            
+                            if (!campaignResponse.ok) {
+                                throw new Error('無法獲取活動信息');
+                            }
+                            
+                            const campaignData = await campaignResponse.json();
+                            
+                            // 检查当前用户是否为创建者
+                            if (campaignData.creator_id && parseInt(campaignData.creator_id) === parseInt(savedUserId)) {
+                                // 如果是创建者，直接删除
+                                const deleteResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Authorization': `Bearer ${savedUserToken}`
+                                    }
+                                });
+
+                                if (!deleteResponse.ok) {
+                                    const errorData = await deleteResponse.json().catch(() => ({ error: '刪除失敗，請檢查伺服器日誌。' }));
+                                    throw new Error(errorData.error || `HTTP error! status: ${deleteResponse.status}`);
+                                }
+
+                                alert(`投票活動 "${campaignTitle}" 已成功刪除！`);
+                                showDefaultDrawerContent(); // Refresh drawer list
+                                renderCampaignList(); // Refresh main campaign list
+                                
+                                // If the currently loaded campaign is the one deleted, navigate back to selection
+                                if (currentCampaignData && currentCampaignData.campaign_id.toString() === campaignId.toString()) {
+                                    currentCampaignData = null; // Clear current campaign
+                                    renderCampaignList(); // Show campaign selection screen
+                                }
+                                return;
+                            }
+                            
+                            // 如果不是创建者，则需要验证密码
+                            const password = prompt(`請輸入活動 "${campaignTitle}" 的編輯密碼 (4-6位) 以確認刪除:`);
+                            
+                            if (password === null) { // User cancelled prompt
+                                return;
+                            }
+                            if (password.trim() === '') {
+                                alert('請輸入編輯密碼以進行刪除。');
+                                return;
+                            }
+
                             // Step 1: Verify password
                             const verifyResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/verify-password`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                },
                                 body: JSON.stringify({ password: password })
                             });
                             
@@ -1404,10 +1536,9 @@
                             // Step 2: Delete campaign if password is verified
                             const deleteResponse = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
                                 method: 'DELETE',
-                                // No body needed for DELETE if password was verified in a separate step
-                                // If backend handles password in DELETE, include it here:
-                                // headers: { 'Content-Type': 'application/json' },
-                                // body: JSON.stringify({ password: password })
+                                headers: {
+                                    'Authorization': `Bearer ${savedUserToken}`
+                                }
                             });
 
                             if (!deleteResponse.ok) {
@@ -1417,7 +1548,7 @@
 
                             alert(`投票活動 "${campaignTitle}" 已成功刪除！`);
                             showDefaultDrawerContent(); // Refresh drawer list
-                            renderCampaignList(); // Refresh main campaign list if the deleted one was active or for general update
+                            renderCampaignList(); // Refresh main campaign list
                             // If the currently loaded campaign is the one deleted, navigate back to selection
                             if (currentCampaignData && currentCampaignData.campaign_id.toString() === campaignId.toString()) { // Ensure comparison is robust
                                 currentCampaignData = null; // Clear current campaign
@@ -1574,8 +1705,9 @@
                                     <textarea id="new-campaign-description" name="description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 60px;"></textarea>
                                 </div>
                                 <div>
-                                    <label for="new-campaign-password" style="display: block; margin-bottom: 5px;">編輯密碼 (4-6位):</label>
-                                    <input type="password" id="new-campaign-password" name="edit_password" required minlength="4" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                    <label for="new-campaign-password" style="display: block; margin-bottom: 5px;">編輯密碼 (4-6位, 可選):</label>
+                                    <input type="password" id="new-campaign-password" name="edit_password" minlength="4" maxlength="6" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                    <small style="color: #666; font-size: 0.8em;">如不設置密碼，只有您本人可以編輯和刪除此活動。</small>
                                 </div>
                                 <h4>投票選項 (至少1個)</h4>
                                 <div id="new-campaign-options-container">
@@ -1718,14 +1850,19 @@
                             submitButton.textContent = '創建活動';
                             return;
                         }
-                         if (edit_password.length < 4 || edit_password.length > 6) {
-                            alert('編輯密碼必須是4到6位。');
+                        // 密碼現在是可選的，只有在提供時才驗證長度
+                        if (edit_password && (edit_password.length < 4 || edit_password.length > 6)) {
+                            alert('如果提供編輯密碼，必須是4到6位。');
                             submitButton.disabled = false;
                             submitButton.textContent = '創建活動';
                             return;
                         }
 
-                        const campaignData = { title, description, edit_password, options };
+                        const campaignData = { title, description, options };
+                        // 只有當密碼被提供時，才將其添加到請求數據中
+                        if (edit_password) {
+                            campaignData.edit_password = edit_password;
+                        }
                         
                         try {
                             const response = await fetch(`${API_BASE_URL}/campaigns`, {
