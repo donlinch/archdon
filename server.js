@@ -546,10 +546,6 @@ voitRouter.post('/campaigns/:campaignId/verify-password', optionalAuthenticateBo
     const { password } = req.body;
     const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
-    if (!password) {
-        return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
-    }
-
     try {
         const result = await pool.query("SELECT edit_password, creator_id FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
         if (result.rows.length === 0) {
@@ -563,12 +559,21 @@ voitRouter.post('/campaigns/:campaignId/verify-password', optionalAuthenticateBo
         // 检查是否为创建者
         const isCreator = currentUserId && creatorId && parseInt(currentUserId) === parseInt(creatorId);
         
+        // 如果是创建者，直接验证通过，无需密码
+        if (isCreator) {
+            return res.json({ verified: true });
+        }
+        
+        // 非创建者需要检查密码
+        if (!password) {
+            return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
+        }
+        
         // 管理员密码检查
         const masterPassword = process.env.VOIT_MASTER_PASSWORD;
         const isPasswordCorrect = password === storedPassword || (masterPassword && password === masterPassword);
         
-        // 创建者无需密码，或者密码正确
-        if (isCreator || isPasswordCorrect) {
+        if (isPasswordCorrect) {
             res.json({ verified: true });
         } else {
             res.status(401).json({ verified: false, error: '編輯密碼錯誤，請重試。' });
@@ -603,7 +608,7 @@ voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req
 
         // 首先检查活动是否存在以及当前用户是否为创建者
         const campaignCheckResult = await client.query(
-            "SELECT creator_id, edit_password FROM voit_Campaigns WHERE campaign_id = $1",
+            "SELECT creator_id FROM voit_Campaigns WHERE campaign_id = $1",
             [campaignId]
         );
         
@@ -614,12 +619,10 @@ voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req
         
         const creatorId = campaignCheckResult.rows[0].creator_id;
         
-        // 检查当前用户是否为创建者 - 前端应该已经通过verify-password验证过密码
-        // 如果是创建者，则可以直接编辑，无需密码验证
-        if (currentUserId && creatorId && parseInt(currentUserId) !== parseInt(creatorId)) {
-            // 如果不是创建者，则前端应该已经通过verify-password验证过密码
-            // 这里我们信任前端已经完成了密码验证
-            console.log(`[API PUT /voit/campaigns] 非创建者(${currentUserId})尝试编辑活动ID: ${campaignId}, 创建者ID: ${creatorId}`);
+        // 检查当前用户是否为创建者
+        if (!currentUserId || parseInt(currentUserId) !== parseInt(creatorId)) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: '只有活動創建者可以更新此活動。' });
         }
 
         // 1. 更新 voit_Campaigns 表
@@ -662,16 +665,11 @@ voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req
 
 // POST /api/voit/campaigns - 新增投票活動
 voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
-    const { title, description, edit_password, options } = req.body;
+    const { title, description, options } = req.body;
     const userId = req.boxUser.user_id; // 从认证中间件获取用户ID
 
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: 'Campaign title is required.' });
-    }
-    // 移除密码必填验证，使其成为可选项
-    // 如果提供了密码，则验证长度
-    if (edit_password && (edit_password.length < 4 || edit_password.length > 6)) {
-        return res.status(400).json({ error: 'If provided, edit password must be 4-6 characters long.' });
     }
     if (!options || !Array.isArray(options) || options.length === 0) {
         return res.status(400).json({ error: 'At least one option is required.' });
@@ -687,10 +685,9 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
         await client.query('BEGIN');
 
         // 插入投票活動，添加creator_id字段
-        // 密码现在是可选的，如果未提供则存储为null
         const campaignResult = await client.query(
-            "INSERT INTO voit_Campaigns (title, description, status, edit_password, creator_id) VALUES ($1, $2, $3, $4, $5) RETURNING campaign_id, title, description, status, created_at",
-            [title.trim(), description || null, 'active', edit_password || null, userId] // 密码可为null
+            "INSERT INTO voit_Campaigns (title, description, status, creator_id) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
+            [title.trim(), description || null, 'active', userId]
         );
         const newCampaign = campaignResult.rows[0];
         const campaignId = newCampaign.campaign_id;
