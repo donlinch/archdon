@@ -472,17 +472,17 @@ function resetGame() {
 
 // 載入預設模板
 function loadDefaultTemplate() {
-    // 嘗試載入 ID=1 的官方模板
-    api.get('/api/card-game/templates/1')
-        .then(template => {
-            processLoadedTemplate(template);
-        })
-        .catch(error => {
-            console.error('無法載入預設模板:', error);
-            // 如果無法載入預設模板，則使用硬編碼的內容
-            setExampleContent();
+    console.log("載入預設模板...");
+    
+    // 直接使用硬編碼的內容，不再嘗試從API獲取預設模板
+    setExampleContent();
     initializeBoard();
-        });
+    console.log("已載入預設內容");
+    
+    // 嘗試獲取用戶的模板列表
+    populateMyTemplates()
+        .then(() => console.log("已嘗試載入用戶模板列表"))
+        .catch(err => console.error("載入用戶模板列表失敗:", err));
 }
 
 // 設置默認/示例內容到 gameState.contents
