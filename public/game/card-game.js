@@ -734,9 +734,9 @@ async function populateMyTemplates() {
         
         if (!templates || templates.length === 0) {
             templateList.innerHTML = '<p style="text-align: center; padding: 20px;">您還沒有創建任何模板。</p>';
-            return;
-        }
-        
+        return;
+    }
+    
         renderTemplateList(templates);
     } catch (error) {
         console.error('載入我的模板列表失敗:', error);

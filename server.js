@@ -1,6 +1,10 @@
+ 
+
+
+
+
 // server.js
 require('dotenv').config();
-const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
 const http = require('http'); // <--- Need http module
 const express = require('express');
 const path = require('path');
@@ -123,63 +127,6 @@ const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證�
 // =================================================================
 
 
-// --- START OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-const authenticateBoxUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7); // "Bearer " is 7 chars
-        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            if (err) {
-                console.warn('[Box Auth] Token verification failed:', err.message);
-                return res.status(403).json({ error: 'Forbidden: Invalid or expired token.' });
-            }
-            
-            // CRITICAL CHECK: Ensure the decoded token has user_id or userId.
-            if (!decoded || (typeof decoded.user_id === 'undefined' && typeof decoded.userId === 'undefined')) {
-                console.error('[Box Auth] Invalid token payload: user_id/userId is missing.', decoded);
-                return res.status(403).json({ error: 'Forbidden: Invalid token payload.' });
-            }
-
-            // Normalize to user_id for consistency
-            if (decoded.userId && !decoded.user_id) {
-                decoded.user_id = decoded.userId;
-            }
-
-            // Attach user info to the request object
-            req.boxUser = decoded; // decoded now reliably contains user_id
-            next();
-        });
-    } else {
-        console.warn('[Box Auth] Authorization header missing or format incorrect.');
-        res.status(401).json({ error: 'Unauthorized: Please provide a valid token.' });
-    }
-};
-// --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-
-
-
-// 中介軟體，用於可選地驗證用戶。
-const optionalAuthenticateBoxUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
-                if (decoded.userId && !decoded.user_id) {
-                    decoded.user_id = decoded.userId;
-                }
-                req.boxUser = decoded;
-            }
-            next();
-        });
-    } else {
-        next();
-    }
-};
-
-
-
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     const adminUsername = process.env.ADMIN_LOGIN;
@@ -243,7 +190,7 @@ app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, asyn
                 prr.id, prr.user_id, u.username, u.email, 
                 prr.reset_token, prr.token_expires_at, prr.created_at
             FROM password_reset_requests prr
-            JOIN BOX_Users u ON prr.user_id = u.user_id
+            JOIN box_users u ON prr.user_id = u.user_id
             WHERE prr.status = 'pending'
             ORDER BY prr.created_at ASC;
         `;
@@ -335,7 +282,7 @@ const productUpload = multer({
 
  
 
-const sessionProtectedAdminPages = [
+const sessionProtectedAdminPages =  [
     // 注意：admin-main.html 和 admin-nav.html 已有特定處理，這裡僅為示例結構
     '/admin-main.html',
     '/admin-nav.html',
@@ -7055,7 +7002,7 @@ app.get('/api/analytics/traffic', async (req, res) => {
             count: parseInt(row.count) 
         }));
         res.status(200).json(trafficData);
-    } catch (err) {
+    } catch (err) { 
         console.error('獲取流量數據時發生錯誤:', err); 
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); 
     }
