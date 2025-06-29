@@ -2171,7 +2171,7 @@ input:checked + .slider:before {
                 userStatusName.textContent = '未登入';
                 userStatus.addEventListener('click', () => {
                     // 變更為導向會員登入頁
-                    window.location.href = `member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
                 });
             }
         });
