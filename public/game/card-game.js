@@ -71,13 +71,33 @@ function getDOMElements() {
 
 // --- API 請求函數 ---
 const api = {
+    _getAuthHeaders: () => {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        const savedUserId = localStorage.getItem('boxCurrentUserId');
+        const savedUserToken = savedUserId ? localStorage.getItem(`boxUserToken_${savedUserId}`) : null;
+
+        if (savedUserToken) {
+            headers['Authorization'] = `Bearer ${savedUserToken}`;
+        }
+        return headers;
+    },
+
     get: async (url) => {
         try {
             console.log(`API GET: ${url}`);
-            const res = await fetch(url);
+            const res = await fetch(url, {
+                headers: api._getAuthHeaders()
+            });
             if (!res.ok) {
                 console.error(`API Error (${res.status}): ${url}`);
-                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+                const errorText = await res.text();
+                throw new Error(`請求失敗: ${res.status} ${res.statusText} - ${errorText}`);
+            }
+            // 處理 res.status === 204 No Content 的情況
+            if (res.status === 204) {
+                return null; 
             }
             return await res.json();
         } catch (error) {
@@ -90,12 +110,16 @@ const api = {
             console.log(`API POST: ${url}`, body);
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: api._getAuthHeaders(),
                 body: JSON.stringify(body),
             });
             if (!res.ok) {
                 console.error(`API Error (${res.status}): ${url}`);
-                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+                const errorText = await res.text();
+                throw new Error(`請求失敗: ${res.status} ${res.statusText} - ${errorText}`);
+            }
+            if (res.status === 204) {
+                return null;
             }
             return await res.json();
         } catch (error) {
@@ -108,12 +132,16 @@ const api = {
             console.log(`API PUT: ${url}`, body);
             const res = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: api._getAuthHeaders(),
                 body: JSON.stringify(body),
             });
             if (!res.ok) {
                 console.error(`API Error (${res.status}): ${url}`);
-                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+                const errorText = await res.text();
+                throw new Error(`請求失敗: ${res.status} ${res.statusText} - ${errorText}`);
+            }
+            if (res.status === 204) {
+                return null;
             }
             return await res.json();
         } catch (error) {
@@ -124,10 +152,14 @@ const api = {
     delete: async (url) => {
         try {
             console.log(`API DELETE: ${url}`);
-            const res = await fetch(url, { method: 'DELETE' });
+            const res = await fetch(url, {
+                method: 'DELETE',
+                headers: api._getAuthHeaders()
+            });
             if (!res.ok) {
                 console.error(`API Error (${res.status}): ${url}`);
-                throw new Error(`請求失敗: ${res.status} ${res.statusText}`);
+                const errorText = await res.text();
+                throw new Error(`請求失敗: ${res.status} ${res.statusText} - ${errorText}`);
             }
             return res;
         } catch (error) {
