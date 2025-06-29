@@ -158,7 +158,31 @@ const authenticateBoxUser = (req, res, next) => {
 // --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
 
+// --- START OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+const optionalAuthenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
 
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7); // "Bearer " is 7 chars
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            // 如果 token 有效，就附加使用者資訊
+            if (!err && decoded && (decoded.user_id || decoded.userId)) {
+                // 為了統一，將 userId 轉換為 user_id
+                if (decoded.userId && !decoded.user_id) {
+                    decoded.user_id = decoded.userId;
+                }
+                req.boxUser = decoded;
+            }
+            // 對於選擇性認證，無論 token 是否有效，我們都繼續處理請求
+            // 路由處理器後續需要自行檢查 req.boxUser 是否存在
+            next();
+        });
+    } else {
+        // 沒有 token，也直接繼續
+        next();
+    }
+};
+// --- END OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
 
 
