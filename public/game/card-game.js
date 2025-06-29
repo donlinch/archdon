@@ -1152,71 +1152,40 @@ async function fillEditorForEdit(id) {
 
 // 刪除模板
 async function deleteTemplate(id) {
-    if (!confirm('確定要刪除這個模板嗎？此操作無法復原。')) {
+    // 在確認對話框中就告知使用者可能會失敗
+    if (!confirm(`您確定要嘗試刪除模板 ID: ${id} 嗎？\n\n注意：由於伺服器權限設定，此操作可能會失敗。如果失敗，建議使用旁邊的「隱藏」按鈕。`)) {
         return;
     }
-    
+
     try {
-        console.log(`嘗試刪除模板 ID: ${id}`);
-        
-        // 顯示刪除中提示
-        showNotification('正在刪除模板...', 'info');
-        
-        // 嘗試標準刪除
-        try {
-            await api.delete(`/api/card-game/templates/${id}`);
-            console.log("標準刪除成功");
-            showNotification('模板已成功刪除');
-            
-            // 重新載入模板列表
-            populateMyTemplates();
-            return;
-        } catch (standardError) {
-            console.error('標準刪除失敗:', standardError);
-            
-            // 如果標準刪除失敗，嘗試使用PUT請求將模板標記為已刪除
-            try {
-                console.log("嘗試替代刪除方法...");
-                await api.put(`/api/card-game/templates/${id}`, {
-                    is_deleted: true,
-                    deleted_at: new Date().toISOString()
-                });
-                console.log("替代刪除成功");
-                showNotification('模板已標記為刪除');
-                
-                // 重新載入模板列表
-                populateMyTemplates();
-                return;
-            } catch (alternativeError) {
-                console.error('替代刪除也失敗:', alternativeError);
-                throw standardError; // 仍然拋出原始錯誤
-            }
-        }
+        console.log(`正在發送刪除模板 ID: ${id} 的請求`);
+        showNotification('正在刪除...', 'info');
+
+        // 直接調用 API 刪除
+        await api.delete(`/api/card-game/templates/${id}`);
+
+        showNotification('模板已成功刪除');
+
+        // 成功後，重新載入模板列表以更新 UI
+        await populateMyTemplates();
+
     } catch (error) {
         console.error('刪除模板失敗:', error);
-        
-        // 提取錯誤信息
-        let errorMessage = '刪除失敗';
+
+        let errorMessage = '刪除失敗，發生未知錯誤。';
         if (error.message) {
+            // 根據錯誤碼提供更友善的提示
             if (error.message.includes('403')) {
-                errorMessage = '您沒有權限刪除此模板。請刷新頁面後重試。';
+                errorMessage = '刪除失敗：伺服器回報無此權限。這很可能是後端問題，請改用「隱藏」按鈕。';
             } else if (error.message.includes('404')) {
-                errorMessage = '模板不存在或已被刪除。';
-                
-                // 如果是404，我們可以從列表中移除該模板
-                const templateItem = document.querySelector(`.template-item button[data-id="${id}"]`)?.closest('.template-item');
-                if (templateItem) {
-                    templateItem.style.opacity = '0.5';
-                    templateItem.style.textDecoration = 'line-through';
-                    setTimeout(() => {
-                        templateItem.remove();
-                    }, 1000);
-                }
+                errorMessage = '刪除失敗：模板不存在或已被刪除。';
+                // 既然不存在，就直接更新UI
+                await populateMyTemplates();
             } else {
                 errorMessage = `刪除失敗: ${error.message}`;
             }
         }
-        
+
         showNotification(errorMessage, 'error');
     }
 }
