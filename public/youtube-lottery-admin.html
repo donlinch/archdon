@@ -196,6 +196,21 @@
           from { opacity: 0; transform: scale(0.8); }
           to { opacity: 1; transform: scale(1); }
         }
+
+        #wheel-canvas {
+            margin: 20px auto;
+            display: block;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .winner-highlight {
+            color: #ff4757;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-shadow: 0 0 5px rgba(255,71,87,0.3);
+        }
     </style>
 </head>
 <body>
@@ -240,8 +255,11 @@
 
         <div id="animation-panel" class="panel">
             <canvas id="confetti-canvas"></canvas>
-            <div id="draw-animation-container">
-                <span>請先設定直播並開始監控</span>
+            <div id="animation-container">
+                <canvas id="wheel-canvas" width="500" height="500" style="display: none;"></canvas>
+                <div id="default-animation" style="text-align: center; padding: 20px;">
+                    請先設定直播並開始監控
+                </div>
             </div>
             <div id="winner-display">
                 <img id="winner-avatar" src="" alt="Winner Avatar">
@@ -291,6 +309,127 @@
                 useWorker: true
             });
 
+            // 輪盤動畫相關變數
+            let wheelCanvas, wheelCtx;
+            let currentRotation = 0;
+            let isSpinning = false;
+            let targetRotation = 0;
+            let spinStartTime = 0;
+            let spinDuration = 5000; // 5秒
+            let selectedWinner = null;
+
+            // 初始化輪盤
+            function initWheel() {
+                wheelCanvas = document.getElementById('wheel-canvas');
+                wheelCtx = wheelCanvas.getContext('2d');
+                requestAnimationFrame(drawWheel);
+            }
+
+            // 繪製輪盤
+            function drawWheel(timestamp) {
+                const participants = Array.from(document.querySelectorAll('#participants-list li'))
+                    .map(li => li.textContent.trim());
+                
+                if (participants.length === 0) {
+                    wheelCanvas.style.display = 'none';
+                    document.getElementById('default-animation').style.display = 'block';
+                    return;
+                }
+
+                wheelCanvas.style.display = 'block';
+                document.getElementById('default-animation').style.display = 'none';
+
+                const centerX = wheelCanvas.width / 2;
+                const centerY = wheelCanvas.height / 2;
+                const radius = Math.min(centerX, centerY) - 20;
+
+                wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+
+                // 繪製輪盤背景
+                wheelCtx.save();
+                wheelCtx.translate(centerX, centerY);
+                wheelCtx.rotate(currentRotation);
+
+                const sliceAngle = (2 * Math.PI) / participants.length;
+                participants.forEach((name, index) => {
+                    const startAngle = index * sliceAngle;
+                    const endAngle = startAngle + sliceAngle;
+
+                    // 繪製扇形
+                    wheelCtx.beginPath();
+                    wheelCtx.moveTo(0, 0);
+                    wheelCtx.arc(0, 0, radius, startAngle, endAngle);
+                    wheelCtx.closePath();
+                    wheelCtx.fillStyle = `hsl(${(360 / participants.length) * index}, 70%, 60%)`;
+                    wheelCtx.fill();
+                    wheelCtx.stroke();
+
+                    // 繪製文字
+                    wheelCtx.save();
+                    wheelCtx.rotate(startAngle + sliceAngle / 2);
+                    wheelCtx.textAlign = 'right';
+                    wheelCtx.fillStyle = 'white';
+                    wheelCtx.font = '14px Arial';
+                    wheelCtx.fillText(name, radius - 10, 5);
+                    wheelCtx.restore();
+                });
+
+                wheelCtx.restore();
+
+                // 繪製指針
+                wheelCtx.beginPath();
+                wheelCtx.moveTo(centerX + radius + 10, centerY);
+                wheelCtx.lineTo(centerX + radius - 10, centerY - 10);
+                wheelCtx.lineTo(centerX + radius - 10, centerY + 10);
+                wheelCtx.closePath();
+                wheelCtx.fillStyle = '#ff4757';
+                wheelCtx.fill();
+
+                // 如果正在旋轉，更新旋轉角度
+                if (isSpinning) {
+                    const progress = (timestamp - spinStartTime) / spinDuration;
+                    if (progress < 1) {
+                        // 使用緩動函數使動畫更自然
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
+                        currentRotation = easeOut * targetRotation;
+                        requestAnimationFrame(drawWheel);
+                    } else {
+                        isSpinning = false;
+                        currentRotation = targetRotation;
+                        if (selectedWinner) {
+                            highlightWinner(selectedWinner);
+                        }
+                    }
+                }
+            }
+
+            // 開始輪盤動畫
+            function startWheelAnimation(winnerIndex, totalParticipants) {
+                if (isSpinning) return;
+                
+                isSpinning = true;
+                spinStartTime = performance.now();
+                
+                // 計算目標旋轉角度
+                const sliceAngle = (2 * Math.PI) / totalParticipants;
+                const winnerAngle = sliceAngle * winnerIndex;
+                
+                // 確保至少轉5圈，然後停在獲獎者位置
+                targetRotation = currentRotation + (Math.PI * 10) + (2 * Math.PI - winnerAngle);
+                
+                requestAnimationFrame(drawWheel);
+            }
+
+            // 高亮顯示獲獎者
+            function highlightWinner(winner) {
+                const participantsList = document.querySelectorAll('#participants-list li');
+                participantsList.forEach(li => {
+                    if (li.textContent.includes(winner.displayName)) {
+                        li.classList.add('winner-highlight');
+                    }
+                });
+            }
+
             async function fetchParticipants() {
                 try {
                     const response = await fetch('/api/admin/lottery/participants');
@@ -312,16 +451,21 @@
 
             function updateParticipantsList(participants) {
                 participantsListEl.innerHTML = '';
-                participants.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = 'participant';
-                    div.innerHTML = `
-                        <img src="${p.profileImageUrl}" alt="${p.displayName}">
-                        <span>${p.displayName}</span>
+                participantsCountEl.textContent = participants.length;
+
+                participants.forEach(participant => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <img src="${participant.profileImageUrl}" alt="${participant.displayName}" class="participant-avatar">
+                        <span>${participant.displayName}</span>
                     `;
-                    participantsListEl.appendChild(div);
+                    participantsListEl.appendChild(li);
                 });
-                participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
+
+                // 重新繪製輪盤
+                if (wheelCanvas) {
+                    requestAnimationFrame(drawWheel);
+                }
             }
             
             function showTemporaryAnimation(participants, callback) {
@@ -414,36 +558,39 @@
 
             drawWinnerBtn.addEventListener('click', async () => {
                 const animationMode = animationModeEl.value;
-                
-                const participantsResponse = await fetch('/api/admin/lottery/participants');
-                const { participants } = await participantsResponse.json();
+                const duration = parseInt(durationEl.value, 10);
 
-                if (!participants || participants.length === 0) {
-                    alert('沒有參與者可以抽獎！');
-                    return;
-                }
+                try {
+                    const response = await fetch('/api/admin/lottery/draw', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ animationMode, duration })
+                    });
 
-                showTemporaryAnimation(participants, async () => {
-                    try {
-                        const response = await fetch('/api/admin/lottery/draw', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ animationMode, duration: 0 })
-                        });
-                        const result = await response.json();
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error);
 
-                        if (response.ok) {
-                            displayWinner(result.winner);
-                        } else {
-                            throw new Error(result.error || '抽獎失敗');
+                    if (animationMode === 'turntable') {
+                        // 獲取獲獎者在參與者列表中的索引
+                        const participants = Array.from(document.querySelectorAll('#participants-list li'));
+                        const winnerIndex = participants.findIndex(li => 
+                            li.textContent.includes(result.winner.displayName)
+                        );
+                        
+                        if (winnerIndex !== -1) {
+                            selectedWinner = result.winner;
+                            startWheelAnimation(winnerIndex, participants.length);
                         }
-
-                    } catch (error) {
-                        console.error('Error drawing winner:', error);
-                        alert(`抽獎失敗: ${error.message}`);
-                        animationContainer.textContent = "抽獎出錯，請重試。";
+                    } else {
+                        // 其他動畫模式的處理...
+                        highlightWinner(result.winner);
                     }
-                });
+                } catch (error) {
+                    console.error('抽獎出錯:', error);
+                    alert(`抽獎失敗: ${error.message}`);
+                }
             });
             
             refreshParticipantsBtn.addEventListener('click', fetchParticipants);
