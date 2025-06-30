@@ -345,9 +345,7 @@
                         <h2 class="h4">會員管理</h2>
                     </div>
                     <div class="col-md-6 text-end">
-                        <button type="button" class="btn btn-primary" id="assignDefaultRolesBtn">
-                            為無角色用戶分配默認角色
-                        </button>
+                        <!-- 移除「為無角色用戶分配默認角色」按鈕 -->
                     </div>
                 </div>
                 <input type="text" id="user-search" placeholder="搜尋用戶名稱..." class="form-group" style="width: 300px; padding: 10px;">
@@ -1047,45 +1045,6 @@
                              console.error('刪除角色失敗:', error);
                         }
                     }
-                }
-            });
-
-            // 為無角色用戶分配默認角色
-            document.getElementById('assignDefaultRolesBtn').addEventListener('click', function() {
-                if (confirm('確定要為所有沒有角色的用戶分配默認角色嗎？')) {
-                    // 顯示加載中
-                    const btn = this;
-                    const originalText = btn.textContent;
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 處理中...';
-                    
-                    fetch('/api/box/admin/users/assign-default-roles', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            // 如果有更新，重新加載用戶列表
-                            if (data.updatedCount > 0) {
-                                fetchUsers();
-                            }
-                        } else {
-                            alert('操作失敗: ' + (data.error || '未知錯誤'));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('操作失敗，請查看控制台獲取詳細信息。');
-                    })
-                    .finally(() => {
-                        // 恢復按鈕狀態
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    });
                 }
             });
         }

@@ -702,6 +702,7 @@
                     const email = registerEmailInput.value;
                     const password = registerPasswordInput.value;
                     const confirmPassword = registerConfirmPasswordInput.value;
+                    const profileImageFile = profileImage.files[0]; // 獲取上傳的頭像文件
 
                     registerFormErrorMessage.style.display = 'none';
 
@@ -722,10 +723,22 @@
                     submitButton.textContent = '註冊中...';
 
                     try {
+                        // 使用 FormData 來處理文件上傳
+                        const formData = new FormData();
+                        formData.append('username', username);
+                        formData.append('email', email);
+                        formData.append('password', password);
+                        formData.append('confirmPassword', confirmPassword);
+                        
+                        // 如果有選擇頭像，則添加到表單數據中
+                        if (profileImageFile) {
+                            formData.append('profileImage', profileImageFile);
+                        }
+
                         const response = await fetch('/api/box/users/register', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ username, email, password })
+                            // 不要設置 Content-Type，讓瀏覽器自動設置正確的 multipart/form-data 和邊界
+                            body: formData
                         });
 
                         const data = await response.json();
@@ -735,6 +748,7 @@
                             localStorage.setItem('boxCurrentUserId', data.user.userId);
                             localStorage.setItem('boxCurrentUsername', data.user.username);
                             localStorage.setItem('boxCurrentUserAvatar', data.user?.profileImageUrl || '/images/a01girlmove.gif');
+                            localStorage.setItem('boxCurrentDisplayName', data.user?.display_name || data.user.username);
                             
                             // 註冊成功後返回上一頁
                             window.location.href = redirect;
