@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽獎歷史紀錄</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #16213e;
+            --secondary-color: #0f3460;
+            --accent-color: #e94560;
+            --text-color: #dcdcdc;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--primary-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            color: var(--accent-color);
+            text-align: center;
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid var(--secondary-color);
+            text-align: left;
+        }
+
+        thead {
+            background-color: var(--secondary-color);
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #1f2a4d;
+        }
+
+        tbody tr:hover {
+            background-color: #2a3966;
+        }
+        
+        td a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        
+        td a:hover {
+            text-decoration: underline;
+        }
+
+        #loading-message {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>抽獎歷史紀錄</h1>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>抽獎時間</th>
+                    <th>Video ID</th>
+                    <th>關鍵字</th>
+                    <th>中獎者</th>
+                    <th>總參與人數</th>
+                    <th>動畫模式</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <!-- Data will be loaded here -->
+            </tbody>
+        </table>
+        <div id="loading-message">正在載入紀錄...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const historyBody = document.getElementById('history-body');
+            const loadingMessage = document.getElementById('loading-message');
+
+            try {
+                const response = await fetch('/api/admin/lottery/history');
+                if (!response.ok) {
+                    throw new Error(`伺服器錯誤: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.history && data.history.length > 0) {
+                    populateTable(data.history);
+                    loadingMessage.style.display = 'none';
+                } else {
+                    loadingMessage.textContent = '沒有找到任何抽獎紀錄。';
+                }
+
+            } catch (error) {
+                console.error('無法載入抽獎歷史:', error);
+                loadingMessage.textContent = `無法載入抽獎歷史: ${error.message}`;
+                loadingMessage.style.color = '#e94560';
+            }
+        });
+
+        function populateTable(history) {
+            const historyBody = document.getElementById('history-body');
+            historyBody.innerHTML = ''; // Clear existing content
+
+            history.forEach(record => {
+                const row = document.createElement('tr');
+                
+                const drawTimestamp = new Date(record.draw_timestamp).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+                
+                row.innerHTML = `
+                    <td>${record.id}</td>
+                    <td>${drawTimestamp}</td>
+                    <td><a href="https://www.youtube.com/watch?v=${record.video_id}" target="_blank">${record.video_id}</a></td>
+                    <td>${record.lottery_keyword}</td>
+                    <td>${record.winner_name}</td>
+                    <td>${record.total_participants}</td>
+                    <td>${record.animation_mode || 'N/A'}</td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html> 

@@ -857,6 +857,16 @@ youtubeLotteryRouter.post('/set-video', async (req, res) => {
     }
   });
 
+  // 獲取用戶參與統計
+  youtubeLotteryRouter.get('/stats', async (req, res) => {
+    try {
+      const stats = await userProfile.getParticipationStats();
+      res.json({ stats });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
 
 
 // 處理YouTube抽獎WebSocket消息
