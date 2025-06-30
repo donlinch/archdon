@@ -1538,6 +1538,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                 SELECT 
                     user_id, 
                     username, 
+                    display_name,
                     user_profile_image_url,
                     created_at
                 FROM BOX_Users u
@@ -2244,6 +2245,145 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         } catch (err) {
             console.error(`[API DELETE /admin/users/:userId/titles/:titleId] Error:`, err);
             res.status(500).json({ error: '移除頭銜失敗。' });
+        }
+    });
+
+    // 創建新頭銜
+    router.post('/admin/titles', isAdminAuthenticated, async (req, res) => {
+        const { titleName, titleDescription, titleImageUrl, achievementId, isManual } = req.body;
+        
+        if (!titleName) {
+            return res.status(400).json({ error: '頭銜名稱為必填項。' });
+        }
+        
+        try {
+            const query = `
+                INSERT INTO titles (title_name, title_description, title_image_url, achievement_id, is_manual)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                titleName,
+                titleDescription || null,
+                titleImageUrl || null,
+                achievementId || null,
+                isManual !== undefined ? isManual : true
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '頭銜創建成功。',
+                title: result.rows[0]
+            });
+        } catch (err) {
+            console.error('[API POST /admin/titles] Error:', err);
+            res.status(500).json({ error: '創建頭銜失敗。' });
+        }
+    });
+    
+    // 上傳頭銜圖片
+    router.post('/admin/titles/upload', isAdminAuthenticated, boxImageUpload.single('titleImage'), async (req, res) => {
+        const { titleName, titleDescription, achievementId, isManual } = req.body;
+        
+        if (!titleName) {
+            return res.status(400).json({ error: '頭銜名稱為必填項。' });
+        }
+
+        let diskPath;
+        let urlPath = null; // Default to null if no image is uploaded
+
+        try {
+            // 如果有上傳圖片，處理圖片
+            if (req.file) {
+                const imageBuffer = req.file.buffer;
+                const originalFilename = req.file.originalname;
+                
+                // 處理圖片
+                const processedImageBuffer = await sharp(imageBuffer).rotate()
+                    .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                
+                // 生成檔案名稱
+                const filename = `title-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+                diskPath = path.join(uploadDir, filename);
+                urlPath = `/uploads/${filename}`;
+                
+                // 保存圖片到磁碟
+                await fs.writeFile(diskPath, processedImageBuffer);
+                
+                // 記錄檔案到 uploaded_files 表
+                const uploadedFileResult = await pool.query(
+                    `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type, owner_user_id)
+                     VALUES ($1, $2, 'image/jpeg', $3, $4, $5) RETURNING id`,
+                    [urlPath, originalFilename, processedImageBuffer.length, 'title_image', req.boxUser?.user_id || null]
+                );
+            }
+            
+            // 創建頭銜
+            const query = `
+                INSERT INTO titles (title_name, title_description, title_image_url, achievement_id, is_manual)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                titleName,
+                titleDescription || null,
+                urlPath, // 如果沒有上傳圖片，這裡會是 null
+                achievementId || null,
+                isManual !== undefined ? isManual : true
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '頭銜創建成功。',
+                title: result.rows[0],
+                image_url: urlPath
+            });
+        } catch (err) {
+            console.error('[API POST /admin/titles/upload] Error:', err);
+            
+            // 如果上傳過程中出錯，嘗試刪除已上傳的圖片
+            if (diskPath) {
+                try {
+                    await fs.unlink(diskPath).catch(e => console.error('Error deleting title image:', e));
+                } catch (cleanupErr) {
+                    console.error('Error during cleanup:', cleanupErr);
+                }
+            }
+            
+            res.status(500).json({ error: '創建頭銜失敗。' });
+        }
+    });
+
+    // 獲取特定用戶的詳細資料（管理員用）
+    router.get('/admin/users/:userId/details', isAdminAuthenticated, async (req, res) => {
+        const { userId } = req.params;
+        
+        try {
+            const query = `
+                SELECT 
+                    user_id, 
+                    username, 
+                    email,
+                    display_name,
+                    user_profile_image_url,
+                    created_at,
+                    updated_at
+                FROM BOX_Users 
+                WHERE user_id = $1
+            `;
+            
+            const result = await pool.query(query, [userId]);
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定的用戶' });
+            }
+            
+            res.json(result.rows[0]);
+        } catch (err) {
+            console.error(`[API GET /box/admin/users/${userId}/details] Error:`, err);
+            res.status(500).json({ error: '無法獲取用戶詳細資料' });
         }
     });
 

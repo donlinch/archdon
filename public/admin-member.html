@@ -262,6 +262,71 @@
             margin-bottom: 5px;
             border-radius: 50%;
         }
+
+        .title-item {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            text-align: center;
+            background-color: var(--light-color);
+        }
+
+        .title-item .title-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #6a1b9a; /* Purple color for titles */
+        }
+
+        .title-item .title-description {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+        }
+
+        #modal-user-titles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        #modal-user-titles .item-tag {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f0ff; /* Light purple background */
+            border: 1px solid #d8c0f0;
+        }
+
+        #modal-user-titles .item-tag span {
+            color: #6a1b9a;
+            font-weight: 500;
+        }
+
+        .user-info-section {
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 15px;
+        }
+        
+        .user-info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .user-avatar img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .user-details p {
+            margin: 8px 0;
+        }
     </style>
 </head>
 <body>
@@ -280,9 +345,9 @@
                 <table id="user-table">
                     <thead>
                         <tr>
-                            <th>用戶</th>
-                            <th>Email</th>
-                            <th>註冊時間</th>
+                            <th>帳號</th>
+                            <th>顯示名稱</th>
+                            <th>角色</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -342,8 +407,17 @@
                             <label for="title-description">描述</label>
                             <input type="text" id="title-description">
                         </div>
+                        <div class="form-group">
+                            <label for="title-image">頭銜圖片 (選填)</label>
+                            <input type="file" id="title-image" accept="image/*">
+                            <div id="title-preview" style="margin-top: 10px; max-width: 100px; max-height: 100px; overflow: hidden;"></div>
+                        </div>
                         <button type="submit" class="btn btn-primary">創建頭銜</button>
                     </form>
+                </div>
+                <div class="section">
+                    <h3>現有頭銜列表</h3>
+                    <div id="titles-list" class="item-grid"></div>
                 </div>
                 <div class="section">
                     <h3>現有徽章列表</h3>
@@ -358,7 +432,22 @@
         <div class="modal-content">
             <span class="modal-close">&times;</span>
             <h2 id="modal-username">管理用戶</h2>
-            <p>用戶ID: <span id="modal-user-id"></span></p>
+            
+            <div class="section user-info-section">
+                <h3>用戶資料</h3>
+                <div class="user-info-grid">
+                    <div class="user-avatar">
+                        <img id="modal-user-avatar" src="/images/a01girlmove.gif" alt="用戶頭像">
+                    </div>
+                    <div class="user-details">
+                        <p><strong>用戶ID:</strong> <span id="modal-user-id"></span></p>
+                        <p><strong>帳號:</strong> <span id="modal-user-account"></span></p>
+                        <p><strong>顯示名稱:</strong> <span id="modal-user-display-name"></span></p>
+                        <p><strong>Email:</strong> <span id="modal-user-email"></span></p>
+                        <p><strong>註冊時間:</strong> <span id="modal-user-created-at"></span></p>
+                    </div>
+                </div>
+            </div>
 
             <div class="section">
                 <h3>角色管理</h3>
@@ -478,6 +567,7 @@
                 renderUserTable(allUsers);
                 renderRolesList(allRoles);
                 renderBadgesList(allBadges);
+                renderTitlesList(allTitles);
                 populateGlobalSelectors();
                 setupEventListeners();
                 
@@ -511,15 +601,38 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>
-                        <img src="${user.user_profile_image_url || '/images/a01girlmove.gif'}" alt="${user.username}">
+                        <img src="${user.user_profile_image_url || '/images/a01girlmove.gif'}" alt="${user.username}" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">
                         ${user.username}
                     </td>
-                    <td>${user.email || 'N/A'}</td>
-                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                    <td>${user.display_name || user.username}</td>
+                    <td id="user-roles-${user.user_id}">載入中...</td>
                     <td><button class="btn btn-primary manage-btn" data-user-id="${user.user_id}">管理</button></td>
                 `;
                 userTableBody.appendChild(tr);
+                
+                // 獲取用戶角色
+                fetchUserRoles(user.user_id);
             });
+        }
+        
+        async function fetchUserRoles(userId) {
+            try {
+                const userRoles = await apiFetch(`/api/box/users/${userId}/roles`);
+                const rolesCell = document.getElementById(`user-roles-${userId}`);
+                if (rolesCell) {
+                    if (userRoles.length > 0) {
+                        rolesCell.textContent = userRoles.map(role => role.role_name).join(', ');
+                    } else {
+                        rolesCell.textContent = '無';
+                    }
+                }
+            } catch (error) {
+                console.error(`Failed to load roles for user ${userId}:`, error);
+                const rolesCell = document.getElementById(`user-roles-${userId}`);
+                if (rolesCell) {
+                    rolesCell.textContent = '載入失敗';
+                }
+            }
         }
         
         userSearchInput.addEventListener('input', (e) => {
@@ -532,34 +645,69 @@
 
         async function openUserModal(userId) {
             currentEditingUserId = userId;
-            const user = allUsers.find(u => u.user_id === userId);
             
-            document.getElementById('modal-username').textContent = `管理用戶: ${user.username}`;
-            document.getElementById('modal-user-id').textContent = userId;
+            // Show loading state
+            document.getElementById('modal-username').textContent = '載入中...';
+            document.getElementById('modal-user-id').textContent = '';
+            document.getElementById('modal-user-account').textContent = '';
+            document.getElementById('modal-user-display-name').textContent = '';
+            document.getElementById('modal-user-email').textContent = '';
+            document.getElementById('modal-user-created-at').textContent = '';
+            document.getElementById('modal-user-avatar').src = '/images/a01girlmove.gif';
+            
+            document.getElementById('modal-user-roles').innerHTML = '<div style="text-align: center;">載入中...</div>';
+            document.getElementById('modal-user-badges').innerHTML = '<div style="text-align: center;">載入中...</div>';
+            document.getElementById('modal-user-titles').innerHTML = '<div style="text-align: center;">載入中...</div>';
+            
+            userModal.style.display = 'block';
 
-            // Fetch user-specific data
             try {
+                // 獲取詳細的用戶資料
+                const userDetails = await apiFetch(`/api/box/admin/users/${userId}/details`);
+                
+                // 更新基本資料
+                document.getElementById('modal-username').textContent = `管理用戶: ${userDetails.username}`;
+                document.getElementById('modal-user-id').textContent = userDetails.user_id;
+                document.getElementById('modal-user-account').textContent = userDetails.username;
+                document.getElementById('modal-user-display-name').textContent = userDetails.display_name || userDetails.username;
+                document.getElementById('modal-user-email').textContent = userDetails.email || 'N/A';
+                document.getElementById('modal-user-created-at').textContent = new Date(userDetails.created_at).toLocaleString();
+                
+                // 更新頭像
+                if (userDetails.user_profile_image_url) {
+                    document.getElementById('modal-user-avatar').src = userDetails.user_profile_image_url;
+                }
+
+                // 獲取用戶的角色、徽章和頭銜
                 const [userRoles, userBadges, userTitles] = await Promise.all([
                    apiFetch(`/api/box/users/${userId}/roles`),
                    apiFetch(`/api/box/users/${userId}/badges`),
                    apiFetch(`/api/box/users/${userId}/titles`)
                 ]);
 
-                // For badges, we need the full badge details including images
+                // 為徽章和頭銜添加完整資訊
                 const userBadgesWithDetails = userBadges.map(userBadge => {
                     const fullBadge = allBadges.find(b => b.badge_id === userBadge.badge_id) || userBadge;
                     return { ...userBadge, ...fullBadge };
                 });
 
+                const userTitlesWithDetails = userTitles.map(userTitle => {
+                    const fullTitle = allTitles.find(t => t.title_id === userTitle.title_id) || userTitle;
+                    return { ...userTitle, ...fullTitle };
+                });
+
+                // 渲染列表
                 renderItemList('modal-user-roles', userRoles, 'role_id', 'role_name');
                 renderItemList('modal-user-badges', userBadgesWithDetails, 'badge_id', 'badge_name');
-                renderItemList('modal-user-titles', userTitles, 'title_id', 'title_name');
+                renderItemList('modal-user-titles', userTitlesWithDetails, 'title_id', 'title_name');
                 
             } catch (error) {
                 console.error(`Failed to load data for user ${userId}`, error);
+                document.getElementById('modal-username').textContent = '載入失敗';
+                document.getElementById('modal-user-roles').innerHTML = '<div style="color: red;">載入失敗</div>';
+                document.getElementById('modal-user-badges').innerHTML = '<div style="color: red;">載入失敗</div>';
+                document.getElementById('modal-user-titles').innerHTML = '<div style="color: red;">載入失敗</div>';
             }
-            
-            userModal.style.display = 'block';
         }
 
         function renderItemList(containerId, items, idKey, nameKey) {
@@ -577,6 +725,28 @@
                     tag.className = 'item-tag';
                     tag.innerHTML = `
                         <img src="${item.badge_image_url || '/images/a01girlmove.gif'}" alt="${item[nameKey]}">
+                        <span>${item[nameKey]}</span>
+                        <button class="remove-btn" data-item-id="${item[idKey]}" data-type="${containerId.split('-')[2]}">&times;</button>
+                    `;
+                    container.appendChild(tag);
+                });
+                return;
+            }
+            
+            // Special handling for titles
+            if (containerId === 'modal-user-titles') {
+                items.forEach(item => {
+                    const tag = document.createElement('div');
+                    tag.className = 'item-tag';
+                    
+                    // Add image if available
+                    let imageHtml = '';
+                    if (item.title_image_url) {
+                        imageHtml = `<img src="${item.title_image_url}" alt="${item[nameKey]}" style="width: 50px; height: 50px; object-fit: contain; margin-bottom: 5px; border-radius: 50%;">`;
+                    }
+                    
+                    tag.innerHTML = `
+                        ${imageHtml}
                         <span>${item[nameKey]}</span>
                         <button class="remove-btn" data-item-id="${item[idKey]}" data-type="${containerId.split('-')[2]}">&times;</button>
                     `;
@@ -618,6 +788,24 @@
             // Badge image preview
             document.getElementById('badge-image').addEventListener('change', function(e) {
                 const previewContainer = document.getElementById('badge-preview');
+                previewContainer.innerHTML = '';
+                
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.maxWidth = '100%';
+                        img.style.maxHeight = '100px';
+                        previewContainer.appendChild(img);
+                    }
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+            
+            // Title image preview
+            document.getElementById('title-image').addEventListener('change', function(e) {
+                const previewContainer = document.getElementById('title-preview');
                 previewContainer.innerHTML = '';
                 
                 if (this.files && this.files[0]) {
@@ -688,15 +876,50 @@
                 e.preventDefault();
                 const name = document.getElementById('title-name').value;
                 const description = document.getElementById('title-description').value;
-                await apiFetch('/api/box/admin/titles', {
-                    method: 'POST',
-                    body: { titleName: name, titleDescription: description }
-                });
-                alert('頭銜已創建！');
-                e.target.reset();
-                // Refresh global list
-                allTitles = await apiFetch('/api/box/admin/titles');
-                populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+                const imageFile = document.getElementById('title-image').files[0];
+                
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('titleName', name);
+                formData.append('titleDescription', description);
+                
+                // Only append image if one was selected
+                if (imageFile) {
+                    formData.append('titleImage', imageFile);
+                }
+                
+                try {
+                    loadingOverlay.style.display = 'flex';
+                    
+                    // Use fetch directly instead of apiFetch for FormData
+                    const response = await fetch('/api/box/admin/titles/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+                        throw new Error(errorData.error || `HTTP Error: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    alert('頭銜已創建！');
+                    e.target.reset();
+                    document.getElementById('title-preview').innerHTML = '';
+                    
+                    // Refresh global list
+                    allTitles = await apiFetch('/api/box/admin/titles');
+                    renderTitlesList(allTitles);
+                    populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+                } catch (error) {
+                    alert(`創建頭銜失敗: ${error.message}`);
+                    console.error('Title creation error:', error);
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
             });
             
             // Forms for assigning items to users
@@ -864,6 +1087,29 @@
                     <div class="badge-description">${badge.badge_description || ''}</div>
                 `;
                 badgesList.appendChild(badgeItem);
+            });
+        }
+        
+        function renderTitlesList(titles) {
+            const titlesList = document.getElementById('titles-list');
+            titlesList.innerHTML = '';
+            
+            titles.forEach(title => {
+                const titleItem = document.createElement('div');
+                titleItem.className = 'title-item';
+                
+                // Add image if available
+                let imageHtml = '';
+                if (title.title_image_url) {
+                    imageHtml = `<img src="${title.title_image_url}" alt="${title.title_name}" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 10px; border-radius: 50%;">`;
+                }
+                
+                titleItem.innerHTML = `
+                    ${imageHtml}
+                    <div class="title-name">${title.title_name}</div>
+                    <div class="title-description">${title.title_description || ''}</div>
+                `;
+                titlesList.appendChild(titleItem);
             });
         }
         
