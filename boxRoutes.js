@@ -1583,5 +1583,239 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // --- 角色、徽章和成就相關 API ---
+    
+    // 獲取用戶角色
+    router.get('/users/me/roles', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.user_id;
+        try {
+            const query = `
+                SELECT r.role_id, r.role_name, r.role_description, ura.assigned_at
+                FROM user_roles r
+                JOIN user_role_assignments ura ON r.role_id = ura.role_id
+                WHERE ura.user_id = $1 AND ura.is_active = true
+                ORDER BY r.role_id ASC
+            `;
+            const result = await pool.query(query, [userId]);
+            res.json(result.rows);
+        } catch (err) {
+            console.error(`[API GET /users/me/roles] User ${userId} Error:`, err);
+            res.status(500).json({ error: '無法獲取用戶角色信息。' });
+        }
+    });
+    
+    // 獲取用戶徽章
+    router.get('/users/me/badges', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.user_id;
+        try {
+            const query = `
+                SELECT b.badge_id, b.badge_name, b.badge_description, b.badge_image_url,
+                       b.badge_category, ub.assigned_at, ub.is_displayed
+                FROM badges b
+                JOIN user_badges ub ON b.badge_id = ub.badge_id
+                WHERE ub.user_id = $1
+                ORDER BY ub.assigned_at DESC
+            `;
+            const result = await pool.query(query, [userId]);
+            res.json(result.rows);
+        } catch (err) {
+            console.error(`[API GET /users/me/badges] User ${userId} Error:`, err);
+            res.status(500).json({ error: '無法獲取用戶徽章信息。' });
+        }
+    });
+    
+    // 獲取用戶成就
+    router.get('/users/me/achievements', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.user_id;
+        try {
+            const query = `
+                SELECT a.achievement_id, a.achievement_name, a.achievement_description,
+                       a.achievement_category, a.achievement_icon_url,
+                       ua.achieved_at, ua.progress, ua.is_completed
+                FROM achievements a
+                LEFT JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = $1
+                ORDER BY a.achievement_category, a.achievement_id
+            `;
+            const result = await pool.query(query, [userId]);
+            res.json(result.rows);
+        } catch (err) {
+            console.error(`[API GET /users/me/achievements] User ${userId} Error:`, err);
+            res.status(500).json({ error: '無法獲取用戶成就信息。' });
+        }
+    });
+    
+    // 獲取用戶頭銜
+    router.get('/users/me/titles', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.user_id;
+        try {
+            const query = `
+                SELECT t.title_id, t.title_name, t.title_description, t.title_image_url,
+                       ut.assigned_at, ut.is_current
+                FROM titles t
+                JOIN user_titles ut ON t.title_id = ut.title_id
+                WHERE ut.user_id = $1
+                ORDER BY ut.is_current DESC, ut.assigned_at DESC
+            `;
+            const result = await pool.query(query, [userId]);
+            res.json(result.rows);
+        } catch (err) {
+            console.error(`[API GET /users/me/titles] User ${userId} Error:`, err);
+            res.status(500).json({ error: '無法獲取用戶頭銜信息。' });
+        }
+    });
+    
+    // 設置當前頭銜
+    router.put('/users/me/current-title', authenticateBoxUser, async (req, res) => {
+        const userId = req.boxUser.user_id;
+        const { titleId } = req.body;
+        
+        if (!titleId) {
+            return res.status(400).json({ error: '請提供頭銜ID。' });
+        }
+        
+        try {
+            // 開始事務
+            await pool.query('BEGIN');
+            
+            // 檢查用戶是否擁有此頭銜
+            const checkQuery = 'SELECT 1 FROM user_titles WHERE user_id = $1 AND title_id = $2';
+            const checkResult = await pool.query(checkQuery, [userId, titleId]);
+            
+            if (checkResult.rows.length === 0) {
+                await pool.query('ROLLBACK');
+                return res.status(403).json({ error: '您沒有權限使用此頭銜。' });
+            }
+            
+            // 清除當前頭銜
+            await pool.query(
+                'UPDATE user_titles SET is_current = false WHERE user_id = $1',
+                [userId]
+            );
+            
+            // 設置新的當前頭銜
+            await pool.query(
+                'UPDATE user_titles SET is_current = true WHERE user_id = $1 AND title_id = $2',
+                [userId, titleId]
+            );
+            
+            // 提交事務
+            await pool.query('COMMIT');
+            
+            res.json({ success: true, message: '頭銜已更新。' });
+        } catch (err) {
+            await pool.query('ROLLBACK');
+            console.error(`[API PUT /users/me/current-title] User ${userId} Error:`, err);
+            res.status(500).json({ error: '無法更新頭銜。' });
+        }
+    });
+    
+    // 為管理員提供的API
+    
+    // 獲取所有角色
+    router.get('/admin/roles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM user_roles ORDER BY role_id');
+            res.json(result.rows);
+        } catch (err) {
+            console.error('[API GET /admin/roles] Error:', err);
+            res.status(500).json({ error: '無法獲取角色列表。' });
+        }
+    });
+    
+    // 獲取所有徽章
+    router.get('/admin/badges', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM badges ORDER BY badge_id');
+            res.json(result.rows);
+        } catch (err) {
+            console.error('[API GET /admin/badges] Error:', err);
+            res.status(500).json({ error: '無法獲取徽章列表。' });
+        }
+    });
+    
+    // 創建新徽章
+    router.post('/admin/badges', isAdminAuthenticated, async (req, res) => {
+        const { badgeName, badgeDescription, badgeImageUrl, badgeCategory } = req.body;
+        
+        if (!badgeName) {
+            return res.status(400).json({ error: '徽章名稱為必填項。' });
+        }
+        
+        try {
+            const query = `
+                INSERT INTO badges (badge_name, badge_description, badge_image_url, badge_category)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                badgeName, 
+                badgeDescription || null, 
+                badgeImageUrl || null,
+                badgeCategory || null
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '徽章創建成功。',
+                badge: result.rows[0]
+            });
+        } catch (err) {
+            console.error('[API POST /admin/badges] Error:', err);
+            res.status(500).json({ error: '創建徽章失敗。' });
+        }
+    });
+
+    // 授予徽章給用戶
+    router.post('/admin/users/:userId/badges', isAdminAuthenticated, async (req, res) => {
+        const targetUserId = req.params.userId;
+        const { badgeId } = req.body;
+        const assignedBy = req.boxUser.user_id;
+        
+        if (!badgeId) {
+            return res.status(400).json({ error: '徽章ID為必填項。' });
+        }
+        
+        try {
+            // 檢查用戶是否存在
+            const userCheck = await pool.query('SELECT 1 FROM box_users WHERE user_id = $1', [targetUserId]);
+            if (userCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定用戶。' });
+            }
+            
+            // 檢查徽章是否存在
+            const badgeCheck = await pool.query('SELECT 1 FROM badges WHERE badge_id = $1', [badgeId]);
+            if (badgeCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定徽章。' });
+            }
+            
+            // 檢查用戶是否已擁有該徽章
+            const existingBadge = await pool.query(
+                'SELECT 1 FROM user_badges WHERE user_id = $1 AND badge_id = $2',
+                [targetUserId, badgeId]
+            );
+            
+            if (existingBadge.rows.length > 0) {
+                return res.status(409).json({ error: '該用戶已擁有此徽章。' });
+            }
+            
+            // 授予徽章
+            const query = `
+                INSERT INTO user_badges (user_id, badge_id, assigned_by)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [targetUserId, badgeId, assignedBy]);
+            
+            res.status(201).json({
+                success: true,
+                message: '徽章授予成功。',
+                userBadge: result.rows[0]
+            });
+        } catch (err) {
+            console.error(`[API POST /admin/users/${targetUserId}/badges] Error:`, err);
+            res.status(500).json({ error: '授予徽章失敗。' });
+        }
+    });
+
     return router;
 };

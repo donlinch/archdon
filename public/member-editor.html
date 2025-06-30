@@ -66,6 +66,38 @@
             font-weight: 600;
             font-size: 1.2em;
         }
+        
+        /* 新增用戶頭銜和角色樣式 */
+        .page-header .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .page-header .user-title-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        
+        .page-header .user-title {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: var(--primary-color);
+            background-color: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .page-header .user-role {
+            font-size: 0.8em;
+            font-weight: normal;
+            color: white;
+            background-color: rgba(0,0,0,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
 
         .page-header .header-actions a,
         .page-header .header-actions button {
@@ -462,6 +494,258 @@
             padding-bottom: 70px; /* 為底部導航留出空間 */
          }
 
+        /* 徽章與成就頁籤樣式 */
+        .roles-section, .badges-section, .titles-section, .achievements-section {
+            margin-bottom: 2rem;
+        }
+
+        .empty-placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 1rem 0;
+        }
+
+        /* 角色樣式 */
+        .roles-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .role-item {
+            background-color: #f8f9fa;
+            border-left: 3px solid var(--primary-color);
+            border-radius: var(--border-radius-base);
+            padding: 10px 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .role-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 5px 0;
+        }
+
+        .role-description {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        /* 徽章樣式 */
+        .badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .badge-item {
+            background-color: #fff;
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            padding: 15px;
+            width: calc(50% - 15px);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .badge-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+
+        .badge-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 2px solid var(--primary-color);
+        }
+
+        .badge-details {
+            flex: 1;
+        }
+
+        .badge-details h4 {
+            margin: 0 0 5px 0;
+            color: var(--text-primary);
+        }
+
+        .badge-details p {
+            margin: 0 0 3px 0;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+        }
+
+        .badge-date {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        /* 頭銜樣式 */
+        .current-title-container {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: var(--border-radius-base);
+            margin: 15px 0;
+            border-left: 4px solid #ffb74d;
+        }
+
+        .current-title-container h4 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .current-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .current-title .placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        .titles-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .title-item {
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius-base);
+            padding: 10px 15px;
+            width: calc(50% - 10px);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .title-item.current {
+            border-color: var(--primary-color);
+            background-color: rgba(255, 152, 0, 0.05);
+        }
+
+        .title-name {
+            font-weight: 600;
+            margin: 0 0 5px 0;
+        }
+
+        .title-description {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin: 0 0 10px 0;
+        }
+
+        .title-date {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .title-select-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 3px 8px;
+            font-size: 0.8em;
+            border-radius: var(--border-radius-base);
+            cursor: pointer;
+        }
+
+        .title-item.current .title-select-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 成就樣式 */
+        .achievements-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .achievement-item {
+            background-color: #fff;
+            border-radius: var(--border-radius-base);
+            padding: 15px;
+            width: calc(50% - 15px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .achievement-item.locked {
+            opacity: 0.7;
+        }
+
+        .achievement-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f1f1;
+            color: #999;
+            font-size: 1.2em;
+        }
+
+        .achievement-item.completed .achievement-icon {
+            background-color: #dff5ea;
+            color: #2ecc71;
+        }
+
+        .achievement-details {
+            flex: 1;
+        }
+
+        .achievement-name {
+            font-weight: 600;
+            margin: 0 0 5px 0;
+        }
+
+        .achievement-description {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin: 0 0 8px 0;
+        }
+
+        .achievement-progress {
+            height: 6px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .achievement-progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 3px;
+        }
+
+        .achievement-status {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
 
     </style>
 </head>
@@ -469,7 +753,13 @@
     <header class="page-header">
         <div class="user-info">
             <img id="currentUserAvatar" src="/images/a01girlmove.gif" alt="User Avatar">
-            <span id="currentUsername">用戶</span>
+            <div class="user-details">
+                <span id="currentUsername">用戶</span>
+                <div class="user-title-badge">
+                    <span id="currentUserTitle" class="user-title"></span>
+                    <span id="currentUserRole" class="user-role"></span>
+                </div>
+            </div>
         </div>
         <div class="header-actions">
             <a id="returnToDashboardBtn" href="index.html">返回首頁</a>
@@ -487,6 +777,7 @@
                 <button class="tab-button" data-tab="email">Email</button>
                 <button class="tab-button" data-tab="displayname">顯示名稱</button>
                 <button class="tab-button" data-tab="avatar">頭像</button>
+                <button class="tab-button" data-tab="badges">徽章與成就</button>
             </div>
             
             <!-- 密碼頁籤內容 -->
@@ -558,6 +849,51 @@
                         <p id="changeProfileImageStatus" class="form-status-message"></p>
                      </div>
                 </form>
+            </div>
+            
+            <!-- 徽章與成就頁籤內容 -->
+            <div id="badges-tab" class="tab-content">
+                <!-- 角色顯示區域 -->
+                <div class="roles-section">
+                    <h3>我的角色</h3>
+                    <div id="userRolesContainer" class="roles-container">
+                        <!-- 角色會通過JavaScript動態加載 -->
+                        <p class="empty-placeholder">正在載入角色資訊...</p>
+                    </div>
+                </div>
+                
+                <!-- 徽章顯示區域 -->
+                <div class="badges-section">
+                    <h3>我的徽章</h3>
+                    <div id="userBadgesContainer" class="badges-container">
+                        <!-- 徽章會通過JavaScript動態加載 -->
+                        <p class="empty-placeholder">正在載入徽章資訊...</p>
+                    </div>
+                </div>
+                
+                <!-- 頭銜顯示區域 -->
+                <div class="titles-section">
+                    <h3>我的頭銜</h3>
+                    <div class="current-title-container">
+                        <h4>當前頭銜</h4>
+                        <div id="currentTitleDisplay" class="current-title">
+                            <span class="placeholder">尚未設定頭銜</span>
+                        </div>
+                    </div>
+                    <div id="userTitlesContainer" class="titles-container">
+                        <!-- 頭銜會通過JavaScript動態加載 -->
+                        <p class="empty-placeholder">正在載入頭銜資訊...</p>
+                    </div>
+                </div>
+                
+                <!-- 成就顯示區域 -->
+                <div class="achievements-section">
+                    <h3>我的成就</h3>
+                    <div id="userAchievementsContainer" class="achievements-container">
+                        <!-- 成就會通過JavaScript動態加載 -->
+                        <p class="empty-placeholder">正在載入成就資訊...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -736,6 +1072,7 @@
                     
                     setupEventListeners();
                     setupTabs(); // 初始化頁籤功能
+                    loadUserData(); // 加載用戶角色、徽章、頭銜和成就
                 } catch (error) {
                     if (error.status === 401 || error.status === 403) {
                         alert('登入憑證無效或已過期，請重新登入。');
@@ -753,6 +1090,265 @@
                 changeDisplayNameForm.addEventListener('submit', handleChangeDisplayName);
                 changeProfileImageForm.addEventListener('submit', handleChangeProfileImage);
                 profileImageFile.addEventListener('change', previewImage);
+            }
+
+            // 處理角色、徽章、頭銜和成就的功能
+            async function loadUserRoles() {
+                const container = document.getElementById('userRolesContainer');
+                if (!container) return;
+                
+                try {
+                    const roles = await apiFetch('/api/box/users/me/roles');
+                    
+                    if (roles.length === 0) {
+                        container.innerHTML = '<p class="empty-placeholder">您目前沒有任何角色。</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    roles.forEach(role => {
+                        html += `
+                            <div class="role-item">
+                                <h4 class="role-name">${escapeHtml(role.role_name)}</h4>
+                                <p class="role-description">${escapeHtml(role.role_description || '')}</p>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                } catch (error) {
+                    console.error('無法加載角色信息:', error);
+                    container.innerHTML = '<p class="empty-placeholder">無法加載角色信息。</p>';
+                }
+            }
+            
+            async function loadUserBadges() {
+                const container = document.getElementById('userBadgesContainer');
+                if (!container) return;
+                
+                try {
+                    const badges = await apiFetch('/api/box/users/me/badges');
+                    
+                    if (badges.length === 0) {
+                        container.innerHTML = '<p class="empty-placeholder">您目前沒有獲得任何徽章。</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    badges.forEach(badge => {
+                        const badgeImageUrl = badge.badge_image_url || '/images/default-badge.png';
+                        const assignedDate = new Date(badge.assigned_at).toLocaleDateString('zh-TW');
+                        
+                        html += `
+                            <div class="badge-item" ${badge.is_displayed ? '' : 'style="opacity:0.7;"'}>
+                                <img src="${escapeHtml(badgeImageUrl)}" alt="${escapeHtml(badge.badge_name)}" onerror="this.src='/images/default-badge.png';">
+                                <div class="badge-details">
+                                    <h4>${escapeHtml(badge.badge_name)}</h4>
+                                    <p>${escapeHtml(badge.badge_description || '')}</p>
+                                    <p class="badge-date">獲得於: ${assignedDate}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                } catch (error) {
+                    console.error('無法加載徽章信息:', error);
+                    container.innerHTML = '<p class="empty-placeholder">無法加載徽章信息。</p>';
+                }
+            }
+            
+            async function loadUserTitles() {
+                const container = document.getElementById('userTitlesContainer');
+                const currentTitleDisplay = document.getElementById('currentTitleDisplay');
+                if (!container || !currentTitleDisplay) return;
+                
+                try {
+                    const titles = await apiFetch('/api/box/users/me/titles');
+                    
+                    if (titles.length === 0) {
+                        container.innerHTML = '<p class="empty-placeholder">您目前沒有獲得任何頭銜。</p>';
+                        currentTitleDisplay.innerHTML = '<span class="placeholder">尚未設定頭銜</span>';
+                        return;
+                    }
+                    
+                    let currentTitle = null;
+                    let html = '';
+                    
+                    titles.forEach(title => {
+                        const assignedDate = new Date(title.assigned_at).toLocaleDateString('zh-TW');
+                        
+                        if (title.is_current) {
+                            currentTitle = title;
+                        }
+                        
+                        html += `
+                            <div class="title-item ${title.is_current ? 'current' : ''}">
+                                <h4 class="title-name">${escapeHtml(title.title_name)}</h4>
+                                <p class="title-description">${escapeHtml(title.title_description || '')}</p>
+                                <p class="title-date">獲得於: ${assignedDate}</p>
+                                <button class="title-select-btn" data-title-id="${title.title_id}" ${title.is_current ? 'disabled' : ''}>
+                                    ${title.is_current ? '目前使用中' : '設為當前頭銜'}
+                                </button>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                    
+                    if (currentTitle) {
+                        currentTitleDisplay.textContent = currentTitle.title_name;
+                    } else {
+                        currentTitleDisplay.innerHTML = '<span class="placeholder">尚未設定頭銜</span>';
+                    }
+                    
+                    // 添加頭銜選擇事件監聽
+                    const titleButtons = container.querySelectorAll('.title-select-btn:not([disabled])');
+                    titleButtons.forEach(button => {
+                        button.addEventListener('click', handleTitleSelection);
+                    });
+                } catch (error) {
+                    console.error('無法加載頭銜信息:', error);
+                    container.innerHTML = '<p class="empty-placeholder">無法加載頭銜信息。</p>';
+                    currentTitleDisplay.innerHTML = '<span class="placeholder">無法加載頭銜信息</span>';
+                }
+            }
+            
+            async function handleTitleSelection(event) {
+                const titleId = event.target.dataset.titleId;
+                if (!titleId) return;
+                
+                try {
+                    showLoadingOverlay(true);
+                    await apiFetch('/api/box/users/me/current-title', {
+                        method: 'PUT',
+                        body: { titleId }
+                    });
+                    
+                    // 重新加載頭銜信息以更新界面
+                    await loadUserTitles();
+                } catch (error) {
+                    console.error('更新頭銜失敗:', error);
+                    alert('無法更新頭銜，請稍後再試。');
+                } finally {
+                    showLoadingOverlay(false);
+                }
+            }
+            
+            async function loadUserAchievements() {
+                const container = document.getElementById('userAchievementsContainer');
+                if (!container) return;
+                
+                try {
+                    const achievements = await apiFetch('/api/box/users/me/achievements');
+                    
+                    if (achievements.length === 0) {
+                        container.innerHTML = '<p class="empty-placeholder">目前沒有可獲得的成就。</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    achievements.forEach(achievement => {
+                        const isCompleted = achievement.is_completed;
+                        const progress = achievement.progress || 0;
+                        const iconUrl = achievement.achievement_icon_url || '/images/default-achievement.png';
+                        const achievedDate = achievement.achieved_at ? new Date(achievement.achieved_at).toLocaleDateString('zh-TW') : null;
+                        
+                        let progressHtml = '';
+                        if (!isCompleted) {
+                            // 假設每個成就需要完成100%
+                            const progressPercentage = Math.min(100, Math.max(0, progress));
+                            progressHtml = `
+                                <div class="achievement-progress">
+                                    <div class="achievement-progress-bar" style="width: ${progressPercentage}%;"></div>
+                                </div>
+                                <div class="achievement-status">
+                                    <span>進度: ${progress}%</span>
+                                    <span>未完成</span>
+                                </div>
+                            `;
+                        } else {
+                            progressHtml = `
+                                <div class="achievement-status">
+                                    <span>完成日期: ${achievedDate || '未知'}</span>
+                                    <span>已完成</span>
+                                </div>
+                            `;
+                        }
+                        
+                        html += `
+                            <div class="achievement-item ${isCompleted ? 'completed' : 'locked'}">
+                                <div class="achievement-icon">
+                                    <img src="${escapeHtml(iconUrl)}" alt="${escapeHtml(achievement.achievement_name)}" onerror="this.src='/images/default-achievement.png';">
+                                </div>
+                                <div class="achievement-details">
+                                    <h4 class="achievement-name">${escapeHtml(achievement.achievement_name)}</h4>
+                                    <p class="achievement-description">${escapeHtml(achievement.achievement_description || '')}</p>
+                                    ${progressHtml}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = html;
+                } catch (error) {
+                    console.error('無法加載成就信息:', error);
+                    container.innerHTML = '<p class="empty-placeholder">無法加載成就信息。</p>';
+                }
+            }
+
+            // 載入所有用戶相關資訊
+            async function loadUserData() {
+                if (document.getElementById('badges-tab')) {
+                    await Promise.all([
+                        loadUserRoles(),
+                        loadUserBadges(),
+                        loadUserTitles(),
+                        loadUserAchievements()
+                    ]);
+                    
+                    // 更新頭部顯示的頭銜和角色
+                    updateHeaderTitleAndRole();
+                }
+            }
+            
+            // 更新頭部顯示的頭銜和角色
+            async function updateHeaderTitleAndRole() {
+                const currentUserTitle = document.getElementById('currentUserTitle');
+                const currentUserRole = document.getElementById('currentUserRole');
+                
+                if (!currentUserTitle || !currentUserRole) return;
+                
+                try {
+                    // 獲取當前頭銜
+                    const titles = await apiFetch('/api/box/users/me/titles');
+                    const currentTitle = titles.find(title => title.is_current);
+                    
+                    if (currentTitle) {
+                        currentUserTitle.textContent = currentTitle.title_name;
+                        currentUserTitle.style.display = 'inline-block';
+                    } else {
+                        currentUserTitle.style.display = 'none';
+                    }
+                    
+                    // 獲取最高角色
+                    const roles = await apiFetch('/api/box/users/me/roles');
+                    
+                    if (roles.length > 0) {
+                        // 假設角色ID越小，等級越高（系統管理員為1，普通會員為6）
+                        const highestRole = roles.reduce((highest, current) => 
+                            (current.role_id < highest.role_id) ? current : highest, roles[0]);
+                        
+                        currentUserRole.textContent = highestRole.role_name;
+                        currentUserRole.style.display = 'inline-block';
+                    } else {
+                        currentUserRole.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('無法更新頭銜和角色顯示:', error);
+                    currentUserTitle.style.display = 'none';
+                    currentUserRole.style.display = 'none';
+                }
             }
 
             function logout() {
