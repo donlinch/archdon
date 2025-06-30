@@ -454,6 +454,9 @@
                         <p><strong>註冊時間:</strong> <span id="modal-user-created-at"></span></p>
                     </div>
                 </div>
+                <div class="text-end mt-3">
+                    <button id="delete-user-btn" class="btn btn-danger">刪除會員</button>
+                </div>
             </div>
 
             <div class="section">
@@ -1045,6 +1048,39 @@
                              console.error('刪除角色失敗:', error);
                         }
                     }
+                }
+            });
+
+            // 刪除會員按鈕
+            document.getElementById('delete-user-btn').addEventListener('click', async () => {
+                if (!currentEditingUserId) return;
+                
+                const username = document.getElementById('modal-user-account').textContent;
+                if (!confirm(`您確定要刪除會員 "${username}" 嗎？此操作無法復原，會員所有資料將被永久刪除。`)) {
+                    return;
+                }
+                
+                // 二次確認
+                const confirmText = prompt(`請輸入會員帳號 "${username}" 以確認刪除操作：`);
+                if (confirmText !== username) {
+                    alert('會員帳號輸入不正確，已取消刪除操作。');
+                    return;
+                }
+                
+                try {
+                    await apiFetch(`/api/box/admin/users/${currentEditingUserId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    alert('會員已成功刪除。');
+                    userModal.style.display = 'none';
+                    
+                    // 重新載入會員列表
+                    allUsers = await apiFetch('/api/box/admin/users');
+                    renderUserTable(allUsers);
+                } catch (error) {
+                    console.error('刪除會員失敗:', error);
+                    alert(`刪除會員失敗: ${error.message}`);
                 }
             });
         }
