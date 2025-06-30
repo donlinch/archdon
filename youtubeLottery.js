@@ -236,6 +236,44 @@ class YoutubeLottery {
     }));
   }
 
+  // 刪除指定參與者
+  async removeParticipant(channelId) {
+    if (!this.participants.has(channelId)) {
+      throw new Error('找不到指定的參與者');
+    }
+
+    try {
+      // 從參與者列表中移除
+      const removedParticipant = this.participants.get(channelId);
+      this.participants.delete(channelId);
+
+      // 從資料庫中移除最近的參與記錄
+      await this.pool.query(
+        `UPDATE participation_records 
+         SET is_removed = true, 
+             removed_at = NOW(), 
+             removal_reason = '管理員手動移除'
+         WHERE user_channel_id = $1 
+         AND video_id = $2 
+         AND is_removed = false
+         ORDER BY participated_at DESC 
+         LIMIT 1`,
+        [channelId, this.videoId]
+      );
+
+      return {
+        success: true,
+        removedParticipant: {
+          channelId,
+          ...removedParticipant
+        }
+      };
+    } catch (error) {
+      console.error('刪除參與者時出錯:', error);
+      throw new Error(`刪除參與者失敗: ${error.message}`);
+    }
+  }
+
   // 執行抽獎
   async drawWinner(animationMode = 'turntable', duration = 0) {
     if (this.participants.size === 0) {

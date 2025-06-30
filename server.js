@@ -1,4 +1,6 @@
 
+
+
 // server.js
 require('dotenv').config();
 const http = require('http'); // <--- Need http module
@@ -946,6 +948,23 @@ youtubeLotteryRouter.post('/set-video', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
+
+
+  // 刪除指定參與者
+youtubeLotteryRouter.post('/remove-participant', async (req, res) => {
+    try {
+      const { channelId } = req.body;
+      if (!channelId) {
+        return res.status(400).json({ error: '缺少必要的參數 channelId' });
+      }
+      
+      const result = await youtubeLottery.removeParticipant(channelId);
+      res.json(result);
+    } catch (error) {
+      console.error('刪除參與者時出錯:', error);
+      res.status(500).json({ error: error.message });
+    }
+});
   
   // 獲取當前參與者
   youtubeLotteryRouter.get('/participants', async (req, res) => {
