@@ -176,6 +176,70 @@ const authenticateBoxUser = (req, res, next) => {
 // --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
 
+
+ 
+
+
+// GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
+app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                prr.id, prr.user_id, u.username, u.email, 
+                prr.reset_token, prr.token_expires_at, prr.created_at
+            FROM password_reset_requests prr
+            JOIN BOX_Users u ON prr.user_id = u.user_id
+            WHERE prr.status = 'pending'
+            ORDER BY prr.created_at ASC;
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending] Error:', err);
+        res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
+    }
+});
+
+// GET /api/admin/password-reset-requests/pending-count - 獲取待處理請求數量
+app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
+        const count = parseInt(result.rows[0].count, 10);
+        res.json({ count });
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending-count] Error:', err);
+        res.status(500).json({ error: '無法獲取請求數量' });
+    }
+});
+
+
+
+// Example of a protected admin route
+app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
+    res.send(`
+        <h1>Admin Dashboard</h1>
+        <p>Welcome, admin!</p>
+        <p><a href="#" onclick="logout()">Logout</a></p> <!-- 改為 JS 登出 -->
+        <p>Protected content here.</p>
+        <script>
+            async function logout() {
+                const response = await fetch('/api/admin/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/admin-login.html';
+                } else {
+                    alert('登出失敗');
+                }
+            }
+        </script>
+    `);
+});
+
+
+
+
+
+
+
 // --- START OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 const optionalAuthenticateBoxUser = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -202,6 +266,70 @@ const optionalAuthenticateBoxUser = (req, res, next) => {
 };
 // --- END OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
+
+// =================================================================
+// ★★★ 管理後台登入/登出 API (Admin Login/Logout API) ★★★
+// =================================================================
+// 說明：這些是專門處理管理員登入和登出請求的 API 端點。
+//       前端的 admin-login.html 會向 /api/admin/login 發送 POST 請求。
+//       成功後，伺服器會設定 session 並回傳 JSON。
+// =================================================================
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    const adminUsername = process.env.ADMIN_LOGIN;
+    const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
+
+    if (!adminUsername || !adminPassword) {
+        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD 環境變數未設定。');
+        return res.status(500).json({ success: false, error: '伺服器認證配置錯誤。' });
+    }
+
+    if (username === adminUsername && password === adminPassword) {
+        if (!req.session) {
+            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！');
+            return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
+        }
+        req.session.isAdmin = true;
+        const returnTo = req.session.returnTo || '/admin-main.html';
+        delete req.session.returnTo;
+        
+        // 保存 session 然後再發送回應
+        req.session.save(err => {
+            if (err) {
+                console.error("Session 保存失敗:", err);
+                return res.status(500).json({ success: false, error: 'Session 保存失敗，無法登入。' });
+            }
+            console.log(`[Login Success] Session saved. Responding with JSON. Session ID: ${req.sessionID}`);
+            res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
+        });
+    } else {
+        console.warn(`[Admin Login] 使用者 '${username}' 登入失敗：帳號或密碼錯誤。`);
+        res.status(401).json({ success: false, error: '帳號或密碼錯誤。' });
+    }
+});
+
+// Admin Logout Route
+app.post('/api/admin/logout', (req, res) => {
+    if (req.session) {
+        req.session.destroy(err => {
+            if (err) {
+                console.error('Session 銷毀失敗:', err);
+                return res.status(500).json({ success: false, error: '登出失敗。' });
+            }
+            // 使用你的 session cookie 名稱，你的設定是 'myadminsession.sid'
+            res.clearCookie('myadminsession.sid'); 
+            console.log("[Admin Logout] Session 已成功銷毀。");
+            res.json({ success: true, message: '已成功登出。' });
+        });
+    } else {
+        console.log("[Admin Logout] 沒有活動的 session，無需銷毀。");
+        res.json({ success: true, message: '已登出 (無活動 session)。' });
+    }
+});
+
+// =================================================================
+// ★★★ END OF Admin Login/Logout API ★★★
+// =================================================================
 
 
 // --- Multer Configuration for Product Images (used by adminRouter) ---
@@ -1652,163 +1780,113 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
+
 // --- ★★★ WebSocket 連線處理 (Simple Walk) ★★★ ---
-wss.on('connection', async (ws, req) => {
-    try {
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      const clientType = url.searchParams.get('clientType');
-      const roomId = url.searchParams.get('roomId');
-      const playerName = url.searchParams.get('playerName');
-      const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
-  
-      // YouTube 抽獎系統已改用 HTTP 接口，不再使用 WebSocket
-      if (isYoutubeLottery) {
-        console.log(`[WS] 拒絕過時的 YouTube Lottery WebSocket 連線，來源 IP: ${req.socket.remoteAddress}`);
-        ws.send(JSON.stringify({
-          type: "error",
-          message: "YouTube抽獎系統已更新，請重新整理頁面。"
-        }));
-        ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
+wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
+    // 解析URL參數
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const clientType = url.searchParams.get('clientType');
+    const roomId = url.searchParams.get('roomId');
+    const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
+
+    console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
+
+    // --- 基本驗證 ---
+    if (!roomId || !clientType || !playerName) {
+        console.warn(`[WS] Connection rejected: Missing roomId, clientType, or playerName.`);
+        ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
         return;
-      }
-  
-      // --- Simple Walk 邏輯 ---
-      if (!clientType || !roomId) {
-        console.warn(`[WS] 無效的 Simple Walk 連線請求：缺少 clientType 或 roomId。關閉連線。`);
-        ws.close(1008, '無效的請求：缺少 clientType 或 roomId');
-        return;
-      }
-  
-      ws.id = `${roomId}-${clientType}-${Date.now()}`;
-      console.log(`[WS] Simple Walk 客戶端已連線: ${ws.id}`);
-  
-      // 將客戶端加入對應的房間
-      if (!rooms[roomId]) {
-        rooms[roomId] = {
-          controller: null,
-          players: new Map(),
-          gameState: 'waiting',
-          gameMap: null
-        };
-      }
-      const room = rooms[roomId];
-  
-      if (clientType === 'controller') {
-        if (room.controller) {
-          console.warn(`[WS] 房間 ${roomId} 的控制器已存在。關閉新的控制器連線。`);
-          ws.close(1013, '控制器已存在');
-          return;
-        }
-        room.controller = ws;
-        ws.send(JSON.stringify({
-          type: 'connection_ack',
-          message: '控制器已成功連線'
-        }));
-      } else if (clientType === 'player') {
-        if (!playerName) {
-          ws.close(1008, '玩家名稱未提供');
-          return;
-        }
-        const playerId = `player-${Date.now()}`;
-        ws.playerId = playerId;
-        room.players.set(playerId, {
-          ws: ws,
-          name: playerName,
-          position: null
-        });
-  
-        // 歡迎新玩家
-        ws.send(JSON.stringify({
-          type: 'welcome',
-          playerId: playerId,
-          message: `歡迎你, ${playerName}!`
-        }));
-  
-        // 通知控制器有新玩家加入
-        if (room.controller && room.controller.readyState === WebSocket.OPEN) {
-          room.controller.send(JSON.stringify({
-            type: 'player_joined',
-            playerId: playerId,
-            playerName: playerName
-          }));
-        }
-      } else {
-        ws.close(1008, '未知的客戶端類型');
-        return;
-      }
-  
-      // --- WebSocket 訊息處理 ---
-      ws.on('message', (message) => {
-        try {
-          const data = JSON.parse(message);
-          // 轉發來自控制器的訊息給所有玩家
-          if (clientType === 'controller' && room.players.size > 0) {
-            room.players.forEach(player => {
-              if (player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify(data));
-              }
-            });
-          }
-          // 轉發來自玩家的訊息給控制器
-          else if (clientType === 'player' && room.controller && room.controller.readyState === WebSocket.OPEN) {
-            // 附加玩家資訊
-            const messageWithPlayerInfo = {
-              ...data,
-              playerId: ws.playerId,
-              playerName: playerName
-            };
-            room.controller.send(JSON.stringify(messageWithPlayerInfo));
-          }
-        } catch (e) {
-          console.error(`[WS] 處理訊息時出錯: ${e.message}`);
-        }
-      });
-  
-      // --- WebSocket 關閉處理 ---
-      ws.on('close', () => {
-        console.log(`[WS] Simple Walk 客戶端已離線: ${ws.id}`);
-        if (clientType === 'controller') {
-          if (room.controller === ws) {
-            room.controller = null;
-            // 通知所有玩家控制器已離線
-            room.players.forEach(player => {
-              if (player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify({
-                  type: 'controller_left'
-                }));
-              }
-            });
-            // 如果沒有玩家，可以考慮清除房間
-            if (room.players.size === 0) {
-              delete rooms[roomId];
-              console.log(`[WS] 房間 ${roomId} 已清空並移除。`);
-            }
-          }
-        } else if (clientType === 'player' && ws.playerId) {
-          room.players.delete(ws.playerId);
-          // 通知控制器玩家已離開
-          if (room.controller && room.controller.readyState === WebSocket.OPEN) {
-            room.controller.send(JSON.stringify({
-              type: 'player_left',
-              playerId: ws.playerId
-            }));
-          }
-          // 如果這是最後一個連線 (沒有控制器也沒有玩家)，清除房間
-          if (!room.controller && room.players.size === 0) {
-              delete rooms[roomId];
-              console.log(`[WS] 房間 ${roomId} 已清空並移除。`);
-          }
-        }
-      });
-  
-    } catch (error) {
-      console.error(`[WS] 處理連線時發生未預期的錯誤:`, error);
-      // 確保即使在初始設定出錯時也能安全關閉連線
-      if (ws && ws.readyState !== WebSocket.CLOSED) {
-        ws.close(1011, '伺服器內部錯誤');
-      }
     }
-  });
+
+    // --- YouTube 抽獎系統已改用 HTTP 接口，不再使用 WebSocket (保留您的新邏輯) ---
+    if (url.searchParams.get('type') === 'youtube_lottery') {
+      console.log(`[WS] 拒絕過時的 YouTube Lottery WebSocket 連線，來源 IP: ${req.socket.remoteAddress}`);
+      ws.send(JSON.stringify({ type: "error", message: "YouTube抽獎系統已更新，請重新整理頁面。" }));
+      ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
+      return;
+    }
+    
+    // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
+    if (clientType === 'controller') {
+        let roomData;
+        let playerId; 
+
+        try {
+            // 1. 使用資料庫查找房間是否存在
+            roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state) { 
+                console.warn(`[WS Simple Walker] Room ${roomId} not found in DB or invalid state. Terminating.`);
+                ws.close(1011, "找不到房間或房間無效");
+                return;
+            }
+            console.log(`[WS Simple Walker] Room ${roomId} found in DB.`);
+
+            // 2. 生成唯一的玩家 ID
+            playerId = uuidv4();
+
+            // 3. 嘗試將玩家加入資料庫中的房間狀態
+            const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
+
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                throw new Error("加入房間到資料庫失敗");
+            }
+
+            // 4. 玩家成功加入 - 更新 WebSocket 連接狀態
+            ws.playerId = playerId;
+            ws.roomId = roomId;
+            ws.clientType = clientType;
+            console.log(`[WS Simple Walker] Player ${playerName} (ID: ${playerId}) added to room ${roomId} in DB.`);
+
+            // 5. 將此 WebSocket 連接加入 simpleWalkerConnections 管理
+            if (!simpleWalkerConnections.has(roomId)) {
+                simpleWalkerConnections.set(roomId, new Set());
+            }
+            simpleWalkerConnections.get(roomId).add(ws);
+            console.log(`[WS Simple Walker] Connection added. Room ${roomId} active connections: ${simpleWalkerConnections.get(roomId).size}`);
+
+            // 6. 發送玩家信息給當前客戶端
+            ws.send(JSON.stringify({ type: 'playerInfo', playerId: playerId }));
+            console.log(`[WS Simple Walker] Sent playerInfo to ${playerName}`);
+
+            // 7. 發送最新的遊戲狀態給當前客戶端
+            const currentGameState = updatedRoomResult.game_state;
+            const currentRoomName = updatedRoomResult.room_name;
+            ws.send(JSON.stringify({ type: 'gameStateUpdate', roomName: currentRoomName, gameState: currentGameState }));
+            console.log(`[WS Simple Walker] Sent initial gameStateUpdate to ${playerName}`);
+
+            // 8. 廣播最新的遊戲狀態給房間內所有其他客戶端
+            broadcastToSimpleWalkerRoom(roomId, {
+                type: 'gameStateUpdate',
+                roomName: currentRoomName,
+                gameState: currentGameState
+            }, ws); 
+            console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
+
+        } catch (error) {
+            console.error(`[WS Simple Walker] Error during connection setup for player ${playerName} in room ${roomId}:`, error.stack || error);
+            let closeReason = "加入房間失敗";
+            if (error.message.includes('房間已滿')) {
+                closeReason = "房間已滿";
+            }
+            try {
+                ws.send(JSON.stringify({ type: 'error', message: closeReason }));
+            } catch (sendErr) { /* 如果發送也失敗，忽略 */}
+            ws.close(4000, closeReason);
+            return; 
+        }
+
+        // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
+        ws.on('message', (message) => handleSimpleWalkerMessage(ws, message));
+        ws.on('close', () => handleSimpleWalkerClose(ws));
+        ws.on('error', (error) => handleSimpleWalkerError(ws, error));
+
+    } else {
+        console.warn(`[WS] 收到未知的 clientType: '${clientType}'，關閉連線。`);
+        ws.close(1008, "未知的客戶端類型");
+    }
+});
+
+
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息
  * @param {WebSocket} ws WebSocket 連接對象
@@ -5615,6 +5693,98 @@ app.get('/api/scores/songs', async (req, res) => {
         res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
     }
 });
+
+
+ 
+
+app.get('/api/scores/proxy', (req, res) => {
+    const pdfUrl = req.query.url;
+
+    if (!pdfUrl || typeof pdfUrl !== 'string') {
+        console.warn('代理請求被拒：缺少或無效的 URL 參數。');
+        return res.status(400).send('缺少或無效的 PDF URL。');
+    }
+
+    let decodedUrl;
+    try {
+        decodedUrl = decodeURIComponent(pdfUrl);
+        const allowedDomains = ['raw.githubusercontent.com']; // Add other allowed domains if needed
+        const urlObject = new URL(decodedUrl);
+
+        if (!allowedDomains.includes(urlObject.hostname)) {
+           console.warn(`代理請求被阻止，不允許的網域：${urlObject.hostname} (URL: ${decodedUrl})`);
+           return res.status(403).send('不允許從此網域進行代理。');
+        }
+
+    } catch (e) {
+        console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
+        return res.status(400).send('無效的 URL 格式或編碼。');
+    }
+
+    console.log(`正在代理 PDF 請求：${decodedUrl}`);
+
+    const pdfRequest = https.get(decodedUrl, (pdfRes) => {
+        if (pdfRes.statusCode >= 300 && pdfRes.statusCode < 400 && pdfRes.headers.location) {
+            console.log(`正在跟隨從 ${decodedUrl} 到 ${pdfRes.headers.location} 的重定向`);
+            try {
+                const redirectUrlObject = new URL(pdfRes.headers.location, decodedUrl);
+                const allowedDomains = ['raw.githubusercontent.com'];
+                 if (!allowedDomains.includes(redirectUrlObject.hostname)) {
+                   console.warn(`代理重定向被阻止，不允許的網域：${redirectUrlObject.hostname}`);
+                   return res.status(403).send('重定向目標網域不被允許。');
+                }
+                const redirectedRequest = https.get(redirectUrlObject.href, (redirectedRes) => {
+                     if (redirectedRes.statusCode !== 200) {
+                        console.error(`獲取重定向 PDF 時出錯：狀態碼：${redirectedRes.statusCode}，URL：${redirectUrlObject.href}`);
+                        const statusCodeToSend = redirectedRes.statusCode >= 400 ? redirectedRes.statusCode : 502;
+                        return res.status(statusCodeToSend).send(`無法獲取重定向的 PDF：${redirectedRes.statusMessage}`);
+                    }
+                     res.setHeader('Content-Type', redirectedRes.headers['content-type'] || 'application/pdf');
+                     redirectedRes.pipe(res);
+                }).on('error', (err) => {
+                     console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時發生錯誤：`, err.message);
+                     if (!res.headersSent) res.status(500).send('透過代理獲取重定向 PDF 時出錯。');
+                });
+                redirectedRequest.setTimeout(15000, () => {
+                    console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時超時`);
+                    redirectedRequest.destroy();
+                    if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
+                });
+                return;
+             } catch (e) {
+                console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
+                return res.status(500).send('從來源收到無效的重定向位置。');
+             }
+        }
+
+        if (pdfRes.statusCode !== 200) {
+            console.error(`獲取 PDF 時出錯：狀態碼：${pdfRes.statusCode}，URL：${decodedUrl}`);
+            const statusCodeToSend = pdfRes.statusCode >= 400 ? pdfRes.statusCode : 502;
+             return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
+        }
+
+        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
+        res.setHeader('Content-Type', 'application/pdf'); // Force PDF type
+        pdfRes.pipe(res);
+
+    }).on('error', (err) => {
+        console.error(`向 ${decodedUrl} 發起 PDF 請求期間發生網路或連線錯誤：`, err.message);
+         if (!res.headersSent) {
+             res.status(502).send('錯誤的網關：連接 PDF 來源時出錯。');
+         } else {
+             res.end();
+         }
+    });
+     pdfRequest.setTimeout(15000, () => { // 15 seconds timeout
+         console.error(`向 ${decodedUrl} 發起初始 PDF 請求時超時`);
+         pdfRequest.destroy();
+         if (!res.headersSent) {
+             res.status(504).send('網關超時：連接 PDF 來源時超時。');
+         }
+     });
+});
+
+
 
 // 輔助函數：清理 Banner 排序欄位
 function sanitizeSortField(field) {
