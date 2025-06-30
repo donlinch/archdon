@@ -107,8 +107,8 @@ const chatResponder = new ChatResponder();
 
 
 // --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
-const isAdminAuthenticated = (req, res, next) => { // ★★★ 您新的認證中介軟體
-    if (req.session && req.session.isAdmin) {      // (之前叫 isAdmin，建議改名)
+const isAdminAuthenticated = (req, res, next) => {  
+    if (req.session && req.session.isAdmin) {       
         return next();
     }
     if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {

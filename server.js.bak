@@ -1,6 +1,6 @@
-
 // server.js
 require('dotenv').config();
+const https = require('https'); // Keep this if you were explicitly using it, but usually not needed directly with Express + ws
 const http = require('http'); // <--- Need http module
 const express = require('express');
 const path = require('path');
@@ -37,7 +37,7 @@ if (process.env.NODE_ENV === 'production') {
 
 
 
-const youtubeLotteryRouter = express.Router();
+
 
  
 
@@ -72,24 +72,6 @@ app.use(session({
         sameSite: 'lax' // 嘗試 'lax'
     }
 }));
-
-
-// 創建 HTTP 服務器
-const server = http.createServer(app);
-
-// 創建 WebSocket 服務器
-const wss = new WebSocket.Server({ server });
-
- // YouTube抽獎系統模組
-const YoutubeLottery = require('./youtubeLottery');
-const UserProfile = require('./userProfile');
-const ChatResponder = require('./chatResponder');
-
-// 初始化抽獎系統
-const youtubeLottery = new YoutubeLottery(pool);
-const userProfile = new UserProfile(pool);
-const chatResponder = new ChatResponder();
-
 
 
  
@@ -176,31 +158,121 @@ const authenticateBoxUser = (req, res, next) => {
 // --- END OF BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
 
 
-// --- START OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
-const optionalAuthenticateBoxUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7); // "Bearer " is 7 chars
-        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
-            // 如果 token 有效，就附加使用者資訊
-            if (!err && decoded && (decoded.user_id || decoded.userId)) {
-                // 為了統一，將 userId 轉換為 user_id
-                if (decoded.userId && !decoded.user_id) {
-                    decoded.user_id = decoded.userId;
-                }
-                req.boxUser = decoded;
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    const adminUsername = process.env.ADMIN_LOGIN;
+    const adminPassword = process.env.ADMIN_LOGIN_PASSWORD;
+
+    if (!adminUsername || !adminPassword) {
+        console.error('ADMIN_LOGIN or ADMIN_LOGIN_PASSWORD 環境變數未設定。');
+        return res.status(500).json({ success: false, error: '伺服器認證配置錯誤。' });
+    }
+
+    if (username === adminUsername && password === adminPassword) {
+        if (!req.session) {
+            console.error('錯誤：在 /api/admin/login 中 req.session 未定義！');
+            return res.status(500).json({ success: false, error: 'Session 初始化錯誤，無法登入。' });
+        }
+        req.session.isAdmin = true;
+        const returnTo = req.session.returnTo || '/admin-main.html'; // ★★★ 登入成功後去 admin-main.html ★★★
+        delete req.session.returnTo;
+        console.log('[Login Success] Session isAdmin set. Attempting to save session. redirectTo:', returnTo); // 新日誌
+
+
+        // 保存 session 然後再發送回應
+        req.session.save(err => {
+            if (err) {
+                console.error("Session 保存失敗:", err);
+                return res.status(500).json({ success: false, error: 'Session 保存失敗，無法登入。' });
             }
-            // 對於選擇性認證，無論 token 是否有效，我們都繼續處理請求
-            // 路由處理器後續需要自行檢查 req.boxUser 是否存在
-            next();
+            console.log(`[Login Success] Session saved. Responding with JSON. Session ID: ${req.sessionID}`); // 新日誌
+            res.json({ success: true, message: '登入成功。', redirectTo: returnTo });
         });
     } else {
-        // 沒有 token，也直接繼續
-        next();
+        console.warn(`[Admin Login] 使用者 '${username}' 登入失敗：帳號或密碼錯誤。`);
+        res.status(401).json({ success: false, error: '帳號或密碼錯誤。' });
     }
-};
-// --- END OF OPTIONAL BOX ORGANIZER AUTHENTICATION MIDDLEWARE ---
+});
+// Admin Logout Route
+app.post('/api/admin/logout', (req, res) => { // ★★★ 建議路徑為 /api/admin/logout 且為 POST
+    if (req.session) { // 先檢查 req.session 是否存在
+        req.session.destroy(err => {
+            if (err) {
+                console.error('Session 銷毀失敗:', err);
+                return res.status(500).json({ success: false, error: '登出失敗。' });
+            }
+            res.clearCookie('connect.sid'); // 假設 'connect.sid' 是您的 session cookie 名稱
+            console.log("[Admin Logout] Session 已成功銷毀。");
+            res.json({ success: true, message: '已成功登出。' });
+        });
+    } else {
+        // 如果沒有 session，也算登出成功
+        console.log("[Admin Logout] 沒有活動的 session，無需銷毀。");
+        res.json({ success: true, message: '已登出 (無活動 session)。' });
+    }
+});
+
+
+// GET /api/admin/password-reset-requests/pending - 獲取待處理的密碼重設請求
+app.get('/api/admin/password-reset-requests/pending', isAdminAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                prr.id, prr.user_id, u.username, u.email, 
+                prr.reset_token, prr.token_expires_at, prr.created_at
+            FROM password_reset_requests prr
+            JOIN BOX_Users u ON prr.user_id = u.user_id
+            WHERE prr.status = 'pending'
+            ORDER BY prr.created_at ASC;
+        `;
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending] Error:', err);
+        res.status(500).json({ error: '無法獲取待處理的密碼重設請求' });
+    }
+});
+
+// GET /api/admin/password-reset-requests/pending-count - 獲取待處理請求數量
+app.get('/api/admin/password-reset-requests/pending-count', isAdminAuthenticated, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT COUNT(*) FROM password_reset_requests WHERE status = 'pending'");
+        const count = parseInt(result.rows[0].count, 10);
+        res.json({ count });
+    } catch (err) {
+        console.error('[API GET /api/admin/password-reset-requests/pending-count] Error:', err);
+        res.status(500).json({ error: '無法獲取請求數量' });
+    }
+});
+
+
+
+// Example of a protected admin route
+app.get('/admin/dashboard', isAdminAuthenticated, (req, res) => { // ★★★ 使用新的中介軟體
+    res.send(`
+        <h1>Admin Dashboard</h1>
+        <p>Welcome, admin!</p>
+        <p><a href="#" onclick="logout()">Logout</a></p> <!-- 改為 JS 登出 -->
+        <p>Protected content here.</p>
+        <script>
+            async function logout() {
+                const response = await fetch('/api/admin/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/admin-login.html';
+                } else {
+                    alert('登出失敗');
+                }
+            }
+        </script>
+    `);
+});
+
+
+
+
+
+
 
 
 
@@ -402,12 +474,7 @@ app.use('/api/box', boxRoutes(dependenciesForBoxRoutes));
 voitRouter.get('/campaigns', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT c.campaign_id, c.title, c.description, c.status, c.creator_id,
-                    COALESCE(u.display_name, u.username) as creator_name
-             FROM voit_Campaigns c
-             LEFT JOIN box_users u ON c.creator_id = u.user_id
-             WHERE c.status = 'active'
-             ORDER BY c.created_at DESC`
+            "SELECT campaign_id, title, description, status FROM voit_Campaigns WHERE status = 'active' ORDER BY created_at DESC"
         );
         res.status(200).json(result.rows);
     } catch (err) {
@@ -449,60 +516,6 @@ voitRouter.get('/campaigns/:campaignId', async (req, res) => {
     } catch (err) {
         console.error(`Error fetching campaign ${campaignId}:`, err.stack || err);
         res.status(500).json({ error: 'Failed to fetch campaign details' });
-    }
-});
-
-// POST /api/voit/campaigns - 新增投票活動
-voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
-    const { title, description, options } = req.body;
-    const userId = req.boxUser.user_id; // 从认证中间件获取用户ID
-
-    if (!title || title.trim() === '') {
-        return res.status(400).json({ error: 'Campaign title is required.' });
-    }
-    if (!options || !Array.isArray(options) || options.length === 0) {
-        return res.status(400).json({ error: 'At least one option is required.' });
-    }
-    for (const opt of options) {
-        if (!opt.name || opt.name.trim() === '') { // 移除了對 image_url 的強制要求
-            return res.status(400).json({ error: 'All options must have a name.' });
-        }
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // 插入投票活動，添加creator_id字段
-        const campaignResult = await client.query(
-            "INSERT INTO voit_Campaigns (title, description, status, creator_id) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
-            [title.trim(), description || null, 'active', userId]
-        );
-        const newCampaign = campaignResult.rows[0];
-        const campaignId = newCampaign.campaign_id;
-
-        // 插入投票選項
-        const insertedOptions = [];
-        for (let i = 0; i < options.length; i++) {
-            const opt = options[i];
-            const optionResult = await client.query(
-                "INSERT INTO voit_Options (campaign_id, name, image_url, display_order) VALUES ($1, $2, $3, $4) RETURNING option_id, name, image_url, display_order",
-                [campaignId, opt.name.trim(), opt.image_url ? opt.image_url.trim() : null, i] // 如果 image_url 為空則存儲 NULL
-            );
-            insertedOptions.push(optionResult.rows[0]);
-        }
-        
-        await client.query('COMMIT');
-        
-        newCampaign.options = insertedOptions; // 將選項附加到返回的活動對象中
-        res.status(201).json(newCampaign);
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error creating new voit campaign:', err.stack || err);
-        res.status(500).json({ error: 'Failed to create campaign' });
-    } finally {
-        client.release();
     }
 });
 
@@ -558,39 +571,24 @@ voitRouter.get('/campaigns/:campaignId/results', async (req, res) => {
 });
 
 // 新增 API 端點：驗證活動編輯密碼
-voitRouter.post('/campaigns/:campaignId/verify-password', optionalAuthenticateBoxUser, async (req, res) => {
+voitRouter.post('/campaigns/:campaignId/verify-password', async (req, res) => {
     const { campaignId } = req.params;
     const { password } = req.body;
-    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
+
+    if (!password) {
+        return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
+    }
 
     try {
-        const result = await pool.query("SELECT edit_password, creator_id FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
+        const result = await pool.query("SELECT edit_password FROM voit_Campaigns WHERE campaign_id = $1", [campaignId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ verified: false, error: '找不到指定的投票活動。' });
         }
-        
-        const campaign = result.rows[0];
-        const storedPassword = campaign.edit_password;
-        const creatorId = campaign.creator_id;
-        
-        // 检查是否为创建者
-        const isCreator = currentUserId && creatorId && parseInt(currentUserId) === parseInt(creatorId);
-        
-        // 如果是创建者，直接验证通过，无需密码
-        if (isCreator) {
-            return res.json({ verified: true });
-        }
-        
-        // 非创建者需要检查密码
-        if (!password) {
-            return res.status(400).json({ verified: false, error: '請提供編輯密碼。' });
-        }
-        
-        // 管理员密码检查
+        const storedPassword = result.rows[0].edit_password;
+        // 這裡假設密碼是明文存儲的，實際應用中應使用哈希比較
         const masterPassword = process.env.VOIT_MASTER_PASSWORD;
-        const isPasswordCorrect = password === storedPassword || (masterPassword && password === masterPassword);
-        
-        if (isPasswordCorrect) {
+
+        if (password === storedPassword || (masterPassword && password === masterPassword)) {
             res.json({ verified: true });
         } else {
             res.status(401).json({ verified: false, error: '編輯密碼錯誤，請重試。' });
@@ -602,10 +600,9 @@ voitRouter.post('/campaigns/:campaignId/verify-password', optionalAuthenticateBo
 });
 
 // PUT /api/voit/campaigns/:campaignId - 更新現有投票活動
-voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req, res) => {
+voitRouter.put('/campaigns/:campaignId', async (req, res) => {
     const { campaignId } = req.params;
     const { title, description, options } = req.body; // 編輯時不應更新 edit_password
-    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: '活動標題為必填項。' });
@@ -623,30 +620,16 @@ voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req
     try {
         await client.query('BEGIN');
 
-        // 首先检查活动是否存在以及当前用户是否为创建者
-        const campaignCheckResult = await client.query(
-            "SELECT creator_id FROM voit_Campaigns WHERE campaign_id = $1",
-            [campaignId]
-        );
-        
-        if (campaignCheckResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: '找不到要更新的投票活動。' });
-        }
-        
-        const creatorId = campaignCheckResult.rows[0].creator_id;
-        
-        // 检查当前用户是否为创建者
-        if (!currentUserId || parseInt(currentUserId) !== parseInt(creatorId)) {
-            await client.query('ROLLBACK');
-            return res.status(403).json({ error: '只有活動創建者可以更新此活動。' });
-        }
-
         // 1. 更新 voit_Campaigns 表
         const updatedCampaignResult = await client.query(
             "UPDATE voit_Campaigns SET title = $1, description = $2, updated_at = CURRENT_TIMESTAMP WHERE campaign_id = $3 RETURNING campaign_id, title, description",
             [title.trim(), description || null, campaignId]
         );
+
+        if (updatedCampaignResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: '找不到要更新的投票活動。' });
+        }
 
         // 2. 刪除與該 campaign_id 相關的所有現有選項
         await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [campaignId]); // 同時刪除相關投票記錄
@@ -681,12 +664,14 @@ voitRouter.put('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req
 
 
 // POST /api/voit/campaigns - 新增投票活動
-voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
-    const { title, description, options } = req.body;
-    const userId = req.boxUser.user_id; // 从认证中间件获取用户ID
+voitRouter.post('/campaigns', async (req, res) => {
+    const { title, description, edit_password, options } = req.body;
 
     if (!title || title.trim() === '') {
         return res.status(400).json({ error: 'Campaign title is required.' });
+    }
+    if (!edit_password || edit_password.length < 4 || edit_password.length > 6) {
+        return res.status(400).json({ error: 'Edit password must be 4-6 characters long.' });
     }
     if (!options || !Array.isArray(options) || options.length === 0) {
         return res.status(400).json({ error: 'At least one option is required.' });
@@ -701,10 +686,11 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 插入投票活動，添加creator_id字段
+        // 插入投票活動
+        // 考慮到 edit_password 的安全性，這裡僅為示例，實際應用中應哈希存儲
         const campaignResult = await client.query(
-            "INSERT INTO voit_Campaigns (title, description, status, creator_id) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
-            [title.trim(), description || null, 'active', userId]
+            "INSERT INTO voit_Campaigns (title, description, status, edit_password) VALUES ($1, $2, $3, $4) RETURNING campaign_id, title, description, status, created_at",
+            [title.trim(), description || null, 'active', edit_password] // 示例：直接存儲密碼
         );
         const newCampaign = campaignResult.rows[0];
         const campaignId = newCampaign.campaign_id;
@@ -728,6 +714,10 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Error creating new voit campaign:', err.stack || err);
+        // 檢查是否為唯一約束衝突 (例如 title) - 根據您的資料庫設計
+        // if (err.code === '23505' && err.constraint === 'your_unique_title_constraint_name') {
+        //    return res.status(409).json({ error: 'A campaign with this title already exists.' });
+        // }
         res.status(500).json({ error: 'Failed to create campaign' });
     } finally {
         client.release();
@@ -735,9 +725,8 @@ voitRouter.post('/campaigns', authenticateBoxUser, async (req, res) => {
 });
 
 // DELETE /api/voit/campaigns/:campaignId - 刪除投票活動及其相關數據
-voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (req, res) => {
+voitRouter.delete('/campaigns/:campaignId', async (req, res) => {
     const { campaignId } = req.params;
-    const currentUserId = req.boxUser ? req.boxUser.user_id : null;
 
     // 基本的 ID 驗證 (例如，檢查是否為數字或有效的 UUID 格式，取決於您的 campaign_id 類型)
     // 假設 campaign_id 是數字類型
@@ -747,31 +736,18 @@ voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (
     }
 
     console.log(`[API DELETE /voit/campaigns] 請求刪除活動 ID: ${id}`);
-    
+    // 注意：此處未直接處理密碼驗證，依賴前端在調用此端點前已通過 /verify-password 驗證。
+    // 更安全的做法是在此 DELETE 請求中也包含密碼或一個有時效性的 token。
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // 首先检查活动是否存在以及当前用户是否为创建者
-        const campaignResult = await client.query(
-            "SELECT creator_id FROM voit_Campaigns WHERE campaign_id = $1",
-            [id]
-        );
-        
-        if (campaignResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: '找不到指定的投票活動。' });
-        }
-        
-        const creatorId = campaignResult.rows[0].creator_id;
-        
-        // 检查当前用户是否为创建者
-        if (!currentUserId || parseInt(currentUserId) !== parseInt(creatorId)) {
-            await client.query('ROLLBACK');
-            return res.status(403).json({ error: '只有活動創建者可以刪除此活動。' });
-        }
-
         // 1. 刪除相關的投票記錄 (voit_Votes)
+        // 由於 voit_Votes 中的 option_id 外鍵關聯到 voit_Options, 且 voit_Options 中的 campaign_id 外鍵關聯到 voit_Campaigns,
+        // 並且這些外鍵可能設置了 ON DELETE CASCADE，理論上直接刪除 voit_Campaigns 中的記錄會級聯刪除相關的 voit_Options 和 voit_Votes。
+        // 但為了明確和安全，以及如果沒有設定級聯刪除，我們按順序刪除。
+        // 首先刪除依賴性最強的 voit_Votes。
         const deleteVotesResult = await client.query("DELETE FROM voit_Votes WHERE campaign_id = $1", [id]);
         console.log(`[DB] 從 voit_Votes 刪除了 ${deleteVotesResult.rowCount} 條與活動 ID ${id} 相關的投票記錄。`);
 
@@ -782,6 +758,12 @@ voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (
         // 3. 刪除投票活動本身 (voit_Campaigns)
         const deleteCampaignResult = await client.query("DELETE FROM voit_Campaigns WHERE campaign_id = $1", [id]);
         
+        if (deleteCampaignResult.rowCount === 0) {
+            // 如果活動本身就找不到，可能已經被刪除，或者ID錯誤
+            await client.query('ROLLBACK');
+            console.warn(`[API DELETE /voit/campaigns] 找不到要刪除的活動 ID: ${id}。事務已回滾。`);
+            return res.status(404).json({ error: '找不到要刪除的投票活動。' });
+        }
         console.log(`[DB] 從 voit_Campaigns 成功刪除了活動 ID: ${id}。`);
 
         await client.query('COMMIT');
@@ -803,89 +785,15 @@ voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (
 
 
 
-// YouTube抽獎系統API路由
-app.use('/api/admin/lottery', youtubeLotteryRouter);
-
-
-// 設置監控的直播
-youtubeLotteryRouter.post('/set-video', async (req, res) => {
-    try {
-      const { videoId, keyword, apiRateLimit } = req.body;
-      await youtubeLottery.setTargetVideo(videoId, keyword, apiRateLimit);
-      res.json({ success: true, message: '已設置監控直播' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-  
-  // 獲取當前參與者
-  youtubeLotteryRouter.get('/participants', async (req, res) => {
-    try {
-      const participants = await youtubeLottery.getParticipants();
-      res.json({ participants });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-  
-  // 執行抽獎
-  youtubeLotteryRouter.post('/draw', async (req, res) => {
-    try {
-      const { animationMode, duration } = req.body;
-      const winner = await youtubeLottery.drawWinner(animationMode, duration);
-      res.json({ winner });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-  
-  // 獲取抽獎歷史
-  youtubeLotteryRouter.get('/history', async (req, res) => {
-    try {
-      const history = await youtubeLottery.getLotteryHistory();
-      res.json({ history });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-  
-  // 用戶畫像相關API
-  youtubeLotteryRouter.get('/user-profiles', async (req, res) => {
-    try {
-      const userProfiles = await userProfile.getAllProfiles();
-      res.json({ userProfiles });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // 獲取用戶參與統計
-  youtubeLotteryRouter.get('/stats', async (req, res) => {
-    try {
-      const stats = await userProfile.getParticipationStats();
-      res.json({ stats });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-
-  
-// 向所有WebSocket客戶端廣播消息
-function broadcastToAll(message) {
-  const messageStr = JSON.stringify(message);
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) { // WebSocket.OPEN
-      client.send(messageStr);
-    }
-  });
-}
 
 
 
-  
+
+
+
+
+
  
-   
    
    
 // --- 基本 Express 設定 ---
@@ -963,7 +871,7 @@ app.use(async (req, res, next) => {
                     else if (!refererUrl.hostname.includes(req.hostname)) {
                         sourceType = 'referral';
                         sourceName = refererUrl.hostname;
-        } else {
+                    } else {
                         sourceType = 'internal';
                         sourceName = 'internal';
                     }
@@ -1000,7 +908,7 @@ app.use(async (req, res, next) => {
             `;
             await pool.query(sourceSql, [pagePath, sourceType, sourceName, sourceUrl, isBounce]);
 
-    } catch (err) {
+        } catch (err) {
             console.error('記錄頁面訪問或來源數據時出錯:', err);
             // 但不中斷用戶體驗，繼續處理請求
         }
@@ -1316,7 +1224,7 @@ app.put('/api/admin/nav-links/reorder', isAdminAuthenticated, async (req, res) =
             });
             
         } catch (error) {
-        await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             console.error('[REORDER] 事務回滾:', error);
             throw error;
         } finally {
@@ -1546,9 +1454,10 @@ async function cleanInactiveRooms() {
 setInterval(cleanInactiveRooms, 60 * 60 * 1000);
 
 // --- HTTP 服務器設置 ---
- 
+const server = http.createServer(app);
 
 // --- WebSocket 服務器設置 ---
+const wss = new WebSocket.Server({ server });
 
 
 app.get('/api/admin/products', async (req, res) => {
@@ -1652,81 +1561,114 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
-
 // --- ★★★ 修改 wss.on('connection') ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
-    try {
-        console.log('[WS] Connection handler entered. req.url:', req.url); // New log
+    // 解析URL參數
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const clientType = url.searchParams.get('clientType');
+    const roomId = url.searchParams.get('roomId');
+    const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
 
-        // 解析URL參數
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        const clientType = url.searchParams.get('clientType');
-        const roomId = url.searchParams.get('roomId');
-        const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
-        const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
-        // YouTube抽獎系統已改用簡單的HTTP接口，不再使用WebSocket
-        if (isYoutubeLottery) {
-            console.log(`[WS] Rejecting YouTube Lottery connection, client IP: ${req.socket.remoteAddress}`);
-            ws.send(JSON.stringify({
-                type: "error",
-                message: "YouTube抽獎系統已更新，請重新整理頁面"
-            }));
-            ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
-            return;
-        }                console.error(`[WS] Error sending welcome message to ${ws.connectionId}:`, e.message);
+    console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
+
+    // --- 基本驗證 ---
+    if (!roomId || !clientType || !playerName) {
+        console.warn(`[WS] Connection rejected: Missing roomId, clientType, or playerName.`);
+        ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
+        return;
+    }
+
+    // -------------------------------------------------------------
+    // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
+    // -------------------------------------------------------------
+    if (clientType === 'controller') {
+        let roomData;
+        let playerId; // 在 try 外部定義 playerId
+
+        try {
+            // 1. 使用資料庫查找房間是否存在
+            roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state) { // 確保 game_state 存在
+                console.warn(`[WS Simple Walker] Room ${roomId} not found in DB or invalid state. Terminating.`);
+                ws.close(1011, "找不到房間或房間無效");
+                return;
+            }
+            console.log(`[WS Simple Walker] Room ${roomId} found in DB.`);
+
+            // 2. 生成唯一的玩家 ID
+            playerId = uuidv4();
+
+            // 3. 嘗試將玩家加入資料庫中的房間狀態
+            //    *** 注意：這裡假設你已經修改了 dbclient.js 的 addPlayerToRoom
+            //    *** 移除了名稱重複檢查（根據你的要求） ***
+            const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
+
+            // 檢查 addPlayerToRoom 是否成功 (例如，是否因房間滿了而失敗)
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                 // addPlayerToRoom 內部應該拋出錯誤，理論上不太會到這裡，但做個保險
+                throw new Error("加入房間到資料庫失敗");
             }
 
-            return; // 結束處理，不要繼續執行 Simple Walker 邏輯
+            // 4. 玩家成功加入 - 更新 WebSocket 連接狀態
+            ws.playerId = playerId;
+            ws.roomId = roomId;
+            ws.clientType = clientType; // 保存類型方便後續處理
+            console.log(`[WS Simple Walker] Player ${playerName} (ID: ${playerId}) added to room ${roomId} in DB.`);
+
+            // 5. 將此 WebSocket 連接加入 simpleWalkerConnections 管理
+            if (!simpleWalkerConnections.has(roomId)) {
+                simpleWalkerConnections.set(roomId, new Set());
+            }
+            simpleWalkerConnections.get(roomId).add(ws);
+            console.log(`[WS Simple Walker] Connection added. Room ${roomId} active connections: ${simpleWalkerConnections.get(roomId).size}`);
+
+            // 6. 發送玩家信息給當前客戶端
+            ws.send(JSON.stringify({ type: 'playerInfo', playerId: playerId }));
+            console.log(`[WS Simple Walker] Sent playerInfo to ${playerName}`);
+
+            // 7. 發送**最新的**遊戲狀態給當前客戶端
+            //    (使用 addPlayerToRoom 返回的最新狀態)
+            const currentGameState = updatedRoomResult.game_state;
+            const currentRoomName = updatedRoomResult.room_name;
+            ws.send(JSON.stringify({ type: 'gameStateUpdate', roomName: currentRoomName, gameState: currentGameState }));
+            console.log(`[WS Simple Walker] Sent initial gameStateUpdate to ${playerName}`);
+
+            // 8. 廣播**最新的**遊戲狀態給房間內所有**其他**客戶端
+            broadcastToSimpleWalkerRoom(roomId, {
+                type: 'gameStateUpdate',
+                roomName: currentRoomName, // 包含房間名
+                gameState: currentGameState
+            }, ws); // 傳入 ws，避免重複發送給自己
+            console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
+
+        } catch (error) {
+            // 處理加入房間過程中可能發生的錯誤 (房間滿、資料庫錯誤等)
+            console.error(`[WS Simple Walker] Error during connection setup for player ${playerName} in room ${roomId}:`, error.stack || error);
+            let closeReason = "加入房間失敗";
+            if (error.message.includes('房間已滿')) {
+                closeReason = "房間已滿";
+            }
+            // 注意：名稱重複的錯誤假設已被移除，如果未移除，可以在這裡添加判斷
+            // else if (error.message.includes('名稱已被使用')) {
+            //     closeReason = "玩家名稱已被使用";
+            // }
+            try {
+                // 嘗試發送錯誤給客戶端，告知失敗原因
+                ws.send(JSON.stringify({ type: 'error', message: closeReason }));
+            } catch (sendErr) { /* 如果發送也失敗，忽略 */}
+            ws.close(4000, closeReason); // 使用自定義錯誤碼 4000
+            return; // 結束處理
         }
 
-        // --- 基本驗證 ---
-        // 檢查 Simple Walker 連接所需的參數
-        if (clientType !== 'controller' || !roomId) {
-            console.warn(`[WS] Invalid Simple Walker connection attempt: missing clientType or roomId. Closing connection.`);
-            ws.close(1008, "缺少必要的連接參數");
-            return;
-        }
-        
-        // 為客戶端生成 ID（如果未提供的話）
-        const playerId = playerName || `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        
-        console.log(`[WS Simple Walker] Connection attempt from ${playerId} for room ${roomId}`);
-        
-        // 設置 WebSocket 的訊息處理器
-        ws.roomId = roomId;
-        ws.playerId = playerId;
-        ws.playerName = playerName || playerId;
-        ws.clientType = clientType;
-        
-        // 設置消息處理器
-        ws.on('message', (message) => {
-            handleSimpleWalkerMessage(ws, message);
-        });
-        
-        // 設置關閉處理器
-        ws.on('close', () => {
-            handleSimpleWalkerClose(ws);
-        });
-        
-        // 設置錯誤處理器
-        ws.on('error', (err) => {
-            handleSimpleWalkerError(ws, err);
-        });
-        
-        // 發送歡迎消息
-        ws.send(JSON.stringify({
-            type: 'connection_accepted',
-            playerId: playerId,
-            roomId: roomId,
-            message: '已連接到 Simple Walker 伺服器'
-        }));
-        
-    } catch (error) {
-        console.error('[WS] Connection handler error:', error.stack || error);
-        try {
-            ws.close(1011, "連接處理失敗");
-        } catch (closeErr) { /* 忽略關閉錯誤 */ }
+        // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
+        ws.on('message', (message) => handleSimpleWalkerMessage(ws, message)); // <--- 使用新的處理函數
+        ws.on('close', () => handleSimpleWalkerClose(ws));          // <--- 使用新的處理函數
+        ws.on('error', (error) => handleSimpleWalkerError(ws, error));      // <--- 使用新的處理函數
+
     }
+    // -
+    // 
+   
 });
 
 /**
@@ -1769,7 +1711,7 @@ async function handleSimpleWalkerMessage(ws, message) {
               );
               
               if (templateResult.rows.length === 0) {
-                            ws.send(JSON.stringify({ 
+                ws.send(JSON.stringify({
                   type: 'error',
                   message: '找不到指定的模板'
                 }));
@@ -1918,7 +1860,7 @@ async function handleSimpleWalkerMessage(ws, message) {
             console.warn(`[WS Simple Walker] 收到未知類型的消息，忽略: ${parsedMessage.type}`);
         }
 
-                } catch (error) {
+    } catch (error) {
         console.error(`[WS Simple Walker] 處理來自 ${playerId} 的消息時出錯:`, error.stack || error);
         try {
             ws.send(JSON.stringify({ type: 'error', message: '處理您的請求時發生錯誤' }));
@@ -2152,6 +2094,328 @@ const publicSafeUpload = multer({
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
 });
 // --- END OF publicSafeUpload 定義 ---
+
+
+
+
+
+
+app.post('/api/upload', upload.single('image'), async (req, res) => {
+
+
+
+
+    // 'image' 是前端 input file 元素的 name 屬性
+
+    if (!visionClient) { // 確保 Vision API 客戶端已初始化
+        console.error('[API /upload-safe-image] Vision API client not available.');
+        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
+    }
+
+    if (!req.file) {
+        // multer fileFilter 拒絕或沒有檔案上傳
+        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
+        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
+    }
+    
+    const file = req.file;
+    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
+                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
+
+    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+
+    try {
+        // --- 1. 安全搜尋偵測 ---
+        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
+        const [safeSearchResult] = await visionClient.annotateImage({
+            image: { content: imageBuffer },
+            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
+        });
+
+        const safeSearch = safeSearchResult.safeSearchAnnotation;
+        let isImageSafe = true;
+        let unsafeCategoriesDetected = [];
+
+        if (safeSearch) {
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('成人');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
+            }
+            // 你可以根據需要添加對 spoof, medical 的檢查
+        }
+
+        if (!isImageSafe) {
+            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
+            // 刪除已上傳的不安全圖片
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
+            }
+            return res.status(400).json({
+                success: false,
+                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
+            });
+        }
+        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
+
+        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
+        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
+        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
+        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
+        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
+        
+        // 檢查是否為 PNG 格式
+        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+        
+        // 自動旋轉（如果需要，基於之前的討論）
+        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
+        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
+        sharpInstance = sharp(rotatedImageBuffer);
+        
+        const metadata = await sharpInstance.metadata();
+        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
+
+        const originalWidth = metadata.width;
+        let targetWidth = originalWidth;
+        let needsResize = false;
+        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
+        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
+        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
+
+        let processedBuffer;
+        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
+        let finalImageUrl;
+
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
+        } else {
+            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
+            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
+            // For JPGs only rotated, rotatedImageBuffer is the one to save.
+            // The key is that sharpInstance was updated if a conversion happened.
+            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
+            await fs.promises.writeFile(originalFilePath, bufferToSave);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
+        }
+        
+        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
+        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
+        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
+
+    } catch (err) {
+        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
+        // 確保在錯誤時刪除已上傳的檔案
+        if (file && file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
+            }
+        }
+        // 使用你修改後的全局錯誤處理器，它會返回 JSON
+        // 但在這裡我們可以直接返回 JSON 錯誤
+        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
+            }
+            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
+        }
+        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
+    }
+
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [app.use for voitRouter moved to an earlier position in the file]
+
+
+
+
+
+// --- 新的公開安全圖片上傳端點 ---
+app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    // 'image' 是前端 input file 元素的 name 屬性
+
+    if (!visionClient) { // 確保 Vision API 客戶端已初始化
+        console.error('[API /upload-safe-image] Vision API client not available.');
+        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
+    }
+
+    if (!req.file) {
+        // multer fileFilter 拒絕或沒有檔案上傳
+        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
+        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
+    }
+    
+    const file = req.file;
+    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
+                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
+
+    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+
+    try {
+        // --- 1. 安全搜尋偵測 ---
+        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
+        const [safeSearchResult] = await visionClient.annotateImage({
+            image: { content: imageBuffer },
+            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
+        });
+
+        const safeSearch = safeSearchResult.safeSearchAnnotation;
+        let isImageSafe = true;
+        let unsafeCategoriesDetected = [];
+
+        if (safeSearch) {
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('成人');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
+            }
+            // 你可以根據需要添加對 spoof, medical 的檢查
+        }
+
+        if (!isImageSafe) {
+            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
+            // 刪除已上傳的不安全圖片
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
+            }
+            return res.status(400).json({
+                success: false,
+                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
+            });
+        }
+        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
+
+        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
+        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
+        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
+        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
+        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
+        
+        // 檢查是否為 PNG 格式
+        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
+        
+        // 自動旋轉（如果需要，基於之前的討論）
+        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
+        
+        // 如果是 PNG，設置輸出格式為 JPEG
+        if (isPNG) {
+            sharpInstance = sharpInstance.jpeg({ quality: 90 });
+            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
+        }
+        
+        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
+        sharpInstance = sharp(rotatedImageBuffer);
+        
+        const metadata = await sharpInstance.metadata();
+        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
+
+        const originalWidth = metadata.width;
+        let targetWidth = originalWidth;
+        let needsResize = false;
+        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
+        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
+        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
+
+        let processedBuffer;
+        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
+        let finalImageUrl;
+
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            processedBuffer = await sharpInstance
+                .resize({ width: targetWidth })
+                .toBuffer();
+            await fs.promises.writeFile(originalFilePath, processedBuffer);
+            const newStats = fs.statSync(originalFilePath);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
+        } else {
+            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
+            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
+            // For JPGs only rotated, rotatedImageBuffer is the one to save.
+            // The key is that sharpInstance was updated if a conversion happened.
+            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
+            await fs.promises.writeFile(originalFilePath, bufferToSave);
+            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
+        }
+        
+        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
+        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
+        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
+
+    } catch (err) {
+        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
+        // 確保在錯誤時刪除已上傳的檔案
+        if (file && file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
+            }
+        }
+        // 使用你修改後的全局錯誤處理器，它會返回 JSON
+        // 但在這裡我們可以直接返回 JSON 錯誤
+        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
+            }
+            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
+        }
+        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
+    }
+
+
+
+
+
+});
 
 
 
@@ -2562,248 +2826,224 @@ app.get('/api/diffrent-game/levels', async (req, res) => {
 
 
 
-// --- 洞洞樂遊戲 API (Card Game APIs) ---
 
-// 1. 獲取所有擁有公開模板的創作者列表
-app.get('/api/card-game/creators', async (req, res) => {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
+
+
+
+
+// 新增關卡
+app.post('/api/diffrent-game/levels', async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT DISTINCT u.user_id, u.username, u.user_profile_image_url
-            FROM box_users u
-            JOIN card_game_templates t ON u.user_id = t.creator_id
-            WHERE t.is_public = TRUE
-            ORDER BY u.username;
-        `);
+      const { level_name, left_image_url, right_image_url, active } = req.body;
+      
+      // 驗證數據
+      if (!level_name || !left_image_url || !right_image_url) {
+        return res.status(400).json({ error: '必須提供所有必要欄位' });
+      }
+      
+      const result = await pool.query(
+        'INSERT INTO diffrent_game_levels (level_name, left_image_url, right_image_url, active) VALUES ($1, $2, $3, $4) RETURNING id',
+        [level_name, left_image_url, right_image_url, active || true]
+      );
+      
+      res.status(201).json({ 
+        success: true, 
+        id: result.rows[0].id,
+        message: '關卡已成功新增' 
+      });
+    } catch (error) {
+      console.error('新增關卡錯誤:', error);
+      res.status(500).json({ error: '伺服器錯誤' });
+    }
+  });
+
+
+
+// --- 洞洞樂模板 API (Card Game Templates API) - 使用資料庫 ---
+
+// GET /api/card-game/templates - 獲取所有公開模板
+app.get('/api/card-game/templates', async (req, res) => {
+    try {
+        // 查詢 ID, 名稱和內容數據
+        const result = await pool.query(
+            `SELECT id, template_name, content_data, created_at, updated_at
+             FROM card_game_templates
+             WHERE is_public = TRUE
+             ORDER BY updated_at DESC`
+        );
+        // 直接返回查詢結果的 rows (包含 id, template_name, content_data)
         res.json(result.rows);
     } catch (err) {
-        console.error('[API ERROR] /api/card-game/creators:', err.stack);
-        res.status(500).json({ error: '無法獲取創作者列表' });
+        console.error('獲取洞洞樂模板失敗:', err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
 
-// 2. 獲取模板列表 (支持篩選、排序、搜尋)
-app.get('/api/card-game/templates', optionalAuthenticateBoxUser, async (req, res) => {
-    const { creatorId, sortBy, search, searchBy = 'template_name' } = req.query;
-    const userIdFromToken = req.boxUser ? req.boxUser.user_id : null; // 從 req.boxUser 獲取
-
-    let query = `
-        SELECT 
-            t.id, 
-            t.template_name, 
-            t.creator_id, 
-            COALESCE(u.display_name, u.username) AS creator_name, 
-            t.is_public, 
-            t.play_count, 
-            t.copy_count,
-            CASE WHEN t.creator_id = $1 THEN true ELSE false END AS is_owner
-        FROM 
-            card_game_templates t
-        LEFT JOIN 
-            box_users u ON t.creator_id = u.user_id
-        WHERE 1=1
-    `;
-    const params = [userIdFromToken || null];
-
-    try {
-        if (creatorId) {
-            if (creatorId === 'mine' && userIdFromToken) {
-                query += ` AND t.creator_id = $${params.length + 1}`;
-                params.push(userIdFromToken);
-            } else if (creatorId !== 'mine') {
-                query += ` AND t.creator_id = $${params.length + 1} AND t.is_public = true`;
-                params.push(creatorId);
-            } else {
-                // 如果 creatorId 是 'mine' 但用戶未登入，返回空陣列
-                return res.json([]);
-            }
-        } else {
-            // 預設只顯示公開模板
-            query += ' AND t.is_public = true';
-        }
-
-        if (search) {
-            if (searchBy === 'creator_name') {
-                query += ` AND COALESCE(u.display_name, u.username) ILIKE $${params.length + 1}`;
-            } else {
-                query += ` AND t.template_name ILIKE $${params.length + 1}`;
-            }
-            params.push(`%${search}%`);
-        }
-
-        if (sortBy === 'popular') {
-            query += ' ORDER BY t.play_count DESC, t.copy_count DESC';
-        } else {
-            query += ' ORDER BY t.created_at DESC'; // 預設為最新
-        }
-        
-        const { rows } = await pool.query(query, params);
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching templates:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-
-// 3. 獲取單一模板的完整內容 (用於遊玩或編輯)
-app.get('/api/card-game/templates/:id', optionalAuthenticateBoxUser, async (req, res) => {
+// GET /api/card-game/templates/:id - 獲取特定模板 (保留，雖然前端目前可能不直接用)
+app.get('/api/card-game/templates/:id', async (req, res) => {
     const { id } = req.params;
-    const currentUserId = req.boxUser ? req.boxUser.user_id : null; // 從 req.boxUser 獲取
-
-    try {
-        const result = await pool.query(`
-            SELECT t.*, COALESCE(u.display_name, u.username) AS creator_name,
-                   CASE WHEN t.creator_id = $2 THEN TRUE ELSE FALSE END AS is_owner
-            FROM card_game_templates t
-            LEFT JOIN box_users u ON t.creator_id = u.user_id
-            WHERE t.id = $1
-        `, [id, currentUserId]);
-
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: '找不到該模板' });
-        }
-
-        const template = result.rows[0];
-        // 如果模板是私有的，只有擁有者可以訪問
-        if (!template.is_public && template.creator_id !== currentUserId) {
-            return res.status(403).json({ error: '無權訪問此模板' });
-        }
-        
-        res.json(template);
-    } catch (err) {
-        console.error(`[API ERROR] /api/card-game/templates/${id}:`, err.stack);
-        res.status(500).json({ error: '無法獲取模板' });
-    }
-});
-
-// 4. 新增模板 (需要會員登入)
-app.post('/api/card-game/templates', authenticateBoxUser, async (req, res) => {
-    const { template_name, content_data, is_public } = req.body;
-    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
-
-    if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
-        return res.status(400).json({ error: '參數無效，請檢查模板名稱和內容 (需為20個項目的陣列)。' });
+    const templateId = parseInt(id, 10); // 確保是整數
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
     }
 
     try {
         const result = await pool.query(
-            'INSERT INTO card_game_templates (creator_id, template_name, content_data, is_public) VALUES ($1, $2, $3, $4) RETURNING *',
-            [creatorId, template_name, content_data, is_public]
+            'SELECT id, template_name, content_data, created_at, updated_at FROM card_game_templates WHERE id = $1 AND is_public = TRUE', // 假設只能獲取公開的
+            [templateId]
         );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error('[API ERROR] POST /api/card-game/templates:', err.stack);
-        res.status(500).json({ error: '無法新增模板' });
-    }
-});
 
-// 5. 更新模板 (需要會員登入且為擁有者)
-app.put('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
-    const { id } = req.params;
-    const { template_name, content_data, is_public } = req.body;
-    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
-
-    if (!template_name || !content_data || !Array.isArray(content_data.items) || content_data.items.length !== 20) {
-        return res.status(400).json({ error: '參數無效' });
-    }
-
-    try {
-        const result = await pool.query(
-            'UPDATE card_game_templates SET template_name = $1, content_data = $2, is_public = $3, updated_at = NOW() WHERE id = $4 AND creator_id = $5 RETURNING *',
-            [template_name, content_data, is_public, id, creatorId]
-        );
-        if (result.rowCount === 0) {
-            return res.status(403).json({ error: '無權更新此模板或模板不存在' });
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: '找不到模板或模板不公開' });
         }
+
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(`[API ERROR] PUT /api/card-game/templates/${id}:`, err.stack);
-        res.status(500).json({ error: '無法更新模板' });
+        console.error(`獲取洞洞樂模板 ${id} 失敗:`, err);
+        res.status(500).json({ error: '伺服器內部錯誤' });
     }
 });
-
-// 6. 刪除模板 (需要會員登入且為擁有者)
-app.delete('/api/card-game/templates/:id', authenticateBoxUser, async (req, res) => {
-    const { id } = req.params;
-    const creatorId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
+// POST /api/card-game/templates - 创建新模板 (修正版)
+app.post('/api/card-game/templates', async (req, res) => {
+    const { template_name, content_data, is_public = true } = req.body;
+    
+    console.log('收到模板創建請求:', {
+        template_name,
+        content_data_type: typeof content_data,
+        is_array: Array.isArray(content_data),
+        content_sample: Array.isArray(content_data) ? content_data.slice(0, 3) : content_data
+    });
+    
+    if (!template_name) {
+        return res.status(400).json({ error: '模板名称不能为空' });
+    }
+    
+    // 数据验证和处理
+    let validContentData;
     try {
-        const result = await pool.query(
-            'DELETE FROM card_game_templates WHERE id = $1 AND creator_id = $2',
-            [id, creatorId]
-        );
-        if (result.rowCount === 0) {
-            return res.status(403).json({ error: '無權刪除此模板或模板不存在' });
+        // 確保我們有一個有效的陣列
+        if (Array.isArray(content_data)) {
+            validContentData = content_data;
+        } 
+        // 如果是字符串，尝试解析
+        else if (typeof content_data === 'string') {
+            const parsed = JSON.parse(content_data);
+            // 解析後確保它是陣列
+            validContentData = Array.isArray(parsed) ? parsed : [parsed];
+        } 
+        // 其他类型，包装成数组
+        else if (content_data !== null && content_data !== undefined) {
+            validContentData = [content_data];
         }
-        res.status(204).send();
-    } catch (err) {
-        console.error(`[API ERROR] DELETE /api/card-game/templates/${id}:`, err.stack);
-        res.status(500).json({ error: '無法刪除模板' });
+        // 兜底：如果都不是，使用空陣列
+        else {
+            validContentData = [];
+        }
+        
+        // 再次验证是否為有效 JSON，確保可序列化
+        console.log('處理後的 content_data:', {
+            is_array: Array.isArray(validContentData),
+            length: Array.isArray(validContentData) ? validContentData.length : 0,
+            sample: Array.isArray(validContentData) ? validContentData.slice(0, 3) : validContentData
+        });
+        
+        // 測試是否可序列化
+        JSON.stringify(validContentData); 
+    } catch (error) {
+        console.error('内容数据格式错误:', error, '收到的数据:', content_data);
+        return res.status(400).json({ 
+            error: '内容数据格式错误，必须是有效的JSON',
+            detail: error.message,
+            received: typeof content_data
+        });
     }
-});
-
-// 7. 追蹤遊玩次數 (任何人都可以觸發)
-app.post('/api/card-game/templates/:id/play', async (req, res) => {
-    const { id } = req.params;
-    try {
-        await pool.query('UPDATE card_game_templates SET play_count = play_count + 1 WHERE id = $1', [id]);
-        res.status(200).json({ message: 'Play count updated.' });
-    } catch (err) {
-        // 即使出錯也不要影響前端遊戲體驗，所以只在後端紀錄
-        console.error(`[API ERROR] Failed to increment play count for template ${id}:`, err.stack);
-        res.status(500).json({ error: 'Failed to update play count.' });
-    }
-});
-
-// 8. 複製 (Clone) 模板 (需要會員登入)
-app.post('/api/card-game/templates/:id/copy', authenticateBoxUser, async (req, res) => {
-    const { id } = req.params; // 原始模板 ID
-    const newOwnerId = req.boxUser.user_id; // ★★★ FIX: 從 req.boxUser.user_id 獲取
     
     try {
-        // 使用 transaction 確保資料一致性
-        await pool.query('BEGIN');
-
-        // 獲取原始模板
-        const originalTemplateResult = await pool.query('SELECT * FROM card_game_templates WHERE id = $1', [id]);
-        if (originalTemplateResult.rowCount === 0) {
-            await pool.query('ROLLBACK');
-            return res.status(404).json({ error: '原始模板不存在' });
-        }
-        const originalTemplate = originalTemplateResult.rows[0];
-        
-        // 檢查使用者是否在複製自己的模板
-        if (originalTemplate.creator_id === newOwnerId) {
-             await pool.query('ROLLBACK');
-             return res.status(400).json({ error: '無法複製自己的模板。' });
-        }
-
-        // 增加原始模板的 copy_count
-        await pool.query('UPDATE card_game_templates SET copy_count = copy_count + 1 WHERE id = $1', [id]);
-
-        // 創建一個新的模板給目前使用者
-        const newTemplateName = `副本: ${originalTemplate.template_name}`.slice(0, 100);
-        const newTemplateResult = await pool.query(
-            'INSERT INTO card_game_templates (creator_id, template_name, content_data, is_public) VALUES ($1, $2, $3, $4) RETURNING *',
-            [newOwnerId, newTemplateName, originalTemplate.content_data, false] // 複製後預設為私有
+        // 检查模板名称是否已存在
+        const existingCheck = await pool.query(
+            'SELECT 1 FROM card_game_templates WHERE template_name = $1',
+            [template_name]
         );
-
-        // 提交 transaction
-        await pool.query('COMMIT');
         
-        res.status(201).json(newTemplateResult.rows[0]);
-
+        if (existingCheck.rows.length > 0) {
+            return res.status(409).json({ error: '此模板名称已存在' });
+        }
+        
+        // 插入新模板，使用验证过的数据
+        const ip_address = req.ip || 'unknown';        
+        const result = await pool.query(
+            `INSERT INTO card_game_templates (template_name, content_data, creator_ip, is_public) 
+             VALUES ($1, $2::json, $3, $4) 
+             RETURNING id, template_name, content_data, created_at, updated_at`,
+            [template_name, JSON.stringify(validContentData), ip_address, is_public]
+          );
+        
+        console.log('模板創建成功:', {
+            id: result.rows[0].id,
+            template_name: result.rows[0].template_name
+        });
+        
+        res.status(201).json(result.rows[0]);
     } catch (err) {
-        await pool.query('ROLLBACK');
-        console.error(`[API ERROR] POST /api/card-game/templates/${id}/copy:`, err.stack);
-        res.status(500).json({ error: '無法複製模板' });
+        console.error('创建洞洞乐模板失败:', err);
+        res.status(500).json({ 
+            error: '服务器内部错误',
+            detail: err.message,
+            code: err.code
+        });
     }
 });
 
+// DELETE /api/card-game/templates/:id - 刪除模板 (使用 ID)
+app.delete('/api/card-game/templates/:id', async (req, res) => {
+    const { id } = req.params;
+    const templateId = parseInt(id, 10); // 確保是整數
+    if (isNaN(templateId)) {
+        return res.status(400).json({ error: '無效的模板 ID' });
+    }
 
+    try {
+        const result = await pool.query(
+            'DELETE FROM card_game_templates WHERE id = $1',
+            [templateId]
+        );
 
+        if (result.rowCount === 0) {
+            // 如果沒有刪除任何行，表示找不到該 ID
+            return res.status(404).json({ error: '找不到要刪除的模板' });
+        }
 
+        console.log(`模板 ID ${templateId} 已成功刪除`);
+        res.status(204).send(); // 成功刪除，無內容返回
 
-
+    } catch (err) {
+        console.error(`刪除洞洞樂模板 ${id} 失敗:`, err);
+        // 可以根據錯誤碼判斷是否是外鍵約束等問題
+        res.status(500).json({ error: '伺服器內部錯誤，無法刪除模板' });
+    }
+});
 
 
 
@@ -2902,6 +3142,24 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 const reportTemplatesRouter = express.Router();
 
 
+// 中介軟體，用於可選地驗證用戶。
+const optionalAuthenticateBoxUser = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        jwt.verify(token, process.env.BOX_JWT_SECRET, (err, decoded) => {
+            if (!err && decoded && (typeof decoded.user_id !== 'undefined' || typeof decoded.userId !== 'undefined')) {
+                if (decoded.userId && !decoded.user_id) {
+                    decoded.user_id = decoded.userId;
+                }
+                req.boxUser = decoded;
+            }
+            next();
+        });
+    } else {
+        next();
+    }
+};
 
 // 引入IP限制器
 const reportRateLimiter = createReportRateLimiter(10);
@@ -3375,7 +3633,7 @@ app.post('/api/product-clicks', async (req, res) => {
 // 可能需要管理員權限認證 (isAdminAuthenticated)
 // ===============================================
 // 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
-app.get('/api/analytics/product-clicks-by-date', async (req, res) => {
+app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
     const { startDate, endDate, granularity, productId } = req.query;
 
     // 日期和粒度驗證
@@ -3536,7 +3794,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', async (req, res) => {
+app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -3561,7 +3819,7 @@ app.post('/api/samegame/templates', async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', async (req, res) => {
+app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3598,7 +3856,7 @@ app.put('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', async (req, res) => {
+app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -3621,7 +3879,7 @@ app.delete('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -3723,7 +3981,7 @@ app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', async (req, res) => {
+app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -3814,7 +4072,7 @@ app.put('/api/samegame/levels/:id', async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', async (req, res) => {
+app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -5208,7 +5466,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5248,7 +5506,7 @@ unboxingAiRouter.put('/schemes/:id', async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5297,7 +5555,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', isAdminAuthenticated, unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -5535,6 +5793,92 @@ app.get('/api/scores/songs', async (req, res) => {
         res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
     }
 });
+app.get('/api/scores/proxy', (req, res) => {
+    const pdfUrl = req.query.url;
+
+    if (!pdfUrl || typeof pdfUrl !== 'string') {
+        console.warn('代理請求被拒：缺少或無效的 URL 參數。');
+        return res.status(400).send('缺少或無效的 PDF URL。');
+    }
+
+    let decodedUrl;
+    try {
+        decodedUrl = decodeURIComponent(pdfUrl);
+        const allowedDomains = ['raw.githubusercontent.com']; // Add other allowed domains if needed
+        const urlObject = new URL(decodedUrl);
+
+        if (!allowedDomains.includes(urlObject.hostname)) {
+           console.warn(`代理請求被阻止，不允許的網域：${urlObject.hostname} (URL: ${decodedUrl})`);
+           return res.status(403).send('不允許從此網域進行代理。');
+        }
+
+    } catch (e) {
+        console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
+        return res.status(400).send('無效的 URL 格式或編碼。');
+    }
+
+    console.log(`正在代理 PDF 請求：${decodedUrl}`);
+
+    const pdfRequest = https.get(decodedUrl, (pdfRes) => {
+        if (pdfRes.statusCode >= 300 && pdfRes.statusCode < 400 && pdfRes.headers.location) {
+            console.log(`正在跟隨從 ${decodedUrl} 到 ${pdfRes.headers.location} 的重定向`);
+            try {
+                const redirectUrlObject = new URL(pdfRes.headers.location, decodedUrl);
+                const allowedDomains = ['raw.githubusercontent.com'];
+                 if (!allowedDomains.includes(redirectUrlObject.hostname)) {
+                   console.warn(`代理重定向被阻止，不允許的網域：${redirectUrlObject.hostname}`);
+                   return res.status(403).send('重定向目標網域不被允許。');
+                }
+                const redirectedRequest = https.get(redirectUrlObject.href, (redirectedRes) => {
+                     if (redirectedRes.statusCode !== 200) {
+                        console.error(`獲取重定向 PDF 時出錯：狀態碼：${redirectedRes.statusCode}，URL：${redirectUrlObject.href}`);
+                        const statusCodeToSend = redirectedRes.statusCode >= 400 ? redirectedRes.statusCode : 502;
+                        return res.status(statusCodeToSend).send(`無法獲取重定向的 PDF：${redirectedRes.statusMessage}`);
+                    }
+                     res.setHeader('Content-Type', redirectedRes.headers['content-type'] || 'application/pdf');
+                     redirectedRes.pipe(res);
+                }).on('error', (err) => {
+                     console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時發生錯誤：`, err.message);
+                     if (!res.headersSent) res.status(500).send('透過代理獲取重定向 PDF 時出錯。');
+                });
+                redirectedRequest.setTimeout(15000, () => {
+                    console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時超時`);
+                    redirectedRequest.destroy();
+                    if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
+                });
+                return;
+             } catch (e) {
+                console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
+                return res.status(500).send('從來源收到無效的重定向位置。');
+             }
+        }
+
+        if (pdfRes.statusCode !== 200) {
+            console.error(`獲取 PDF 時出錯：狀態碼：${pdfRes.statusCode}，URL：${decodedUrl}`);
+            const statusCodeToSend = pdfRes.statusCode >= 400 ? pdfRes.statusCode : 502;
+             return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
+        }
+
+        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
+        res.setHeader('Content-Type', 'application/pdf'); // Force PDF type
+        pdfRes.pipe(res);
+
+    }).on('error', (err) => {
+        console.error(`向 ${decodedUrl} 發起 PDF 請求期間發生網路或連線錯誤：`, err.message);
+         if (!res.headersSent) {
+             res.status(502).send('錯誤的網關：連接 PDF 來源時出錯。');
+         } else {
+             res.end();
+         }
+    });
+     pdfRequest.setTimeout(15000, () => { // 15 seconds timeout
+         console.error(`向 ${decodedUrl} 發起初始 PDF 請求時超時`);
+         pdfRequest.destroy();
+         if (!res.headersSent) {
+             res.status(504).send('網關超時：連接 PDF 來源時超時。');
+         }
+     });
+});
 
 // 輔助函數：清理 Banner 排序欄位
 function sanitizeSortField(field) {
@@ -5597,7 +5941,7 @@ app.get('/api/tags', async (req, res) => {
 
 
 // 新增：建立新標籤
-app.post('/api/tags', async (req, res) =>  {
+app.post('/api/tags', isAdminAuthenticated, async (req, res) =>  {
     const { tag_name } = req.body; // 從請求 body 獲取 tag_name
 
     // 驗證輸入
@@ -5626,7 +5970,7 @@ app.post('/api/tags', async (req, res) =>  {
 
 
 // 新增：更新標籤名稱
-app.put('/api/tags/:tag_id', async (req, res) => {
+app.put('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
     const { tag_name } = req.body; // 從請求 body 獲取新的 tag_name
 
@@ -5667,7 +6011,7 @@ app.put('/api/tags/:tag_id', async (req, res) => {
 // --- 標籤 API ---
 // ... (GET, POST, PUT /api/tags) ...
 // 新增：刪除標籤
-app.delete('/api/tags/:tag_id', async (req, res) => {
+app.delete('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
 
     // 驗證輸入
@@ -6080,7 +6424,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', async (req, res) => {
+app.post('/api/music', isAdminAuthenticated, async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6226,7 +6570,7 @@ app.post('/api/music', async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', async (req, res) => {
+app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6325,7 +6669,7 @@ app.put('/api/music/:id', async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', async (req, res) => {
+app.delete('/api/music/:id', isAdminAuthenticated, async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
@@ -6587,6 +6931,7 @@ app.put('/api/products/:id', async (req, res) => {
  
 
 
+ 
 
 // --- 頁面分析相關的 API ---
 app.get('/api/analytics/page-list', async (req, res) => {
@@ -6683,7 +7028,7 @@ app.get('/api/analytics/traffic', async (req, res) => {
             count: parseInt(row.count) 
         }));
         res.status(200).json(trafficData);
-    } catch (err) { 
+    } catch (err) {
         console.error('獲取流量數據時發生錯誤:', err); 
         res.status(500).json({ error: '伺服器內部錯誤，無法獲取流量數據。' }); 
     }
@@ -8403,5 +8748,4 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`伺服器正在監聽端口 ${PORT}`);
   });
-
 
