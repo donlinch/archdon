@@ -155,6 +155,7 @@
 
         /* Animation Styles */
         #winner-display {
+            display: none !important; /* 根據要求，不再使用彈出式卡片 */
             position: fixed;
             top: 50%;
             left: 50%;
@@ -398,6 +399,7 @@
             let selectedWinner = null;
             let updateTimer = null;
             let participants = []; // 在記憶體中保存參與者列表，避免重複讀取
+            let winnerText = ''; // 用於在畫布中心顯示中獎者名字
 
             function drawWheel() {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -453,18 +455,34 @@
 
                 wheelCtx.restore();
 
-                // 將指針畫在 3 點鐘方向，保持靜止
+                // 將指針畫在 12 點鐘方向（頂部），保持靜止
                 wheelCtx.save();
-                wheelCtx.translate(centerX + radius, centerY);
+                wheelCtx.translate(centerX, centerY - radius - 20); // 移到輪盤正上方
                 wheelCtx.fillStyle = '#ff4757';
                 
                 wheelCtx.beginPath();
-                wheelCtx.moveTo(10, 0);
-                wheelCtx.lineTo(-10, -10);
-                wheelCtx.lineTo(-10, 10);
+                wheelCtx.moveTo(0, 20); // 指針尖端指向輪盤邊緣
+                wheelCtx.lineTo(-10, 0);
+                wheelCtx.lineTo(10, 0);
                 wheelCtx.closePath();
                 wheelCtx.fill();
                 wheelCtx.restore();
+
+                // 如果輪盤已停止且有中獎者，在中間顯示名字
+                if (!isSpinning && winnerText) {
+                    wheelCtx.save();
+                    wheelCtx.font = 'bold 40px ' + getComputedStyle(document.body).fontFamily;
+                    wheelCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+                    wheelCtx.textAlign = 'center';
+                    wheelCtx.textBaseline = 'middle';
+                    wheelCtx.shadowColor = 'black';
+                    wheelCtx.shadowBlur = 10;
+                    wheelCtx.shadowOffsetX = 2;
+                    wheelCtx.shadowOffsetY = 2;
+                    const displayName = winnerText.length > 10 ? winnerText.substring(0, 10) + '...' : winnerText;
+                    wheelCtx.fillText(displayName, centerX, centerY);
+                    wheelCtx.restore();
+                }
             }
             
             function startSpin() {
@@ -473,6 +491,7 @@
                     alert('需要至少兩位參與者才能開始轉盤抽獎！');
                     return;
                 }
+                winnerText = ''; // 清除上一位中獎者名字
                 isSpinning = true;
                 // 給予一個隨機的初始速度 (弧度/幀)
                 angularVelocity = (Math.random() * 0.2) + 0.4;
@@ -504,22 +523,24 @@
 
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
                 
-                // 計算哪個切片停在了指針下（0度角）
-                // 因為輪盤是順時針轉，所以用 2*PI 減去餘數
+                // 指針在 12 點鐘方向 (3*PI/2)，我們以此為基準計算
+                const pointerAngle = 3 * Math.PI / 2;
                 const finalAngle = currentRotation % (2 * Math.PI);
-                const targetAngle = (2 * Math.PI - finalAngle) % (2 * Math.PI);
+                const targetAngle = (2 * Math.PI - finalAngle + pointerAngle) % (2 * Math.PI);
                 const winnerIndex = Math.floor(targetAngle / sliceAngle);
 
                 const winner = participants[winnerIndex];
                 if (winner) {
                     selectedWinner = winner;
+                    winnerText = winner.displayName; // 設定要顯示的文字
                     highlightWinner(winner);
-                    showWinner(winner);
+                    // showWinner(winner); // 不再彈出卡片
                     myConfetti({
                         particleCount: 150,
                         spread: 90,
                         origin: { y: 0.6 }
                     });
+                    drawWheel(); // 重新繪製以立即顯示名字
                 }
             }
 
