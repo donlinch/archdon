@@ -873,22 +873,7 @@ youtubeLotteryRouter.post('/set-video', async (req, res) => {
     }
   });
 
-
-
-// 處理YouTube抽獎WebSocket消息
-wss.on('connection', (ws) => {
-    ws.on('message', async (message) => {
-      try {
-        const data = JSON.parse(message);
-        if (data.type === 'youtube_lottery') {
-          // 處理抽獎相關的WebSocket消息
-          handleYoutubeLotteryMessage(ws, data);
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
-    });
-  });
+ 
   
   // YouTube抽獎WebSocket消息處理函數
   async function handleYoutubeLotteryMessage(ws, data) {
@@ -1750,6 +1735,9 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
+
+
+
 // --- ★★★ 修改 wss.on('connection') ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     // 解析URL參數
@@ -1758,9 +1746,28 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     const roomId = url.searchParams.get('roomId');
     const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
 
+    // 處理YouTube抽獎的WebSocket連接
+    if (!clientType && !roomId && !playerName) {
+        console.log(`[WS] Connection for YouTube Lottery`);
+        // 設置YouTube抽獎消息處理
+        ws.on('message', async (message) => {
+            try {
+                const data = JSON.parse(message);
+                if (data.type === 'youtube_lottery') {
+                    // 處理抽獎相關的WebSocket消息
+                    handleYoutubeLotteryMessage(ws, data);
+                }
+            } catch (error) {
+                console.error('WebSocket message error:', error);
+            }
+        });
+        return; // 是YouTube抽獎連接，正常處理完畢
+    }
+
     console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
 
     // --- 基本驗證 ---
+    // ... 剩餘代碼保持不變 ...
     if (!roomId || !clientType || !playerName) {
         console.warn(`[WS] Connection rejected: Missing roomId, clientType, or playerName.`);
         ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
@@ -2639,8 +2646,8 @@ const basicAuthMiddleware = (req, res, next) => {
             console.warn(`認證失敗 - 使用者名稱或密碼錯誤: User='${user}'`);
             res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
             return res.status(401).send('認證失敗。');
-        }
-    } catch (error) {
+          }
+        } catch (error) {
         console.error("認證標頭解析錯誤:", error);
         res.setHeader('WWW-Authenticate', 'Basic realm="Admin Area"');
         return res.status(401).send('認證失敗 (格式錯誤)。');
@@ -6047,7 +6054,7 @@ app.get('/api/scores/proxy', (req, res) => {
                     redirectedRequest.destroy();
                     if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
                 });
-                return;
+        return;
              } catch (e) {
                 console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
                 return res.status(500).send('從來源收到無效的重定向位置。');
