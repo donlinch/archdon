@@ -1581,14 +1581,26 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                 return res.status(404).json({ error: '找不到指定的使用者' });
             }
 
-            // 2. 刪除使用者的所有倉庫（這會級聯刪除所有紙箱和物品）
+            // 2. 刪除用戶的角色分配
+            await client.query('DELETE FROM user_role_assignments WHERE user_id = $1', [userId]);
+            
+            // 3. 刪除用戶的徽章分配
+            await client.query('DELETE FROM user_badges WHERE user_id = $1', [userId]);
+            
+            // 4. 刪除用戶的頭銜分配
+            await client.query('DELETE FROM user_titles WHERE user_id = $1', [userId]);
+            
+            // 5. 刪除用戶的成就記錄
+            await client.query('DELETE FROM user_achievements WHERE user_id = $1', [userId]);
+
+            // 6. 刪除使用者的所有倉庫（這會級聯刪除所有紙箱和物品）
             await client.query('DELETE FROM BOX_Warehouses WHERE user_id = $1', [userId]);
 
-            // 3. 刪除使用者本身
+            // 7. 刪除使用者本身
             await client.query('DELETE FROM BOX_Users WHERE user_id = $1', [userId]);
 
             await client.query('COMMIT');
-            res.status(204).send();
+            res.status(200).json({ success: true, message: '使用者已成功刪除' });
         } catch (err) {
             await client.query('ROLLBACK');
             console.error(`[API DELETE /box/admin/users/${userId}] Error:`, err);
