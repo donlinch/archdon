@@ -343,36 +343,31 @@
             const winnerNameEl = document.getElementById('winner-name');
             const confettiCanvas = document.getElementById('confetti-canvas');
             const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
+            const wheelCanvas = document.getElementById('wheel-canvas');
+            const wheelCtx = wheelCanvas.getContext('2d');
 
             const myConfetti = confetti.create(confettiCanvas, {
                 resize: true,
                 useWorker: true
             });
 
-            // 輪盤動畫相關變數
-            let wheelCanvas, wheelCtx;
             let currentRotation = 0;
             let isSpinning = false;
             let targetRotation = 0;
             let spinStartTime = 0;
-            let spinDuration = 5000; // 5秒
+            const spinDuration = 5000; // 5 seconds
             let selectedWinner = null;
 
-            // 初始化輪盤
-            function initWheel() {
-                wheelCanvas = document.getElementById('wheel-canvas');
-                wheelCtx = wheelCanvas.getContext('2d');
-                requestAnimationFrame(drawWheel);
-            }
-
-            // 繪製輪盤
             function drawWheel(timestamp) {
-                const participants = Array.from(document.querySelectorAll('#participants-list li'))
+                if (!wheelCanvas || !defaultAnimation) return;
+
+                const participants = Array.from(participantsListEl.querySelectorAll('li'))
                     .map(li => li.querySelector('span').textContent.trim());
-                
+
                 if (participants.length === 0) {
                     wheelCanvas.style.display = 'none';
                     defaultAnimation.style.display = 'block';
+                    defaultAnimation.textContent = '監控中...等待參與者加入';
                     return;
                 }
 
@@ -385,7 +380,6 @@
 
                 wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
-                // 繪製輪盤背景
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY);
                 wheelCtx.rotate(currentRotation);
@@ -395,7 +389,6 @@
                     const startAngle = index * sliceAngle;
                     const endAngle = startAngle + sliceAngle;
 
-                    // 繪製扇形
                     wheelCtx.beginPath();
                     wheelCtx.moveTo(0, 0);
                     wheelCtx.arc(0, 0, radius, startAngle, endAngle);
@@ -404,13 +397,11 @@
                     wheelCtx.fill();
                     wheelCtx.stroke();
 
-                    // 繪製文字
                     wheelCtx.save();
                     wheelCtx.rotate(startAngle + sliceAngle / 2);
                     wheelCtx.textAlign = 'right';
                     wheelCtx.fillStyle = 'white';
                     wheelCtx.font = '14px Arial';
-                    // 截短過長的名字
                     const displayName = name.length > 10 ? name.substring(0, 10) + '...' : name;
                     wheelCtx.fillText(displayName, radius - 10, 5);
                     wheelCtx.restore();
@@ -418,7 +409,6 @@
 
                 wheelCtx.restore();
 
-                // 繪製指針
                 wheelCtx.beginPath();
                 wheelCtx.moveTo(centerX + radius + 10, centerY);
                 wheelCtx.lineTo(centerX + radius - 10, centerY - 10);
@@ -427,7 +417,6 @@
                 wheelCtx.fillStyle = '#ff4757';
                 wheelCtx.fill();
 
-                // 如果正在旋轉，更新旋轉角度
                 if (isSpinning && timestamp) {
                     const progress = (timestamp - spinStartTime) / spinDuration;
                     if (progress < 1) {
@@ -436,15 +425,15 @@
                         requestAnimationFrame(drawWheel);
                     } else {
                         isSpinning = false;
-                        currentRotation = targetRotation;
+                        currentRotation = targetRotation % (2 * Math.PI);
                         if (selectedWinner) {
                             highlightWinner(selectedWinner);
                         }
+                        requestAnimationFrame(drawWheel);
                     }
                 }
             }
 
-            // 開始輪盤動畫
             function startWheelAnimation(winnerIndex, totalParticipants) {
                 if (isSpinning) return;
                 
@@ -452,40 +441,21 @@
                 spinStartTime = performance.now();
                 
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
-                const winnerAngle = sliceAngle * winnerIndex;
+                const winnerAngle = sliceAngle * winnerIndex + sliceAngle / 2;
                 
-                targetRotation = currentRotation + (Math.PI * 10) + (2 * Math.PI - winnerAngle);
+                targetRotation = currentRotation + (Math.PI * 12) + ((2 * Math.PI) - winnerAngle);
                 
                 requestAnimationFrame(drawWheel);
             }
 
-            // 高亮顯示獲獎者
             function highlightWinner(winner) {
-                const participantsList = document.querySelectorAll('#participants-list li');
+                const participantsList = participantsListEl.querySelectorAll('li');
                 participantsList.forEach(li => {
+                    li.classList.remove('winner-highlight');
                     if (li.querySelector('span').textContent.includes(winner.displayName)) {
                         li.classList.add('winner-highlight');
                     }
                 });
-            }
-
-            async function fetchParticipants() {
-                try {
-                    const response = await fetch('/api/admin/lottery/participants');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    if (data.participants) {
-                        updateParticipantsList(data.participants);
-                    } else {
-                        console.warn('Participants data is missing in the response', data);
-                        updateParticipantsList([]); // 清空列表或顯示錯誤
-                    }
-                } catch (error) {
-                    console.error('Error fetching participants:', error);
-                    participantsCountEl.textContent = '更新參與者名單失敗';
-                }
             }
 
             function updateParticipantsList(participants) {
@@ -500,8 +470,7 @@
                     `;
                     participantsListEl.appendChild(li);
                 });
-
-                // 重新繪製輪盤
+                
                 drawWheel();
             }
             
@@ -600,27 +569,28 @@
                 try {
                     const response = await fetch('/api/admin/lottery/draw', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ animationMode, duration })
                     });
 
                     const result = await response.json();
-                    if (!response.ok) throw new Error(result.error);
+                    if (!response.ok) throw new Error(result.error || '抽獎失敗');
 
+                    const winner = result.winner;
                     if (animationMode === 'turntable') {
-                        const participants = Array.from(document.querySelectorAll('#participants-list li'));
+                        const participants = Array.from(participantsListEl.querySelectorAll('li'));
                         const winnerIndex = participants.findIndex(li => 
-                            li.querySelector('span').textContent.includes(result.winner.displayName)
+                            li.querySelector('span').textContent.includes(winner.displayName)
                         );
                         
                         if (winnerIndex !== -1) {
-                            selectedWinner = result.winner;
+                            selectedWinner = winner;
                             startWheelAnimation(winnerIndex, participants.length);
+                        } else {
+                            highlightWinner(winner); // Fallback if not in wheel
                         }
                     } else {
-                        highlightWinner(result.winner);
+                        highlightWinner(winner);
                     }
                 } catch (error) {
                     console.error('抽獎出錯:', error);
@@ -630,8 +600,8 @@
             
             refreshParticipantsBtn.addEventListener('click', fetchParticipants);
 
-            // Initial fetch
             fetchParticipants();
+            drawWheel();
         });
     </script>
 </body>
