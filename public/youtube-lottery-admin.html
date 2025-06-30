@@ -400,6 +400,7 @@
             const MAX_ROTATIONS = 8; // Maximum number of full rotations
             let selectedWinner = null;
             let updateTimer = null;
+            let startRotation = 0;
 
             function drawWheel(timestamp) {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -426,7 +427,7 @@
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY);
                 
-                // Make 12 o'clock the 0-degree starting point
+                // Base rotation on 12 o'clock
                 wheelCtx.rotate(currentRotation - Math.PI / 2);
 
                 const sliceAngle = (2 * Math.PI) / participants.length;
@@ -472,18 +473,21 @@
 
                 // Update rotation if spinning
                 if (isSpinning && timestamp) {
-                    const progress = (timestamp - spinStartTime) / SPIN_DURATION;
-                    if (progress < 1) {
+                    const elapsed = timestamp - spinStartTime;
+                    if (elapsed < SPIN_DURATION) {
+                        // Ease-out cubic function for a nice deceleration
+                        const progress = elapsed / SPIN_DURATION;
                         const easeOut = 1 - Math.pow(1 - progress, 3);
-                        currentRotation = easeOut * targetRotation;
+                        currentRotation = startRotation + (targetRotation - startRotation) * easeOut;
                         requestAnimationFrame(drawWheel);
                     } else {
                         isSpinning = false;
-                        currentRotation = targetRotation % (2 * Math.PI);
+                        currentRotation = targetRotation;
                         if (selectedWinner) {
                             highlightWinner(selectedWinner);
+                            showWinner(selectedWinner); // Show winner modal when animation stops
                         }
-                        requestAnimationFrame(drawWheel);
+                        requestAnimationFrame(drawWheel); // Final redraw at the exact position
                     }
                 }
             }
@@ -493,16 +497,21 @@
                 
                 isSpinning = true;
                 spinStartTime = performance.now();
-                
+                startRotation = currentRotation; // Store the starting angle
+
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
+                // The middle angle of the winning slice
                 const winnerMiddleAngle = sliceAngle * winnerIndex + sliceAngle / 2;
                 
+                // Random number of full rotations
                 const rotations = MIN_ROTATIONS + Math.random() * (MAX_ROTATIONS - MIN_ROTATIONS);
                 
-                // Target angle is calculated to stop the winner's slice at the top
-                targetRotation = (Math.PI * 2 * rotations) + winnerMiddleAngle;
+                // The final angle needs to position the winner's slice at the top (under the pointer)
+                // We calculate the required rotation to bring the winner's angle to the top (0)
+                // And add the full rotations. We subtract because we are rotating the wheel.
+                targetRotation = (Math.PI * 2 * rotations) - winnerMiddleAngle;
                 
-                // Small random offset so it doesn't stop at the exact same spot
+                // Add a small random offset within the slice to feel more natural
                 const randomOffset = (Math.random() - 0.5) * sliceAngle * 0.8;
                 targetRotation += randomOffset;
 
@@ -692,7 +701,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             animationMode,
-                            duration: 0 // Fixed duration, not user configurable
+                            duration: 0 
                         })
                     });
 
@@ -710,11 +719,8 @@
                         if (winnerIndex !== -1) {
                             selectedWinner = winner;
                             startWheelAnimation(winnerIndex, participants.length);
-                            // Show winner after animation completes
-                            setTimeout(() => {
-                                showWinner(winner);
-                            }, SPIN_DURATION);
                         } else {
+                            // If winner not found in list (should not happen), just show the modal
                             showWinner(winner);
                         }
                     } else {
