@@ -273,7 +273,7 @@
             const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
             const setVideoBtn = document.getElementById('set-video-btn');
-            const currentVideoIdEl = document.getElementById('current-video-id');
+            const currentVideoEl = document.getElementById('current-video');
             const participantsListEl = document.getElementById('participants-list');
             const participantsCountEl = document.getElementById('participants-count');
             const drawWinnerBtn = document.getElementById('draw-winner-btn');
@@ -410,7 +410,7 @@
                     const result = await response.json();
                     if (response.ok && result.success) {
                         alert('成功設置監控直播！');
-                        currentVideoIdEl.textContent = `當前監控 Video ID: ${videoId}`;
+                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
                         animationContainer.textContent = "監控中...等待參與者加入";
                         winnerDisplayEl.style.display = 'none';
                     } else {
