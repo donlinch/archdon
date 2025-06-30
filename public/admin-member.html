@@ -671,7 +671,7 @@
                 document.getElementById('modal-user-account').textContent = userDetails.username;
                 document.getElementById('modal-user-display-name').textContent = userDetails.display_name || userDetails.username;
                 document.getElementById('modal-user-email').textContent = userDetails.email || 'N/A';
-                document.getElementById('modal-user-created-at').textContent = new Date(userDetails.created_at).toLocaleString();
+                document.getElementById('modal-user-created-at').textContent = userDetails.created_at ? new Date(userDetails.created_at).toLocaleString() : 'N/A';
                 
                 // 更新頭像
                 if (userDetails.user_profile_image_url) {

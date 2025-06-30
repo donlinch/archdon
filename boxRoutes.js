@@ -1555,7 +1555,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                     display_name,
                     user_profile_image_url,
                     created_at
-                FROM BOX_Users u
+                FROM box_users
                 ORDER BY username ASC`;
             
             const result = await pool.query(query);
@@ -2382,8 +2382,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                     email,
                     display_name,
                     user_profile_image_url,
-                    created_at,
-                    updated_at
+                    created_at
                 FROM box_users 
                 WHERE user_id = $1
             `;
