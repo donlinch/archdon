@@ -314,54 +314,57 @@
 
                     // 設置連線超時處理
                     const connectionTimeout = setTimeout(() => {
-                        if (ws.readyState !== WebSocket.OPEN) {
+                        if (ws && ws.readyState !== WebSocket.OPEN) {
                             console.log('Connection timeout, retrying...');
-                            ws.close();
+                            if (ws) ws.close();
                             connectWebSocket();
                         }
                     }, 10000);
 
-                    ws.onopen = () => {
+                ws.onopen = () => {
                         console.log('WebSocket connection established');
-                        wsStatusEl.textContent = '已連接';
-                        wsStatusEl.className = 'status-connected';
+                    wsStatusEl.textContent = '已連接';
+                    wsStatusEl.className = 'status-connected';
                         
                         // 清除連線超時
                         clearTimeout(connectionTimeout);
                         
                         // 連線成功後立即發送身份驗證訊息
-                        if (ws.readyState === WebSocket.OPEN) {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({ 
                                 type: 'init',
                                 client: 'admin'
                             }));
+                            console.log('Sent initialization message');
                         }
                         
                         // Start heartbeat when connection is established
                         startHeartbeat();
-                    };
+                };
 
-                    ws.onmessage = (event) => {
+                ws.onmessage = (event) => {
                         try {
-                            const data = JSON.parse(event.data);
+                    const data = JSON.parse(event.data);
                             console.log('Received data:', data);
 
-                            if (data.type === 'participants_update') {
+                            if (data.type === 'participants_update' || data.type === 'update_participants') {
                                 updateParticipantsList(data.participants);
                             } else if (data.type === 'winner_update') {
                                 displayWinner(data.winner);
                             } else if (data.type === 'error') {
-                                alert(`伺服器錯誤: ${data.message}`);
+                            alert(`伺服器錯誤: ${data.message}`);
                             } else if (data.type === 'ping') {
                                 // Respond to server heartbeat
                                 sendPong();
                             } else if (data.type === 'connection_accepted') {
                                 console.log('Connection accepted by server');
+                            } else if (data.type === 'welcome') {
+                                console.log('Welcome message received:', data.message);
                             }
                         } catch (e) {
                             console.error('Error processing message:', e, event.data);
-                        }
-                    };
+                    }
+                };
 
                     ws.onclose = (event) => {
                         // 清除連線超時
@@ -375,7 +378,7 @@
                         stopHeartbeat();
                         
                         // 使用指數退避策略重新連接
-                        const baseDelay = 1000; // 1秒
+                        const baseDelay = 2000; // 2秒
                         const maxDelay = 30000; // 最大30秒
                         const retryCount = window.wsRetryCount || 0;
                         const delay = Math.min(baseDelay * Math.pow(1.5, retryCount), maxDelay);
@@ -395,7 +398,6 @@
                         stopHeartbeat();
                         
                         // 不在這裡關閉，讓onclose處理重連邏輯
-                        // ws.close();
                     };
                 } catch (e) {
                     console.error("Failed to create WebSocket:", e);
@@ -411,7 +413,7 @@
                 // Clear any existing interval
                 stopHeartbeat();
                 
-                // Send a heartbeat every 20 seconds (比30秒更頻繁)
+                // Send a heartbeat every 15 seconds (比20秒更頻繁)
                 heartbeatInterval = setInterval(() => {
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         try {
@@ -419,12 +421,12 @@
                             ws.send(JSON.stringify({ type: 'heartbeat' }));
                         } catch (e) {
                             console.error('Error sending heartbeat:', e);
-                            ws.close();
+                    ws.close();
                         }
                     }
-                }, 20000);
+                }, 15000);
             }
-            
+
             function stopHeartbeat() {
                 if (heartbeatInterval) {
                     clearInterval(heartbeatInterval);

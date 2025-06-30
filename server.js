@@ -808,7 +808,7 @@ voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (
 
 
 // YouTube抽獎系統API路由
-app.use('/api/admin/lottery', isAdminAuthenticated, youtubeLotteryRouter);
+app.use('/api/admin/lottery', youtubeLotteryRouter);
 
 
 // 設置監控的直播
@@ -970,6 +970,7 @@ function broadcastToAll(message) {
 
   
  
+   
    
    
 // --- 基本 Express 設定 ---
@@ -1737,18 +1738,16 @@ app.delete('/api/admin/products/:id', async (req, res) => {
 });
 
 
-
-
 // --- ★★★ 修改 wss.on('connection') ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     try {
         console.log('[WS] Connection handler entered. req.url:', req.url); // New log
 
-    // 解析URL參數
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const clientType = url.searchParams.get('clientType');
-    const roomId = url.searchParams.get('roomId');
-    const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
+        // 解析URL參數
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const clientType = url.searchParams.get('clientType');
+        const roomId = url.searchParams.get('roomId');
+        const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
         const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
 
         console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}, YoutubeLottery=${isYoutubeLottery}`);
@@ -1757,137 +1756,136 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
         if (isYoutubeLottery) {
             console.log(`[WS] Handling YouTube Lottery connection`);
             ws.isYoutubeLottery = true;
+            
+            // 添加心跳檢測機制
+            ws.isAlive = true;
+            ws.ping_interval = setInterval(() => {
+                if (ws.isAlive === false) {
+                    console.log('[WS] YouTube Lottery client ping timeout, terminating');
+                    clearInterval(ws.ping_interval);
+                    return ws.terminate();
+                }
+                ws.isAlive = false;
+                try {
+                    // 發送ping消息
+                    console.log('[WS] Sending ping to YouTube Lottery client');
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                } catch (e) {
+                    console.error('[WS] Error sending ping:', e);
+                    clearInterval(ws.ping_interval);
+                    ws.terminate();
+                }
+            }, 20000); // 每20秒發送一次ping
 
             ws.on('message', async (message) => {
                 try {
                     const data = JSON.parse(message);
-                    if (data.type === 'youtube_lottery') {
+                    console.log('[WS] Received message from YouTube Lottery client:', data.type);
+                    
+                    // 心跳和初始化消息處理
+                    if (data.type === 'pong') {
+                        ws.isAlive = true;
+                        console.log('[WS] Received pong from YouTube Lottery client');
+                    } else if (data.type === 'heartbeat') {
+                        ws.isAlive = true;
+                        console.log('[WS] Received heartbeat from YouTube Lottery client');
+                    } else if (data.type === 'init') {
+                        ws.isAlive = true;
+                        console.log('[WS] Received init from YouTube Lottery client, client type:', data.client);
+                        
+                        // 不再需要驗證是否是管理員，任何人都可以連接
+                        try {
+                            ws.send(JSON.stringify({ 
+                                type: 'connection_accepted',
+                                message: 'Connection established'
+                            }));
+                            console.log('[WS] Sent connection acceptance to client');
+                            
+                            // 如果有參與者數據，立即發送一次更新
+                            youtubeLottery.broadcastParticipantsUpdate();
+                        } catch (e) {
+                            console.error('[WS] Error sending connection acceptance:', e);
+                        }
+                    } else if (data.type === 'youtube_lottery') {
                         // 處理抽獎相關的 WebSocket 消息
                         handleYoutubeLotteryMessage(ws, data);
                     }
                 } catch (error) {
-                    console.error('WebSocket message error:', error);
+                    console.error('[WS] WebSocket message parse error:', error);
                 }
             });
 
-            ws.on('close', () => { // Add a close handler for debugging
+            ws.on('close', () => {
                 console.log('[WS] YouTube Lottery client disconnected.');
+                clearInterval(ws.ping_interval);
             });
 
-            ws.on('error', (err) => { // Add an error handler for debugging
+            ws.on('error', (err) => {
                 console.error('[WS] YouTube Lottery client error:', err);
+                clearInterval(ws.ping_interval);
             });
+            
+            // 在連接建立時發送一條歡迎訊息
+            try {
+                ws.send(JSON.stringify({
+                    type: 'welcome',
+                    message: 'Connected to YouTube Lottery server'
+                }));
+                console.log('[WS] Sent welcome message to YouTube Lottery client');
+            } catch (e) {
+                console.error('[WS] Error sending welcome message:', e);
+            }
 
             return; // 結束處理，不要繼續執行 Simple Walker 邏輯
         }
 
-    // --- 基本驗證 ---
-        // ... 剩餘代碼保持不變 ...
-    if (!roomId || !clientType || !playerName) {
-        console.warn(`[WS] Connection rejected: Missing roomId, clientType, or playerName.`);
-        ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
-        return;
-    }
-
-    // -------------------------------------------------------------
-    // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
-    // -------------------------------------------------------------
-    if (clientType === 'controller') {
-        let roomData;
-        let playerId; // 在 try 外部定義 playerId
-
-        try {
-            // 1. 使用資料庫查找房間是否存在
-            roomData = await dbClient.getRoom(roomId);
-            if (!roomData || !roomData.game_state) { // 確保 game_state 存在
-                console.warn(`[WS Simple Walker] Room ${roomId} not found in DB or invalid state. Terminating.`);
-                ws.close(1011, "找不到房間或房間無效");
-                return;
-            }
-            console.log(`[WS Simple Walker] Room ${roomId} found in DB.`);
-
-            // 2. 生成唯一的玩家 ID
-            playerId = uuidv4();
-
-            // 3. 嘗試將玩家加入資料庫中的房間狀態
-            //    *** 注意：這裡假設你已經修改了 dbclient.js 的 addPlayerToRoom
-            //    *** 移除了名稱重複檢查（根據你的要求） ***
-            const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
-
-            // 檢查 addPlayerToRoom 是否成功 (例如，是否因房間滿了而失敗)
-            if (!updatedRoomResult || !updatedRoomResult.game_state) {
-                 // addPlayerToRoom 內部應該拋出錯誤，理論上不太會到這裡，但做個保險
-                throw new Error("加入房間到資料庫失敗");
-            }
-
-            // 4. 玩家成功加入 - 更新 WebSocket 連接狀態
-            ws.playerId = playerId;
-            ws.roomId = roomId;
-            ws.clientType = clientType; // 保存類型方便後續處理
-            console.log(`[WS Simple Walker] Player ${playerName} (ID: ${playerId}) added to room ${roomId} in DB.`);
-
-            // 5. 將此 WebSocket 連接加入 simpleWalkerConnections 管理
-            if (!simpleWalkerConnections.has(roomId)) {
-                simpleWalkerConnections.set(roomId, new Set());
-            }
-            simpleWalkerConnections.get(roomId).add(ws);
-            console.log(`[WS Simple Walker] Connection added. Room ${roomId} active connections: ${simpleWalkerConnections.get(roomId).size}`);
-
-            // 6. 發送玩家信息給當前客戶端
-            ws.send(JSON.stringify({ type: 'playerInfo', playerId: playerId }));
-            console.log(`[WS Simple Walker] Sent playerInfo to ${playerName}`);
-
-            // 7. 發送**最新的**遊戲狀態給當前客戶端
-            //    (使用 addPlayerToRoom 返回的最新狀態)
-            const currentGameState = updatedRoomResult.game_state;
-            const currentRoomName = updatedRoomResult.room_name;
-            ws.send(JSON.stringify({ type: 'gameStateUpdate', roomName: currentRoomName, gameState: currentGameState }));
-            console.log(`[WS Simple Walker] Sent initial gameStateUpdate to ${playerName}`);
-
-            // 8. 廣播**最新的**遊戲狀態給房間內所有**其他**客戶端
-            broadcastToSimpleWalkerRoom(roomId, {
-                type: 'gameStateUpdate',
-                roomName: currentRoomName, // 包含房間名
-                gameState: currentGameState
-            }, ws); // 傳入 ws，避免重複發送給自己
-            console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
-
-        } catch (error) {
-            // 處理加入房間過程中可能發生的錯誤 (房間滿、資料庫錯誤等)
-            console.error(`[WS Simple Walker] Error during connection setup for player ${playerName} in room ${roomId}:`, error.stack || error);
-            let closeReason = "加入房間失敗";
-            if (error.message.includes('房間已滿')) {
-                closeReason = "房間已滿";
-            }
-            // 注意：名稱重複的錯誤假設已被移除，如果未移除，可以在這裡添加判斷
-            // else if (error.message.includes('名稱已被使用')) {
-            //     closeReason = "玩家名稱已被使用";
-            // }
-            try {
-                // 嘗試發送錯誤給客戶端，告知失敗原因
-                ws.send(JSON.stringify({ type: 'error', message: closeReason }));
-            } catch (sendErr) { /* 如果發送也失敗，忽略 */}
-            ws.close(4000, closeReason); // 使用自定義錯誤碼 4000
-            return; // 結束處理
+        // --- 基本驗證 ---
+        // 檢查 Simple Walker 連接所需的參數
+        if (clientType !== 'controller' || !roomId) {
+            console.warn(`[WS] Invalid Simple Walker connection attempt: missing clientType or roomId. Closing connection.`);
+            ws.close(1008, "缺少必要的連接參數");
+            return;
         }
-
-        // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
-        ws.on('message', (message) => handleSimpleWalkerMessage(ws, message)); // <--- 使用新的處理函數
-        ws.on('close', () => handleSimpleWalkerClose(ws));          // <--- 使用新的處理函數
-        ws.on('error', (error) => handleSimpleWalkerError(ws, error));      // <--- 使用新的處理函數
-
-    }
-    // -
-    // 
-   
+        
+        // 為客戶端生成 ID（如果未提供的話）
+        const playerId = playerName || `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        
+        console.log(`[WS Simple Walker] Connection attempt from ${playerId} for room ${roomId}`);
+        
+        // 設置 WebSocket 的訊息處理器
+        ws.roomId = roomId;
+        ws.playerId = playerId;
+        ws.playerName = playerName || playerId;
+        ws.clientType = clientType;
+        
+        // 設置消息處理器
+        ws.on('message', (message) => {
+            handleSimpleWalkerMessage(ws, message);
+        });
+        
+        // 設置關閉處理器
+        ws.on('close', () => {
+            handleSimpleWalkerClose(ws);
+        });
+        
+        // 設置錯誤處理器
+        ws.on('error', (err) => {
+            handleSimpleWalkerError(ws, err);
+        });
+        
+        // 發送歡迎消息
+        ws.send(JSON.stringify({
+            type: 'connection_accepted',
+            playerId: playerId,
+            roomId: roomId,
+            message: '已連接到 Simple Walker 伺服器'
+        }));
+        
     } catch (error) {
-        console.error('[WS] CRITICAL ERROR in wss.on("connection"):', error);
-        // We can't send a message if the connection is already broken, but try.
+        console.error('[WS] Connection handler error:', error.stack || error);
         try {
-            ws.close(1011, "Internal server error during connection setup.");
-        } catch (e) {
-            // ignore
-        }
+            ws.close(1011, "連接處理失敗");
+        } catch (closeErr) { /* 忽略關閉錯誤 */ }
     }
 });
 
@@ -1931,7 +1929,7 @@ async function handleSimpleWalkerMessage(ws, message) {
               );
               
               if (templateResult.rows.length === 0) {
-                ws.send(JSON.stringify({
+                            ws.send(JSON.stringify({ 
                   type: 'error',
                   message: '找不到指定的模板'
                 }));
@@ -2080,7 +2078,7 @@ async function handleSimpleWalkerMessage(ws, message) {
             console.warn(`[WS Simple Walker] 收到未知類型的消息，忽略: ${parsedMessage.type}`);
         }
 
-    } catch (error) {
+                } catch (error) {
         console.error(`[WS Simple Walker] 處理來自 ${playerId} 的消息時出錯:`, error.stack || error);
         try {
             ws.send(JSON.stringify({ type: 'error', message: '處理您的請求時發生錯誤' }));
@@ -3865,7 +3863,7 @@ app.post('/api/product-clicks', async (req, res) => {
 // 可能需要管理員權限認證 (isAdminAuthenticated)
 // ===============================================
 // 使用你現有的 isAdminAuthenticated 中介軟體來保護這個路由
-app.get('/api/analytics/product-clicks-by-date', isAdminAuthenticated, async (req, res) => {
+app.get('/api/analytics/product-clicks-by-date', async (req, res) => {
     const { startDate, endDate, granularity, productId } = req.query;
 
     // 日期和粒度驗證
@@ -4026,7 +4024,7 @@ app.get('/api/samegame/templates/:id', async (req, res) => {
 });
 
 // 創建新的遊戲模板
-app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
+app.post('/api/samegame/templates', async (req, res) => {
     const { name, description, difficulty, is_active } = req.body;
     
     if (!name || name.trim() === '') {
@@ -4051,7 +4049,7 @@ app.post('/api/samegame/templates', isAdminAuthenticated, async (req, res) => {
 });
 
 // 更新遊戲模板
-app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/samegame/templates/:id', async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -4088,7 +4086,7 @@ app.put('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) =>
 });
 
 // 刪除遊戲模板
-app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/samegame/templates/:id', async (req, res) => {
     const { id } = req.params;
     const templateId = parseInt(id, 10);
     
@@ -4111,7 +4109,7 @@ app.delete('/api/samegame/templates/:id', isAdminAuthenticated, async (req, res)
 });
 
 // 創建新的關卡
-app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, async (req, res) => {
+app.post('/api/samegame/templates/:templateId/levels', async (req, res) => {
     const { templateId } = req.params;
     const tplId = parseInt(templateId, 10);
     
@@ -4213,7 +4211,7 @@ app.post('/api/samegame/templates/:templateId/levels', isAdminAuthenticated, asy
 });
 
 // 更新關卡
-app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/samegame/levels/:id', async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -4304,7 +4302,7 @@ app.put('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // 刪除關卡
-app.delete('/api/samegame/levels/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/samegame/levels/:id', async (req, res) => {
     const { id } = req.params;
     const levelId = parseInt(id, 10);
     
@@ -5698,7 +5696,7 @@ unboxingAiRouter.post('/schemes', async (req, res) => {
 });
 
 // PUT /api/unboxing-ai/schemes/:id - 更新一個 AI 提示詞方案
-unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
+unboxingAiRouter.put('/schemes/:id', async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
     const { name, intent_key, prompt_template, description, is_active } = req.body;
@@ -5738,7 +5736,7 @@ unboxingAiRouter.put('/schemes/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/unboxing-ai/schemes/:id - 刪除一個 AI 提示詞方案
-unboxingAiRouter.delete('/schemes/:id', isAdminAuthenticated, async (req, res) => {
+unboxingAiRouter.delete('/schemes/:id', async (req, res) => {
     const { id } = req.params;
     const schemeId = parseInt(id, 10);
 
@@ -5787,7 +5785,7 @@ app.use('/api/unboxing-ai', unboxingAiRouter); // 你可以選擇是否要加上
 
 
 // --- 新的 API 端點：產生開箱文或識別圖片內容 ---
-app.post('/api/generate-unboxing-post', isAdminAuthenticated, unboxingUpload.array('images', 3), async (req, res) => {
+app.post('/api/generate-unboxing-post', unboxingUpload.array('images', 3), async (req, res) => {
     // 'images' 是前端 input file 元素的 name 屬性，3 是最大檔案數
 
 
@@ -6044,7 +6042,7 @@ app.get('/api/scores/proxy', (req, res) => {
            return res.status(403).send('不允許從此網域進行代理。');
         }
 
-    } catch (e) {
+            } catch (e) {
         console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
         return res.status(400).send('無效的 URL 格式或編碼。');
     }
@@ -6173,7 +6171,7 @@ app.get('/api/tags', async (req, res) => {
 
 
 // 新增：建立新標籤
-app.post('/api/tags', isAdminAuthenticated, async (req, res) =>  {
+app.post('/api/tags', async (req, res) =>  {
     const { tag_name } = req.body; // 從請求 body 獲取 tag_name
 
     // 驗證輸入
@@ -6202,7 +6200,7 @@ app.post('/api/tags', isAdminAuthenticated, async (req, res) =>  {
 
 
 // 新增：更新標籤名稱
-app.put('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/tags/:tag_id', async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
     const { tag_name } = req.body; // 從請求 body 獲取新的 tag_name
 
@@ -6243,7 +6241,7 @@ app.put('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
 // --- 標籤 API ---
 // ... (GET, POST, PUT /api/tags) ...
 // 新增：刪除標籤
-app.delete('/api/tags/:tag_id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/tags/:tag_id', async (req, res) => {
     const { tag_id } = req.params; // 從路徑參數獲取 tag_id
 
     // 驗證輸入
@@ -6656,7 +6654,7 @@ app.get('/api/music/:id', async (req, res) => {
 });
 
 // POST /api/music - 新增音樂
-app.post('/api/music', isAdminAuthenticated, async (req, res) => {
+app.post('/api/music', async (req, res) => {
     const { title, artist_names, release_date, description, cover_art_url, platform_url, youtube_video_id, scores } = req.body;
 
     // 基本驗證
@@ -6802,7 +6800,7 @@ app.post('/api/music', isAdminAuthenticated, async (req, res) => {
 });
 
 // PUT /api/music/:id - 更新音樂
-app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
+app.put('/api/music/:id', async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
     if (isNaN(musicId)) {
@@ -6901,7 +6899,7 @@ app.put('/api/music/:id', isAdminAuthenticated, async (req, res) => {
 });
 
 // DELETE /api/music/:id - 刪除音樂
-app.delete('/api/music/:id', isAdminAuthenticated, async (req, res) => {
+app.delete('/api/music/:id', async (req, res) => {
     const { id } = req.params;
     const musicId = parseInt(id, 10);
 
@@ -7163,7 +7161,6 @@ app.put('/api/products/:id', async (req, res) => {
  
 
 
- 
 
 // --- 頁面分析相關的 API ---
 app.get('/api/analytics/page-list', async (req, res) => {

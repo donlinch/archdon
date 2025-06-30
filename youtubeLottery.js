@@ -322,12 +322,12 @@ class YoutubeLottery {
         count: participantsArray.length
       });
 
-      // 向所有連接的客戶端廣播
+      // 向所有連接的客戶端廣播，不進行權限限制
       this.webSocketServer.clients.forEach(client => {
         if (client.readyState === 1) { // WebSocket.OPEN
-          // 如果 client 是 YouTube 抽獎客戶端，或者沒有特定標識（向後兼容）
-          if (client.isYoutubeLottery || !client.clientType) {
-          client.send(message);
+          // 對所有的YouTube抽獎相關客戶端發送訊息，不檢查權限
+          if (client.isYoutubeLottery) {
+            client.send(message);
           }
         }
       });
