@@ -391,12 +391,36 @@
             background: linear-gradient(145deg, var(--surface-color), var(--light-color));
             box-shadow: var(--box-shadow);
             transition: all 0.3s ease;
+            position: relative;
         }
         .badge-item:hover, .title-item:hover {
             transform: scale(1.05);
             box-shadow: var(--box-shadow-hover);
         }
         
+        .item-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 5px;
+            border-radius: var(--border-radius);
+        }
+        .badge-item:hover .item-actions,
+        .title-item:hover .item-actions {
+            opacity: 1;
+        }
+        .item-actions .btn {
+            padding: 4px 8px;
+            font-size: 0.8em;
+            border-radius: 8px;
+            min-width: auto;
+        }
+
         .badge-item img, .title-item img {
             width: 80px;
             height: 80px;
@@ -554,6 +578,7 @@
                     <div class="content-card">
                         <h3>創建新徽章</h3>
                         <form id="create-badge-form">
+                            <input type="hidden" id="badge-id">
                             <div class="form-group">
                                 <label for="badge-name">徽章名稱</label>
                                 <input type="text" id="badge-name" required>
@@ -568,6 +593,7 @@
                                 <div id="badge-preview" style="margin-top: 10px; max-width: 100px; max-height: 100px; overflow: hidden;"></div>
                             </div>
                             <button type="submit" class="btn btn-primary">創建徽章</button>
+                            <button type="button" id="cancel-edit-badge-btn" class="btn btn-secondary" style="display: none;">取消編輯</button>
                         </form>
                     </div>
                      <div class="content-card">
@@ -583,6 +609,7 @@
                     <div class="content-card">
                         <h3>創建新頭銜</h3>
                         <form id="create-title-form">
+                            <input type="hidden" id="title-id">
                              <div class="form-group">
                                 <label for="title-name">頭銜名稱</label>
                                 <input type="text" id="title-name" required>
@@ -597,6 +624,7 @@
                                 <div id="title-preview" style="margin-top: 10px; max-width: 100px; max-height: 100px; overflow: hidden;"></div>
                             </div>
                             <button type="submit" class="btn btn-primary">創建頭銜</button>
+                            <button type="button" id="cancel-edit-title-btn" class="btn btn-secondary" style="display: none;">取消編輯</button>
                         </form>
                     </div>
                     <div class="content-card">
@@ -693,6 +721,8 @@
         const createTitleForm = document.querySelector('#titles-tab #create-title-form');
         const badgesListContainer = document.querySelector('#badges-tab #badges-list');
         const titlesListContainer = document.querySelector('#titles-tab #titles-list');
+        const cancelEditBadgeBtn = document.getElementById('cancel-edit-badge-btn');
+        const cancelEditTitleBtn = document.getElementById('cancel-edit-title-btn');
 
 
         // --- API & Auth ---
@@ -958,9 +988,148 @@
                 }
             }
             
-            // Create forms
-            createBadgeForm.addEventListener('submit', handleCreateItem);
-            createTitleForm.addEventListener('submit', handleCreateItem);
+            // Create/Update forms
+            createBadgeForm.addEventListener('submit', handleBadgeFormSubmit);
+            createTitleForm.addEventListener('submit', handleTitleFormSubmit);
+
+            async function handleBadgeFormSubmit(e) {
+                e.preventDefault();
+                const form = e.target;
+                const badgeId = document.getElementById('badge-id').value;
+                const itemName = '徽章';
+                
+                const formData = new FormData();
+                formData.append('badgeName', document.getElementById('badge-name').value);
+                formData.append('badgeDescription', document.getElementById('badge-description').value);
+                const imageFile = document.getElementById('badge-image').files[0];
+                if (imageFile) {
+                    formData.append('badgeImage', imageFile);
+                }
+
+                const method = badgeId ? 'PUT' : 'POST';
+                // The create endpoint is specific, so we adjust the URL
+                const url = badgeId ? `/api/box/admin/badges/${badgeId}` : '/api/box/admin/badges/upload';
+
+                try {
+                    loadingOverlay.style.display = 'flex';
+                    // Use fetch directly for FormData
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Authorization': `Bearer ${authToken}` },
+                        body: formData
+                    });
+                     if (!response.ok) {
+                        const err = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
+                        throw new Error(err.error);
+                    }
+
+                    alert(`${itemName}已${badgeId ? '更新' : '創建'}！`);
+                    resetBadgeForm();
+                    
+                    allBadges = await apiFetch('/api/box/admin/badges');
+                    renderBadgesList(allBadges);
+                    populateSelect(document.getElementById('badge-select'), allBadges, 'badge_id', 'badge_name');
+
+                } catch (error) {
+                    alert(`處理${itemName}失敗: ${error.message}`);
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+            
+            async function handleTitleFormSubmit(e) {
+                e.preventDefault();
+                const form = e.target;
+                const titleId = document.getElementById('title-id').value;
+                const itemName = '頭銜';
+
+                const formData = new FormData();
+                formData.append('titleName', document.getElementById('title-name').value);
+                formData.append('titleDescription', document.getElementById('title-description').value);
+                const imageFile = document.getElementById('title-image').files[0];
+                if (imageFile) {
+                    formData.append('titleImage', imageFile);
+                }
+
+                const method = titleId ? 'PUT' : 'POST';
+                const url = titleId ? `/api/box/admin/titles/${titleId}` : '/api/box/admin/titles/upload';
+
+                try {
+                    loadingOverlay.style.display = 'flex';
+                     const response = await fetch(url, {
+                        method: method,
+                        headers: { 'Authorization': `Bearer ${authToken}` },
+                        body: formData
+                    });
+                     if (!response.ok) {
+                        const err = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
+                        throw new Error(err.error);
+                    }
+
+                    alert(`${itemName}已${titleId ? '更新' : '創建'}！`);
+                    resetTitleForm();
+
+                    allTitles = await apiFetch('/api/box/admin/titles');
+                    renderTitlesList(allTitles);
+                    populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+                } catch (error) {
+                    alert(`處理${itemName}失敗: ${error.message}`);
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+            
+            cancelEditBadgeBtn.addEventListener('click', resetBadgeForm);
+            cancelEditTitleBtn.addEventListener('click', resetTitleForm);
+
+            // Item list actions (edit/delete)
+            badgesListContainer.addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.edit-badge-btn');
+                const deleteBtn = e.target.closest('.delete-badge-btn');
+                
+                if (editBtn) {
+                    const badgeId = editBtn.dataset.badgeId;
+                    const badge = allBadges.find(b => b.badge_id == badgeId);
+                    if (badge) setupBadgeFormForEdit(badge);
+                }
+                
+                if (deleteBtn) {
+                    const badgeId = deleteBtn.dataset.badgeId;
+                    if (confirm('您確定要刪除這個徽章嗎？')) {
+                        await apiFetch(`/api/box/admin/badges/${badgeId}`, { method: 'DELETE' });
+                        alert('徽章已刪除');
+                        allBadges = await apiFetch('/api/box/admin/badges');
+                        renderBadgesList(allBadges);
+                        populateSelect(document.getElementById('badge-select'), allBadges, 'badge_id', 'badge_name');
+                    }
+                }
+            });
+
+            titlesListContainer.addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.edit-title-btn');
+                const deleteBtn = e.target.closest('.delete-title-btn');
+                
+                if (editBtn) {
+                    const titleId = editBtn.dataset.titleId;
+                    const title = allTitles.find(t => t.title_id == titleId);
+                    if (title) setupTitleFormForEdit(title);
+                }
+                
+                if (deleteBtn) {
+                    const titleId = deleteBtn.dataset.titleId;
+                    if (confirm('您確定要刪除這個頭銜嗎？')) {
+                        await apiFetch(`/api/box/admin/titles/${titleId}`, { method: 'DELETE' });
+                        alert('頭銜已刪除');
+                        allTitles = await apiFetch('/api/box/admin/titles');
+                        renderTitlesList(allTitles);
+                        populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+                    }
+                }
+            });
+
+            // Forms for creating global items
+            createBadgeForm.addEventListener('submit', handleBadgeFormSubmit);
+            createTitleForm.addEventListener('submit', handleTitleFormSubmit);
 
             async function handleCreateItem(e) {
                 e.preventDefault();
@@ -1147,6 +1316,10 @@
                 const item = document.createElement('div');
                 item.className = 'badge-item';
                 item.innerHTML = `
+                    <div class="item-actions">
+                        <button class="btn btn-secondary edit-badge-btn" data-badge-id="${badge.badge_id}">編</button>
+                        <button class="btn btn-danger delete-badge-btn" data-badge-id="${badge.badge_id}">刪</button>
+                    </div>
                     <img src="${badge.badge_image_url || '/images/a01girlmove.gif'}" alt="${badge.badge_name}">
                     <div class="badge-name">${badge.badge_name}</div>
                     <div class="badge-description">${badge.badge_description || ''}</div>
@@ -1155,6 +1328,32 @@
             });
         }
         
+        function setupBadgeFormForEdit(badge) {
+            document.getElementById('badge-id').value = badge.badge_id;
+            document.getElementById('badge-name').value = badge.badge_name;
+            document.getElementById('badge-description').value = badge.badge_description || '';
+            
+            const preview = document.getElementById('badge-preview');
+            preview.innerHTML = '';
+            if (badge.badge_image_url) {
+                const img = document.createElement('img');
+                img.src = badge.badge_image_url;
+                img.style.cssText = 'max-width: 100%; max-height: 100px; border-radius: 8px;';
+                preview.appendChild(img);
+            }
+
+            cancelEditBadgeBtn.style.display = 'inline-block';
+            createBadgeForm.querySelector('button[type="submit"]').textContent = '更新徽章';
+        }
+
+        function resetBadgeForm() {
+            createBadgeForm.reset();
+            document.getElementById('badge-id').value = '';
+            document.getElementById('badge-preview').innerHTML = '';
+            cancelEditBadgeBtn.style.display = 'none';
+            createBadgeForm.querySelector('button[type="submit"]').textContent = '創建徽章';
+        }
+
         function renderTitlesList(titles) {
             titlesListContainer.innerHTML = '';
             titles.forEach(title => {
@@ -1162,12 +1361,42 @@
                 item.className = 'title-item';
                 let imgHtml = title.title_image_url ? `<img src="${title.title_image_url}" alt="${title.title_name}">` : '';
                 item.innerHTML = `
+                     <div class="item-actions">
+                        <button class="btn btn-secondary edit-title-btn" data-title-id="${title.title_id}">編</button>
+                        <button class="btn btn-danger delete-title-btn" data-title-id="${title.title_id}">刪</button>
+                    </div>
                     ${imgHtml}
                     <div class="title-name">${title.title_name}</div>
                     <div class="title-description">${title.title_description || ''}</div>
                 `;
                 titlesListContainer.appendChild(item);
             });
+        }
+        
+        function setupTitleFormForEdit(title) {
+            document.getElementById('title-id').value = title.title_id;
+            document.getElementById('title-name').value = title.title_name;
+            document.getElementById('title-description').value = title.title_description || '';
+
+            const preview = document.getElementById('title-preview');
+            preview.innerHTML = '';
+            if (title.title_image_url) {
+                const img = document.createElement('img');
+                img.src = title.title_image_url;
+                img.style.cssText = 'max-width: 100%; max-height: 100px; border-radius: 8px;';
+                preview.appendChild(img);
+            }
+
+            cancelEditTitleBtn.style.display = 'inline-block';
+            createTitleForm.querySelector('button[type="submit"]').textContent = '更新頭銜';
+        }
+
+        function resetTitleForm() {
+            createTitleForm.reset();
+            document.getElementById('title-id').value = '';
+            document.getElementById('title-preview').innerHTML = '';
+            cancelEditTitleBtn.style.display = 'none';
+            createTitleForm.querySelector('button[type="submit"]').textContent = '創建頭銜';
         }
         
         // --- Start the App ---
