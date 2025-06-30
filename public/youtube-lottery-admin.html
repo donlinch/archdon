@@ -250,6 +250,7 @@
 
         <div id="participants-panel" class="panel">
             <h2>參與者名單</h2>
+            <button id="refresh-participants-btn" class="secondary" style="margin-bottom: 10px;">手動更新名單</button>
             <div id="participants-list">
                 <!-- Participants will be dynamically added here -->
             </div>
@@ -260,7 +261,6 @@
 
         <div id="footer" class="panel">
              <div id="status-bar">
-                <div>WS 狀態: <span id="ws-status" class="status-disconnected">未連接</span></div>
                 <div id="current-video">當前監控 Video ID: 無</div>
             </div>
         </div>
@@ -268,7 +268,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const wsStatusEl = document.getElementById('ws-status');
             const videoIdEl = document.getElementById('video-id');
             const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
@@ -283,196 +282,29 @@
             const winnerNameEl = document.getElementById('winner-name');
             const animationContainer = document.getElementById('draw-animation-container');
             const confettiCanvas = document.getElementById('confetti-canvas');
+            const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
 
-            let ws;
-            let heartbeatInterval;
             const myConfetti = confetti.create(confettiCanvas, {
                 resize: true,
                 useWorker: true
             });
 
-            function connectWebSocket() {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const host = window.location.host;
-                const wsUrl = `${protocol}//${host}/?type=youtube_lottery`;
-                
-                console.log(`[WS] Attempting to connect to: ${wsUrl}`);
-                wsStatusEl.textContent = '正在連接...';
-                wsStatusEl.className = '';
-
-                // 清除之前可能存在的連線
-                if (ws) {
-                    try {
-                        ws.close();
-                    } catch (e) {
-                        console.log('Error closing previous connection:', e);
-                    }
-                }
-
+            async function fetchParticipants() {
                 try {
-                    ws = new WebSocket(wsUrl);
-
-                    // 設置連線超時處理
-                    const connectionTimeout = setTimeout(() => {
-                        if (ws && ws.readyState !== WebSocket.OPEN) {
-                            console.log('Connection timeout, retrying...');
-                            if (ws) ws.close();
-                            connectWebSocket();
-                        }
-                    }, 10000);
-
-                ws.onopen = () => {
-                        console.log('WebSocket connection established');
-                    wsStatusEl.textContent = '已連接';
-                    wsStatusEl.className = 'status-connected';
-                        
-                        // 清除連線超時
-                        clearTimeout(connectionTimeout);
-                        
-                        // 連線成功後立即發送身份驗證訊息
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ 
-                                type: 'init',
-                                client: 'admin',
-                                clientInfo: {
-                                    userAgent: navigator.userAgent,
-                                    screenWidth: window.innerWidth,
-                                    screenHeight: window.innerHeight,
-                                    timestamp: new Date().toISOString()
-                                }
-                            }));
-                            console.log('Sent initialization message');
-                        }
-                        
-                        // Start heartbeat when connection is established
-                        startHeartbeat();
-                };
-
-                ws.onmessage = (event) => {
-                        try {
-                    const data = JSON.parse(event.data);
-                            console.log('Received data:', data);
-
-                            if (data.type === 'participants_update' || data.type === 'update_participants') {
-                                updateParticipantsList(data.participants);
-                            } else if (data.type === 'winner_update') {
-                                displayWinner(data.winner);
-                            } else if (data.type === 'error') {
-                            alert(`伺服器錯誤: ${data.message}`);
-                            } else if (data.type === 'ping') {
-                                // Respond to server heartbeat
-                                sendPong();
-                                console.log('Received ping, sent pong response');
-                            } else if (data.type === 'connection_accepted') {
-                                console.log('Connection accepted by server', data.connectionId ? `(ID: ${data.connectionId})` : '');
-                                // 保存連線 ID 用於調試
-                                window.wsConnectionId = data.connectionId;
-                            } else if (data.type === 'welcome') {
-                                console.log('Welcome message received:', data.message, data.connectionId ? `(ID: ${data.connectionId})` : '');
-                                // 保存連線 ID 用於調試
-                                window.wsConnectionId = data.connectionId;
-                            }
-                        } catch (e) {
-                            console.error('Error processing message:', e, event.data);
+                    const response = await fetch('/api/admin/lottery/participants');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                };
-
-                    ws.onclose = (event) => {
-                        // 清除連線超時
-                        clearTimeout(connectionTimeout);
-                        
-                        console.log(`WebSocket disconnected with code ${event.code}, reason: ${event.reason}`);
-                        wsStatusEl.textContent = '已斷線，嘗試重連...';
-                        wsStatusEl.className = 'status-disconnected';
-                        
-                        // Clear heartbeat interval when connection is closed
-                        stopHeartbeat();
-                        
-                        // 標示錯誤代碼
-                        let errorMessage = '';
-                        if (event.code === 1006) {
-                            errorMessage = '異常關閉（代碼 1006）';
-                            console.warn('WebSocket異常關閉（代碼1006），這通常是由網絡問題或服務器關閉導致的');
-                        }
-                        
-                        // 在視覺上顯示錯誤狀態
-                        if (errorMessage) {
-                            wsStatusEl.textContent = `已斷線: ${errorMessage}，嘗試重連...`;
-                        }
-                        
-                        // 使用指數退避策略重新連接
-                        const baseDelay = 2000; // 2秒
-                        const maxDelay = 30000; // 最大30秒
-                        const retryCount = window.wsRetryCount || 0;
-                        const delay = Math.min(baseDelay * Math.pow(1.5, retryCount), maxDelay);
-                        
-                        console.log(`Reconnecting in ${delay}ms (retry #${retryCount})...`);
-                        window.wsRetryCount = retryCount + 1;
-                        
-                        setTimeout(connectWebSocket, delay);
-                    };
-
-                    ws.onerror = (event) => {
-                        console.error('WebSocket error:', event);
-                        wsStatusEl.textContent = '連接錯誤';
-                        wsStatusEl.className = 'status-disconnected';
-                        
-                        // Clear heartbeat interval on error
-                        stopHeartbeat();
-                        
-                        // 不在這裡關閉，讓onclose處理重連邏輯
-                    };
-                } catch (e) {
-                    console.error("Failed to create WebSocket:", e);
-                    wsStatusEl.textContent = '創建WS失敗';
-                    wsStatusEl.className = 'status-disconnected';
-                    
-                    // 若無法建立WebSocket，3秒後重試
-                    setTimeout(connectWebSocket, 3000);
-                }
-            }
-            
-            function startHeartbeat() {
-                // Clear any existing interval
-                stopHeartbeat();
-                
-                // Send a heartbeat every 10 seconds (比15秒更頻繁)
-                heartbeatInterval = setInterval(() => {
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        try {
-                            console.log('Sending heartbeat');
-                            ws.send(JSON.stringify({ 
-                                type: 'heartbeat',
-                                timestamp: new Date().toISOString(),
-                                connectionId: window.wsConnectionId
-                            }));
-                        } catch (e) {
-                            console.error('Error sending heartbeat:', e);
-                    ws.close();
-                        }
+                    const data = await response.json();
+                    if (data.participants) {
+                        updateParticipantsList(data.participants);
+                    } else {
+                        console.warn('Participants data is missing in the response', data);
+                        updateParticipantsList([]); // 清空列表或顯示錯誤
                     }
-                }, 10000);
-            }
-
-            function stopHeartbeat() {
-                if (heartbeatInterval) {
-                    clearInterval(heartbeatInterval);
-                    heartbeatInterval = null;
-                }
-            }
-            
-            function sendPong() {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    try {
-                        console.log('Sending pong response');
-                        ws.send(JSON.stringify({ 
-                            type: 'pong',
-                            timestamp: new Date().toISOString(),
-                            connectionId: window.wsConnectionId
-                        }));
-                    } catch (e) {
-                        console.error('Error sending pong:', e);
-                    }
+                } catch (error) {
+                    console.error('Error fetching participants:', error);
+                    participantsCountEl.textContent = '更新參與者名單失敗';
                 }
             }
 
@@ -548,6 +380,7 @@
                         currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
                         animationContainer.textContent = "監控中...等待參與者加入";
                         winnerDisplayEl.style.display = 'none';
+                        fetchParticipants(); // 設置成功後立即更新一次參與者
                     } else {
                         throw new Error(result.error || '設置失敗');
                     }
@@ -590,8 +423,11 @@
                     }
                 });
             });
+            
+            refreshParticipantsBtn.addEventListener('click', fetchParticipants);
 
-            connectWebSocket();
+            // Initial fetch
+            fetchParticipants();
         });
     </script>
 </body>
