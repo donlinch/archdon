@@ -640,16 +640,15 @@
                 const description = document.getElementById('badge-description').value;
                 const imageFile = document.getElementById('badge-image').files[0];
                 
-                if (!imageFile) {
-                    alert('請選擇徽章圖片');
-                    return;
-                }
-                
                 // Create FormData for file upload
                 const formData = new FormData();
                 formData.append('badgeName', name);
                 formData.append('badgeDescription', description);
-                formData.append('badgeImage', imageFile);
+                
+                // Only append image if one was selected
+                if (imageFile) {
+                    formData.append('badgeImage', imageFile);
+                }
                 
                 try {
                     loadingOverlay.style.display = 'flex';

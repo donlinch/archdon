@@ -1854,39 +1854,42 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
 
     // 上傳徽章圖片
     router.post('/admin/badges/upload', isAdminAuthenticated, boxImageUpload.single('badgeImage'), async (req, res) => {
-        if (!req.file) {
-            return res.status(400).json({ error: '沒有上傳有效的圖片檔案。' });
-        }
-
-        const imageBuffer = req.file.buffer;
-        const originalFilename = req.file.originalname;
         const { badgeName, badgeDescription, badgeCategory } = req.body;
         
         if (!badgeName) {
             return res.status(400).json({ error: '徽章名稱為必填項。' });
         }
 
+        let diskPath;
+        let urlPath = null; // Default to null if no image is uploaded
+
         try {
-            // 處理圖片
-            const processedImageBuffer = await sharp(imageBuffer).rotate()
-                .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
-                .jpeg({ quality: 80 })
-                .toBuffer();
-            
-            // 生成檔案名稱
-            const filename = `badge-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
-            const diskPath = path.join(uploadDir, filename);
-            const urlPath = `/uploads/${filename}`;
-            
-            // 保存圖片到磁碟
-            await fs.writeFile(diskPath, processedImageBuffer);
-            
-            // 記錄檔案到 uploaded_files 表
-            const uploadedFileResult = await pool.query(
-                `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type, owner_user_id)
-                 VALUES ($1, $2, 'image/jpeg', $3, $4, $5) RETURNING id`,
-                [urlPath, originalFilename, processedImageBuffer.length, 'badge_image', req.boxUser.user_id]
-            );
+            // 如果有上傳圖片，處理圖片
+            if (req.file) {
+                const imageBuffer = req.file.buffer;
+                const originalFilename = req.file.originalname;
+                
+                // 處理圖片
+                const processedImageBuffer = await sharp(imageBuffer).rotate()
+                    .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                
+                // 生成檔案名稱
+                const filename = `badge-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+                diskPath = path.join(uploadDir, filename);
+                urlPath = `/uploads/${filename}`;
+                
+                // 保存圖片到磁碟
+                await fs.writeFile(diskPath, processedImageBuffer);
+                
+                // 記錄檔案到 uploaded_files 表
+                const uploadedFileResult = await pool.query(
+                    `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type, owner_user_id)
+                     VALUES ($1, $2, 'image/jpeg', $3, $4, $5) RETURNING id`,
+                    [urlPath, originalFilename, processedImageBuffer.length, 'badge_image', req.boxUser?.user_id || null]
+                );
+            }
             
             // 創建徽章
             const query = `
@@ -1897,7 +1900,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             const result = await pool.query(query, [
                 badgeName, 
                 badgeDescription || null, 
-                urlPath,
+                urlPath, // 如果沒有上傳圖片，這裡會是 null
                 badgeCategory || null
             ]);
             
@@ -1909,6 +1912,16 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             });
         } catch (err) {
             console.error('[API POST /admin/badges/upload] Error:', err);
+            
+            // 如果上傳過程中出錯，嘗試刪除已上傳的圖片
+            if (diskPath) {
+                try {
+                    await fs.unlink(diskPath).catch(e => console.error('Error deleting badge image:', e));
+                } catch (cleanupErr) {
+                    console.error('Error during cleanup:', cleanupErr);
+                }
+            }
+            
             res.status(500).json({ error: '創建徽章失敗。' });
         }
     });
