@@ -1652,163 +1652,83 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
-// --- ★★★ WebSocket 連線處理 (Simple Walk) ★★★ ---
-wss.on('connection', async (ws, req) => {
+
+// --- ★★★ 修改 wss.on('connection') ★★★ ---
+wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     try {
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      const clientType = url.searchParams.get('clientType');
-      const roomId = url.searchParams.get('roomId');
-      const playerName = url.searchParams.get('playerName');
-      const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
-  
-      // YouTube 抽獎系統已改用 HTTP 接口，不再使用 WebSocket
-      if (isYoutubeLottery) {
-        console.log(`[WS] 拒絕過時的 YouTube Lottery WebSocket 連線，來源 IP: ${req.socket.remoteAddress}`);
-        ws.send(JSON.stringify({
-          type: "error",
-          message: "YouTube抽獎系統已更新，請重新整理頁面。"
-        }));
-        ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
-        return;
-      }
-  
-      // --- Simple Walk 邏輯 ---
-      if (!clientType || !roomId) {
-        console.warn(`[WS] 無效的 Simple Walk 連線請求：缺少 clientType 或 roomId。關閉連線。`);
-        ws.close(1008, '無效的請求：缺少 clientType 或 roomId');
-        return;
-      }
-  
-      ws.id = `${roomId}-${clientType}-${Date.now()}`;
-      console.log(`[WS] Simple Walk 客戶端已連線: ${ws.id}`);
-  
-      // 將客戶端加入對應的房間
-      if (!rooms[roomId]) {
-        rooms[roomId] = {
-          controller: null,
-          players: new Map(),
-          gameState: 'waiting',
-          gameMap: null
-        };
-      }
-      const room = rooms[roomId];
-  
-      if (clientType === 'controller') {
-        if (room.controller) {
-          console.warn(`[WS] 房間 ${roomId} 的控制器已存在。關閉新的控制器連線。`);
-          ws.close(1013, '控制器已存在');
-          return;
-        }
-        room.controller = ws;
-        ws.send(JSON.stringify({
-          type: 'connection_ack',
-          message: '控制器已成功連線'
-        }));
-      } else if (clientType === 'player') {
-        if (!playerName) {
-          ws.close(1008, '玩家名稱未提供');
-          return;
-        }
-        const playerId = `player-${Date.now()}`;
-        ws.playerId = playerId;
-        room.players.set(playerId, {
-          ws: ws,
-          name: playerName,
-          position: null
-        });
-  
-        // 歡迎新玩家
-        ws.send(JSON.stringify({
-          type: 'welcome',
-          playerId: playerId,
-          message: `歡迎你, ${playerName}!`
-        }));
-  
-        // 通知控制器有新玩家加入
-        if (room.controller && room.controller.readyState === WebSocket.OPEN) {
-          room.controller.send(JSON.stringify({
-            type: 'player_joined',
-            playerId: playerId,
-            playerName: playerName
-          }));
-        }
-      } else {
-        ws.close(1008, '未知的客戶端類型');
-        return;
-      }
-  
-      // --- WebSocket 訊息處理 ---
-      ws.on('message', (message) => {
-        try {
-          const data = JSON.parse(message);
-          // 轉發來自控制器的訊息給所有玩家
-          if (clientType === 'controller' && room.players.size > 0) {
-            room.players.forEach(player => {
-              if (player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify(data));
-              }
-            });
-          }
-          // 轉發來自玩家的訊息給控制器
-          else if (clientType === 'player' && room.controller && room.controller.readyState === WebSocket.OPEN) {
-            // 附加玩家資訊
-            const messageWithPlayerInfo = {
-              ...data,
-              playerId: ws.playerId,
-              playerName: playerName
-            };
-            room.controller.send(JSON.stringify(messageWithPlayerInfo));
-          }
-        } catch (e) {
-          console.error(`[WS] 處理訊息時出錯: ${e.message}`);
-        }
-      });
-  
-      // --- WebSocket 關閉處理 ---
-      ws.on('close', () => {
-        console.log(`[WS] Simple Walk 客戶端已離線: ${ws.id}`);
-        if (clientType === 'controller') {
-          if (room.controller === ws) {
-            room.controller = null;
-            // 通知所有玩家控制器已離線
-            room.players.forEach(player => {
-              if (player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify({
-                  type: 'controller_left'
-                }));
-              }
-            });
-            // 如果沒有玩家，可以考慮清除房間
-            if (room.players.size === 0) {
-              delete rooms[roomId];
-              console.log(`[WS] 房間 ${roomId} 已清空並移除。`);
-            }
-          }
-        } else if (clientType === 'player' && ws.playerId) {
-          room.players.delete(ws.playerId);
-          // 通知控制器玩家已離開
-          if (room.controller && room.controller.readyState === WebSocket.OPEN) {
-            room.controller.send(JSON.stringify({
-              type: 'player_left',
-              playerId: ws.playerId
+        console.log('[WS] Connection handler entered. req.url:', req.url); // New log
+
+        // 解析URL參數
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const clientType = url.searchParams.get('clientType');
+        const roomId = url.searchParams.get('roomId');
+        const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
+        const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
+        // YouTube抽獎系統已改用簡單的HTTP接口，不再使用WebSocket
+        if (isYoutubeLottery) {
+            console.log(`[WS] Rejecting YouTube Lottery connection, client IP: ${req.socket.remoteAddress}`);
+            ws.send(JSON.stringify({
+                type: "error",
+                message: "YouTube抽獎系統已更新，請重新整理頁面"
             }));
-          }
-          // 如果這是最後一個連線 (沒有控制器也沒有玩家)，清除房間
-          if (!room.controller && room.players.size === 0) {
-              delete rooms[roomId];
-              console.log(`[WS] 房間 ${roomId} 已清空並移除。`);
-          }
+            ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
+            return;
+        }                console.error(`[WS] Error sending welcome message to ${ws.connectionId}:`, e.message);
+            }
+
+            return; // 結束處理，不要繼續執行 Simple Walker 邏輯
         }
-      });
-  
+
+        // --- 基本驗證 ---
+        // 檢查 Simple Walker 連接所需的參數
+        if (clientType !== 'controller' || !roomId) {
+            console.warn(`[WS] Invalid Simple Walker connection attempt: missing clientType or roomId. Closing connection.`);
+            ws.close(1008, "缺少必要的連接參數");
+            return;
+        }
+        
+        // 為客戶端生成 ID（如果未提供的話）
+        const playerId = playerName || `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        
+        console.log(`[WS Simple Walker] Connection attempt from ${playerId} for room ${roomId}`);
+        
+        // 設置 WebSocket 的訊息處理器
+        ws.roomId = roomId;
+        ws.playerId = playerId;
+        ws.playerName = playerName || playerId;
+        ws.clientType = clientType;
+        
+        // 設置消息處理器
+        ws.on('message', (message) => {
+            handleSimpleWalkerMessage(ws, message);
+        });
+        
+        // 設置關閉處理器
+        ws.on('close', () => {
+            handleSimpleWalkerClose(ws);
+        });
+        
+        // 設置錯誤處理器
+        ws.on('error', (err) => {
+            handleSimpleWalkerError(ws, err);
+        });
+        
+        // 發送歡迎消息
+        ws.send(JSON.stringify({
+            type: 'connection_accepted',
+            playerId: playerId,
+            roomId: roomId,
+            message: '已連接到 Simple Walker 伺服器'
+        }));
+        
     } catch (error) {
-      console.error(`[WS] 處理連線時發生未預期的錯誤:`, error);
-      // 確保即使在初始設定出錯時也能安全關閉連線
-      if (ws && ws.readyState !== WebSocket.CLOSED) {
-        ws.close(1011, '伺服器內部錯誤');
-      }
+        console.error('[WS] Connection handler error:', error.stack || error);
+        try {
+            ws.close(1011, "連接處理失敗");
+        } catch (closeErr) { /* 忽略關閉錯誤 */ }
     }
-  });
+});
+
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息
  * @param {WebSocket} ws WebSocket 連接對象

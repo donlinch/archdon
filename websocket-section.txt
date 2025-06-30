@@ -1,0 +1,30 @@
+// --- ★★★ 修改 wss.on('connection') ★★★ ---
+wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
+    try {
+        console.log('[WS] Connection handler entered. req.url:', req.url); // New log
+
+        // 解析URL參數
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const clientType = url.searchParams.get('clientType');
+        const roomId = url.searchParams.get('roomId');
+        const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
+        const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
+        // YouTube抽獎系統已改用簡單的HTTP接口，不再使用WebSocket
+        if (isYoutubeLottery) {
+            console.log(`[WS] Rejecting YouTube Lottery connection, client IP: ${req.socket.remoteAddress}`);
+            ws.send(JSON.stringify({
+                type: "error",
+                message: "YouTube抽獎系統已更新，請重新整理頁面"
+            }));
+            ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
+            return;
+        }                console.error(`[WS] Error sending welcome message to ${ws.connectionId}:`, e.message);
+            }
+
+            return; // 結束處理，不要繼續執行 Simple Walker 邏輯
+        }
+
+        // --- 基本驗證 ---
+        // 檢查 Simple Walker 連接所需的參數
+        if (clientType !== 'controller' || !roomId) {
+            console.warn(`[WS] Invalid Simple Walker connection attempt: missing clientType or roomId. Closing connection.`);
