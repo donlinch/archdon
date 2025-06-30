@@ -636,6 +636,8 @@
                 participants.forEach((participant, index) => {
                     const li = document.createElement('li');
                     li.className = 'participant';
+                    // 將 channelId 存儲在 data 屬性中
+                    li.dataset.channelId = participant.channelId;
                     li.innerHTML = `
                         <img src="${participant.profileImageUrl}" alt="${participant.displayName}" class="participant-avatar">
                         <span>${participant.displayName}</span>
@@ -654,18 +656,17 @@
                     // 刪除按鈕的點擊處理
                     const deleteBtn = li.querySelector('.delete-btn');
                     deleteBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation(); // 防止觸發父元素的點擊事件
-
+                        e.stopPropagation();
                         if (confirm(`確定要刪除參與者 "${participant.displayName}" 嗎？`)) {
                             try {
+                                // 使用 data-channel-id 來獲取正確的 channelId
+                                const channelId = li.dataset.channelId;
                                 const response = await fetch('/api/admin/lottery/remove-participant', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json'
                                     },
-                                    body: JSON.stringify({
-                                        channelId: participant.channelId
-                                    })
+                                    body: JSON.stringify({ channelId })
                                 });
 
                                 const result = await response.json();

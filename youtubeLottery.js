@@ -247,12 +247,9 @@ class YoutubeLottery {
       const removedParticipant = this.participants.get(channelId);
       this.participants.delete(channelId);
 
-      // 從資料庫中移除最近的參與記錄
-      await this.pool.query(
-        `UPDATE participation_records 
-         SET is_removed = true, 
-             removed_at = NOW(), 
-             removal_reason = '管理員手動移除'
+      // 先找到要更新的記錄
+      const recordToUpdate = await this.pool.query(
+        `SELECT id FROM participation_records 
          WHERE user_channel_id = $1 
          AND video_id = $2 
          AND is_removed = false
@@ -260,6 +257,18 @@ class YoutubeLottery {
          LIMIT 1`,
         [channelId, this.videoId]
       );
+
+      if (recordToUpdate.rows.length > 0) {
+        // 然後更新找到的記錄
+        await this.pool.query(
+          `UPDATE participation_records 
+           SET is_removed = true, 
+               removed_at = NOW(), 
+               removal_reason = '管理員手動移除'
+           WHERE id = $1`,
+          [recordToUpdate.rows[0].id]
+        );
+      }
 
       return {
         success: true,
