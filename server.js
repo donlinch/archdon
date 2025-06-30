@@ -37,7 +37,7 @@ if (process.env.NODE_ENV === 'production') {
 
 
 
-
+const youtubeLotteryRouter = express.Router();
 
  
 
@@ -74,7 +74,22 @@ app.use(session({
 }));
 
 
- 
+ // YouTube抽獎系統模組
+const YoutubeLottery = require('./youtubeLottery');
+const UserProfile = require('./userProfile');
+const ChatResponder = require('./chatResponder');
+
+// 初始化抽獎系統
+const youtubeLottery = new YoutubeLottery(pool);
+const userProfile = new UserProfile(pool);
+const chatResponder = new ChatResponder();
+
+// 將WebSocket伺服器傳遞給抽獎系統
+youtubeLottery.setWebSocketServer(wss);
+
+
+
+
  
 // =================================================================
 // ★★★ 管理後台專用認證中介軟體 (Admin Authentication) ★★★
@@ -786,13 +801,172 @@ voitRouter.delete('/campaigns/:campaignId', optionalAuthenticateBoxUser, async (
 
 
 
+// YouTube抽獎系統API路由
+app.use('/api/admin/lottery', isAdminAuthenticated, youtubeLotteryRouter);
+
+
+// 設置監控的直播
+youtubeLotteryRouter.post('/set-video', async (req, res) => {
+    try {
+      const { videoId, keyword, apiRateLimit } = req.body;
+      await youtubeLottery.setTargetVideo(videoId, keyword, apiRateLimit);
+      res.json({ success: true, message: '已設置監控直播' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // 獲取當前參與者
+  youtubeLotteryRouter.get('/participants', async (req, res) => {
+    try {
+      const participants = await youtubeLottery.getParticipants();
+      res.json({ participants });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // 執行抽獎
+  youtubeLotteryRouter.post('/draw', async (req, res) => {
+    try {
+      const { animationMode, duration } = req.body;
+      const winner = await youtubeLottery.drawWinner(animationMode, duration);
+      res.json({ winner });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // 獲取抽獎歷史
+  youtubeLotteryRouter.get('/history', async (req, res) => {
+    try {
+      const history = await youtubeLottery.getLotteryHistory();
+      res.json({ history });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // 用戶畫像相關API
+  youtubeLotteryRouter.get('/user-profiles', async (req, res) => {
+    try {
+      const userProfiles = await userProfile.getAllProfiles();
+      res.json({ userProfiles });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
 
 
+// 處理YouTube抽獎WebSocket消息
+wss.on('connection', (ws) => {
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message);
+        if (data.type === 'youtube_lottery') {
+          // 處理抽獎相關的WebSocket消息
+          handleYoutubeLotteryMessage(ws, data);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+  });
+  
+  // YouTube抽獎WebSocket消息處理函數
+  async function handleYoutubeLotteryMessage(ws, data) {
+    try {
+      switch (data.action) {
+        case 'startCountdown':
+          // 處理開始倒數
+          const { minutes, keyword } = data;
+          if (minutes && keyword) {
+            // 設置倒數計時器
+            const countdownMinutes = parseInt(minutes, 10);
+            
+            // 廣播倒數開始訊息
+            broadcastToAll({
+              type: 'countdown_update',
+              minutes: countdownMinutes,
+              status: 'started'
+            });
+            
+            // 每分鐘更新倒數
+            let remainingMinutes = countdownMinutes;
+            const countdownInterval = setInterval(() => {
+              remainingMinutes--;
+              
+              // 最後一分鐘特別提醒
+              if (remainingMinutes === 1) {
+                broadcastToAll({
+                  type: 'countdown_update',
+                  minutes: remainingMinutes,
+                  status: 'last_minute'
+                });
+              } 
+              // 倒數結束
+              else if (remainingMinutes <= 0) {
+                clearInterval(countdownInterval);
+                broadcastToAll({
+                  type: 'countdown_update',
+                  minutes: 0,
+                  status: 'ended'
+                });
+              } 
+              // 正常倒數
+              else {
+                broadcastToAll({
+                  type: 'countdown_update',
+                  minutes: remainingMinutes,
+                  status: 'counting'
+                });
+              }
+            }, 60000); // 每分鐘更新一次
+          }
+          break;
+          
+        case 'getStats':
+          // 獲取並返回用戶統計數據
+          const stats = await userProfile.getParticipationStats();
+          ws.send(JSON.stringify({
+            type: 'user_stats_update',
+            stats
+          }));
+          break;
+          
+        case 'cancelCountdown':
+          // 取消倒數計時 (具體邏輯需在前端實現)
+          broadcastToAll({
+            type: 'countdown_update',
+            status: 'cancelled'
+          });
+          break;
+          
+        default:
+          console.warn(`未知的YouTube抽獎WebSocket動作: ${data.action}`);
+      }
+    } catch (error) {
+      console.error('處理YouTube抽獎WebSocket消息時出錯:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: error.message
+      }));
+    }
+  }
+
+// 向所有WebSocket客戶端廣播消息
+function broadcastToAll(message) {
+  const messageStr = JSON.stringify(message);
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      client.send(messageStr);
+    }
+  });
+}
 
 
-
-
+  
  
    
    
