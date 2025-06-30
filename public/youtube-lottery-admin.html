@@ -364,7 +364,7 @@
 
                 const participants = Array.from(participantsListEl.querySelectorAll('li'))
                     .map(li => li.querySelector('span').textContent.trim());
-
+                    
                 if (participants.length === 0) {
                     wheelCanvas.style.display = 'none';
                     defaultAnimation.style.display = 'block';
@@ -381,6 +381,7 @@
 
                 wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
+                // Draw wheel background
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY);
                 wheelCtx.rotate(currentRotation);
@@ -390,6 +391,7 @@
                     const startAngle = index * sliceAngle;
                     const endAngle = startAngle + sliceAngle;
 
+                    // Draw slice
                     wheelCtx.beginPath();
                     wheelCtx.moveTo(0, 0);
                     wheelCtx.arc(0, 0, radius, startAngle, endAngle);
@@ -398,6 +400,7 @@
                     wheelCtx.fill();
                     wheelCtx.stroke();
 
+                    // Draw text
                     wheelCtx.save();
                     wheelCtx.rotate(startAngle + sliceAngle / 2);
                     wheelCtx.textAlign = 'right';
@@ -410,14 +413,21 @@
 
                 wheelCtx.restore();
 
-                wheelCtx.beginPath();
-                wheelCtx.moveTo(centerX + radius + 10, centerY);
-                wheelCtx.lineTo(centerX + radius - 10, centerY - 10);
-                wheelCtx.lineTo(centerX + radius - 10, centerY + 10);
-                wheelCtx.closePath();
+                // Draw pointer at 12 o'clock position
+                wheelCtx.save();
+                wheelCtx.translate(centerX, centerY - radius);
                 wheelCtx.fillStyle = '#ff4757';
+                
+                // Draw triangle pointer
+                wheelCtx.beginPath();
+                wheelCtx.moveTo(0, -10); // Top point
+                wheelCtx.lineTo(-10, 10); // Bottom left
+                wheelCtx.lineTo(10, 10); // Bottom right
+                wheelCtx.closePath();
                 wheelCtx.fill();
+                wheelCtx.restore();
 
+                // Update rotation if spinning
                 if (isSpinning && timestamp) {
                     const progress = (timestamp - spinStartTime) / spinDuration;
                     if (progress < 1) {
@@ -442,9 +452,10 @@
                 spinStartTime = performance.now();
                 
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
-                const winnerAngle = sliceAngle * winnerIndex + sliceAngle / 2;
-                
-                targetRotation = currentRotation + (Math.PI * 12) + ((2 * Math.PI) - winnerAngle);
+                // Adjust the target angle to align with 12 o'clock position
+                const winnerAngle = sliceAngle * winnerIndex;
+                // Add extra rotations and align with 12 o'clock (Math.PI * 1.5 is 270 degrees)
+                targetRotation = currentRotation + (Math.PI * 12) + (Math.PI * 1.5 - winnerAngle);
                 
                 requestAnimationFrame(drawWheel);
             }
@@ -617,7 +628,7 @@
 
             drawWinnerBtn.addEventListener('click', async () => {
                 const animationMode = animationModeEl.value;
-                const duration = parseInt(durationEl.value, 10);
+                const duration = parseInt(durationEl.value, 10) || 0;
 
                 try {
                     const response = await fetch('/api/admin/lottery/draw', {
@@ -628,6 +639,8 @@
 
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || '抽獎失敗');
+
+                    if (!result.winner) throw new Error('未能獲取中獎者資訊');
 
                     const winner = result.winner;
                     if (animationMode === 'turntable') {
