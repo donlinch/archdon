@@ -197,12 +197,49 @@
           to { opacity: 1; transform: scale(1); }
         }
 
+        #animation-container {
+            width: 100%;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
         #wheel-canvas {
-            margin: 20px auto;
+            margin: 0 auto;
             display: block;
             background: white;
             border-radius: 50%;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        #default-animation {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        #participants-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #participants-list li {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
         }
 
         .winner-highlight {
@@ -210,6 +247,7 @@
             font-weight: bold;
             font-size: 1.2em;
             text-shadow: 0 0 5px rgba(255,71,87,0.3);
+            background: rgba(255,71,87,0.1);
         }
     </style>
 </head>
@@ -297,10 +335,12 @@
             const participantsCountEl = document.getElementById('participants-count');
             const drawWinnerBtn = document.getElementById('draw-winner-btn');
             const animationModeEl = document.getElementById('animation-mode');
+            const durationEl = document.getElementById('animation-duration');
+            const animationContainer = document.getElementById('animation-container');
+            const defaultAnimation = document.getElementById('default-animation');
             const winnerDisplayEl = document.getElementById('winner-display');
             const winnerAvatarEl = document.getElementById('winner-avatar');
             const winnerNameEl = document.getElementById('winner-name');
-            const animationContainer = document.getElementById('draw-animation-container');
             const confettiCanvas = document.getElementById('confetti-canvas');
             const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
 
@@ -328,16 +368,16 @@
             // 繪製輪盤
             function drawWheel(timestamp) {
                 const participants = Array.from(document.querySelectorAll('#participants-list li'))
-                    .map(li => li.textContent.trim());
+                    .map(li => li.querySelector('span').textContent.trim());
                 
                 if (participants.length === 0) {
                     wheelCanvas.style.display = 'none';
-                    document.getElementById('default-animation').style.display = 'block';
+                    defaultAnimation.style.display = 'block';
                     return;
                 }
 
                 wheelCanvas.style.display = 'block';
-                document.getElementById('default-animation').style.display = 'none';
+                defaultAnimation.style.display = 'none';
 
                 const centerX = wheelCanvas.width / 2;
                 const centerY = wheelCanvas.height / 2;
@@ -370,7 +410,9 @@
                     wheelCtx.textAlign = 'right';
                     wheelCtx.fillStyle = 'white';
                     wheelCtx.font = '14px Arial';
-                    wheelCtx.fillText(name, radius - 10, 5);
+                    // 截短過長的名字
+                    const displayName = name.length > 10 ? name.substring(0, 10) + '...' : name;
+                    wheelCtx.fillText(displayName, radius - 10, 5);
                     wheelCtx.restore();
                 });
 
@@ -386,10 +428,9 @@
                 wheelCtx.fill();
 
                 // 如果正在旋轉，更新旋轉角度
-                if (isSpinning) {
+                if (isSpinning && timestamp) {
                     const progress = (timestamp - spinStartTime) / spinDuration;
                     if (progress < 1) {
-                        // 使用緩動函數使動畫更自然
                         const easeOut = 1 - Math.pow(1 - progress, 3);
                         currentRotation = easeOut * targetRotation;
                         requestAnimationFrame(drawWheel);
@@ -410,11 +451,9 @@
                 isSpinning = true;
                 spinStartTime = performance.now();
                 
-                // 計算目標旋轉角度
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
                 const winnerAngle = sliceAngle * winnerIndex;
                 
-                // 確保至少轉5圈，然後停在獲獎者位置
                 targetRotation = currentRotation + (Math.PI * 10) + (2 * Math.PI - winnerAngle);
                 
                 requestAnimationFrame(drawWheel);
@@ -424,7 +463,7 @@
             function highlightWinner(winner) {
                 const participantsList = document.querySelectorAll('#participants-list li');
                 participantsList.forEach(li => {
-                    if (li.textContent.includes(winner.displayName)) {
+                    if (li.querySelector('span').textContent.includes(winner.displayName)) {
                         li.classList.add('winner-highlight');
                     }
                 });
@@ -463,9 +502,7 @@
                 });
 
                 // 重新繪製輪盤
-                if (wheelCanvas) {
-                    requestAnimationFrame(drawWheel);
-                }
+                drawWheel();
             }
             
             function showTemporaryAnimation(participants, callback) {
@@ -573,10 +610,9 @@
                     if (!response.ok) throw new Error(result.error);
 
                     if (animationMode === 'turntable') {
-                        // 獲取獲獎者在參與者列表中的索引
                         const participants = Array.from(document.querySelectorAll('#participants-list li'));
                         const winnerIndex = participants.findIndex(li => 
-                            li.textContent.includes(result.winner.displayName)
+                            li.querySelector('span').textContent.includes(result.winner.displayName)
                         );
                         
                         if (winnerIndex !== -1) {
@@ -584,7 +620,6 @@
                             startWheelAnimation(winnerIndex, participants.length);
                         }
                     } else {
-                        // 其他動畫模式的處理...
                         highlightWinner(result.winner);
                     }
                 } catch (error) {
