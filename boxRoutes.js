@@ -1733,6 +1733,17 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
     
+    // 獲取所有頭銜
+    router.get('/admin/titles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query('SELECT * FROM titles ORDER BY title_id');
+            res.json(result.rows);
+        } catch (err) {
+            console.error('[API GET /admin/titles] Error:', err);
+            res.status(500).json({ error: '無法獲取頭銜列表。' });
+        }
+    });
+
     // 創建新徽章
     router.post('/admin/badges', isAdminAuthenticated, async (req, res) => {
         const { badgeName, badgeDescription, badgeImageUrl, badgeCategory } = req.body;
