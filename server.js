@@ -971,6 +971,7 @@ function broadcastToAll(message) {
  
    
    
+   
 // --- 基本 Express 設定 ---
 
 
@@ -1745,26 +1746,29 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     const clientType = url.searchParams.get('clientType');
     const roomId = url.searchParams.get('roomId');
     const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
+    const isYoutubeLottery = url.searchParams.get('type') === 'youtube_lottery';
 
-    // 處理YouTube抽獎的WebSocket連接
-    if (!clientType && !roomId && !playerName) {
-        console.log(`[WS] Connection for YouTube Lottery`);
-        // 設置YouTube抽獎消息處理
+    console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}, YoutubeLottery=${isYoutubeLottery}`);
+
+    // 處理 YouTube 抽獎的 WebSocket 連接
+    if (isYoutubeLottery) {
+        console.log(`[WS] Handling YouTube Lottery connection`);
+        ws.isYoutubeLottery = true;
+        
         ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message);
                 if (data.type === 'youtube_lottery') {
-                    // 處理抽獎相關的WebSocket消息
+                    // 處理抽獎相關的 WebSocket 消息
                     handleYoutubeLotteryMessage(ws, data);
                 }
             } catch (error) {
                 console.error('WebSocket message error:', error);
             }
         });
-        return; // 是YouTube抽獎連接，正常處理完畢
+        
+        return; // 結束處理，不要繼續執行 Simple Walker 邏輯
     }
-
-    console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
 
     // --- 基本驗證 ---
     // ... 剩餘代碼保持不變 ...
