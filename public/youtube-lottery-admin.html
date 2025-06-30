@@ -268,23 +268,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // DOM Elements
             const wsStatusEl = document.getElementById('ws-status');
-            const videoIdInput = document.getElementById('video-id');
-            const keywordInput = document.getElementById('lottery-keyword');
+            const videoIdEl = document.getElementById('video-id');
+            const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
             const setVideoBtn = document.getElementById('set-video-btn');
+            const currentVideoIdEl = document.getElementById('current-video-id');
             const participantsListEl = document.getElementById('participants-list');
             const participantsCountEl = document.getElementById('participants-count');
-            const currentVideoEl = document.getElementById('current-video');
             const drawWinnerBtn = document.getElementById('draw-winner-btn');
-            const animationModeSelect = document.getElementById('animation-mode');
+            const animationModeEl = document.getElementById('animation-mode');
             const winnerDisplayEl = document.getElementById('winner-display');
             const winnerAvatarEl = document.getElementById('winner-avatar');
             const winnerNameEl = document.getElementById('winner-name');
-            const drawAnimationContainer = document.getElementById('draw-animation-container');
+            const animationContainer = document.getElementById('draw-animation-container');
             const confettiCanvas = document.getElementById('confetti-canvas');
-
 
             let ws;
             const myConfetti = confetti.create(confettiCanvas, {
@@ -293,47 +291,58 @@
             });
 
             function connectWebSocket() {
-                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=youtube_lottery`);
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.host;
+                const wsUrl = `${protocol}//${host}/?type=youtube_lottery`;
+                
+                console.log(`[WS] Attempting to connect to: ${wsUrl}`);
+                wsStatusEl.textContent = '正在連接...';
+                wsStatusEl.className = '';
 
-                ws.onopen = () => {
-                    console.log('WebSocket connected');
-                    wsStatusEl.textContent = '已連接';
-                    wsStatusEl.className = 'status-connected';
-                };
+                try {
+                    ws = new WebSocket(wsUrl);
 
-                ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    console.log('Message from server:', data);
+                    ws.onopen = () => {
+                        console.log('WebSocket connection established');
+                        wsStatusEl.textContent = '已連接';
+                        wsStatusEl.className = 'status-connected';
+                    };
 
-                    switch (data.type) {
-                        case 'update_participants':
-                            updateParticipantList(data.participants);
-                            break;
-                        case 'announce_winner':
-                             // This is now handled by the REST API response
-                            break;
-                        case 'error':
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        console.log('Received data:', data);
+
+                        if (data.type === 'participants_update') {
+                            updateParticipantsList(data.participants);
+                        } else if (data.type === 'winner_update') {
+                            displayWinner(data.winner);
+                        } else if (data.type === 'error') {
                             alert(`伺服器錯誤: ${data.message}`);
-                            break;
-                    }
-                };
+                        }
+                    };
 
-                ws.onclose = () => {
-                    console.log('WebSocket disconnected. Reconnecting...');
-                    wsStatusEl.textContent = '未連接';
+                    ws.onclose = () => {
+                        console.log('WebSocket disconnected. Reconnecting...');
+                        wsStatusEl.textContent = '已斷線，嘗試重連...';
+                        wsStatusEl.className = 'status-disconnected';
+                        setTimeout(connectWebSocket, 3000);
+                    };
+
+                    ws.onerror = (event) => {
+                        console.error('WebSocket error:', event);
+                        wsStatusEl.textContent = '連接錯誤';
+                        wsStatusEl.className = 'status-disconnected';
+                        ws.close();
+                    };
+                } catch (e) {
+                    console.error("Failed to create WebSocket:", e);
+                    wsStatusEl.textContent = '創建WS失敗';
                     wsStatusEl.className = 'status-disconnected';
-                    setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
-                };
-
-                ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    ws.close();
-                };
+                }
             }
 
-            function updateParticipantList(participants) {
-                participantsListEl.innerHTML = ''; // Clear list
+            function updateParticipantsList(participants) {
+                participantsListEl.innerHTML = '';
                 participants.forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'participant';
@@ -347,17 +356,17 @@
             }
             
             function showTemporaryAnimation(participants, callback) {
-                drawAnimationContainer.style.display = 'block';
+                animationContainer.style.display = 'block';
                 winnerDisplayEl.style.display = 'none';
                 
                 if (participants.length === 0) {
-                    drawAnimationContainer.textContent = '沒有參與者!';
+                    animationContainer.textContent = '沒有參與者!';
                     return;
                 }
                 
                 let animationInterval = setInterval(() => {
                     const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-                    drawAnimationContainer.innerHTML = `
+                    animationContainer.innerHTML = `
                         <img src="${randomParticipant.profileImageUrl}" style="width: 80px; height: 80px; border-radius: 50%; margin-right: 20px;">
                         <span>${randomParticipant.displayName}</span>
                     `;
@@ -366,16 +375,15 @@
                 setTimeout(() => {
                     clearInterval(animationInterval);
                     callback();
-                }, 5000); // Animate for 5 seconds
+                }, 5000);
             }
 
             function displayWinner(winner) {
-                drawAnimationContainer.style.display = 'none';
+                animationContainer.style.display = 'none';
                 winnerDisplayEl.style.display = 'flex';
                 winnerAvatarEl.src = winner.profileImageUrl;
                 winnerNameEl.textContent = winner.displayName;
                 
-                // Trigger confetti
                 myConfetti({
                     particleCount: 150,
                     spread: 180,
@@ -383,10 +391,9 @@
                 });
             }
 
-            // Event Listeners
             setVideoBtn.addEventListener('click', async () => {
-                const videoId = videoIdInput.value.trim();
-                const keyword = keywordInput.value.trim();
+                const videoId = videoIdEl.value.trim();
+                const keyword = keywordEl.value.trim();
                 const apiRateLimit = apiRateInput.value;
 
                 if (!videoId || !keyword) {
@@ -403,10 +410,9 @@
                     const result = await response.json();
                     if (response.ok && result.success) {
                         alert('成功設置監控直播！');
-                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
-                        drawAnimationContainer.textContent = "監控中...等待參與者加入";
+                        currentVideoIdEl.textContent = `當前監控 Video ID: ${videoId}`;
+                        animationContainer.textContent = "監控中...等待參與者加入";
                         winnerDisplayEl.style.display = 'none';
-
                     } else {
                         throw new Error(result.error || '設置失敗');
                     }
@@ -417,9 +423,8 @@
             });
 
             drawWinnerBtn.addEventListener('click', async () => {
-                const animationMode = animationModeSelect.value;
+                const animationMode = animationModeEl.value;
                 
-                // First, get current participants for animation
                 const participantsResponse = await fetch('/api/admin/lottery/participants');
                 const { participants } = await participantsResponse.json();
 
@@ -428,7 +433,6 @@
                     return;
                 }
 
-                // Show animation, then draw winner
                 showTemporaryAnimation(participants, async () => {
                     try {
                         const response = await fetch('/api/admin/lottery/draw', {
@@ -447,12 +451,11 @@
                     } catch (error) {
                         console.error('Error drawing winner:', error);
                         alert(`抽獎失敗: ${error.message}`);
-                        drawAnimationContainer.textContent = "抽獎出錯，請重試。";
+                        animationContainer.textContent = "抽獎出錯，請重試。";
                     }
                 });
             });
 
-            // Initial connection
             connectWebSocket();
         });
     </script>
