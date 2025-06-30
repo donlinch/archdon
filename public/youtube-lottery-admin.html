@@ -158,13 +158,22 @@
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) scale(0.8);
             background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
+            padding: 20px 40px;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
             text-align: center;
             z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        #winner-display.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
         }
 
         #winner-display img {
@@ -177,6 +186,11 @@
         #winner-display h2 {
             margin: 10px 0;
             color: #ff4757;
+        }
+
+        #winner-display h3 {
+            font-size: 1.5em;
+            color: #333;
         }
 
         .close-winner {
@@ -324,8 +338,10 @@
                 </div>
             </div>
             <div id="winner-display">
-                <img id="winner-avatar" src="" alt="Winner Avatar">
-                <h2 id="winner-name"></h2>
+                <span class="close-winner">&times;</span>
+                <img id="winner-avatar" alt="Winner Avatar">
+                <h2>🎉 恭喜中獎 🎉</h2>
+                <h3 id="winner-name"></h3>
             </div>
         </div>
 
@@ -407,10 +423,11 @@
 
                 wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
 
-                // Draw wheel background
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY);
-                wheelCtx.rotate(currentRotation);
+                
+                // Make 12 o'clock the 0-degree starting point
+                wheelCtx.rotate(currentRotation - Math.PI / 2);
 
                 const sliceAngle = (2 * Math.PI) / participants.length;
                 participants.forEach((name, index) => {
@@ -439,7 +456,7 @@
 
                 wheelCtx.restore();
 
-                // Draw pointer at 12 o'clock position
+                // Draw pointer at 12 o'clock position, remains static
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY - radius);
                 wheelCtx.fillStyle = '#ff4757';
@@ -478,15 +495,17 @@
                 spinStartTime = performance.now();
                 
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
-                const winnerAngle = sliceAngle * winnerIndex;
+                const winnerMiddleAngle = sliceAngle * winnerIndex + sliceAngle / 2;
                 
-                // Random number of rotations between MIN and MAX
                 const rotations = MIN_ROTATIONS + Math.random() * (MAX_ROTATIONS - MIN_ROTATIONS);
-                // Add random offset within the winner's slice for more natural feel
-                const randomOffset = Math.random() * sliceAngle;
                 
-                targetRotation = (Math.PI * 2 * rotations) + winnerAngle + randomOffset;
+                // Target angle is calculated to stop the winner's slice at the top
+                targetRotation = (Math.PI * 2 * rotations) + winnerMiddleAngle;
                 
+                // Small random offset so it doesn't stop at the exact same spot
+                const randomOffset = (Math.random() - 0.5) * sliceAngle * 0.8;
+                targetRotation += randomOffset;
+
                 requestAnimationFrame(drawWheel);
             }
 
@@ -593,19 +612,17 @@
                 
                 winnerAvatar.src = winner.profileImageUrl;
                 winnerName.textContent = winner.displayName;
-                winnerDisplay.style.display = 'block';
+                winnerDisplay.classList.add('show');
 
-                // Add close button functionality
-                const closeBtn = document.querySelector('.close-winner');
+                const closeBtn = winnerDisplay.querySelector('.close-winner');
                 if (closeBtn) {
                     closeBtn.onclick = () => {
-                        winnerDisplay.style.display = 'none';
+                        winnerDisplay.classList.remove('show');
                     };
                 }
 
-                // Auto hide after 5 seconds
                 setTimeout(() => {
-                    winnerDisplay.style.display = 'none';
+                    winnerDisplay.classList.remove('show');
                 }, 5000);
             }
 
@@ -714,13 +731,5 @@
             drawWheel();
         });
     </script>
-
-    <!-- Winner Display Modal -->
-    <div id="winner-display" style="display:none;">
-        <span class="close-winner">&times;</span>
-        <img id="winner-avatar" src="" alt="Winner Avatar">
-        <h2>🎉 恭喜中獎 🎉</h2>
-        <h3 id="winner-name"></h3>
-    </div>
 </body>
 </html> 
