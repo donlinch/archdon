@@ -357,6 +357,7 @@
             let spinStartTime = 0;
             const spinDuration = 5000; // 5 seconds
             let selectedWinner = null;
+            let updateTimer = null;
 
             function drawWheel(timestamp) {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -458,9 +459,56 @@
                 });
             }
 
+            async function fetchParticipants() {
+                try {
+                    const response = await fetch('/api/admin/lottery/participants');
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || '無法獲取參與者');
+                    }
+                    
+                    if (data.participants) {
+                        updateParticipantsList(data.participants);
+                        if (data.participants.length === 0) {
+                            if (defaultAnimation) {
+                                defaultAnimation.textContent = '監控中...等待參與者加入';
+                            }
+                        }
+                    } else {
+                        throw new Error('參與者資料格式錯誤');
+                    }
+                } catch (error) {
+                    console.error('Error fetching participants:', error);
+                    if (defaultAnimation) {
+                        defaultAnimation.textContent = '更新參與者名單失敗';
+                    }
+                }
+            }
+
+            function startAutoUpdate() {
+                if (updateTimer) {
+                    clearInterval(updateTimer);
+                }
+                
+                fetchParticipants();
+                
+                const interval = parseInt(apiRateInput.value, 10) * 1000;
+                updateTimer = setInterval(fetchParticipants, interval);
+            }
+
+            function stopAutoUpdate() {
+                if (updateTimer) {
+                    clearInterval(updateTimer);
+                    updateTimer = null;
+                }
+            }
+
             function updateParticipantsList(participants) {
+                if (!participantsListEl || !participantsCountEl) return;
+
                 participantsListEl.innerHTML = '';
-                participantsCountEl.textContent = participants.length;
+                participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
 
                 participants.forEach(participant => {
                     const li = document.createElement('li');
@@ -513,29 +561,32 @@
             setVideoBtn.addEventListener('click', async () => {
                 const videoId = videoIdEl.value.trim();
                 const keyword = keywordEl.value.trim();
-                const apiRateLimit = apiRateInput.value;
+                const apiRateLimit = parseInt(apiRateInput.value, 10);
 
                 if (!videoId || !keyword) {
-                    alert('請輸入 Video ID 和關鍵字');
+                    alert('請填寫 Video ID 和關鍵字！');
                     return;
                 }
 
                 try {
                     const response = await fetch('/api/admin/lottery/set-video', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ videoId, keyword, apiRateLimit })
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            videoId,
+                            keyword,
+                            apiRateLimit
+                        })
                     });
+
                     const result = await response.json();
-                    if (response.ok && result.success) {
-                        alert('成功設置監控直播！');
-                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
-                        animationContainer.textContent = "監控中...等待參與者加入";
-                        winnerDisplayEl.style.display = 'none';
-                        fetchParticipants(); // 設置成功後立即更新一次參與者
-                    } else {
-                        throw new Error(result.error || '設置失敗');
-                    }
+                    if (!response.ok) throw new Error(result.error || '設置失敗');
+
+                    currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
+                    startAutoUpdate();
+                    alert('設置成功！');
                 } catch (error) {
                     console.error('Error setting video:', error);
                     alert(`設置失敗: ${error.message}`);
@@ -548,11 +599,13 @@
                         method: 'POST'
                     });
                     const result = await response.json();
+                    
                     if (response.ok && result.success) {
-                        alert('已停止監控！');
-                        currentVideoEl.textContent = `當前監控 Video ID: 無`;
-                        animationContainer.textContent = "請先設定直播並開始監控";
+                        stopAutoUpdate();
+                        currentVideoEl.textContent = '當前監控 Video ID: 無';
+                        defaultAnimation.textContent = '請先設定直播並開始監控';
                         updateParticipantsList([]);
+                        alert('已停止監控！');
                     } else {
                         throw new Error(result.error || '停止監控失敗');
                     }
@@ -587,7 +640,7 @@
                             selectedWinner = winner;
                             startWheelAnimation(winnerIndex, participants.length);
                         } else {
-                            highlightWinner(winner); // Fallback if not in wheel
+                            highlightWinner(winner);
                         }
                     } else {
                         highlightWinner(winner);
@@ -600,7 +653,6 @@
             
             refreshParticipantsBtn.addEventListener('click', fetchParticipants);
 
-            fetchParticipants();
             drawWheel();
         });
     </script>
