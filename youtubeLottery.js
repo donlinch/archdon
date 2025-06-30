@@ -270,14 +270,24 @@ class YoutubeLottery {
         [winnerChannelId]
       );
 
-      // 更新參與記錄
-      await this.pool.query(
-        `UPDATE participation_records 
-         SET is_winner = true, lottery_id = $1 
-         WHERE user_channel_id = $2 AND video_id = $3 
+      // 更新參與記錄 - 修復 SQL 語法錯誤 (PostgreSQL 不支持在 UPDATE 中使用 ORDER BY 和 LIMIT)
+      // 先用 SELECT 找出要更新的記錄
+      const recordToUpdate = await this.pool.query(
+        `SELECT id FROM participation_records
+         WHERE user_channel_id = $1 AND video_id = $2
          ORDER BY participated_at DESC LIMIT 1`,
-        [lotteryId, winnerChannelId, this.videoId]
+        [winnerChannelId, this.videoId]
       );
+      
+      if (recordToUpdate.rows.length > 0) {
+        // 然後只更新這個記錄
+        await this.pool.query(
+          `UPDATE participation_records
+           SET is_winner = true, lottery_id = $1
+           WHERE id = $2`,
+          [lotteryId, recordToUpdate.rows[0].id]
+        );
+      }
 
       // 返回中獎者資訊
       return {
