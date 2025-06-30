@@ -327,7 +327,7 @@ class YoutubeLottery {
         if (client.readyState === 1) { // WebSocket.OPEN
           // 如果 client 是 YouTube 抽獎客戶端，或者沒有特定標識（向後兼容）
           if (client.isYoutubeLottery || !client.clientType) {
-            client.send(message);
+          client.send(message);
           }
         }
       });

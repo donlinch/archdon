@@ -285,6 +285,7 @@
             const confettiCanvas = document.getElementById('confetti-canvas');
 
             let ws;
+            let heartbeatInterval;
             const myConfetti = confetti.create(confettiCanvas, {
                 resize: true,
                 useWorker: true
@@ -299,45 +300,146 @@
                 wsStatusEl.textContent = '正在連接...';
                 wsStatusEl.className = '';
 
+                // 清除之前可能存在的連線
+                if (ws) {
+                    try {
+                        ws.close();
+                    } catch (e) {
+                        console.log('Error closing previous connection:', e);
+                    }
+                }
+
                 try {
                     ws = new WebSocket(wsUrl);
+
+                    // 設置連線超時處理
+                    const connectionTimeout = setTimeout(() => {
+                        if (ws.readyState !== WebSocket.OPEN) {
+                            console.log('Connection timeout, retrying...');
+                            ws.close();
+                            connectWebSocket();
+                        }
+                    }, 10000);
 
                     ws.onopen = () => {
                         console.log('WebSocket connection established');
                         wsStatusEl.textContent = '已連接';
                         wsStatusEl.className = 'status-connected';
+                        
+                        // 清除連線超時
+                        clearTimeout(connectionTimeout);
+                        
+                        // 連線成功後立即發送身份驗證訊息
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ 
+                                type: 'init',
+                                client: 'admin'
+                            }));
+                        }
+                        
+                        // Start heartbeat when connection is established
+                        startHeartbeat();
                     };
 
                     ws.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        console.log('Received data:', data);
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('Received data:', data);
 
-                        if (data.type === 'participants_update') {
-                            updateParticipantsList(data.participants);
-                        } else if (data.type === 'winner_update') {
-                            displayWinner(data.winner);
-                        } else if (data.type === 'error') {
-                            alert(`伺服器錯誤: ${data.message}`);
+                            if (data.type === 'participants_update') {
+                                updateParticipantsList(data.participants);
+                            } else if (data.type === 'winner_update') {
+                                displayWinner(data.winner);
+                            } else if (data.type === 'error') {
+                                alert(`伺服器錯誤: ${data.message}`);
+                            } else if (data.type === 'ping') {
+                                // Respond to server heartbeat
+                                sendPong();
+                            } else if (data.type === 'connection_accepted') {
+                                console.log('Connection accepted by server');
+                            }
+                        } catch (e) {
+                            console.error('Error processing message:', e, event.data);
                         }
                     };
 
-                    ws.onclose = () => {
-                        console.log('WebSocket disconnected. Reconnecting...');
+                    ws.onclose = (event) => {
+                        // 清除連線超時
+                        clearTimeout(connectionTimeout);
+                        
+                        console.log(`WebSocket disconnected with code ${event.code}, reason: ${event.reason}`);
                         wsStatusEl.textContent = '已斷線，嘗試重連...';
                         wsStatusEl.className = 'status-disconnected';
-                        setTimeout(connectWebSocket, 3000);
+                        
+                        // Clear heartbeat interval when connection is closed
+                        stopHeartbeat();
+                        
+                        // 使用指數退避策略重新連接
+                        const baseDelay = 1000; // 1秒
+                        const maxDelay = 30000; // 最大30秒
+                        const retryCount = window.wsRetryCount || 0;
+                        const delay = Math.min(baseDelay * Math.pow(1.5, retryCount), maxDelay);
+                        
+                        console.log(`Reconnecting in ${delay}ms (retry #${retryCount})...`);
+                        window.wsRetryCount = retryCount + 1;
+                        
+                        setTimeout(connectWebSocket, delay);
                     };
 
                     ws.onerror = (event) => {
                         console.error('WebSocket error:', event);
                         wsStatusEl.textContent = '連接錯誤';
                         wsStatusEl.className = 'status-disconnected';
-                        ws.close();
+                        
+                        // Clear heartbeat interval on error
+                        stopHeartbeat();
+                        
+                        // 不在這裡關閉，讓onclose處理重連邏輯
+                        // ws.close();
                     };
                 } catch (e) {
                     console.error("Failed to create WebSocket:", e);
                     wsStatusEl.textContent = '創建WS失敗';
                     wsStatusEl.className = 'status-disconnected';
+                    
+                    // 若無法建立WebSocket，3秒後重試
+                    setTimeout(connectWebSocket, 3000);
+                }
+            }
+            
+            function startHeartbeat() {
+                // Clear any existing interval
+                stopHeartbeat();
+                
+                // Send a heartbeat every 20 seconds (比30秒更頻繁)
+                heartbeatInterval = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        try {
+                            console.log('Sending heartbeat');
+                            ws.send(JSON.stringify({ type: 'heartbeat' }));
+                        } catch (e) {
+                            console.error('Error sending heartbeat:', e);
+                            ws.close();
+                        }
+                    }
+                }, 20000);
+            }
+            
+            function stopHeartbeat() {
+                if (heartbeatInterval) {
+                    clearInterval(heartbeatInterval);
+                    heartbeatInterval = null;
+                }
+            }
+            
+            function sendPong() {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    try {
+                        console.log('Sending pong response');
+                        ws.send(JSON.stringify({ type: 'pong' }));
+                    } catch (e) {
+                        console.error('Error sending pong:', e);
+                    }
                 }
             }
 
