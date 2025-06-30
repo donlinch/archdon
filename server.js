@@ -957,6 +957,13 @@ youtubeLotteryRouter.post('/set-video', async (req, res) => {
     }
   });
   
+
+
+
+
+
+
+
   // 執行抽獎
   youtubeLotteryRouter.post('/draw', async (req, res) => {
     try {
@@ -967,6 +974,20 @@ youtubeLotteryRouter.post('/set-video', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
+
+
+
+// 停止監控
+youtubeLotteryRouter.post('/stop-monitoring', async (req, res) => {
+    try {
+      const result = youtubeLottery.stopMonitoring();
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+
   
   // 獲取抽獎歷史
   youtubeLotteryRouter.get('/history', async (req, res) => {
@@ -8650,6 +8671,47 @@ adminRouter.delete('/news-categories/:id', async (req, res) => {
         res.status(500).json({ error: '伺服器內部錯誤，無法刪除分類。' });
     }
 });
+
+
+// --- Graceful Shutdown ---
+function gracefulShutdown() {
+    console.log('收到關閉訊號，正在優雅關閉...');
+    
+    // 停止 YouTube 抽獎輪詢
+    if (youtubeLottery) {
+      console.log('正在停止 YouTube Lottery 監控...');
+      youtubeLottery.stopMonitoring();
+    }
+  
+    // 關閉 HTTP 伺服器
+    server.close(() => {
+      console.log('已關閉剩餘的連線。');
+      
+      // 關閉資料庫連接池
+      if (pool) {
+        pool.end(() => {
+          console.log('資料庫連接池已關閉。');
+          process.exit(0);
+        });
+      } else {
+        process.exit(0);
+      }
+    });
+  
+    // 如果伺服器在 10 秒內沒有關閉，強制退出
+    setTimeout(() => {
+      console.error('無法在時限內關閉連線，強制關閉。');
+      process.exit(1);
+    }, 10000); // 10 秒
+  }
+  
+  // 監聽來自 pm2 或其他工具的 SIGTERM 訊號
+  process.on('SIGTERM', gracefulShutdown);
+  
+  // 監聽來自 Ctrl+C 的 SIGINT 訊號
+  process.on('SIGINT', gracefulShutdown);
+
+
 
 app.listen(PORT, () => {
     console.log(`伺服器正在監聽端口 ${PORT}`);

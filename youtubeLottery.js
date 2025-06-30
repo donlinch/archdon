@@ -62,6 +62,21 @@ class YoutubeLottery {
     }
   }
 
+  // 停止監控
+  stopMonitoring() {
+    if (this.chatPollingInterval) {
+      clearInterval(this.chatPollingInterval);
+      this.chatPollingInterval = null;
+      console.log(`已停止監控 Video ID: ${this.videoId}`);
+    }
+    // 重置狀態
+    this.videoId = null;
+    this.keyword = null;
+    this.participants.clear();
+    this.pollingPageToken = null;
+    return { success: true, message: '已停止監控' };
+  }
+
   // 開始輪詢聊天室
   startChatPolling(liveChatId) {
     this.chatPollingInterval = setInterval(async () => {

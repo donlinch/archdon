@@ -223,7 +223,8 @@
                     <option value="20">20秒</option>
                 </select>
             </div>
-            <button id="set-video-btn">開始監控</button>
+            <button id="set-video-btn">更新設定並開始</button>
+            <button id="stop-monitoring-btn" class="secondary" style="margin-top: 10px;">停止監控</button>
             <hr style="border-color: var(--secondary-color); margin: 20px 0;">
              <h2>抽獎控制</h2>
             <div class="form-group">
@@ -272,6 +273,7 @@
             const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
             const setVideoBtn = document.getElementById('set-video-btn');
+            const stopMonitoringBtn = document.getElementById('stop-monitoring-btn');
             const currentVideoEl = document.getElementById('current-video');
             const participantsListEl = document.getElementById('participants-list');
             const participantsCountEl = document.getElementById('participants-count');
@@ -387,6 +389,26 @@
                 } catch (error) {
                     console.error('Error setting video:', error);
                     alert(`設置失敗: ${error.message}`);
+                }
+            });
+
+            stopMonitoringBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/admin/lottery/stop-monitoring', {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        alert('已停止監控！');
+                        currentVideoEl.textContent = `當前監控 Video ID: 無`;
+                        animationContainer.textContent = "請先設定直播並開始監控";
+                        updateParticipantsList([]);
+                    } else {
+                        throw new Error(result.error || '停止監控失敗');
+                    }
+                } catch (error) {
+                    console.error('Error stopping monitoring:', error);
+                    alert(`停止監控失敗: ${error.message}`);
                 }
             });
 
