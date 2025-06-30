@@ -5793,6 +5793,10 @@ app.get('/api/scores/songs', async (req, res) => {
         res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
     }
 });
+
+
+
+
 app.get('/api/scores/proxy', (req, res) => {
     const pdfUrl = req.query.url;
 
