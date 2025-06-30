@@ -672,12 +672,10 @@
                                 const result = await response.json();
                                 if (!response.ok) throw new Error(result.error || '刪除失敗');
 
-                                // 從本地陣列中移除
-                                participants.splice(index, 1);
-                                // 重新渲染列表
-                                updateParticipantsList(participants);
-                                // 更新轉盤
-                                drawWheel();
+                                // 刪除成功後，重新從伺服器獲取最新的參與者列表
+                                // 這樣可以確保前後端狀態一致，並自動更新UI和轉盤
+                                fetchParticipants();
+                                alert(`參與者 "${participant.displayName}" 已成功刪除。`);
                             } catch (error) {
                                 console.error('Error removing participant:', error);
                                 alert(`刪除失敗: ${error.message}`);
