@@ -1754,74 +1754,81 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
 
         // 處理 YouTube 抽獎的 WebSocket 連接
         if (isYoutubeLottery) {
-            console.log(`[WS] Handling YouTube Lottery connection`);
+            console.log(`[WS] Handling YouTube Lottery connection, client IP: ${req.socket.remoteAddress}`);
             ws.isYoutubeLottery = true;
+            
+            // 跟蹤連接時間，用於調試
+            ws.connectionTime = new Date();
+            ws.connectionId = `yt_lottery_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            console.log(`[WS] YouTube Lottery connection established with ID: ${ws.connectionId}`);
             
             // 添加心跳檢測機制
             ws.isAlive = true;
             ws.ping_interval = setInterval(() => {
                 if (ws.isAlive === false) {
-                    console.log('[WS] YouTube Lottery client ping timeout, terminating');
+                    console.log(`[WS] YouTube Lottery client ping timeout, terminating connection ${ws.connectionId}`);
                     clearInterval(ws.ping_interval);
                     return ws.terminate();
                 }
                 ws.isAlive = false;
                 try {
                     // 發送ping消息
-                    console.log('[WS] Sending ping to YouTube Lottery client');
+                    console.log(`[WS] Sending ping to YouTube Lottery client ${ws.connectionId}`);
                     ws.send(JSON.stringify({ type: 'ping' }));
                 } catch (e) {
-                    console.error('[WS] Error sending ping:', e);
+                    console.error(`[WS] Error sending ping to ${ws.connectionId}:`, e.message);
                     clearInterval(ws.ping_interval);
                     ws.terminate();
                 }
-            }, 20000); // 每20秒發送一次ping
+            }, 15000); // 改為每15秒發送一次ping，更頻繁些
 
             ws.on('message', async (message) => {
                 try {
                     const data = JSON.parse(message);
-                    console.log('[WS] Received message from YouTube Lottery client:', data.type);
+                    console.log(`[WS] Received message from YouTube Lottery client ${ws.connectionId}:`, data.type);
                     
                     // 心跳和初始化消息處理
                     if (data.type === 'pong') {
                         ws.isAlive = true;
-                        console.log('[WS] Received pong from YouTube Lottery client');
+                        console.log(`[WS] Received pong from YouTube Lottery client ${ws.connectionId}`);
                     } else if (data.type === 'heartbeat') {
                         ws.isAlive = true;
-                        console.log('[WS] Received heartbeat from YouTube Lottery client');
+                        console.log(`[WS] Received heartbeat from YouTube Lottery client ${ws.connectionId}`);
                     } else if (data.type === 'init') {
                         ws.isAlive = true;
-                        console.log('[WS] Received init from YouTube Lottery client, client type:', data.client);
+                        console.log(`[WS] Received init from YouTube Lottery client ${ws.connectionId}, client type:`, data.client);
                         
                         // 不再需要驗證是否是管理員，任何人都可以連接
                         try {
                             ws.send(JSON.stringify({ 
                                 type: 'connection_accepted',
-                                message: 'Connection established'
+                                message: 'Connection established',
+                                connectionId: ws.connectionId
                             }));
-                            console.log('[WS] Sent connection acceptance to client');
+                            console.log(`[WS] Sent connection acceptance to client ${ws.connectionId}`);
                             
                             // 如果有參與者數據，立即發送一次更新
                             youtubeLottery.broadcastParticipantsUpdate();
+                            console.log(`[WS] Broadcasted participants update after connection ${ws.connectionId}`);
                         } catch (e) {
-                            console.error('[WS] Error sending connection acceptance:', e);
+                            console.error(`[WS] Error sending connection acceptance to ${ws.connectionId}:`, e.message);
                         }
                     } else if (data.type === 'youtube_lottery') {
                         // 處理抽獎相關的 WebSocket 消息
                         handleYoutubeLotteryMessage(ws, data);
                     }
                 } catch (error) {
-                    console.error('[WS] WebSocket message parse error:', error);
+                    console.error(`[WS] WebSocket message parse error for ${ws.connectionId}:`, error.message, "Raw message:", message.toString().substring(0, 100));
                 }
             });
 
-            ws.on('close', () => {
-                console.log('[WS] YouTube Lottery client disconnected.');
+            ws.on('close', (code, reason) => {
+                console.log(`[WS] YouTube Lottery client ${ws.connectionId} disconnected with code ${code}, reason: "${reason || 'No reason provided'}", was connected for ${(new Date() - ws.connectionTime) / 1000}s`);
                 clearInterval(ws.ping_interval);
             });
 
             ws.on('error', (err) => {
-                console.error('[WS] YouTube Lottery client error:', err);
+                console.error(`[WS] YouTube Lottery client ${ws.connectionId} error:`, err.message, err.stack);
                 clearInterval(ws.ping_interval);
             });
             
@@ -1829,11 +1836,13 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
             try {
                 ws.send(JSON.stringify({
                     type: 'welcome',
-                    message: 'Connected to YouTube Lottery server'
+                    message: 'Connected to YouTube Lottery server',
+                    connectionId: ws.connectionId,
+                    timestamp: new Date().toISOString()
                 }));
-                console.log('[WS] Sent welcome message to YouTube Lottery client');
+                console.log(`[WS] Sent welcome message to YouTube Lottery client ${ws.connectionId}`);
             } catch (e) {
-                console.error('[WS] Error sending welcome message:', e);
+                console.error(`[WS] Error sending welcome message to ${ws.connectionId}:`, e.message);
             }
 
             return; // 結束處理，不要繼續執行 Simple Walker 邏輯
@@ -2312,334 +2321,6 @@ const publicSafeUpload = multer({
   limits: { fileSize: 4 * 1024 * 1024 } // 限制 4MB，與 upload 相同
 });
 // --- END OF publicSafeUpload 定義 ---
-
-
-
-
-
-
-
-
-
-
-
-
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-
-
-
-
-    // 'image' 是前端 input file 元素的 name 屬性
-
-    if (!visionClient) { // 確保 Vision API 客戶端已初始化
-        console.error('[API /upload-safe-image] Vision API client not available.');
-        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
-    }
-
-    if (!req.file) {
-        // multer fileFilter 拒絕或沒有檔案上傳
-        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
-        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
-    }
-    
-    const file = req.file;
-    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
-                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
-
-    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
-
-    try {
-        // --- 1. 安全搜尋偵測 ---
-        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
-        const [safeSearchResult] = await visionClient.annotateImage({
-            image: { content: imageBuffer },
-            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
-        });
-
-        const safeSearch = safeSearchResult.safeSearchAnnotation;
-        let isImageSafe = true;
-        let unsafeCategoriesDetected = [];
-
-        if (safeSearch) {
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('成人');
-            }
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
-            }
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
-            }
-            // 你可以根據需要添加對 spoof, medical 的檢查
-        }
-
-        if (!isImageSafe) {
-            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
-            // 刪除已上傳的不安全圖片
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
-            }
-            return res.status(400).json({
-                success: false,
-                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
-            });
-        }
-        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
-
-        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
-        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
-        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
-        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
-        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-        
-        // 檢查是否為 PNG 格式
-        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
-        
-        // 自動旋轉（如果需要，基於之前的討論）
-        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
-        
-        // 如果是 PNG，設置輸出格式為 JPEG
-        if (isPNG) {
-            sharpInstance = sharpInstance.jpeg({ quality: 90 });
-            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
-        }
-        
-        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
-        sharpInstance = sharp(rotatedImageBuffer);
-        
-        const metadata = await sharpInstance.metadata();
-        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
-
-        const originalWidth = metadata.width;
-        let targetWidth = originalWidth;
-        let needsResize = false;
-        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
-        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
-        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
-
-        let processedBuffer;
-        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
-        let finalImageUrl;
-
-        if (needsResize) {
-            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-            processedBuffer = await sharpInstance
-                .resize({ width: targetWidth })
-                .toBuffer();
-            await fs.promises.writeFile(originalFilePath, processedBuffer);
-            const newStats = fs.statSync(originalFilePath);
-            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
-        } else {
-            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
-            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
-            // For JPGs only rotated, rotatedImageBuffer is the one to save.
-            // The key is that sharpInstance was updated if a conversion happened.
-            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
-            await fs.promises.writeFile(originalFilePath, bufferToSave);
-            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
-        }
-        
-        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
-        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
-        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
-
-    } catch (err) {
-        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
-        // 確保在錯誤時刪除已上傳的檔案
-        if (file && file.path && fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
-            } catch (cleanupErr) {
-                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
-            }
-        }
-        // 使用你修改後的全局錯誤處理器，它會返回 JSON
-        // 但在這裡我們可以直接返回 JSON 錯誤
-        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
-            }
-            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
-        }
-        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
-    }
-
-
-
-
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-// [app.use for voitRouter moved to an earlier position in the file]
-
-
-
-
-
-// --- 新的公開安全圖片上傳端點 ---
-app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
- 
- 
- 
- 
- 
- 
- 
-    // 'image' 是前端 input file 元素的 name 屬性
-
-    if (!visionClient) { // 確保 Vision API 客戶端已初始化
-        console.error('[API /upload-safe-image] Vision API client not available.');
-        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
-    }
-
-    if (!req.file) {
-        // multer fileFilter 拒絕或沒有檔案上傳
-        // multer 的錯誤處理應該在下面捕獲，但這裡可以作為一個保險
-        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
-    }
-    
-    const file = req.file;
-    const imageBuffer = fs.readFileSync(file.path); // 如果用 diskStorage，需要讀取檔案
-                                                  // 如果 publicSafeUploadStorage 用 memoryStorage, 則用 file.buffer
-
-    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
-
-    try {
-        // --- 1. 安全搜尋偵測 ---
-        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
-        const [safeSearchResult] = await visionClient.annotateImage({
-            image: { content: imageBuffer },
-            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
-        });
-
-        const safeSearch = safeSearchResult.safeSearchAnnotation;
-        let isImageSafe = true;
-        let unsafeCategoriesDetected = [];
-
-        if (safeSearch) {
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('成人');
-            }
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
-            }
-            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
-                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
-            }
-            // 你可以根據需要添加對 spoof, medical 的檢查
-        }
-
-        if (!isImageSafe) {
-            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
-            // 刪除已上傳的不安全圖片
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
-            }
-            return res.status(400).json({
-                success: false,
-                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
-            });
-        }
-        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
-
-        // --- 2. 如果圖片安全，則進行 Sharp 處理 (與你現有 /api/upload 類似) ---
-        let fileToProcess = { ...file }; // file.path 仍然是 multer 保存的路徑
-        const originalFilePath = fileToProcess.path; // multer儲存的原始檔案路徑
-        const lowerMimetype = fileToProcess.mimetype.toLowerCase();
-        const lowerExt = path.extname(fileToProcess.originalname).toLowerCase();
-        
-        // 檢查是否為 PNG 格式
-        const isPNG = lowerMimetype === 'image/png' || lowerExt === '.png';
-        
-        // 自動旋轉（如果需要，基於之前的討論）
-        let sharpInstance = sharp(imageBuffer); // 使用 buffer 初始化 sharp
-        
-        // 如果是 PNG，設置輸出格式為 JPEG
-        if (isPNG) {
-            sharpInstance = sharpInstance.jpeg({ quality: 90 });
-            console.log(`[API /upload-safe-image] Converting PNG to JPG for file: ${file.originalname}`);
-        }
-        
-        const rotatedImageBuffer = await sharpInstance.rotate().toBuffer();
-        sharpInstance = sharp(rotatedImageBuffer);
-        
-        const metadata = await sharpInstance.metadata();
-        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${metadata.width}, height=${metadata.height}`);
-
-        const originalWidth = metadata.width;
-        let targetWidth = originalWidth;
-        let needsResize = false;
-        if (originalWidth > 1500) { targetWidth = Math.round(originalWidth * 0.25); needsResize = true; }
-        else if (originalWidth > 800) { targetWidth = Math.round(originalWidth * 0.50); needsResize = true; }
-        else if (originalWidth > 500) { targetWidth = Math.round(originalWidth * 0.75); needsResize = true; }
-
-        let processedBuffer;
-        let finalFilename = fileToProcess.filename; // Ensure filename is defined, it should be from multer
-        let finalImageUrl;
-
-        if (needsResize) {
-            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
-            processedBuffer = await sharpInstance
-                .resize({ width: targetWidth })
-                .toBuffer();
-            await fs.promises.writeFile(originalFilePath, processedBuffer);
-            const newStats = fs.statSync(originalFilePath);
-            console.log(`[API /upload-safe-image] Image ${file.originalname} successfully resized. New size: ${newStats.size} bytes`);
-        } else {
-            // 如果不需要縮放，但進行了旋轉或格式轉換(PNG->JPG)，也需要保存更新後的 buffer
-            // For PNGs converted to JPG, rotatedImageBuffer would have been passed through .jpeg()
-            // For JPGs only rotated, rotatedImageBuffer is the one to save.
-            // The key is that sharpInstance was updated if a conversion happened.
-            const bufferToSave = (isPNG || sharpInstance !== sharp(rotatedImageBuffer)) ? await sharpInstance.toBuffer() : rotatedImageBuffer;
-            await fs.promises.writeFile(originalFilePath, bufferToSave);
-            console.log(`[API /upload-safe-image] Image ${file.originalname} saved (no resize, but potential rotation/conversion).`);
-        }
-        
-        finalImageUrl = '/uploads/' + finalFilename; // Use the filename from multer
-        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
-        res.json({ success: true, url: finalImageUrl }); // 返回最終的 URL
-
-    } catch (err) {
-        console.error(`[API /upload-safe-image] Error processing file ${file ? file.originalname : 'N/A'}:`, err);
-        // 確保在錯誤時刪除已上傳的檔案
-        if (file && file.path && fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
-            } catch (cleanupErr) {
-                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
-            }
-        }
-        // 使用你修改後的全局錯誤處理器，它會返回 JSON
-        // 但在這裡我們可以直接返回 JSON 錯誤
-        if (err instanceof multer.MulterError) { // 捕獲 multer 自身的錯誤
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(413).json({ success: false, error: `檔案超過限制大小 (${publicSafeUpload.opts.limits.fileSize / 1024 / 1024}MB)。` });
-            }
-            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
-        }
-        return res.status(500).json({ success: false, error: err.message || '圖片上傳及處理失敗。' });
-    }
-
-
-
-
-
-});
 
 
 
@@ -6022,92 +5703,6 @@ app.get('/api/scores/songs', async (req, res) => {
         console.error('獲取帶有樂譜的歌曲列表時出錯:', err.stack || err);
         res.status(500).json({ error: '獲取帶有樂譜的歌曲列表時發生內部伺服器錯誤' });
     }
-});
-app.get('/api/scores/proxy', (req, res) => {
-    const pdfUrl = req.query.url;
-
-    if (!pdfUrl || typeof pdfUrl !== 'string') {
-        console.warn('代理請求被拒：缺少或無效的 URL 參數。');
-        return res.status(400).send('缺少或無效的 PDF URL。');
-    }
-
-    let decodedUrl;
-    try {
-        decodedUrl = decodeURIComponent(pdfUrl);
-        const allowedDomains = ['raw.githubusercontent.com']; // Add other allowed domains if needed
-        const urlObject = new URL(decodedUrl);
-
-        if (!allowedDomains.includes(urlObject.hostname)) {
-           console.warn(`代理請求被阻止，不允許的網域：${urlObject.hostname} (URL: ${decodedUrl})`);
-           return res.status(403).send('不允許從此網域進行代理。');
-        }
-
-            } catch (e) {
-        console.error(`代理請求被拒：無效的 URL 編碼或格式：${pdfUrl}`, e);
-        return res.status(400).send('無效的 URL 格式或編碼。');
-    }
-
-    console.log(`正在代理 PDF 請求：${decodedUrl}`);
-
-    const pdfRequest = https.get(decodedUrl, (pdfRes) => {
-        if (pdfRes.statusCode >= 300 && pdfRes.statusCode < 400 && pdfRes.headers.location) {
-            console.log(`正在跟隨從 ${decodedUrl} 到 ${pdfRes.headers.location} 的重定向`);
-            try {
-                const redirectUrlObject = new URL(pdfRes.headers.location, decodedUrl);
-                const allowedDomains = ['raw.githubusercontent.com'];
-                 if (!allowedDomains.includes(redirectUrlObject.hostname)) {
-                   console.warn(`代理重定向被阻止，不允許的網域：${redirectUrlObject.hostname}`);
-                   return res.status(403).send('重定向目標網域不被允許。');
-                }
-                const redirectedRequest = https.get(redirectUrlObject.href, (redirectedRes) => {
-                     if (redirectedRes.statusCode !== 200) {
-                        console.error(`獲取重定向 PDF 時出錯：狀態碼：${redirectedRes.statusCode}，URL：${redirectUrlObject.href}`);
-                        const statusCodeToSend = redirectedRes.statusCode >= 400 ? redirectedRes.statusCode : 502;
-                        return res.status(statusCodeToSend).send(`無法獲取重定向的 PDF：${redirectedRes.statusMessage}`);
-                    }
-                     res.setHeader('Content-Type', redirectedRes.headers['content-type'] || 'application/pdf');
-                     redirectedRes.pipe(res);
-                }).on('error', (err) => {
-                     console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時發生錯誤：`, err.message);
-                     if (!res.headersSent) res.status(500).send('透過代理獲取重定向 PDF 時出錯。');
-                });
-                redirectedRequest.setTimeout(15000, () => {
-                    console.error(`重定向 PDF 請求至 ${redirectUrlObject.href} 時超時`);
-                    redirectedRequest.destroy();
-                    if (!res.headersSent) res.status(504).send('透過代理獲取重定向 PDF 時超時。');
-                });
-                return;
-             } catch (e) {
-                console.error(`無效的重定向 URL：${pdfRes.headers.location}`, e);
-                return res.status(500).send('從來源收到無效的重定向位置。');
-             }
-        }
-
-        if (pdfRes.statusCode !== 200) {
-            console.error(`獲取 PDF 時出錯：狀態碼：${pdfRes.statusCode}，URL：${decodedUrl}`);
-            const statusCodeToSend = pdfRes.statusCode >= 400 ? pdfRes.statusCode : 502;
-             return res.status(statusCodeToSend).send(`無法從來源獲取 PDF：狀態 ${pdfRes.statusCode}`);
-        }
-
-        console.log(`從來源 ${decodedUrl} 獲取的 Content-Type 為: ${pdfRes.headers['content-type']}，強制設為 application/pdf`);
-        res.setHeader('Content-Type', 'application/pdf'); // Force PDF type
-        pdfRes.pipe(res);
-
-    }).on('error', (err) => {
-        console.error(`向 ${decodedUrl} 發起 PDF 請求期間發生網路或連線錯誤：`, err.message);
-         if (!res.headersSent) {
-             res.status(502).send('錯誤的網關：連接 PDF 來源時出錯。');
-         } else {
-             res.end();
-         }
-    });
-     pdfRequest.setTimeout(15000, () => { // 15 seconds timeout
-         console.error(`向 ${decodedUrl} 發起初始 PDF 請求時超時`);
-         pdfRequest.destroy();
-         if (!res.headersSent) {
-             res.status(504).send('網關超時：連接 PDF 來源時超時。');
-         }
-     });
 });
 
 // 輔助函數：清理 Banner 排序欄位

@@ -333,7 +333,13 @@
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({ 
                                 type: 'init',
-                                client: 'admin'
+                                client: 'admin',
+                                clientInfo: {
+                                    userAgent: navigator.userAgent,
+                                    screenWidth: window.innerWidth,
+                                    screenHeight: window.innerHeight,
+                                    timestamp: new Date().toISOString()
+                                }
                             }));
                             console.log('Sent initialization message');
                         }
@@ -356,10 +362,15 @@
                             } else if (data.type === 'ping') {
                                 // Respond to server heartbeat
                                 sendPong();
+                                console.log('Received ping, sent pong response');
                             } else if (data.type === 'connection_accepted') {
-                                console.log('Connection accepted by server');
+                                console.log('Connection accepted by server', data.connectionId ? `(ID: ${data.connectionId})` : '');
+                                // 保存連線 ID 用於調試
+                                window.wsConnectionId = data.connectionId;
                             } else if (data.type === 'welcome') {
-                                console.log('Welcome message received:', data.message);
+                                console.log('Welcome message received:', data.message, data.connectionId ? `(ID: ${data.connectionId})` : '');
+                                // 保存連線 ID 用於調試
+                                window.wsConnectionId = data.connectionId;
                             }
                         } catch (e) {
                             console.error('Error processing message:', e, event.data);
@@ -376,6 +387,18 @@
                         
                         // Clear heartbeat interval when connection is closed
                         stopHeartbeat();
+                        
+                        // 標示錯誤代碼
+                        let errorMessage = '';
+                        if (event.code === 1006) {
+                            errorMessage = '異常關閉（代碼 1006）';
+                            console.warn('WebSocket異常關閉（代碼1006），這通常是由網絡問題或服務器關閉導致的');
+                        }
+                        
+                        // 在視覺上顯示錯誤狀態
+                        if (errorMessage) {
+                            wsStatusEl.textContent = `已斷線: ${errorMessage}，嘗試重連...`;
+                        }
                         
                         // 使用指數退避策略重新連接
                         const baseDelay = 2000; // 2秒
@@ -413,18 +436,22 @@
                 // Clear any existing interval
                 stopHeartbeat();
                 
-                // Send a heartbeat every 15 seconds (比20秒更頻繁)
+                // Send a heartbeat every 10 seconds (比15秒更頻繁)
                 heartbeatInterval = setInterval(() => {
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         try {
                             console.log('Sending heartbeat');
-                            ws.send(JSON.stringify({ type: 'heartbeat' }));
+                            ws.send(JSON.stringify({ 
+                                type: 'heartbeat',
+                                timestamp: new Date().toISOString(),
+                                connectionId: window.wsConnectionId
+                            }));
                         } catch (e) {
                             console.error('Error sending heartbeat:', e);
                     ws.close();
                         }
                     }
-                }, 15000);
+                }, 10000);
             }
 
             function stopHeartbeat() {
@@ -438,7 +465,11 @@
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     try {
                         console.log('Sending pong response');
-                        ws.send(JSON.stringify({ type: 'pong' }));
+                        ws.send(JSON.stringify({ 
+                            type: 'pong',
+                            timestamp: new Date().toISOString(),
+                            connectionId: window.wsConnectionId
+                        }));
                     } catch (e) {
                         console.error('Error sending pong:', e);
                     }
