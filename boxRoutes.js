@@ -1817,5 +1817,182 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // 授予角色給用戶
+    router.post('/admin/users/:userId/roles', isAdminAuthenticated, async (req, res) => {
+        const targetUserId = req.params.userId;
+        const { roleId } = req.body;
+        const assignedBy = req.boxUser.user_id;
+        
+        if (!roleId) {
+            return res.status(400).json({ error: '角色ID為必填項。' });
+        }
+        
+        try {
+            // 檢查用戶是否存在
+            const userCheck = await pool.query('SELECT 1 FROM box_users WHERE user_id = $1', [targetUserId]);
+            if (userCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定用戶。' });
+            }
+            
+            // 檢查角色是否存在
+            const roleCheck = await pool.query('SELECT 1 FROM user_roles WHERE role_id = $1', [roleId]);
+            if (roleCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定角色。' });
+            }
+            
+            // 檢查用戶是否已有該角色
+            const existingRole = await pool.query(
+                'SELECT 1 FROM user_role_assignments WHERE user_id = $1 AND role_id = $2 AND is_active = true',
+                [targetUserId, roleId]
+            );
+            
+            if (existingRole.rows.length > 0) {
+                return res.status(409).json({ error: '該用戶已擁有此角色。' });
+            }
+            
+            // 取消之前的相同角色（如果有）
+            await pool.query(
+                'UPDATE user_role_assignments SET is_active = false WHERE user_id = $1 AND role_id = $2',
+                [targetUserId, roleId]
+            );
+            
+            // 授予新角色
+            const query = `
+                INSERT INTO user_role_assignments (user_id, role_id, assigned_by)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [targetUserId, roleId, assignedBy]);
+            
+            res.status(201).json({
+                success: true,
+                message: '角色授予成功。',
+                userRole: result.rows[0]
+            });
+        } catch (err) {
+            console.error(`[API POST /admin/users/${targetUserId}/roles] Error:`, err);
+            res.status(500).json({ error: '授予角色失敗。' });
+        }
+    });
+    
+    // 授予頭銜給用戶
+    router.post('/admin/users/:userId/titles', isAdminAuthenticated, async (req, res) => {
+        const targetUserId = req.params.userId;
+        const { titleId } = req.body;
+        const assignedBy = req.boxUser.user_id;
+        
+        if (!titleId) {
+            return res.status(400).json({ error: '頭銜ID為必填項。' });
+        }
+        
+        try {
+            // 檢查用戶是否存在
+            const userCheck = await pool.query('SELECT 1 FROM box_users WHERE user_id = $1', [targetUserId]);
+            if (userCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定用戶。' });
+            }
+            
+            // 檢查頭銜是否存在
+            const titleCheck = await pool.query('SELECT 1 FROM titles WHERE title_id = $1', [titleId]);
+            if (titleCheck.rows.length === 0) {
+                return res.status(404).json({ error: '找不到指定頭銜。' });
+            }
+            
+            // 檢查用戶是否已擁有該頭銜
+            const existingTitle = await pool.query(
+                'SELECT 1 FROM user_titles WHERE user_id = $1 AND title_id = $2',
+                [targetUserId, titleId]
+            );
+            
+            if (existingTitle.rows.length > 0) {
+                return res.status(409).json({ error: '該用戶已擁有此頭銜。' });
+            }
+            
+            // 授予頭銜
+            const query = `
+                INSERT INTO user_titles (user_id, title_id, assigned_by)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [targetUserId, titleId, assignedBy]);
+            
+            res.status(201).json({
+                success: true,
+                message: '頭銜授予成功。',
+                userTitle: result.rows[0]
+            });
+        } catch (err) {
+            console.error(`[API POST /admin/users/${targetUserId}/titles] Error:`, err);
+            res.status(500).json({ error: '授予頭銜失敗。' });
+        }
+    });
+    
+    // 創建新頭銜
+    router.post('/admin/titles', isAdminAuthenticated, async (req, res) => {
+        const { titleName, titleDescription, titleImageUrl, achievementId, isManual } = req.body;
+        
+        if (!titleName) {
+            return res.status(400).json({ error: '頭銜名稱為必填項。' });
+        }
+        
+        try {
+            const query = `
+                INSERT INTO titles (title_name, title_description, title_image_url, achievement_id, is_manual)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                titleName,
+                titleDescription || null,
+                titleImageUrl || null,
+                achievementId || null,
+                isManual !== undefined ? isManual : true
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '頭銜創建成功。',
+                title: result.rows[0]
+            });
+        } catch (err) {
+            console.error('[API POST /admin/titles] Error:', err);
+            res.status(500).json({ error: '創建頭銜失敗。' });
+        }
+    });
+    
+    // 創建新成就
+    router.post('/admin/achievements', isAdminAuthenticated, async (req, res) => {
+        const { achievementName, achievementDescription, achievementCategory, requirementDescription, requirementCode, achievementIconUrl } = req.body;
+        
+        if (!achievementName) {
+            return res.status(400).json({ error: '成就名稱為必填項。' });
+        }
+        
+        try {
+            const query = `
+                INSERT INTO achievements (achievement_name, achievement_description, achievement_category, requirement_description, requirement_code, achievement_icon_url)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                achievementName,
+                achievementDescription || null,
+                achievementCategory || null,
+                requirementDescription || null,
+                requirementCode || null,
+                achievementIconUrl || null
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '成就創建成功。',
+                achievement: result.rows[0]
+            });
+        } catch (err) {
+            console.error('[API POST /admin/achievements] Error:', err);
+            res.status(500).json({ error: '創建成就失敗。' });
+        }
+    });
+
     return router;
 };
