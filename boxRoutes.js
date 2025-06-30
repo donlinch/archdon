@@ -1994,5 +1994,97 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // --- 新增：管理員獲取特定用戶的資訊 ---
+
+    // 獲取特定用戶的角色
+    router.get('/users/:userId/roles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT r.role_id, r.role_name FROM user_roles r
+                 JOIN user_role_assignments ura ON r.role_id = ura.role_id
+                 WHERE ura.user_id = $1 AND ura.is_active = true`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            res.status(500).json({ error: '無法獲取用戶角色信息。' });
+        }
+    });
+
+    // 獲取特定用戶的徽章
+    router.get('/users/:userId/badges', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT b.badge_id, b.badge_name FROM badges b
+                 JOIN user_badges ub ON b.badge_id = ub.badge_id
+                 WHERE ub.user_id = $1`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            res.status(500).json({ error: '無法獲取用戶徽章信息。' });
+        }
+    });
+
+    // 獲取特定用戶的頭銜
+    router.get('/users/:userId/titles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT t.title_id, t.title_name FROM titles t
+                 JOIN user_titles ut ON t.title_id = ut.title_id
+                 WHERE ut.user_id = $1`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            res.status(500).json({ error: '無法獲取用戶頭銜信息。' });
+        }
+    });
+
+    // 移除用戶角色
+    router.delete('/admin/users/:userId/roles/:roleId', isAdminAuthenticated, async (req, res) => {
+        const { userId, roleId } = req.params;
+        try {
+            await pool.query(
+                'UPDATE user_role_assignments SET is_active = false WHERE user_id = $1 AND role_id = $2',
+                [userId, roleId]
+            );
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/users/:userId/roles/:roleId] Error:`, err);
+            res.status(500).json({ error: '移除角色失敗。' });
+        }
+    });
+
+    // 移除用戶徽章
+    router.delete('/admin/users/:userId/badges/:badgeId', isAdminAuthenticated, async (req, res) => {
+        const { userId, badgeId } = req.params;
+        try {
+            await pool.query(
+                'DELETE FROM user_badges WHERE user_id = $1 AND badge_id = $2',
+                [userId, badgeId]
+            );
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/users/:userId/badges/:badgeId] Error:`, err);
+            res.status(500).json({ error: '移除徽章失敗。' });
+        }
+    });
+
+    // 移除用戶頭銜
+    router.delete('/admin/users/:userId/titles/:titleId', isAdminAuthenticated, async (req, res) => {
+        const { userId, titleId } = req.params;
+        try {
+            await pool.query(
+                'DELETE FROM user_titles WHERE user_id = $1 AND title_id = $2',
+                [userId, titleId]
+            );
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/users/:userId/titles/:titleId] Error:`, err);
+            res.status(500).json({ error: '移除頭銜失敗。' });
+        }
+    });
+
     return router;
 };

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會員管理後台</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --background-color: #f4f6f9;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --border-radius: 0.3rem;
+            --box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: var(--dark-color);
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 25px;
+        }
+
+        .admin-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        
+        .admin-header a {
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        .main-content, .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        /* 表格樣式 */
+        #user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #user-table th, #user-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }
+        #user-table th {
+            background-color: var(--light-color);
+            font-weight: 600;
+        }
+        #user-table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        #user-table td img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.8; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+        
+        /* 表單樣式 */
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+        }
+        
+        /* Modal 彈窗樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 800px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 2em;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #333; }
+        
+        .section {
+            margin-bottom: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .item-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .item-tag {
+            background-color: var(--light-color);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+        }
+        .item-tag .remove-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay" style="display: flex;">正在驗證管理員身份...</div>
+
+    <div id="admin-container" class="container" style="display: none;">
+        <header class="admin-header">
+            <h1>會員管理後台</h1>
+            <a href="/index.html">返回網站首頁</a>
+        </header>
+
+        <div class="admin-grid">
+            <div class="main-content">
+                <h2>用戶列表</h2>
+                <input type="text" id="user-search" placeholder="搜尋用戶名稱..." class="form-group" style="width: 300px; padding: 10px;">
+                <table id="user-table">
+                    <thead>
+                        <tr>
+                            <th>用戶</th>
+                            <th>Email</th>
+                            <th>註冊時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        <!-- 用戶數據將動態插入此處 -->
+                    </tbody>
+                </table>
+            </div>
+            <aside class="sidebar">
+                <h2>全局設定</h2>
+                <div class="section">
+                    <h3>創建新徽章</h3>
+                    <form id="create-badge-form">
+                        <div class="form-group">
+                            <label for="badge-name">徽章名稱</label>
+                            <input type="text" id="badge-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="badge-description">描述</label>
+                            <input type="text" id="badge-description">
+                        </div>
+                        <div class="form-group">
+                            <label for="badge-image-url">圖片 URL</label>
+                            <input type="text" id="badge-image-url">
+                        </div>
+                        <button type="submit" class="btn btn-primary">創建徽章</button>
+                    </form>
+                </div>
+                <div class="section">
+                    <h3>創建新頭銜</h3>
+                    <form id="create-title-form">
+                         <div class="form-group">
+                            <label for="title-name">頭銜名稱</label>
+                            <input type="text" id="title-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="title-description">描述</label>
+                            <input type="text" id="title-description">
+                        </div>
+                        <button type="submit" class="btn btn-primary">創建頭銜</button>
+                    </form>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- 用戶管理 Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modal-username">管理用戶</h2>
+            <p>用戶ID: <span id="modal-user-id"></span></p>
+
+            <div class="section">
+                <h3>角色管理</h3>
+                <div class="item-list" id="modal-user-roles"></div>
+                <form id="assign-role-form" class="form-group" style="margin-top: 15px;">
+                    <select id="role-select"></select>
+                    <button type="submit" class="btn btn-primary">授予角色</button>
+                </form>
+            </div>
+            
+            <div class="section">
+                <h3>徽章管理</h3>
+                <div class="item-list" id="modal-user-badges"></div>
+                <form id="assign-badge-form" class="form-group" style="margin-top: 15px;">
+                    <select id="badge-select"></select>
+                    <button type="submit" class="btn btn-primary">授予徽章</button>
+                </form>
+            </div>
+
+            <div class="section">
+                <h3>頭銜管理</h3>
+                <div class="item-list" id="modal-user-titles"></div>
+                <form id="assign-title-form" class="form-group" style="margin-top: 15px;">
+                    <select id="title-select"></select>
+                    <button type="submit" class="btn btn-primary">授予頭銜</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const adminContainer = document.getElementById('admin-container');
+        const userTableBody = document.getElementById('user-table-body');
+        const userSearchInput = document.getElementById('user-search');
+
+        // Modal elements
+        const userModal = document.getElementById('user-modal');
+        const modalCloseBtn = userModal.querySelector('.modal-close');
+        
+        let allUsers = [];
+        let allRoles = [];
+        let allBadges = [];
+        let allTitles = [];
+        let currentEditingUserId = null;
+        let authToken = null;
+
+        // --- API & Auth ---
+        
+        async function apiFetch(url, options = {}) {
+            loadingOverlay.style.display = 'flex';
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                }
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            if (options.body && typeof options.body !== 'string') {
+                mergedOptions.body = JSON.stringify(options.body);
+            }
+
+            try {
+                const response = await fetch(url, mergedOptions);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+                    throw new Error(errorData.error || `HTTP Error: ${response.status}`);
+                }
+                if (response.status === 204) return null;
+                return await response.json();
+            } catch (error) {
+                alert(`API Error: ${error.message}`);
+                throw error;
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        async function checkAdminAuth() {
+            const adminUserId = localStorage.getItem('boxCurrentUserId');
+            authToken = localStorage.getItem(`boxUserToken_${adminUserId}`);
+            if (!authToken) {
+                loadingOverlay.innerHTML = '請先登入管理員帳號。';
+                window.location.href = 'box.html';
+                return;
+            }
+
+            try {
+                await apiFetch('/api/box/admin/auth/check');
+                adminContainer.style.display = 'block';
+                loadingOverlay.style.display = 'none';
+                initializeApp();
+            } catch (error) {
+                loadingOverlay.innerHTML = '管理員身份驗證失敗，請重新登入。';
+                console.error("Admin auth failed:", error);
+                // Optional: redirect to login
+                // window.location.href = 'box.html';
+            }
+        }
+
+        // --- Page Initialization ---
+
+        async function initializeApp() {
+            try {
+                [allUsers, allRoles, allBadges, allTitles] = await Promise.all([
+                    apiFetch('/api/box/admin/users'),
+                    apiFetch('/api/box/admin/roles'),
+                    apiFetch('/api/box/admin/badges'),
+                    apiFetch('/api/box/admin/titles') 
+                ]);
+                
+                renderUserTable(allUsers);
+                populateGlobalSelectors();
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                alert("無法載入後台初始數據。");
+            }
+        }
+        
+        function populateGlobalSelectors() {
+            populateSelect(document.getElementById('role-select'), allRoles, 'role_id', 'role_name');
+            populateSelect(document.getElementById('badge-select'), allBadges, 'badge_id', 'badge_name');
+            populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+        }
+        
+        function populateSelect(selectElement, items, valueKey, textKey) {
+             selectElement.innerHTML = '';
+             items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueKey];
+                option.textContent = item[textKey];
+                selectElement.appendChild(option);
+            });
+        }
+
+        // --- User Table ---
+
+        function renderUserTable(users) {
+            userTableBody.innerHTML = '';
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <img src="${user.user_profile_image_url || '/images/a01girlmove.gif'}" alt="${user.username}">
+                        ${user.username}
+                    </td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                    <td><button class="btn btn-primary manage-btn" data-user-id="${user.user_id}">管理</button></td>
+                `;
+                userTableBody.appendChild(tr);
+            });
+        }
+        
+        userSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user => user.username.toLowerCase().includes(searchTerm));
+            renderUserTable(filteredUsers);
+        });
+
+        // --- Modal Management ---
+
+        async function openUserModal(userId) {
+            currentEditingUserId = userId;
+            const user = allUsers.find(u => u.user_id === userId);
+            
+            document.getElementById('modal-username').textContent = `管理用戶: ${user.username}`;
+            document.getElementById('modal-user-id').textContent = userId;
+
+            // Fetch user-specific data
+            try {
+                const [userRoles, userBadges, userTitles] = await Promise.all([
+                   apiFetch(`/api/box/users/${userId}/roles`), // Note: These admin routes might need to be created
+                   apiFetch(`/api/box/users/${userId}/badges`),
+                   apiFetch(`/api/box/users/${userId}/titles`)
+                ]);
+
+                renderItemList('modal-user-roles', userRoles, 'role_id', 'role_name');
+                renderItemList('modal-user-badges', userBadges, 'badge_id', 'badge_name');
+                renderItemList('modal-user-titles', userTitles, 'title_id', 'title_name');
+                
+            } catch (error) {
+                console.error(`Failed to load data for user ${userId}`, error);
+                // Close modal or show error inside
+            }
+            
+            userModal.style.display = 'block';
+        }
+
+        function renderItemList(containerId, items, idKey, nameKey) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (items.length === 0) {
+                container.textContent = '無';
+                return;
+            }
+            items.forEach(item => {
+                const tag = document.createElement('div');
+                tag.className = 'item-tag';
+                tag.innerHTML = `
+                    <span>${item[nameKey]}</span>
+                    <button class="remove-btn" data-item-id="${item[idKey]}" data-type="${containerId.split('-')[2]}">&times;</button>
+                `;
+                container.appendChild(tag);
+            });
+        }
+        
+        modalCloseBtn.addEventListener('click', () => userModal.style.display = 'none');
+        window.addEventListener('click', (e) => {
+            if (e.target === userModal) {
+                userModal.style.display = 'none';
+            }
+        });
+        
+        // --- Event Listeners Setup ---
+        
+        function setupEventListeners() {
+            // Manage user button delegation
+            userTableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('manage-btn')) {
+                    const userId = parseInt(e.target.dataset.userId, 10);
+                    openUserModal(userId);
+                }
+            });
+            
+            // Forms for creating global items
+            document.getElementById('create-badge-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('badge-name').value;
+                const description = document.getElementById('badge-description').value;
+                const imageUrl = document.getElementById('badge-image-url').value;
+                await apiFetch('/api/box/admin/badges', {
+                    method: 'POST',
+                    body: { badgeName: name, badgeDescription: description, badgeImageUrl: imageUrl }
+                });
+                alert('徽章已創建！');
+                e.target.reset();
+                // Refresh global list
+                allBadges = await apiFetch('/api/box/admin/badges');
+                populateSelect(document.getElementById('badge-select'), allBadges, 'badge_id', 'badge_name');
+            });
+
+            document.getElementById('create-title-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('title-name').value;
+                const description = document.getElementById('title-description').value;
+                await apiFetch('/api/box/admin/titles', {
+                    method: 'POST',
+                    body: { titleName: name, titleDescription: description }
+                });
+                alert('頭銜已創建！');
+                e.target.reset();
+                // Refresh global list
+                allTitles = await apiFetch('/api/box/admin/titles');
+                populateSelect(document.getElementById('title-select'), allTitles, 'title_id', 'title_name');
+            });
+            
+            // Forms for assigning items to users
+            document.getElementById('assign-role-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const roleId = document.getElementById('role-select').value;
+                await apiFetch(`/api/box/admin/users/${currentEditingUserId}/roles`, {
+                    method: 'POST',
+                    body: { roleId }
+                });
+                alert('角色已授予！');
+                openUserModal(currentEditingUserId); // Refresh modal
+            });
+            
+            document.getElementById('assign-badge-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const badgeId = document.getElementById('badge-select').value;
+                await apiFetch(`/api/box/admin/users/${currentEditingUserId}/badges`, {
+                    method: 'POST',
+                    body: { badgeId }
+                });
+                alert('徽章已授予！');
+                openUserModal(currentEditingUserId); // Refresh modal
+            });
+            
+            document.getElementById('assign-title-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const titleId = document.getElementById('title-select').value;
+                 await apiFetch(`/api/box/admin/users/${currentEditingUserId}/titles`, {
+                    method: 'POST',
+                    body: { titleId }
+                });
+                alert('頭銜已授予！');
+                openUserModal(currentEditingUserId); // Refresh modal
+            });
+
+            // Modal item removal delegation
+            userModal.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('remove-btn')) {
+                    const button = e.target;
+                    const itemId = button.dataset.itemId;
+                    const itemType = button.dataset.type; // 'roles', 'badges', or 'titles'
+                    
+                    if (!confirm(`您確定要移除這個 ${itemType.slice(0, -1)} 嗎?`)) {
+                        return;
+                    }
+
+                    try {
+                        await apiFetch(`/api/box/admin/users/${currentEditingUserId}/${itemType}/${itemId}`, {
+                            method: 'DELETE'
+                        });
+                        alert('項目已移除。');
+                        openUserModal(currentEditingUserId); // Refresh modal to show changes
+                    } catch (error) {
+                        console.error(`Failed to remove item:`, error);
+                        alert(`移除失敗: ${error.message}`);
+                    }
+                }
+            });
+        }
+        
+        // --- Start the App ---
+        checkAdminAuth();
+    });
+    </script>
+</body>
+</html>
