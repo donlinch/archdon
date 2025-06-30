@@ -1847,6 +1847,205 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // --- 新增：徽章 CRUD ---
+    // 更新徽章
+    router.put('/admin/badges/:badgeId', isAdminAuthenticated, boxImageUpload.single('badgeImage'), async (req, res) => {
+        const { badgeId } = req.params;
+        const { badgeName, badgeDescription } = req.body;
+        
+        if (!badgeName) {
+            return res.status(400).json({ error: '徽章名稱為必填項。' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const oldBadgeResult = await client.query('SELECT badge_image_url FROM badges WHERE badge_id = $1', [badgeId]);
+            if (oldBadgeResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: '找不到要更新的徽章。'});
+            }
+            const oldImageUrl = oldBadgeResult.rows[0].badge_image_url;
+            
+            let newUrlPath = oldImageUrl;
+
+            // 如果有新圖片上傳
+            if (req.file) {
+                const imageBuffer = req.file.buffer;
+                const processedImageBuffer = await sharp(imageBuffer).rotate()
+                    .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                
+                const filename = `badge-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+                const diskPath = path.join(uploadDir, filename);
+                newUrlPath = `/uploads/${filename}`;
+                
+                await fs.writeFile(diskPath, processedImageBuffer);
+
+                // 如果舊圖片存在，刪除它
+                if (oldImageUrl) {
+                    const oldFilename = path.basename(oldImageUrl);
+                    try {
+                        await fs.unlink(path.join(uploadDir, oldFilename));
+                    } catch (e) {
+                        console.error(`刪除舊徽章圖片失敗: ${oldImageUrl}`, e);
+                    }
+                }
+            }
+
+            const query = `
+                UPDATE badges SET badge_name = $1, badge_description = $2, badge_image_url = $3, updated_at = NOW()
+                WHERE badge_id = $4 RETURNING *
+            `;
+            const result = await client.query(query, [badgeName, badgeDescription || null, newUrlPath, badgeId]);
+            
+            await client.query('COMMIT');
+            res.json(result.rows[0]);
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error(`[API PUT /admin/badges/${badgeId}] Error:`, err);
+            res.status(500).json({ error: '更新徽章失敗。' });
+        } finally {
+            client.release();
+        }
+    });
+
+    // 刪除徽章
+    router.delete('/admin/badges/:badgeId', isAdminAuthenticated, async (req, res) => {
+        const { badgeId } = req.params;
+        try {
+            // 檢查徽章是否仍被使用
+            const assignmentCheck = await pool.query('SELECT 1 FROM user_badges WHERE badge_id = $1 LIMIT 1', [badgeId]);
+            if (assignmentCheck.rows.length > 0) {
+                return res.status(409).json({ error: '無法刪除，仍有用戶擁有此徽章。' });
+            }
+
+            // 刪除前先獲取圖片 URL
+            const badgeResult = await pool.query('SELECT badge_image_url FROM badges WHERE badge_id = $1', [badgeId]);
+            
+            const result = await pool.query('DELETE FROM badges WHERE badge_id = $1', [badgeId]);
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: '找不到要刪除的徽章。' });
+            }
+
+            // 如果有圖片，則從文件系統中刪除
+            if (badgeResult.rows.length > 0 && badgeResult.rows[0].badge_image_url) {
+                const imageUrl = badgeResult.rows[0].badge_image_url;
+                const filename = path.basename(imageUrl);
+                try {
+                    await fs.unlink(path.join(uploadDir, filename));
+                } catch (e) {
+                    console.error(`刪除徽章圖片文件失敗: ${imageUrl}`, e);
+                }
+            }
+            
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/badges/${badgeId}] Error:`, err);
+            res.status(500).json({ error: '刪除徽章失敗。' });
+        }
+    });
+
+    // --- 新增：頭銜 CRUD ---
+    // 更新頭銜
+    router.put('/admin/titles/:titleId', isAdminAuthenticated, boxImageUpload.single('titleImage'), async (req, res) => {
+        const { titleId } = req.params;
+        const { titleName, titleDescription } = req.body;
+        
+        if (!titleName) {
+            return res.status(400).json({ error: '頭銜名稱為必填項。' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const oldTitleResult = await client.query('SELECT title_image_url FROM titles WHERE title_id = $1', [titleId]);
+            if (oldTitleResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: '找不到要更新的頭銜。'});
+            }
+            const oldImageUrl = oldTitleResult.rows[0].title_image_url;
+            
+            let newUrlPath = oldImageUrl;
+
+            if (req.file) {
+                const imageBuffer = req.file.buffer;
+                const processedImageBuffer = await sharp(imageBuffer).rotate()
+                    .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                
+                const filename = `title-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+                const diskPath = path.join(uploadDir, filename);
+                newUrlPath = `/uploads/${filename}`;
+                
+                await fs.writeFile(diskPath, processedImageBuffer);
+
+                if (oldImageUrl) {
+                    const oldFilename = path.basename(oldImageUrl);
+                    try {
+                        await fs.unlink(path.join(uploadDir, oldFilename));
+                    } catch (e) {
+                        console.error(`刪除舊頭銜圖片失敗: ${oldImageUrl}`, e);
+                    }
+                }
+            }
+
+            const query = `
+                UPDATE titles SET title_name = $1, title_description = $2, title_image_url = $3, updated_at = NOW()
+                WHERE title_id = $4 RETURNING *
+            `;
+            const result = await client.query(query, [titleName, titleDescription || null, newUrlPath, titleId]);
+            
+            await client.query('COMMIT');
+            res.json(result.rows[0]);
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error(`[API PUT /admin/titles/${titleId}] Error:`, err);
+            res.status(500).json({ error: '更新頭銜失敗。' });
+        } finally {
+            client.release();
+        }
+    });
+
+    // 刪除頭銜
+    router.delete('/admin/titles/:titleId', isAdminAuthenticated, async (req, res) => {
+        const { titleId } = req.params;
+        try {
+            const assignmentCheck = await pool.query('SELECT 1 FROM user_titles WHERE title_id = $1 LIMIT 1', [titleId]);
+            if (assignmentCheck.rows.length > 0) {
+                return res.status(409).json({ error: '無法刪除，仍有用戶擁有此頭銜。' });
+            }
+
+            const titleResult = await pool.query('SELECT title_image_url FROM titles WHERE title_id = $1', [titleId]);
+            
+            const result = await pool.query('DELETE FROM titles WHERE title_id = $1', [titleId]);
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: '找不到要刪除的頭銜。' });
+            }
+
+            if (titleResult.rows.length > 0 && titleResult.rows[0].title_image_url) {
+                const imageUrl = titleResult.rows[0].title_image_url;
+                const filename = path.basename(imageUrl);
+                try {
+                    await fs.unlink(path.join(uploadDir, filename));
+                } catch (e) {
+                    console.error(`刪除頭銜圖片文件失敗: ${imageUrl}`, e);
+                }
+            }
+            
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/titles/${titleId}] Error:`, err);
+            res.status(500).json({ error: '刪除頭銜失敗。' });
+        }
+    });
+
     // 創建新徽章
     router.post('/admin/badges', isAdminAuthenticated, async (req, res) => {
         const { badgeName, badgeDescription, badgeImageUrl, badgeCategory } = req.body;
