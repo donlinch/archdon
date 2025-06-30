@@ -393,22 +393,18 @@
 
             let currentRotation = 0;
             let isSpinning = false;
-            let spinStartTime = 0;
-            const SPIN_DURATION = 8000; // 8 seconds for more drama
-            const MIN_INITIAL_VELOCITY = 15; // Minimum initial rotation speed
-            const MAX_INITIAL_VELOCITY = 20; // Maximum initial rotation speed
-            let currentVelocity = 0;
-            let friction = 0;
+            let angularVelocity = 0;
+            const FRICTION = 0.995; // 摩擦力係數，確保輪盤最終會停下
             let selectedWinner = null;
             let updateTimer = null;
+            let participants = []; // 在記憶體中保存參與者列表，避免重複讀取
 
-            function drawWheel(timestamp) {
+            function drawWheel() {
                 if (!wheelCanvas || !defaultAnimation) return;
 
-                const participants = Array.from(participantsListEl.querySelectorAll('li'))
-                    .map(li => li.querySelector('span').textContent.trim());
+                const totalParticipants = participants.length;
                     
-                if (participants.length === 0) {
+                if (totalParticipants === 0) {
                     wheelCanvas.style.display = 'none';
                     defaultAnimation.style.display = 'block';
                     defaultAnimation.textContent = '監控中...等待參與者加入';
@@ -427,11 +423,11 @@
                 wheelCtx.save();
                 wheelCtx.translate(centerX, centerY);
                 
-                // Base rotation on 12 o'clock
-                wheelCtx.rotate(currentRotation - Math.PI / 2);
+                // 為了簡化角度計算，我們讓指針指向 3 點鐘方向，並旋轉輪盤
+                wheelCtx.rotate(currentRotation);
 
-                const sliceAngle = (2 * Math.PI) / participants.length;
-                participants.forEach((name, index) => {
+                const sliceAngle = (2 * Math.PI) / totalParticipants;
+                participants.forEach((p, index) => {
                     const startAngle = index * sliceAngle;
                     const endAngle = startAngle + sliceAngle;
 
@@ -440,7 +436,7 @@
                     wheelCtx.moveTo(0, 0);
                     wheelCtx.arc(0, 0, radius, startAngle, endAngle);
                     wheelCtx.closePath();
-                    wheelCtx.fillStyle = `hsl(${(360 / participants.length) * index}, 70%, 60%)`;
+                    wheelCtx.fillStyle = `hsl(${(360 / totalParticipants) * index}, 70%, 60%)`;
                     wheelCtx.fill();
                     wheelCtx.stroke();
 
@@ -450,130 +446,80 @@
                     wheelCtx.textAlign = 'right';
                     wheelCtx.fillStyle = 'white';
                     wheelCtx.font = '14px Arial';
-                    const displayName = name.length > 10 ? name.substring(0, 10) + '...' : name;
+                    const displayName = p.displayName.length > 10 ? p.displayName.substring(0, 10) + '...' : p.displayName;
                     wheelCtx.fillText(displayName, radius - 10, 5);
                     wheelCtx.restore();
                 });
 
                 wheelCtx.restore();
 
-                // Draw pointer at 12 o'clock position, remains static
+                // 將指針畫在 3 點鐘方向，保持靜止
                 wheelCtx.save();
-                wheelCtx.translate(centerX, centerY - radius);
+                wheelCtx.translate(centerX + radius, centerY);
                 wheelCtx.fillStyle = '#ff4757';
                 
-                // Draw triangle pointer
                 wheelCtx.beginPath();
-                wheelCtx.moveTo(0, -10); // Top point
-                wheelCtx.lineTo(-10, 10); // Bottom left
-                wheelCtx.lineTo(10, 10); // Bottom right
+                wheelCtx.moveTo(10, 0);
+                wheelCtx.lineTo(-10, -10);
+                wheelCtx.lineTo(-10, 10);
                 wheelCtx.closePath();
                 wheelCtx.fill();
                 wheelCtx.restore();
-
-                // Update rotation if spinning
-                if (isSpinning && timestamp) {
-                    const elapsed = timestamp - spinStartTime;
-                    if (elapsed < SPIN_DURATION) {
-                        // Ease-out cubic function for a nice deceleration
-                        const progress = elapsed / SPIN_DURATION;
-                        const easeOut = 1 - Math.pow(1 - progress, 3);
-                        currentRotation = currentRotation + (currentVelocity * easeOut);
-                        requestAnimationFrame(drawWheel);
-                    } else {
-                        isSpinning = false;
-                        currentRotation = currentRotation % (2 * Math.PI);
-                        if (selectedWinner) {
-                            highlightWinner(selectedWinner);
-                            showWinner(selectedWinner); // Show winner modal when animation stops
-                        }
-                        requestAnimationFrame(drawWheel); // Final redraw at the exact position
-                    }
-                }
             }
-
-            function startWheelAnimation() {
+            
+            function startSpin() {
                 if (isSpinning) return;
-                
+                if (participants.length < 2) {
+                    alert('需要至少兩位參與者才能開始轉盤抽獎！');
+                    return;
+                }
                 isSpinning = true;
-                spinStartTime = performance.now();
-                
-                // 設定初始速度（每幀旋轉的弧度）
-                currentVelocity = MIN_INITIAL_VELOCITY + Math.random() * (MAX_INITIAL_VELOCITY - MIN_INITIAL_VELOCITY);
-                
-                // 設定隨機摩擦力（每幀減少的速度）
-                friction = 0.005 + Math.random() * 0.003;
-                
-                requestAnimationFrame(animateWheel);
+                // 給予一個隨機的初始速度 (弧度/幀)
+                angularVelocity = (Math.random() * 0.2) + 0.4;
+                requestAnimationFrame(animate);
             }
 
-            function animateWheel(timestamp) {
+            function animate() {
                 if (!isSpinning) return;
 
-                // 根據摩擦力減少速度
-                currentVelocity = Math.max(0, currentVelocity - friction);
-                
-                // 更新輪盤位置
-                currentRotation += currentVelocity;
-                
-                // 確保角度在 0-2π 之間
-                currentRotation = currentRotation % (2 * Math.PI);
-                
-                // 繪製輪盤
+                currentRotation += angularVelocity;
+                angularVelocity *= FRICTION; // 應用摩擦力使其減速
+
                 drawWheel();
-                
-                // 如果速度接近零，停止動畫
-                if (currentVelocity < 0.001) {
+
+                // 當速度小於一個閾值時，停止動畫
+                if (angularVelocity < 0.001) {
                     isSpinning = false;
-                    determineWinner();
+                    angularVelocity = 0;
+                    drawWheel(); // 畫最後一幀確保位置精確
+                    determineWinnerFromAngle();
                 } else {
-                    requestAnimationFrame(animateWheel);
+                    requestAnimationFrame(animate);
                 }
             }
+            
+            function determineWinnerFromAngle() {
+                const totalParticipants = participants.length;
+                if (totalParticipants === 0) return;
 
-            async function determineWinner() {
-                const participants = Array.from(participantsListEl.querySelectorAll('li'));
-                if (participants.length === 0) return;
+                const sliceAngle = (2 * Math.PI) / totalParticipants;
                 
-                // 計算指針指向的位置
-                const sliceAngle = (2 * Math.PI) / participants.length;
-                let currentAngle = currentRotation % (2 * Math.PI);
-                
-                // 將角度轉換為參與者索引
-                let winnerIndex = Math.floor(currentAngle / sliceAngle);
-                // 因為輪盤是順時針旋轉，所以需要反轉索引
-                winnerIndex = participants.length - 1 - winnerIndex;
-                
-                try {
-                    // 向後端請求抽獎結果
-                    const response = await fetch('/api/admin/lottery/draw', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            animationMode: 'turntable',
-                            duration: 0 
-                        })
+                // 計算哪個切片停在了指針下（0度角）
+                // 因為輪盤是順時針轉，所以用 2*PI 減去餘數
+                const finalAngle = currentRotation % (2 * Math.PI);
+                const targetAngle = (2 * Math.PI - finalAngle) % (2 * Math.PI);
+                const winnerIndex = Math.floor(targetAngle / sliceAngle);
+
+                const winner = participants[winnerIndex];
+                if (winner) {
+                    selectedWinner = winner;
+                    highlightWinner(winner);
+                    showWinner(winner);
+                    myConfetti({
+                        particleCount: 150,
+                        spread: 90,
+                        origin: { y: 0.6 }
                     });
-
-                    const result = await response.json();
-                    if (!response.ok) throw new Error(result.error || '抽獎失敗');
-                    
-                    // 顯示中獎者
-                    if (result.winner) {
-                        selectedWinner = result.winner;
-                        highlightWinner(result.winner);
-                        showWinner(result.winner);
-                        
-                        // 觸發紙花效果
-                        myConfetti({
-                            particleCount: 100,
-                            spread: 70,
-                            origin: { y: 0.6 }
-                        });
-                    }
-                } catch (error) {
-                    console.error('抽獎出錯:', error);
-                    alert(`抽獎失敗: ${error.message}`);
                 }
             }
 
@@ -583,6 +529,7 @@
                     li.classList.remove('winner-highlight');
                     if (li.querySelector('span').textContent.includes(winner.displayName)) {
                         li.classList.add('winner-highlight');
+                        li.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 });
             }
@@ -632,8 +579,10 @@
                 }
             }
 
-            function updateParticipantsList(participants) {
+            function updateParticipantsList(participantsData) {
                 if (!participantsListEl || !participantsCountEl) return;
+
+                participants = participantsData; // 更新全局參與者陣列
 
                 participantsListEl.innerHTML = '';
                 participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
@@ -691,7 +640,7 @@
 
                 setTimeout(() => {
                     winnerDisplay.classList.remove('show');
-                }, 5000);
+                }, 10000); // 延長顯示時間
             }
 
             setVideoBtn.addEventListener('click', async () => {
@@ -751,12 +700,37 @@
                 }
             });
 
-            drawWinnerBtn.addEventListener('click', () => {
+            drawWinnerBtn.addEventListener('click', async () => {
                 const animationMode = animationModeEl.value;
+                
                 if (animationMode === 'turntable') {
-                    startWheelAnimation();
+                    // 對於轉盤模式，直接開始動畫，結果由動畫決定
+                    startSpin();
                 } else {
-                    // ... existing code for other animation modes ...
+                    // 對於其他模式，維持原樣，先從後端獲取結果
+                    try {
+                        const response = await fetch('/api/admin/lottery/draw', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                animationMode,
+                                duration: 0 
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.error || '抽獎失敗');
+                        if (!result.winner) throw new Error('未能獲取中獎者資訊');
+
+                        const winner = result.winner;
+                        selectedWinner = winner;
+                        highlightWinner(winner);
+                        showWinner(winner);
+                        myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
+                    } catch (error) {
+                        console.error('抽獎出錯:', error);
+                        alert(`抽獎失敗: ${error.message}`);
+                    }
                 }
             });
             
