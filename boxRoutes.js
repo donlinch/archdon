@@ -1583,30 +1583,6 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
-    // 獲取上傳的文件列表 (管理員用)
-    router.get('/admin/files', isAdminAuthenticated, async (req, res) => {
-        const fileType = req.query.type; // e.g., 'image'
-
-        try {
-            let queryText = 'SELECT id, file_path, original_filename, mimetype, size_bytes, created_at, owner_user_id FROM uploaded_files';
-            const queryParams = [];
-
-            if (fileType === 'image') {
-                queryText += ' WHERE mimetype LIKE $1';
-                queryParams.push('image/%');
-            }
-            
-            queryText += ' ORDER BY created_at DESC';
-
-            const result = await pool.query(queryText, queryParams);
-            res.json(result.rows);
-
-        } catch (err) {
-            console.error('[API GET /box/admin/files] Error:', err);
-            res.status(500).json({ error: '無法獲取文件列表' });
-        }
-    });
-
     // --- 角色、徽章和成就相關 API ---
     
     // 獲取用戶角色
@@ -1872,6 +1848,67 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             });
         } catch (err) {
             console.error('[API POST /admin/badges] Error:', err);
+            res.status(500).json({ error: '創建徽章失敗。' });
+        }
+    });
+
+    // 上傳徽章圖片
+    router.post('/admin/badges/upload', isAdminAuthenticated, boxImageUpload.single('badgeImage'), async (req, res) => {
+        if (!req.file) {
+            return res.status(400).json({ error: '沒有上傳有效的圖片檔案。' });
+        }
+
+        const imageBuffer = req.file.buffer;
+        const originalFilename = req.file.originalname;
+        const { badgeName, badgeDescription, badgeCategory } = req.body;
+        
+        if (!badgeName) {
+            return res.status(400).json({ error: '徽章名稱為必填項。' });
+        }
+
+        try {
+            // 處理圖片
+            const processedImageBuffer = await sharp(imageBuffer).rotate()
+                .resize({ width: 200, height: 200, fit: 'cover', withoutEnlargement: true })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+            
+            // 生成檔案名稱
+            const filename = `badge-${Date.now()}-${uuidv4().substring(0, 8)}.jpg`;
+            const diskPath = path.join(uploadDir, filename);
+            const urlPath = `/uploads/${filename}`;
+            
+            // 保存圖片到磁碟
+            await fs.writeFile(diskPath, processedImageBuffer);
+            
+            // 記錄檔案到 uploaded_files 表
+            const uploadedFileResult = await pool.query(
+                `INSERT INTO uploaded_files (file_path, original_filename, mimetype, size_bytes, file_type, owner_user_id)
+                 VALUES ($1, $2, 'image/jpeg', $3, $4, $5) RETURNING id`,
+                [urlPath, originalFilename, processedImageBuffer.length, 'badge_image', req.boxUser.user_id]
+            );
+            
+            // 創建徽章
+            const query = `
+                INSERT INTO badges (badge_name, badge_description, badge_image_url, badge_category)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+            `;
+            const result = await pool.query(query, [
+                badgeName, 
+                badgeDescription || null, 
+                urlPath,
+                badgeCategory || null
+            ]);
+            
+            res.status(201).json({
+                success: true,
+                message: '徽章創建成功。',
+                badge: result.rows[0],
+                image_url: urlPath
+            });
+        } catch (err) {
+            console.error('[API POST /admin/badges/upload] Error:', err);
             res.status(500).json({ error: '創建徽章失敗。' });
         }
     });
