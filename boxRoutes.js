@@ -2400,5 +2400,71 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // 為沒有角色的用戶分配默認角色（管理員用）
+    router.post('/admin/users/assign-default-roles', isAdminAuthenticated, async (req, res) => {
+        try {
+            // 開始事務
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                
+                // 1. 找出所有沒有角色的用戶
+                const usersWithoutRolesQuery = `
+                    SELECT u.user_id 
+                    FROM box_users u
+                    LEFT JOIN user_role_assignments ra ON u.user_id = ra.user_id AND ra.is_active = true
+                    WHERE ra.user_id IS NULL
+                `;
+                const usersWithoutRoles = await client.query(usersWithoutRolesQuery);
+                
+                // 如果沒有找到任何用戶，直接返回
+                if (usersWithoutRoles.rows.length === 0) {
+                    await client.query('COMMIT');
+                    return res.json({ 
+                        success: true, 
+                        message: '沒有找到需要分配角色的用戶。', 
+                        updatedCount: 0 
+                    });
+                }
+                
+                // 2. 為每個用戶分配默認角色（role_id = 1）
+                const defaultRoleId = 1;
+                let successCount = 0;
+                let errorCount = 0;
+                
+                for (const user of usersWithoutRoles.rows) {
+                    try {
+                        await client.query(
+                            `INSERT INTO user_role_assignments (user_id, role_id, is_active) VALUES ($1, $2, true)`,
+                            [user.user_id, defaultRoleId]
+                        );
+                        successCount++;
+                    } catch (err) {
+                        console.error(`Failed to assign default role to user ${user.user_id}:`, err);
+                        errorCount++;
+                    }
+                }
+                
+                // 提交事務
+                await client.query('COMMIT');
+                
+                res.json({ 
+                    success: true, 
+                    message: `成功為 ${successCount} 個用戶分配了默認角色。${errorCount > 0 ? `有 ${errorCount} 個用戶分配失敗。` : ''}`, 
+                    updatedCount: successCount,
+                    errorCount: errorCount
+                });
+            } catch (err) {
+                await client.query('ROLLBACK');
+                throw err;
+            } finally {
+                client.release();
+            }
+        } catch (err) {
+            console.error('[API POST /admin/users/assign-default-roles] Error:', err);
+            res.status(500).json({ error: '分配默認角色時發生錯誤。' });
+        }
+    });
+
     return router;
 };
