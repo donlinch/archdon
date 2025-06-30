@@ -1777,7 +1777,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
     });
 
     // 授予徽章給用戶
-    router.post('/admin/users/:userId/badges', isAdminAuthenticated, async (req, res) => {
+    router.post('/admin/users/:userId/badges', authenticateBoxUser, isAdminAuthenticated, async (req, res) => {
         const targetUserId = req.params.userId;
         const { badgeId } = req.body;
         const assignedBy = req.boxUser.user_id;
@@ -1829,7 +1829,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
     });
 
     // 授予角色給用戶
-    router.post('/admin/users/:userId/roles', isAdminAuthenticated, async (req, res) => {
+    router.post('/admin/users/:userId/roles', authenticateBoxUser, isAdminAuthenticated, async (req, res) => {
         const targetUserId = req.params.userId;
         const { roleId } = req.body;
         const assignedBy = req.boxUser.user_id;
@@ -1887,7 +1887,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
     });
     
     // 授予頭銜給用戶
-    router.post('/admin/users/:userId/titles', isAdminAuthenticated, async (req, res) => {
+    router.post('/admin/users/:userId/titles', authenticateBoxUser, isAdminAuthenticated, async (req, res) => {
         const targetUserId = req.params.userId;
         const { titleId } = req.body;
         const assignedBy = req.boxUser.user_id;
