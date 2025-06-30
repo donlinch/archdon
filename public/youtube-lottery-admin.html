@@ -155,24 +155,39 @@
 
         /* Animation Styles */
         #winner-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
             text-align: center;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            animation: fadeIn 0.5s ease-in-out;
+            z-index: 1000;
         }
+
         #winner-display img {
-            width: 150px;
-            height: 150px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            border: 5px solid var(--accent-color);
-            box-shadow: 0 0 20px var(--accent-color);
+            margin-bottom: 10px;
         }
+
         #winner-display h2 {
-            font-size: 2.5em;
-            margin: 20px 0 0 0;
+            margin: 10px 0;
+            color: #ff4757;
         }
-        
+
+        .close-winner {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+        }
+
         #confetti-canvas {
             position: absolute;
             top: 0;
@@ -248,6 +263,11 @@
             font-size: 1.2em;
             text-shadow: 0 0 5px rgba(255,71,87,0.3);
             background: rgba(255,71,87,0.1);
+        }
+
+        /* Remove animation duration input */
+        #animation-duration {
+            display: none;
         }
     </style>
 </head>
@@ -359,7 +379,9 @@
             let isSpinning = false;
             let targetRotation = 0;
             let spinStartTime = 0;
-            const spinDuration = 5000; // 5 seconds
+            const SPIN_DURATION = 5000; // 5 seconds
+            const MIN_ROTATIONS = 5; // Minimum number of full rotations
+            const MAX_ROTATIONS = 8; // Maximum number of full rotations
             let selectedWinner = null;
             let updateTimer = null;
 
@@ -433,7 +455,7 @@
 
                 // Update rotation if spinning
                 if (isSpinning && timestamp) {
-                    const progress = (timestamp - spinStartTime) / spinDuration;
+                    const progress = (timestamp - spinStartTime) / SPIN_DURATION;
                     if (progress < 1) {
                         const easeOut = 1 - Math.pow(1 - progress, 3);
                         currentRotation = easeOut * targetRotation;
@@ -456,10 +478,14 @@
                 spinStartTime = performance.now();
                 
                 const sliceAngle = (2 * Math.PI) / totalParticipants;
-                // Adjust the target angle to align with 12 o'clock position
                 const winnerAngle = sliceAngle * winnerIndex;
-                // Add extra rotations and align with 12 o'clock (Math.PI * 1.5 is 270 degrees)
-                targetRotation = currentRotation + (Math.PI * 12) + (Math.PI * 1.5 - winnerAngle);
+                
+                // Random number of rotations between MIN and MAX
+                const rotations = MIN_ROTATIONS + Math.random() * (MAX_ROTATIONS - MIN_ROTATIONS);
+                // Add random offset within the winner's slice for more natural feel
+                const randomOffset = Math.random() * sliceAngle;
+                
+                targetRotation = (Math.PI * 2 * rotations) + winnerAngle + randomOffset;
                 
                 requestAnimationFrame(drawWheel);
             }
@@ -560,17 +586,27 @@
                 }, 5000);
             }
 
-            function displayWinner(winner) {
-                animationContainer.style.display = 'none';
-                winnerDisplayEl.style.display = 'flex';
-                winnerAvatarEl.src = winner.profileImageUrl;
-                winnerNameEl.textContent = winner.displayName;
+            function showWinner(winner) {
+                const winnerDisplay = document.getElementById('winner-display');
+                const winnerAvatar = document.getElementById('winner-avatar');
+                const winnerName = document.getElementById('winner-name');
                 
-                myConfetti({
-                    particleCount: 150,
-                    spread: 180,
-                    origin: { y: 0.6 }
-                });
+                winnerAvatar.src = winner.profileImageUrl;
+                winnerName.textContent = winner.displayName;
+                winnerDisplay.style.display = 'block';
+
+                // Add close button functionality
+                const closeBtn = document.querySelector('.close-winner');
+                if (closeBtn) {
+                    closeBtn.onclick = () => {
+                        winnerDisplay.style.display = 'none';
+                    };
+                }
+
+                // Auto hide after 5 seconds
+                setTimeout(() => {
+                    winnerDisplay.style.display = 'none';
+                }, 5000);
             }
 
             setVideoBtn.addEventListener('click', async () => {
@@ -599,7 +635,7 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || '設置失敗');
 
-                    currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
+                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
                     startAutoUpdate();
                     alert('設置成功！');
                 } catch (error) {
@@ -632,18 +668,19 @@
 
             drawWinnerBtn.addEventListener('click', async () => {
                 const animationMode = animationModeEl.value;
-                const duration = parseInt(durationEl.value, 10) || 0;
 
                 try {
                     const response = await fetch('/api/admin/lottery/draw', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ animationMode, duration })
+                        body: JSON.stringify({ 
+                            animationMode,
+                            duration: 0 // Fixed duration, not user configurable
+                        })
                     });
 
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || '抽獎失敗');
-
                     if (!result.winner) throw new Error('未能獲取中獎者資訊');
 
                     const winner = result.winner;
@@ -656,11 +693,15 @@
                         if (winnerIndex !== -1) {
                             selectedWinner = winner;
                             startWheelAnimation(winnerIndex, participants.length);
+                            // Show winner after animation completes
+                            setTimeout(() => {
+                                showWinner(winner);
+                            }, SPIN_DURATION);
                         } else {
-                            highlightWinner(winner);
+                            showWinner(winner);
                         }
                     } else {
-                        highlightWinner(winner);
+                        showWinner(winner);
                     }
                 } catch (error) {
                     console.error('抽獎出錯:', error);
@@ -673,5 +714,13 @@
             drawWheel();
         });
     </script>
+
+    <!-- Winner Display Modal -->
+    <div id="winner-display" style="display:none;">
+        <span class="close-winner">&times;</span>
+        <img id="winner-avatar" src="" alt="Winner Avatar">
+        <h2>🎉 恭喜中獎 🎉</h2>
+        <h3 id="winner-name"></h3>
+    </div>
 </body>
 </html> 
