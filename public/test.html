@@ -1,1060 +1,220 @@
-        <!DOCTYPE html>
-        <html lang="zh-CN">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>自定义洞洞乐</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-            <script>
-                tailwind.config = {
-                    theme: {
-                        extend: {
-                            colors: {
-                                primary: '#3B82F6',
-                                secondary: '#10B981',
-                                accent: '#F59E0B',
-                                danger: '#EF4444',
-                                dark: '#1E293B',
-                                light: '#F8FAFC'
-                            },
-                            fontFamily: {
-                                sans: ['Inter', 'system-ui', 'sans-serif'],
-                            },
-                        }
-                    }
-                }
-            </script>
-            <style type="text/tailwindcss">
-                @layer utilities {
-                    .content-auto {
-                        content-visibility: auto;
-                    }
-                    .card-flip {
-                        perspective: 1000px;
-                        transform-style: preserve-3d;
-                    }
-                    .card-inner {
-                        transition: transform 0.6s;
-                        transform-style: preserve-3d;
-                    }
-                    .card-flipped .card-inner {
-                        transform: rotateY(180deg);
-                    }
-                    .card-front, .card-back {
-                        backface-visibility: hidden;
-                    }
-                    .card-back {
-                        transform: rotateY(180deg);
-                    }
-                    .result-popup {
-                        transform: translate(-50%, -50%) scale(0.5);
-                        opacity: 0;
-                        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    }
-                    .result-popup.active {
-                        transform: translate(-50%, -50%) scale(1);
-                        opacity: 1;
-                    }
-                    .card-glow {
-                        box-shadow: 0 0 20px rgba(59, 130, 246, 0.7);
-                    }
-                    .card-flip.edit-mode-active {
-                        perspective: none; /* 編輯模式下禁用3D透視 */
-                        transform-style: flat; /* 編輯模式下禁用3D變換 */
-                    }
-                    .btn-hover {
-                        transition: all 0.3s ease;
-                    }
-                    .btn-hover:hover {
-                        transform: translateY(-2px);
-                    }
-                }
-            </style>
-        </head>
-        <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans">
-            <div class="container mx-auto px-4 py-8 max-w-6xl">
-                <!-- 顶部导航 -->
-                <header class="flex flex-wrap items-center justify-between mb-8">
-                    <div class="flex items-center mb-4 sm:mb-0">
-                        <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-dark tracking-tight">
-                            <span class="text-primary" id="gameTitle">自定义洞洞乐</span>
-                        </h1>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-3">
-                        <button id="editTitleBtn" class="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
-                            <i class="fa fa-pencil mr-2"></i> 编辑标题
-                        </button>
-                        <button id="saveGameBtn" class="bg-secondary hover:bg-secondary/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
-                            <i class="fa fa-save mr-2"></i> 保存配置
-                        </button>
-                        <button id="loadGameBtn" class="bg-accent hover:bg-accent/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
-                            <i class="fa fa-folder-open mr-2"></i> 加载配置
-                        </button>
-                        <button id="resetBtn" class="bg-danger hover:bg-danger/90 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
-                            <i class="fa fa-refresh mr-2"></i> 重置游戏
-                        </button>
-                        <button id="toggleEditModeBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-lg shadow transition-all duration-300 flex items-center btn-hover">
-                            <i class="fa fa-edit mr-2"></i> 编辑模式
-                        </button>
-                    </div>
-                </header>
-                
-                <!-- 游戏格子板 -->
-                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
-                    <h2 class="text-xl font-bold text-dark mb-4">选择一个格子</h2>
-                    <div id="gameBoard" class="grid grid-cols-5 gap-3">
-                        <!-- 动态生成20个格子 -->
-                    </div>
-                </div>
-                
-                <!-- 编辑卡片内容区域 -->
-                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
-                    <h2 class="text-xl font-bold text-dark mb-4">编辑卡片内容</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="mb-4">
-                                <label for="cardType" class="block text-gray-700 font-medium mb-2">卡片类型</label>
-                                <select id="cardType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                                    <option value="custom">自定义内容</option>
-                                    <option value="score">分数卡</option>
-                                    <option value="coin">金币卡</option>
-                                    <option value="item">道具卡</option>
-                                    <option value="trap">陷阱卡</option>
-                                    <option value="empty">空卡</option>
-                                </select>
-                            </div>
-                            
-                            <div id="customContentContainer" class="mb-4">
-                                <label for="customContent" class="block text-gray-700 font-medium mb-2">自定义内容</label>
-                                <textarea id="customContent" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入卡片显示的内容..."></textarea>
-                            </div>
-                            
-                            <div id="cardValueContainer" class="mb-4 hidden">
-                                <label for="cardValue" class="block text-gray-700 font-medium mb-2">数值</label>
-                                <input type="number" id="cardValue" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入数值...">
-                            </div>
-                            
-                            <div id="cardTextContainer" class="mb-4 hidden">
-                                <label for="cardText" class="block text-gray-700 font-medium mb-2">描述文字</label>
-                                <input type="text" id="cardText" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="输入描述文字...">
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="cardColor" class="block text-gray-700 font-medium mb-2">卡片颜色</label>
-                                <div class="grid grid-cols-5 gap-2">
-                                    <button class="card-color-btn w-full h-10 rounded-lg bg-blue-500" data-color="bg-blue-500"></button>
-                                    <button class="card-color-btn w-full h-10 rounded-lg bg-amber-500" data-color="bg-amber-500"></button>
-                                    <button class="card-color-btn w-full h-10 rounded-lg bg-green-500" data-color="bg-green-500"></button>
-                                    <button class="card-color-btn w-full h-10 rounded-lg bg-red-500" data-color="bg-red-500"></button>
-                                    <button class="card-color-btn w-full h-10 rounded-lg bg-gray-400" data-color="bg-gray-400"></button>
-                                </div>
-                                <input type="hidden" id="selectedColor" value="bg-blue-500">
-                            </div>
-                            
-                            <button id="applyToSelectedBtn" class="w-full bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-lg shadow transition-all duration-300 font-medium btn-hover">
-                                应用到选中卡片
-                            </button>
-                        </div>
-                        
-                        <div>
-                            <h3 class="text-lg font-semibold text-dark mb-3">卡片预览</h3>
-                            <div class="card-flip w-32 h-32 mx-auto">
-                                <div class="card-inner relative w-full h-full">
-                                    <div class="card-front absolute inset-0 bg-gradient-to-br from-primary to-indigo-600 rounded-lg shadow-md flex items-center justify-center text-white font-bold text-xl">
-                                        <i class="fa fa-question-circle"></i>
-                                    </div>
-                                    <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 bg-blue-500">
-                                        <i class="fa fa-star text-2xl mb-1"></i>
-                                        <span>自定义内容</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-6">
-                                <h3 class="text-lg font-semibold text-dark mb-3">使用说明</h3>
-                                <ul class="space-y-2 text-gray-600">
-                                    <li class="flex items-start">
-                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                        <span>点击格子可选择要编辑的卡片</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                        <span>选择卡片类型并设置相应内容</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                        <span>点击"应用到选中卡片"按钮更新卡片内容</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <i class="fa fa-check-circle text-green-500 mt-1 mr-2"></i>
-                                        <span>保存配置后可随时加载使用</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 游戏说明 -->
-                <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6">
-                    <h2 class="text-xl font-bold text-dark mb-4">游戏说明</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                                    <i class="fa fa-paint-brush text-blue-500"></i>
-                                </div>
-                                <h3 class="font-semibold text-dark">自定义内容</h3>
-                            </div>
-                            <p class="text-gray-600 text-sm">可以自定义洞洞乐的标题和每个格子的内容，打造属于你的游戏！</p>
-                        </div>
-                        
-                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-100">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mr-3">
-                                    <i class="fa fa-save text-amber-500"></i>
-                                </div>
-                                <h3 class="font-semibold text-dark">保存与加载</h3>
-                            </div>
-                            <p class="text-gray-600 text-sm">保存你的洞洞乐配置，随时可以加载使用，方便重复游玩！</p>
-                        </div>
-                        
-                        <div class="bg-green-50 p-4 rounded-lg border border-green-100">
-                            <div class="flex items-center mb-2">
-                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                                    <i class="fa fa-share-alt text-green-500"></i>
-                                </div>
-                                <h3 class="font-semibold text-dark">分享乐趣</h3>
-                            </div>
-                            <p class="text-gray-600 text-sm">和朋友一起分享你的创意洞洞乐，一起体验惊喜和乐趣！</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 编辑标题弹窗 -->
-            <div id="editTitleModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-                    <div class="text-center">
-                        <h2 class="text-2xl font-bold text-dark mb-4">编辑洞洞乐标题</h2>
-                        <input type="text" id="newGameTitle" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4" placeholder="输入新的标题...">
-                        <div class="flex gap-3">
-                            <button id="saveTitleBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
-                                保存
-                            </button>
-                            <button id="cancelTitleBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 卡片结果弹窗 -->
-            <div id="cardResultModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden cursor-pointer">
-                <div class="result-popup absolute top-1/2 left-1/2 w-64 h-64 rounded-xl overflow-hidden">
-                    <div id="resultContent" class="w-full h-full flex flex-col items-center justify-center text-white font-bold">
-                        <!-- 结果内容将在这里动态生成 -->
-                    </div>
-                </div>
-                <div class="absolute bottom-8 text-white text-center">
-                    <p class="text-lg">点击任意位置关闭</p>
-                    <p class="text-sm mt-2">剩余时间: <span id="popupTimer">20</span>秒</p>
-                </div>
-            </div>
-            
-            <!-- 保存配置弹窗 -->
-            <div id="saveGameModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-                    <div class="text-center">
-                        <h2 class="text-2xl font-bold text-dark mb-4">保存洞洞乐配置</h2>
-                        <input type="text" id="saveGameName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4" placeholder="输入配置名称...">
-                        <div class="flex gap-3">
-                            <button id="confirmSaveBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
-                                保存
-                            </button>
-                            <button id="cancelSaveBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 加载配置弹窗 -->
-            <div id="loadGameModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full max-h-[80vh] overflow-y-auto">
-                    <div class="text-center mb-4">
-                        <h2 class="text-2xl font-bold text-dark">加载洞洞乐配置</h2>
-                    </div>
-                    <div id="savedGamesList" class="space-y-3">
-                        <!-- 动态生成已保存的配置列表 -->
-                        <div class="text-gray-500 text-center py-6">
-                            暂无保存的配置
-                        </div>
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                        <button id="closeLoadModalBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow transition-all duration-300 font-medium">
-                            关闭
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <script>
-                // 游戏数据
-                function createInitialCards() {
-                    const initialCards = [
-                        { type: 'score', value: 10, color: 'bg-amber-500' },
-                        { type: 'custom', content: '再来一次！', color: 'bg-green-500' },
-                        { type: 'trap', text: '暂停一回合', color: 'bg-gray-400' },
-                        { type: 'coin', value: 5, color: 'bg-amber-500' },
-                        { type: 'item', text: '获得“免罪”卡', color: 'bg-blue-500' },
-                        { type: 'empty', color: 'bg-gray-400' },
-                        { type: 'score', value: 20, color: 'bg-amber-500' },
-                        { type: 'custom', content: '指定下一位玩家', color: 'bg-green-500' },
-                        { type: 'coin', value: 10, color: 'bg-amber-500' },
-                        { type: 'trap', text: '回答一个问题', color: 'bg-red-500' },
-                        { type: 'item', text: '获得“双倍”卡', color: 'bg-blue-500' },
-                        { type: 'score', value: 5, color: 'bg-amber-500' },
-                        { type: 'custom', content: '真心话大冒险', color: 'bg-red-500' },
-                        { type: 'empty', color: 'bg-gray-400' },
-                        { type: 'coin', value: 2, color: 'bg-amber-500' },
-                        { type: 'trap', text: '学猫叫三声', color: 'bg-red-500' },
-                        { type: 'score', value: 15, color: 'bg-amber-500' },
-                        { type: 'item', text: '获得“偷看”卡', color: 'bg-blue-500' },
-                        { type: 'custom', content: '恭喜！免做家务一天', color: 'bg-green-500' },
-                        { type: 'coin', value: 20, color: 'bg-amber-500' }
-                    ];
-                    return initialCards.sort(() => Math.random() - 0.5);
-                }
+專案計畫書：YouTube 直播互動抽獎系統
+版本：1.1 日期： 2024年5月21日 專案負責人： SunnyYummy
+1. 專案目標與願景 (Project Goal & Vision)
+本專案旨在為 SunnyYummy 的 YouTube 頻道建立一個功能強大、高互動性的直播抽獎工具。此工具需能即時抓取直播聊天室內容，根據指定關鍵字自動建立抽獎名單，並提供多種視覺化的抽獎動畫，以提升直播的趣味性和觀眾的參與感。最終的抽獎結果將被永久記錄，以便於日後查詢和管理。
+v1.1 新增目標：
+* 建立完整的觀眾互動回饋機制，提升參與體驗
+* 構建觀眾忠誠度管理系統，培養核心粉絲群
+* 強化系統安全性與視覺效果，提升專業度
+2. 功能規格 (Functional Specifications)
+2.1 直播監控與參與者管理
+* 動態目標設定：系統管理員（直播主）能夠在不重啟服務的情況下，透過後台管理介面輸入 YouTube 直播的影片ID或網址，即時切換監控的直播聊天室。
+* 關鍵字觸發：系統將監聽聊天室，當有觀眾發送包含預設關鍵字（例如：「我要抽獎」）的訊息時，自動將該觀眾的 displayName 加入抽獎參與者名單。
+* 重複排除：系統會自動過濾，確保同一位觀眾即使多次發言，在單次抽獎中也只會被計入名單一次。
+* 🆕 參與確認回饋：當觀眾成功加入抽獎名單時，系統會自動在聊天室發送確認訊息（如：「@用戶名 已成功參與抽獎！🎉」）。
+* 🆕 重複參與提示：對已參與的觀眾給予友善提醒訊息（如：「@用戶名 您已在抽獎名單中囉！😊」），而非完全忽略。
+* 手動資格管理：管理員能夠在後台介面即時查看當前所有參與者名單，並可以手動將任何不符合資格或已中獎的參與者從名單中移除。
+2.2 抽獎活動管理
+* 🆕 倒數計時功能：管理員可為抽獎活動設定截止時間（5分鐘、10分鐘、15分鐘、30分鐘或自訂時間），系統會在聊天室顯示倒數計時，在最後1分鐘進行提醒，增加緊迫感和參與度。
+* 🆕 API 速率限制管理：管理員可在後台選擇 YouTube API 請求間隔（5秒、10秒、20秒），防止惡意請求耗盡 API 配額，確保系統穩定運行。
+2.3 抽獎執行與動畫效果
+* 多模式抽獎：系統需提供至少三種不同的抽獎動畫模式，供管理員在直播時自由選擇：
+    1. 轉盤式 (Turntable)：所有參與者姓名平均分佈在一個圓盤上，啟動後轉盤會旋轉，最終由指針停在的位置決定中獎者。
+    2. 指針式 (Pointer)：所有參與者姓名在一個橫向滾動的跑馬燈上循環移動，管理員按下停止後，由中央的指針所指的姓名為中獎者。
+    3. 洞洞樂式 (Punch-Hole)：所有參與者姓名被隱藏在一個個蓋牌（卡片）後面，管理員點擊卡片後，卡片會翻開揭曉中獎者。
+* (可選擴充) 多人抽獎：洞洞樂模式應支援一次設定抽出多位中獎者的功能。
+* 🆕 粒子效果慶祝動畫：中獎時觸發絢麗的粒子爆炸效果，包含彩紙、煙火、星星等多種粒子類型，搭配顏色漸變和動態軌跡，營造慶祝氛圍。
+2.4 資料持久化與歷史記錄
+* 抽獎結果記錄：每次抽獎執行完畢後，系統必須將本次抽獎的關鍵資訊寫入 PostgreSQL 資料庫進行永久保存。
+* 記錄欄位：儲存的資料應至少包含：
+    * 抽獎活動對應的 video_id
+    * 當時使用的 lottery_keyword
+    * 中獎者的 winner_name
+    * 當時的 total_participants（總參與人數）
+    * 抽獎執行的時間戳 draw_timestamp
+    * 🆕 活動持續時間 duration_minutes
+    * 🆕 使用的動畫模式 animation_mode
+    * (可選) 完整的 participants_list (以 JSONB 格式儲存)
+* 歷史查詢：系統需提供一個受保護的後台 API，用於查詢歷史抽獎記錄。
+2.5 用戶畫像與忠誠度管理
+* 🆕 用戶參與記錄：建立 user_profiles 資料表，記錄每位觀眾的參與歷史：
+    * user_channel_id（YouTube 頻道ID）
+    * display_name（顯示名稱）
+    * profile_image_url（頭像網址）
+    * total_participations（總參與次數）
+    * total_wins（總中獎次數）
+    * first_participation_date（首次參與日期）
+    * last_participation_date（最後參與日期）
+    * participation_frequency（參與頻率評分）
+* 🆕 忠實粉絲識別：系統自動標記「核心粉絲」（參與次數 ≥ 5次）、「超級粉絲」（參與次數 ≥ 20次），並在後台提供粉絲分析報表。
+* 🆕 用戶標籤系統：管理員可為特定用戶新增自訂標籤（如：「活躍觀眾」、「忠實粉絲」、「新觀眾」），便於管理和互動策略制定。
+2.6 資訊擷取與顯示
+* 豐富的作者資訊：系統從 YouTube API 擷取的資訊需包含發言者的顯示名稱 (displayName) 和個人頭像 (profileImageUrl)。
+* 即時前端顯示：後台管理介面需即時顯示：
+    * 直播聊天室的完整內容（含頭像）。
+    * 當前抽獎參與者名單（含人數統計）。
+    * 🆕 倒數計時器（活動進行中時）。
+    * 🆕 API 請求狀態與速率限制設定。
+    * 🆕 用戶參與統計（新用戶、回歸用戶比例）。
+    * 抽獎動畫。
+3. 技術架構與設定 (Technical Architecture & Configuration)
+3.1 後端 (Backend)
+* 語言/框架：Node.js 搭配 Express.js。
+* 即時通訊：使用 ws (WebSocket) 套件，在後端和前端管理介面之間建立即時雙向通訊。
+* 資料庫：PostgreSQL，透過 pg 套件進行連接與操作。
+* 🆕 快取系統：使用 node-cache 套件實現記憶體快取，儲存用戶畫像和參與狀態，提升查詢效能。
+* 🆕 速率限制：使用 express-rate-limit 中介軟體保護 API 端點，防止濫用。
+* 外部 API：
+    * YouTube Data API v3：使用 axios 套件呼叫，用於抓取直播聊天室訊息。
+    * 🆕 智能速率控制：實現動態 API 請求間隔調整，避免超出配額限制。
+    * API 金鑰將儲存在 Render 的環境變數 YOUTUBE_API_KEY 中，並不在程式碼中寫死。
+* 模組化設計：
+    * 核心抽獎邏輯將封裝在獨立的 youtubeLottery.js 模組中。
+    * 🆕 userProfile.js 模組負責用戶畫像管理。
+    * 🆕 chatResponder.js 模組處理聊天室自動回覆功能。
+    * server.js 作為主入口，負責整合 Express、WebSocket、資料庫連接，並初始化各模組。
+* API 端點：所有管理相關的 API (如切換直播、執行抽獎、移除參與者、查詢歷史、用戶管理) 都將掛載在 /api/admin/ 路徑下，並受現有的 isAdminAuthenticated 中介軟體保護。
+3.2 前端 (Frontend)
+* 技術：純 HTML, CSS, JavaScript。
+* 🆕 視覺庫：引入 particles.js 或 canvas-confetti 實現粒子效果。
+* 🆕 動畫庫：使用 anime.js 或原生 CSS animations 增強動畫流暢度。
+* 核心頁面：public/youtube-lottery-admin.html，作為所有操作的管理中樞。
+* 🆕 新增頁面：
+    * public/user-analytics.html - 用戶分析儀表板
+    * public/lottery-history.html - 抽獎歷史詳細檢視
+* 通訊：透過 WebSocket 與後端連接，接收 chat_message、update_participants、announce_winner、🆕 countdown_update、🆕 user_stats_update 等事件，並即時更新 UI。
+* 互動：使用者可以透過頁面上的輸入框和按鈕，向後端 API 發送指令（如設定 Video ID、觸發抽獎、移除參與者、🆕 設定倒數計時、🆕 調整 API 速率）。
+3.3 資料庫結構 (Database Schema)
 
-                const gameData = {
-                    title: "自定义洞洞乐",
-                    cards: createInitialCards(),
-                    isEditMode: false, // 新增编辑模式状态
-                    selectedCardIndex: null,
-                    savedGames: []
-                };
-                
-                // 弹窗计时器
-                let popupTimer = null;
-                let remainingTime = 20;
-                
-                // 初始化游戏
-                function initGame() {
-                    // 更新标题
-                    document.getElementById('gameTitle').textContent = gameData.title;
-                    
-                    // 生成卡片
-                    generateCards();
-                    
-                    // 新增编辑模式切换按钮的事件监听器
-                    document.getElementById('toggleEditModeBtn').addEventListener('click', toggleEditMode);
-                    
-                    // 加载已保存的游戏配置
-                    loadSavedGames();
-                    
-                    // 更新卡片类型选择器
-                    document.getElementById('cardType').addEventListener('change', updateCardForm);
-                    
-                    // 更新卡片颜色选择器
-                    document.querySelectorAll('.card-color-btn').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            document.querySelectorAll('.card-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2'));
-                            this.classList.add('ring-2', 'ring-white', 'ring-offset-2');
-                            document.getElementById('selectedColor').value = this.dataset.color;
-                            updateCardPreview();
-                        });
-                    });
-                    
-                    // 应用到选中卡片按钮
-                    document.getElementById('applyToSelectedBtn').addEventListener('click', applyToSelectedCard);
-                    
-                    // 编辑标题按钮
-                    document.getElementById('editTitleBtn').addEventListener('click', () => {
-                        document.getElementById('newGameTitle').value = gameData.title;
-                        document.getElementById('editTitleModal').classList.remove('hidden');
-                    });
-                    
-                    // 保存标题按钮
-                    document.getElementById('saveTitleBtn').addEventListener('click', saveGameTitle);
-                    
-                    // 取消编辑标题按钮
-                    document.getElementById('cancelTitleBtn').addEventListener('click', () => {
-                        document.getElementById('editTitleModal').classList.add('hidden');
-                    });
-                    
-                    // 保存游戏配置按钮
-                    document.getElementById('saveGameBtn').addEventListener('click', () => {
-                        document.getElementById('saveGameName').value = gameData.title;
-                        document.getElementById('saveGameModal').classList.remove('hidden');
-                    });
-                    
-                    // 确认保存按钮
-                    document.getElementById('confirmSaveBtn').addEventListener('click', saveGameConfig);
-                    
-                    // 取消保存按钮
-                    document.getElementById('cancelSaveBtn').addEventListener('click', () => {
-                        document.getElementById('saveGameModal').classList.add('hidden');
-                    });
-                    
-                    // 加载游戏配置按钮
-                    document.getElementById('loadGameBtn').addEventListener('click', () => {
-                        loadSavedGames();
-                        document.getElementById('loadGameModal').classList.remove('hidden');
-                    });
-                    
-                    // 关闭加载弹窗按钮
-                    document.getElementById('closeLoadModalBtn').addEventListener('click', () => {
-                        document.getElementById('loadGameModal').classList.add('hidden');
-                    });
-                    
-                    // 重置游戏按钮
-                    document.getElementById('resetBtn').addEventListener('click', resetGame);
-                    
-                    // 更新卡片表单
-                    updateCardForm();
-                }
-                
-                // 生成卡片
-                function generateCards() {
-                    const gameBoard = document.getElementById('gameBoard');
-                    gameBoard.innerHTML = '';
-                    const isEditMode = gameData.isEditMode;
-                    
-                    gameData.cards.forEach((card, index) => {
-                        const cardElement = document.createElement('div');
-                        // 在编辑模式下，卡片不应有翻转效果，且光标应为文本编辑
-                        cardElement.className = `card-flip ${isEditMode ? 'edit-mode-active cursor-text' : 'cursor-pointer'} ${index === gameData.selectedCardIndex ? 'ring-4 ring-primary' : ''}`;
-                        cardElement.dataset.index = index;
-                        
-                        if (isEditMode) {
-                            // 编辑模式下直接显示背面，并使其可编辑
-                            cardElement.innerHTML = `
-                                <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 transition-all duration-300 ${card.color}">
-                                    ${getEditableCardContentHtml(card, index)}
-                                </div>
-                            `;
-                        } else {
-                            // 正常游戏模式，可翻转
-                            cardElement.innerHTML = `
-                                <div class="card-inner relative w-full aspect-square">
-                                    <div class="card-front absolute inset-0 bg-gradient-to-br from-primary to-indigo-600 rounded-lg shadow-md flex items-center justify-center text-white font-bold text-xl transition-all duration-300 hover:shadow-lg">
-                                        <i class="fa fa-question-circle"></i>
-                                    </div>
-                                    <div class="card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 transition-all duration-300 ${card.color}">
-                                        ${getCardContent(card)}
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // 添加点击事件
-                        cardElement.addEventListener('click', () => selectCard(index));
-                        
-                        gameBoard.appendChild(cardElement);
-                    });
-                }
-                
-                // 新增：切换编辑模式
-                function toggleEditMode() {
-                    gameData.isEditMode = !gameData.isEditMode;
-                    const btn = document.getElementById('toggleEditModeBtn');
-                    
-                    if (gameData.isEditMode) {
-                        btn.innerHTML = '<i class="fa fa-gamepad mr-2"></i> 游戏模式';
-                        btn.classList.replace('bg-indigo-500', 'bg-indigo-700');
-                        showNotification('已进入编辑模式', 'bg-blue-500');
-                    } else {
-                        btn.innerHTML = '<i class="fa fa-edit mr-2"></i> 编辑模式';
-                        btn.classList.replace('bg-indigo-700', 'bg-indigo-500');
-                        showNotification('已退出编辑模式', 'bg-gray-500');
-                    }
-                    generateCards();
-                }
+sql
+-- 原有的抽獎歷史表（更新欄位）
+CREATE TABLE youtube_lottery_history (
+    id SERIAL PRIMARY KEY,
+    video_id VARCHAR(255) NOT NULL,
+    lottery_keyword VARCHAR(255) NOT NULL,
+    winner_name VARCHAR(255) NOT NULL,
+    total_participants INTEGER NOT NULL,
+    draw_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    duration_minutes INTEGER, -- 🆕 活動持續時間
+    animation_mode VARCHAR(50), -- 🆕 使用的動畫模式
+    participants_list JSONB
+);
 
-                // 新增：获取可编辑卡片内容的HTML
-                function getEditableCardContentHtml(card, index) {
-                    const commonStyles = `background:transparent; border:none; color:white; text-align:center; width:100%; resize:none; font-weight:bold; padding: 4px; outline: none;`;
-                    const onBlurAction = `onblur="updateCardContent(${index}, this)"`;
-                    
-                    switch (card.type) {
-                        case 'score':
-                            return `<div class="flex items-center justify-center h-full"><i class="fa fa-star text-2xl mr-2"></i>+<input type="number" value="${card.value || 0}" data-field="value" data-card-index="${index}" ${onBlurAction} style="${commonStyles}" class="w-16 inline-block"> 分</div>`;
-                        case 'coin':
-                            return `<div class="flex items-center justify-center h-full"><i class="fa fa-coins text-2xl mr-2"></i>+<input type="number" value="${card.value || 0}" data-field="value" data-card-index="${index}" ${onBlurAction} style="${commonStyles}" class="w-16 inline-block"> 金幣</div>`;
-                        case 'item':
-                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-gift text-2xl mb-1"></i><input type="text" value="${card.text || ''}" placeholder="道具描述" data-field="text" data-card-index="${index}" ${onBlurAction} style="${commonStyles}"></div>`;
-                        case 'trap':
-                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-bomb text-2xl mb-1"></i><input type="text" value="${card.text || ''}" placeholder="陷阱描述" data-field="text" data-card-index="${index}" ${onBlurAction} style="${commonStyles}"></div>`;
-                        case 'empty':
-                            return `<div class="flex flex-col items-center justify-center h-full"><i class="fa fa-ban text-2xl mb-1"></i><span>空的</span></div>`;
-                        case 'custom':
-                        default:
-                            return `<textarea data-field="content" data-card-index="${index}" ${onBlurAction} oninput="autoExpandTextarea(this)" style="${commonStyles}" placeholder="自定义内容">${card.content || ''}</textarea>`;
-                    }
-                }
+-- 🆕 用戶畫像表
+CREATE TABLE user_profiles (
+    id SERIAL PRIMARY KEY,
+    user_channel_id VARCHAR(255) UNIQUE NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    profile_image_url TEXT,
+    total_participations INTEGER DEFAULT 0,
+    total_wins INTEGER DEFAULT 0,
+    first_participation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_participation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    participation_frequency DECIMAL(3,2) DEFAULT 0.00,
+    user_tags TEXT[], -- 🆕 用戶標籤陣列
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-                // 新增：更新卡片数据模型
-                function updateCardContent(index, element) {
-                    const field = element.dataset.field;
-                    if (!field) return;
-                    
-                    const value = (element.type === 'number') ? parseInt(element.value, 10) || 0 : element.value;
-                    
-                    if (gameData.cards[index] && typeof gameData.cards[index][field] !== 'undefined') {
-                        gameData.cards[index][field] = value;
-                    }
-                }
+-- 🆕 參與記錄詳細表
+CREATE TABLE participation_records (
+    id SERIAL PRIMARY KEY,
+    user_channel_id VARCHAR(255) REFERENCES user_profiles(user_channel_id),
+    video_id VARCHAR(255) NOT NULL,
+    lottery_id INTEGER REFERENCES youtube_lottery_history(id),
+    participated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_winner BOOLEAN DEFAULT FALSE
+);
 
-                // 新增：自动调整textarea高度
-                function autoExpandTextarea(element) {
-                    element.style.height = 'auto';
-                    element.style.height = (element.scrollHeight) + 'px';
-                }
+-- 🆕 建立索引提升查詢效能
+CREATE INDEX idx_user_profiles_channel_id ON user_profiles(user_channel_id);
+CREATE INDEX idx_participation_records_user_id ON participation_records(user_channel_id);
+CREATE INDEX idx_participation_records_video_id ON participation_records(video_id);
+3.4 部署與環境 (Deployment & Environment)
+* 平台：Render.com。
+* 環境變數：
+    * DATABASE_URL：PostgreSQL 資料庫連接字串。
+    * YOUTUBE_API_KEY：YouTube Data API v3 的金鑰。
+    * 🆕 DEFAULT_API_RATE_LIMIT：預設 API 請求間隔（秒）。
+    * 🆕 ENABLE_CHAT_RESPONSES：是否啟用聊天室自動回覆功能。
+    * SESSION_SECRET 等現有專案所需的變數。
+* 資料持久化：Render 的 PostgreSQL 服務用於儲存抽獎歷史和用戶畫像；Render 的持久化磁碟 (/data/uploads) 與此專案無直接關聯。參與者名單等即時狀態儲存在伺服器記憶體中。
+4. 實施步驟 (Implementation Steps)
+第一階段：基礎系統建立
+1. 環境設定：
+    * [✓] 在 Google Cloud Platform 建立專案並啟用 YouTube Data API v3。
+    * [✓] 產生一組 API 金鑰。
+    * [✓] 安全設定：將 API 金鑰的「應用程式限制」設為「無」，但將「API 限制」設定為僅允許 YouTube Data API v3。
+    * [✓] 在 Render.com 的環境變數中新增 YOUTUBE_API_KEY 並填入金鑰。
+2. 資料庫建立：
+    * 使用提供的 SQL 指令，在 PostgreSQL 資料庫中建立 youtube_lottery_history、🆕 user_profiles、🆕 participation_records 表格。
+第二階段：核心功能開發
+1. 後端開發：
+    * 安裝新套件：npm install axios node-cache express-rate-limit canvas-confetti
+    * 建立 youtubeLottery.js 模組，並實現核心函式。
+    * 🆕 建立 userProfile.js 模組，實現用戶畫像管理功能。
+    * 🆕 建立 chatResponder.js 模組，處理自動回覆邏輯。
+    * 🆕 實現 API 速率限制選擇功能。
+    * 修改 server.js，整合所有新模組。
+2. 前端開發：
+    * 建立 public/youtube-lottery-admin.html 頁面。
+    * 🆕 新增倒數計時器 UI 組件。
+    * 🆕 整合粒子效果庫，實現中獎慶祝動畫。
+    * 🆕 建立用戶分析儀表板頁面。
+    * 🆕 新增 API 速率設定控制面板。
+第三階段：增強功能實作
+1. 互動回饋系統：
+    * 🆕 實現參與確認和重複參與提示功能。
+    * 🆕 建立聊天室訊息發送機制。
+    * 🆕 設計友善的回饋訊息模板。
+2. 用戶畫像系統：
+    * 🆕 實現用戶參與記錄追蹤。
+    * 🆕 建立忠實粉絲識別演算法。
+    * 🆕 開發用戶標籤管理功能。
+第四階段：測試與優化
+1. 系統測試：
+    * 在本地環境進行完整的功能測試。
+    * 🆕 進行 API 速率限制測試。
+    * 🆕 測試粒子效果在不同裝置上的效能。
+    * 🆕 驗證用戶畫像資料準確性。
+2. 效能優化：
+    * 🆕 優化資料庫查詢效率。
+    * 🆕 實施前端快取策略。
+    * 🆕 調整粒子效果參數，確保流暢度。
+第五階段：部署與監控
+1. 生產部署：
+    * 將所有程式碼變更推送到 GitHub。
+    * Render 將自動部署新版本，監控部署日誌確保無誤。
+    * 🆕 設定系統監控和日誌記錄。
+2. 正式測試：
+    * 在正式環境進行一次完整的直播抽獎模擬。
+    * 🆕 測試所有新功能的穩定性。
+    * 🆕 驗證用戶分析數據的準確性。
+5. 風險評估與緩解策略 (Risk Assessment & Mitigation)
+技術風險
+* YouTube API 配額超限：
+    * 緩解：實施智能速率控制，提供多檔速率選擇
+    * 監控：即時追蹤 API 使用量
+* 🆕 粒子效果效能問題：
+    * 緩解：提供效果開關，針對低階裝置優化
+    * 備案：降級為簡單 CSS 動畫
+營運風險
+* 🆕 聊天室垃圾訊息：
+    * 緩解：實施訊息過濾和速率限制
+    * 監控：異常訊息模式偵測
+* 🆕 用戶隱私問題：
+    * 緩解：僅收集公開的 YouTube 資訊
+    * 合規：遵循 GDPR 和個資法規範
+6. 成功指標 (Success Metrics)
+技術指標
+* 系統正常運行時間 ≥ 99.5%
+* API 請求成功率 ≥ 98%
+* 🆕 粒子動畫幀率 ≥ 30 FPS
+* 🆕 用戶畫像資料準確率 ≥ 95%
+業務指標
+* 🆕 觀眾參與確認回饋滿意度 ≥ 4.5/5
+* 🆕 直播互動率提升 20%
+* 🆕 核心粉絲識別準確率 ≥ 90%
+* 抽獎活動完成率 100%
 
-                // 获取卡片内容
-                function getCardContent(card) {
-                    let content = '';
-                    
-                    switch (card.type) {
-                        case 'score':
-                            content = `
-                                <i class="fa fa-star text-2xl mb-1"></i>
-                                <span>+${card.value} 分</span>
-                            `;
-                            break;
-                        case 'coin':
-                            content = `
-                                <i class="fa fa-coins text-2xl mb-1"></i>
-                                <span>+${card.value} 金幣</span>
-                            `;
-                            break;
-                        case 'item':
-                            content = `
-                                <i class="fa fa-gift text-2xl mb-1"></i>
-                                <span class="text-sm">${card.text}</span>
-                            `;
-                            break;
-                        case 'trap':
-                            content = `
-                                <i class="fa fa-bomb text-2xl mb-1"></i>
-                                <span class="text-sm">${card.text}</span>
-                            `;
-                            break;
-                        case 'empty':
-                            content = `
-                                <i class="fa fa-ban text-2xl mb-1"></i>
-                                <span>空的</span>
-                            `;
-                            break;
-                        case 'custom':
-                        default:
-                            content = `
-                                <span class="text-center">${card.content}</span>
-                            `;
-                            break;
-                    }
-                    
-                    return content;
-                }
-                
-                // 选择卡片
-                function selectCard(index) {
-                    const cardElement = document.querySelector(`[data-index="${index}"]`);
-                    if (!cardElement) return;
-
-                    if (gameData.isEditMode) {
-                        // 编辑模式下，选中卡片进行编辑
-                        gameData.selectedCardIndex = index;
-                        updateFormForSelectedCard();
-                        generateCards(); // 重绘以显示选中高亮和更新内容
-                        focusOnEditableCard(index);
-                    } else {
-                        // 游戏模式下，翻转卡片
-                        const cardInner = cardElement.querySelector('.card-inner');
-                        if (!cardInner) return;
-
-                        if (cardInner.classList.contains('card-flipped')) {
-                            showCardResult(index); // 如果已翻开，直接显示结果
-                        } else {
-                            cardInner.classList.add('card-flipped'); // 翻转卡片
-                            setTimeout(() => showCardResult(index), 600); // 动画后显示结果
-                        }
-                    }
-                }
-                
-                // 更新卡片表单
-                function updateCardForm() {
-                    const cardType = document.getElementById('cardType').value;
-                    const customContentContainer = document.getElementById('customContentContainer');
-                    const cardValueContainer = document.getElementById('cardValueContainer');
-                    const cardTextContainer = document.getElementById('cardTextContainer');
-                    
-                    // 隐藏所有容器
-                    customContentContainer.classList.add('hidden');
-                    cardValueContainer.classList.add('hidden');
-                    cardTextContainer.classList.add('hidden');
-                    
-                    // 根据选择的类型显示相应的容器
-                    if (cardType === 'custom') {
-                        customContentContainer.classList.remove('hidden');
-                    } else if (['score', 'coin'].includes(cardType)) {
-                        cardValueContainer.classList.remove('hidden');
-                    } else if (['item', 'trap'].includes(cardType)) {
-                        cardTextContainer.classList.remove('hidden');
-                    }
-                    
-                    // 更新卡片预览
-                    updateCardPreview();
-                }
-                
-                // 更新卡片预览
-                function updateCardPreview() {
-                    const cardType = document.getElementById('cardType').value;
-                    const color = document.getElementById('selectedColor').value;
-                    const previewCard = document.querySelector('.card-flip');
-                    const cardBack = previewCard.querySelector('.card-back');
-                    
-                    // 更新颜色
-                    cardBack.className = `card-back absolute inset-0 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold p-2 ${color}`;
-                    
-                    // 更新内容
-                    let content = '';
-                    
-                    switch (cardType) {
-                        case 'score':
-                            const scoreValue = document.getElementById('cardValue').value || '10';
-                            content = `
-                                <i class="fa fa-star text-2xl mb-1"></i>
-                                <span>+${scoreValue} 分</span>
-                            `;
-                            break;
-                        case 'coin':
-                            const coinValue = document.getElementById('cardValue').value || '1';
-                            content = `
-                                <i class="fa fa-coins text-2xl mb-1"></i>
-                                <span>+${coinValue} 金幣</span>
-                            `;
-                            break;
-                        case 'item':
-                            const itemText = document.getElementById('cardText').value || '道具';
-                            content = `
-                                <i class="fa fa-gift text-2xl mb-1"></i>
-                                <span class="text-sm">${itemText}</span>
-                            `;
-                            break;
-                        case 'trap':
-                            const trapText = document.getElementById('cardText').value || '陷阱';
-                            content = `
-                                <i class="fa fa-bomb text-2xl mb-1"></i>
-                                <span class="text-sm">${trapText}</span>
-                            `;
-                            break;
-                        case 'empty':
-                            content = `
-                                <i class="fa fa-ban text-2xl mb-1"></i>
-                                <span>空的</span>
-                            `;
-                            break;
-                        case 'custom':
-                        default:
-                            const customContent = document.getElementById('customContent').value || '自定义内容';
-                            content = `
-                                <span class="text-center">${customContent}</span>
-                            `;
-                            break;
-                    }
-                    
-                    cardBack.innerHTML = content;
-                }
-                
-                // 应用到选中卡片
-                function applyToSelectedCard() {
-                    if (gameData.selectedCardIndex === null) {
-                        alert('请先选择一个卡片');
-                        return;
-                    }
-                    
-                    const cardType = document.getElementById('cardType').value;
-                    const color = document.getElementById('selectedColor').value;
-                    const card = gameData.cards[gameData.selectedCardIndex];
-                    
-                    card.type = cardType;
-                    card.color = color;
-                    
-                    if (cardType === 'custom') {
-                        card.content = document.getElementById('customContent').value || '自定义内容';
-                    } else if (['score', 'coin'].includes(cardType)) {
-                        card.value = parseInt(document.getElementById('cardValue').value) || 0;
-                    } else if (['item', 'trap'].includes(cardType)) {
-                        card.text = document.getElementById('cardText').value || '';
-                    }
-                    
-                    // 更新卡片
-                    generateCards();
-                    
-                    // 显示成功通知
-                    showNotification('卡片内容已更新！', 'bg-green-500');
-                }
-                
-                // 保存游戏标题
-                function saveGameTitle() {
-                    const newTitle = document.getElementById('newGameTitle').value.trim();
-                    
-                    if (newTitle) {
-                        gameData.title = newTitle;
-                        document.getElementById('gameTitle').textContent = newTitle;
-                        document.getElementById('editTitleModal').classList.add('hidden');
-                        generateCards(); // 重新渲染卡片，以防标题内容被使用
-                        showNotification('标题已更新！', 'bg-green-500');
-                    } else {
-                        alert('请输入有效的标题');
-                    }
-                }
-                
-                // 保存游戏配置
-                function saveGameConfig() {
-                    const configName = document.getElementById('saveGameName').value.trim();
-                    
-                    if (configName) {
-                        // 创建配置对象
-                        const config = {
-                            name: configName,
-                            title: gameData.title,
-                            cards: [...gameData.cards]
-                        };
-                        
-                        // 保存到localStorage
-                        const savedGames = JSON.parse(localStorage.getItem('savedHoleGames')) || [];
-                        
-                        // 检查是否已存在同名配置
-                        const existingIndex = savedGames.findIndex(g => g.name === configName);
-                        if (existingIndex !== -1) {
-                            savedGames[existingIndex] = config;
-                        } else {
-                            savedGames.push(config);
-                        }
-                        
-                        localStorage.setItem('savedHoleGames', JSON.stringify(savedGames));
-                        
-                        // 关闭弹窗
-                        document.getElementById('saveGameModal').classList.add('hidden');
-                        
-                        // 更新游戏数据
-                        gameData.savedGames = savedGames;
-                        
-                        // 显示成功通知
-                        showNotification(`配置"${configName}"已保存！`, 'bg-green-500');
-                    } else {
-                        alert('请输入有效的配置名称');
-                    }
-                }
-                
-                // 加载已保存的游戏配置
-                function loadSavedGames() {
-                    const savedGames = JSON.parse(localStorage.getItem('savedHoleGames')) || [];
-                    gameData.savedGames = savedGames;
-                    
-                    const savedGamesList = document.getElementById('savedGamesList');
-                    savedGamesList.innerHTML = '';
-                    
-                    if (savedGames.length === 0) {
-                        savedGamesList.innerHTML = `
-                            <div class="text-gray-500 text-center py-6">
-                                暂无保存的配置
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    savedGames.forEach((game, index) => {
-                        const gameItem = document.createElement('div');
-                        gameItem.className = 'bg-gray-50 rounded-lg p-4 flex justify-between items-center hover:bg-gray-100 transition-colors';
-                        
-                        gameItem.innerHTML = `
-                            <div>
-                                <h3 class="font-medium text-dark">${game.name}</h3>
-                                <p class="text-sm text-gray-500">${game.title}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button class="load-game-btn px-3 py-1 bg-primary text-white rounded hover:bg-primary/90 transition-colors" data-index="${index}">
-                                    加载
-                                </button>
-                                <button class="delete-game-btn px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors" data-index="${index}">
-                                    删除
-                                </button>
-                            </div>
-                        `;
-                        
-                        savedGamesList.appendChild(gameItem);
-                    });
-                    
-                    // 添加加载按钮事件
-                    document.querySelectorAll('.load-game-btn').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const index = parseInt(this.dataset.index);
-                            loadGameConfig(index);
-                        });
-                    });
-                    
-                    // 添加删除按钮事件
-                    document.querySelectorAll('.delete-game-btn').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const index = parseInt(this.dataset.index);
-                            deleteGameConfig(index);
-                        });
-                    });
-                }
-                
-                // 加载游戏配置
-                function loadGameConfig(index) {
-                    const config = gameData.savedGames[index];
-                    
-                    if (config) {
-                        gameData.title = config.title;
-                        gameData.cards = [...config.cards];
-                        gameData.selectedCardIndex = null;
-                        gameData.isEditMode = false; // 加载配置后总是进入游戏模式
-                        
-                        // 更新UI
-                        document.getElementById('gameTitle').textContent = gameData.title;
-                        generateCards();
-                        
-                        // 关闭弹窗
-                        document.getElementById('loadGameModal').classList.add('hidden');
-                        
-                        // 显示成功通知
-                        showNotification(`已加载配置"${config.name}"！`, 'bg-green-500');
-                    }
-                }
-                
-                // 删除游戏配置
-                function deleteGameConfig(index) {
-                    if (confirm('确定要删除这个配置吗？')) {
-                        gameData.savedGames.splice(index, 1);
-                        localStorage.setItem('savedHoleGames', JSON.stringify(gameData.savedGames));
-                        loadSavedGames();
-                        showNotification('配置已删除！', 'bg-red-500');
-                    }
-                }
-                
-                // 重置游戏
-                function resetGame() {
-                    if (confirm('确定要重置游戏吗？所有自定义内容将被清除。')) {
-                            // 重置游戏数据
-                            gameData.title = "自定义洞洞乐";
-                            gameData.cards = createInitialCards();
-                            gameData.isEditMode = false; // 重置游戏后默认进入游戏模式
-                            gameData.selectedCardIndex = null;
-                            
-                            // 更新UI
-                            document.getElementById('gameTitle').textContent = gameData.title;
-                            generateCards();
-                            
-                            // 显示成功通知
-                            showNotification('游戏已重置！', 'bg-green-500');
-                        }
-                    }
-
-                    // 辅助函数：更新表单以匹配选定的卡片
-                    function updateFormForSelectedCard() {
-                        if (gameData.selectedCardIndex === null) return;
-                        const card = gameData.cards[gameData.selectedCardIndex];
-                        
-                        document.getElementById('cardType').value = card.type;
-                        document.getElementById('customContent').value = card.content || '';
-                        document.getElementById('cardValue').value = card.value || '';
-                        document.getElementById('cardText').value = card.text || '';
-                        document.getElementById('selectedColor').value = card.color;
-                        
-                        document.querySelectorAll('.card-color-btn').forEach(btn => {
-                            const isSelected = btn.dataset.color === card.color;
-                            btn.classList.toggle('ring-2', isSelected);
-                            btn.classList.toggle('ring-white', isSelected);
-                            btn.classList.toggle('ring-offset-2', isSelected);
-                        });
-                        
-                        updateCardForm();
-                        updateCardPreview();
-                    }
-
-                    // 辅助函数：在编辑模式下聚焦到卡片输入框
-                    function focusOnEditableCard(index) {
-                        setTimeout(() => {
-                            const editableElement = document.querySelector(`[data-card-index="${index}"]`);
-                            if (editableElement) {
-                                editableElement.focus();
-                                if (editableElement.select) editableElement.select();
-                                if (editableElement.type === 'textarea') autoExpandTextarea(editableElement);
-                            }
-                        }, 50);
-                    }
-                    
-                    // 显示卡片结果
-                    function showCardResult(index) {
-                        const card = gameData.cards[index];
-                        const resultContent = document.getElementById('resultContent');
-                        
-                        // 清空结果内容
-                        resultContent.innerHTML = '';
-                        
-                        // 设置结果内容
-                        resultContent.className = `w-full h-full flex flex-col items-center justify-center text-white font-bold ${card.color}`;
-                        
-                        // 添加卡片内容
-                        const cardContent = document.createElement('div');
-                        cardContent.className = 'text-center p-6';
-                        cardContent.innerHTML = `
-                            <div class="text-5xl mb-4">
-                                ${getCardIcon(card.type)}
-                            </div>
-                            <div class="text-2xl mb-2">
-                                ${getCardTitle(card)}
-                            </div>
-                            <div class="text-xl">
-                                ${getCardDescription(card)}
-                            </div>
-                        `;
-                        
-                        resultContent.appendChild(cardContent);
-                        
-                        // 显示弹窗
-                        document.getElementById('cardResultModal').classList.remove('hidden');
-                        setTimeout(() => {
-                            document.querySelector('.result-popup').classList.add('active');
-                        }, 10);
-                        
-                        // 启动计时器
-                        startPopupTimer();
-                    }
-                    
-                    // 获取卡片图标
-                    function getCardIcon(type) {
-                        switch (type) {
-                            case 'score':
-                                return '<i class="fa fa-star"></i>';
-                            case 'coin':
-                                return '<i class="fa fa-coins"></i>';
-                            case 'item':
-                                return '<i class="fa fa-gift"></i>';
-                            case 'trap':
-                                return '<i class="fa fa-bomb"></i>';
-                            case 'empty':
-                                return '<i class="fa fa-ban"></i>';
-                            case 'custom':
-                            default:
-                                return '<i class="fa fa-info-circle"></i>';
-                        }
-                    }
-                    
-                    // 获取卡片标题
-                    function getCardTitle(card) {
-                        switch (card.type) {
-                            case 'score':
-                                return `+${card.value} 分`;
-                            case 'coin':
-                                return `+${card.value} 金幣`;
-                            case 'item':
-                                return card.text;
-                            case 'trap':
-                                return card.text;
-                            case 'empty':
-                                return '空的';
-                            case 'custom':
-                            default:
-                                return card.content;
-                        }
-                    }
-                    
-                    // 获取卡片描述
-                    function getCardDescription(card) {
-                        switch (card.type) {
-                            case 'score':
-                                return '获得分数奖励！';
-                            case 'coin':
-                                return '获得金币奖励！';
-                            case 'item':
-                                return '获得道具！';
-                            case 'trap':
-                                return '遇到陷阱！';
-                            case 'empty':
-                                return '什么也没有...';
-                            case 'custom':
-                            default:
-                                return '';
-                        }
-                    }
-                    
-                    // 开始弹窗计时器
-                    function startPopupTimer() {
-                        remainingTime = 20;
-                        document.getElementById('popupTimer').textContent = remainingTime;
-                        
-                        // 清除之前的计时器
-                        if (popupTimer) {
-                            clearInterval(popupTimer);
-                        }
-                        
-                        // 设置新的计时器
-                        popupTimer = setInterval(() => {
-                            remainingTime--;
-                            document.getElementById('popupTimer').textContent = remainingTime;
-                            
-                            if (remainingTime <= 0) {
-                                closeCardResultModal();
-                            }
-                        }, 1000);
-                    }
-                    
-                    // 关闭卡片结果弹窗
-                    function closeCardResultModal() {
-                        clearInterval(popupTimer);
-                        document.querySelector('.result-popup').classList.remove('active');
-                        
-                        setTimeout(() => {
-                            document.getElementById('cardResultModal').classList.add('hidden');
-                        }, 500);
-                    }
-                    
-                    // 显示通知
-                    function showNotification(message, bgColor) {
-                        // 创建通知元素
-                        const notification = document.createElement('div');
-                        notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium ${bgColor} transform translate-x-full transition-transform duration-500 ease-in-out z-50`;
-                        notification.textContent = message;
-                        
-                        // 添加到页面
-                        document.body.appendChild(notification);
-                        
-                        // 显示通知
-                        setTimeout(() => {
-                            notification.classList.remove('translate-x-full');
-                        }, 10);
-                        
-                        // 自动关闭
-                        setTimeout(() => {
-                            notification.classList.add('translate-x-full');
-                            
-                            setTimeout(() => {
-                                document.body.removeChild(notification);
-                            }, 500);
-                        }, 3000);
-                    }
-                    
-                    // 点击卡片结果弹窗关闭
-                    document.getElementById('cardResultModal').addEventListener('click', function(e) {
-                        if (e.target === this) {
-                            closeCardResultModal();
-                        }
-                    });
-                    
-                    // 初始化游戏
-                    document.addEventListener('DOMContentLoaded', initGame);
-                </script>
-            </body>
-            </html>
+備註：本計畫書版本 1.1 新增了六項核心功能，大幅提升了系統的互動性、安全性和分析能力。所有標示 🆕 的項目為本次更新新增內容。

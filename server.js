@@ -74,7 +74,13 @@ app.use(session({
 }));
 
 
- // YouTube抽獎系統模組
+// 創建 HTTP 服務器
+const server = http.createServer(app);
+
+// 創建 WebSocket 服務器
+const wss = new WebSocket.Server({ server });
+
+// YouTube抽獎系統模組
 const YoutubeLottery = require('./youtubeLottery');
 const UserProfile = require('./userProfile');
 const ChatResponder = require('./chatResponder');
@@ -1638,10 +1644,9 @@ async function cleanInactiveRooms() {
 setInterval(cleanInactiveRooms, 60 * 60 * 1000);
 
 // --- HTTP 服務器設置 ---
-const server = http.createServer(app);
+ 
 
 // --- WebSocket 服務器設置 ---
-const wss = new WebSocket.Server({ server });
 
 
 app.get('/api/admin/products', async (req, res) => {
