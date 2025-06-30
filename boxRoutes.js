@@ -115,6 +115,20 @@ module.exports = function(dependencies) {
             );
             const newUser = newUserResult.rows[0];
 
+            // 為新用戶分配預設角色 (role_id = 1)
+            try {
+                const defaultRoleId = 1;
+                await pool.query(
+                    `INSERT INTO user_role_assignments (user_id, role_id, is_active) VALUES ($1, $2, true)`,
+                    [newUser.user_id, defaultRoleId]
+                );
+                console.log(`[Register] Assigned default role (ID: ${defaultRoleId}) to user ${newUser.user_id}`);
+            } catch (roleError) {
+                console.error(`[Register] Failed to assign default role to user ${newUser.user_id}:`, roleError);
+                // 根據策略，這裡可以選擇是否要因此而讓註冊失敗
+                // 目前選擇僅記錄錯誤，不中斷註冊流程
+            }
+
             // (重要) 如果之前上傳了圖片並記錄到 uploaded_files，現在用 newUser.user_id 更新 owner_user_id
             if (req.file && typeof tempUploadedFileId !== 'undefined') {
                 await pool.query('UPDATE uploaded_files SET owner_user_id = $1, file_type = $2 WHERE id = $3', [newUser.user_id, 'profile_image', tempUploadedFileId]);
@@ -2370,7 +2384,7 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
                     user_profile_image_url,
                     created_at,
                     updated_at
-                FROM BOX_Users 
+                FROM box_users 
                 WHERE user_id = $1
             `;
             
