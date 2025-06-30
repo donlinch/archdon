@@ -118,10 +118,36 @@
             align-items: center;
             padding: 8px;
             border-bottom: 1px solid var(--secondary-color);
+            cursor: pointer;
+            position: relative;
         }
         
         .participant:hover {
             background-color: var(--secondary-color);
+        }
+
+        .participant.selected {
+            background-color: rgba(233, 69, 96, 0.2);
+        }
+
+        .participant .delete-btn {
+            position: absolute;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .participant.selected .delete-btn {
+            display: block;
+        }
+
+        .participant .delete-btn:hover {
+            background-color: #d63031;
         }
 
         .participant img {
@@ -604,16 +630,60 @@
                 if (!participantsListEl || !participantsCountEl) return;
 
                 participants = participantsData; // 更新全局參與者陣列
-
                 participantsListEl.innerHTML = '';
                 participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
 
-                participants.forEach(participant => {
+                participants.forEach((participant, index) => {
                     const li = document.createElement('li');
+                    li.className = 'participant';
                     li.innerHTML = `
                         <img src="${participant.profileImageUrl}" alt="${participant.displayName}" class="participant-avatar">
                         <span>${participant.displayName}</span>
+                        <button class="delete-btn">刪除</button>
                     `;
+
+                    // 點擊參與者列表項目時的處理
+                    li.addEventListener('click', (e) => {
+                        // 如果點擊的是刪除按鈕，不切換選中狀態
+                        if (e.target.classList.contains('delete-btn')) {
+                            return;
+                        }
+                        li.classList.toggle('selected');
+                    });
+
+                    // 刪除按鈕的點擊處理
+                    const deleteBtn = li.querySelector('.delete-btn');
+                    deleteBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // 防止觸發父元素的點擊事件
+
+                        if (confirm(`確定要刪除參與者 "${participant.displayName}" 嗎？`)) {
+                            try {
+                                const response = await fetch('/api/admin/lottery/remove-participant', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        participantId: participant.id // 假設每個參與者都有一個唯一的 ID
+                                    })
+                                });
+
+                                const result = await response.json();
+                                if (!response.ok) throw new Error(result.error || '刪除失敗');
+
+                                // 從本地陣列中移除
+                                participants.splice(index, 1);
+                                // 重新渲染列表
+                                updateParticipantsList(participants);
+                                // 更新轉盤
+                                drawWheel();
+                            } catch (error) {
+                                console.error('Error removing participant:', error);
+                                alert(`刪除失敗: ${error.message}`);
+                            }
+                        }
+                    });
+
                     participantsListEl.appendChild(li);
                 });
                 
@@ -709,8 +779,8 @@
                     if (response.ok && result.success) {
                         stopAutoUpdate();
                         currentVideoEl.textContent = '當前監控 Video ID: 無';
-                        defaultAnimation.textContent = '請先設定直播並開始監控';
-                        updateParticipantsList([]);
+                        defaultAnimation.textContent = '已停止監控';
+                        // 不再清空參與者名單
                         alert('已停止監控！');
                     } else {
                         throw new Error(result.error || '停止監控失敗');
