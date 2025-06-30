@@ -208,6 +208,71 @@
         #roles-list .role-actions button {
             margin-left: 5px;
         }
+
+        /* Styles for File Picker */
+        .controls-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 15px 0; }
+        .file-grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: #f8f9fa;
+        }
+        .file-card { 
+            background-color: #fff; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--border-radius); 
+            padding: 10px; 
+            box-shadow: var(--box-shadow);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            text-align: center; 
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .file-card .preview {
+            height: 100px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            background-color: var(--light-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .file-card .preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .file-card .filename { 
+            font-weight: 500; 
+            margin-bottom: 5px; 
+            font-size: 0.85rem; 
+            width: 100%; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .file-card .meta { 
+            font-size: 0.7em; 
+            color: #888; 
+        }
+
+        /* Styles for Upload Form */
+        #upload-preview-badge { margin-top: 10px; max-width: 100%; text-align: center; }
+        #upload-preview-badge img { max-width: 100%; height: auto; max-height: 150px; border-radius: var(--border-radius); }
+        .form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 20px;}
     </style>
 </head>
 <body>
@@ -270,8 +335,12 @@
                             <input type="text" id="badge-description">
                         </div>
                         <div class="form-group">
-                            <label for="badge-image-url">圖片 URL</label>
-                            <input type="text" id="badge-image-url">
+                            <label for="badge-image-url">徽章圖片</label>
+                            <input type="hidden" id="badge-image-url" required>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img id="badge-image-preview" src="" style="width: 40px; height: 40px; display: none; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);">
+                                <button type="button" id="select-badge-image-btn" class="btn btn-secondary">選擇圖片</button>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">創建徽章</button>
                     </form>
@@ -330,6 +399,41 @@
         </div>
     </div>
 
+    <!-- File Picker Modal -->
+    <div id="file-picker-modal" class="modal">
+        <div class="modal-content" style="max-width: 80vw;">
+            <span class="modal-close" id="file-picker-close-btn">&times;</span>
+            <h2>選擇圖片</h2>
+            <div class="controls-bar">
+                <button id="picker-upload-btn" class="btn btn-success" style="background-color: var(--success-color);">➕ 上傳新圖片</button>
+                <input type="text" id="file-picker-search" placeholder="搜尋檔名..." style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-left: auto;">
+            </div>
+            <div id="file-picker-grid" class="file-grid-view">
+                <!-- Image cards will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal (for Badges) -->
+    <div id="upload-modal-badge" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="close-upload-modal-badge">&times;</span>
+            <h2>上傳新圖片 (徽章用)</h2>
+            <form id="upload-form-badge">
+                <div class="form-group">
+                    <label for="file-input-badge">選擇檔案 (建議為正方形 PNG/JPG/GIF):</label>
+                    <input type="file" id="file-input-badge" name="image" accept="image/*" required>
+                    <div id="upload-preview-badge"></div>
+                </div>
+                <div class="form-actions">
+                    <p id="upload-status-badge" style="text-align: left; flex-grow: 1; margin: 0; color: var(--primary-color);"></p>
+                    <button type="button" id="cancel-upload-btn-badge" class="btn btn-secondary">取消</button>
+                    <button type="submit" id="confirm-upload-btn-badge" class="btn btn-primary">確認上傳</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', async () => {
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -347,10 +451,20 @@
         let allTitles = [];
         let currentEditingUserId = null;
         let authToken = null;
+        let allFiles = []; // For file picker
 
         const roleForm = document.getElementById('role-form');
         const rolesList = document.getElementById('roles-list');
         const cancelEditRoleBtn = document.getElementById('cancel-edit-role-btn');
+        
+        // File Picker & Upload Modal elements
+        const filePickerModal = document.getElementById('file-picker-modal');
+        const filePickerCloseBtn = document.getElementById('file-picker-close-btn');
+        const filePickerGrid = document.getElementById('file-picker-grid');
+        const filePickerSearch = document.getElementById('file-picker-search');
+        const uploadModalBadge = document.getElementById('upload-modal-badge');
+        const closeUploadModalBadge = document.getElementById('close-upload-modal-badge');
+        const cancelUploadBtnBadge = document.getElementById('cancel-upload-btn-badge');
 
         // --- API & Auth ---
         
@@ -362,8 +476,15 @@
                     'Authorization': `Bearer ${authToken}`
                 }
             };
+
+            // Don't set Content-Type for FormData
+            if (options.body instanceof FormData) {
+                delete defaultOptions.headers['Content-Type'];
+            }
+
             const mergedOptions = { ...defaultOptions, ...options };
-            if (options.body && typeof options.body !== 'string') {
+
+            if (options.body && typeof options.body !== 'string' && !(options.body instanceof FormData)) {
                 mergedOptions.body = JSON.stringify(options.body);
             }
 
@@ -539,12 +660,17 @@
                 const name = document.getElementById('badge-name').value;
                 const description = document.getElementById('badge-description').value;
                 const imageUrl = document.getElementById('badge-image-url').value;
+                if (!imageUrl) {
+                    alert('請選擇一張圖片作為徽章圖示。');
+                    return;
+                }
                 await apiFetch('/api/box/admin/badges', {
                     method: 'POST',
                     body: { badgeName: name, badgeDescription: description, badgeImageUrl: imageUrl }
                 });
                 alert('徽章已創建！');
                 e.target.reset();
+                document.getElementById('badge-image-preview').style.display = 'none';
                 // Refresh global list
                 allBadges = await apiFetch('/api/box/admin/badges');
                 populateSelect(document.getElementById('badge-select'), allBadges, 'badge_id', 'badge_name');
@@ -683,8 +809,124 @@
                     }
                 }
             });
+
+            // --- File Picker Listeners ---
+            document.getElementById('select-badge-image-btn').addEventListener('click', async () => {
+                try {
+                    allFiles = await apiFetch('/api/box/admin/files?type=image');
+                    renderFilePickerGrid(allFiles);
+                    filePickerModal.style.display = 'block';
+                } catch (error) {
+                    console.error('Could not load files for picker:', error);
+                    alert('無法載入圖片列表。');
+                }
+            });
+            
+            filePickerCloseBtn.addEventListener('click', () => filePickerModal.style.display = 'none');
+            
+            filePickerSearch.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredFiles = allFiles.filter(file => file.original_filename.toLowerCase().includes(searchTerm));
+                renderFilePickerGrid(filteredFiles);
+            });
+
+            filePickerGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.file-card');
+                if (card) {
+                    const imageUrl = card.dataset.imageUrl;
+                    document.getElementById('badge-image-url').value = imageUrl;
+                    const preview = document.getElementById('badge-image-preview');
+                    preview.src = imageUrl;
+                    preview.style.display = 'inline-block';
+                    filePickerModal.style.display = 'none';
+                }
+            });
+            
+            // --- Upload Modal Listeners ---
+            document.getElementById('picker-upload-btn').addEventListener('click', () => {
+                uploadModalBadge.style.display = 'block';
+            });
+            
+            closeUploadModalBadge.addEventListener('click', () => uploadModalBadge.style.display = 'none');
+            cancelUploadBtnBadge.addEventListener('click', () => uploadModalBadge.style.display = 'none');
+            
+            document.getElementById('file-input-badge').addEventListener('change', function() {
+                const file = this.files[0];
+                const preview = document.getElementById('upload-preview-badge');
+                preview.innerHTML = '';
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        preview.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            document.getElementById('upload-form-badge').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fileInput = document.getElementById('file-input-badge');
+                if (fileInput.files.length === 0) {
+                    alert('請選擇一個檔案。');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+                formData.append('fileType', 'badge_icon');
+
+                const statusP = document.getElementById('upload-status-badge');
+                statusP.textContent = '上傳中...';
+                try {
+                    const result = await apiFetch('/api/box/upload-analyze-then-process-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    statusP.textContent = '上傳成功！';
+                    // Add new file to our local list and re-render
+                    const newFile = { 
+                        file_path: result.image_url, 
+                        original_filename: fileInput.files[0].name,
+                        created_at: new Date().toISOString()
+                    };
+                    allFiles.unshift(newFile);
+                    renderFilePickerGrid(allFiles);
+                    
+                    setTimeout(() => {
+                        uploadModalBadge.style.display = 'none';
+                        e.target.reset();
+                        document.getElementById('upload-preview-badge').innerHTML = '';
+                        statusP.textContent = '';
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    statusP.textContent = `上傳失敗: ${error.message}`;
+                }
+            });
         }
         
+        // --- File Picker UI ---
+        function renderFilePickerGrid(files) {
+            filePickerGrid.innerHTML = '';
+            if (files.length === 0) {
+                filePickerGrid.innerHTML = '<p style="text-align: center; color: #777;">找不到圖片，請先上傳。</p>';
+                return;
+            }
+            files.forEach(file => {
+                const card = document.createElement('div');
+                card.className = 'file-card';
+                card.dataset.imageUrl = file.file_path;
+                card.innerHTML = `
+                    <div class="preview"><img src="${file.file_path}" alt="${file.original_filename}" loading="lazy"></div>
+                    <div class="filename" title="${file.original_filename}">${file.original_filename}</div>
+                    <div class="meta">${new Date(file.created_at).toLocaleDateString()}</div>
+                `;
+                filePickerGrid.appendChild(card);
+            });
+        }
         // --- Role Management UI ---
         function renderRolesList(roles) {
             rolesList.innerHTML = '';

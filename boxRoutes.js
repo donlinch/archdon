@@ -1583,6 +1583,30 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // 獲取上傳的文件列表 (管理員用)
+    router.get('/admin/files', isAdminAuthenticated, async (req, res) => {
+        const fileType = req.query.type; // e.g., 'image'
+
+        try {
+            let queryText = 'SELECT id, file_path, original_filename, mimetype, size_bytes, created_at, owner_user_id FROM uploaded_files';
+            const queryParams = [];
+
+            if (fileType === 'image') {
+                queryText += ' WHERE mimetype LIKE $1';
+                queryParams.push('image/%');
+            }
+            
+            queryText += ' ORDER BY created_at DESC';
+
+            const result = await pool.query(queryText, queryParams);
+            res.json(result.rows);
+
+        } catch (err) {
+            console.error('[API GET /box/admin/files] Error:', err);
+            res.status(500).json({ error: '無法獲取文件列表' });
+        }
+    });
+
     // --- 角色、徽章和成就相關 API ---
     
     // 獲取用戶角色
