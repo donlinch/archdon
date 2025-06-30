@@ -194,6 +194,20 @@
             justify-content: center;
             align-items: center;
         }
+
+        #roles-list .role-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #roles-list .role-item:last-child {
+            border-bottom: none;
+        }
+        #roles-list .role-actions button {
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -225,6 +239,25 @@
             </div>
             <aside class="sidebar">
                 <h2>全局設定</h2>
+                <div class="section">
+                    <h3>角色管理</h3>
+                    <form id="role-form">
+                        <input type="hidden" id="role-id">
+                        <div class="form-group">
+                            <label for="role-name">角色名稱</label>
+                            <input type="text" id="role-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="role-description">描述</label>
+                            <input type="text" id="role-description">
+                        </div>
+                        <button type="submit" class="btn btn-primary">保存角色</button>
+                        <button type="button" id="cancel-edit-role-btn" class="btn btn-secondary" style="display: none;">取消編輯</button>
+                    </form>
+                    <hr>
+                    <h4>現有角色列表</h4>
+                    <div id="roles-list"></div>
+                </div>
                 <div class="section">
                     <h3>創建新徽章</h3>
                     <form id="create-badge-form">
@@ -315,6 +348,10 @@
         let currentEditingUserId = null;
         let authToken = null;
 
+        const roleForm = document.getElementById('role-form');
+        const rolesList = document.getElementById('roles-list');
+        const cancelEditRoleBtn = document.getElementById('cancel-edit-role-btn');
+
         // --- API & Auth ---
         
         async function apiFetch(url, options = {}) {
@@ -380,6 +417,7 @@
                 ]);
                 
                 renderUserTable(allUsers);
+                renderRolesList(allRoles);
                 populateGlobalSelectors();
                 setupEventListeners();
                 
@@ -584,6 +622,99 @@
                     }
                 }
             });
+
+            // Role form submission
+            roleForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const roleId = document.getElementById('role-id').value;
+                const roleName = document.getElementById('role-name').value;
+                const roleDescription = document.getElementById('role-description').value;
+
+                const payload = { role_name: roleName, role_description: roleDescription };
+
+                try {
+                    if (roleId) {
+                        // Update existing role
+                        await apiFetch(`/api/box/admin/roles/${roleId}`, { method: 'PUT', body: payload });
+                        alert('角色已更新！');
+                    } else {
+                        // Create new role
+                        await apiFetch('/api/box/admin/roles', { method: 'POST', body: payload });
+                        alert('角色已創建！');
+                    }
+                    
+                    allRoles = await apiFetch('/api/box/admin/roles');
+                    renderRolesList(allRoles);
+                    populateSelect(document.getElementById('role-select'), allRoles, 'role_id', 'role_name');
+                    resetRoleForm();
+
+                } catch (error) {
+                    console.error('保存角色失敗:', error);
+                }
+            });
+
+            // Cancel role edit
+            cancelEditRoleBtn.addEventListener('click', resetRoleForm);
+
+            // Role list actions (Edit/Delete)
+            rolesList.addEventListener('click', async (e) => {
+                const target = e.target;
+                const roleId = target.dataset.roleId;
+
+                if (target.classList.contains('edit-role-btn')) {
+                    const role = allRoles.find(r => r.role_id == roleId);
+                    if (role) {
+                        setupRoleFormForEdit(role);
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+
+                if (target.classList.contains('delete-role-btn')) {
+                    if (confirm(`您確定要刪除這個角色嗎？此操作無法復原。`)) {
+                        try {
+                            await apiFetch(`/api/box/admin/roles/${roleId}`, { method: 'DELETE' });
+                            alert('角色已刪除。');
+                            allRoles = await apiFetch('/api/box/admin/roles');
+                            renderRolesList(allRoles);
+                            populateSelect(document.getElementById('role-select'), allRoles, 'role_id', 'role_name');
+                        } catch (error) {
+                             console.error('刪除角色失敗:', error);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // --- Role Management UI ---
+        function renderRolesList(roles) {
+            rolesList.innerHTML = '';
+            roles.forEach(role => {
+                const div = document.createElement('div');
+                div.className = 'role-item';
+                div.innerHTML = `
+                    <span><strong>${role.role_name}</strong>: ${role.role_description || ''}</span>
+                    <div class="role-actions">
+                        <button class="btn btn-secondary edit-role-btn" data-role-id="${role.role_id}">編輯</button>
+                        <button class="btn btn-danger delete-role-btn" data-role-id="${role.role_id}">刪除</button>
+                    </div>
+                `;
+                rolesList.appendChild(div);
+            });
+        }
+
+        function setupRoleFormForEdit(role) {
+            document.getElementById('role-id').value = role.role_id;
+            document.getElementById('role-name').value = role.role_name;
+            document.getElementById('role-description').value = role.role_description || '';
+            cancelEditRoleBtn.style.display = 'inline-block';
+            roleForm.querySelector('button[type="submit"]').textContent = '更新角色';
+        }
+
+        function resetRoleForm() {
+            roleForm.reset();
+            document.getElementById('role-id').value = '';
+            cancelEditRoleBtn.style.display = 'none';
+            roleForm.querySelector('button[type="submit"]').textContent = '保存角色';
         }
         
         // --- Start the App ---

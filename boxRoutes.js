@@ -1744,6 +1744,82 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // --- 新增：角色 CRUD ---
+    // 創建新角色
+    router.post('/admin/roles', isAdminAuthenticated, async (req, res) => {
+        const { role_name, role_description } = req.body;
+        if (!role_name) {
+            return res.status(400).json({ error: '角色名稱為必填項。' });
+        }
+        try {
+            const newRole = await pool.query(
+                'INSERT INTO user_roles (role_name, role_description) VALUES ($1, $2) RETURNING *',
+                [role_name, role_description || null]
+            );
+            res.status(201).json(newRole.rows[0]);
+        } catch (err) {
+            if (err.code === '23505') { // unique_violation
+                return res.status(409).json({ error: '該角色名稱已存在。' });
+            }
+            console.error('[API POST /admin/roles] Error:', err);
+            res.status(500).json({ error: '創建角色失敗。' });
+        }
+    });
+
+    // 更新角色
+    router.put('/admin/roles/:roleId', isAdminAuthenticated, async (req, res) => {
+        const { roleId } = req.params;
+        const { role_name, role_description } = req.body;
+        if (!role_name) {
+            return res.status(400).json({ error: '角色名稱為必填項。' });
+        }
+        try {
+            const updatedRole = await pool.query(
+                'UPDATE user_roles SET role_name = $1, role_description = $2, updated_at = NOW() WHERE role_id = $3 RETURNING *',
+                [role_name, role_description || null, roleId]
+            );
+            if (updatedRole.rows.length === 0) {
+                return res.status(404).json({ error: '找不到要更新的角色。' });
+            }
+            res.json(updatedRole.rows[0]);
+        } catch (err) {
+            if (err.code === '23505') {
+                return res.status(409).json({ error: '該角色名稱已存在。' });
+            }
+            console.error(`[API PUT /admin/roles/${roleId}] Error:`, err);
+            res.status(500).json({ error: '更新角色失敗。' });
+        }
+    });
+
+    // 刪除角色
+    router.delete('/admin/roles/:roleId', isAdminAuthenticated, async (req, res) => {
+        const { roleId } = req.params;
+        try {
+            // 檢查此角色是否仍被任何用戶使用
+            const assignmentCheck = await pool.query(
+                'SELECT 1 FROM user_role_assignments WHERE role_id = $1 AND is_active = true LIMIT 1',
+                [roleId]
+            );
+
+            if (assignmentCheck.rows.length > 0) {
+                return res.status(409).json({ error: '無法刪除，仍有用戶被指派此角色。請先移除所有用戶的此角色。' });
+            }
+
+            const result = await pool.query('DELETE FROM user_roles WHERE role_id = $1', [roleId]);
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: '找不到要刪除的角色。' });
+            }
+            res.status(204).send();
+        } catch (err) {
+            console.error(`[API DELETE /admin/roles/${roleId}] Error:`, err);
+            // 處理外鍵約束錯誤
+            if (err.code === '23503') {
+                return res.status(409).json({ error: '無法刪除，此角色仍被系統其他部分使用。' });
+            }
+            res.status(500).json({ error: '刪除角色失敗。' });
+        }
+    });
+
     // 創建新徽章
     router.post('/admin/badges', isAdminAuthenticated, async (req, res) => {
         const { badgeName, badgeDescription, badgeImageUrl, badgeCategory } = req.body;
