@@ -278,6 +278,20 @@
             border: 2px solid var(--secondary-color);
             border-radius: var(--border-radius);
             background: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pointer-winner-display {
+            position: absolute;
+            color: white;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 15px var(--accent-color), 0 0 10px rgba(0,0,0,0.8);
+            z-index: 5;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
         }
 
         #pointer {
@@ -423,6 +437,7 @@
             <div id="animation-container">
                 <canvas id="wheel-canvas" width="500" height="500" style="display: none;"></canvas>
                 <div id="pointer-animation" style="display: none;">
+                    <div id="pointer-winner-display" style="display: none;"></div>
                     <div id="pointer"></div>
                     <div id="participants-reel"></div>
                 </div>
@@ -501,8 +516,9 @@
             let reelPosition = 0;
             let reelAnimationId = null;
             const REEL_FRICTION = 0.988; // 摩擦力, 數值越小停越快
-            const IDLE_SPEED = 0.5; // 待機時的滾動速度
+            const IDLE_SPEED = 2.5; // 待機時的滾動速度 (已提高)
             let idleAnimationId = null;
+            let pointerWinnerDecided = false;
 
             function drawWheel() {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -788,6 +804,7 @@
                     const winnerChannelId = winnerCard.dataset.channelId;
                     const winner = participants.find(p => p.channelId === winnerChannelId);
                     if(winner){
+                        pointerWinnerDecided = true;
                         selectedWinner = winner;
                         highlightWinner(winner);
                         myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
@@ -802,12 +819,44 @@
                         
                         participantsReelEl.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
                         participantsReelEl.style.transform = `translateX(${currentX + offset}px)`;
+
+                        // 在中間顯示中獎者名字
+                        const winnerDisplay = document.getElementById('pointer-winner-display');
+                        if (winnerDisplay) {
+                            winnerDisplay.textContent = winner.displayName;
+                            winnerDisplay.style.display = 'block';
+                        }
+                        
+                        // 更改按鈕文字，提示可以重設
+                        drawWinnerBtn.textContent = '重設/再抽一次';
+
                     } else {
                          startReelIdleAnimation();
                     }
                 } else {
                     startReelIdleAnimation();
                 }
+            }
+
+            function resetPointerAnimation() {
+                pointerWinnerDecided = false;
+                
+                const winnerDisplay = document.getElementById('pointer-winner-display');
+                if (winnerDisplay) {
+                    winnerDisplay.style.display = 'none';
+                }
+
+                drawWinnerBtn.textContent = '立即抽獎';
+
+                const participantsList = participantsListEl.querySelectorAll('li');
+                participantsList.forEach(li => {
+                    li.classList.remove('winner-highlight');
+                });
+                
+                // 重設捲軸的 transform transition
+                participantsReelEl.style.transition = 'none';
+
+                startReelIdleAnimation();
             }
 
             async function fetchParticipants() {
@@ -1055,7 +1104,11 @@
                 if (animationMode === 'turntable') {
                     startSpin();
                 } else if (animationMode === 'pointer') {
-                    startPointerLottery();
+                    if (pointerWinnerDecided) {
+                        resetPointerAnimation();
+                    } else {
+                        startPointerLottery();
+                    }
                 } else {
                     // 對於其他模式，維持原樣，先從後端獲取結果
                     try {
@@ -1090,6 +1143,11 @@
                 if(isReelSpinning || isSpinning) {
                     alert('請等待目前抽獎動畫結束！');
                     animationModeEl.value = isSpinning ? 'turntable' : 'pointer';
+                    return;
+                }
+                if (pointerWinnerDecided) {
+                    alert('請先重設指針抽獎，才能切換模式！');
+                    animationModeEl.value = 'pointer';
                     return;
                 }
                 setupAnimationView(animationModeEl.value);
