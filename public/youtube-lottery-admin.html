@@ -552,6 +552,11 @@
             background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
             border: 2px solid var(--accent-color);
             transform: rotateY(180deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
         }
 
         .punch-card-front img {
@@ -583,6 +588,27 @@
             width: 100%;
             height: 100%;
             display: block;
+            position: absolute;
+            z-index: 1;
+            opacity: 0.4; /* 調暗Logo，讓數字更清晰 */
+        }
+
+        .card-number {
+            position: relative;
+            z-index: 2;
+            font-size: 3.5em;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 12px rgba(0, 0, 0, 0.75);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .punch-card.face-down .card-number {
+            opacity: 1;
+            transform: scale(1);
+            transition-delay: 0.4s; /* 延遲出現，等待翻牌動畫 */
         }
 
         @keyframes winner-pulse {
@@ -706,39 +732,6 @@
             margin-bottom: 10px;
             font-weight: bold;
             color: var(--accent-color);
-        }
-
-        /* 添加卡片編號的 CSS 樣式 */
-        .card-number {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 25px;
-            height: 25px;
-            background-color: white;
-            color: var(--accent-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            z-index: 5;
-            opacity: 0; /* 初始時隱藏 */
-            transition: opacity 0.5s ease;
-        }
-
-        .punch-card.shuffling .card-number {
-            opacity: 0; /* 打亂過程中隱藏 */
-        }
-
-        .punch-card.face-down .card-number {
-            opacity: 1; /* 卡片翻到背面時顯示 */
-        }
-
-        .punch-card.selected .card-number {
-            opacity: 0; /* 被選中時隱藏數字 */
         }
     </style>
 </head>
@@ -1426,21 +1419,14 @@
                     card.dataset.channelId = participant.channelId;
                     card.dataset.index = index;
                     
-                    // 確保卡片沒有殘留的樣式
-                    card.style.position = '';
-                    card.style.top = '';
-                    card.style.left = '';
-                    card.style.margin = '';
-                    card.style.transform = '';
-                    card.style.opacity = '';
-                    card.style.cursor = '';
-                    
                     card.innerHTML = `
                         <div class="punch-card-front">
                             <img src="${participant.profileImageUrl}" alt="${participant.displayName}">
                             <span>${participant.displayName}</span>
                         </div>
-                        <div class="punch-card-back"></div>
+                        <div class="punch-card-back">
+                            <span class="card-number"></span>
+                        </div>
                     `;
                     
                     punchHoleAnimationEl.appendChild(card);
@@ -1587,9 +1573,24 @@
                                     card.style.transform = `rotate(0deg) rotateY(180deg)`;
                                 });
                                 
-                                // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                                // 為所有卡片添加點擊事件並分配數字
                                 setTimeout(() => {
-                                    cardsArray.forEach(card => {
+                                    // 根據視覺位置排序卡片，以便分配正確的編號
+                                    const sortedCards = cardsArray.sort((a, b) => {
+                                        const topA = parseFloat(a.style.top);
+                                        const topB = parseFloat(b.style.top);
+                                        if (Math.abs(topA - topB) > 10) { // 如果垂直位置差異大於一個閾值
+                                            return topA - topB;
+                                        }
+                                        return parseFloat(a.style.left) - parseFloat(b.style.left);
+                                    });
+
+                                    sortedCards.forEach((card, index) => {
+                                        const numberEl = card.querySelector('.card-number');
+                                        if (numberEl) {
+                                            numberEl.textContent = index + 1;
+                                        }
+                                        
                                         // 確保卡片仍然是背面朝上
                                         if (!card.classList.contains('face-down')) {
                                             card.classList.add('face-down');
