@@ -5,15 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube 直播抽獎管理後台</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <!-- 添加 GSAP 動畫庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <!-- 添加 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #1a1a2e;
-            --primary-color: #16213e;
-            --secondary-color: #0f3460;
-            --accent-color: #e94560;
-            --text-color: #dcdcdc;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            --border-radius: 8px;
+            --bg-color: #0a0a1a;
+            --primary-color: #1e1e3f;
+            --secondary-color: #2d2b55;
+            --accent-color: #ff3366;
+            --text-color: #ffffff;
+            --font-family: 'Noto Sans TC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-radius: 12px;
+            --panel-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            --panel-border: 1px solid rgba(255, 255, 255, 0.18);
+            --gradient-1: linear-gradient(135deg, rgba(255, 51, 102, 0.1), rgba(45, 43, 85, 0.1));
+            --gradient-2: linear-gradient(45deg, rgba(76, 0, 255, 0.1), rgba(255, 51, 102, 0.1));
         }
 
         body {
@@ -25,6 +33,33 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 動態背景效果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(76, 0, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 51, 102, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundShift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes backgroundShift {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 100% 100%;
+            }
         }
 
         .container {
@@ -35,703 +70,247 @@
                 "header header header"
                 "settings-panel animation-panel participants-panel"
                 "footer footer footer";
-            gap: 20px;
+            gap: 24px;
             width: 100%;
             max-width: 1600px;
             height: 90vh;
+            perspective: 1000px;
         }
 
         .panel {
-            background-color: var(--primary-color);
+            background: rgba(30, 30, 63, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-radius: var(--border-radius);
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            padding: 24px;
+            box-shadow: var(--panel-shadow);
+            border: var(--panel-border);
             display: flex;
             flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
         }
 
         h1, h2 {
             color: var(--accent-color);
             text-align: center;
             margin-top: 0;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.3);
         }
 
-        #header { grid-area: header; text-align: center; padding-bottom: 10px; }
-        #settings-panel { grid-area: settings-panel; }
-        #animation-panel { grid-area: animation-panel; justify-content: center; align-items: center; position: relative; overflow: hidden; }
-        #participants-panel { grid-area: participants-panel; }
-        #footer { grid-area: footer; }
-
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
-            font-size: 0.9em;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
         }
 
         input[type="text"], input[type="number"], select {
             width: 100%;
-            padding: 10px;
-            background-color: var(--bg-color);
-            border: 1px solid var(--secondary-color);
-            border-radius: 5px;
+            padding: 12px;
+            background: rgba(10, 10, 26, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             color: var(--text-color);
             box-sizing: border-box;
+            transition: all 0.3s ease;
+            font-family: var(--font-family);
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.2);
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background-color: var(--accent-color);
+            padding: 14px;
+            background: var(--accent-color);
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             color: white;
-            font-weight: bold;
+            font-weight: 600;
             font-size: 1.1em;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: var(--font-family);
+            position: relative;
+            overflow: hidden;
         }
 
         button:hover {
-            background-color: #f06a81;
-        }
-        
-        button.secondary {
-             background-color: var(--secondary-color);
-        }
-        button.secondary:hover {
-            background-color: #1a4a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 51, 102, 0.3);
         }
 
+        button:active {
+            transform: translateY(0);
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        button:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        button.secondary {
+            background: var(--secondary-color);
+        }
 
         #participants-list {
             flex-grow: 1;
             overflow-y: auto;
-            padding-right: 10px;
+            padding: 10px;
+            margin: -10px;
+            border-radius: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--primary-color);
+        }
+
+        #participants-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #participants-list::-webkit-scrollbar-track {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        #participants-list::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
         }
 
         .participant {
             display: flex;
             align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid var(--secondary-color);
-            cursor: pointer;
-            position: relative;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
         }
-        
+
         .participant:hover {
-            background-color: var(--secondary-color);
-        }
-
-        .participant.selected {
-            background-color: rgba(233, 69, 96, 0.2);
-        }
-
-        .participant .delete-btn {
-            position: absolute;
-            right: 10px;
-            padding: 5px 10px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: none;
-        }
-
-        .participant.selected .delete-btn {
-            display: block;
-        }
-
-        .participant .delete-btn:hover {
-            background-color: #d63031;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
         }
 
         .participant img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            margin-right: 12px;
-        }
-        
-        #participants-count {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 1.2em;
-        }
-        
-        #status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--secondary-color);
-            padding: 10px 20px;
-            border-radius: var(--border-radius);
-            margin-top: 10px;
-        }
-        
-        #ws-status {
-            font-weight: bold;
-        }
-        .status-connected { color: #50fa7b; }
-        .status-disconnected { color: #ff5555; }
-
-        /* Animation Styles */
-        #winner-display {
-            display: none !important; /* 根據要求，不再使用彈出式卡片 */
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px 40px;
-            border-radius: 10px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-            text-align: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            pointer-events: none;
-        }
-
-        #winner-display.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-            pointer-events: auto;
-        }
-
-        #winner-display img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            margin-bottom: 10px;
-        }
-
-        #winner-display h2 {
-            margin: 10px 0;
-            color: #ff4757;
-        }
-
-        #winner-display h3 {
-            font-size: 1.5em;
-            color: #333;
-        }
-
-        .close-winner {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            font-size: 20px;
-            color: #666;
-        }
-
-        #confetti-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #draw-animation-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2em;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
-        #animation-container {
-            width: 100%;
-            height: 500px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-        }
-
-        #wheel-canvas {
-            margin: 0 auto;
-            display: block;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        #pointer-animation {
-            width: 100%;
-            height: 150px;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid var(--secondary-color);
-            border-radius: var(--border-radius);
-            background: var(--bg-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #pointer-winner-display {
-            position: absolute;
-            color: white;
-            font-size: 3em;
-            font-weight: bold;
-            text-shadow: 0 0 15px var(--accent-color), 0 0 10px rgba(0,0,0,0.8);
-            z-index: 5;
-            text-align: center;
-            animation: fadeIn 0.5s ease;
-        }
-
-        #pointer {
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 20px solid var(--accent-color);
-            z-index: 3;
-            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.5));
-        }
-
-        #participants-reel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            display: flex;
-            will-change: transform;
-        }
-
-        .reel-participant-card {
-            width: 120px;
-            height: 120px;
-            margin: 15px 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--secondary-color);
-            border-radius: var(--border-radius);
-            text-align: center;
-            flex-shrink: 0;
-            padding: 5px;
-            box-sizing: border-box;
-            color: var(--text-color);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .reel-participant-card img {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin-bottom: 8px;
-        }
-
-        .reel-participant-card span {
-            font-size: 0.9em;
-            font-weight: bold;
-            word-break: break-all;
-        }
-
-        #default-animation {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        #participants-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        #participants-list li {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .participant-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .winner-highlight {
-            color: #ff4757;
-            font-weight: bold;
-            font-size: 1.2em;
-            text-shadow: 0 0 5px rgba(255,71,87,0.3);
-            background: rgba(255,71,87,0.1);
-        }
-
-        /* Remove animation duration input */
-        #animation-duration {
-            display: none;
-        }
-
-        /* Animated Button from Uiverse.io by gharsh11032000 - Adapted for this project */
-        .animated-button {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            padding: 16px 36px;
+            margin-right: 12px;
             border: 2px solid var(--accent-color);
-            border-radius: 100px;
-            font-weight: 600;
-            color: var(--accent-color);
-            background-color: transparent;
-            cursor: pointer;
-            overflow: hidden;
-            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-            width: 100%;
-            box-sizing: border-box;
-            margin-top: 10px;
+            transition: transform 0.3s ease;
         }
 
-        .animated-button svg {
-            position: absolute;
-            width: 24px;
-            fill: var(--accent-color);
-            z-index: 9;
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        .participant:hover img {
+            transform: scale(1.1);
         }
 
-        .animated-button .arr-1 {
-            right: 16px;
-        }
-
-        .animated-button .arr-2 {
-            left: -25%;
-        }
-
-        .animated-button .circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            opacity: 0;
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .animated-button .text {
-            position: relative;
-            z-index: 1;
-            transform: translateX(0px); /* Adjusted for better centering */
-            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-
-        .animated-button:hover {
-            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.2);
-            color: var(--bg-color);
-            border-radius: 12px;
-        }
-
-        .animated-button:hover .arr-1 {
-            right: -25%;
-        }
-
-        .animated-button:hover .arr-2 {
-            left: 16px;
-        }
-
-        .animated-button:hover .text {
-            transform: translateX(0px); /* Adjusted for better centering */
-        }
-
-        .animated-button:hover svg {
-            fill: var(--bg-color);
-        }
-
-        .animated-button:active {
-            scale: 0.95;
-            box-shadow: 0 0 0 4px var(--accent-color);
-        }
-
-        .animated-button:hover .circle {
-            width: 220px;
-            height: 220px;
-            opacity: 1;
-        }
-
-        /* Punch-hole (洞洞樂) animation styles */
-        #punch-hole-animation {
-            width: 100%;
-            height: 500px;
-            position: relative;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px;
-            padding: 20px;
-            box-sizing: border-box;
-            perspective: 1000px;
-            overflow: hidden;
-        }
-
-        .punch-card {
-            width: 120px;
-            height: 150px;
-            position: relative;
-            transition: all 0.6s ease;
-            transform-style: preserve-3d;
-            cursor: pointer;
-            margin: 5px;
-            justify-self: center;
-        }
-
-        .punch-card.shuffling {
-            position: absolute;
-            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .punch-card.face-down {
-            transform: rotateY(180deg);
-        }
-
-        .punch-card.selected {
-            transform: rotateY(0deg) !important;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-            cursor: default;
-            z-index: 10;
-            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .punch-card.winner {
-            box-shadow: 0 0 25px gold;
-            animation: winner-pulse 1s infinite alternate;
-            transform: rotateY(0deg) scale(1.5) !important;
-            z-index: 20;
-        }
-
-        .punch-card-front, .punch-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 10px;
+        #status-bar {
+            background: var(--secondary-color);
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            margin-top: 15px;
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .punch-card-front {
-            background: var(--accent-color);
-            padding: 10px;
-            text-align: center;
-            transform: rotateY(0deg);
-        }
-
-        .punch-card-back {
-            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
-            border: 2px solid var(--accent-color);
-            transform: rotateY(180deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .punch-card-front img {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid white;
-            margin-bottom: 8px;
-        }
-
-        .punch-card-front span {
-            font-size: 14px;
-            font-weight: bold;
-            color: white;
-            word-break: break-word;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .punch-card-back::before {
-            content: "";
-            background-image: url('/images/android-chrome-192x192.png');
-            background-size: 80px 80px;
-            background-position: center;
-            background-repeat: no-repeat;
-            width: 100%;
-            height: 100%;
-            display: block;
-            position: absolute;
-            z-index: 1;
-            opacity: 0.4; /* 調暗Logo，讓數字更清晰 */
-        }
-
-        .card-number {
-            position: relative;
-            z-index: 2;
-            font-size: 3.5em;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 0 12px rgba(0, 0, 0, 0.75);
-            opacity: 0;
-            transform: scale(0.5);
-            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-        }
-
-        .punch-card.face-down .card-number {
-            opacity: 1;
-            transform: scale(1);
-            transition-delay: 0.4s; /* 延遲出現，等待翻牌動畫 */
-        }
-
-        @keyframes winner-pulse {
-            from { box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
-            to { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
-        }
-
-        #punch-hole-winner-display {
-            position: absolute;
-            top: 10px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: white;
-            font-size: 2em;
-            font-weight: bold;
-            text-shadow: 0 0 10px var(--accent-color);
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.5s ease;
-            z-index: 10;
-        }
-
-        #punch-hole-winner-display.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .punch-instruction {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            color: var(--text-color);
-            font-size: 1.2em;
-            opacity: 0.8;
-        }
-
-        /* Toggle Switch from Uiverse.io by teymr */
-        #checkbox {
-            display: none;
-        }
-
-        .switch {
-            position: relative;
-            width: 70px;
-            height: 70px;
-            background-color: rgb(99, 99, 99);
-            border-radius: 50%;
-            z-index: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid rgb(126, 126, 126);
-            box-shadow: 0px 0px 3px rgb(2, 2, 2) inset;
-            transition: 0.5s;
-        }
-
-        .switch svg {
-            width: 1.2em;
-        }
-
-        .switch svg path {
-            fill: rgb(48, 48, 48);
-        }
-
-        #checkbox:checked + .switch {
-            box-shadow:
-                0px 0px 1px rgb(151, 243, 255) inset,
-                0px 0px 2px rgb(151, 243, 255) inset,
-                0px 0px 10px rgb(151, 243, 255) inset,
-                0px 0px 40px rgb(151, 243, 255),
-                0px 0px 100px rgb(151, 243, 255),
-                0px 0px 5px rgb(151, 243, 255);
-            border: 2px solid rgb(255, 255, 255);
-            background-color: rgb(146, 180, 184);
-        }
-
-        #checkbox:checked + .switch svg {
-            filter: drop-shadow(0px 0px 5px rgb(151, 243, 255));
-        }
-
-        #checkbox:checked + .switch svg path {
-            fill: rgb(255, 255, 255);
-        }
-
-        #checkbox:active + .switch {
-            transform: translate(0em, 0.1em);
-            box-shadow:
-                0px 0px 0.1px rgb(151, 243, 255) inset,
-                0px 0px 0.2px rgb(151, 243, 255) inset,
-                0px 0px 1px rgb(151, 243, 255) inset,
-                0px 0px 10px rgb(151, 243, 255),
-                0px 0px 50px rgb(151, 243, 255);
-            border: 2px solid rgb(255, 255, 255);
-            background-color: rgb(146, 180, 184);
-        }
-
-        #checkbox:active + .switch svg path {
-            box-shadow: 0.2em 0.2em 0.3em rgba(0, 0, 0, 0.3);
-            transform: translate(0em, 0.1em);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .toggle-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px 0;
-        }
-
-        .toggle-label {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: var(--text-color);
+            position: relative;
+            padding: 20px;
+            background: var(--gradient-1);
+            border-radius: var(--border-radius);
+            margin: 25px 0;
             text-align: center;
         }
 
         .toggle-status {
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: var(--accent-color);
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        /* 添加動畫效果 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .winner-highlight {
+            animation: pulse 1s infinite;
+            background: linear-gradient(45deg, rgba(255, 51, 102, 0.2), rgba(76, 0, 255, 0.2));
+        }
+
+        /* 添加頁面載入動畫 */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 改進動畫面板的視覺效果 */
+        #animation-panel {
+            background: rgba(30, 30, 63, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 優化參與者計數顯示 */
+        #participants-count {
+            background: var(--gradient-2);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -1855,6 +1434,121 @@
 
             // Initial setup
             setupAnimationView(animationModeEl.value);
+
+            // 添加頁面載入動畫
+            document.querySelectorAll('.panel').forEach((panel, index) => {
+                panel.style.opacity = '0';
+                panel.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    panel.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    panel.style.opacity = '1';
+                    panel.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+
+            // 為表單元素添加動畫
+            document.querySelectorAll('.form-group').forEach((group, index) => {
+                group.style.animationDelay = `${index * 100}ms`;
+            });
+
+            // 添加按鈕點擊波紋效果
+            document.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const ripple = document.createElement('div');
+                    ripple.classList.add('ripple');
+                    this.appendChild(ripple);
+                    
+                    const rect = button.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    ripple.style.width = ripple.style.height = `${size}px`;
+                    
+                    const x = e.clientX - rect.left - size/2;
+                    const y = e.clientY - rect.top - size/2;
+                    
+                    ripple.style.left = `${x}px`;
+                    ripple.style.top = `${y}px`;
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // 優化參與者列表的滾動效果
+            const participantsList = document.getElementById('participants-list');
+            if (participantsList) {
+                let isScrolling;
+                participantsList.addEventListener('scroll', () => {
+                    participantsList.classList.add('is-scrolling');
+                    clearTimeout(isScrolling);
+                    isScrolling = setTimeout(() => {
+                        participantsList.classList.remove('is-scrolling');
+                    }, 150);
+                });
+            }
+
+            // 添加動態背景效果
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.className = 'background-particle';
+                document.body.appendChild(particle);
+
+                const size = Math.random() * 5 + 2;
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                const duration = Math.random() * 20 + 10;
+                const delay = Math.random() * 5;
+
+                particle.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${startX}px;
+                    top: ${startY}px;
+                    animation: float ${duration}s ${delay}s infinite linear;
+                `;
+
+                setTimeout(() => particle.remove(), (duration + delay) * 1000);
+            }
+
+            // 定期創建背景粒子
+            setInterval(createParticle, 2000);
+
+            // 優化表單輸入體驗
+            document.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('focus', () => {
+                    input.parentElement.classList.add('focused');
+                });
+                input.addEventListener('blur', () => {
+                    input.parentElement.classList.remove('focused');
+                });
+            });
+
+            // 使用 GSAP 添加平滑的狀態切換動畫
+            function updateStatus(status, isActive) {
+                const statusEl = document.querySelector('.toggle-status');
+                gsap.to(statusEl, {
+                    opacity: 0,
+                    y: -10,
+                    duration: 0.3,
+                    onComplete: () => {
+                        statusEl.textContent = status;
+                        gsap.to(statusEl, {
+                            opacity: 1,
+                            y: 0,
+                            duration: 0.3,
+                            color: isActive ? '#50fa7b' : '#ff5555'
+                        });
+                    }
+                });
+            }
+
+            // 更新原有的狀態切換邏輯
+            monitoringToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    updateStatus('系統狀態: 監控中', true);
+                } else {
+                    updateStatus('系統狀態: 停止中', false);
+                }
+                // ... 原有的監控邏輯 ...
+            });
         });
     </script>
 </body>
