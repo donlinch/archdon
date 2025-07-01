@@ -194,7 +194,8 @@ function connectWebSocket() {
     
     // 連接錯誤時
     ws.onerror = function(error) {
-        console.error('WebSocket錯誤:', error);
+        console.error('WebSocket錯誤詳情:', error);
+        console.error('WebSocket連接狀態:', ws.readyState);
         updateConnectionStatus('offline', '連接錯誤');
     };
 }

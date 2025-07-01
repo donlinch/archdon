@@ -82,7 +82,7 @@ const server = http.createServer(app);
 
 // 創建 WebSocket 服務器
 const wss = new WebSocket.Server({ server });
-
+console.log('[WS] WebSocket服務器已初始化');
  // YouTube抽獎系統模組
 const YoutubeLottery = require('./youtubeLottery');
 const UserProfile = require('./userProfile');
