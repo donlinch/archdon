@@ -6,7 +6,7 @@ require('dotenv').config();
 const http = require('http'); // <--- Need http module
 const https = require('https');
 const express = require('express');
-const path = require('path');
+ const path = require('path');
 const { Pool } = require('pg');
 const WebSocket = require('ws'); // <--- Import the ws library
 // const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
@@ -27,6 +27,12 @@ const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
 
 const adminRouter = express.Router();
 const app = express();
+   // 在Express應用中添加WebSocket路由
+   app.get('/ws', (req, res) => {
+    // 這只是一個佔位符，實際的WebSocket升級由wss處理
+    res.status(200).send('WebSocket endpoint');
+  });
+  
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
 
@@ -81,7 +87,10 @@ app.use(session({
 const server = http.createServer(app);
 
 // 創建 WebSocket 服務器
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ 
+    server,
+    path: '/ws'  // 指定WebSocket路徑
+  });
 console.log('[WS] WebSocket服務器已初始化');
  // YouTube抽獎系統模組
 const YoutubeLottery = require('./youtubeLottery');
