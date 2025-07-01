@@ -166,9 +166,6 @@ function connectWebSocket() {
     // 確定WebSocket URL (支援HTTPS)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?clientType=controller&roomId=${roomId}&playerName=${encodeURIComponent(playerName)}`;    
-    // 創建WebSocket連接
-    ws = new WebSocket(wsUrl);
-    
     // 連接打開時
     ws.onopen = function() {
         console.log('WebSocket連接已建立');

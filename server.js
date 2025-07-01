@@ -32,7 +32,7 @@ const app = express();
     // 這只是一個佔位符，實際的WebSocket升級由wss處理
     res.status(200).send('WebSocket endpoint');
   });
-  
+
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
 
@@ -1238,6 +1238,9 @@ app.post('/api/track/conversion', async (req, res) => {
 
  
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+    res.status(200).send("Server is running and healthy!");
+});
 
 
 // --- 第二個跳出率更新中間件已被移除，因為其功能已包含在上面的「記錄 Page View 中間件」中 ---

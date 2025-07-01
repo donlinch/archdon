@@ -1,6 +1,7 @@
+<!-- test.html -->
 <script>
-    const ws = new WebSocket('wss://sunnyyummy.onrender.com');
+    const ws = new WebSocket('wss://sunnyyummy.onrender.com/ws');
     ws.onopen = () => console.log('連接成功');
     ws.onerror = (e) => console.error('錯誤', e);
     ws.onclose = (e) => console.log('關閉', e.code, e.reason);
-    </script>
+</script>
