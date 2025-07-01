@@ -878,7 +878,7 @@
         
         async function fetchUserRoles(userId) {
             try {
-                const userRoles = await apiFetch(`/api/box/users/${userId}/roles`);
+                const userRoles = await apiFetch(`/api/box/admin/users/${userId}/roles`);
                 const rolesCell = document.getElementById(`user-roles-${userId}`);
                 if (rolesCell) {
                     if (userRoles.length > 0) {
@@ -935,9 +935,9 @@
                 }
 
                 const [userRoles, userBadges, userTitles] = await Promise.all([
-                   apiFetch(`/api/box/users/${userId}/roles`),
-                   apiFetch(`/api/box/users/${userId}/badges`),
-                   apiFetch(`/api/box/users/${userId}/titles`)
+                   apiFetch(`/api/box/admin/users/${userId}/roles`),
+                   apiFetch(`/api/box/admin/users/${userId}/badges`),
+                   apiFetch(`/api/box/admin/users/${userId}/titles`)
                 ]);
 
                 const userBadgesWithDetails = userBadges.map(userBadge => {

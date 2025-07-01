@@ -2449,6 +2449,22 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // 管理員專用 API - 獲取特定用戶的徽章
+    router.get('/admin/users/:userId/badges', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT b.badge_id, b.badge_name FROM badges b
+                 JOIN user_badges ub ON b.badge_id = ub.badge_id
+                 WHERE ub.user_id = $1`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            console.error('[API GET /admin/users/:userId/badges] Error:', error);
+            res.status(500).json({ error: '無法獲取用戶徽章信息。' });
+        }
+    });
+
     // 獲取特定用戶的頭銜
     router.get('/users/:userId/titles', isAdminAuthenticated, async (req, res) => {
         try {
@@ -2460,6 +2476,22 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
             );
             res.json(result.rows);
         } catch (error) {
+            res.status(500).json({ error: '無法獲取用戶頭銜信息。' });
+        }
+    });
+
+    // 管理員專用 API - 獲取特定用戶的頭銜
+    router.get('/admin/users/:userId/titles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT t.title_id, t.title_name FROM titles t
+                 JOIN user_titles ut ON t.title_id = ut.title_id
+                 WHERE ut.user_id = $1`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            console.error('[API GET /admin/users/:userId/titles] Error:', error);
             res.status(500).json({ error: '無法獲取用戶頭銜信息。' });
         }
     });
