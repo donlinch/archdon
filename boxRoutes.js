@@ -2418,6 +2418,22 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
         }
     });
 
+    // 管理員專用 API - 獲取特定用戶的角色
+    router.get('/admin/users/:userId/roles', isAdminAuthenticated, async (req, res) => {
+        try {
+            const result = await pool.query(
+                `SELECT r.role_id, r.role_name FROM user_roles r
+                 JOIN user_role_assignments ura ON r.role_id = ura.role_id
+                 WHERE ura.user_id = $1 AND ura.is_active = true`,
+                [req.params.userId]
+            );
+            res.json(result.rows);
+        } catch (error) {
+            console.error('[API GET /admin/users/:userId/roles] Error:', error);
+            res.status(500).json({ error: '無法獲取用戶角色信息。' });
+        }
+    });
+
     // 獲取特定用戶的徽章
     router.get('/users/:userId/badges', isAdminAuthenticated, async (req, res) => {
         try {
