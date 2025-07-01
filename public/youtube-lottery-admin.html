@@ -179,6 +179,57 @@
         .status-connected { color: #50fa7b; }
         .status-disconnected { color: #ff5555; }
 
+        /* --- User Status Indicator (adapted for dark theme) --- */
+        .user-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            background-color: rgba(30, 41, 59, 0.9); /* A slightly lighter shade from the theme */
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid var(--secondary-color);
+        }
+
+        .user-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            background-color: var(--secondary-color);
+        }
+
+        .user-status img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-color);
+            object-fit: cover;
+        }
+
+        .user-status .username {
+            margin-left: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        @media (max-width: 767px) {
+            .user-status {
+                padding: 3px;
+            }
+            
+            .user-status .username {
+                display: none;
+            }
+        }
+
         /* Animation Styles */
         #winner-display {
             display: none !important; /* 根據要求，不再使用彈出式卡片 */
@@ -737,6 +788,12 @@
 </head>
 <body>
 
+    <!-- User Status Indicator -->
+    <div id="userStatus" class="user-status">
+        <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
+        <span id="userStatusName" class="username">未登入</span>
+    </div>
+
    
 
     <div class="container">
@@ -834,6 +891,36 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // User status elements
+            const userStatusAvatar = document.getElementById('userStatusAvatar');
+            const userStatusName = document.getElementById('userStatusName');
+            const userStatus = document.getElementById('userStatus');
+
+            // 檢查是否有已保存的登入信息
+            const savedUserId = localStorage.getItem('boxCurrentUserId');
+            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
+            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+            const savedUserName = localStorage.getItem('boxCurrentUsername');
+            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+
+            // Update the user status indicator
+            if (savedUserId && savedUserToken && savedUserName) {
+                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                userStatusName.textContent = savedDisplayName;
+                
+                // Add click event to navigate to user editor page
+                userStatus.addEventListener('click', () => {
+                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
+                });
+            } else {
+                userStatusAvatar.src = '/images/a01girlmove.gif';
+                userStatusName.textContent = '未登入';
+                userStatus.addEventListener('click', () => {
+                    // 變更為導向會員登入頁
+                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                });
+            }
+            
             const videoIdEl = document.getElementById('video-id');
             const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
