@@ -1563,11 +1563,8 @@
 
                 async function fetchParticipants() {
                     try {
-                        const response = await apiFetch('/api/admin/lottery/participants');                        const data = await response.json();
-                        
-                        if (!response.ok) {
-                            throw new Error(data.error || '無法獲取參與者');
-                        }
+                        const response = await apiFetch('/api/admin/lottery/participants');
+                        const data = response;
                         
                         if (data.participants) {
                             updateParticipantsList(data.participants);
@@ -1648,13 +1645,10 @@
                                 try {
                                     // 使用 data-channel-id 來獲取正確的 channelId
                                     const channelId = li.dataset.channelId;
-                                    const response = await apiFetch('/api/admin/lottery/remove-participant', {
-    method: 'POST',
-    body: { channelId }
-});
-
-                                    const result = await response.json();
-                                    if (!response.ok) throw new Error(result.error || '刪除失敗');
+                                    const result = await apiFetch('/api/admin/lottery/remove-participant', {
+                                        method: 'POST',
+                                        body: { channelId }
+                                    });
 
                                     // 刪除成功後，重新從伺服器獲取最新的參與者列表
                                     // 這樣可以確保前後端狀態一致，並自動更新UI和轉盤
@@ -2071,16 +2065,14 @@
                     } else {
                         // 對於其他模式，維持原樣，先從後端獲取結果
                         try {
-                            const response = await apiFetch('/api/admin/lottery/draw', {
-    method: 'POST',
-    body: { 
-        animationMode,
-        duration: 0 
-    }
-});
+                            const result = await apiFetch('/api/admin/lottery/draw', {
+                                method: 'POST',
+                                body: { 
+                                    animationMode,
+                                    duration: 0 
+                                }
+                            });
 
-                            const result = await response.json();
-                            if (!response.ok) throw new Error(result.error || '抽獎失敗');
                             if (!result.winner) throw new Error('未能獲取中獎者資訊');
 
                             const winner = result.winner;
@@ -2146,17 +2138,14 @@
                         }
 
                         try {
-                            const response = await apiFetch('/api/admin/lottery/set-video', {
-    method: 'POST',
-    body: {
-        videoId,
-        keyword,
-        apiRateLimit
-    }
-});
-
-                            const result = await response.json();
-                            if (!response.ok) throw new Error(result.error || '設置失敗');
+                            const result = await apiFetch('/api/admin/lottery/set-video', {
+                                method: 'POST',
+                                body: {
+                                    videoId,
+                                    keyword,
+                                    apiRateLimit
+                                }
+                            });
                             
                             monitoringVideoIdEl.textContent = ` (${result.videoTitle})`;
                             apiRateInput.disabled = !result.isLive;
@@ -2182,12 +2171,11 @@
                     } else {
                         // 停止監控
                         try {
-                            const response = await apiFetch('/api/admin/lottery/stop-monitoring', {
-    method: 'POST'
-});
-                            const result = await response.json();
+                            const result = await apiFetch('/api/admin/lottery/stop-monitoring', {
+                                method: 'POST'
+                            });
                             
-                            if (response.ok && result.success) {
+                            if (result.success) {
                                 stopAutoUpdate();
                                 monitoringVideoIdEl.textContent = '';
                                 defaultAnimation.textContent = '已停止監控';

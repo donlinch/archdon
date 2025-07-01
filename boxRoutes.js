@@ -2384,16 +2384,36 @@ router.get('/my-warehouses/search-all-items', authenticateBoxUser, async (req, r
     // --- 新增：管理員獲取特定用戶的資訊 ---
 
     // 獲取特定用戶的角色
-    router.get('/users/:userId/roles', isAdminAuthenticated, async (req, res) => {
+    router.get('/users/:userId/roles', authenticateBoxUser, async (req, res) => {
         try {
+            // 確保用戶只能訪問自己的角色信息，除非是管理員
+            const requestedUserId = req.params.userId;
+            const currentUserId = req.boxUser.user_id;
+            
+            // 檢查是否是訪問自己的角色信息
+            if (requestedUserId != currentUserId) {
+                // 檢查當前用戶是否是管理員
+                const adminCheck = await pool.query(
+                    `SELECT 1 FROM user_roles r
+                     JOIN user_role_assignments ura ON r.role_id = ura.role_id
+                     WHERE ura.user_id = $1 AND ura.is_active = true AND r.role_name = 'admin'`,
+                    [currentUserId]
+                );
+                
+                if (adminCheck.rows.length === 0) {
+                    return res.status(403).json({ error: '無權訪問其他用戶的角色信息。' });
+                }
+            }
+            
             const result = await pool.query(
                 `SELECT r.role_id, r.role_name FROM user_roles r
                  JOIN user_role_assignments ura ON r.role_id = ura.role_id
                  WHERE ura.user_id = $1 AND ura.is_active = true`,
-                [req.params.userId]
+                [requestedUserId]
             );
             res.json(result.rows);
         } catch (error) {
+            console.error('[API GET /users/:userId/roles] Error:', error);
             res.status(500).json({ error: '無法獲取用戶角色信息。' });
         }
     });
