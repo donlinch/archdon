@@ -500,7 +500,7 @@
             let reelVelocity = 0;
             let reelPosition = 0;
             let reelAnimationId = null;
-            const REEL_FRICTION = 0.992; // 摩擦力
+            const REEL_FRICTION = 0.988; // 摩擦力, 數值越小停越快
             const IDLE_SPEED = 0.5; // 待機時的滾動速度
             let idleAnimationId = null;
 
@@ -675,9 +675,7 @@
                 for(let i = 0; i < repeatCount; i++) {
                     reelParticipants.push(...participants);
                 }
-                // 打亂順序增加隨機感
-                reelParticipants.sort(() => Math.random() - 0.5);
-
+                
                 reelParticipants.forEach(p => {
                     const card = document.createElement('div');
                     card.className = 'reel-participant-card';
@@ -734,8 +732,8 @@
                 }
                 stopReelIdleAnimation();
                 isReelSpinning = true;
-                // 給予一個隨機的初始速度 (像素/幀)
-                reelVelocity = (Math.random() * 15) + 35; 
+                // 給予一個隨機的初始速度 (像素/幀)，增加速度以獲得拉霸機的感覺
+                reelVelocity = (Math.random() * 20) + 55;
                 
                 if (reelAnimationId) {
                     cancelAnimationFrame(reelAnimationId);
@@ -1055,8 +1053,9 @@
                 const animationMode = animationModeEl.value;
                 
                 if (animationMode === 'turntable') {
-                    // 對於轉盤模式，直接開始動畫，結果由動畫決定
                     startSpin();
+                } else if (animationMode === 'pointer') {
+                    startPointerLottery();
                 } else {
                     // 對於其他模式，維持原樣，先從後端獲取結果
                     try {
