@@ -576,7 +576,7 @@
 
         .punch-card-back::before {
             content: "";
-            background-image: url('/android-chrome-192x192.png');
+            background-image: url('/images/android-chrome-192x192.png');
             background-size: 80px 80px;
             background-position: center;
             background-repeat: no-repeat;
@@ -1440,10 +1440,10 @@
                     card.classList.add('shuffling');
                 });
                 
-                // 第一階段：先翻面（背面朝上）
-                // 使用更長的延遲確保翻面動畫完成
+                // 第一階段：先翻面（背面朝上）- 但不移動位置
                 setTimeout(() => {
                     cardsArray.forEach(card => {
+                        // 只添加翻面效果，不改變位置
                         card.classList.add('face-down');
                     });
                     
@@ -1474,37 +1474,40 @@
                             [positions[i], positions[j]] = [positions[j], positions[i]];
                         }
                         
-                        // 第一次隨機移動（中間過程）- 讓卡片隨機移動，增加混亂感
+                        // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移，不集中到中心
                         cardsArray.forEach((card, index) => {
-                            // 隨機移動到附近位置
+                            // 獲取當前位置
                             const currentLeft = parseFloat(card.style.left);
                             const currentTop = parseFloat(card.style.top);
                             
-                            // 隨機偏移量，但不要太遠
-                            const offsetX = (Math.random() - 0.5) * 100;
-                            const offsetY = (Math.random() - 0.5) * 100;
+                            // 隨機偏移量，但偏移範圍較小，讓卡片保持在原位置附近
+                            const offsetX = (Math.random() - 0.5) * 60;
+                            const offsetY = (Math.random() - 0.5) * 60;
                             
                             // 確保不超出容器
                             const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
                             const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
                             
-                            // 添加隨機旋轉
-                            card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
+                            // 添加隨機旋轉，同時保持背面朝上
+                            card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
                         });
                         
-                        // 第二次隨機移動 - 更加混亂
+                        // 第二次隨機移動 - 更大幅度的移動，但仍然不集中
                         setTimeout(() => {
                             cardsArray.forEach((card, index) => {
-                                // 再次隨機移動
+                                // 再次隨機移動，這次範圍更大
                                 const currentLeft = parseFloat(card.style.left);
                                 const currentTop = parseFloat(card.style.top);
                                 
-                                const offsetX = (Math.random() - 0.5) * 150;
-                                const offsetY = (Math.random() - 0.5) * 150;
+                                // 更大的隨機偏移
+                                const offsetX = (Math.random() - 0.5) * 120;
+                                const offsetY = (Math.random() - 0.5) * 120;
                                 
+                                // 確保不超出容器
                                 const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
                                 const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
                                 
+                                // 添加更大的隨機旋轉，同時保持背面朝上
                                 card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                             });
                             
