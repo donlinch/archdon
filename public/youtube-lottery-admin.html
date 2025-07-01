@@ -1563,8 +1563,7 @@
 
                 async function fetchParticipants() {
                     try {
-                        const response = await fetch('/api/admin/lottery/participants');
-                        const data = await response.json();
+                        const response = await apiFetch('/api/admin/lottery/participants');                        const data = await response.json();
                         
                         if (!response.ok) {
                             throw new Error(data.error || '無法獲取參與者');
@@ -1649,13 +1648,10 @@
                                 try {
                                     // 使用 data-channel-id 來獲取正確的 channelId
                                     const channelId = li.dataset.channelId;
-                                    const response = await fetch('/api/admin/lottery/remove-participant', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({ channelId })
-                                    });
+                                    const response = await apiFetch('/api/admin/lottery/remove-participant', {
+    method: 'POST',
+    body: { channelId }
+});
 
                                     const result = await response.json();
                                     if (!response.ok) throw new Error(result.error || '刪除失敗');
@@ -2075,14 +2071,13 @@
                     } else {
                         // 對於其他模式，維持原樣，先從後端獲取結果
                         try {
-                            const response = await fetch('/api/admin/lottery/draw', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ 
-                                    animationMode,
-                                    duration: 0 
-                                })
-                            });
+                            const response = await apiFetch('/api/admin/lottery/draw', {
+    method: 'POST',
+    body: { 
+        animationMode,
+        duration: 0 
+    }
+});
 
                             const result = await response.json();
                             if (!response.ok) throw new Error(result.error || '抽獎失敗');
@@ -2151,17 +2146,14 @@
                         }
 
                         try {
-                            const response = await fetch('/api/admin/lottery/set-video', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    videoId,
-                                    keyword,
-                                    apiRateLimit
-                                })
-                            });
+                            const response = await apiFetch('/api/admin/lottery/set-video', {
+    method: 'POST',
+    body: {
+        videoId,
+        keyword,
+        apiRateLimit
+    }
+});
 
                             const result = await response.json();
                             if (!response.ok) throw new Error(result.error || '設置失敗');
@@ -2190,9 +2182,9 @@
                     } else {
                         // 停止監控
                         try {
-                            const response = await fetch('/api/admin/lottery/stop-monitoring', {
-                                method: 'POST'
-                            });
+                            const response = await apiFetch('/api/admin/lottery/stop-monitoring', {
+    method: 'POST'
+});
                             const result = await response.json();
                             
                             if (response.ok && result.success) {
