@@ -815,6 +815,87 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* From Uiverse.io by Botwe-Felix5820 - Adapted */
+        .history-button {
+            height: 2.8em;
+            width: auto;
+            padding: 0 1.2em;
+            background: transparent;
+            -webkit-animation: jello-horizontal 0.9s both;
+            animation: jello-horizontal 0.9s both;
+            border: 2px solid #016dd9;
+            outline: none;
+            color: #016dd9;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: normal; /* Override general button style */
+            border-radius: 0; /* Override general button style */
+            align-self: flex-start; /* Align to the start of the panel */
+        }
+
+        .history-button:hover {
+            background: #016dd9;
+            color: #ffffff;
+            animation: squeeze3124 0.9s both;
+        }
+
+        @-webkit-keyframes jello-horizontal {
+            0% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+            30% { -webkit-transform: scale3d(1.25, 0.75, 1); transform: scale3d(1.25, 0.75, 1); }
+            40% { -webkit-transform: scale3d(0.75, 1.25, 1); transform: scale3d(0.75, 1.25, 1); }
+            50% { -webkit-transform: scale3d(1.15, 0.85, 1); transform: scale3d(1.15, 0.85, 1); }
+            65% { -webkit-transform: scale3d(0.95, 1.05, 1); transform: scale3d(0.95, 1.05, 1); }
+            75% { -webkit-transform: scale3d(1.05, 0.95, 1); transform: scale3d(1.05, 0.95, 1); }
+            100% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+        }
+
+        @keyframes jello-horizontal {
+            0% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+            30% { -webkit-transform: scale3d(1.25, 0.75, 1); transform: scale3d(1.25, 0.75, 1); }
+            40% { -webkit-transform: scale3d(0.75, 1.25, 1); transform: scale3d(0.75, 1.25, 1); }
+            50% { -webkit-transform: scale3d(1.15, 0.85, 1); transform: scale3d(1.15, 0.85, 1); }
+            65% { -webkit-transform: scale3d(0.95, 1.05, 1); transform: scale3d(0.95, 1.05, 1); }
+            75% { -webkit-transform: scale3d(1.05, 0.95, 1); transform: scale3d(1.05, 0.95, 1); }
+            100% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+        }
+
+        @keyframes squeeze3124 {
+            0% {
+                -webkit-transform: scale3d(1, 1, 1);
+                transform: scale3d(1, 1, 1);
+            }
+
+            30% {
+                -webkit-transform: scale3d(1.25, 0.75, 1);
+                transform: scale3d(1.25, 0.75, 1);
+            }
+
+            40% {
+                -webkit-transform: scale3d(0.75, 1.25, 1);
+                transform: scale3d(0.75, 1.25, 1);
+            }
+
+            50% {
+                -webkit-transform: scale3d(1.15, 0.85, 1);
+                transform: scale3d(1.15, 0.85, 1);
+            }
+
+            65% {
+                -webkit-transform: scale3d(0.95, 1.05, 1);
+                transform: scale3d(0.95, 1.05, 1);
+            }
+
+            75% {
+                -webkit-transform: scale3d(1.05, 0.95, 1);
+                transform: scale3d(1.05, 0.95, 1);
+            }
+
+            100% {
+                -webkit-transform: scale3d(1, 1, 1);
+                transform: scale3d(1, 1, 1);
+            }
+        }
     </style>
 </head>
 <body>
@@ -912,7 +993,7 @@
 
         <div id="participants-panel" class="panel">
            
-            <button id="refresh-participants-btn" class="secondary" style="margin-bottom: 10px;">手動更新名單</button>
+            <button id="view-history-btn" class="history-button" style="margin-bottom: 10px;">查看抽獎紀錄</button>
             <div id="participants-list">
                 <!-- Participants will be dynamically added here -->
             </div>
@@ -1028,7 +1109,7 @@
                 const winnerAvatarEl = document.getElementById('winner-avatar');
                 const winnerNameEl = document.getElementById('winner-name');
                 const confettiCanvas = document.getElementById('confetti-canvas');
-                const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
+                const viewHistoryBtn = document.getElementById('view-history-btn');
                 const wheelCanvas = document.getElementById('wheel-canvas');
                 const wheelCtx = wheelCanvas.getContext('2d');
                 const pointerAnimationEl = document.getElementById('pointer-animation');
@@ -1944,7 +2025,9 @@
                     }
                 });
                 
-                refreshParticipantsBtn.addEventListener('click', fetchParticipants);
+                viewHistoryBtn.addEventListener('click', () => {
+                    window.location.href = 'lottery-history.html';
+                });
                 
                 animationModeEl.addEventListener('change', () => {
                     if(isReelSpinning || isSpinning) {
