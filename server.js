@@ -1039,6 +1039,22 @@ youtubeLotteryRouter.post('/stop-monitoring', async (req, res) => {
   });
 
 
+
+  youtubeLotteryRouter.post('/history', async (req, res) => {
+    try {
+        const winnerData = req.body;
+        if (!youtubeLottery) {
+            return res.status(400).json({ error: '抽獎系統尚未初始化' });
+        }
+        const result = await youtubeLottery.saveLotteryHistory(winnerData);
+        res.status(201).json(result);
+    } catch (error) {
+        console.error('API /api/admin/lottery/history error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
   
 // 向所有WebSocket客戶端廣播消息
 function broadcastToAll(message) {
@@ -1207,6 +1223,8 @@ app.post('/api/track/conversion', async (req, res) => {
         res.status(500).json({ error: '伺服器錯誤' });
     }
 });
+
+
 
 
  

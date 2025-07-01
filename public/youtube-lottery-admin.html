@@ -1162,13 +1162,25 @@
                     };
 
                     try {
-                        const result = await apiFetch('/api/admin/lottery/history', {
+                        const response = await fetch('/api/admin/lottery/history', {
                             method: 'POST',
-                            body: winnerData
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
+                            },
+                            body: JSON.stringify(winnerData)
                         });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ error: '請求失敗' }));
+                            throw new Error(errorData.error || `HTTP Error: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
                         console.log('抽獎紀錄已儲存:', result);
                     } catch (error) {
                         console.error('儲存抽獎紀錄時發生錯誤:', error);
+                        alert(`儲存抽獎紀錄失敗: ${error.message}`);
                     }
                 }
 
