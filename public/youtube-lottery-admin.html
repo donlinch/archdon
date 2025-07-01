@@ -484,10 +484,8 @@
             width: 100%;
             height: 500px;
             position: relative;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 15px;
             padding: 20px;
             box-sizing: border-box;
@@ -503,6 +501,7 @@
             transform-style: preserve-3d;
             cursor: pointer;
             margin: 5px;
+            justify-self: center;
         }
 
         .punch-card.shuffling {
@@ -1270,14 +1269,8 @@
                 punchHoleWinner = null;
                 isPunchHoleShuffled = false;
                 
-                // 獲取容器尺寸以計算排列
-                const containerWidth = punchHoleAnimationEl.clientWidth;
-                const containerHeight = punchHoleAnimationEl.clientHeight;
-                const cardWidth = 130; // 包含margin
-                const cardHeight = 160; // 包含margin
-                
-                // 計算每行能放多少卡片
-                const cardsPerRow = Math.floor(containerWidth / cardWidth);
+                // 將容器從絕對定位的排列改為網格排列
+                punchHoleAnimationEl.style.display = 'grid';
                 
                 // 創建卡片 - 初始時正面朝上，排列成磚牆
                 participants.forEach((participant, index) => {
@@ -1285,10 +1278,6 @@
                     card.className = 'punch-card';
                     card.dataset.channelId = participant.channelId;
                     card.dataset.index = index;
-                    
-                    // 計算在磚牆中的位置
-                    const row = Math.floor(index / cardsPerRow);
-                    const col = index % cardsPerRow;
                     
                     card.innerHTML = `
                         <div class="punch-card-front">
@@ -1318,6 +1307,9 @@
                 const cards = punchHoleAnimationEl.querySelectorAll('.punch-card');
                 const containerWidth = punchHoleAnimationEl.clientWidth;
                 const containerHeight = punchHoleAnimationEl.clientHeight;
+                
+                // 改變容器為絕對定位布局
+                punchHoleAnimationEl.style.display = 'block';
                 
                 // 隨機打亂卡片順序
                 const cardsArray = Array.from(cards);
@@ -1386,9 +1378,13 @@
                         card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg)`;
                     });
                     
-                    // 為所有卡片添加點擊事件
+                    // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
                     setTimeout(() => {
                         cardsArray.forEach(card => {
+                            // 確保卡片仍然是背面朝上
+                            if (!card.classList.contains('face-down')) {
+                                card.classList.add('face-down');
+                            }
                             card.addEventListener('click', handlePunchCardClick);
                         });
                         
@@ -1433,6 +1429,9 @@
                     // 顯示中獎提示
                     punchHoleWinnerDisplayEl.textContent = `🎉 恭喜 ${winner.displayName} 中獎！`;
                     punchHoleWinnerDisplayEl.classList.add('show');
+                    
+                    // 更新指示文字
+                    document.querySelector('.punch-instruction').textContent = '已選出中獎者，點擊「重新發牌」開始新一輪抽獎';
                     
                     // 播放慶祝特效
                     myConfetti({
