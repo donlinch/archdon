@@ -1367,6 +1367,7 @@
             function setupPunchHoleCards() {
                 if (!punchHoleAnimationEl) return;
                 
+                // 清除所有卡片
                 punchHoleAnimationEl.querySelectorAll('.punch-card').forEach(card => card.remove());
                 punchHoleWinnerDisplayEl.textContent = '';
                 punchHoleWinnerDisplayEl.classList.remove('show');
@@ -1381,8 +1382,9 @@
                 punchHoleWinner = null;
                 isPunchHoleShuffled = false;
                 
-                // 將容器從絕對定位的排列改為網格排列
+                // 重置容器樣式
                 punchHoleAnimationEl.style.display = 'grid';
+                punchHoleAnimationEl.style.position = ''; // 清除 position 屬性
                 
                 // 創建卡片 - 初始時正面朝上，排列成磚牆
                 participants.forEach((participant, index) => {
@@ -1390,6 +1392,15 @@
                     card.className = 'punch-card';
                     card.dataset.channelId = participant.channelId;
                     card.dataset.index = index;
+                    
+                    // 確保卡片沒有殘留的樣式
+                    card.style.position = '';
+                    card.style.top = '';
+                    card.style.left = '';
+                    card.style.margin = '';
+                    card.style.transform = '';
+                    card.style.opacity = '';
+                    card.style.cursor = '';
                     
                     card.innerHTML = `
                         <div class="punch-card-front">
@@ -1420,23 +1431,34 @@
                 const containerWidth = punchHoleAnimationEl.clientWidth;
                 const containerHeight = punchHoleAnimationEl.clientHeight;
                 
-                // 改變容器為絕對定位布局
-                punchHoleAnimationEl.style.display = 'block';
+                // 重要：保持網格布局，但將卡片設為絕對定位
+                // punchHoleAnimationEl.style.display = 'block'; // 移除這行，保持網格布局
                 
                 // 隨機打亂卡片順序
                 const cardsArray = Array.from(cards);
                 const parentNode = punchHoleAnimationEl;
                 
-                // 先將所有卡片變為絕對定位，準備動畫
+                // 先記錄所有卡片的初始位置
+                const initialPositions = [];
                 cardsArray.forEach(card => {
-                    // 記錄卡片當前位置
                     const rect = card.getBoundingClientRect();
                     const parentRect = parentNode.getBoundingClientRect();
-                    
-                    // 設置初始絕對位置，使其看起來沒有變化
+                    initialPositions.push({
+                        top: rect.top - parentRect.top,
+                        left: rect.left - parentRect.left
+                    });
+                });
+                
+                // 設置容器樣式，允許絕對定位的卡片
+                punchHoleAnimationEl.style.position = 'relative';
+                
+                // 先將所有卡片變為絕對定位，準備動畫，但保持在原來的位置
+                cardsArray.forEach((card, index) => {
+                    const pos = initialPositions[index];
                     card.style.position = 'absolute';
-                    card.style.top = `${rect.top - parentRect.top}px`;
-                    card.style.left = `${rect.left - parentRect.left}px`;
+                    card.style.top = `${pos.top}px`;
+                    card.style.left = `${pos.left}px`;
+                    card.style.margin = '0'; // 移除margin，因為現在使用絕對定位
                     card.classList.add('shuffling');
                 });
                 
@@ -1453,17 +1475,20 @@
                         
                         // 首先，創建一個網格位置的陣列
                         const positions = [];
-                        const cardWidth = 130; // 包含margin
-                        const cardHeight = 160; // 包含margin
-                        const cardsPerRow = Math.floor(containerWidth / cardWidth);
+                        const cardWidth = 120; // 卡片寬度，不包含margin
+                        const cardHeight = 150; // 卡片高度，不包含margin
+                        const cardMargin = 10; // 卡片之間的間距
+                        const effectiveCardWidth = cardWidth + cardMargin * 2;
+                        const effectiveCardHeight = cardHeight + cardMargin * 2;
+                        const cardsPerRow = Math.floor(containerWidth / effectiveCardWidth);
                         
                         // 計算每個卡片可能的位置
                         for (let i = 0; i < cardsArray.length; i++) {
                             const row = Math.floor(i / cardsPerRow);
                             const col = i % cardsPerRow;
                             
-                            const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
-                            const top = (row * cardHeight) + 20;
+                            const left = (col * effectiveCardWidth) + (containerWidth - cardsPerRow * effectiveCardWidth) / 2 + cardMargin;
+                            const top = (row * effectiveCardHeight) + 20 + cardMargin;
                             
                             positions.push({ left, top });
                         }
@@ -1474,28 +1499,30 @@
                             [positions[i], positions[j]] = [positions[j], positions[i]];
                         }
                         
-                        // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移，不集中到中心
+                        // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移
                         cardsArray.forEach((card, index) => {
-                            // 獲取當前位置
-                            const currentLeft = parseFloat(card.style.left);
-                            const currentTop = parseFloat(card.style.top);
+                            // 使用初始位置作為基準
+                            const initialPos = initialPositions[index];
                             
-                            // 隨機偏移量，但偏移範圍較小，讓卡片保持在原位置附近
+                            // 隨機偏移量，但偏移範圍較小
                             const offsetX = (Math.random() - 0.5) * 60;
                             const offsetY = (Math.random() - 0.5) * 60;
                             
                             // 確保不超出容器
-                            const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
-                            const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
+                            const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, initialPos.left + offsetX));
+                            const newTop = Math.max(0, Math.min(containerHeight - cardHeight, initialPos.top + offsetY));
                             
-                            // 添加隨機旋轉，同時保持背面朝上
-                            card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
+                            // 直接設置新位置，不使用transform來移動
+                            card.style.left = `${newLeft}px`;
+                            card.style.top = `${newTop}px`;
+                            // 只使用transform來處理旋轉和翻面
+                            card.style.transform = `rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
                         });
                         
-                        // 第二次隨機移動 - 更大幅度的移動，但仍然不集中
+                        // 第二次隨機移動 - 更大幅度的移動
                         setTimeout(() => {
                             cardsArray.forEach((card, index) => {
-                                // 再次隨機移動，這次範圍更大
+                                // 獲取當前位置
                                 const currentLeft = parseFloat(card.style.left);
                                 const currentTop = parseFloat(card.style.top);
                                 
@@ -1507,8 +1534,11 @@
                                 const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
                                 const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
                                 
-                                // 添加更大的隨機旋轉，同時保持背面朝上
-                                card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
+                                // 直接設置新位置
+                                card.style.left = `${newLeft}px`;
+                                card.style.top = `${newTop}px`;
+                                // 只使用transform來處理旋轉和翻面
+                                card.style.transform = `rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                             });
                             
                             // 第三階段：最終排列成網格
@@ -1517,8 +1547,11 @@
                                 cardsArray.forEach((card, index) => {
                                     const position = positions[index];
                                     
-                                    // 保持卡片背面朝上，但位置和旋轉角度恢復正常
-                                    card.style.transform = `translate(${position.left - card.offsetLeft}px, ${position.top - card.offsetTop}px) rotate(0deg) rotateY(180deg)`;
+                                    // 直接設置最終位置
+                                    card.style.left = `${position.left}px`;
+                                    card.style.top = `${position.top}px`;
+                                    // 保持卡片背面朝上，但旋轉角度恢復正常
+                                    card.style.transform = `rotate(0deg) rotateY(180deg)`;
                                 });
                                 
                                 // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
