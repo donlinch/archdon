@@ -830,12 +830,7 @@
             </div>
         </div>
 
-        <div id="footer" class="panel">
-             <div id="status-bar">
-                
-            </div>
-        </div>
-    </div>
+        
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -1793,6 +1788,13 @@
                 setupAnimationView(animationModeEl.value);
             });
 
+            // 當API請求間隔改變時，如果正在監控中，則重設計時器
+            apiRateInput.addEventListener('change', () => {
+                if (updateTimer) {
+                    startAutoUpdate();
+                }
+            });
+
             // 監控開關的事件處理
             monitoringToggle.addEventListener('change', async function() {
                 if (this.checked) {
@@ -1823,7 +1825,7 @@
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.error || '設置失敗');
 
-                        monitoringVideoIdEl.textContent = ` (監控中: ${videoId})`;
+                        monitoringVideoIdEl.textContent = ` ${videoId})`;
                         startAutoUpdate();
                     } catch (error) {
                         console.error('Error setting video:', error);
