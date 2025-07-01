@@ -478,6 +478,134 @@
             height: 220px;
             opacity: 1;
         }
+
+        /* Punch-hole (洞洞樂) animation styles */
+        #punch-hole-animation {
+            width: 100%;
+            height: 500px;
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            perspective: 1000px;
+        }
+
+        .punch-card {
+            width: 120px;
+            height: 150px;
+            position: relative;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .punch-card.face-down {
+            transform: rotateY(180deg);
+        }
+
+        .punch-card.selected {
+            transform: rotateY(0deg);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            cursor: default;
+        }
+
+        .punch-card.winner {
+            box-shadow: 0 0 25px gold;
+            animation: winner-pulse 1s infinite alternate;
+        }
+
+        .punch-card-front, .punch-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .punch-card-front {
+            background: var(--accent-color);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .punch-card-back {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            border: 2px solid var(--accent-color);
+            transform: rotateY(180deg);
+        }
+
+        .punch-card-front img {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            margin-bottom: 8px;
+        }
+
+        .punch-card-front span {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .punch-card-back::before {
+            content: "?";
+            font-size: 45px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes winner-pulse {
+            from { box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+            to { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+        }
+
+        #punch-hole-winner-display {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--accent-color);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.5s ease;
+            z-index: 10;
+        }
+
+        #punch-hole-winner-display.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .punch-instruction {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: var(--text-color);
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -540,6 +668,10 @@
                     <div id="pointer"></div>
                     <div id="participants-reel"></div>
                 </div>
+                <div id="punch-hole-animation" style="display: none;">
+                    <div id="punch-hole-winner-display"></div>
+                    <div class="punch-instruction">請點擊「打亂卡片」開始抽獎</div>
+                </div>
                 <div id="default-animation" style="text-align: center; padding: 20px;">
                     請先設定直播並開始監控
                 </div>
@@ -594,6 +726,8 @@
             const wheelCtx = wheelCanvas.getContext('2d');
             const pointerAnimationEl = document.getElementById('pointer-animation');
             const participantsReelEl = document.getElementById('participants-reel');
+            const punchHoleAnimationEl = document.getElementById('punch-hole-animation');
+            const punchHoleWinnerDisplayEl = document.getElementById('punch-hole-winner-display');
 
             const myConfetti = confetti.create(confettiCanvas, {
                 resize: true,
@@ -618,6 +752,10 @@
             const IDLE_SPEED = 60; // 待機時的滾動速度 (已提高)
             let idleAnimationId = null;
             let pointerWinnerDecided = false;
+            let punchHoleReady = false;
+            let punchHoleWinnerSelected = false;
+            let punchHoleWinner = null;
+            let isPunchHoleShuffled = false;
 
             function drawWheel() {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -1073,6 +1211,7 @@
                 if (participants.length === 0) {
                     wheelCanvas.style.display = 'none';
                     pointerAnimationEl.style.display = 'none';
+                    punchHoleAnimationEl.style.display = 'none';
                     defaultAnimation.style.display = 'block';
                     defaultAnimation.textContent = '監控中...等待參與者加入';
                     stopReelIdleAnimation();
@@ -1084,20 +1223,168 @@
                 if (mode === 'turntable') {
                     wheelCanvas.style.display = 'block';
                     pointerAnimationEl.style.display = 'none';
+                    punchHoleAnimationEl.style.display = 'none';
                     stopReelIdleAnimation();
                     drawWheel();
                 } else if (mode === 'pointer') {
                     wheelCanvas.style.display = 'none';
                     pointerAnimationEl.style.display = 'block';
+                    punchHoleAnimationEl.style.display = 'none';
                     buildParticipantsReel();
+                } else if (mode === 'punch-hole') {
+                    wheelCanvas.style.display = 'none';
+                    pointerAnimationEl.style.display = 'none';
+                    punchHoleAnimationEl.style.display = 'block';
+                    setupPunchHoleCards();
                 } else {
                     // 未來其他模式的處理
                     wheelCanvas.style.display = 'none';
                     pointerAnimationEl.style.display = 'none';
+                    punchHoleAnimationEl.style.display = 'none';
                     stopReelIdleAnimation();
                 }
             }
             
+            function setupPunchHoleCards() {
+                if (!punchHoleAnimationEl) return;
+                
+                punchHoleAnimationEl.querySelectorAll('.punch-card').forEach(card => card.remove());
+                punchHoleWinnerDisplayEl.textContent = '';
+                punchHoleWinnerDisplayEl.classList.remove('show');
+                
+                if (participants.length === 0) {
+                    return;
+                }
+                
+                // 重置狀態
+                punchHoleReady = true;
+                punchHoleWinnerSelected = false;
+                punchHoleWinner = null;
+                isPunchHoleShuffled = false;
+                
+                // 創建卡片 - 初始時正面朝上
+                participants.forEach((participant, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'punch-card';
+                    card.dataset.channelId = participant.channelId;
+                    card.dataset.index = index;
+                    
+                    card.innerHTML = `
+                        <div class="punch-card-front">
+                            <img src="${participant.profileImageUrl}" alt="${participant.displayName}">
+                            <span>${participant.displayName}</span>
+                        </div>
+                        <div class="punch-card-back"></div>
+                    `;
+                    
+                    punchHoleAnimationEl.appendChild(card);
+                });
+                
+                // 更新按鈕文字和指示
+                const buttonText = drawWinnerBtn.querySelector('.text');
+                if (buttonText) buttonText.textContent = '打亂卡片';
+                
+                document.querySelector('.punch-instruction').textContent = '請點擊「打亂卡片」開始抽獎';
+            }
+            
+            function shufflePunchHoleCards() {
+                if (!punchHoleReady || punchHoleWinnerSelected || isPunchHoleShuffled) return;
+                
+                // 取得所有卡片
+                const cards = punchHoleAnimationEl.querySelectorAll('.punch-card');
+                
+                // 隨機打亂卡片順序
+                const cardsArray = Array.from(cards);
+                const parentNode = punchHoleAnimationEl;
+                
+                // 先將所有卡片翻面（背面朝上）
+                cardsArray.forEach(card => {
+                    card.classList.add('face-down');
+                });
+                
+                // 等待翻面動畫完成後再打亂位置
+                setTimeout(() => {
+                    // 打亂卡片順序
+                    for (let i = cardsArray.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        parentNode.insertBefore(cardsArray[j], cardsArray[i]);
+                    }
+                    
+                    // 為所有卡片添加點擊事件
+                    cardsArray.forEach(card => {
+                        card.addEventListener('click', handlePunchCardClick);
+                    });
+                    
+                    // 更新狀態和提示
+                    isPunchHoleShuffled = true;
+                    document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
+                    
+                    // 更新按鈕文字
+                    const buttonText = drawWinnerBtn.querySelector('.text');
+                    if (buttonText) buttonText.textContent = '重新發牌';
+                }, 600); // 等待翻面動畫完成
+            }
+            
+            function handlePunchCardClick(e) {
+                if (!punchHoleReady || punchHoleWinnerSelected || !isPunchHoleShuffled) return;
+                
+                const card = e.currentTarget;
+                if (card.classList.contains('selected')) return;
+                
+                // 選擇了這張卡片作為中獎者
+                card.classList.add('selected');
+                card.classList.remove('face-down');
+                
+                punchHoleWinnerSelected = true;
+                
+                // 獲取中獎者資訊
+                const channelId = card.dataset.channelId;
+                const winner = participants.find(p => p.channelId === channelId);
+                
+                if (winner) {
+                    punchHoleWinner = winner;
+                    selectedWinner = winner;
+                    highlightWinner(winner);
+                    
+                    // 標記卡片為中獎
+                    card.classList.add('winner');
+                    
+                    // 顯示中獎提示
+                    punchHoleWinnerDisplayEl.textContent = `🎉 恭喜 ${winner.displayName} 中獎！`;
+                    punchHoleWinnerDisplayEl.classList.add('show');
+                    
+                    // 播放慶祝特效
+                    myConfetti({
+                        particleCount: 150,
+                        spread: 90,
+                        origin: { y: 0.6 }
+                    });
+                }
+                
+                // 防止繼續點擊其他卡片
+                punchHoleAnimationEl.querySelectorAll('.punch-card:not(.selected)').forEach(otherCard => {
+                    otherCard.removeEventListener('click', handlePunchCardClick);
+                    otherCard.style.opacity = '0.5';
+                    otherCard.style.cursor = 'default';
+                });
+            }
+            
+            function resetPunchHoleAnimation() {
+                punchHoleReady = false;
+                punchHoleWinnerSelected = false;
+                punchHoleWinner = null;
+                isPunchHoleShuffled = false;
+                
+                // 清除高亮
+                const participantsList = participantsListEl.querySelectorAll('li');
+                participantsList.forEach(li => {
+                    li.classList.remove('winner-highlight');
+                });
+                
+                // 重新設置
+                setupPunchHoleCards();
+            }
+
             function showTemporaryAnimation(participants, callback) {
                 animationContainer.style.display = 'block';
                 winnerDisplayEl.style.display = 'none';
@@ -1210,6 +1497,15 @@
                     } else {
                         startPointerLottery();
                     }
+                } else if (animationMode === 'punch-hole') {
+                    // 洞洞樂模式
+                    if (isPunchHoleShuffled) {
+                        // 如果已經打亂，就重新發牌
+                        resetPunchHoleAnimation();
+                    } else {
+                        // 如果還沒打亂，就打亂卡片
+                        shufflePunchHoleCards();
+                    }
                 } else {
                     // 對於其他模式，維持原樣，先從後端獲取結果
                     try {
@@ -1249,6 +1545,11 @@
                 if (pointerWinnerDecided) {
                     alert('請先重設指針抽獎，才能切換模式！');
                     animationModeEl.value = 'pointer';
+                    return;
+                }
+                if (punchHoleWinnerSelected) {
+                    alert('請先重新發牌，才能切換模式！');
+                    animationModeEl.value = 'punch-hole';
                     return;
                 }
                 setupAnimationView(animationModeEl.value);
