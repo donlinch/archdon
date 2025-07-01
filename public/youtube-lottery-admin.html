@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube 直播抽獎管理後台</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #1a1a2e;
@@ -15,21 +12,13 @@
             --secondary-color: #0f3460;
             --accent-color: #e94560;
             --text-color: #dcdcdc;
-            --font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            --border-radius: 12px;
-        }
-
-        @keyframes gradient-animation {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-radius: 8px;
         }
 
         body {
             font-family: var(--font-family);
-            background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #1a1a2e);
-            background-size: 400% 400%;
-            animation: gradient-animation 15s ease infinite;
+            background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
             padding: 20px;
@@ -40,7 +29,7 @@
 
         .container {
             display: grid;
-            grid-template-columns: 300px 1fr 350px;
+            grid-template-columns: 280px 1fr 350px;
             grid-template-rows: auto 1fr auto;
             grid-template-areas:
                 "header header header"
@@ -49,32 +38,16 @@
             gap: 20px;
             width: 100%;
             max-width: 1600px;
-            height: calc(100vh - 40px);
-        }
-
-        @keyframes panel-fade-in {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            height: 90vh;
         }
 
         .panel {
-            background-color: rgba(22, 33, 62, 0.65);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: var(--primary-color);
             border-radius: var(--border-radius);
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             display: flex;
             flex-direction: column;
-            animation: panel-fade-in 0.8s ease forwards;
-            opacity: 0;
         }
 
         h1, h2 {
@@ -83,29 +56,11 @@
             margin-top: 0;
         }
 
-        #header { 
-            grid-area: header; 
-            text-align: center; 
-            padding: 10px 20px;
-            background: none;
-            backdrop-filter: none;
-            border: none;
-            box-shadow: none;
-            animation: none; /* The header doesn't need to fade in like other panels */
-            opacity: 1;
-        }
-
-        #header h1 {
-            margin: 0;
-            font-size: 2.2em;
-            font-weight: 700;
-            text-shadow: 0 0 15px rgba(233, 69, 96, 0.5);
-        }
-
-        #settings-panel { grid-area: settings-panel; animation-delay: 0.2s; }
-        #animation-panel { grid-area: animation-panel; justify-content: center; align-items: center; position: relative; overflow: hidden; animation-delay: 0.3s;}
-        #participants-panel { grid-area: participants-panel; animation-delay: 0.4s; }
-        #footer { grid-area: footer; animation-delay: 0.5s; }
+        #header { grid-area: header; text-align: center; padding-bottom: 10px; }
+        #settings-panel { grid-area: settings-panel; }
+        #animation-panel { grid-area: animation-panel; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        #participants-panel { grid-area: participants-panel; }
+        #footer { grid-area: footer; }
 
         .form-group {
             margin-bottom: 15px;
@@ -125,13 +80,6 @@
             border-radius: 5px;
             color: var(--text-color);
             box-sizing: border-box;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        input[type="text"]:focus, input[type="number"]:focus, select:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 8px rgba(233, 69, 96, 0.5);
-            outline: none;
         }
 
         button {
@@ -158,37 +106,24 @@
             background-color: #1a4a8a;
         }
 
+
         #participants-list {
             flex-grow: 1;
             overflow-y: auto;
             padding-right: 10px;
         }
 
-        #participants-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        #participants-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        #participants-list::-webkit-scrollbar-thumb {
-            background-color: var(--accent-color);
-            border-radius: 10px;
-            border: 2px solid rgba(22, 33, 62, 0.65);
-        }
-
         .participant {
             display: flex;
             align-items: center;
-            padding: 8px 12px;
+            padding: 8px;
             border-bottom: 1px solid var(--secondary-color);
             cursor: pointer;
             position: relative;
-            transition: background-color 0.3s ease, transform 0.2s ease;
         }
         
         .participant:hover {
             background-color: var(--secondary-color);
-            transform: translateX(5px);
         }
 
         .participant.selected {
@@ -805,14 +740,10 @@
    
 
     <div class="container">
-        <div id="header">
-            <h1>YouTube 直播抽獎管理後台</h1>
-        </div>
-
         <div id="settings-panel" class="panel">
             <h2>系統設定</h2>
             <div class="form-group">
-                <label for="video-id">YouTube Video ID</label>
+                <label for="video-id">YouTube Video ID <span id="monitoring-video-id" style="font-weight: normal; font-size: 0.9em; color: var(--accent-color);"></span></label>
                 <input type="text" id="video-id" placeholder="例如：dQw4w9WgXcQ">
             </div>
             <div class="form-group">
@@ -901,7 +832,7 @@
 
         <div id="footer" class="panel">
              <div id="status-bar">
-                <div id="current-video">當前監控 Video ID: 無</div>
+                
             </div>
         </div>
     </div>
@@ -913,7 +844,7 @@
             const apiRateInput = document.getElementById('api-rate-limit');
             const setVideoBtn = null; // 原按鈕已移除
             const stopMonitoringBtn = null; // 原按鈕已移除
-            const currentVideoEl = document.getElementById('current-video');
+            const monitoringVideoIdEl = document.getElementById('monitoring-video-id');
             const participantsListEl = document.getElementById('participants-list');
             const participantsCountEl = document.getElementById('participants-count');
             const drawWinnerBtn = document.getElementById('draw-winner-btn');
@@ -970,8 +901,6 @@
                     
                 if (totalParticipants === 0) {
                     wheelCanvas.style.display = 'none';
-                    pointerAnimationEl.style.display = 'none';
-                    punchHoleAnimationEl.style.display = 'none';
                     defaultAnimation.style.display = 'block';
                     defaultAnimation.textContent = '監控中...等待參與者加入';
                     return;
@@ -1894,7 +1823,7 @@
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.error || '設置失敗');
 
-                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
+                        monitoringVideoIdEl.textContent = ` (監控中: ${videoId})`;
                         startAutoUpdate();
                     } catch (error) {
                         console.error('Error setting video:', error);
@@ -1911,7 +1840,7 @@
                         
                         if (response.ok && result.success) {
                             stopAutoUpdate();
-                            currentVideoEl.textContent = '當前監控 Video ID: 無';
+                            monitoringVideoIdEl.textContent = '';
                             defaultAnimation.textContent = '已停止監控';
                         } else {
                             throw new Error(result.error || '停止監控失敗');
