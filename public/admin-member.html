@@ -486,6 +486,35 @@
         .user-details p { margin: 8px 0; }
         .user-details p strong { color: var(--primary-color); }
         
+        .dev-hint {
+            background-color: #fafafa;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            color: var(--dark-color);
+        }
+        .dev-hint h5 {
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .dev-hint p {
+            margin: 6px 0;
+            line-height: 1.6;
+        }
+        .dev-hint code {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: var(--accent-color);
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
         @media (max-width: 992px) {
             .pane-grid { grid-template-columns: 1fr; }
         }
@@ -556,7 +585,13 @@
                         </form>
                     </div>
                     <div class="content-card">
-                        <h3>現有角色列表</h4>
+                        <h3>現有角色列表</h3>
+                        <div class="dev-hint">
+                            <h5>開發者提示</h5>
+                            <p>表格名稱: <code>roles</code></p>
+                            <p>數值 (欄位): <code>role_id</code>, <code>role_name</code>, <code>role_description</code></p>
+                            <p>關聯表格: <code>user_roles</code> (欄位: <code>user_id</code>, <code>role_id</code>)</p>
+                        </div>
                         <div id="roles-list"></div>
                     </div>
                 </div>
@@ -588,6 +623,12 @@
                     </div>
                      <div class="content-card">
                         <h3>現有徽章列表</h3>
+                        <div class="dev-hint">
+                            <h5>開發者提示</h5>
+                            <p>表格名稱: <code>badges</code></p>
+                            <p>數值 (欄位): <code>badge_id</code>, <code>badge_name</code>, <code>badge_description</code>, <code>badge_image_url</code></p>
+                            <p>關聯表格: <code>user_badges</code> (欄位: <code>user_id</code>, <code>badge_id</code>)</p>
+                        </div>
                         <div id="badges-list" class="item-grid"></div>
                     </div>
                 </div>
@@ -619,6 +660,12 @@
                     </div>
                     <div class="content-card">
                         <h3>現有頭銜列表</h3>
+                        <div class="dev-hint">
+                            <h5>開發者提示</h5>
+                            <p>表格名稱: <code>titles</code></p>
+                            <p>數值 (欄位): <code>title_id</code>, <code>title_name</code>, <code>title_description</code>, <code>title_image_url</code></p>
+                            <p>關聯表格: <code>user_titles</code> (欄位: <code>user_id</code>, <code>title_id</code>)</p>
+                        </div>
                         <div id="titles-list" class="item-grid"></div>
                     </div>
                 </div>
