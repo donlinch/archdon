@@ -1842,6 +1842,10 @@ app.delete('/api/admin/products/:id', async (req, res) => {
 
 // --- ★★★ WebSocket 連線處理 (Simple Walk) ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
+    // 詳細的連接調試信息
+    console.log(`[WS DEBUG] 新連接嘗試. URL完整信息:`, req.url);
+    console.log(`[WS DEBUG] 連接頭信息:`, JSON.stringify(req.headers, null, 2));
+    
     // 解析URL參數
     const url = new URL(req.url, `http://${req.headers.host}`);
     const clientType = url.searchParams.get('clientType');
@@ -1852,7 +1856,7 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
 
     // --- 基本驗證 ---
     if (!roomId || !clientType || !playerName) {
-        console.warn(`[WS] Connection rejected: Missing roomId, clientType, or playerName.`);
+        console.warn(`[WS DEBUG] 連接被拒絕: 缺少參數. roomId=${roomId}, clientType=${clientType}, playerName=${playerName}`);
         ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
         return;
     }
@@ -1865,16 +1869,17 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
       return;
     }
     
-    // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
-    if (clientType === 'controller') {
+     // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
+     if (clientType === 'controller') {
         let roomData;
         let playerId; 
 
         try {
+            console.log(`[WS DEBUG] 嘗試查找房間 ${roomId} 在資料庫中`);
             // 1. 使用資料庫查找房間是否存在
             roomData = await dbClient.getRoom(roomId);
             if (!roomData || !roomData.game_state) { 
-                console.warn(`[WS Simple Walker] Room ${roomId} not found in DB or invalid state. Terminating.`);
+                console.warn(`[WS DEBUG] 房間 ${roomId} 未找到或狀態無效. roomData=${JSON.stringify(roomData)}`);
                 ws.close(1011, "找不到房間或房間無效");
                 return;
             }
@@ -1882,11 +1887,14 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
 
             // 2. 生成唯一的玩家 ID
             playerId = uuidv4();
+            console.log(`[WS DEBUG] 為玩家 ${playerName} 生成 ID: ${playerId}`);
 
             // 3. 嘗試將玩家加入資料庫中的房間狀態
+            console.log(`[WS DEBUG] 嘗試將玩家 ${playerName} (ID: ${playerId}) 加入房間 ${roomId}`);
             const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
 
             if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                console.error(`[WS DEBUG] 加入房間失敗. updatedRoomResult=${JSON.stringify(updatedRoomResult)}`);
                 throw new Error("加入房間到資料庫失敗");
             }
 
@@ -1921,30 +1929,42 @@ wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
             }, ws); 
             console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
 
+     
         } catch (error) {
-            console.error(`[WS Simple Walker] Error during connection setup for player ${playerName} in room ${roomId}:`, error.stack || error);
+            console.error(`[WS DEBUG] 連接設置錯誤: ${error.message}`);
+            console.error(`[WS DEBUG] 錯誤堆棧: ${error.stack}`);
             let closeReason = "加入房間失敗";
             if (error.message.includes('房間已滿')) {
                 closeReason = "房間已滿";
             }
             try {
                 ws.send(JSON.stringify({ type: 'error', message: closeReason }));
-            } catch (sendErr) { /* 如果發送也失敗，忽略 */}
+            } catch (sendErr) { 
+                console.error(`[WS DEBUG] 無法發送錯誤消息: ${sendErr.message}`);
+            }
             ws.close(4000, closeReason);
             return; 
         }
 
-        // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
-        ws.on('message', (message) => handleSimpleWalkerMessage(ws, message));
-        ws.on('close', () => handleSimpleWalkerClose(ws));
-        ws.on('error', (error) => handleSimpleWalkerError(ws, error));
+         // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
+         ws.on('message', (message) => {
+            console.log(`[WS DEBUG] 收到來自 ${playerName} (ID: ${playerId}) 的消息: ${message}`);
+            handleSimpleWalkerMessage(ws, message);
+        });
+        ws.on('close', (code, reason) => {
+            console.log(`[WS DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接關閉. 代碼: ${code}, 原因: ${reason}`);
+            handleSimpleWalkerClose(ws);
+        });
+        ws.on('error', (error) => {
+            console.error(`[WS DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接錯誤: ${error.message}, ${error.stack}`);
+            handleSimpleWalkerError(ws, error);
+        });
 
     } else {
-        console.warn(`[WS] 收到未知的 clientType: '${clientType}'，關閉連線。`);
+        console.warn(`[WS DEBUG] 未知的客戶端類型: '${clientType}'，連接被拒絕`);
         ws.close(1008, "未知的客戶端類型");
     }
 });
-
 
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息
