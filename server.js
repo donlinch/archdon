@@ -3093,7 +3093,134 @@ app.get('/api/admin/files', isAdminAuthenticated, async (req, res) => { // <-- �
 
 
 
+app.post('/api/upload-safe-image', publicSafeUpload.single('image'), async (req, res) => {
+    // 'image' 是前端 input file 元素的 name 屬性
 
+    if (!visionClient) { // 確保 Vision API 客戶端已初始化
+        console.error('[API /upload-safe-image] Vision API client not available.');
+        return res.status(503).json({ success: false, error: "圖片分析服務目前不可用。" });
+    }
+
+    if (!req.file) {
+        // multer fileFilter 拒絕或沒有檔案上傳
+        return res.status(400).json({ success: false, error: '沒有上傳有效的圖片檔案或欄位名稱不符 (應為 "image")' });
+    }
+    
+    const file = req.file;
+    // 因為您使用 multer.diskStorage，檔案已寫入磁碟，需要讀取回來處理
+    const imageBuffer = fs.readFileSync(file.path); 
+
+    console.log(`[API /upload-safe-image] Received file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+
+    try {
+        // --- 1. 安全搜尋偵測 ---
+        console.log(`[API /upload-safe-image] Performing Safe Search detection for ${file.originalname}`);
+        const [safeSearchResult] = await visionClient.annotateImage({
+            image: { content: imageBuffer },
+            features: [{ type: 'SAFE_SEARCH_DETECTION' }],
+        });
+
+        const safeSearch = safeSearchResult.safeSearchAnnotation;
+        let isImageSafe = true;
+        let unsafeCategoriesDetected = [];
+
+        if (safeSearch) {
+            // 您可以根據需求調整嚴格度，例如加入 'POSSIBLE'
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.adult)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('成人');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.violence)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('暴力');
+            }
+            if (['LIKELY', 'VERY_LIKELY'].includes(safeSearch.racy)) {
+                isImageSafe = false; unsafeCategoriesDetected.push('煽情');
+            }
+        }
+
+        if (!isImageSafe) {
+            console.warn(`[API /upload-safe-image] Unsafe content detected in ${file.originalname}. Categories: ${unsafeCategoriesDetected.join(', ')}.`);
+            // 刪除已上傳的不安全圖片
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+                console.log(`[API /upload-safe-image] Deleted unsafe image: ${file.path}`);
+            }
+            return res.status(400).json({
+                success: false,
+                error: `上傳的圖片內容不適宜 (${unsafeCategoriesDetected.join(', ')})，已被拒絕。`
+            });
+        }
+        console.log(`[API /upload-safe-image] Image ${file.originalname} passed Safe Search.`);
+
+        // --- 2. 如果圖片安全，則進行 Sharp 處理 ---
+        const originalFilePath = file.path;
+        
+        // 使用從檔案讀取的 buffer 初始化 sharp
+        let sharpInstance = sharp(imageBuffer)
+            .rotate(); // 自動根據 EXIF 資訊旋轉圖片
+
+        // 獲取旋轉後的 buffer 和元數據
+        const rotatedBuffer = await sharpInstance.toBuffer({ resolveWithObject: true });
+        const { data: processedBuffer, info } = rotatedBuffer;
+        
+        console.log(`[API /upload-safe-image] Metadata for ${file.originalname} (after auto-rotate): width=${info.width}, height=${info.height}`);
+
+        const originalWidth = info.width;
+        let targetWidth = originalWidth;
+        let needsResize = false;
+
+        // 根據寬度決定是否縮放
+        if (originalWidth > 1500) { targetWidth = 1200; needsResize = true; }
+        else if (originalWidth > 800) { targetWidth = 800; needsResize = true; }
+
+        let finalBuffer = processedBuffer;
+
+        if (needsResize) {
+            console.log(`[API /upload-safe-image] Resizing image ${file.originalname} from ${originalWidth}px to ${targetWidth}px`);
+            finalBuffer = await sharp(processedBuffer)
+                .resize({ width: targetWidth, withoutEnlargement: true })
+                .jpeg({ quality: 85, chromaSubsampling: '4:2:0' }) // 在縮放後統一轉為優化的JPG
+                .toBuffer();
+        } else {
+             // 即使不縮放，也統一轉為優化的JPG，以確保格式和大小一致性
+             finalBuffer = await sharp(processedBuffer)
+                .jpeg({ quality: 90 })
+                .toBuffer();
+        }
+
+        // 將最終處理過的 buffer 寫回原始檔案路徑
+        await fs.promises.writeFile(originalFilePath, finalBuffer);
+        
+        const finalImageUrl = '/uploads/' + file.filename;
+        console.log(`[API /upload-safe-image] Successfully processed and saved ${file.originalname}. URL: ${finalImageUrl}`);
+        
+        // 返回成功的回應
+        res.json({ success: true, url: finalImageUrl });
+
+    } catch (err) {
+        console.error(`[API /upload-safe-image] Error processing file ${file.originalname}:`, err);
+        // 確保在任何錯誤發生時都刪除已上傳的檔案
+        if (file && file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+                console.warn(`[API /upload-safe-image] Cleaned up file due to error: ${file.path}`);
+            } catch (cleanupErr) {
+                console.error(`[API /upload-safe-image] Error cleaning up file ${file.path} after error:`, cleanupErr);
+            }
+        }
+        
+        // 處理 multer 自身的錯誤
+        if (err instanceof multer.MulterError) { 
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ success: false, error: `檔案超過限制大小。` });
+            }
+            return res.status(400).json({ success: false, error: `上傳錯誤: ${err.message}` });
+        }
+        
+        // 處理其他錯誤
+        return res.status(500).json({ success: false, error: '圖片上傳及處理過程中發生伺服器錯誤。' });
+    }
+});
+// --- END OF PUBLIC SAFE IMAGE UPLOAD API ---
 
 
 
