@@ -1431,64 +1431,50 @@
                 const containerWidth = punchHoleAnimationEl.clientWidth;
                 const containerHeight = punchHoleAnimationEl.clientHeight;
                 
-                // 重要：保持網格布局，但將卡片設為絕對定位
-                // punchHoleAnimationEl.style.display = 'block'; // 移除這行，保持網格布局
+                // 改變容器為絕對定位布局
+                punchHoleAnimationEl.style.display = 'block';
                 
                 // 隨機打亂卡片順序
                 const cardsArray = Array.from(cards);
                 const parentNode = punchHoleAnimationEl;
                 
-                // 先記錄所有卡片的初始位置
-                const initialPositions = [];
+                // 先將所有卡片變為絕對定位，準備動畫
                 cardsArray.forEach(card => {
+                    // 記錄卡片當前位置
                     const rect = card.getBoundingClientRect();
                     const parentRect = parentNode.getBoundingClientRect();
-                    initialPositions.push({
-                        top: rect.top - parentRect.top,
-                        left: rect.left - parentRect.left
-                    });
-                });
-                
-                // 設置容器樣式，允許絕對定位的卡片
-                punchHoleAnimationEl.style.position = 'relative';
-                
-                // 先將所有卡片變為絕對定位，準備動畫，但保持在原來的位置
-                cardsArray.forEach((card, index) => {
-                    const pos = initialPositions[index];
+                    
+                    // 設置初始絕對位置，使其看起來沒有變化
                     card.style.position = 'absolute';
-                    card.style.top = `${pos.top}px`;
-                    card.style.left = `${pos.left}px`;
-                    card.style.margin = '0'; // 移除margin，因為現在使用絕對定位
+                    card.style.top = `${rect.top - parentRect.top}px`;
+                    card.style.left = `${rect.left - parentRect.left}px`;
                     card.classList.add('shuffling');
                 });
                 
-                // 第一階段：先翻面（背面朝上）- 但不移動位置
+                // 第一階段：先翻面（背面朝上）
+                // 使用更長的延遲確保翻面動畫完成 - 延長至100ms (原50ms)
                 setTimeout(() => {
                     cardsArray.forEach(card => {
-                        // 只添加翻面效果，不改變位置
                         card.classList.add('face-down');
                     });
                     
-                    // 確保卡片完全翻到背面後再開始打亂
+                    // 確保卡片完全翻到背面後再開始打亂 - 延長至400ms (原200ms)
                     setTimeout(() => {
                         // 第二階段：直接打亂卡片（不集中到中心）
                         
                         // 首先，創建一個網格位置的陣列
                         const positions = [];
-                        const cardWidth = 120; // 卡片寬度，不包含margin
-                        const cardHeight = 150; // 卡片高度，不包含margin
-                        const cardMargin = 10; // 卡片之間的間距
-                        const effectiveCardWidth = cardWidth + cardMargin * 2;
-                        const effectiveCardHeight = cardHeight + cardMargin * 2;
-                        const cardsPerRow = Math.floor(containerWidth / effectiveCardWidth);
+                        const cardWidth = 130; // 包含margin
+                        const cardHeight = 160; // 包含margin
+                        const cardsPerRow = Math.floor(containerWidth / cardWidth);
                         
                         // 計算每個卡片可能的位置
                         for (let i = 0; i < cardsArray.length; i++) {
                             const row = Math.floor(i / cardsPerRow);
                             const col = i % cardsPerRow;
                             
-                            const left = (col * effectiveCardWidth) + (containerWidth - cardsPerRow * effectiveCardWidth) / 2 + cardMargin;
-                            const top = (row * effectiveCardHeight) + 20 + cardMargin;
+                            const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
+                            const top = (row * cardHeight) + 20;
                             
                             positions.push({ left, top });
                         }
@@ -1499,62 +1485,55 @@
                             [positions[i], positions[j]] = [positions[j], positions[i]];
                         }
                         
-                        // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移
+                        // 第一次隨機移動（中間過程）- 讓卡片隨機移動，增加混亂感
                         cardsArray.forEach((card, index) => {
-                            // 使用初始位置作為基準
-                            const initialPos = initialPositions[index];
+                            // 隨機移動到附近位置
+                            const currentLeft = parseFloat(card.style.left);
+                            const currentTop = parseFloat(card.style.top);
                             
-                            // 隨機偏移量，但偏移範圍較小
-                            const offsetX = (Math.random() - 0.5) * 60;
-                            const offsetY = (Math.random() - 0.5) * 60;
+                            // 隨機偏移量，但不要太遠
+                            const offsetX = (Math.random() - 0.5) * 100;
+                            const offsetY = (Math.random() - 0.5) * 100;
                             
                             // 確保不超出容器
-                            const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, initialPos.left + offsetX));
-                            const newTop = Math.max(0, Math.min(containerHeight - cardHeight, initialPos.top + offsetY));
+                            const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
+                            const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
                             
-                            // 直接設置新位置，不使用transform來移動
-                            card.style.left = `${newLeft}px`;
-                            card.style.top = `${newTop}px`;
-                            // 只使用transform來處理旋轉和翻面
-                            card.style.transform = `rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
+                            // 添加隨機旋轉，並放慢動畫速度
+                            card.style.transition = "all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)"; // 延長至1.2s (原0.8s)
+                            card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                         });
                         
-                        // 第二次隨機移動 - 更大幅度的移動
+                        // 第二次隨機移動 - 更加混亂 - 延長至800ms (原400ms)
                         setTimeout(() => {
                             cardsArray.forEach((card, index) => {
-                                // 獲取當前位置
+                                // 再次隨機移動
                                 const currentLeft = parseFloat(card.style.left);
                                 const currentTop = parseFloat(card.style.top);
                                 
-                                // 更大的隨機偏移
-                                const offsetX = (Math.random() - 0.5) * 120;
-                                const offsetY = (Math.random() - 0.5) * 120;
+                                const offsetX = (Math.random() - 0.5) * 150;
+                                const offsetY = (Math.random() - 0.5) * 150;
                                 
-                                // 確保不超出容器
                                 const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
                                 const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
                                 
-                                // 直接設置新位置
-                                card.style.left = `${newLeft}px`;
-                                card.style.top = `${newTop}px`;
-                                // 只使用transform來處理旋轉和翻面
-                                card.style.transform = `rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
+                                // 放慢第二次移動的速度
+                                card.style.transition = "all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)"; // 延長至1.2s
+                                card.style.transform = `translate(${newLeft - card.offsetLeft}px, ${newTop - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                             });
                             
-                            // 第三階段：最終排列成網格
+                            // 第三階段：最終排列成網格 - 延長至1600ms (原800ms)
                             setTimeout(() => {
                                 // 將卡片移動到最終位置
                                 cardsArray.forEach((card, index) => {
                                     const position = positions[index];
                                     
-                                    // 直接設置最終位置
-                                    card.style.left = `${position.left}px`;
-                                    card.style.top = `${position.top}px`;
-                                    // 保持卡片背面朝上，但旋轉角度恢復正常
-                                    card.style.transform = `rotate(0deg) rotateY(180deg)`;
+                                    // 保持卡片背面朝上，但位置和旋轉角度恢復正常，放慢最終排列速度
+                                    card.style.transition = "all 1.6s cubic-bezier(0.34, 1.56, 0.64, 1)"; // 延長至1.6s
+                                    card.style.transform = `translate(${position.left - card.offsetLeft}px, ${position.top - card.offsetTop}px) rotate(0deg) rotateY(180deg)`;
                                 });
                                 
-                                // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                                // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態 - 延長至1600ms (原800ms)
                                 setTimeout(() => {
                                     cardsArray.forEach(card => {
                                         // 確保卡片仍然是背面朝上
@@ -1574,11 +1553,11 @@
                                     
                                     // 重新啟用按鈕
                                     drawWinnerBtn.disabled = false;
-                                }, 800);
-                            }, 800);
-                        }, 400);
-                    }, 200); // 添加小延遲確保翻面完成
-                }, 50);
+                                }, 1600);
+                            }, 1600);
+                        }, 800);
+                    }, 400); // 添加小延遲確保翻面完成
+                }, 100);
             }
             
             function handlePunchCardClick(e) {
