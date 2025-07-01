@@ -707,6 +707,39 @@
             font-weight: bold;
             color: var(--accent-color);
         }
+
+        /* 添加卡片編號的 CSS 樣式 */
+        .card-number {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 25px;
+            height: 25px;
+            background-color: white;
+            color: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 5;
+            opacity: 0; /* 初始時隱藏 */
+            transition: opacity 0.5s ease;
+        }
+
+        .punch-card.shuffling .card-number {
+            opacity: 0; /* 打亂過程中隱藏 */
+        }
+
+        .punch-card.face-down .card-number {
+            opacity: 1; /* 卡片翻到背面時顯示 */
+        }
+
+        .punch-card.selected .card-number {
+            opacity: 0; /* 被選中時隱藏數字 */
+        }
     </style>
 </head>
 <body>
