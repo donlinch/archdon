@@ -30,6 +30,7 @@
             padding: 20px;
             border-radius: var(--border-radius);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            position: relative; /* For button positioning */
         }
 
         h1 {
@@ -90,10 +91,91 @@
             padding: 20px;
             font-size: 1.2em;
         }
+
+        /* From Uiverse.io by Botwe-Felix5820 - Adapted */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            height: 2.8em;
+            width: 10em; /* Adjusted width for text */
+            background: transparent;
+            -webkit-animation: jello-horizontal 0.9s both;
+            animation: jello-horizontal 0.9s both;
+            border: 2px solid #016dd9;
+            outline: none;
+            color: #016dd9;
+            cursor: pointer;
+            font-size: 17px;
+        }
+
+        .back-button:hover {
+            background: #016dd9;
+            color: #ffffff;
+            animation: squeeze3124 0.9s both;
+        }
+
+        @-webkit-keyframes jello-horizontal {
+            0% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+            30% { -webkit-transform: scale3d(1.25, 0.75, 1); transform: scale3d(1.25, 0.75, 1); }
+            40% { -webkit-transform: scale3d(0.75, 1.25, 1); transform: scale3d(0.75, 1.25, 1); }
+            50% { -webkit-transform: scale3d(1.15, 0.85, 1); transform: scale3d(1.15, 0.85, 1); }
+            65% { -webkit-transform: scale3d(0.95, 1.05, 1); transform: scale3d(0.95, 1.05, 1); }
+            75% { -webkit-transform: scale3d(1.05, 0.95, 1); transform: scale3d(1.05, 0.95, 1); }
+            100% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+        }
+
+        @keyframes jello-horizontal {
+            0% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+            30% { -webkit-transform: scale3d(1.25, 0.75, 1); transform: scale3d(1.25, 0.75, 1); }
+            40% { -webkit-transform: scale3d(0.75, 1.25, 1); transform: scale3d(0.75, 1.25, 1); }
+            50% { -webkit-transform: scale3d(1.15, 0.85, 1); transform: scale3d(1.15, 0.85, 1); }
+            65% { -webkit-transform: scale3d(0.95, 1.05, 1); transform: scale3d(0.95, 1.05, 1); }
+            75% { -webkit-transform: scale3d(1.05, 0.95, 1); transform: scale3d(1.05, 0.95, 1); }
+            100% { -webkit-transform: scale3d(1, 1, 1); transform: scale3d(1, 1, 1); }
+        }
+
+        @keyframes squeeze3124 {
+            0% {
+                -webkit-transform: scale3d(1, 1, 1);
+                transform: scale3d(1, 1, 1);
+            }
+
+            30% {
+                -webkit-transform: scale3d(1.25, 0.75, 1);
+                transform: scale3d(1.25, 0.75, 1);
+            }
+
+            40% {
+                -webkit-transform: scale3d(0.75, 1.25, 1);
+                transform: scale3d(0.75, 1.25, 1);
+            }
+
+            50% {
+                -webkit-transform: scale3d(1.15, 0.85, 1);
+                transform: scale3d(1.15, 0.85, 1);
+            }
+
+            65% {
+                -webkit-transform: scale3d(0.95, 1.05, 1);
+                transform: scale3d(0.95, 1.05, 1);
+            }
+
+            75% {
+                -webkit-transform: scale3d(1.05, 0.95, 1);
+                transform: scale3d(1.05, 0.95, 1);
+            }
+
+            100% {
+                -webkit-transform: scale3d(1, 1, 1);
+                transform: scale3d(1, 1, 1);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <button id="back-to-admin-btn" class="back-button">返回管理後台</button>
         <h1>抽獎歷史紀錄</h1>
         <table id="history-table">
             <thead>
@@ -118,6 +200,11 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const historyBody = document.getElementById('history-body');
             const loadingMessage = document.getElementById('loading-message');
+            const backBtn = document.getElementById('back-to-admin-btn');
+
+            backBtn.addEventListener('click', () => {
+                window.location.href = 'youtube-lottery-admin.html';
+            });
 
             try {
                 const response = await fetch('/api/admin/lottery/history');
