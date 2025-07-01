@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
                 try {
                     // 使用你現有的安全圖片上傳端點
-                    const uploadResponse = await fetch('/api/upload', { // <--- 修改這裡
+                    const uploadResponse = await fetch('/api/upload-safe-image', { // ★★★ 修改這裡，使用正確的路由 ★★★
                         method: 'POST',
                         body: formData,
                         // 注意：使用 FormData 時，不需要手動設定 Content-Type header，瀏覽器會自動處理
