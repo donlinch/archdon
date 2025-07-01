@@ -1492,6 +1492,9 @@
                                 winnerDisplay.style.display = 'block';
                             }
                             
+                            // 儲存抽獎紀錄到資料庫
+                            saveWinnerToHistory(winner);
+                            
                             // 更改按鈕文字，提示可以重設
                             const buttonText = drawWinnerBtn.querySelector('.text');
                             if (buttonText) buttonText.textContent = '重設/再抽一次';
