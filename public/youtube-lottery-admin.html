@@ -1147,6 +1147,31 @@
                 let punchHoleWinner = null;
                 let isPunchHoleShuffled = false;
 
+                async function saveWinnerToHistory(winner) {
+                    if (!winner) return;
+
+                    const winnerData = {
+                        video_id: videoIdEl.value.trim(),
+                        lottery_keyword: keywordEl.value.trim(),
+                        winner_channel_id: winner.channelId,
+                        winner_name: winner.displayName,
+                        winner_avatar_url: winner.profileImageUrl,
+                        winner_comment: winner.commentText || 'N/A', 
+                        total_participants: participants.length,
+                        animation_mode: animationModeEl.value
+                    };
+
+                    try {
+                        const result = await apiFetch('/api/admin/lottery/history', {
+                            method: 'POST',
+                            body: winnerData
+                        });
+                        console.log('抽獎紀錄已儲存:', result);
+                    } catch (error) {
+                        console.error('儲存抽獎紀錄時發生錯誤:', error);
+                    }
+                }
+
                 function drawWheel() {
                     if (!wheelCanvas || !defaultAnimation) return;
 
@@ -1287,6 +1312,7 @@
                             origin: { y: 0.6 }
                         });
                         drawWheel(); // 重新繪製以立即顯示名字
+                        saveWinnerToHistory(winner);
                     }
                 }
 
@@ -1907,6 +1933,8 @@
                             spread: 90,
                             origin: { y: 0.6 }
                         });
+
+                        saveWinnerToHistory(winner);
                     }
                     
                     // 防止繼續點擊其他卡片

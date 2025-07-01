@@ -139,18 +139,19 @@ class YoutubeLottery {
 
     // 檢查是否包含關鍵字
     if (this.keyword && messageText.includes(this.keyword)) {
-      await this.addParticipant(channelId, displayName, profileImageUrl);
+      await this.addParticipant(channelId, displayName, profileImageUrl, messageText);
     }
   }
 
   // (新) 添加參與者核心邏輯
-  async addParticipant(channelId, displayName, profileImageUrl) {
+  async addParticipant(channelId, displayName, profileImageUrl, commentText = '') {
     // 添加到參與者列表
     if (!this.participants.has(channelId)) {
       this.participants.set(channelId, {
         displayName,
         profileImageUrl,
-        joinTime: new Date()
+        joinTime: new Date(),
+        commentText
       });
 
       // 更新用戶畫像資料
@@ -189,11 +190,12 @@ class YoutubeLottery {
 
         for (const item of items) {
           const comment = item.snippet.topLevelComment.snippet;
-          if (this.keyword && comment.textDisplay.includes(this.keyword)) {
+          const commentText = comment.textDisplay;
+          if (this.keyword && commentText.includes(this.keyword)) {
             const { authorChannelId, authorDisplayName, authorProfileImageUrl } = comment;
             // The authorChannelId object is { value: "..." }
             if (authorChannelId && authorChannelId.value) {
-                await this.addParticipant(authorChannelId.value, authorDisplayName, authorProfileImageUrl);
+                await this.addParticipant(authorChannelId.value, authorDisplayName, authorProfileImageUrl, commentText);
                 participantsFound++;
             }
           }
@@ -367,14 +369,17 @@ class YoutubeLottery {
     try {
       const result = await this.pool.query(
         `INSERT INTO youtube_lottery_history 
-         (video_id, lottery_keyword, winner_name, total_participants, 
+         (video_id, lottery_keyword, winner_name, winner_avatar_url, winner_channel_id, winner_comment, total_participants, 
           duration_minutes, animation_mode, participants_list) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
          RETURNING id`,
         [
           this.videoId,
           this.keyword,
           winnerData.displayName,
+          winnerData.profileImageUrl,
+          winnerChannelId,
+          winnerData.commentText || 'N/A',
           this.participants.size,
           duration,
           animationMode,
@@ -437,6 +442,81 @@ class YoutubeLottery {
     } catch (error) {
       console.error('獲取抽獎歷史時出錯:', error);
       throw new Error(`獲取抽獎歷史失敗: ${error.message}`);
+    }
+  }
+
+  // (新增) 儲存從前端發起的抽獎紀錄
+  async saveLotteryHistory(winnerData) {
+    const {
+        video_id,
+        lottery_keyword,
+        winner_channel_id,
+        winner_name,
+        winner_avatar_url,
+        winner_comment,
+        total_participants,
+        animation_mode
+    } = winnerData;
+
+    if (!winner_channel_id || !winner_name) {
+        throw new Error('中獎者資訊不完整，無法儲存紀錄。');
+    }
+
+    const client = await this.pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const insertResult = await client.query(
+            `INSERT INTO youtube_lottery_history
+             (video_id, lottery_keyword, winner_name, winner_avatar_url, winner_channel_id, winner_comment, total_participants, animation_mode)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id`,
+            [
+                video_id,
+                lottery_keyword,
+                winner_name,
+                winner_avatar_url,
+                winner_channel_id,
+                winner_comment,
+                total_participants,
+                animation_mode
+            ]
+        );
+        const lotteryId = insertResult.rows[0].id;
+
+        // 更新中獎者的資料
+        await client.query(
+            `UPDATE user_profiles
+             SET total_wins = total_wins + 1
+             WHERE user_channel_id = $1`,
+            [winner_channel_id]
+        );
+
+        // 更新參與記錄
+        const recordToUpdate = await client.query(
+            `SELECT id FROM participation_records
+             WHERE user_channel_id = $1 AND video_id = $2
+             ORDER BY participated_at DESC LIMIT 1`,
+            [winner_channel_id, video_id]
+        );
+
+        if (recordToUpdate.rows.length > 0) {
+            await client.query(
+                `UPDATE participation_records
+                 SET is_winner = true, lottery_id = $1
+                 WHERE id = $2`,
+                [lotteryId, recordToUpdate.rows[0].id]
+            );
+        }
+
+        await client.query('COMMIT');
+        return { success: true, lotteryId };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('記錄前端抽獎結果時出錯:', error);
+        throw new Error(`儲存抽獎紀錄失敗: ${error.message}`);
+    } finally {
+        client.release();
     }
   }
 }

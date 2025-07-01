@@ -185,6 +185,8 @@
                     <th>Video ID</th>
                     <th>關鍵字</th>
                     <th>中獎者</th>
+                    <th>中獎者 YouTube ID</th>
+                    <th>中獎留言</th>
                     <th>總參與人數</th>
                     <th>動畫模式</th>
                 </tr>
@@ -242,6 +244,8 @@
                 
                 const drawTimestamp = new Date(record.draw_timestamp).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
                 const animationModeChinese = animationModeMap[record.animation_mode] || record.animation_mode || 'N/A';
+                const winnerComment = record.winner_comment || 'N/A';
+                const winnerChannelId = record.winner_channel_id;
                 
                 row.innerHTML = `
                     <td>${record.id}</td>
@@ -254,6 +258,8 @@
                             <span>${record.winner_name}</span>
                         </div>
                     </td>
+                    <td>${winnerChannelId ? `<a href="https://www.youtube.com/channel/${winnerChannelId}" target="_blank">${winnerChannelId}</a>` : 'N/A'}</td>
+                    <td>${winnerComment}</td>
                     <td>${record.total_participants}</td>
                     <td>${animationModeChinese}</td>
                 `;
