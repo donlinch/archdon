@@ -571,10 +571,14 @@
         }
 
         .punch-card-back::before {
-            content: "?";
-            font-size: 45px;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.5);
+            content: "";
+            background-image: url('/android-chrome-192x192.png');
+            background-size: 80px 80px;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         @keyframes winner-pulse {
@@ -1328,8 +1332,14 @@
                     card.classList.add('shuffling');
                 });
                 
-                // 第一階段：散開卡片
+                // 第一階段：先翻面（背面朝上）
+                cardsArray.forEach(card => {
+                    card.classList.add('face-down');
+                });
+                
+                // 等待翻面動畫完成後，再開始散開卡片
                 setTimeout(() => {
+                    // 第二階段：散開卡片
                     cardsArray.forEach(card => {
                         // 隨機散開到容器四周
                         const randomAngle = Math.random() * 360;
@@ -1345,61 +1355,54 @@
                         // 設置旋轉和位置
                         card.style.transform = `translate(${targetX - card.offsetLeft}px, ${targetY - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg)`;
                     });
-                }, 50);
-                
-                // 第二階段：翻面
-                setTimeout(() => {
-                    cardsArray.forEach(card => {
-                        card.classList.add('face-down');
-                    });
-                }, 650);
-                
-                // 第三階段：重新排列成網格
-                setTimeout(() => {
-                    // 重新排列之前，先打亂順序
-                    for (let i = cardsArray.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
-                    }
                     
-                    // 計算網格排列
-                    const cardWidth = 130; // 包含margin
-                    const cardHeight = 160; // 包含margin
-                    const cardsPerRow = Math.floor(containerWidth / cardWidth);
-                    
-                    // 排列到網格位置
-                    cardsArray.forEach((card, index) => {
-                        const row = Math.floor(index / cardsPerRow);
-                        const col = index % cardsPerRow;
-                        
-                        const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
-                        const top = (row * cardHeight) + 20; // 頂部留出20px空間
-                        
-                        card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg)`;
-                    });
-                    
-                    // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                    // 第三階段：重新排列成網格
                     setTimeout(() => {
-                        cardsArray.forEach(card => {
-                            // 確保卡片仍然是背面朝上
-                            if (!card.classList.contains('face-down')) {
-                                card.classList.add('face-down');
-                            }
-                            card.addEventListener('click', handlePunchCardClick);
+                        // 重新排列之前，先打亂順序
+                        for (let i = cardsArray.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
+                        }
+                        
+                        // 計算網格排列
+                        const cardWidth = 130; // 包含margin
+                        const cardHeight = 160; // 包含margin
+                        const cardsPerRow = Math.floor(containerWidth / cardWidth);
+                        
+                        // 排列到網格位置
+                        cardsArray.forEach((card, index) => {
+                            const row = Math.floor(index / cardsPerRow);
+                            const col = index % cardsPerRow;
+                            
+                            const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
+                            const top = (row * cardHeight) + 20; // 頂部留出20px空間
+                            
+                            card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg)`;
                         });
                         
-                        // 更新狀態和提示
-                        isPunchHoleShuffled = true;
-                        document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
-                        
-                        // 更新按鈕文字
-                        const buttonText = drawWinnerBtn.querySelector('.text');
-                        if (buttonText) buttonText.textContent = '重新發牌';
-                        
-                        // 重新啟用按鈕
-                        drawWinnerBtn.disabled = false;
-                    }, 800);
-                }, 1200);
+                        // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                        setTimeout(() => {
+                            cardsArray.forEach(card => {
+                                // 確保卡片仍然是背面朝上
+                                if (!card.classList.contains('face-down')) {
+                                    card.classList.add('face-down');
+                                }
+                                card.addEventListener('click', handlePunchCardClick);
+                            });
+                            
+                            // 更新狀態和提示
+                            isPunchHoleShuffled = true;
+                            document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
+                            
+                            // 更新按鈕文字
+                            const buttonText = drawWinnerBtn.querySelector('.text');
+                            if (buttonText) buttonText.textContent = '重新發牌';
+                            
+                            // 重新啟用按鈕
+                            drawWinnerBtn.disabled = false;
+                        }, 800);
+                    }, 1200);
+                }, 600); // 等待翻面動畫完成
             }
             
             function handlePunchCardClick(e) {
