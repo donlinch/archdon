@@ -48,6 +48,7 @@
             padding: 12px 15px;
             border: 1px solid var(--secondary-color);
             text-align: left;
+            vertical-align: middle;
         }
 
         thead {
@@ -69,6 +70,19 @@
         
         td a:hover {
             text-decoration: underline;
+        }
+
+        .winner-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .winner-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
         }
 
         #loading-message {
@@ -130,19 +144,31 @@
             const historyBody = document.getElementById('history-body');
             historyBody.innerHTML = ''; // Clear existing content
 
+            const animationModeMap = {
+                'turntable': '轉盤式',
+                'pointer': '指針式',
+                'punch-hole': '洞洞樂'
+            };
+
             history.forEach(record => {
                 const row = document.createElement('tr');
                 
                 const drawTimestamp = new Date(record.draw_timestamp).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+                const animationModeChinese = animationModeMap[record.animation_mode] || record.animation_mode || 'N/A';
                 
                 row.innerHTML = `
                     <td>${record.id}</td>
                     <td>${drawTimestamp}</td>
                     <td><a href="https://www.youtube.com/watch?v=${record.video_id}" target="_blank">${record.video_id}</a></td>
                     <td>${record.lottery_keyword}</td>
-                    <td>${record.winner_name}</td>
+                    <td>
+                        <div class="winner-cell">
+                            <img src="${record.winner_avatar_url || '/images/a01girlmove.gif'}" alt="${record.winner_name}" class="winner-avatar">
+                            <span>${record.winner_name}</span>
+                        </div>
+                    </td>
                     <td>${record.total_participants}</td>
-                    <td>${record.animation_mode || 'N/A'}</td>
+                    <td>${animationModeChinese}</td>
                 `;
                 historyBody.appendChild(row);
             });
