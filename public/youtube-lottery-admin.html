@@ -812,8 +812,8 @@
             const videoIdEl = document.getElementById('video-id');
             const keywordEl = document.getElementById('lottery-keyword');
             const apiRateInput = document.getElementById('api-rate-limit');
-            const setVideoBtn = document.getElementById('set-video-btn');
-            const stopMonitoringBtn = document.getElementById('stop-monitoring-btn');
+            const setVideoBtn = null; // 原按鈕已移除
+            const stopMonitoringBtn = null; // 原按鈕已移除
             const currentVideoEl = document.getElementById('current-video');
             const participantsListEl = document.getElementById('participants-list');
             const participantsCountEl = document.getElementById('participants-count');
@@ -1437,76 +1437,85 @@
                 });
                 
                 // 第一階段：先翻面（背面朝上）
-                cardsArray.forEach(card => {
-                    card.classList.add('face-down');
-                });
-                
-                // 等待翻面動畫完成後，再開始散開卡片
+                // 使用更長的延遲確保翻面動畫完成
                 setTimeout(() => {
-                    // 第二階段：散開卡片
                     cardsArray.forEach(card => {
-                        // 隨機散開到容器四周
-                        const randomAngle = Math.random() * 360;
-                        const distance = 100 + Math.random() * 200; // 散開的距離
-                        const centerX = containerWidth / 2;
-                        const centerY = containerHeight / 2;
-                        
-                        // 計算目標位置
-                        const radians = randomAngle * (Math.PI / 180);
-                        const targetX = centerX + Math.cos(radians) * distance - 60; // 60是卡片寬度的一半
-                        const targetY = centerY + Math.sin(radians) * distance - 75; // 75是卡片高度的一半
-                        
-                        // 設置旋轉和位置
-                        card.style.transform = `translate(${targetX - card.offsetLeft}px, ${targetY - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg)`;
+                        card.classList.add('face-down');
                     });
                     
-                    // 第三階段：重新排列成網格
+                    // 確保卡片完全翻到背面後再開始散開
                     setTimeout(() => {
-                        // 重新排列之前，先打亂順序
-                        for (let i = cardsArray.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
-                        }
-                        
-                        // 計算網格排列
-                        const cardWidth = 130; // 包含margin
-                        const cardHeight = 160; // 包含margin
-                        const cardsPerRow = Math.floor(containerWidth / cardWidth);
-                        
-                        // 排列到網格位置
-                        cardsArray.forEach((card, index) => {
-                            const row = Math.floor(index / cardsPerRow);
-                            const col = index % cardsPerRow;
+                        // 第二階段：散開卡片
+                        cardsArray.forEach(card => {
+                            // 確保卡片仍然是背面朝上
+                            if (!card.classList.contains('face-down')) {
+                                card.classList.add('face-down');
+                            }
                             
-                            const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
-                            const top = (row * cardHeight) + 20; // 頂部留出20px空間
+                            // 隨機散開到容器四周
+                            const randomAngle = Math.random() * 360;
+                            const distance = 100 + Math.random() * 200; // 散開的距離
+                            const centerX = containerWidth / 2;
+                            const centerY = containerHeight / 2;
                             
-                            card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg)`;
+                            // 計算目標位置
+                            const radians = randomAngle * (Math.PI / 180);
+                            const targetX = centerX + Math.cos(radians) * distance - 60; // 60是卡片寬度的一半
+                            const targetY = centerY + Math.sin(radians) * distance - 75; // 75是卡片高度的一半
+                            
+                            // 設置旋轉和位置，保持背面朝上
+                            card.style.transform = `translate(${targetX - card.offsetLeft}px, ${targetY - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                         });
                         
-                        // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                        // 第三階段：重新排列成網格
                         setTimeout(() => {
-                            cardsArray.forEach(card => {
-                                // 確保卡片仍然是背面朝上
-                                if (!card.classList.contains('face-down')) {
-                                    card.classList.add('face-down');
-                                }
-                                card.addEventListener('click', handlePunchCardClick);
+                            // 重新排列之前，先打亂順序
+                            for (let i = cardsArray.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
+                            }
+                            
+                            // 計算網格排列
+                            const cardWidth = 130; // 包含margin
+                            const cardHeight = 160; // 包含margin
+                            const cardsPerRow = Math.floor(containerWidth / cardWidth);
+                            
+                            // 排列到網格位置
+                            cardsArray.forEach((card, index) => {
+                                const row = Math.floor(index / cardsPerRow);
+                                const col = index % cardsPerRow;
+                                
+                                const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
+                                const top = (row * cardHeight) + 20; // 頂部留出20px空間
+                                
+                                // 保持卡片背面朝上，但位置和旋轉角度恢復正常
+                                card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg) rotateY(180deg)`;
                             });
                             
-                            // 更新狀態和提示
-                            isPunchHoleShuffled = true;
-                            document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
-                            
-                            // 更新按鈕文字
-                            const buttonText = drawWinnerBtn.querySelector('.text');
-                            if (buttonText) buttonText.textContent = '重新發牌';
-                            
-                            // 重新啟用按鈕
-                            drawWinnerBtn.disabled = false;
-                        }, 800);
-                    }, 1200);
-                }, 600); // 等待翻面動畫完成
+                            // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                            setTimeout(() => {
+                                cardsArray.forEach(card => {
+                                    // 確保卡片仍然是背面朝上
+                                    if (!card.classList.contains('face-down')) {
+                                        card.classList.add('face-down');
+                                    }
+                                    card.addEventListener('click', handlePunchCardClick);
+                                });
+                                
+                                // 更新狀態和提示
+                                isPunchHoleShuffled = true;
+                                document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
+                                
+                                // 更新按鈕文字
+                                const buttonText = drawWinnerBtn.querySelector('.text');
+                                if (buttonText) buttonText.textContent = '重新發牌';
+                                
+                                // 重新啟用按鈕
+                                drawWinnerBtn.disabled = false;
+                            }, 800);
+                        }, 1200);
+                    }, 200); // 添加小延遲確保翻面完成
+                }, 50);
             }
             
             function handlePunchCardClick(e) {
@@ -1615,63 +1624,6 @@
                     winnerDisplay.classList.remove('show');
                 }, 10000); // 延長顯示時間
             }
-
-            setVideoBtn.addEventListener('click', async () => {
-                const videoId = videoIdEl.value.trim();
-                const keyword = keywordEl.value.trim();
-                const apiRateLimit = parseInt(apiRateInput.value, 10);
-
-                if (!videoId || !keyword) {
-                    alert('請填寫 Video ID 和關鍵字！');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/admin/lottery/set-video', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            videoId,
-                            keyword,
-                            apiRateLimit
-                        })
-                    });
-
-                    const result = await response.json();
-                    if (!response.ok) throw new Error(result.error || '設置失敗');
-
-                        currentVideoEl.textContent = `當前監控 Video ID: ${videoId}`;
-                    startAutoUpdate();
-                    alert('設置成功！');
-                } catch (error) {
-                    console.error('Error setting video:', error);
-                    alert(`設置失敗: ${error.message}`);
-                }
-            });
-
-            stopMonitoringBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/admin/lottery/stop-monitoring', {
-                        method: 'POST'
-                    });
-                    const result = await response.json();
-                    
-                    if (response.ok && result.success) {
-                        stopAutoUpdate();
-                        currentVideoEl.textContent = '當前監控 Video ID: 無';
-                        defaultAnimation.textContent = '已停止監控';
-                        // 不再清空參與者名單
-                        alert('已停止監控！');
-                    } else {
-                        throw new Error(result.error || '停止監控失敗');
-                    }
-                } catch (error) {
-                    console.error('Error stopping monitoring:', error);
-                    alert(`停止監控失敗: ${error.message}`);
-                }
-            });
 
             drawWinnerBtn.addEventListener('click', async () => {
                 const animationMode = animationModeEl.value;
