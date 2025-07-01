@@ -832,12 +832,41 @@
             font-weight: normal; /* Override general button style */
             border-radius: 0; /* Override general button style */
             align-self: flex-start; /* Align to the start of the panel */
+            margin-right: 10px; /* Add margin to separate buttons */
         }
 
         .history-button:hover {
             background: #016dd9;
             color: #ffffff;
             animation: squeeze3124 0.9s both;
+        }
+        
+        .game-button {
+            height: 2.8em;
+            width: auto;
+            padding: 0 1.2em;
+            background: transparent;
+            -webkit-animation: jello-horizontal 0.9s both;
+            animation: jello-horizontal 0.9s both;
+            border: 2px solid #e67e22;
+            outline: none;
+            color: #e67e22;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: normal;
+            border-radius: 0;
+            align-self: flex-start;
+        }
+        
+        .game-button:hover {
+            background: #e67e22;
+            color: #ffffff;
+            animation: squeeze3124 0.9s both;
+        }
+
+        .button-container {
+            display: flex;
+            margin-bottom: 10px;
         }
 
         @-webkit-keyframes jello-horizontal {
@@ -993,7 +1022,10 @@
 
         <div id="participants-panel" class="panel">
            
-            <button id="view-history-btn" class="history-button" style="margin-bottom: 10px;">查看抽獎紀錄</button>
+            <div class="button-container">
+                <button id="view-history-btn" class="history-button">查看抽獎紀錄</button>
+                <button id="back-to-game-btn" class="game-button">返回遊戲</button>
+            </div>
             <div id="participants-list">
                 <!-- Participants will be dynamically added here -->
             </div>
@@ -2070,6 +2102,12 @@
                 
                 viewHistoryBtn.addEventListener('click', () => {
                     window.location.href = 'lottery-history.html';
+                });
+                
+                // 新增返回遊戲按鈕事件監聽
+                const backToGameBtn = document.getElementById('back-to-game-btn');
+                backToGameBtn.addEventListener('click', () => {
+                    window.location.href = '/rich/game.html';
                 });
                 
                 animationModeEl.addEventListener('change', () => {
