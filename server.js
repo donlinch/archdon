@@ -8908,8 +8908,8 @@ function gracefulShutdown() {
 
 
 
-app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`伺服器正在監聽端口 ${PORT}`);
-  });
+});
 
 
