@@ -784,19 +784,53 @@
             font-weight: bold;
             color: var(--accent-color);
         }
+
+        #loading-overlay {
+            display: flex;
+            position: fixed;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(26, 26, 46, 0.95); /* from --bg-color */
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #loading-overlay::before {
+            content: '';
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--secondary-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        #loading-overlay p {
+            font-size: 1.2em;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <p>正在驗證您的身份...</p>
+    </div>
 
     <!-- User Status Indicator -->
-    <div id="userStatus" class="user-status">
+    <div id="userStatus" class="user-status" style="display: none;">
         <img id="userStatusAvatar" src="/images/a01girlmove.gif" alt="User">
         <span id="userStatusName" class="username">未登入</span>
     </div>
 
    
 
-    <div class="container">
+    <div class="container" style="display: none;">
         <div id="settings-panel" class="panel">
             
             <div class="form-group">
@@ -891,1074 +925,1133 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // User status elements
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = loadingOverlay.querySelector('p');
+            const container = document.querySelector('.container');
+            const userStatus = document.getElementById('userStatus');
             const userStatusAvatar = document.getElementById('userStatusAvatar');
             const userStatusName = document.getElementById('userStatusName');
-            const userStatus = document.getElementById('userStatus');
 
-            // 檢查是否有已保存的登入信息
-            const savedUserId = localStorage.getItem('boxCurrentUserId');
-            const savedUserToken = localStorage.getItem(`boxUserToken_${savedUserId}`);
-            const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
-            const savedUserName = localStorage.getItem('boxCurrentUsername');
-            const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
+            let authToken = null;
 
-            // Update the user status indicator
-            if (savedUserId && savedUserToken && savedUserName) {
-                userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
-                userStatusName.textContent = savedDisplayName;
-                
-                // Add click event to navigate to user editor page
-                userStatus.addEventListener('click', () => {
-                    window.location.href = `/member-editor.html?userId=${savedUserId}`;
-                });
-            } else {
-                userStatusAvatar.src = '/images/a01girlmove.gif';
-                userStatusName.textContent = '未登入';
-                userStatus.addEventListener('click', () => {
-                    // 變更為導向會員登入頁
-                    window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
-                });
-            }
-            
-            const videoIdEl = document.getElementById('video-id');
-            const keywordEl = document.getElementById('lottery-keyword');
-            const apiRateInput = document.getElementById('api-rate-limit');
-            const setVideoBtn = null; // 原按鈕已移除
-            const stopMonitoringBtn = null; // 原按鈕已移除
-            const monitoringVideoIdEl = document.getElementById('monitoring-video-id');
-            const participantsListEl = document.getElementById('participants-list');
-            const participantsCountEl = document.getElementById('participants-count');
-            const drawWinnerBtn = document.getElementById('draw-winner-btn');
-            const animationModeEl = document.getElementById('animation-mode');
-            const durationEl = document.getElementById('animation-duration');
-            const animationContainer = document.getElementById('animation-container');
-            const defaultAnimation = document.getElementById('default-animation');
-            const winnerDisplayEl = document.getElementById('winner-display');
-            const winnerAvatarEl = document.getElementById('winner-avatar');
-            const winnerNameEl = document.getElementById('winner-name');
-            const confettiCanvas = document.getElementById('confetti-canvas');
-            const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
-            const wheelCanvas = document.getElementById('wheel-canvas');
-            const wheelCtx = wheelCanvas.getContext('2d');
-            const pointerAnimationEl = document.getElementById('pointer-animation');
-            const participantsReelEl = document.getElementById('participants-reel');
-            const punchHoleAnimationEl = document.getElementById('punch-hole-animation');
-            const punchHoleWinnerDisplayEl = document.getElementById('punch-hole-winner-display');
-            const monitoringToggle = document.getElementById('checkbox');
-            const toggleStatusEl = document.querySelector('.toggle-status');
-
-            const myConfetti = confetti.create(confettiCanvas, {
-                resize: true,
-                useWorker: true
-            });
-
-            let currentRotation = 0;
-            let isSpinning = false;
-            let angularVelocity = 0;
-            const FRICTION = 0.995; // 摩擦力係數，確保輪盤最終會停下
-            let selectedWinner = null;
-            let updateTimer = null;
-            let participants = []; // 在記憶體中保存參與者列表，避免重複讀取
-            let winnerText = ''; // 用於在畫布中心顯示中獎者名字
-
-            // Pointer animation state
-            let isReelSpinning = false;
-            let reelVelocity = 0;
-            let reelPosition = 0;
-            let reelAnimationId = null;
-            const REEL_FRICTION = 0.988; // 摩擦力, 數值越小停越快
-            const IDLE_SPEED = 60; // 待機時的滾動速度 (已提高)
-            let idleAnimationId = null;
-            let pointerWinnerDecided = false;
-            let punchHoleReady = false;
-            let punchHoleWinnerSelected = false;
-            let punchHoleWinner = null;
-            let isPunchHoleShuffled = false;
-
-            function drawWheel() {
-                if (!wheelCanvas || !defaultAnimation) return;
-
-                const totalParticipants = participants.length;
-                    
-                if (totalParticipants === 0) {
-                    wheelCanvas.style.display = 'none';
-                    defaultAnimation.style.display = 'block';
-                    defaultAnimation.textContent = '監控中...等待參與者加入';
-                    return;
-                }
-
-                wheelCanvas.style.display = 'block';
-                defaultAnimation.style.display = 'none';
-
-                const centerX = wheelCanvas.width / 2;
-                const centerY = wheelCanvas.height / 2;
-                const radius = Math.min(centerX, centerY) - 20;
-
-                wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
-
-                wheelCtx.save();
-                wheelCtx.translate(centerX, centerY);
-                
-                // 為了簡化角度計算，我們讓指針指向 3 點鐘方向，並旋轉輪盤
-                wheelCtx.rotate(currentRotation);
-
-                const sliceAngle = (2 * Math.PI) / totalParticipants;
-                participants.forEach((p, index) => {
-                    const startAngle = index * sliceAngle;
-                    const endAngle = startAngle + sliceAngle;
-
-                    // Draw slice
-                    wheelCtx.beginPath();
-                    wheelCtx.moveTo(0, 0);
-                    wheelCtx.arc(0, 0, radius, startAngle, endAngle);
-                    wheelCtx.closePath();
-                    wheelCtx.fillStyle = `hsl(${(360 / totalParticipants) * index}, 70%, 60%)`;
-                    wheelCtx.fill();
-                    wheelCtx.stroke();
-
-                    // Draw text
-                    wheelCtx.save();
-                    wheelCtx.rotate(startAngle + sliceAngle / 2);
-                    wheelCtx.textAlign = 'right';
-                    wheelCtx.fillStyle = 'white';
-                    wheelCtx.font = '14px Arial';
-                    const displayName = p.displayName.length > 10 ? p.displayName.substring(0, 10) + '...' : p.displayName;
-                    wheelCtx.fillText(displayName, radius - 10, 5);
-                    wheelCtx.restore();
-                });
-
-                wheelCtx.restore();
-
-                // 將指針畫在 12 點鐘方向（頂部），保持靜止
-                wheelCtx.save();
-                wheelCtx.translate(centerX, centerY - radius - 20); // 移到輪盤正上方
-                wheelCtx.fillStyle = '#ff4757';
-                
-                wheelCtx.beginPath();
-                wheelCtx.moveTo(0, 20); // 指針尖端指向輪盤邊緣
-                wheelCtx.lineTo(-10, 0);
-                wheelCtx.lineTo(10, 0);
-                wheelCtx.closePath();
-                wheelCtx.fill();
-                wheelCtx.restore();
-
-                // 如果輪盤已停止且有中獎者，在中間顯示名字
-                if (!isSpinning && winnerText) {
-                    wheelCtx.save();
-                    wheelCtx.font = 'bold 40px ' + getComputedStyle(document.body).fontFamily;
-                    wheelCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-                    wheelCtx.textAlign = 'center';
-                    wheelCtx.textBaseline = 'middle';
-                    wheelCtx.shadowColor = 'black';
-                    wheelCtx.shadowBlur = 10;
-                    wheelCtx.shadowOffsetX = 2;
-                    wheelCtx.shadowOffsetY = 2;
-                    const displayName = winnerText.length > 10 ? winnerText.substring(0, 10) + '...' : winnerText;
-                    wheelCtx.fillText(displayName, centerX, centerY);
-                    wheelCtx.restore();
-                }
-            }
-            
-            function startSpin() {
-                if (isSpinning) return;
-                if (participants.length < 2) {
-                    alert('需要至少兩位參與者才能開始轉盤抽獎！');
-                    return;
-                }
-                winnerText = ''; // 清除上一位中獎者名字
-                isSpinning = true;
-                // 給予一個隨機的初始速度 (弧度/幀)
-                angularVelocity = (Math.random() * 0.2) + 0.4;
-                requestAnimationFrame(animate);
-            }
-
-            function animate() {
-                if (!isSpinning) return;
-
-                currentRotation += angularVelocity;
-                angularVelocity *= FRICTION; // 應用摩擦力使其減速
-
-                drawWheel();
-
-                // 當速度小於一個閾值時，停止動畫
-                if (angularVelocity < 0.001) {
-                    isSpinning = false;
-                    angularVelocity = 0;
-                    drawWheel(); // 畫最後一幀確保位置精確
-                    determineWinnerFromAngle();
-                } else {
-                    requestAnimationFrame(animate);
-                }
-            }
-            
-            function determineWinnerFromAngle() {
-                const totalParticipants = participants.length;
-                if (totalParticipants === 0) return;
-
-                const sliceAngle = (2 * Math.PI) / totalParticipants;
-                
-                // 指針在 12 點鐘方向 (3*PI/2)，我們以此為基準計算
-                const pointerAngle = 3 * Math.PI / 2;
-                const finalAngle = currentRotation % (2 * Math.PI);
-                const targetAngle = (2 * Math.PI - finalAngle + pointerAngle) % (2 * Math.PI);
-                const winnerIndex = Math.floor(targetAngle / sliceAngle);
-
-                const winner = participants[winnerIndex];
-                if (winner) {
-                    selectedWinner = winner;
-                    winnerText = winner.displayName; // 設定要顯示的文字
-                    highlightWinner(winner);
-                    // showWinner(winner); // 不再彈出卡片
-                    myConfetti({
-                        particleCount: 150,
-                        spread: 90,
-                        origin: { y: 0.6 }
-                    });
-                    drawWheel(); // 重新繪製以立即顯示名字
-                }
-            }
-
-            function highlightWinner(winner) {
-                const participantsList = participantsListEl.querySelectorAll('li');
-                participantsList.forEach(li => {
-                    li.classList.remove('winner-highlight');
-                    if (li.querySelector('span').textContent.includes(winner.displayName)) {
-                        li.classList.add('winner-highlight');
-                        li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            async function apiFetch(url, options = {}) {
+                // no loading indicator changes in here, handled by caller
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
                     }
-                });
-            }
-
-            function buildParticipantsReel() {
-                if (!participantsReelEl) return;
-                participantsReelEl.innerHTML = '';
-                participantsReelEl.style.transition = 'none';
-                participantsReelEl.style.transform = 'translateX(0px)';
-
-                if (participants.length === 0) {
-                    stopReelIdleAnimation();
-                    return;
+                };
+                const mergedOptions = { ...defaultOptions, ...options };
+                if (options.body && typeof options.body !== 'string') {
+                    mergedOptions.body = JSON.stringify(options.body);
                 }
 
-                // 為了製造無限滾動的感覺，我們複製參與者列表
-                const reelParticipants = [];
-                const repeatCount = Math.max(5, Math.ceil(40 / participants.length));
-                for(let i = 0; i < repeatCount; i++) {
-                    reelParticipants.push(...participants);
-                }
-                
-                reelParticipants.forEach(p => {
-                    const card = document.createElement('div');
-                    card.className = 'reel-participant-card';
-                    card.dataset.channelId = p.channelId;
-                    card.innerHTML = `
-                        <img src="${p.profileImageUrl}" alt="${p.displayName}">
-                        <span>${p.displayName.substring(0, 12)}</span>
-                    `;
-                    participantsReelEl.appendChild(card);
-                });
-
-                startReelIdleAnimation();
-            }
-
-            function startReelIdleAnimation() {
-                stopReelIdleAnimation(); // 確保只有一個動畫在跑
-
-                let lastTime = null;
-                function idleAnimate(time) {
-                    if (!lastTime) {
-                        lastTime = time;
-                        idleAnimationId = requestAnimationFrame(idleAnimate);
-                        return;
-                    }
-                    const deltaTime = time - lastTime;
-                    lastTime = time;
-
-                    reelPosition -= IDLE_SPEED * (deltaTime / 16); // 標準化到 60fps
-                    
-                    const cardWidth = 120 + 20; // card width + margin
-                    const loopWidth = cardWidth * participants.length;
-                    if (reelPosition < -loopWidth) {
-                        reelPosition += loopWidth;
-                    }
-                    participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
-
-                    idleAnimationId = requestAnimationFrame(idleAnimate);
-                }
-                idleAnimationId = requestAnimationFrame(idleAnimate);
-            }
-
-            function stopReelIdleAnimation() {
-                if (idleAnimationId) {
-                    cancelAnimationFrame(idleAnimationId);
-                    idleAnimationId = null;
-                }
-            }
-
-            function startPointerLottery() {
-                if (isReelSpinning) return;
-                if (participants.length < 2) {
-                    alert('需要至少兩位參與者才能開始抽獎！');
-                    return;
-                }
-                stopReelIdleAnimation();
-                isReelSpinning = true;
-                // 給予一個隨機的初始速度 (像素/幀)，增加速度以獲得拉霸機的感覺
-                reelVelocity = (Math.random() * 20) + 55;
-                
-                if (reelAnimationId) {
-                    cancelAnimationFrame(reelAnimationId);
-                }
-                animateReel();
-            }
-
-            function animateReel() {
-                reelPosition -= reelVelocity;
-                reelVelocity *= REEL_FRICTION; // 應用摩擦力
-
-                const cardWidth = 120 + 20;
-                const totalReelWidth = cardWidth * participants.length * Math.floor(participantsReelEl.children.length / participants.length);
-                const loopWidth = cardWidth * participants.length;
-
-                // 為了循環效果，重置位置
-                if(reelPosition < -loopWidth * 2) {
-                    reelPosition += loopWidth;
-                }
-
-                participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
-
-                if (reelVelocity < 0.05) {
-                    isReelSpinning = false;
-                    cancelAnimationFrame(reelAnimationId);
-                    reelAnimationId = null;
-                    determinePointerWinner();
-                } else {
-                    reelAnimationId = requestAnimationFrame(animateReel);
-                }
-            }
-            
-            function determinePointerWinner() {
-                const pointerLine = pointerAnimationEl.getBoundingClientRect().left + (pointerAnimationEl.offsetWidth / 2);
-                const cards = participantsReelEl.querySelectorAll('.reel-participant-card');
-                
-                let winnerCard = null;
-                let minDistance = Infinity;
-
-                cards.forEach(card => {
-                    const cardRect = card.getBoundingClientRect();
-                    const cardCenter = cardRect.left + (cardRect.width / 2);
-                    const distance = Math.abs(pointerLine - cardCenter);
-                    
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        winnerCard = card;
-                    }
-                });
-
-                if (winnerCard) {
-                    const winnerChannelId = winnerCard.dataset.channelId;
-                    const winner = participants.find(p => p.channelId === winnerChannelId);
-                    if(winner){
-                        pointerWinnerDecided = true;
-                        selectedWinner = winner;
-                        highlightWinner(winner);
-                        myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
-                        
-                        // 平滑地將中獎者卡片對齊到指針
-                        const cardRect = winnerCard.getBoundingClientRect();
-                        const cardCenter = cardRect.left + (cardRect.width / 2);
-                        const offset = pointerLine - cardCenter;
-                        
-                        const currentTransform = new DOMMatrix(getComputedStyle(participantsReelEl).transform);
-                        const currentX = currentTransform.m41;
-                        
-                        participantsReelEl.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-                        participantsReelEl.style.transform = `translateX(${currentX + offset}px)`;
-
-                        // 在中間顯示中獎者名字
-                        const winnerDisplay = document.getElementById('pointer-winner-display');
-                        if (winnerDisplay) {
-                            winnerDisplay.textContent = winner.displayName;
-                            winnerDisplay.style.display = 'block';
-                        }
-                        
-                        // 更改按鈕文字，提示可以重設
-                        const buttonText = drawWinnerBtn.querySelector('.text');
-                        if (buttonText) buttonText.textContent = '重設/再抽一次';
-
-                    } else {
-                         startReelIdleAnimation();
-                    }
-                } else {
-                    startReelIdleAnimation();
-                }
-            }
-
-            function resetPointerAnimation() {
-                pointerWinnerDecided = false;
-                
-                const winnerDisplay = document.getElementById('pointer-winner-display');
-                if (winnerDisplay) {
-                    winnerDisplay.style.display = 'none';
-                }
-
-                const buttonText = drawWinnerBtn.querySelector('.text');
-                if (buttonText) buttonText.textContent = '立即抽獎';
-
-                const participantsList = participantsListEl.querySelectorAll('li');
-                participantsList.forEach(li => {
-                    li.classList.remove('winner-highlight');
-                });
-                
-                // 重設捲軸的 transform transition
-                participantsReelEl.style.transition = 'none';
-
-                startReelIdleAnimation();
-            }
-
-            async function fetchParticipants() {
                 try {
-                    const response = await fetch('/api/admin/lottery/participants');
-                    const data = await response.json();
-                    
+                    const response = await fetch(url, mergedOptions);
                     if (!response.ok) {
-                        throw new Error(data.error || '無法獲取參與者');
+                        const errorData = await response.json().catch(() => ({ error: '請求失敗' }));
+                        throw new Error(errorData.error || `HTTP Error: ${response.status}`);
                     }
-                    
-                    if (data.participants) {
-                        updateParticipantsList(data.participants);
-                        if (data.participants.length === 0) {
-                            if (defaultAnimation) {
-                                defaultAnimation.textContent = '監控中...等待參與者加入';
-                            }
-                        }
-                    } else {
-                        throw new Error('參與者資料格式錯誤');
-                    }
+                    if (response.status === 204) return null;
+                    return await response.json();
                 } catch (error) {
-                    console.error('Error fetching participants:', error);
-                    if (defaultAnimation) {
-                        defaultAnimation.textContent = '更新參與者名單失敗';
-                    }
+                    alert(`API 錯誤: ${error.message}`);
+                    throw error;
                 }
             }
 
-            function startAutoUpdate() {
-                if (updateTimer) {
-                    clearInterval(updateTimer);
-                }
-                
-                fetchParticipants();
-                
-                const interval = parseInt(apiRateInput.value, 10) * 1000;
-                updateTimer = setInterval(fetchParticipants, interval);
+            async function checkAccess() {
+                const userId = localStorage.getItem('boxCurrentUserId');
+                authToken = localStorage.getItem(`boxUserToken_${userId}`);
 
-                // 更新狀態顯示
-                toggleStatusEl.textContent = '系統狀態: 監控中';
-                toggleStatusEl.style.color = '#50fa7b'; // 綠色
-            }
-
-            function stopAutoUpdate() {
-                if (updateTimer) {
-                    clearInterval(updateTimer);
-                    updateTimer = null;
-                }
-
-                // 更新狀態顯示
-                toggleStatusEl.textContent = '系統狀態: 停止中';
-                toggleStatusEl.style.color = '#ff5555'; // 紅色
-            }
-
-            function updateParticipantsList(participantsData) {
-                if (!participantsListEl || !participantsCountEl) return;
-
-                participants = participantsData; // 更新全局參與者陣列
-                participantsListEl.innerHTML = '';
-                participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
-
-                participants.forEach((participant, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'participant';
-                    // 將 channelId 存儲在 data 屬性中
-                    li.dataset.channelId = participant.channelId;
-                    li.innerHTML = `
-                        <img src="${participant.profileImageUrl}" alt="${participant.displayName}" class="participant-avatar">
-                        <span>${participant.displayName}</span>
-                        <button class="delete-btn">刪除</button>
-                    `;
-
-                    // 點擊參與者列表項目時的處理
-                    li.addEventListener('click', (e) => {
-                        // 如果點擊的是刪除按鈕，不切換選中狀態
-                        if (e.target.classList.contains('delete-btn')) {
-                            return;
-                        }
-                        li.classList.toggle('selected');
-                    });
-
-                    // 刪除按鈕的點擊處理
-                    const deleteBtn = li.querySelector('.delete-btn');
-                    deleteBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        if (confirm(`確定要刪除參與者 "${participant.displayName}" 嗎？`)) {
-                            try {
-                                // 使用 data-channel-id 來獲取正確的 channelId
-                                const channelId = li.dataset.channelId;
-                                const response = await fetch('/api/admin/lottery/remove-participant', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ channelId })
-                                });
-
-                                const result = await response.json();
-                                if (!response.ok) throw new Error(result.error || '刪除失敗');
-
-                                // 刪除成功後，重新從伺服器獲取最新的參與者列表
-                                // 這樣可以確保前後端狀態一致，並自動更新UI和轉盤
-                                fetchParticipants();
-                                alert(`參與者 "${participant.displayName}" 已成功刪除。`);
-                            } catch (error) {
-                                console.error('Error removing participant:', error);
-                                alert(`刪除失敗: ${error.message}`);
-                            }
-                        }
-                    });
-
-                    participantsListEl.appendChild(li);
-                });
-                
-                // 更新動畫視圖
-                setupAnimationView(animationModeEl.value);
-            }
-            
-            function setupAnimationView(mode) {
-                if (participants.length === 0) {
-                    wheelCanvas.style.display = 'none';
-                    pointerAnimationEl.style.display = 'none';
-                    punchHoleAnimationEl.style.display = 'none';
-                    defaultAnimation.style.display = 'block';
-                    defaultAnimation.textContent = '監控中...等待參與者加入';
-                    stopReelIdleAnimation();
-                    return;
-                }
-                
-                defaultAnimation.style.display = 'none';
-
-                if (mode === 'turntable') {
-                    wheelCanvas.style.display = 'block';
-                    pointerAnimationEl.style.display = 'none';
-                    punchHoleAnimationEl.style.display = 'none';
-                    stopReelIdleAnimation();
-                    drawWheel();
-                } else if (mode === 'pointer') {
-                    wheelCanvas.style.display = 'none';
-                    pointerAnimationEl.style.display = 'block';
-                    punchHoleAnimationEl.style.display = 'none';
-                    buildParticipantsReel();
-                } else if (mode === 'punch-hole') {
-                    wheelCanvas.style.display = 'none';
-                    pointerAnimationEl.style.display = 'none';
-                    punchHoleAnimationEl.style.display = 'block';
-                    setupPunchHoleCards();
-                } else {
-                    // 未來其他模式的處理
-                    wheelCanvas.style.display = 'none';
-                    pointerAnimationEl.style.display = 'none';
-                    punchHoleAnimationEl.style.display = 'none';
-                    stopReelIdleAnimation();
-                }
-            }
-            
-            function setupPunchHoleCards() {
-                if (!punchHoleAnimationEl) return;
-                
-                // 清除所有卡片
-                punchHoleAnimationEl.querySelectorAll('.punch-card').forEach(card => card.remove());
-                punchHoleWinnerDisplayEl.textContent = '';
-                punchHoleWinnerDisplayEl.classList.remove('show');
-                
-                if (participants.length === 0) {
-                    return;
-                }
-                
-                // 重置狀態
-                punchHoleReady = true;
-                punchHoleWinnerSelected = false;
-                punchHoleWinner = null;
-                isPunchHoleShuffled = false;
-                
-                // 重置容器樣式
-                punchHoleAnimationEl.style.display = 'grid';
-                punchHoleAnimationEl.style.position = ''; // 清除 position 屬性
-                
-                // 創建卡片 - 初始時正面朝上，排列成磚牆
-                participants.forEach((participant, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'punch-card';
-                    card.dataset.channelId = participant.channelId;
-                    card.dataset.index = index;
-                    
-                    card.innerHTML = `
-                        <div class="punch-card-front">
-                            <img src="${participant.profileImageUrl}" alt="${participant.displayName}">
-                            <span>${participant.displayName}</span>
-                        </div>
-                        <div class="punch-card-back">
-                            <span class="card-number"></span>
-                        </div>
-                    `;
-                    
-                    punchHoleAnimationEl.appendChild(card);
-                });
-                
-                // 更新按鈕文字和指示
-                const buttonText = drawWinnerBtn.querySelector('.text');
-                if (buttonText) buttonText.textContent = '打亂卡片';
-                
-                document.querySelector('.punch-instruction').textContent = '請點擊「打亂卡片」開始抽獎';
-            }
-            
-            function shufflePunchHoleCards() {
-                if (!punchHoleReady || punchHoleWinnerSelected || isPunchHoleShuffled) return;
-                
-                // 禁用按鈕防止重複點擊
-                drawWinnerBtn.disabled = true;
-                
-                // 取得所有卡片
-                const cards = punchHoleAnimationEl.querySelectorAll('.punch-card');
-                const containerWidth = punchHoleAnimationEl.clientWidth;
-                const containerHeight = punchHoleAnimationEl.clientHeight;
-                
-                // 重要：保持網格布局，但將卡片設為絕對定位
-                // punchHoleAnimationEl.style.display = 'block'; // 移除這行，保持網格布局
-                
-                // 隨機打亂卡片順序
-                const cardsArray = Array.from(cards);
-                const parentNode = punchHoleAnimationEl;
-                
-                // 先記錄所有卡片的初始位置
-                const initialPositions = [];
-                cardsArray.forEach(card => {
-                    const rect = card.getBoundingClientRect();
-                    const parentRect = parentNode.getBoundingClientRect();
-                    initialPositions.push({
-                        top: rect.top - parentRect.top,
-                        left: rect.left - parentRect.left
-                    });
-                });
-                
-                // 設置容器樣式，允許絕對定位的卡片
-                punchHoleAnimationEl.style.position = 'relative';
-                
-                // 先將所有卡片變為絕對定位，準備動畫，但保持在原來的位置
-                cardsArray.forEach((card, index) => {
-                    const pos = initialPositions[index];
-                    card.style.position = 'absolute';
-                    card.style.top = `${pos.top}px`;
-                    card.style.left = `${pos.left}px`;
-                    card.style.margin = '0'; // 移除margin，因為現在使用絕對定位
-                    card.classList.add('shuffling');
-                });
-                
-                // 第一階段：先翻面（背面朝上）- 但不移動位置
-                setTimeout(() => {
-                    cardsArray.forEach(card => {
-                        // 只添加翻面效果，不改變位置
-                        card.classList.add('face-down');
-                    });
-                    
-                    // 確保卡片完全翻到背面後再開始打亂
+                if (!userId || !authToken) {
+                    loadingText.textContent = '您尚未登入，將為您導向登入頁面...';
                     setTimeout(() => {
-                        // 第二階段：直接打亂卡片（不集中到中心）
+                        window.location.href = `/member-login.html?redirect=${encodeURIComponent(window.location.href)}`;
+                    }, 2000);
+                    return;
+                }
+
+                try {
+                    loadingText.textContent = '正在驗證您的權限...';
+                    const userRoles = await apiFetch(`/api/box/users/${userId}/roles`);
+                    
+                    const hasAccess = userRoles.some(role => role.role_id > 1);
+
+                    if (hasAccess) {
+                        loadingOverlay.style.display = 'none';
+                        container.style.display = 'grid';
+                        userStatus.style.display = 'flex';
                         
-                        // 首先，創建一個網格位置的陣列
-                        const positions = [];
-                        const cardWidth = 120; // 卡片寬度，不包含margin
-                        const cardHeight = 150; // 卡片高度，不包含margin
-                        const cardMargin = 10; // 卡片之間的間距
-                        const effectiveCardWidth = cardWidth + cardMargin * 2;
-                        const effectiveCardHeight = cardHeight + cardMargin * 2;
-                        const cardsPerRow = Math.floor(containerWidth / effectiveCardWidth);
+                        const savedUserAvatarUrl = localStorage.getItem('boxCurrentUserAvatar');
+                        const savedUserName = localStorage.getItem('boxCurrentUsername');
+                        const savedDisplayName = localStorage.getItem('boxCurrentDisplayName') || savedUserName;
                         
-                        // 計算每個卡片可能的位置
-                        for (let i = 0; i < cardsArray.length; i++) {
-                            const row = Math.floor(i / cardsPerRow);
-                            const col = i % cardsPerRow;
-                            
-                            const left = (col * effectiveCardWidth) + (containerWidth - cardsPerRow * effectiveCardWidth) / 2 + cardMargin;
-                            const top = (row * effectiveCardHeight) + 20 + cardMargin;
-                            
-                            positions.push({ left, top });
-                        }
-                        
-                        // 打亂位置陣列
-                        for (let i = positions.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [positions[i], positions[j]] = [positions[j], positions[i]];
-                        }
-                        
-                        // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移
-                        cardsArray.forEach((card, index) => {
-                            // 使用初始位置作為基準
-                            const initialPos = initialPositions[index];
-                            
-                            // 隨機偏移量，但偏移範圍較小
-                            const offsetX = (Math.random() - 0.5) * 60;
-                            const offsetY = (Math.random() - 0.5) * 60;
-                            
-                            // 確保不超出容器
-                            const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, initialPos.left + offsetX));
-                            const newTop = Math.max(0, Math.min(containerHeight - cardHeight, initialPos.top + offsetY));
-                            
-                            // 直接設置新位置，不使用transform來移動
-                            card.style.left = `${newLeft}px`;
-                            card.style.top = `${newTop}px`;
-                            // 只使用transform來處理旋轉和翻面
-                            card.style.transform = `rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
+                        userStatusAvatar.src = savedUserAvatarUrl || '/images/a01girlmove.gif';
+                        userStatusName.textContent = savedDisplayName;
+                        userStatus.addEventListener('click', () => {
+                            window.location.href = `/member-editor.html?userId=${userId}`;
                         });
                         
-                        // 第二次隨機移動 - 更大幅度的移動
+                        initializeApp();
+                    } else {
+                        loadingText.textContent = '您的權限不足，將為您導向遊戲頁面...';
                         setTimeout(() => {
-                            cardsArray.forEach((card, index) => {
-                                // 獲取當前位置
-                                const currentLeft = parseFloat(card.style.left);
-                                const currentTop = parseFloat(card.style.top);
+                            window.location.href = '/games.html';
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error("Authorization check failed:", error);
+                    loadingText.textContent = `權限驗證失敗。將為您導向遊戲頁面...`;
+                    setTimeout(() => {
+                        window.location.href = '/games.html';
+                    }, 3000);
+                }
+            }
+            
+            function initializeApp() {
+                const videoIdEl = document.getElementById('video-id');
+                const keywordEl = document.getElementById('lottery-keyword');
+                const apiRateInput = document.getElementById('api-rate-limit');
+                const setVideoBtn = null; // 原按鈕已移除
+                const stopMonitoringBtn = null; // 原按鈕已移除
+                const monitoringVideoIdEl = document.getElementById('monitoring-video-id');
+                const participantsListEl = document.getElementById('participants-list');
+                const participantsCountEl = document.getElementById('participants-count');
+                const drawWinnerBtn = document.getElementById('draw-winner-btn');
+                const animationModeEl = document.getElementById('animation-mode');
+                const durationEl = document.getElementById('animation-duration');
+                const animationContainer = document.getElementById('animation-container');
+                const defaultAnimation = document.getElementById('default-animation');
+                const winnerDisplayEl = document.getElementById('winner-display');
+                const winnerAvatarEl = document.getElementById('winner-avatar');
+                const winnerNameEl = document.getElementById('winner-name');
+                const confettiCanvas = document.getElementById('confetti-canvas');
+                const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
+                const wheelCanvas = document.getElementById('wheel-canvas');
+                const wheelCtx = wheelCanvas.getContext('2d');
+                const pointerAnimationEl = document.getElementById('pointer-animation');
+                const participantsReelEl = document.getElementById('participants-reel');
+                const punchHoleAnimationEl = document.getElementById('punch-hole-animation');
+                const punchHoleWinnerDisplayEl = document.getElementById('punch-hole-winner-display');
+                const monitoringToggle = document.getElementById('checkbox');
+                const toggleStatusEl = document.querySelector('.toggle-status');
+
+                const myConfetti = confetti.create(confettiCanvas, {
+                    resize: true,
+                    useWorker: true
+                });
+
+                let currentRotation = 0;
+                let isSpinning = false;
+                let angularVelocity = 0;
+                const FRICTION = 0.995; // 摩擦力係數，確保輪盤最終會停下
+                let selectedWinner = null;
+                let updateTimer = null;
+                let participants = []; // 在記憶體中保存參與者列表，避免重複讀取
+                let winnerText = ''; // 用於在畫布中心顯示中獎者名字
+
+                // Pointer animation state
+                let isReelSpinning = false;
+                let reelVelocity = 0;
+                let reelPosition = 0;
+                let reelAnimationId = null;
+                const REEL_FRICTION = 0.988; // 摩擦力, 數值越小停越快
+                const IDLE_SPEED = 60; // 待機時的滾動速度 (已提高)
+                let idleAnimationId = null;
+                let pointerWinnerDecided = false;
+                let punchHoleReady = false;
+                let punchHoleWinnerSelected = false;
+                let punchHoleWinner = null;
+                let isPunchHoleShuffled = false;
+
+                function drawWheel() {
+                    if (!wheelCanvas || !defaultAnimation) return;
+
+                    const totalParticipants = participants.length;
+                        
+                    if (totalParticipants === 0) {
+                        wheelCanvas.style.display = 'none';
+                        defaultAnimation.style.display = 'block';
+                        defaultAnimation.textContent = '監控中...等待參與者加入';
+                        return;
+                    }
+
+                    wheelCanvas.style.display = 'block';
+                    defaultAnimation.style.display = 'none';
+
+                    const centerX = wheelCanvas.width / 2;
+                    const centerY = wheelCanvas.height / 2;
+                    const radius = Math.min(centerX, centerY) - 20;
+
+                    wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+
+                    wheelCtx.save();
+                    wheelCtx.translate(centerX, centerY);
+                    
+                    // 為了簡化角度計算，我們讓指針指向 3 點鐘方向，並旋轉輪盤
+                    wheelCtx.rotate(currentRotation);
+
+                    const sliceAngle = (2 * Math.PI) / totalParticipants;
+                    participants.forEach((p, index) => {
+                        const startAngle = index * sliceAngle;
+                        const endAngle = startAngle + sliceAngle;
+
+                        // Draw slice
+                        wheelCtx.beginPath();
+                        wheelCtx.moveTo(0, 0);
+                        wheelCtx.arc(0, 0, radius, startAngle, endAngle);
+                        wheelCtx.closePath();
+                        wheelCtx.fillStyle = `hsl(${(360 / totalParticipants) * index}, 70%, 60%)`;
+                        wheelCtx.fill();
+                        wheelCtx.stroke();
+
+                        // Draw text
+                        wheelCtx.save();
+                        wheelCtx.rotate(startAngle + sliceAngle / 2);
+                        wheelCtx.textAlign = 'right';
+                        wheelCtx.fillStyle = 'white';
+                        wheelCtx.font = '14px Arial';
+                        const displayName = p.displayName.length > 10 ? p.displayName.substring(0, 10) + '...' : p.displayName;
+                        wheelCtx.fillText(displayName, radius - 10, 5);
+                        wheelCtx.restore();
+                    });
+
+                    wheelCtx.restore();
+
+                    // 將指針畫在 12 點鐘方向（頂部），保持靜止
+                    wheelCtx.save();
+                    wheelCtx.translate(centerX, centerY - radius - 20); // 移到輪盤正上方
+                    wheelCtx.fillStyle = '#ff4757';
+                    
+                    wheelCtx.beginPath();
+                    wheelCtx.moveTo(0, 20); // 指針尖端指向輪盤邊緣
+                    wheelCtx.lineTo(-10, 0);
+                    wheelCtx.lineTo(10, 0);
+                    wheelCtx.closePath();
+                    wheelCtx.fill();
+                    wheelCtx.restore();
+
+                    // 如果輪盤已停止且有中獎者，在中間顯示名字
+                    if (!isSpinning && winnerText) {
+                        wheelCtx.save();
+                        wheelCtx.font = 'bold 40px ' + getComputedStyle(document.body).fontFamily;
+                        wheelCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+                        wheelCtx.textAlign = 'center';
+                        wheelCtx.textBaseline = 'middle';
+                        wheelCtx.shadowColor = 'black';
+                        wheelCtx.shadowBlur = 10;
+                        wheelCtx.shadowOffsetX = 2;
+                        wheelCtx.shadowOffsetY = 2;
+                        const displayName = winnerText.length > 10 ? winnerText.substring(0, 10) + '...' : winnerText;
+                        wheelCtx.fillText(displayName, centerX, centerY);
+                        wheelCtx.restore();
+                    }
+                }
+                
+                function startSpin() {
+                    if (isSpinning) return;
+                    if (participants.length < 2) {
+                        alert('需要至少兩位參與者才能開始轉盤抽獎！');
+                        return;
+                    }
+                    winnerText = ''; // 清除上一位中獎者名字
+                    isSpinning = true;
+                    // 給予一個隨機的初始速度 (弧度/幀)
+                    angularVelocity = (Math.random() * 0.2) + 0.4;
+                    requestAnimationFrame(animate);
+                }
+
+                function animate() {
+                    if (!isSpinning) return;
+
+                    currentRotation += angularVelocity;
+                    angularVelocity *= FRICTION; // 應用摩擦力使其減速
+
+                    drawWheel();
+
+                    // 當速度小於一個閾值時，停止動畫
+                    if (angularVelocity < 0.001) {
+                        isSpinning = false;
+                        angularVelocity = 0;
+                        drawWheel(); // 畫最後一幀確保位置精確
+                        determineWinnerFromAngle();
+                    } else {
+                        requestAnimationFrame(animate);
+                    }
+                }
+                
+                function determineWinnerFromAngle() {
+                    const totalParticipants = participants.length;
+                    if (totalParticipants === 0) return;
+
+                    const sliceAngle = (2 * Math.PI) / totalParticipants;
+                    
+                    // 指針在 12 點鐘方向 (3*PI/2)，我們以此為基準計算
+                    const pointerAngle = 3 * Math.PI / 2;
+                    const finalAngle = currentRotation % (2 * Math.PI);
+                    const targetAngle = (2 * Math.PI - finalAngle + pointerAngle) % (2 * Math.PI);
+                    const winnerIndex = Math.floor(targetAngle / sliceAngle);
+
+                    const winner = participants[winnerIndex];
+                    if (winner) {
+                        selectedWinner = winner;
+                        winnerText = winner.displayName; // 設定要顯示的文字
+                        highlightWinner(winner);
+                        // showWinner(winner); // 不再彈出卡片
+                        myConfetti({
+                            particleCount: 150,
+                            spread: 90,
+                            origin: { y: 0.6 }
+                        });
+                        drawWheel(); // 重新繪製以立即顯示名字
+                    }
+                }
+
+                function highlightWinner(winner) {
+                    const participantsList = participantsListEl.querySelectorAll('li');
+                    participantsList.forEach(li => {
+                        li.classList.remove('winner-highlight');
+                        if (li.querySelector('span').textContent.includes(winner.displayName)) {
+                            li.classList.add('winner-highlight');
+                            li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                }
+
+                function buildParticipantsReel() {
+                    if (!participantsReelEl) return;
+                    participantsReelEl.innerHTML = '';
+                    participantsReelEl.style.transition = 'none';
+                    participantsReelEl.style.transform = 'translateX(0px)';
+
+                    if (participants.length === 0) {
+                        stopReelIdleAnimation();
+                        return;
+                    }
+
+                    // 為了製造無限滾動的感覺，我們複製參與者列表
+                    const reelParticipants = [];
+                    const repeatCount = Math.max(5, Math.ceil(40 / participants.length));
+                    for(let i = 0; i < repeatCount; i++) {
+                        reelParticipants.push(...participants);
+                    }
+                    
+                    reelParticipants.forEach(p => {
+                        const card = document.createElement('div');
+                        card.className = 'reel-participant-card';
+                        card.dataset.channelId = p.channelId;
+                        card.innerHTML = `
+                            <img src="${p.profileImageUrl}" alt="${p.displayName}">
+                            <span>${p.displayName.substring(0, 12)}</span>
+                        `;
+                        participantsReelEl.appendChild(card);
+                    });
+
+                    startReelIdleAnimation();
+                }
+
+                function startReelIdleAnimation() {
+                    stopReelIdleAnimation(); // 確保只有一個動畫在跑
+
+                    let lastTime = null;
+                    function idleAnimate(time) {
+                        if (!lastTime) {
+                            lastTime = time;
+                            idleAnimationId = requestAnimationFrame(idleAnimate);
+                            return;
+                        }
+                        const deltaTime = time - lastTime;
+                        lastTime = time;
+
+                        reelPosition -= IDLE_SPEED * (deltaTime / 16); // 標準化到 60fps
+                        
+                        const cardWidth = 120 + 20; // card width + margin
+                        const loopWidth = cardWidth * participants.length;
+                        if (reelPosition < -loopWidth) {
+                            reelPosition += loopWidth;
+                        }
+                        participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
+
+                        idleAnimationId = requestAnimationFrame(idleAnimate);
+                    }
+                    idleAnimationId = requestAnimationFrame(idleAnimate);
+                }
+
+                function stopReelIdleAnimation() {
+                    if (idleAnimationId) {
+                        cancelAnimationFrame(idleAnimationId);
+                        idleAnimationId = null;
+                    }
+                }
+
+                function startPointerLottery() {
+                    if (isReelSpinning) return;
+                    if (participants.length < 2) {
+                        alert('需要至少兩位參與者才能開始抽獎！');
+                        return;
+                    }
+                    stopReelIdleAnimation();
+                    isReelSpinning = true;
+                    // 給予一個隨機的初始速度 (像素/幀)，增加速度以獲得拉霸機的感覺
+                    reelVelocity = (Math.random() * 20) + 55;
+                    
+                    if (reelAnimationId) {
+                        cancelAnimationFrame(reelAnimationId);
+                    }
+                    animateReel();
+                }
+
+                function animateReel() {
+                    reelPosition -= reelVelocity;
+                    reelVelocity *= REEL_FRICTION; // 應用摩擦力
+
+                    const cardWidth = 120 + 20;
+                    const totalReelWidth = cardWidth * participants.length * Math.floor(participantsReelEl.children.length / participants.length);
+                    const loopWidth = cardWidth * participants.length;
+
+                    // 為了循環效果，重置位置
+                    if(reelPosition < -loopWidth * 2) {
+                        reelPosition += loopWidth;
+                    }
+
+                    participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
+
+                    if (reelVelocity < 0.05) {
+                        isReelSpinning = false;
+                        cancelAnimationFrame(reelAnimationId);
+                        reelAnimationId = null;
+                        determinePointerWinner();
+                    } else {
+                        reelAnimationId = requestAnimationFrame(animateReel);
+                    }
+                }
+                
+                function determinePointerWinner() {
+                    const pointerLine = pointerAnimationEl.getBoundingClientRect().left + (pointerAnimationEl.offsetWidth / 2);
+                    const cards = participantsReelEl.querySelectorAll('.reel-participant-card');
+                    
+                    let winnerCard = null;
+                    let minDistance = Infinity;
+
+                    cards.forEach(card => {
+                        const cardRect = card.getBoundingClientRect();
+                        const cardCenter = cardRect.left + (cardRect.width / 2);
+                        const distance = Math.abs(pointerLine - cardCenter);
+                        
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            winnerCard = card;
+                        }
+                    });
+
+                    if (winnerCard) {
+                        const winnerChannelId = winnerCard.dataset.channelId;
+                        const winner = participants.find(p => p.channelId === winnerChannelId);
+                        if(winner){
+                            pointerWinnerDecided = true;
+                            selectedWinner = winner;
+                            highlightWinner(winner);
+                            myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
+                            
+                            // 平滑地將中獎者卡片對齊到指針
+                            const cardRect = winnerCard.getBoundingClientRect();
+                            const cardCenter = cardRect.left + (cardRect.width / 2);
+                            const offset = pointerLine - cardCenter;
+                            
+                            const currentTransform = new DOMMatrix(getComputedStyle(participantsReelEl).transform);
+                            const currentX = currentTransform.m41;
+                            
+                            participantsReelEl.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+                            participantsReelEl.style.transform = `translateX(${currentX + offset}px)`;
+
+                            // 在中間顯示中獎者名字
+                            const winnerDisplay = document.getElementById('pointer-winner-display');
+                            if (winnerDisplay) {
+                                winnerDisplay.textContent = winner.displayName;
+                                winnerDisplay.style.display = 'block';
+                            }
+                            
+                            // 更改按鈕文字，提示可以重設
+                            const buttonText = drawWinnerBtn.querySelector('.text');
+                            if (buttonText) buttonText.textContent = '重設/再抽一次';
+
+                        } else {
+                            startReelIdleAnimation();
+                        }
+                    } else {
+                        startReelIdleAnimation();
+                    }
+                }
+
+                function resetPointerAnimation() {
+                    pointerWinnerDecided = false;
+                    
+                    const winnerDisplay = document.getElementById('pointer-winner-display');
+                    if (winnerDisplay) {
+                        winnerDisplay.style.display = 'none';
+                    }
+
+                    const buttonText = drawWinnerBtn.querySelector('.text');
+                    if (buttonText) buttonText.textContent = '立即抽獎';
+
+                    const participantsList = participantsListEl.querySelectorAll('li');
+                    participantsList.forEach(li => {
+                        li.classList.remove('winner-highlight');
+                    });
+                    
+                    // 重設捲軸的 transform transition
+                    participantsReelEl.style.transition = 'none';
+
+                    startReelIdleAnimation();
+                }
+
+                async function fetchParticipants() {
+                    try {
+                        const response = await fetch('/api/admin/lottery/participants');
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            throw new Error(data.error || '無法獲取參與者');
+                        }
+                        
+                        if (data.participants) {
+                            updateParticipantsList(data.participants);
+                            if (data.participants.length === 0) {
+                                if (defaultAnimation) {
+                                    defaultAnimation.textContent = '監控中...等待參與者加入';
+                                }
+                            }
+                        } else {
+                            throw new Error('參與者資料格式錯誤');
+                        }
+                    } catch (error) {
+                        console.error('Error fetching participants:', error);
+                        if (defaultAnimation) {
+                            defaultAnimation.textContent = '更新參與者名單失敗';
+                        }
+                    }
+                }
+
+                function startAutoUpdate() {
+                    if (updateTimer) {
+                        clearInterval(updateTimer);
+                    }
+                    
+                    fetchParticipants();
+                    
+                    const interval = parseInt(apiRateInput.value, 10) * 1000;
+                    updateTimer = setInterval(fetchParticipants, interval);
+
+                    // 更新狀態顯示
+                    toggleStatusEl.textContent = '系統狀態: 監控中';
+                    toggleStatusEl.style.color = '#50fa7b'; // 綠色
+                }
+
+                function stopAutoUpdate() {
+                    if (updateTimer) {
+                        clearInterval(updateTimer);
+                        updateTimer = null;
+                    }
+
+                    // 更新狀態顯示
+                    toggleStatusEl.textContent = '系統狀態: 停止中';
+                    toggleStatusEl.style.color = '#ff5555'; // 紅色
+                }
+
+                function updateParticipantsList(participantsData) {
+                    if (!participantsListEl || !participantsCountEl) return;
+
+                    participants = participantsData; // 更新全局參與者陣列
+                    participantsListEl.innerHTML = '';
+                    participantsCountEl.textContent = `目前參與人數：${participants.length} 人`;
+
+                    participants.forEach((participant, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'participant';
+                        // 將 channelId 存儲在 data 屬性中
+                        li.dataset.channelId = participant.channelId;
+                        li.innerHTML = `
+                            <img src="${participant.profileImageUrl}" alt="${participant.displayName}" class="participant-avatar">
+                            <span>${participant.displayName}</span>
+                            <button class="delete-btn">刪除</button>
+                        `;
+
+                        // 點擊參與者列表項目時的處理
+                        li.addEventListener('click', (e) => {
+                            // 如果點擊的是刪除按鈕，不切換選中狀態
+                            if (e.target.classList.contains('delete-btn')) {
+                                return;
+                            }
+                            li.classList.toggle('selected');
+                        });
+
+                        // 刪除按鈕的點擊處理
+                        const deleteBtn = li.querySelector('.delete-btn');
+                        deleteBtn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`確定要刪除參與者 "${participant.displayName}" 嗎？`)) {
+                                try {
+                                    // 使用 data-channel-id 來獲取正確的 channelId
+                                    const channelId = li.dataset.channelId;
+                                    const response = await fetch('/api/admin/lottery/remove-participant', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ channelId })
+                                    });
+
+                                    const result = await response.json();
+                                    if (!response.ok) throw new Error(result.error || '刪除失敗');
+
+                                    // 刪除成功後，重新從伺服器獲取最新的參與者列表
+                                    // 這樣可以確保前後端狀態一致，並自動更新UI和轉盤
+                                    fetchParticipants();
+                                    alert(`參與者 "${participant.displayName}" 已成功刪除。`);
+                                } catch (error) {
+                                    console.error('Error removing participant:', error);
+                                    alert(`刪除失敗: ${error.message}`);
+                                }
+                            }
+                        });
+
+                        participantsListEl.appendChild(li);
+                    });
+                    
+                    // 更新動畫視圖
+                    setupAnimationView(animationModeEl.value);
+                }
+                
+                function setupAnimationView(mode) {
+                    if (participants.length === 0) {
+                        wheelCanvas.style.display = 'none';
+                        pointerAnimationEl.style.display = 'none';
+                        punchHoleAnimationEl.style.display = 'none';
+                        defaultAnimation.style.display = 'block';
+                        defaultAnimation.textContent = '監控中...等待參與者加入';
+                        stopReelIdleAnimation();
+                        return;
+                    }
+                    
+                    defaultAnimation.style.display = 'none';
+
+                    if (mode === 'turntable') {
+                        wheelCanvas.style.display = 'block';
+                        pointerAnimationEl.style.display = 'none';
+                        punchHoleAnimationEl.style.display = 'none';
+                        stopReelIdleAnimation();
+                        drawWheel();
+                    } else if (mode === 'pointer') {
+                        wheelCanvas.style.display = 'none';
+                        pointerAnimationEl.style.display = 'block';
+                        punchHoleAnimationEl.style.display = 'none';
+                        buildParticipantsReel();
+                    } else if (mode === 'punch-hole') {
+                        wheelCanvas.style.display = 'none';
+                        pointerAnimationEl.style.display = 'none';
+                        punchHoleAnimationEl.style.display = 'block';
+                        setupPunchHoleCards();
+                    } else {
+                        // 未來其他模式的處理
+                        wheelCanvas.style.display = 'none';
+                        pointerAnimationEl.style.display = 'none';
+                        punchHoleAnimationEl.style.display = 'none';
+                        stopReelIdleAnimation();
+                    }
+                }
+                
+                function setupPunchHoleCards() {
+                    if (!punchHoleAnimationEl) return;
+                    
+                    // 清除所有卡片
+                    punchHoleAnimationEl.querySelectorAll('.punch-card').forEach(card => card.remove());
+                    punchHoleWinnerDisplayEl.textContent = '';
+                    punchHoleWinnerDisplayEl.classList.remove('show');
+                    
+                    if (participants.length === 0) {
+                        return;
+                    }
+                    
+                    // 重置狀態
+                    punchHoleReady = true;
+                    punchHoleWinnerSelected = false;
+                    punchHoleWinner = null;
+                    isPunchHoleShuffled = false;
+                    
+                    // 重置容器樣式
+                    punchHoleAnimationEl.style.display = 'grid';
+                    punchHoleAnimationEl.style.position = ''; // 清除 position 屬性
+                    
+                    // 創建卡片 - 初始時正面朝上，排列成磚牆
+                    participants.forEach((participant, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'punch-card';
+                        card.dataset.channelId = participant.channelId;
+                        card.dataset.index = index;
+                        
+                        card.innerHTML = `
+                            <div class="punch-card-front">
+                                <img src="${participant.profileImageUrl}" alt="${participant.displayName}">
+                                <span>${participant.displayName}</span>
+                            </div>
+                            <div class="punch-card-back">
+                                <span class="card-number"></span>
+                            </div>
+                        `;
+                        
+                        punchHoleAnimationEl.appendChild(card);
+                    });
+                    
+                    // 更新按鈕文字和指示
+                    const buttonText = drawWinnerBtn.querySelector('.text');
+                    if (buttonText) buttonText.textContent = '打亂卡片';
+                    
+                    document.querySelector('.punch-instruction').textContent = '請點擊「打亂卡片」開始抽獎';
+                }
+                
+                function shufflePunchHoleCards() {
+                    if (!punchHoleReady || punchHoleWinnerSelected || isPunchHoleShuffled) return;
+                    
+                    // 禁用按鈕防止重複點擊
+                    drawWinnerBtn.disabled = true;
+                    
+                    // 取得所有卡片
+                    const cards = punchHoleAnimationEl.querySelectorAll('.punch-card');
+                    const containerWidth = punchHoleAnimationEl.clientWidth;
+                    const containerHeight = punchHoleAnimationEl.clientHeight;
+                    
+                    // 重要：保持網格布局，但將卡片設為絕對定位
+                    // punchHoleAnimationEl.style.display = 'block'; // 移除這行，保持網格布局
+                    
+                    // 隨機打亂卡片順序
+                    const cardsArray = Array.from(cards);
+                    const parentNode = punchHoleAnimationEl;
+                    
+                    // 先記錄所有卡片的初始位置
+                    const initialPositions = [];
+                    cardsArray.forEach(card => {
+                        const rect = card.getBoundingClientRect();
+                        const parentRect = parentNode.getBoundingClientRect();
+                        initialPositions.push({
+                            top: rect.top - parentRect.top,
+                            left: rect.left - parentRect.left
+                        });
+                    });
+                    
+                    // 設置容器樣式，允許絕對定位的卡片
+                    punchHoleAnimationEl.style.position = 'relative';
+                    
+                    // 先將所有卡片變為絕對定位，準備動畫，但保持在原來的位置
+                    cardsArray.forEach((card, index) => {
+                        const pos = initialPositions[index];
+                        card.style.position = 'absolute';
+                        card.style.top = `${pos.top}px`;
+                        card.style.left = `${pos.left}px`;
+                        card.style.margin = '0'; // 移除margin，因為現在使用絕對定位
+                        card.classList.add('shuffling');
+                    });
+                    
+                    // 第一階段：先翻面（背面朝上）- 但不移動位置
+                    setTimeout(() => {
+                        cardsArray.forEach(card => {
+                            // 只添加翻面效果，不改變位置
+                            card.classList.add('face-down');
+                        });
+                        
+                        // 確保卡片完全翻到背面後再開始打亂
+                        setTimeout(() => {
+                            // 第二階段：直接打亂卡片（不集中到中心）
+                            
+                            // 首先，創建一個網格位置的陣列
+                            const positions = [];
+                            const cardWidth = 120; // 卡片寬度，不包含margin
+                            const cardHeight = 150; // 卡片高度，不包含margin
+                            const cardMargin = 10; // 卡片之間的間距
+                            const effectiveCardWidth = cardWidth + cardMargin * 2;
+                            const effectiveCardHeight = cardHeight + cardMargin * 2;
+                            const cardsPerRow = Math.floor(containerWidth / effectiveCardWidth);
+                            
+                            // 計算每個卡片可能的位置
+                            for (let i = 0; i < cardsArray.length; i++) {
+                                const row = Math.floor(i / cardsPerRow);
+                                const col = i % cardsPerRow;
                                 
-                                // 更大的隨機偏移
-                                const offsetX = (Math.random() - 0.5) * 120;
-                                const offsetY = (Math.random() - 0.5) * 120;
+                                const left = (col * effectiveCardWidth) + (containerWidth - cardsPerRow * effectiveCardWidth) / 2 + cardMargin;
+                                const top = (row * effectiveCardHeight) + 20 + cardMargin;
+                                
+                                positions.push({ left, top });
+                            }
+                            
+                            // 打亂位置陣列
+                            for (let i = positions.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [positions[i], positions[j]] = [positions[j], positions[i]];
+                            }
+                            
+                            // 第一次隨機移動 - 讓卡片在原位置附近隨機偏移
+                            cardsArray.forEach((card, index) => {
+                                // 使用初始位置作為基準
+                                const initialPos = initialPositions[index];
+                                
+                                // 隨機偏移量，但偏移範圍較小
+                                const offsetX = (Math.random() - 0.5) * 60;
+                                const offsetY = (Math.random() - 0.5) * 60;
                                 
                                 // 確保不超出容器
-                                const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
-                                const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
+                                const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, initialPos.left + offsetX));
+                                const newTop = Math.max(0, Math.min(containerHeight - cardHeight, initialPos.top + offsetY));
                                 
-                                // 直接設置新位置
+                                // 直接設置新位置，不使用transform來移動
                                 card.style.left = `${newLeft}px`;
                                 card.style.top = `${newTop}px`;
                                 // 只使用transform來處理旋轉和翻面
-                                card.style.transform = `rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
+                                card.style.transform = `rotate(${Math.random() * 20 - 10}deg) rotateY(180deg)`;
                             });
                             
-                            // 第三階段：最終排列成網格
+                            // 第二次隨機移動 - 更大幅度的移動
                             setTimeout(() => {
-                                // 將卡片移動到最終位置
                                 cardsArray.forEach((card, index) => {
-                                    const position = positions[index];
+                                    // 獲取當前位置
+                                    const currentLeft = parseFloat(card.style.left);
+                                    const currentTop = parseFloat(card.style.top);
                                     
-                                    // 直接設置最終位置
-                                    card.style.left = `${position.left}px`;
-                                    card.style.top = `${position.top}px`;
-                                    // 保持卡片背面朝上，但旋轉角度恢復正常
-                                    card.style.transform = `rotate(0deg) rotateY(180deg)`;
+                                    // 更大的隨機偏移
+                                    const offsetX = (Math.random() - 0.5) * 120;
+                                    const offsetY = (Math.random() - 0.5) * 120;
+                                    
+                                    // 確保不超出容器
+                                    const newLeft = Math.max(0, Math.min(containerWidth - cardWidth, currentLeft + offsetX));
+                                    const newTop = Math.max(0, Math.min(containerHeight - cardHeight, currentTop + offsetY));
+                                    
+                                    // 直接設置新位置
+                                    card.style.left = `${newLeft}px`;
+                                    card.style.top = `${newTop}px`;
+                                    // 只使用transform來處理旋轉和翻面
+                                    card.style.transform = `rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
                                 });
                                 
-                                // 為所有卡片添加點擊事件並分配數字
+                                // 第三階段：最終排列成網格
                                 setTimeout(() => {
-                                    // 根據視覺位置排序卡片，以便分配正確的編號
-                                    const sortedCards = cardsArray.sort((a, b) => {
-                                        const topA = parseFloat(a.style.top);
-                                        const topB = parseFloat(b.style.top);
-                                        if (Math.abs(topA - topB) > 10) { // 如果垂直位置差異大於一個閾值
-                                            return topA - topB;
-                                        }
-                                        return parseFloat(a.style.left) - parseFloat(b.style.left);
-                                    });
-
-                                    sortedCards.forEach((card, index) => {
-                                        const numberEl = card.querySelector('.card-number');
-                                        if (numberEl) {
-                                            numberEl.textContent = index + 1;
-                                        }
+                                    // 將卡片移動到最終位置
+                                    cardsArray.forEach((card, index) => {
+                                        const position = positions[index];
                                         
-                                        // 確保卡片仍然是背面朝上
-                                        if (!card.classList.contains('face-down')) {
-                                            card.classList.add('face-down');
-                                        }
-                                        card.addEventListener('click', handlePunchCardClick);
+                                        // 直接設置最終位置
+                                        card.style.left = `${position.left}px`;
+                                        card.style.top = `${position.top}px`;
+                                        // 保持卡片背面朝上，但旋轉角度恢復正常
+                                        card.style.transform = `rotate(0deg) rotateY(180deg)`;
                                     });
                                     
-                                    // 更新狀態和提示
-                                    isPunchHoleShuffled = true;
-                                    document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
-                                    
-                                    // 更新按鈕文字
-                                    const buttonText = drawWinnerBtn.querySelector('.text');
-                                    if (buttonText) buttonText.textContent = '重新發牌';
-                                    
-                                    // 重新啟用按鈕
-                                    drawWinnerBtn.disabled = false;
+                                    // 為所有卡片添加點擊事件並分配數字
+                                    setTimeout(() => {
+                                        // 根據視覺位置排序卡片，以便分配正確的編號
+                                        const sortedCards = cardsArray.sort((a, b) => {
+                                            const topA = parseFloat(a.style.top);
+                                            const topB = parseFloat(b.style.top);
+                                            if (Math.abs(topA - topB) > 10) { // 如果垂直位置差異大於一個閾值
+                                                return topA - topB;
+                                            }
+                                            return parseFloat(a.style.left) - parseFloat(b.style.left);
+                                        });
+
+                                        sortedCards.forEach((card, index) => {
+                                            const numberEl = card.querySelector('.card-number');
+                                            if (numberEl) {
+                                                numberEl.textContent = index + 1;
+                                            }
+                                            
+                                            // 確保卡片仍然是背面朝上
+                                            if (!card.classList.contains('face-down')) {
+                                                card.classList.add('face-down');
+                                            }
+                                            card.addEventListener('click', handlePunchCardClick);
+                                        });
+                                        
+                                        // 更新狀態和提示
+                                        isPunchHoleShuffled = true;
+                                        document.querySelector('.punch-instruction').textContent = '請選擇一張卡片揭曉中獎者';
+                                        
+                                        // 更新按鈕文字
+                                        const buttonText = drawWinnerBtn.querySelector('.text');
+                                        if (buttonText) buttonText.textContent = '重新發牌';
+                                        
+                                        // 重新啟用按鈕
+                                        drawWinnerBtn.disabled = false;
+                                    }, 800);
                                 }, 800);
-                            }, 800);
-                        }, 400);
-                    }, 200); // 添加小延遲確保翻面完成
-                }, 50);
-            }
-            
-            function handlePunchCardClick(e) {
-                if (!punchHoleReady || punchHoleWinnerSelected || !isPunchHoleShuffled) return;
+                            }, 400);
+                        }, 200); // 添加小延遲確保翻面完成
+                    }, 50);
+                }
                 
-                const card = e.currentTarget;
-                if (card.classList.contains('selected')) return;
-                
-                // 選擇了這張卡片作為中獎者
-                card.classList.add('selected');
-                card.classList.remove('face-down');
-                
-                punchHoleWinnerSelected = true;
-                
-                // 獲取中獎者資訊
-                const channelId = card.dataset.channelId;
-                const winner = participants.find(p => p.channelId === channelId);
-                
-                if (winner) {
-                    punchHoleWinner = winner;
-                    selectedWinner = winner;
-                    highlightWinner(winner);
+                function handlePunchCardClick(e) {
+                    if (!punchHoleReady || punchHoleWinnerSelected || !isPunchHoleShuffled) return;
                     
-                    // 標記卡片為中獎，並放大顯示
-                    setTimeout(() => {
-                        card.classList.add('winner');
-                    }, 500);
+                    const card = e.currentTarget;
+                    if (card.classList.contains('selected')) return;
                     
-                    // 顯示中獎提示
-                    punchHoleWinnerDisplayEl.textContent = `🎉 恭喜 ${winner.displayName} 中獎！`;
-                    punchHoleWinnerDisplayEl.classList.add('show');
+                    // 選擇了這張卡片作為中獎者
+                    card.classList.add('selected');
+                    card.classList.remove('face-down');
                     
-                    // 更新指示文字
-                    document.querySelector('.punch-instruction').textContent = '已選出中獎者，點擊「重新發牌」開始新一輪抽獎';
+                    punchHoleWinnerSelected = true;
                     
-                    // 播放慶祝特效
-                    myConfetti({
-                        particleCount: 150,
-                        spread: 90,
-                        origin: { y: 0.6 }
+                    // 獲取中獎者資訊
+                    const channelId = card.dataset.channelId;
+                    const winner = participants.find(p => p.channelId === channelId);
+                    
+                    if (winner) {
+                        punchHoleWinner = winner;
+                        selectedWinner = winner;
+                        highlightWinner(winner);
+                        
+                        // 標記卡片為中獎，並放大顯示
+                        setTimeout(() => {
+                            card.classList.add('winner');
+                        }, 500);
+                        
+                        // 顯示中獎提示
+                        punchHoleWinnerDisplayEl.textContent = `🎉 恭喜 ${winner.displayName} 中獎！`;
+                        punchHoleWinnerDisplayEl.classList.add('show');
+                        
+                        // 更新指示文字
+                        document.querySelector('.punch-instruction').textContent = '已選出中獎者，點擊「重新發牌」開始新一輪抽獎';
+                        
+                        // 播放慶祝特效
+                        myConfetti({
+                            particleCount: 150,
+                            spread: 90,
+                            origin: { y: 0.6 }
+                        });
+                    }
+                    
+                    // 防止繼續點擊其他卡片
+                    punchHoleAnimationEl.querySelectorAll('.punch-card:not(.selected)').forEach(otherCard => {
+                        otherCard.removeEventListener('click', handlePunchCardClick);
+                        otherCard.style.opacity = '0.5';
+                        otherCard.style.cursor = 'default';
                     });
                 }
                 
-                // 防止繼續點擊其他卡片
-                punchHoleAnimationEl.querySelectorAll('.punch-card:not(.selected)').forEach(otherCard => {
-                    otherCard.removeEventListener('click', handlePunchCardClick);
-                    otherCard.style.opacity = '0.5';
-                    otherCard.style.cursor = 'default';
-                });
-            }
-            
-            function resetPunchHoleAnimation() {
-                punchHoleReady = false;
-                punchHoleWinnerSelected = false;
-                punchHoleWinner = null;
-                isPunchHoleShuffled = false;
-                
-                // 清除高亮
-                const participantsList = participantsListEl.querySelectorAll('li');
-                participantsList.forEach(li => {
-                    li.classList.remove('winner-highlight');
-                });
-                
-                // 重新設置
-                setupPunchHoleCards();
-            }
-
-            function showTemporaryAnimation(participants, callback) {
-                animationContainer.style.display = 'block';
-                winnerDisplayEl.style.display = 'none';
-                
-                if (participants.length === 0) {
-                    animationContainer.textContent = '沒有參與者!';
-                    return;
-                }
-                
-                let animationInterval = setInterval(() => {
-                    const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
-                    animationContainer.innerHTML = `
-                        <img src="${randomParticipant.profileImageUrl}" style="width: 80px; height: 80px; border-radius: 50%; margin-right: 20px;">
-                        <span>${randomParticipant.displayName}</span>
-                    `;
-                }, 100);
-
-                setTimeout(() => {
-                    clearInterval(animationInterval);
-                    callback();
-                }, 5000);
-            }
-
-            function showWinner(winner) {
-                const winnerDisplay = document.getElementById('winner-display');
-                const winnerAvatar = document.getElementById('winner-avatar');
-                const winnerName = document.getElementById('winner-name');
-                
-                winnerAvatar.src = winner.profileImageUrl;
-                winnerName.textContent = winner.displayName;
-                winnerDisplay.classList.add('show');
-
-                const closeBtn = winnerDisplay.querySelector('.close-winner');
-                if (closeBtn) {
-                    closeBtn.onclick = () => {
-                        winnerDisplay.classList.remove('show');
-                    };
+                function resetPunchHoleAnimation() {
+                    punchHoleReady = false;
+                    punchHoleWinnerSelected = false;
+                    punchHoleWinner = null;
+                    isPunchHoleShuffled = false;
+                    
+                    // 清除高亮
+                    const participantsList = participantsListEl.querySelectorAll('li');
+                    participantsList.forEach(li => {
+                        li.classList.remove('winner-highlight');
+                    });
+                    
+                    // 重新設置
+                    setupPunchHoleCards();
                 }
 
-                setTimeout(() => {
-                    winnerDisplay.classList.remove('show');
-                }, 10000); // 延長顯示時間
-            }
-
-            drawWinnerBtn.addEventListener('click', async () => {
-                const animationMode = animationModeEl.value;
-                
-                if (animationMode === 'turntable') {
-                    startSpin();
-                } else if (animationMode === 'pointer') {
-                    if (pointerWinnerDecided) {
-                        resetPointerAnimation();
-                    } else {
-                        startPointerLottery();
-                    }
-                } else if (animationMode === 'punch-hole') {
-                    // 洞洞樂模式
-                    if (isPunchHoleShuffled) {
-                        // 如果已經打亂，就重新發牌
-                        resetPunchHoleAnimation();
-                    } else {
-                        // 如果還沒打亂，就打亂卡片
-                        shufflePunchHoleCards();
-                    }
-                } else {
-                    // 對於其他模式，維持原樣，先從後端獲取結果
-                    try {
-                        const response = await fetch('/api/admin/lottery/draw', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                animationMode,
-                                duration: 0 
-                            })
-                        });
-
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.error || '抽獎失敗');
-                        if (!result.winner) throw new Error('未能獲取中獎者資訊');
-
-                        const winner = result.winner;
-                        selectedWinner = winner;
-                        highlightWinner(winner);
-                        showWinner(winner);
-                        myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
-                    } catch (error) {
-                        console.error('抽獎出錯:', error);
-                        alert(`抽獎失敗: ${error.message}`);
-                    }
-                }
-            });
-            
-            refreshParticipantsBtn.addEventListener('click', fetchParticipants);
-            
-            animationModeEl.addEventListener('change', () => {
-                if(isReelSpinning || isSpinning) {
-                    alert('請等待目前抽獎動畫結束！');
-                    animationModeEl.value = isSpinning ? 'turntable' : 'pointer';
-                    return;
-                }
-                if (pointerWinnerDecided) {
-                    alert('請先重設指針抽獎，才能切換模式！');
-                    animationModeEl.value = 'pointer';
-                    return;
-                }
-                if (punchHoleWinnerSelected) {
-                    alert('請先重新發牌，才能切換模式！');
-                    animationModeEl.value = 'punch-hole';
-                    return;
-                }
-                setupAnimationView(animationModeEl.value);
-            });
-
-            // 當API請求間隔改變時，如果正在監控中，則重設計時器
-            apiRateInput.addEventListener('change', () => {
-                if (updateTimer) {
-                    startAutoUpdate();
-                }
-            });
-
-            // 監控開關的事件處理
-            monitoringToggle.addEventListener('change', async function() {
-                if (this.checked) {
-                    // 開始監控
-                    const videoId = videoIdEl.value.trim();
-                    const keyword = keywordEl.value.trim();
-                    const apiRateLimit = parseInt(apiRateInput.value, 10);
-
-                    if (!videoId || !keyword) {
-                        alert('請填寫 Video ID 和關鍵字！');
-                        this.checked = false;
+                function showTemporaryAnimation(participants, callback) {
+                    animationContainer.style.display = 'block';
+                    winnerDisplayEl.style.display = 'none';
+                    
+                    if (participants.length === 0) {
+                        animationContainer.textContent = '沒有參與者!';
                         return;
                     }
+                    
+                    let animationInterval = setInterval(() => {
+                        const randomParticipant = participants[Math.floor(Math.random() * participants.length)];
+                        animationContainer.innerHTML = `
+                            <img src="${randomParticipant.profileImageUrl}" style="width: 80px; height: 80px; border-radius: 50%; margin-right: 20px;">
+                            <span>${randomParticipant.displayName}</span>
+                        `;
+                    }, 100);
 
-                    try {
-                        const response = await fetch('/api/admin/lottery/set-video', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                videoId,
-                                keyword,
-                                apiRateLimit
-                            })
-                        });
-
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.error || '設置失敗');
-                        
-                        monitoringVideoIdEl.textContent = ` (${result.videoTitle})`;
-                        apiRateInput.disabled = !result.isLive;
-
-                        if (result.isLive) {
-                            // 直播模式
-                            toggleStatusEl.textContent = '系統狀態: 監控中';
-                            startAutoUpdate();
-                        } else {
-                            // 影片留言模式
-                            toggleStatusEl.textContent = `系統狀態: 留言已載入`;
-                            stopAutoUpdate(); // 確保沒有舊的計時器在跑
-                            // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
-                            participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
-                            fetchParticipants(); 
-                        }
-
-                    } catch (error) {
-                        console.error('Error setting video:', error);
-                        alert(`設置失敗: ${error.message}`);
-                        this.checked = false;
-                    }
-                } else {
-                    // 停止監控
-                    try {
-                        const response = await fetch('/api/admin/lottery/stop-monitoring', {
-                            method: 'POST'
-                        });
-                        const result = await response.json();
-                        
-                        if (response.ok && result.success) {
-                            stopAutoUpdate();
-                            monitoringVideoIdEl.textContent = '';
-                            defaultAnimation.textContent = '已停止監控';
-                            apiRateInput.disabled = false; // 重新啟用 API 頻率選項
-                        } else {
-                            throw new Error(result.error || '停止監控失敗');
-                        }
-                    } catch (error) {
-                        console.error('Error stopping monitoring:', error);
-                        alert(`停止監控失敗: ${error.message}`);
-                        this.checked = true;
-                    }
+                    setTimeout(() => {
+                        clearInterval(animationInterval);
+                        callback();
+                    }, 5000);
                 }
-            });
 
-            // Initial setup
-            setupAnimationView(animationModeEl.value);
+                function showWinner(winner) {
+                    const winnerDisplay = document.getElementById('winner-display');
+                    const winnerAvatar = document.getElementById('winner-avatar');
+                    const winnerName = document.getElementById('winner-name');
+                    
+                    winnerAvatar.src = winner.profileImageUrl;
+                    winnerName.textContent = winner.displayName;
+                    winnerDisplay.classList.add('show');
+
+                    const closeBtn = winnerDisplay.querySelector('.close-winner');
+                    if (closeBtn) {
+                        closeBtn.onclick = () => {
+                            winnerDisplay.classList.remove('show');
+                        };
+                    }
+
+                    setTimeout(() => {
+                        winnerDisplay.classList.remove('show');
+                    }, 10000); // 延長顯示時間
+                }
+
+                drawWinnerBtn.addEventListener('click', async () => {
+                    const animationMode = animationModeEl.value;
+                    
+                    if (animationMode === 'turntable') {
+                        startSpin();
+                    } else if (animationMode === 'pointer') {
+                        if (pointerWinnerDecided) {
+                            resetPointerAnimation();
+                        } else {
+                            startPointerLottery();
+                        }
+                    } else if (animationMode === 'punch-hole') {
+                        // 洞洞樂模式
+                        if (isPunchHoleShuffled) {
+                            // 如果已經打亂，就重新發牌
+                            resetPunchHoleAnimation();
+                        } else {
+                            // 如果還沒打亂，就打亂卡片
+                            shufflePunchHoleCards();
+                        }
+                    } else {
+                        // 對於其他模式，維持原樣，先從後端獲取結果
+                        try {
+                            const response = await fetch('/api/admin/lottery/draw', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    animationMode,
+                                    duration: 0 
+                                })
+                            });
+
+                            const result = await response.json();
+                            if (!response.ok) throw new Error(result.error || '抽獎失敗');
+                            if (!result.winner) throw new Error('未能獲取中獎者資訊');
+
+                            const winner = result.winner;
+                            selectedWinner = winner;
+                            highlightWinner(winner);
+                            showWinner(winner);
+                            myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
+                        } catch (error) {
+                            console.error('抽獎出錯:', error);
+                            alert(`抽獎失敗: ${error.message}`);
+                        }
+                    }
+                });
+                
+                refreshParticipantsBtn.addEventListener('click', fetchParticipants);
+                
+                animationModeEl.addEventListener('change', () => {
+                    if(isReelSpinning || isSpinning) {
+                        alert('請等待目前抽獎動畫結束！');
+                        animationModeEl.value = isSpinning ? 'turntable' : 'pointer';
+                        return;
+                    }
+                    if (pointerWinnerDecided) {
+                        alert('請先重設指針抽獎，才能切換模式！');
+                        animationModeEl.value = 'pointer';
+                        return;
+                    }
+                    if (punchHoleWinnerSelected) {
+                        alert('請先重新發牌，才能切換模式！');
+                        animationModeEl.value = 'punch-hole';
+                        return;
+                    }
+                    setupAnimationView(animationModeEl.value);
+                });
+
+                // 當API請求間隔改變時，如果正在監控中，則重設計時器
+                apiRateInput.addEventListener('change', () => {
+                    if (updateTimer) {
+                        startAutoUpdate();
+                    }
+                });
+
+                // 監控開關的事件處理
+                monitoringToggle.addEventListener('change', async function() {
+                    if (this.checked) {
+                        // 開始監控
+                        const videoId = videoIdEl.value.trim();
+                        const keyword = keywordEl.value.trim();
+                        const apiRateLimit = parseInt(apiRateInput.value, 10);
+
+                        if (!videoId || !keyword) {
+                            alert('請填寫 Video ID 和關鍵字！');
+                            this.checked = false;
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch('/api/admin/lottery/set-video', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    videoId,
+                                    keyword,
+                                    apiRateLimit
+                                })
+                            });
+
+                            const result = await response.json();
+                            if (!response.ok) throw new Error(result.error || '設置失敗');
+                            
+                            monitoringVideoIdEl.textContent = ` (${result.videoTitle})`;
+                            apiRateInput.disabled = !result.isLive;
+
+                            if (result.isLive) {
+                                // 直播模式
+                                toggleStatusEl.textContent = '系統狀態: 監控中';
+                                startAutoUpdate();
+                            } else {
+                                // 影片留言模式
+                                toggleStatusEl.textContent = `系統狀態: 留言已載入`;
+                                stopAutoUpdate(); // 確保沒有舊的計時器在跑
+                                // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
+                                participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
+                                fetchParticipants(); 
+                            }
+
+                        } catch (error) {
+                            console.error('Error setting video:', error);
+                            alert(`設置失敗: ${error.message}`);
+                            this.checked = false;
+                        }
+                    } else {
+                        // 停止監控
+                        try {
+                            const response = await fetch('/api/admin/lottery/stop-monitoring', {
+                                method: 'POST'
+                            });
+                            const result = await response.json();
+                            
+                            if (response.ok && result.success) {
+                                stopAutoUpdate();
+                                monitoringVideoIdEl.textContent = '';
+                                defaultAnimation.textContent = '已停止監控';
+                                apiRateInput.disabled = false; // 重新啟用 API 頻率選項
+                            } else {
+                                throw new Error(result.error || '停止監控失敗');
+                            }
+                        } catch (error) {
+                            console.error('Error stopping monitoring:', error);
+                            alert(`停止監控失敗: ${error.message}`);
+                            this.checked = true;
+                        }
+                    }
+                });
+
+                // Initial setup
+                setupAnimationView(animationModeEl.value);
+            }
+
+            checkAccess();
         });
     </script>
 </body>
