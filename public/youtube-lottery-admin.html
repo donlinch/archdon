@@ -270,6 +270,70 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
+        #pointer-animation {
+            width: 100%;
+            height: 150px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--secondary-color);
+            border-radius: var(--border-radius);
+            background: var(--bg-color);
+        }
+
+        #pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 20px solid var(--accent-color);
+            z-index: 3;
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.5));
+        }
+
+        #participants-reel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            display: flex;
+            will-change: transform;
+        }
+
+        .reel-participant-card {
+            width: 120px;
+            height: 120px;
+            margin: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            text-align: center;
+            flex-shrink: 0;
+            padding: 5px;
+            box-sizing: border-box;
+            color: var(--text-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .reel-participant-card img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+        }
+
+        .reel-participant-card span {
+            font-size: 0.9em;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
         #default-animation {
             text-align: center;
             padding: 20px;
@@ -314,9 +378,7 @@
 </head>
 <body>
 
-    <div id="header">
-        <h1>YouTube 直播抽獎管理後台</h1>
-    </div>
+   
 
     <div class="container">
         <div id="settings-panel" class="panel">
@@ -360,6 +422,10 @@
             <canvas id="confetti-canvas"></canvas>
             <div id="animation-container">
                 <canvas id="wheel-canvas" width="500" height="500" style="display: none;"></canvas>
+                <div id="pointer-animation" style="display: none;">
+                    <div id="pointer"></div>
+                    <div id="participants-reel"></div>
+                </div>
                 <div id="default-animation" style="text-align: center; padding: 20px;">
                     請先設定直播並開始監控
                 </div>
@@ -412,6 +478,8 @@
             const refreshParticipantsBtn = document.getElementById('refresh-participants-btn');
             const wheelCanvas = document.getElementById('wheel-canvas');
             const wheelCtx = wheelCanvas.getContext('2d');
+            const pointerAnimationEl = document.getElementById('pointer-animation');
+            const participantsReelEl = document.getElementById('participants-reel');
 
             const myConfetti = confetti.create(confettiCanvas, {
                 resize: true,
@@ -426,6 +494,15 @@
             let updateTimer = null;
             let participants = []; // 在記憶體中保存參與者列表，避免重複讀取
             let winnerText = ''; // 用於在畫布中心顯示中獎者名字
+
+            // Pointer animation state
+            let isReelSpinning = false;
+            let reelVelocity = 0;
+            let reelPosition = 0;
+            let reelAnimationId = null;
+            const REEL_FRICTION = 0.992; // 摩擦力
+            const IDLE_SPEED = 0.5; // 待機時的滾動速度
+            let idleAnimationId = null;
 
             function drawWheel() {
                 if (!wheelCanvas || !defaultAnimation) return;
@@ -581,6 +658,160 @@
                 });
             }
 
+            function buildParticipantsReel() {
+                if (!participantsReelEl) return;
+                participantsReelEl.innerHTML = '';
+                participantsReelEl.style.transition = 'none';
+                participantsReelEl.style.transform = 'translateX(0px)';
+
+                if (participants.length === 0) {
+                    stopReelIdleAnimation();
+                    return;
+                }
+
+                // 為了製造無限滾動的感覺，我們複製參與者列表
+                const reelParticipants = [];
+                const repeatCount = Math.max(5, Math.ceil(40 / participants.length));
+                for(let i = 0; i < repeatCount; i++) {
+                    reelParticipants.push(...participants);
+                }
+                // 打亂順序增加隨機感
+                reelParticipants.sort(() => Math.random() - 0.5);
+
+                reelParticipants.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'reel-participant-card';
+                    card.dataset.channelId = p.channelId;
+                    card.innerHTML = `
+                        <img src="${p.profileImageUrl}" alt="${p.displayName}">
+                        <span>${p.displayName.substring(0, 12)}</span>
+                    `;
+                    participantsReelEl.appendChild(card);
+                });
+
+                startReelIdleAnimation();
+            }
+
+            function startReelIdleAnimation() {
+                stopReelIdleAnimation(); // 確保只有一個動畫在跑
+
+                let lastTime = null;
+                function idleAnimate(time) {
+                    if (!lastTime) {
+                        lastTime = time;
+                        idleAnimationId = requestAnimationFrame(idleAnimate);
+                        return;
+                    }
+                    const deltaTime = time - lastTime;
+                    lastTime = time;
+
+                    reelPosition -= IDLE_SPEED * (deltaTime / 16); // 標準化到 60fps
+                    
+                    const cardWidth = 120 + 20; // card width + margin
+                    const loopWidth = cardWidth * participants.length;
+                    if (reelPosition < -loopWidth) {
+                        reelPosition += loopWidth;
+                    }
+                    participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
+
+                    idleAnimationId = requestAnimationFrame(idleAnimate);
+                }
+                idleAnimationId = requestAnimationFrame(idleAnimate);
+            }
+
+            function stopReelIdleAnimation() {
+                if (idleAnimationId) {
+                    cancelAnimationFrame(idleAnimationId);
+                    idleAnimationId = null;
+                }
+            }
+
+            function startPointerLottery() {
+                if (isReelSpinning) return;
+                if (participants.length < 2) {
+                    alert('需要至少兩位參與者才能開始抽獎！');
+                    return;
+                }
+                stopReelIdleAnimation();
+                isReelSpinning = true;
+                // 給予一個隨機的初始速度 (像素/幀)
+                reelVelocity = (Math.random() * 15) + 35; 
+                
+                if (reelAnimationId) {
+                    cancelAnimationFrame(reelAnimationId);
+                }
+                animateReel();
+            }
+
+            function animateReel() {
+                reelPosition -= reelVelocity;
+                reelVelocity *= REEL_FRICTION; // 應用摩擦力
+
+                const cardWidth = 120 + 20;
+                const totalReelWidth = cardWidth * participants.length * Math.floor(participantsReelEl.children.length / participants.length);
+                const loopWidth = cardWidth * participants.length;
+
+                // 為了循環效果，重置位置
+                if(reelPosition < -loopWidth * 2) {
+                    reelPosition += loopWidth;
+                }
+
+                participantsReelEl.style.transform = `translateX(${reelPosition}px)`;
+
+                if (reelVelocity < 0.05) {
+                    isReelSpinning = false;
+                    cancelAnimationFrame(reelAnimationId);
+                    reelAnimationId = null;
+                    determinePointerWinner();
+                } else {
+                    reelAnimationId = requestAnimationFrame(animateReel);
+                }
+            }
+            
+            function determinePointerWinner() {
+                const pointerLine = pointerAnimationEl.getBoundingClientRect().left + (pointerAnimationEl.offsetWidth / 2);
+                const cards = participantsReelEl.querySelectorAll('.reel-participant-card');
+                
+                let winnerCard = null;
+                let minDistance = Infinity;
+
+                cards.forEach(card => {
+                    const cardRect = card.getBoundingClientRect();
+                    const cardCenter = cardRect.left + (cardRect.width / 2);
+                    const distance = Math.abs(pointerLine - cardCenter);
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        winnerCard = card;
+                    }
+                });
+
+                if (winnerCard) {
+                    const winnerChannelId = winnerCard.dataset.channelId;
+                    const winner = participants.find(p => p.channelId === winnerChannelId);
+                    if(winner){
+                        selectedWinner = winner;
+                        highlightWinner(winner);
+                        myConfetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
+                        
+                        // 平滑地將中獎者卡片對齊到指針
+                        const cardRect = winnerCard.getBoundingClientRect();
+                        const cardCenter = cardRect.left + (cardRect.width / 2);
+                        const offset = pointerLine - cardCenter;
+                        
+                        const currentTransform = new DOMMatrix(getComputedStyle(participantsReelEl).transform);
+                        const currentX = currentTransform.m41;
+                        
+                        participantsReelEl.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+                        participantsReelEl.style.transform = `translateX(${currentX + offset}px)`;
+                    } else {
+                         startReelIdleAnimation();
+                    }
+                } else {
+                    startReelIdleAnimation();
+                }
+            }
+
             async function fetchParticipants() {
                 try {
                     const response = await fetch('/api/admin/lottery/participants');
@@ -686,7 +917,37 @@
                     participantsListEl.appendChild(li);
                 });
                 
-                drawWheel();
+                // 更新動畫視圖
+                setupAnimationView(animationModeEl.value);
+            }
+            
+            function setupAnimationView(mode) {
+                if (participants.length === 0) {
+                    wheelCanvas.style.display = 'none';
+                    pointerAnimationEl.style.display = 'none';
+                    defaultAnimation.style.display = 'block';
+                    defaultAnimation.textContent = '監控中...等待參與者加入';
+                    stopReelIdleAnimation();
+                    return;
+                }
+                
+                defaultAnimation.style.display = 'none';
+
+                if (mode === 'turntable') {
+                    wheelCanvas.style.display = 'block';
+                    pointerAnimationEl.style.display = 'none';
+                    stopReelIdleAnimation();
+                    drawWheel();
+                } else if (mode === 'pointer') {
+                    wheelCanvas.style.display = 'none';
+                    pointerAnimationEl.style.display = 'block';
+                    buildParticipantsReel();
+                } else {
+                    // 未來其他模式的處理
+                    wheelCanvas.style.display = 'none';
+                    pointerAnimationEl.style.display = 'none';
+                    stopReelIdleAnimation();
+                }
             }
             
             function showTemporaryAnimation(participants, callback) {
@@ -825,8 +1086,18 @@
             });
             
             refreshParticipantsBtn.addEventListener('click', fetchParticipants);
+            
+            animationModeEl.addEventListener('change', () => {
+                if(isReelSpinning || isSpinning) {
+                    alert('請等待目前抽獎動畫結束！');
+                    animationModeEl.value = isSpinning ? 'turntable' : 'pointer';
+                    return;
+                }
+                setupAnimationView(animationModeEl.value);
+            });
 
-            drawWheel();
+            // Initial setup
+            setupAnimationView(animationModeEl.value);
         });
     </script>
 </body>
