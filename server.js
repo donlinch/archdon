@@ -27,12 +27,7 @@ const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
 
 const adminRouter = express.Router();
 const app = express();
-   // 在Express應用中添加WebSocket路由
-   app.get('/ws', (req, res) => {
-    // 這只是一個佔位符，實際的WebSocket升級由wss處理
-    res.status(200).send('WebSocket endpoint');
-  });
-
+   
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
 
@@ -1855,6 +1850,10 @@ app.delete('/api/admin/products/:id', async (req, res) => {
 // --- ★★★ WebSocket 連線處理 (Simple Walk) ★★★ ---
 wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
     // 詳細的連接調試信息
+
+     // ★★★ 在這裡加上日誌 ★★★
+     const clientIp = req.socket.remoteAddress || req.headers['x-forwarded-for']?.split(',').shift();
+     console.log(`[WS] 新的 WebSocket 客戶端已連接！IP: ${clientIp}`);
     console.log(`[WS DEBUG] 新連接嘗試. URL完整信息:`, req.url);
     console.log(`[WS DEBUG] 連接頭信息:`, JSON.stringify(req.headers, null, 2));
     
