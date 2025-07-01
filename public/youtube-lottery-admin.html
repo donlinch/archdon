@@ -1440,69 +1440,59 @@
                     card.classList.add('shuffling');
                 });
                 
-                // 第一階段：先翻面（背面朝上）
-                // 使用更長的延遲確保翻面動畫完成
+                // 第一階段：散開卡片（保持正面朝上）
                 setTimeout(() => {
                     cardsArray.forEach(card => {
-                        card.classList.add('face-down');
+                        // 隨機散開到容器四周
+                        const randomAngle = Math.random() * 360;
+                        const distance = 100 + Math.random() * 200; // 散開的距離
+                        const centerX = containerWidth / 2;
+                        const centerY = containerHeight / 2;
+                        
+                        // 計算目標位置
+                        const radians = randomAngle * (Math.PI / 180);
+                        const targetX = centerX + Math.cos(radians) * distance - 60; // 60是卡片寬度的一半
+                        const targetY = centerY + Math.sin(radians) * distance - 75; // 75是卡片高度的一半
+                        
+                        // 設置旋轉和位置，保持正面朝上
+                        card.style.transform = `translate(${targetX - card.offsetLeft}px, ${targetY - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg)`;
                     });
                     
-                    // 確保卡片完全翻到背面後再開始散開
+                    // 第二階段：重新排列成網格並翻面
                     setTimeout(() => {
-                        // 第二階段：散開卡片
-                        cardsArray.forEach(card => {
-                            // 確保卡片仍然是背面朝上
-                            if (!card.classList.contains('face-down')) {
-                                card.classList.add('face-down');
-                            }
+                        // 重新排列之前，先打亂順序
+                        for (let i = cardsArray.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
+                        }
+                        
+                        // 計算網格排列
+                        const cardWidth = 130; // 包含margin
+                        const cardHeight = 160; // 包含margin
+                        const cardsPerRow = Math.floor(containerWidth / cardWidth);
+                        
+                        // 排列到網格位置
+                        cardsArray.forEach((card, index) => {
+                            const row = Math.floor(index / cardsPerRow);
+                            const col = index % cardsPerRow;
                             
-                            // 隨機散開到容器四周
-                            const randomAngle = Math.random() * 360;
-                            const distance = 100 + Math.random() * 200; // 散開的距離
-                            const centerX = containerWidth / 2;
-                            const centerY = containerHeight / 2;
+                            const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
+                            const top = (row * cardHeight) + 20; // 頂部留出20px空間
                             
-                            // 計算目標位置
-                            const radians = randomAngle * (Math.PI / 180);
-                            const targetX = centerX + Math.cos(radians) * distance - 60; // 60是卡片寬度的一半
-                            const targetY = centerY + Math.sin(radians) * distance - 75; // 75是卡片高度的一半
-                            
-                            // 設置旋轉和位置，保持背面朝上
-                            card.style.transform = `translate(${targetX - card.offsetLeft}px, ${targetY - card.offsetTop}px) rotate(${Math.random() * 40 - 20}deg) rotateY(180deg)`;
+                            // 設置位置，但保持正面朝上
+                            card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg)`;
                         });
                         
-                        // 第三階段：重新排列成網格
+                        // 排列完成後，再統一翻面
                         setTimeout(() => {
-                            // 重新排列之前，先打亂順序
-                            for (let i = cardsArray.length - 1; i > 0; i--) {
-                                const j = Math.floor(Math.random() * (i + 1));
-                                [cardsArray[i], cardsArray[j]] = [cardsArray[j], cardsArray[i]];
-                            }
-                            
-                            // 計算網格排列
-                            const cardWidth = 130; // 包含margin
-                            const cardHeight = 160; // 包含margin
-                            const cardsPerRow = Math.floor(containerWidth / cardWidth);
-                            
-                            // 排列到網格位置
-                            cardsArray.forEach((card, index) => {
-                                const row = Math.floor(index / cardsPerRow);
-                                const col = index % cardsPerRow;
-                                
-                                const left = (col * cardWidth) + (containerWidth - cardsPerRow * cardWidth) / 2;
-                                const top = (row * cardHeight) + 20; // 頂部留出20px空間
-                                
-                                // 保持卡片背面朝上，但位置和旋轉角度恢復正常
-                                card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px) rotate(0deg) rotateY(180deg)`;
+                            // 所有卡片一起翻到背面
+                            cardsArray.forEach(card => {
+                                card.classList.add('face-down');
                             });
                             
-                            // 為所有卡片添加點擊事件，確保每張卡片仍然為翻面狀態
+                            // 為所有卡片添加點擊事件
                             setTimeout(() => {
                                 cardsArray.forEach(card => {
-                                    // 確保卡片仍然是背面朝上
-                                    if (!card.classList.contains('face-down')) {
-                                        card.classList.add('face-down');
-                                    }
                                     card.addEventListener('click', handlePunchCardClick);
                                 });
                                 
@@ -1516,9 +1506,9 @@
                                 
                                 // 重新啟用按鈕
                                 drawWinnerBtn.disabled = false;
-                            }, 800);
-                        }, 1200);
-                    }, 200); // 添加小延遲確保翻面完成
+                            }, 600);
+                        }, 1500); // 給足夠時間讓用戶看清排列後的卡片
+                    }, 1200);
                 }, 50);
             }
             
