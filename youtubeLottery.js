@@ -13,19 +13,18 @@ class YoutubeLottery {
     this.pollingPageToken = null; // YouTube API 分頁標記
     this.cache = new NodeCache({ stdTTL: 600 }); // 10分鐘快取
     this.apiKey = process.env.YOUTUBE_API_KEY;
+    this.isLive = false; // 新增：標記是否為直播模式
+    this.liveChatId = null; // 新增：儲存直播聊天室 ID
   }
 
-  // 設置監控的直播
+  // 設置監控的直播或影片（智慧偵測）
   async setTargetVideo(videoId, keyword, apiRateLimit = 10) {
     if (!this.apiKey) {
       throw new Error('YouTube API 金鑰未配置');
     }
 
     // 停止當前監控
-    if (this.chatPollingInterval) {
-      clearInterval(this.chatPollingInterval);
-      this.chatPollingInterval = null;
-    }
+    this.stopMonitoring();
 
     // 重設狀態
     this.videoId = videoId;
@@ -34,7 +33,7 @@ class YoutubeLottery {
     this.participants.clear();
     this.pollingPageToken = null;
 
-    // 驗證直播存在
+    // 驗證影片存在
     try {
       const response = await axios.get(`https://www.googleapis.com/youtube/v3/videos`, {
         params: {
@@ -49,16 +48,27 @@ class YoutubeLottery {
       }
 
       const video = response.data.items[0];
-      if (!video.liveStreamingDetails || !video.liveStreamingDetails.activeLiveChatId) {
-        throw new Error('指定的影片不是直播或沒有啟用聊天室');
-      }
+      const videoTitle = video.snippet.title;
 
-      // 開始輪詢聊天室
-      this.startChatPolling(video.liveStreamingDetails.activeLiveChatId);
-      return { success: true, videoTitle: video.snippet.title };
+      // 智慧判斷：是直播還是影片
+      if (video.liveStreamingDetails && video.liveStreamingDetails.activeLiveChatId) {
+        // 模式：直播
+        this.isLive = true;
+        this.liveChatId = video.liveStreamingDetails.activeLiveChatId;
+        console.log(`偵測到直播影片: "${videoTitle}". 開始監控聊天室...`);
+        this.startChatPolling(this.liveChatId);
+        return { success: true, videoTitle, isLive: true };
+      } else {
+        // 模式：一般影片或已結束的直播
+        this.isLive = false;
+        console.log(`偵測到一般影片: "${videoTitle}". 開始抓取留言...`);
+        await this.fetchAllComments();
+        return { success: true, videoTitle, isLive: false, participantCount: this.participants.size };
+      }
     } catch (error) {
-      console.error('設置監控直播時出錯:', error);
-      throw new Error(`設置監控直播失敗: ${error.message}`);
+      console.error('設置監控影片時出錯:', error);
+      const errorMessage = error.response ? (error.response.data.error.message || error.message) : error.message;
+      throw new Error(`設置監控影片失敗: ${errorMessage}`);
     }
   }
 
@@ -74,6 +84,8 @@ class YoutubeLottery {
     this.keyword = null;
     this.participants.clear();
     this.pollingPageToken = null;
+    this.isLive = false;
+    this.liveChatId = null;
     return { success: true, message: '已停止監控' };
   }
 
@@ -127,27 +139,84 @@ class YoutubeLottery {
 
     // 檢查是否包含關鍵字
     if (this.keyword && messageText.includes(this.keyword)) {
-      // 添加到參與者列表
-      if (!this.participants.has(channelId)) {
-        this.participants.set(channelId, {
-          displayName,
-          profileImageUrl,
-          joinTime: new Date()
-        });
+      await this.addParticipant(channelId, displayName, profileImageUrl);
+    }
+  }
 
-        // 更新用戶畫像資料
-        try {
-          await this.updateUserProfile(channelId, displayName, profileImageUrl);
-        } catch (error) {
-          console.error('更新用戶畫像時出錯:', error);
-        }
+  // (新) 添加參與者核心邏輯
+  async addParticipant(channelId, displayName, profileImageUrl) {
+    // 添加到參與者列表
+    if (!this.participants.has(channelId)) {
+      this.participants.set(channelId, {
+        displayName,
+        profileImageUrl,
+        joinTime: new Date()
+      });
 
-        // 發送確認訊息
-        if (process.env.ENABLE_CHAT_RESPONSES === 'true') {
-          await this.sendChatResponse(channelId, displayName);
-        }
+      // 更新用戶畫像資料
+      try {
+        await this.updateUserProfile(channelId, displayName, profileImageUrl);
+      } catch (error) {
+        console.error('更新用戶畫像時出錯:', error);
+      }
+
+      // 直播模式下才發送確認訊息
+      if (this.isLive && process.env.ENABLE_CHAT_RESPONSES === 'true') {
+        await this.sendChatResponse(channelId, displayName);
       }
     }
+  }
+
+  // (新) 獲取影片所有留言
+  async fetchAllComments() {
+    console.log(`正在為影片 ID 抓取留言: ${this.videoId}`);
+    let pageToken = null;
+    let participantsFound = 0;
+
+    do {
+      try {
+        const params = {
+          part: 'snippet',
+          videoId: this.videoId,
+          textFormat: 'plainText',
+          maxResults: 100,
+          key: this.apiKey,
+          pageToken,
+        };
+        const response = await axios.get('https://www.googleapis.com/youtube/v3/commentThreads', { params });
+        
+        const { items, nextPageToken } = response.data;
+
+        for (const item of items) {
+          const comment = item.snippet.topLevelComment.snippet;
+          if (this.keyword && comment.textDisplay.includes(this.keyword)) {
+            const { authorChannelId, authorDisplayName, authorProfileImageUrl } = comment;
+            // The authorChannelId object is { value: "..." }
+            if (authorChannelId && authorChannelId.value) {
+                await this.addParticipant(authorChannelId.value, authorDisplayName, authorProfileImageUrl);
+                participantsFound++;
+            }
+          }
+        }
+        
+        pageToken = nextPageToken;
+
+      } catch (error) {
+        const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+        console.error('獲取影片留言時出錯:', errorMessage);
+        
+        // 如果是留言已停用等錯誤，就直接中斷
+        if (errorMessage.includes('commentsDisabled')) {
+           console.warn(`影片 ${this.videoId} 的留言功能已停用。`);
+           // 拋出一個更友善的錯誤給前端
+           throw new Error(`此影片的留言功能已關閉，無法進行抽獎。`);
+        }
+        // 其他錯誤也中斷，避免無限循環
+        break;
+      }
+    } while (pageToken);
+    
+    console.log(`留言抓取完成。共有 ${participantsFound} 位參與者符合關鍵字。`);
   }
 
   // 更新用戶畫像資料

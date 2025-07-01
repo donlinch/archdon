@@ -1824,9 +1824,23 @@
 
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.error || '設置失敗');
+                        
+                        monitoringVideoIdEl.textContent = ` (${result.videoTitle})`;
+                        apiRateInput.disabled = !result.isLive;
 
-                        monitoringVideoIdEl.textContent = ` ${videoId})`;
-                        startAutoUpdate();
+                        if (result.isLive) {
+                            // 直播模式
+                            toggleStatusEl.textContent = '系統狀態: 監控中';
+                            startAutoUpdate();
+                        } else {
+                            // 影片留言模式
+                            toggleStatusEl.textContent = `系統狀態: 留言已載入`;
+                            stopAutoUpdate(); // 確保沒有舊的計時器在跑
+                            // 後端已返回參與者數量，可以直接更新，並手動抓取一次列表
+                            participantsCountEl.textContent = `目前參與人數：${result.participantCount} 人`;
+                            fetchParticipants(); 
+                        }
+
                     } catch (error) {
                         console.error('Error setting video:', error);
                         alert(`設置失敗: ${error.message}`);
@@ -1844,6 +1858,7 @@
                             stopAutoUpdate();
                             monitoringVideoIdEl.textContent = '';
                             defaultAnimation.textContent = '已停止監控';
+                            apiRateInput.disabled = false; // 重新啟用 API 頻率選項
                         } else {
                             throw new Error(result.error || '停止監控失敗');
                         }
