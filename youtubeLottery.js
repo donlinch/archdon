@@ -18,7 +18,7 @@ class YoutubeLottery {
   }
 
   // 設置監控的直播或影片（智慧偵測）
-  async setTargetVideo(videoId, keyword, apiRateLimit = 10) {
+  async setTargetVideo(videoId, keyword, apiRateLimit = 10, forceLiveMode = null) {
     if (!this.apiKey) {
       throw new Error('YouTube API 金鑰未配置');
     }
@@ -50,18 +50,37 @@ class YoutubeLottery {
       const video = response.data.items[0];
       const videoTitle = video.snippet.title;
 
-      // 智慧判斷：是直播還是影片
-      if (video.liveStreamingDetails && video.liveStreamingDetails.activeLiveChatId) {
+      // 是否為直播
+      const hasLiveChatId = video.liveStreamingDetails && video.liveStreamingDetails.activeLiveChatId;
+      
+      // 使用用戶指定的模式或自動偵測
+      if (forceLiveMode !== null) {
+        this.isLive = forceLiveMode;
+        console.log(`使用者指定模式: ${forceLiveMode ? '直播' : '影片'}`);
+      } else {
+        this.isLive = hasLiveChatId;
+        console.log(`自動偵測模式: ${hasLiveChatId ? '直播' : '影片'}`);
+      }
+
+      // 處理不同模式
+      if (this.isLive) {
         // 模式：直播
-        this.isLive = true;
-        this.liveChatId = video.liveStreamingDetails.activeLiveChatId;
-        console.log(`偵測到直播影片: "${videoTitle}". 開始監控聊天室...`);
-        this.startChatPolling(this.liveChatId);
+        if (!hasLiveChatId) {
+          console.warn('警告：該影片不是直播或沒有活躍的聊天室，但仍按照直播模式處理');
+        } else {
+          this.liveChatId = video.liveStreamingDetails.activeLiveChatId;
+        }
+        
+        if (this.liveChatId) {
+          console.log(`開始監控直播聊天室: "${videoTitle}"...`);
+          this.startChatPolling(this.liveChatId);
+        } else {
+          throw new Error('直播模式錯誤：找不到聊天室ID');
+        }
         return { success: true, videoTitle, isLive: true };
       } else {
         // 模式：一般影片或已結束的直播
-        this.isLive = false;
-        console.log(`偵測到一般影片: "${videoTitle}". 開始抓取留言...`);
+        console.log(`開始抓取影片留言: "${videoTitle}"...`);
         await this.fetchAllComments();
         return { success: true, videoTitle, isLive: false, participantCount: this.participants.size };
       }

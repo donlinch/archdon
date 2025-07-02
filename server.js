@@ -945,9 +945,9 @@ app.use('/api/admin/lottery', youtubeLotteryRouter);
 // 設置監控的直播
 youtubeLotteryRouter.post('/set-video', async (req, res) => {
     try {
-      const { videoId, keyword, apiRateLimit } = req.body;
-      await youtubeLottery.setTargetVideo(videoId, keyword, apiRateLimit);
-      res.json({ success: true, message: '已設置監控直播' });
+      const { videoId, keyword, apiRateLimit, forceLiveMode } = req.body;
+      const result = await youtubeLottery.setTargetVideo(videoId, keyword, apiRateLimit, forceLiveMode);
+      res.json(result); // 直接返回結果對象，包括videoTitle、isLive等信息
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
