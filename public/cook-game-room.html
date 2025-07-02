@@ -460,19 +460,18 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // 檢查是否有登入令牌，若無則導回登入頁
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('cookGameToken');
       if (!token) {
         window.location.href = '/cook-login.html';
         return;
       }
       
-      // 獲取房間ID (從URL參數)
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomId = urlParams.get('id');
+      // 獲取房間ID
+      const roomId = localStorage.getItem('currentRoomId');
       
       if (!roomId) {
         alert('找不到房間ID，將返回遊戲大廳');
-        window.location.href = '/cook-lobby.html';
+        window.location.href = 'cook-lobby.html';
         return;
       }
       
