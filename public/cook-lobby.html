@@ -360,7 +360,7 @@
   <div class="header">
     <div class="header-title">廚房急先鋒 - 遊戲大廳</div>
     <div class="user-info">
-      <span id="userLevel">Lv.1</span>
+      <span id="userInfo">Lv.1</span>
       <div class="avatar" id="userAvatar">@</div>
     </div>
   </div>
@@ -462,11 +462,32 @@
 
     // 初始化頁面
     document.addEventListener('DOMContentLoaded', function() {
-        // 檢查登入狀態
-        const token = localStorage.getItem('cookGameToken');
+        // 檢查是否已經登入
+        const checkAuthentication = () => {
+            // 檢查廚房急先鋒游戲token
+            const cookGameToken = localStorage.getItem('cookGameToken');
+            // 檢查主系統token
+            const boxCurrentUserId = localStorage.getItem('boxCurrentUserId');
+            const boxUserToken = localStorage.getItem(`boxUserToken_${boxCurrentUserId}`);
+            
+            // 如果沒有任何token，跳轉到主會員登入
+            if (!cookGameToken && (!boxCurrentUserId || !boxUserToken)) {
+                const currentUrl = window.location.href;
+                window.location.href = `/member-login.html?redirect=${encodeURIComponent(currentUrl)}`;
+                return false;
+            }
+            
+            // 如果有主系統token但沒有遊戲token，跳轉到遊戲登入頁面進行快速登入
+            if (!cookGameToken && boxCurrentUserId && boxUserToken) {
+                window.location.href = 'cook-login.html';
+                return false;
+            }
+            
+            return cookGameToken;
+        };
+        
+        const token = checkAuthentication();
         if (!token) {
-            // 未登入，跳轉到登入頁
-            window.location.href = 'cook-login.html';
             return;
         }
 
@@ -485,9 +506,17 @@
         .then(data => {
             // 顯示用戶資料
             userId = data.user.user_id;
-            username = data.user.username;
-            document.getElementById('userLevel').textContent = `Lv.${data.user.level}`;
-            document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
+            username = data.user.display_name || data.user.username;
+            document.getElementById('userInfo').textContent = 
+                `[LV.${data.user.level}] ${username} (積分: ${data.user.points})`;
+            
+            // 更新頭像 (如果用戶有頭像)
+            if (data.user.user_profile_image_url) {
+                const avatarImg = document.getElementById('userAvatar');
+                if (avatarImg) {
+                    avatarImg.src = data.user.user_profile_image_url;
+                }
+            }
             
             // 獲取房間列表
             fetchGameRooms();
@@ -499,7 +528,8 @@
             console.error('獲取用戶資料失敗:', error);
             // 返回登入頁
             localStorage.removeItem('cookGameToken');
-            window.location.href = 'cook-login.html';
+            const currentUrl = window.location.href;
+            window.location.href = `/member-login.html?redirect=${encodeURIComponent(currentUrl)}`;
         });
 
         // 註冊事件處理
@@ -667,7 +697,15 @@
         window.location.href = 'cook-game-room.html';
     }
 
-    // ... existing code ...
+    // 登出函數
+    function logout() {
+        // 清除遊戲token
+        localStorage.removeItem('cookGameToken');
+        localStorage.removeItem('cookUsername');
+        
+        // 返回主頁
+        window.location.href = '/';
+    }
   </script>
 </body>
 </html> 
