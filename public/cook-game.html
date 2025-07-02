@@ -742,17 +742,21 @@
             
           case 'new_order':
             addOrder(message.order);
+            updateTaskHint(); // 更新任務提示
+            showToast('收到新訂單!');
             break;
             
           case 'order_completed':
             removeOrder(message.orderId);
             updateScore(message.newScore);
             showToast('訂單完成! +' + message.points + ' 分');
+            updateTaskHint(); // 更新任務提示
             break;
             
           case 'order_failed':
             removeOrder(message.orderId);
             showToast('訂單失敗! 客人不滿意');
+            updateTaskHint(); // 更新任務提示
             break;
             
           case 'player_action':
@@ -804,6 +808,7 @@
               updateInventory(gameState.inventory);
               updateScore(message.newScore);
               showToast(`訂單完成！獲得 ${message.points} 分`);
+              updateTaskHint(); // 更新任務提示
             } else {
               showToast('沒有匹配的訂單，料理被退回');
             }
@@ -1177,29 +1182,45 @@
           // 檢查是否有足夠的食材可以組裝
           if (hasAssemblableItems()) {
             sendAction('assemble_items', {});
+            
+            // 添加組裝動畫效果
+            const slots = document.querySelectorAll('.inventory-slot');
+            slots.forEach(slot => {
+              const item = slot.querySelector('.game-item');
+              if (item) {
+                item.style.animation = 'shake 0.5s';
+              }
+            });
+            
             showToast('正在組裝食材...');
           } else {
             showToast('需要更多處理好的食材才能組裝');
           }
         }
-        // 盤子站互動
+        // 盤子站互動 - 上菜
         else if (type === 'plate') {
-          // 檢查當前選中的庫存槽是否為空
-          if (gameState.inventory[gameState.activeSlot] === null) {
-            sendAction('pick_plate', { slotIndex: gameState.activeSlot });
-            showToast('拿取了一個盤子');
-          } else {
-            // 如果庫存槽有完成的料理，嘗試配對訂單
-            const currentItem = gameState.inventory[gameState.activeSlot];
-            if (currentItem && isCompleteDish(currentItem.type)) {
-              sendAction('serve_dish', { 
-                slotIndex: gameState.activeSlot,
-                dishType: currentItem.type
-              });
-              showToast('正在上菜...');
-            } else {
-              showToast('請先拿取盤子或準備好完整的料理');
+          // 檢查當前選中的庫存槽是否有完整料理
+          const currentItem = gameState.inventory[gameState.activeSlot];
+          if (currentItem && isCompleteDish(currentItem.type)) {
+            // 發送上菜的動作
+            sendAction('serve_dish', { 
+              slotIndex: gameState.activeSlot
+            });
+            
+            // 添加上菜動畫效果
+            const slot = document.querySelectorAll('.inventory-slot')[gameState.activeSlot];
+            if (slot) {
+              const item = slot.querySelector('.game-item');
+              if (item) {
+                item.style.animation = 'bounce 0.5s';
+              }
             }
+            
+            showToast(`正在上菜${getItemName(currentItem.type)}...`);
+          } else if (currentItem) {
+            showToast('這不是一道完整的料理，無法上菜！');
+          } else {
+            showToast('請先準備完整的料理');
           }
         }
       }
@@ -1771,12 +1792,17 @@
         
         // 根據玩家庫存狀態提供更具體的提示
         const hasRawIngredients = gameState.inventory.some(item => 
-          item && ['beef_raw', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(item.type));
+          item && ['beef', 'lettuce', 'tomato', 'onion', 'bread', 'cheese'].includes(item.type));
         
         const hasCookedIngredients = gameState.inventory.some(item => 
           item && ['beef_cooked', 'bread_toasted', 'tomato_grilled', 'onion_grilled'].includes(item.type));
         
-        if (hasAssemblableItems()) {
+        const hasCompleteDish = gameState.inventory.some(item => 
+          item && isCompleteDish(item.type));
+        
+        if (hasCompleteDish) {
+          taskHint.textContent = '料理已完成！前往上菜區送餐';
+        } else if (hasAssemblableItems()) {
           taskHint.textContent = '可以組裝漢堡了！前往組裝區';
         } else if (hasCookedIngredients) {
           taskHint.textContent = '需要更多食材，繼續拿取或烹飪';

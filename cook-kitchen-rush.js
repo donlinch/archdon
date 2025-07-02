@@ -368,11 +368,12 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
                         
                         setTimeout(async () => {
                             try {
-                                const initialGameState = { // 這裡應該從一個範本或生成器函數來創建
+                                // 修改: 產生初始遊戲狀態，包含訂單
+                                const initialGameState = {
                                     timeRemaining: 180, // 3 minutes
                                     score: 0,
-                                    orders: [],
-                                    stations: {}, // 初始化工作站狀態
+                                    orders: [generateOrder(), generateOrder()], // 產生2個初始訂單
+                                    stations: {}, 
                                     players: gameState.players.map(p => ({ ...p, inventory: Array(5).fill(null), activeSlot: 0 }))
                                 };
 
