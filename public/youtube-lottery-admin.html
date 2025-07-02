@@ -1055,12 +1055,8 @@
             </div>
             <div class="form-group">
                 <label for="lottery-keyword">抽獎關鍵字</label>
-                <input type="text" id="lottery-keyword" placeholder="例如：我要抽獎">
-            </div>
-            <div class="form-group">
-                <label for="auto-stop-timer">自動停止監控 (分鐘)</label>
-                <input type="number" id="auto-stop-timer" value="30" min="0" placeholder="0表示不自動停止">
-                <small style="display: block; margin-top: 5px; color: var(--text-color); opacity: 0.8;">設定後，將在指定時間後自動停止監控 (0表示不自動停止)</small>
+                <input type="text" id="lottery-keyword" placeholder="輸入關鍵字">
+                <small style="display: block; margin-top: 5px; color: var(--text-color); opacity: 0.8;">觀眾在聊天室中輸入此關鍵字即可參與抽獎</small>
             </div>
             <div class="toggle-container">
                 <div class="toggle-status"> </div>
@@ -1262,7 +1258,7 @@
                 const monitoringToggle = document.getElementById('checkbox');
                 const toggleStatusEl = null; // 不再使用toggleStatusEl
                 const modeToggle = document.getElementById('mode-toggle');
-                const autoStopTimerEl = document.getElementById('auto-stop-timer');
+                const autoStopTimerEl = null; // 不再使用autoStopTimerEl
                 let isLiveMode = true; // 默認為直播模式
                 let autoStopTimeout = null; // 自動停止監控計時器
 
@@ -1729,21 +1725,19 @@
                         autoStopTimeout = null;
                     }
                     
-                    const autoStopMinutes = parseInt(autoStopTimerEl.value, 10);
-                    if (autoStopMinutes > 0) {
-                        const autoStopMs = autoStopMinutes * 60 * 1000;
-                        console.log(`將在 ${autoStopMinutes} 分鐘後自動停止監控`);
-                        
-                        autoStopTimeout = setTimeout(() => {
-                            console.log(`自動停止計時器觸發，停止監控`);
-                            if (monitoringToggle.checked) {
-                                monitoringToggle.checked = false;
-                                // 觸發change事件
-                                const event = new Event('change');
-                                monitoringToggle.dispatchEvent(event);
-                            }
-                        }, autoStopMs);
-                    }
+                    const autoStopMinutes = 30; // 固定30分鐘自動停止
+                    const autoStopMs = autoStopMinutes * 60 * 1000;
+                    console.log(`將在 ${autoStopMinutes} 分鐘後自動停止監控`);
+                    
+                    autoStopTimeout = setTimeout(() => {
+                        console.log(`自動停止計時器觸發，停止監控`);
+                        if (monitoringToggle.checked) {
+                            monitoringToggle.checked = false;
+                            // 觸發change事件
+                            const event = new Event('change');
+                            monitoringToggle.dispatchEvent(event);
+                        }
+                    }, autoStopMs);
                 }
 
                 function stopAutoUpdate() {
