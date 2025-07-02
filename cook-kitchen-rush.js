@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt'); // bcryptjs -> bcrypt (保持與主文件一致)
 const cors = require('cors');
 const path = require('path');
+const { authenticateToken, pool } = require('./auth');
 
 // 初始化Express應用
 const cookGameApp = express();
@@ -32,61 +33,103 @@ cookGameApp.use(express.json());
 // JWT密鑰
 const JWT_SECRET = process.env.COOK_JWT_SECRET || 'cook-kitchen-rush-secret-key';
 
-// 活躍的遊戲房間
-const gameRooms = new Map();
-// 活躍的連接
-const activeConnections = new Map();
+// 記憶體儲存已由資料庫取代
+// const gameRooms = new Map(); 
+const activeConnections = new Map(); // 用於追蹤 userId -> ws 的對應關係
 
 // ==========================================================
 // ★★★ 以下是重構的核心部分 ★★★
 // ==========================================================
 
 // 輔助函數：廣播訊息到指定房間
-function broadcastToRoom(roomId, message, excludeWs = null) {
-  const room = gameRooms.get(roomId);
-  if (!room) return;
+async function broadcastToRoom(roomId, message, excludeWs = null) {
+    try {
+        const roomStateQuery = await pool.query('SELECT game_state FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+        if (roomStateQuery.rows.length === 0) return;
+        
+        const gameState = roomStateQuery.rows[0].game_state;
+        if (!gameState || !gameState.players) return;
 
-  const messageString = JSON.stringify(message);
-  room.players.forEach(player => {
-    // 每個 player 物件現在需要包含其 WebSocket 連接實例
-    if (player.ws && player.ws.readyState === WebSocket.OPEN && player.ws !== excludeWs) {
-      player.ws.send(messageString);
+        const messageString = JSON.stringify(message);
+        
+        gameState.players.forEach(player => {
+            const playerWs = activeConnections.get(player.id);
+            if (playerWs && playerWs.readyState === WebSocket.OPEN && playerWs !== excludeWs) {
+                try {
+                    playerWs.send(messageString);
+                } catch (sendError) {
+                    console.error(`[Broadcast Error] 發送訊息給玩家 ${player.id} 失敗:`, sendError);
+                }
+            }
+        });
+    } catch (error) {
+        console.error(`[Broadcast Error] 廣播到房間 ${roomId} 失敗:`, error);
     }
-  });
 }
 
 // 輔助函數：處理玩家離開房間
 async function handlePlayerLeave(roomId, userId) {
-    const room = gameRooms.get(roomId);
-    if (!room) return;
+    if (!roomId || !userId) return;
 
-    const playerIndex = room.players.findIndex(p => p.id === userId);
-    if (playerIndex === -1) return;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
 
-    const [leftPlayer] = room.players.splice(playerIndex, 1);
-    console.log(`[COOK-GAME] 玩家 ${leftPlayer.username} 已從房間 ${roomId} 移除`);
-
-    // 如果房間空了，刪除房間
-    if (room.players.length === 0) {
-        gameRooms.delete(roomId);
-        console.log(`[COOK-GAME] 房間 ${roomId} 因無玩家而關閉`);
-    } else {
-        // 如果房主離開了，將房主轉移給下一個玩家
-        if (room.creatorId === userId) {
-            room.creatorId = room.players[0].id;
-            room.creator = room.players[0].username;
-            console.log(`[COOK-GAME] 房主已轉移給 ${room.creator}`);
+        const roomResult = await client.query('SELECT * FROM cook_game_rooms WHERE room_id = $1 FOR UPDATE', [roomId]);
+        if (roomResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return;
         }
 
-        // 廣播玩家離開和更新後的房間資訊
-        broadcastToRoom(roomId, { type: 'player_left', playerName: leftPlayer.username, newCreator: room.creator });
-        broadcastToRoom(roomId, { type: 'room_info', room });
-        broadcastToRoom(roomId, { type: 'player_list', players: room.players });
+        let room = roomResult.rows[0];
+        let gameState = room.game_state || { players: [] };
+        
+        const playerIndex = gameState.players.findIndex(p => p.id === userId);
+        if (playerIndex === -1) {
+            await client.query('ROLLBACK');
+            return;
+        }
+
+        const [leftPlayer] = gameState.players.splice(playerIndex, 1);
+        console.log(`[COOK-GAME] 玩家 ${leftPlayer.username} (ID: ${userId}) 已從房間 ${roomId} 狀態中移除`);
+
+        if (gameState.players.length === 0) {
+            await client.query('DELETE FROM cook_game_rooms WHERE room_id = $1', [roomId]);
+            console.log(`[COOK-GAME] 房間 ${roomId} 因無玩家而從資料庫中刪除`);
+        } else {
+            let newCreatorName = room.creator_name;
+            let broadcastNewCreator = false;
+            if (room.creator_id === userId) {
+                room.creator_id = gameState.players[0].id;
+                newCreatorName = gameState.players[0].username;
+                console.log(`[COOK-GAME] 房主已轉移給 ${newCreatorName}`);
+                broadcastNewCreator = true;
+            }
+            
+            await client.query(
+                'UPDATE cook_game_rooms SET game_state = $1, creator_id = $2, creator_name = $3 WHERE room_id = $4',
+                [gameState, room.creator_id, newCreatorName, roomId]
+            );
+            
+            const leaveMessage = {
+                type: 'player_left',
+                playerName: leftPlayer.username,
+                newCreator: broadcastNewCreator ? newCreatorName : undefined,
+                players: gameState.players
+            };
+            broadcastToRoom(roomId, leaveMessage);
+        }
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(`[Player Leave Error] 處理玩家 ${userId} 離開房間 ${roomId} 失敗:`, error);
+    } finally {
+        client.release();
     }
 }
 
 // WebSocket連接處理函數
-async function handleAuthenticatedMessage(ws, data, userId, username) {
+async function handleAuthenticatedMessage(ws, data, userId, username, userProfile) {
   const currentRoomId = ws.currentRoomId; // 從 ws 物件獲取當前房間ID
 
   switch (data.type) {
@@ -857,71 +900,85 @@ cookGameApp.get('/cook-*.html', (req, res) => {
  * 這個函數不再創建自己的 WebSocket Server，而是接收一個外部傳入的 wss 實例。
  * @param {WebSocket.Server} wss - 從主 server.js 傳入的 WebSocket 服務器實例。
  */
-function initCookGameWss(wss) {
-  console.log('[COOK-GAME] WebSocket 邏輯已附加到主 WSS 實例上');
+function initCookGameWss(server) {
+  const wssCookGame = new WebSocket.Server({ noServer: true });
 
-  wss.on('connection', (ws, req) => {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname !== '/cook-ws') {
-      return;
-    }
-    
-    console.log(`[COOK-GAME WS] 收到一個新連接`);
-    
-    let authenticated = false;
-    let userId = null;
-    let username = null;
-    ws.currentRoomId = null; // 在 ws 實例上初始化 currentRoomId
-    
+  wssCookGame.on('connection', (ws, req) => {
+    console.log('[COOK-GAME WS] 收到一個新連接');
+    ws.isAlive = true;
+
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message);
-        
         if (data.type === 'authenticate') {
-          try {
-            const decoded = jwt.verify(data.token, JWT_SECRET);
-            userId = decoded.userId;
+          const decoded = await authenticateToken(data.token, true);
+          if (decoded) {
+            const userId = decoded.userId;
+            ws.userId = userId; // 在 ws 上附加 userId
+            activeConnections.set(userId, ws); // 儲存連接
             
-            const result = await pool.query('SELECT user_id, username, display_name FROM box_users WHERE user_id = $1', [userId]);
-            if (result.rows.length === 0) {
-              ws.send(JSON.stringify({ type: 'auth_error', message: '無效的使用者' }));
-              return;
-            }
-            
-            username = result.rows[0].display_name || result.rows[0].username;
-            authenticated = true;
-            
-            ws.send(JSON.stringify({ type: 'auth_success', userId, username }));
-            console.log(`[COOK-GAME WS] 使用者 ${username} (ID: ${userId}) 認證成功`);
-          } catch (error) {
-            console.error('[COOK-GAME WS] 認證錯誤:', error);
-            ws.send(JSON.stringify({ type: 'auth_error', message: '無效的令牌' }));
+            // 獲取用戶完整資料
+            const userRes = await pool.query(`
+              SELECT u.user_id, u.username, u.display_name, u.user_profile_image_url, COALESCE(p.level, 1) as level
+              FROM box_users u
+              LEFT JOIN cook_players p ON u.user_id = p.user_id
+              WHERE u.user_id = $1
+            `, [userId]);
+
+            const userProfile = userRes.rows[0];
+
+            ws.send(JSON.stringify({ type: 'auth_success' }));
+            console.log(`[COOK-GAME WS] 使用者 ${userProfile.display_name || userProfile.username} (ID: ${userId}) 認證成功`);
+            ws.userProfile = userProfile;
+          } else {
+            ws.send(JSON.stringify({ type: 'auth_fail' }));
+            ws.terminate();
           }
-          return;
+        } else if (ws.userId && ws.userProfile) {
+          await handleAuthenticatedMessage(ws, data, ws.userId, ws.userProfile.username, ws.userProfile);
+        } else {
+          console.log("[COOK-GAME WS] 收到未認證的訊息:", data.type);
         }
-        
-        if (!authenticated) {
-          ws.send(JSON.stringify({ type: 'error', message: '未認證，請先進行認證' }));
-          return;
-        }
-        
-        // ★★★ 呼叫已修改的函數 ★★★
-        await handleAuthenticatedMessage(ws, data, userId, username);
-        
-      } catch (error) {
-        console.error('[COOK-GAME WS] 處理消息出錯:', error);
-        ws.send(JSON.stringify({ type: 'error', message: '處理消息時出錯' }));
+      } catch (err) {
+        console.error('[COOK-GAME WS] 處理訊息錯誤:', err);
+        ws.send(JSON.stringify({ type: 'error', message: '伺服器處理訊息時發生錯誤' }));
       }
     });
-    
+
     ws.on('close', () => {
-      console.log(`[COOK-GAME WS] 連接關閉`);
-      if (authenticated && ws.currentRoomId) {
-        // ★★★ 呼叫玩家離開的處理函數 ★★★
-        handlePlayerLeave(ws.currentRoomId, userId);
+      console.log('[COOK-GAME WS] 連接關閉');
+      if (ws.userId) {
+        handlePlayerLeave(ws.currentRoomId, ws.userId);
+        activeConnections.delete(ws.userId);
       }
+    });
+
+    ws.on('error', (error) => {
+      console.error('[COOK-GAME WS] 連接發生錯誤:', error);
     });
   });
+  
+  // 心跳檢測
+  const interval = setInterval(() => {
+    wssCookGame.clients.forEach(ws => {
+      if (ws.isAlive === false) {
+        console.log('[COOK-GAME WS] 心跳超時，終止連接');
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wssCookGame.on('close', () => {
+    clearInterval(interval);
+  });
+
+  return wssCookGame;
 }
 
 // 修改導出，導出新的初始化函數
