@@ -755,10 +755,12 @@
             hideModal('createRoomModal');
             
             // 加入創建的房間
-            if (data && data.roomId) {
-                joinRoom(data.roomId);
+            if (data && data.id) {
+                joinRoom(data.id);
             } else {
-                throw new Error('無法獲取房間ID');
+                // 為避免混淆，給出更精確的錯誤訊息
+                console.error('創建房間後，伺服器未返回有效的房間ID。收到的數據:', data);
+                throw new Error('無法從伺服器獲取有效的房間ID');
             }
         })
         .catch(error => {

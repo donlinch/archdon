@@ -40,23 +40,25 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
             }
 
             try {
-                const result = await pool.query(
-                    'SELECT user_id, username FROM box_users WHERE user_id = $1',
-                    [decoded.userId] 
+                // 檢查用戶是否存在
+                const userResult = await pool.query(
+                    'SELECT * FROM box_users WHERE user_id = $1',
+                    [decoded.userId]
                 );
 
-                if (result.rows.length === 0) {
-                    return res.status(403).json({ success: false, error: '找不到對應的使用者' });
+                if (userResult.rows.length === 0) {
+                    return res.status(404).json({ success: false, error: '找不到用戶' });
                 }
 
+                // 將用戶信息添加到請求對象
                 req.user = {
-                    userId: result.rows[0].user_id,
-                    username: result.rows[0].username
+                    userId: decoded.userId,
+                    username: decoded.username,
+                    // 其他需要的用戶信息
                 };
-                
                 next();
             } catch (error) {
-                console.error('驗證使用者時出錯:', error);
+                console.error('驗證用戶時出錯:', error);
                 res.status(500).json({ success: false, error: '伺服器錯誤' });
             }
         });
@@ -335,10 +337,63 @@ module.exports = function(pool) { // <-- 接收傳入的 pool
 
             res.status(201).json({ id: roomId, name: roomName, status: 'waiting' });
             console.log(`[COOK-GAME] 房間 ${roomId} 已創建並存入資料庫`);
-
+    
         } catch (error) {
             console.error('[COOK-GAME] 創建房間錯誤:', error);
             res.status(500).json({ message: '創建房間時服務器發生錯誤' });
+        }
+    });
+
+    // API: 獲取當前登入用戶的遊戲資料
+    cookGameApp.get('/users/profile', authenticateToken, async (req, res) => {
+        try {
+            // 從主表獲取用戶基本資料
+            const userQuery = `
+                SELECT u.user_id, u.username, u.display_name, u.email, u.user_profile_image_url, 
+                       u.created_at, u.last_login_at, u.user_status, u.user_level, u.user_points
+                FROM box_users u
+                WHERE u.user_id = $1
+            `;
+            
+            const userResult = await pool.query(userQuery, [req.user.userId]);
+            
+            if (userResult.rows.length === 0) {
+                return res.status(404).json({ success: false, error: '找不到用戶資料' });
+            }
+            
+            const userData = userResult.rows[0];
+            
+            // 從遊戲玩家表獲取遊戲相關資料
+            const playerQuery = `
+                SELECT cp.player_id, cp.player_level, cp.player_experience, cp.player_rank,
+                       cp.games_played, cp.games_won, cp.total_score, cp.best_score,
+                       cp.favorite_station, cp.achievements_json
+                FROM cook_players cp
+                WHERE cp.user_id = $1
+            `;
+            
+            const playerResult = await pool.query(playerQuery, [req.user.userId]);
+            
+            // 合併用戶資料與遊戲資料
+            let user = { ...userData };
+            
+            if (playerResult.rows.length > 0) {
+                user = { ...user, ...playerResult.rows[0] };
+            } else {
+                // 如果用戶沒有遊戲資料，提供默認值
+                user.player_level = 1;
+                user.player_experience = 0;
+                user.games_played = 0;
+                user.games_won = 0;
+                user.total_score = 0;
+                user.best_score = 0;
+            }
+            
+            res.json({ success: true, user });
+            
+        } catch (error) {
+            console.error('獲取用戶資料時出錯:', error);
+            res.status(500).json({ success: false, error: '伺服器錯誤' });
         }
     });
 
