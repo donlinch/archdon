@@ -652,10 +652,15 @@
           case 'auth_success':
             addSystemMessage('認證成功，正在加入房間...');
             // 發送加入房間訊息
-            websocket.send(JSON.stringify({
-                type: 'join_room',
-                roomId: roomId
-            }));
+            if (currentUser) {
+                websocket.send(JSON.stringify({
+                    type: 'join_room',
+                    roomId: roomId,
+                    userId: currentUser.user_id
+                }));
+            } else {
+                addSystemMessage('錯誤：找不到用戶資料，無法加入房間。');
+            }
             break;
           case 'room_info':
             updateRoomInfo(message.room);
