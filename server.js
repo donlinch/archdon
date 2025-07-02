@@ -1,68 +1,52 @@
 
-
-
 // server.js
 require('dotenv').config();
 const http = require('http'); // <--- Need http module
 const https = require('https');
 const express = require('express');
- const path = require('path');
+const path = require('path');
 const { Pool } = require('pg');
 const WebSocket = require('ws'); // <--- Import the ws library
-// const GameWebSocketServer = require('./rich-websocket.js'); // <--- Import your class (optional, can implement directly)
 const { v4: uuidv4 } = require('uuid');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session); 
 const multer = require('multer');
 const { ImageAnnotatorClient } = require('@google-cloud/vision');
-// 引入 Google Cloud Translation 客戶端庫
 const { TranslationServiceClient } = require('@google-cloud/translate');
 const fs = require('fs');
 const sharp = require('sharp')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const dbClient = require('./dbclient'); // <--- 把這一行加在這裡
+const dbClient = require('./dbclient');
 const createReportRateLimiter = require('./report-ip-limiter');
-const bcrypt = require('bcryptjs'); // 用於密碼哈希
-const jwt = require('jsonwebtoken'); // 用於JWT Token (如果選擇JWT方案)
-
- 
- 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const adminRouter = express.Router();
 const app = express();
-   
 const PORT = process.env.PORT || 3000;
 const unboxingAiRouter = express.Router();
-
 const boxRoutes = require('./boxRoutes');
-
-
-if (process.env.NODE_ENV === 'production') {
-    app.set('trust proxy', 1); // 信任第一個代理 (Render 通常是這樣)
-}
-// Session Middleware Setup
-
-
-
 const youtubeLotteryRouter = express.Router();
 
- 
+// 導入廚房急先鋒遊戲模塊
+const { cookGameApp, initCookGameWss } = require('./cook-kitchen-rush');
+
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 
 // --- 資料庫連接池設定 ---
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // 從環境變數讀取資料庫 URL
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false // 生產環境需要 SSL (Render 提供)
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-
 app.use(express.json({ limit: '10mb' }));
-
- 
 app.use(express.urlencoded({ extended: true }));
 
-
+// --- Session Middleware Setup ---
 app.use(session({
-    name: 'myadminsession.sid', // 給你的 session cookie 一個獨特的名稱
+    name: 'myadminsession.sid',
     store: new pgSession({
         pool: pool,
         tableName: 'user_sessions',
@@ -72,67 +56,61 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        path: '/', // ★★★ 確保 cookie 對整個域名下的所有路徑都有效 ★★★
+        path: '/',
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'lax' // 嘗試 'lax'
+        sameSite: 'lax'
     }
 }));
 
+// =================================================================
+// ★★★ HTTP Server & WebSocket Server Setup ★★★
+// =================================================================
 
 // 創建 HTTP 服務器
 const server = http.createServer(app);
 
-   // 导入廚房急先鋒游戏模块（重命名以避免冲突）
-   
-const { cookGameApp: gameApp, initCookGame } = require('./cook-kitchen-rush');
-   
+// 將廚房遊戲的 Express 路由掛載到 /cook-api
+app.use('/cook-api', cookGameApp);
+
+// 創建兩個使用 noServer: true 的 WebSocket 服務器實例
+const wssSimpleWalker = new WebSocket.Server({ noServer: true });
+const wssCookGame = new WebSocket.Server({ noServer: true });
+console.log('[WS] 已創建 Simple Walker 和 Cook Game 的 WebSocket 服務實例 (未附加)');
+
+// 調用廚房急先鋒的 WebSocket 初始化函數
+initCookGameWss(wssCookGame);
 
 
-
-app.use('/cook-api', gameApp);
-
-
-
-
-// 創建 WebSocket 服務器
-const wss = new WebSocket.Server({ 
-    server,
-    path: '/ws'  // 指定WebSocket路徑
-  });
-console.log('[WS] WebSocket服務器已初始化');
-
-initCookGame(server);
-
-
-
- // YouTube抽獎系統模組
+// =================================================================
+// ★★★ YouTube Lottery System (HTTP-based) ★★★
+// =================================================================
 const YoutubeLottery = require('./youtubeLottery');
 const UserProfile = require('./userProfile');
 const ChatResponder = require('./chatResponder');
 
-// 初始化抽獎系統
 const youtubeLottery = new YoutubeLottery(pool);
 const userProfile = new UserProfile(pool);
 const chatResponder = new ChatResponder();
 
+// 向所有WebSocket客戶端廣播消息 (如果還有其他通用WS需求)
+function broadcastToAll(message) {
+  const messageStr = JSON.stringify(message);
+  // 注意：這裡需要決定廣播給哪個遊戲的玩家，或所有玩家
+  // 遍歷 wssSimpleWalker.clients 和 wssCookGame.clients
+  for (const client of [...wssSimpleWalker.clients, ...wssCookGame.clients]) {
+      if (client.readyState === WebSocket.OPEN) {
+          client.send(messageStr);
+      }
+  }
+}
 
-  
 // =================================================================
-// ★★★ 管理後台專用認證中介軟體 (Admin Authentication) ★★★
-// =================================================================
-// 說明：此中介軟體專門用於保護管理後台的路由 (例如 /admin/dashboard)。
-// 機制：它依賴於伺服器端的 session。當管理員成功登入後，
-//       伺服器會在 session 中設定 `req.session.isAdmin = true`。
-//       對於每個需要保護的請求，此中介軟體會檢查該 session 變數是否存在且為 true。
-//       如果認證失敗，它會將用戶重導向到後台登入頁面。
-//       這種方式是傳統的、基於 session-cookie 的認證。
+// ★★★ Authentication Middlewares ★★★
 // =================================================================
 
-
-
-// --- START OF AUTHENTICATION MIDDLEWARE AND ROUTES ---
+// 管理後台專用認證中介軟體 (Admin - Session-based)
 const isAdminAuthenticated = (req, res, next) => {  
     if (req.session && req.session.isAdmin) {       
         return next();
@@ -141,7 +119,7 @@ const isAdminAuthenticated = (req, res, next) => {
         return res.status(401).json({ error: '未授權：請先登入。', loginUrl: '/admin-login.html' });
     } else {
         req.session.returnTo = req.originalUrl;
-        return res.redirect('/admin-login.html'); // 確保這是您的登入頁面檔案名
+        return res.redirect('/admin-login.html');
     }
 };
 
@@ -1265,6 +1243,144 @@ app.get('/', (req, res) => {
 
 
 
+// =================================================================
+// ★★★ WebSocket Connection Handlers ★★★
+// =================================================================
+
+// 5. 處理 Simple Walker 的連接邏輯
+wssSimpleWalker.on('connection', async (ws, req) => {
+    const clientIp = req.socket.remoteAddress || req.headers['x-forwarded-for']?.split(',').shift();
+    console.log(`[WS Simple Walker] 新的 WebSocket 客戶端已連接！IP: ${clientIp}`);
+    console.log(`[WS Simple Walker DEBUG] 新連接嘗試. URL完整信息:`, req.url);
+    
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const clientType = url.searchParams.get('clientType');
+    const roomId = url.searchParams.get('roomId');
+    const playerName = url.searchParams.get('playerName');
+
+    console.log(`[WS Simple Walker] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
+
+    if (!roomId || !clientType || !playerName) {
+        console.warn(`[WS Simple Walker DEBUG] 連接被拒絕: 缺少參數.`);
+        ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
+        return;
+    }
+
+    if (clientType === 'controller') {
+        let roomData;
+        let playerId; 
+
+        try {
+            roomData = await dbClient.getRoom(roomId);
+            if (!roomData || !roomData.game_state) { 
+                console.warn(`[WS Simple Walker DEBUG] 房間 ${roomId} 未找到或狀態無效.`);
+                ws.close(1011, "找不到房間或房間無效");
+                return;
+            }
+            console.log(`[WS Simple Walker] Room ${roomId} found in DB.`);
+
+            playerId = uuidv4();
+            console.log(`[WS Simple Walker DEBUG] 為玩家 ${playerName} 生成 ID: ${playerId}`);
+            
+            const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
+
+            if (!updatedRoomResult || !updatedRoomResult.game_state) {
+                console.error(`[WS Simple Walker DEBUG] 加入房間失敗.`);
+                throw new Error("加入房間到資料庫失敗");
+            }
+
+            ws.playerId = playerId;
+            ws.roomId = roomId;
+            ws.clientType = clientType;
+            console.log(`[WS Simple Walker] Player ${playerName} (ID: ${playerId}) added to room ${roomId} in DB.`);
+
+            if (!simpleWalkerConnections.has(roomId)) {
+                simpleWalkerConnections.set(roomId, new Set());
+            }
+            simpleWalkerConnections.get(roomId).add(ws);
+            console.log(`[WS Simple Walker] Connection added. Room ${roomId} active connections: ${simpleWalkerConnections.get(roomId).size}`);
+
+            ws.send(JSON.stringify({ type: 'playerInfo', playerId: playerId }));
+            console.log(`[WS Simple Walker] Sent playerInfo to ${playerName}`);
+            
+            const currentGameState = updatedRoomResult.game_state;
+            const currentRoomName = updatedRoomResult.room_name;
+            ws.send(JSON.stringify({ type: 'gameStateUpdate', roomName: currentRoomName, gameState: currentGameState }));
+            console.log(`[WS Simple Walker] Sent initial gameStateUpdate to ${playerName}`);
+            
+            broadcastToSimpleWalkerRoom(roomId, {
+                type: 'gameStateUpdate',
+                roomName: currentRoomName,
+                gameState: currentGameState
+            }, ws); 
+            console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
+     
+        } catch (error) {
+            console.error(`[WS Simple Walker DEBUG] 連接設置錯誤: ${error.message}`);
+            let closeReason = "加入房間失敗";
+            if (error.message.includes('房間已滿') || error.message.includes('玩家名稱已被使用')) {
+                closeReason = error.message;
+            }
+            try {
+                ws.send(JSON.stringify({ type: 'error', message: closeReason }));
+            } catch (sendErr) { 
+                console.error(`[WS Simple Walker DEBUG] 無法發送錯誤消息: ${sendErr.message}`);
+            }
+            ws.close(4000, closeReason);
+            return; 
+        }
+
+        ws.on('message', (message) => {
+            handleSimpleWalkerMessage(ws, message);
+        });
+        ws.on('close', (code, reason) => {
+            console.log(`[WS Simple Walker DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接關閉. 代碼: ${code}, 原因: ${reason}`);
+            handleSimpleWalkerClose(ws);
+        });
+        ws.on('error', (error) => {
+            console.error(`[WS Simple Walker DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接錯誤: ${error.message}`);
+            handleSimpleWalkerError(ws, error);
+        });
+
+    } else {
+        console.warn(`[WS Simple Walker DEBUG] 未知的客戶端類型: '${clientType}'，連接被拒絕`);
+        ws.close(1008, "未知的客戶端類型");
+    }
+});
+
+// Simple Walker 的 WebSocket 邏輯已經準備好處理連接
+console.log('[Simple Walker] WebSocket 邏輯初始化完成。');
+
+
+// =================================================================
+// ★★★ WebSocket Upgrade Router ★★★
+// =================================================================
+
+server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const pathname = url.pathname;
+  
+    console.log(`[WS Upgrade] 收到升級請求，路徑: ${pathname}`);
+  
+    if (pathname === '/ws') {
+      // 如果是 Simple Walker 的路徑
+      wssSimpleWalker.handleUpgrade(request, socket, head, (ws) => {
+        console.log(`[WS Upgrade] 將連接路由到 Simple Walker (wssSimpleWalker)`);
+        wssSimpleWalker.emit('connection', ws, request);
+      });
+    } else if (pathname === '/cook-ws') {
+      // 如果是廚房急先鋒的路徑
+      wssCookGame.handleUpgrade(request, socket, head, (ws) => {
+        console.log(`[WS Upgrade] 將連接路由到 Cook Game (wssCookGame)`);
+        wssCookGame.emit('connection', ws, request);
+      });
+    } else {
+      // 如果路徑不匹配，拒絕連接
+      console.warn(`[WS Upgrade] 收到未知路徑 ${pathname} 的 WebSocket 請求，連接已銷毀。`);
+      socket.destroy();
+    }
+});
+
 
 
 
@@ -1865,136 +1981,6 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     }
 });
 
-
-// --- ★★★ WebSocket 連線處理 (Simple Walk) ★★★ ---
-wss.on('connection', async (ws, req) => { // <--- 改成 async 函數
-    // 詳細的連接調試信息
-
-     // ★★★ 在這裡加上日誌 ★★★
-     const clientIp = req.socket.remoteAddress || req.headers['x-forwarded-for']?.split(',').shift();
-     console.log(`[WS] 新的 WebSocket 客戶端已連接！IP: ${clientIp}`);
-    console.log(`[WS DEBUG] 新連接嘗試. URL完整信息:`, req.url);
-    console.log(`[WS DEBUG] 連接頭信息:`, JSON.stringify(req.headers, null, 2));
-    
-    // 解析URL參數
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const clientType = url.searchParams.get('clientType');
-    const roomId = url.searchParams.get('roomId');
-    const playerName = url.searchParams.get('playerName'); // 從 game.js 的 wsUrl 獲取
-
-    console.log(`[WS] Connection attempt: Type=${clientType}, Room=${roomId}, Player=${playerName}`);
-
-    // --- 基本驗證 ---
-    if (!roomId || !clientType || !playerName) {
-        console.warn(`[WS DEBUG] 連接被拒絕: 缺少參數. roomId=${roomId}, clientType=${clientType}, playerName=${playerName}`);
-        ws.close(1008, "缺少房間 ID、客戶端類型或玩家名稱");
-        return;
-    }
-
-    // --- YouTube 抽獎系統已改用 HTTP 接口，不再使用 WebSocket (保留您的新邏輯) ---
-    if (url.searchParams.get('type') === 'youtube_lottery') {
-      console.log(`[WS] 拒絕過時的 YouTube Lottery WebSocket 連線，來源 IP: ${req.socket.remoteAddress}`);
-      ws.send(JSON.stringify({ type: "error", message: "YouTube抽獎系統已更新，請重新整理頁面。" }));
-      ws.close(1000, "YouTube抽獎系統已更新為HTTP接口");
-      return;
-    }
-    
-     // --- Simple Walker (clientType = 'controller') 處理邏輯 ---
-     if (clientType === 'controller') {
-        let roomData;
-        let playerId; 
-
-        try {
-            console.log(`[WS DEBUG] 嘗試查找房間 ${roomId} 在資料庫中`);
-            // 1. 使用資料庫查找房間是否存在
-            roomData = await dbClient.getRoom(roomId);
-            if (!roomData || !roomData.game_state) { 
-                console.warn(`[WS DEBUG] 房間 ${roomId} 未找到或狀態無效. roomData=${JSON.stringify(roomData)}`);
-                ws.close(1011, "找不到房間或房間無效");
-                return;
-            }
-            console.log(`[WS Simple Walker] Room ${roomId} found in DB.`);
-
-            // 2. 生成唯一的玩家 ID
-            playerId = uuidv4();
-            console.log(`[WS DEBUG] 為玩家 ${playerName} 生成 ID: ${playerId}`);
-
-            // 3. 嘗試將玩家加入資料庫中的房間狀態
-            console.log(`[WS DEBUG] 嘗試將玩家 ${playerName} (ID: ${playerId}) 加入房間 ${roomId}`);
-            const updatedRoomResult = await dbClient.addPlayerToRoom(roomId, playerId, playerName);
-
-            if (!updatedRoomResult || !updatedRoomResult.game_state) {
-                console.error(`[WS DEBUG] 加入房間失敗. updatedRoomResult=${JSON.stringify(updatedRoomResult)}`);
-                throw new Error("加入房間到資料庫失敗");
-            }
-
-            // 4. 玩家成功加入 - 更新 WebSocket 連接狀態
-            ws.playerId = playerId;
-            ws.roomId = roomId;
-            ws.clientType = clientType;
-            console.log(`[WS Simple Walker] Player ${playerName} (ID: ${playerId}) added to room ${roomId} in DB.`);
-
-            // 5. 將此 WebSocket 連接加入 simpleWalkerConnections 管理
-            if (!simpleWalkerConnections.has(roomId)) {
-                simpleWalkerConnections.set(roomId, new Set());
-            }
-            simpleWalkerConnections.get(roomId).add(ws);
-            console.log(`[WS Simple Walker] Connection added. Room ${roomId} active connections: ${simpleWalkerConnections.get(roomId).size}`);
-
-            // 6. 發送玩家信息給當前客戶端
-            ws.send(JSON.stringify({ type: 'playerInfo', playerId: playerId }));
-            console.log(`[WS Simple Walker] Sent playerInfo to ${playerName}`);
-
-            // 7. 發送最新的遊戲狀態給當前客戶端
-            const currentGameState = updatedRoomResult.game_state;
-            const currentRoomName = updatedRoomResult.room_name;
-            ws.send(JSON.stringify({ type: 'gameStateUpdate', roomName: currentRoomName, gameState: currentGameState }));
-            console.log(`[WS Simple Walker] Sent initial gameStateUpdate to ${playerName}`);
-
-            // 8. 廣播最新的遊戲狀態給房間內所有其他客戶端
-            broadcastToSimpleWalkerRoom(roomId, {
-                type: 'gameStateUpdate',
-                roomName: currentRoomName,
-                gameState: currentGameState
-            }, ws); 
-            console.log(`[WS Simple Walker] Broadcasted gameStateUpdate to other players in room ${roomId}.`);
-
-     
-        } catch (error) {
-            console.error(`[WS DEBUG] 連接設置錯誤: ${error.message}`);
-            console.error(`[WS DEBUG] 錯誤堆棧: ${error.stack}`);
-            let closeReason = "加入房間失敗";
-            if (error.message.includes('房間已滿')) {
-                closeReason = "房間已滿";
-            }
-            try {
-                ws.send(JSON.stringify({ type: 'error', message: closeReason }));
-            } catch (sendErr) { 
-                console.error(`[WS DEBUG] 無法發送錯誤消息: ${sendErr.message}`);
-            }
-            ws.close(4000, closeReason);
-            return; 
-        }
-
-         // --- 為這個 Simple Walker 連接設置消息、關閉、錯誤處理器 ---
-         ws.on('message', (message) => {
-            console.log(`[WS DEBUG] 收到來自 ${playerName} (ID: ${playerId}) 的消息: ${message}`);
-            handleSimpleWalkerMessage(ws, message);
-        });
-        ws.on('close', (code, reason) => {
-            console.log(`[WS DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接關閉. 代碼: ${code}, 原因: ${reason}`);
-            handleSimpleWalkerClose(ws);
-        });
-        ws.on('error', (error) => {
-            console.error(`[WS DEBUG] 玩家 ${playerName} (ID: ${playerId}) 連接錯誤: ${error.message}, ${error.stack}`);
-            handleSimpleWalkerError(ws, error);
-        });
-
-    } else {
-        console.warn(`[WS DEBUG] 未知的客戶端類型: '${clientType}'，連接被拒絕`);
-        ws.close(1008, "未知的客戶端類型");
-    }
-});
 
 /**
  * 處理來自 Simple Walker 客戶端 (控制器) 的消息

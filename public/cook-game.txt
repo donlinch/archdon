@@ -9,39 +9,24 @@
 
 ### 2. 系統架構說明
 
-此專案包含兩個主要部分，需分開啟動：
+此專案已整合成一個單一的Node.js應用程式，由 `server.js` 作為主入口點。它同時管理主網站和「廚房急先鋒」遊戲的後端服務。
 
-1. **主網站系統** (`server.js`)：
-   - 運行在端口 3000
-   - 處理主要會員功能和API
-   - WebSocket路徑：`/ws`
+- **主伺服器 (`server.js`)**:
+  - 統一處理所有HTTP請求和WebSocket連接。
+  - 監聽單一端口 (例如 3000)。
 
-2. **廚房急先鋒遊戲** (`cook-kitchen-rush.js`):
-   -  
-   - 處理遊戲相關功能和API
-   - WebSocket路徑：`/cook-ws`
-   - API路徑前綴：`/cook-api`
+- **整合的服務**:
+  - **主網站API**: 處理會員、文章等核心功能。
+  - **遊戲API (`/cook-api`)**: 由 `cook-kitchen-rush.js` 模組提供，處理所有遊戲相關的HTTP請求。
+  - **WebSocket服務**:
+    - `/ws`: 主網站的WebSocket連接。
+    - `/cook-ws`: 廚房急先鋒遊戲的專用WebSocket連接。
+  - 兩個WebSocket路徑由同一個WebSocket伺服器實例根據連接路徑進行路由。
 
 
 
 ### 3. 安裝步驟
-
-```bash
-# 1. 複製項目
-git clone [repository-url] sunnyyummy-app
-cd sunnyyummy-app
-
-# 2. 安裝依賴
-npm install
-
-# 3. 設定環境變數
-cp .env.example .env
-# 編輯 .env 文件，配置資料庫連接和JWT密鑰
-```
-
-### 4. 環境變數配置
-
-建議在 `.env` 文件中設定以下變數：
+ 
 
 ```
 # 共用資料庫配置
@@ -56,7 +41,7 @@ PORT=3000
 JWT_SECRET=your_main_jwt_secret
 
 # 廚房急先鋒配置 (不再需要單獨的資料庫配置，將使用主資料庫)
-COOK_PORT=3001
+ 
 COOK_JWT_SECRET=your_cook_game_jwt_secret
 ```
 
@@ -74,37 +59,16 @@ CREATE DATABASE sunnyyummy_db; # 如果已存在會跳過
 
 ### 6. 啟動服務
 
-開發模式下分別啟動兩個服務：
+由於系統已整合，只需一個命令即可啟動所有服務。
 
-```bash
-# 開啟一個終端，啟動主網站系統
-npm run dev
-
-# 開啟另一個終端，啟動廚房急先鋒遊戲
-npm run dev-cook-game
-```
-
-或者使用一個命令同時啟動兩個服務：
-
-```bash
-npm run start-all
-```
-
-生產模式：
-
-```bash
-# 開啟一個終端，啟動主網站系統
-npm start
-
-# 開啟另一個終端，啟動廚房急先鋒遊戲
-npm run cook-game
+ 
 ```
 
 ### 7. 訪問應用
 - 主網站：http://localhost:3000
 - 廚房急先鋒遊戲：http://localhost:3000/cook-login.html
 
-注意：即使遊戲服務運行在3001端口，由於靜態文件通過主服務器提供，用戶仍然通過3000端口訪問遊戲界面，但遊戲API和WebSocket連接會自動連接到3001端口的服務。
+注意：所有靜態文件、API和WebSocket連接現在都由同一個伺服器和端口提供。客戶端將自動連接到正確的API和WebSocket路徑 (例如 `/cook-api` 和 `/cook-ws`)。
 
 ## 項目結構
 
@@ -119,9 +83,7 @@ sunnyyummy-app/
 │   ├── cook-game-room.html # 遊戲房間
 │   ├── cook-game.html      # 遊戲主頁面
 │   ├── cook-result.html    # 遊戲結果頁面
-│   └── cook-help.html      # 遊戲說明頁面
-├── db_schema.sql           # 廚房急先鋒資料庫結構
-├── db_schema_main.sql      # 主網站資料庫結構
+│   ├── cook-help.html      # 遊戲說明頁面
 ├── package.json            # 項目配置
 ├── .env                    # 環境變數
 └── README.md               # 項目文檔
@@ -1661,18 +1623,32 @@ CREATE TABLE cook_ai_levels (
 # 16. 部署與發布策略
 
 ## 16.1 部署架構
+系統部署在像Render這樣的雲端平台上，作為一個單一的Node.js服務實例。
+- **入口點**: 所有來自使用者的流量，無論是HTTP還是WebSocket，都首先由負載均衡器（如Cloudflare）接收，然後轉發到單一的伺服器應用。
+- **整合服務**: 伺服器內部：
+  - **Express.js** 處理所有HTTP請求，根據URL路徑將請求分發給靜態文件服務、主系統API或遊戲API (`/cook-api`)。
+  - **WebSocket.Server** 實例監聽所有WebSocket升級請求。它檢查請求的URL路徑 (`/ws` 或 `/cook-ws`)，並將連接交給相應的邏輯模組處理。
+- **後端依賴**: 應用程式連接到PostgreSQL資料庫進行數據持久化，並可能使用Redis進行會話緩存和排行榜等即時功能。
+
 ```
            [使用者]
               |
           [Cloudflare]  <-- CDN與DDoS防護
               |
-     +--------+--------+
-     |                 |
-[靜態資源伺服器]    [API伺服器叢集]  <-- 負載平衡
-     |                 |
-     |           [Redis叢集]  <-- 狀態管理
-     |                 |
-     +--------+--------+
+              |
+        [整合式服務器]  <-- 單一應用部署
+        /     |     \
+       /      |      \
+ [靜態資源] [主系統API] [遊戲API]
+       \      |      /
+        \     |     /
+      [WebSocket服務]
+       /           \
+      /             \
+[/ws路徑]       [/cook-ws路徑]
+      \             /
+       \           /
+        [Redis叢集]  <-- 狀態管理
               |
         [PostgreSQL]  <-- 關聯式資料庫
 ```
